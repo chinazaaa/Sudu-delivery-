@@ -134,3 +134,22 @@ export async function savePromoter(form: FormData): Promise<void> {
   });
   revalidatePath("/admin/promoters");
 }
+
+/** Bank details and the WhatsApp number card payers are sent to. */
+export async function saveSettings(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  await db()
+    .from("settings")
+    .update({
+      bank_name: String(form.get("bank_name") ?? "").trim(),
+      bank_account_name: String(form.get("bank_account_name") ?? "").trim(),
+      bank_account_number: String(form.get("bank_account_number") ?? "").trim(),
+      whatsapp_number: String(form.get("whatsapp_number") ?? "").trim(),
+      card_note: String(form.get("card_note") ?? "").trim(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", true);
+
+  revalidatePath("/admin/settings");
+}

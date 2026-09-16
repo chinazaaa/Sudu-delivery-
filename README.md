@@ -39,11 +39,23 @@ a batch cut-off, and the admin screen the driver reads at the counter.
 - Menu editor (a price changes in under a minute), promoter list with
   per-promoter order counts, and batch status/capacity controls
 
-**Deliberately not built yet:** wallets, accounts, live tracking, ratings, a
-rider app, the run pass. Payments are plain bank transfer matched by the phone
-number in the narration and marked paid in admin; `payment_ref` and `paid_at`
-exist from day one so a Paystack webhook can replace the manual step without a
-migration.
+**Payment** is bank transfer, plus a by-hand route for card payers. There is no
+Paystack or Flutterwave and nothing automated:
+
+- The bank details and the WhatsApp number live in **Admin → Payment**, so they
+  change from a phone in seconds with no redeploy
+- The customer transfers and puts their phone number in the narration, which is
+  how the payment is matched to the order
+- Anyone who would rather pay by card taps **Message us on WhatsApp** — the
+  message arrives pre-filled with their name, batch, total and order reference,
+  you send them a link, and you mark the order paid on its batch page once you
+  see the money
+- The order page is itself the shareable link: send it to a parent or partner
+  and they see the items, the total and the same bank details
+
+**Deliberately not built:** wallets, accounts, live tracking, ratings, a rider
+app, the run pass. `payment_ref` and `paid_at` exist on every order from day
+one, so if a gateway is ever wanted it slots in without a migration.
 
 ## Running it
 
@@ -61,6 +73,11 @@ Apply the schema in the Supabase SQL editor, in order:
 2. `supabase/migrations/0002_seed_restaurants.sql` — KFC and Domino's, with
    **placeholder prices that must be corrected** from the counter on the first
    run (Admin → Menu)
+3. `supabase/migrations/0003_settings.sql` — the one settings row holding the
+   bank details and WhatsApp number
+
+Then fill in **Admin → Payment** before ordering opens. Until the bank details
+are set, the pay page says so rather than showing a blank account number.
 
 Then, on a development project only, `supabase/fake_orders.sql` fills the next
 open batch with fake orders. Use it to read the admin screen on a phone before
@@ -101,7 +118,10 @@ npm run build
 ```
 
 The full customer and admin flows have been exercised end to end against a
-local Postgres + PostgREST stack: promoter attribution and the first-order
-discount, first-order detection across `+234`/`0` phone formats, pay-link
-expiry at cut-off, roll-forward to the next batch when one closes, rejection of
-orders into a closed batch, mark-paid, and the counter sheet totals.
+local Postgres + PostgREST stack: a cart mixing KFC and Domino's on one fee,
+promoter attribution and the first-order discount, first-order detection across
+`+234`/`0` phone formats, admin-edited bank details and the WhatsApp card
+route appearing on the pay page, the pay link opened by someone other than the
+customer, pay-link expiry at cut-off, roll-forward to the next batch when one
+closes, rejection of orders into a closed batch, mark-paid, and the counter
+sheet totals.

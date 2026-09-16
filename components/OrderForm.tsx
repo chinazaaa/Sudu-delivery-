@@ -224,7 +224,8 @@ export default function OrderForm({
           {pending ? "Placing…" : `Place order · ${naira(total)}`}
         </button>
         <p className="text-xs text-ink/50">
-          You will get transfer details on the next screen. Orders travel once paid.
+          Transfer details come on the next screen — or message us there to pay by
+          card. Orders travel once paid.
         </p>
       </section>
     </form>

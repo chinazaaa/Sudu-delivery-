@@ -2,11 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ExpiryNote from "@/components/ExpiryNote";
 import ShareLink from "@/components/ShareLink";
-import { BANK, SLOT_LABEL } from "@/lib/config";
+import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
 import { getOrder } from "@/lib/orders";
 import { formatPhone } from "@/lib/phone";
 import { clockLabel, runDateLabel, weekdayLabel } from "@/lib/time";
+import { getSettings, hasBankDetails, whatsappLink } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,8 @@ export default async function OrderPage({
 }) {
   const order = await getOrder((await params).id);
   if (!order) notFound();
+
+  const settings = await getSettings();
 
   const batchLabel = `${weekdayLabel(order.batch.run_date)} ${SLOT_LABEL[order.batch.slot]}`;
   const expired = new Date(order.batch.cut_off_at).getTime() <= Date.now();
@@ -94,20 +97,31 @@ export default async function OrderPage({
         <section className="card space-y-3">
           <h2 className="font-semibold">Pay {naira(order.total)} to confirm</h2>
           <ExpiryNote cutOffISO={order.batch.cut_off_at} />
-          <dl className="space-y-1 rounded-lg bg-black/5 px-3 py-2 text-sm">
-            <Row label="Bank" value={BANK.name || "—"} />
-            <Row label="Account name" value={BANK.accountName || "—"} />
-            <Row label="Account number" value={BANK.accountNumber || "—"} />
-            <Row label="Use as narration" value={formatPhone(order.customer_phone)} />
-          </dl>
-          <p className="text-sm text-ink/70">
-            Put the phone number in the transfer narration — that is how the payment is
-            matched to this order. Transfer only; no cash at the drop point.
-          </p>
+          {hasBankDetails(settings) ? (
+            <>
+              <dl className="space-y-1 rounded-lg bg-black/5 px-3 py-2 text-sm">
+                <Row label="Bank" value={settings.bank_name} />
+                <Row label="Account name" value={settings.bank_account_name || "—"} />
+                <Row label="Account number" value={settings.bank_account_number} />
+                <Row label="Use as narration" value={formatPhone(order.customer_phone)} />
+              </dl>
+              <p className="text-sm text-ink/70">
+                Put the phone number in the transfer narration — that is how the payment
+                is matched to this order. Transfer only; no cash at the drop point.
+              </p>
+            </>
+          ) : (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Transfer details are being set up. Message us and we will send them to you.
+            </p>
+          )}
+
+          <CardPayment order={order} settings={settings} batchLabel={batchLabel} />
+
           <ShareLink label="Send this to whoever is paying" />
           <p className="text-xs text-ink/50">
             Not paying yourself? Send the link — it shows the items and the total, and
-            the order confirms the moment the transfer lands.
+            the order confirms once we see the money.
           </p>
         </section>
       )}
@@ -117,6 +131,45 @@ export default async function OrderPage({
           Already paid? This page updates once the transfer is matched. Refresh it.
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * There is no card gateway. Card payers are sent to WhatsApp, handed a link by
+ * hand, and their order is marked paid in admin once the money is seen.
+ */
+function CardPayment({
+  order,
+  settings,
+  batchLabel,
+}: {
+  order: { id: string; customer_name: string; total: number };
+  settings: Awaited<ReturnType<typeof getSettings>>;
+  batchLabel: string;
+}) {
+  const link = whatsappLink(
+    settings.whatsapp_number,
+    `Hi — I want to pay by card for my Sudu Delivery order.\n\n` +
+      `Name: ${order.customer_name}\n` +
+      `Batch: ${batchLabel}\n` +
+      `Total: ${naira(order.total)}\n` +
+      `Order: ${order.id.slice(0, 8)}`
+  );
+  if (!link) return null;
+
+  return (
+    <div className="rounded-lg border border-black/10 p-3">
+      <h3 className="font-medium">Paying by card instead?</h3>
+      <p className="mt-1 text-sm text-ink/70">{settings.card_note}</p>
+      <a
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn-quiet mt-2 w-full"
+      >
+        Message us on WhatsApp
+      </a>
     </div>
   );
 }

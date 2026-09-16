@@ -30,12 +30,6 @@ export const SLOT_LABEL: Record<BatchSlot, string> = {
   night: "night",
 };
 
-export const BANK = {
-  name: process.env.NEXT_PUBLIC_BANK_NAME ?? "",
-  accountName: process.env.NEXT_PUBLIC_BANK_ACCOUNT_NAME ?? "",
-  accountNumber: process.env.NEXT_PUBLIC_BANK_ACCOUNT_NUMBER ?? "",
-};
-
 /**
  * Days ordering runs, as JS weekday numbers (0 = Sunday). The brief starts
  * with Friday only (§5) — add days here once the operation is boring.
