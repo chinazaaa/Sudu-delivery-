@@ -59,6 +59,8 @@ a batch cut-off, and the admin screen the driver reads at the counter.
 - **Unpaid orders** separated out, because unpaid orders do not travel
 - **Batch summary**: paid count against the 8-order minimum, gross, food cost,
   commission owed, net before fuel and driver
+- Restaurants added, renamed, retimed and switched on or off, and a one tap
+  button that puts KFC and Domino's on an empty menu
 - Menu editor (a price changes in under a minute), promoter list with
   per-promoter order counts, and batch status/capacity controls
 - **Stage buttons**: one tap per stage of the run, seen by everyone in the batch
@@ -106,9 +108,12 @@ cp .env.example .env.local   # then fill it in
 npm run dev
 ```
 
-Apply the schema in the Supabase SQL editor. The quickest way is to paste
-`supabase/setup.sql`, which is all six migrations in order, and run it once on
-a new project. Or run the files one at a time:
+Apply the schema in the Supabase SQL editor by pasting `supabase/setup.sql`
+and running it. It is safe to run more than once: it creates whatever is
+missing and leaves whatever exists alone, so it is also the repair for a
+database where only some of the migrations were run. The files in
+`supabase/migrations` are the history of how the schema got here, and are not
+needed for a new project:
 
 1. `supabase/migrations/0001_init.sql`: tables, enums, RLS on
 2. `supabase/migrations/0002_seed_restaurants.sql`: KFC and Domino's, with
@@ -123,6 +128,10 @@ a new project. Or run the files one at a time:
 6. `supabase/migrations/0006_pins_and_stages.sql`: customer PINs and run stages
 
 Then fill in **Admin, Settings** before ordering opens.
+
+Errors that name a missing column, such as **"Could not find the 'flash_fee'
+column of 'batches' in the schema cache"**, mean a partly applied schema. Run
+`supabase/setup.sql` again and it fills in what is missing.
 
 If admin loads but the menu and the runs are both empty, the key is wrong: a
 publishable key is subject to row level security, and since this schema has no

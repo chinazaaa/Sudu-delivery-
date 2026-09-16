@@ -1,7 +1,13 @@
 import Diagnostic from "@/components/Diagnostic";
 import { db } from "@/lib/supabase";
 import { diagnoseEmpty } from "@/lib/health";
-import { addMenuItem, updateMenuItem } from "../actions";
+import {
+  addMenuItem,
+  addRestaurant,
+  seedLaunchRestaurants,
+  updateMenuItem,
+  updateRestaurant,
+} from "../actions";
 import type { MenuItem, Restaurant } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -12,25 +18,58 @@ export default async function MenuAdmin() {
     .select("*")
     .order("sort_order");
   const { data: items } = await db().from("menu_items").select("*").order("sort_order");
-  const problem = (restaurants ?? []).length === 0 ? await diagnoseEmpty() : null;
+
+  const list = (restaurants ?? []) as Restaurant[];
+  const problem = list.length === 0 ? await diagnoseEmpty() : null;
 
   return (
     <div className="space-y-4">
       <section className="card">
         <h1 className="text-lg font-semibold">Menu</h1>
         <p className="text-sm text-ink/60">
-          Prices are in naira, food only. Delivery is added at checkout. Untick an
-          item the branch has actually run out of.
+          Prices are in naira, food only. Delivery is added at checkout. Untick an item
+          the branch has actually run out of.
         </p>
       </section>
 
       {problem && !problem.ok && (
-        <Diagnostic title={problem.title} detail={problem.detail} />
+        <>
+          <Diagnostic title={problem.title} detail={problem.detail} />
+          <form action={seedLaunchRestaurants} className="card space-y-2">
+            <h2 className="font-semibold">Or start the menu here</h2>
+            <p className="text-sm text-ink/60">
+              Adds KFC Novare and Domino&apos;s with their usual items at placeholder
+              prices. Correct the prices at the counter on the first run.
+            </p>
+            <button className="btn-primary w-full">Add KFC and Domino&apos;s</button>
+          </form>
+        </>
       )}
 
-      {((restaurants ?? []) as Restaurant[]).map((restaurant) => (
+      {list.map((restaurant) => (
         <section key={restaurant.id} className="card space-y-3">
-          <h2 className="font-semibold">{restaurant.name}</h2>
+          <form action={updateRestaurant} className="flex flex-wrap items-end gap-2">
+            <input type="hidden" name="restaurant_id" value={restaurant.id} />
+            <div className="grow">
+              <label className="label">Restaurant</label>
+              <input name="name" defaultValue={restaurant.name} className="field" />
+            </div>
+            <div className="w-28">
+              <label className="label">Closes</label>
+              <input
+                name="closes_at"
+                type="time"
+                defaultValue={restaurant.closes_at.slice(0, 5)}
+                className="field"
+              />
+            </div>
+            <label className="flex items-center gap-2 pb-2 text-sm">
+              <input type="checkbox" name="active" defaultChecked={restaurant.active} />
+              On the site
+            </label>
+            <input type="hidden" name="address" value={restaurant.address} />
+            <button className="btn-quiet">Save</button>
+          </form>
 
           {((items ?? []) as MenuItem[])
             .filter((i) => i.restaurant_id === restaurant.id)
@@ -62,7 +101,10 @@ export default async function MenuAdmin() {
               </form>
             ))}
 
-          <form action={addMenuItem} className="flex flex-wrap items-end gap-2 border-t border-black/10 pt-3">
+          <form
+            action={addMenuItem}
+            className="flex flex-wrap items-end gap-2 border-t border-black/10 pt-3"
+          >
             <input type="hidden" name="restaurant_id" value={restaurant.id} />
             <div className="grow">
               <label className="label">Add item</label>
@@ -76,6 +118,25 @@ export default async function MenuAdmin() {
           </form>
         </section>
       ))}
+
+      <form action={addRestaurant} className="card space-y-2">
+        <h2 className="font-semibold">Add a restaurant</h2>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="grow">
+            <label className="label">Name</label>
+            <input name="name" placeholder="Panarottis" className="field" />
+          </div>
+          <div className="w-28">
+            <label className="label">Closes</label>
+            <input name="closes_at" type="time" defaultValue="21:00" className="field" />
+          </div>
+        </div>
+        <div>
+          <label className="label">Address</label>
+          <input name="address" placeholder="Novare Mall, Sangotedo" className="field" />
+        </div>
+        <button className="btn-primary">Add restaurant</button>
+      </form>
     </div>
   );
 }

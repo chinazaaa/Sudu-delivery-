@@ -210,3 +210,101 @@ export async function setBatchStage(form: FormData): Promise<void> {
   revalidatePath("/admin");
   revalidatePath("/orders");
 }
+
+/** Restaurants are added and edited here, not only by running the seed file. */
+export async function addRestaurant(form: FormData): Promise<void> {
+  await assertAdmin();
+  const name = String(form.get("name") ?? "").trim();
+  if (!name) return;
+
+  await db().from("restaurants").insert({
+    name,
+    address: String(form.get("address") ?? "").trim(),
+    closes_at: String(form.get("closes_at") ?? "").trim() || "21:00",
+    active: true,
+    sort_order: 100,
+  });
+  revalidatePath("/admin/menu");
+  revalidatePath("/");
+}
+
+export async function updateRestaurant(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  await db()
+    .from("restaurants")
+    .update({
+      name: String(form.get("name") ?? "").trim() || undefined,
+      address: String(form.get("address") ?? "").trim(),
+      closes_at: String(form.get("closes_at") ?? "").trim() || undefined,
+      // Off keeps a restaurant and its menu but takes it off the site, which is
+      // how the brief adds Panarottis and the rest once the run is boring.
+      active: form.get("active") === "on",
+    })
+    .eq("id", String(form.get("restaurant_id")));
+  revalidatePath("/admin/menu");
+  revalidatePath("/");
+}
+
+/** The two launch restaurants and their menu, for a database with no seed. */
+export async function seedLaunchRestaurants(): Promise<void> {
+  await assertAdmin();
+
+  const { data: existing } = await db().from("restaurants").select("id").limit(1);
+  if (existing && existing.length > 0) return;
+
+  const launch = [
+    {
+      name: "KFC Novare",
+      address: "Novare Mall, Sangotedo",
+      closes_at: "21:00",
+      sort_order: 1,
+      items: [
+        ["Original Recipe 2pc + chips", 6500],
+        ["8pc bucket", 18000],
+        ["Wrap meal", 5500],
+        ["Refuel Meal", 7000],
+        ["Zinger burger meal", 8000],
+      ] as const,
+    },
+    {
+      name: "Domino's Pizza",
+      address: "KM 34 Lekki-Epe Expy, Emperor Estate",
+      closes_at: "22:00",
+      sort_order: 2,
+      items: [
+        ["Medium pepperoni", 11000],
+        ["Medium BBQ chicken", 12000],
+        ["Large meat lovers", 17500],
+        ["Chicken wings (6)", 6500],
+        ["Garlic bread", 3000],
+      ] as const,
+    },
+  ];
+
+  for (const place of launch) {
+    const { data: restaurant } = await db()
+      .from("restaurants")
+      .insert({
+        name: place.name,
+        address: place.address,
+        closes_at: place.closes_at,
+        active: true,
+        sort_order: place.sort_order,
+      })
+      .select("id")
+      .single();
+    if (!restaurant) continue;
+
+    await db().from("menu_items").insert(
+      place.items.map(([name, price], index) => ({
+        restaurant_id: restaurant.id,
+        name,
+        price_food: price,
+        sort_order: index + 1,
+      }))
+    );
+  }
+  revalidatePath("/admin/menu");
+  revalidatePath("/");
+}
