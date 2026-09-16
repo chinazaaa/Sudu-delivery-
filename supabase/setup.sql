@@ -156,9 +156,8 @@ create index if not exists order_items_order_idx on order_items (order_id);
 alter table order_items add column if not exists for_name text;
 
 -- Catalogue: a restaurant has categories, a category has items, and an item
--- has choices. A real menu has structure: a restaurant has categories, a category has items,
--- and an item has choices. A pizza is not one price, it is a size and a
--- flavour, and the counter sheet has to say which.
+-- has choices. A pizza is not one price, it is a size and a flavour, and the
+-- counter sheet has to say which.
 
 create table if not exists menu_categories (
   id            uuid primary key default gen_random_uuid(),
