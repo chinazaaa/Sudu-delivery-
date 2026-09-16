@@ -53,10 +53,12 @@ export async function ensureUpcomingBatches(): Promise<void> {
   }
   if (rows.length === 0) return;
 
-  await db().from("batches").upsert(rows, {
+  const { error } = await db().from("batches").upsert(rows, {
     onConflict: "run_date,slot",
     ignoreDuplicates: true,
   });
+  // A blocked write here is why batches would otherwise just never appear.
+  if (error) throw new Error(`Could not open batches: ${error.message}`);
 }
 
 /**

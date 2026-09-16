@@ -124,6 +124,11 @@ a new project. Or run the files one at a time:
 
 Then fill in **Admin, Settings** before ordering opens.
 
+If admin loads but the menu and the runs are both empty, the key is wrong: a
+publishable key is subject to row level security, and since this schema has no
+policies, every query comes back empty rather than failing. Admin now says so
+on the screen instead of showing nothing. Swap in the secret key and redeploy.
+
 If the site loads but every page shows **"Could not find the table
 'public.restaurants' in the schema cache"**, the environment variables are
 right and reaching Supabase, but the schema above has not been run yet. Run it.
@@ -147,7 +152,7 @@ Three environment variables, set for Production, Preview and Development:
 | Variable | Where it comes from |
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase, Project Settings, API, Project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase, same page, the `service_role` secret |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase, same page, the **secret** key: `service_role` on older projects, `sb_secret_...` on newer ones. Not the publishable or anon one |
 | `ADMIN_PASSWORD` | Anything you choose, long and random |
 
 Nothing else belongs in the environment. Bank details, the WhatsApp number,

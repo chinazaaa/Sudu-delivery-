@@ -1,4 +1,6 @@
+import Diagnostic from "@/components/Diagnostic";
 import { db } from "@/lib/supabase";
+import { diagnoseEmpty } from "@/lib/health";
 import { addMenuItem, updateMenuItem } from "../actions";
 import type { MenuItem, Restaurant } from "@/lib/types";
 
@@ -10,6 +12,7 @@ export default async function MenuAdmin() {
     .select("*")
     .order("sort_order");
   const { data: items } = await db().from("menu_items").select("*").order("sort_order");
+  const problem = (restaurants ?? []).length === 0 ? await diagnoseEmpty() : null;
 
   return (
     <div className="space-y-4">
@@ -20,6 +23,10 @@ export default async function MenuAdmin() {
           item the branch has actually run out of.
         </p>
       </section>
+
+      {problem && !problem.ok && (
+        <Diagnostic title={problem.title} detail={problem.detail} />
+      )}
 
       {((restaurants ?? []) as Restaurant[]).map((restaurant) => (
         <section key={restaurant.id} className="card space-y-3">

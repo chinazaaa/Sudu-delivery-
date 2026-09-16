@@ -1,5 +1,7 @@
 import Link from "next/link";
+import Diagnostic from "@/components/Diagnostic";
 import { batchOverview } from "@/lib/admin";
+import { diagnoseEmpty, keyKind } from "@/lib/health";
 import { ensureUpcomingBatches, closeExpiredBatches } from "@/lib/batches";
 import { BATCH_MINIMUM, SLOT_LABEL } from "@/lib/config";
 import { clockLabel, runDateLabel } from "@/lib/time";
@@ -7,9 +9,26 @@ import { clockLabel, runDateLabel } from "@/lib/time";
 export const dynamic = "force-dynamic";
 
 export default async function AdminHome() {
-  await ensureUpcomingBatches();
-  await closeExpiredBatches();
-  const batches = await batchOverview();
+  let problem: Awaited<ReturnType<typeof diagnoseEmpty>> | null = null;
+  let batches: Awaited<ReturnType<typeof batchOverview>> = [];
+
+  try {
+    await ensureUpcomingBatches();
+    await closeExpiredBatches();
+    batches = await batchOverview();
+    if (batches.length === 0) problem = await diagnoseEmpty();
+  } catch (error) {
+    // A blocked write usually means the wrong key, so say that rather than
+    // repeating a Postgres permission message at someone deploying a site.
+    problem =
+      keyKind() === "public"
+        ? await diagnoseEmpty()
+        : {
+            ok: false,
+            title: "Could not reach the database",
+            detail: error instanceof Error ? error.message : String(error),
+          };
+  }
 
   const thisWeek = batches.filter((b) => b.status !== "cancelled");
   const weekTotal = thisWeek.reduce((total, b) => total + b.orderCount, 0);
@@ -55,8 +74,8 @@ export default async function AdminHome() {
         })}
       </ul>
 
-      {batches.length === 0 && (
-        <p className="text-sm text-ink/60">No batches yet.</p>
+      {problem && !problem.ok && (
+        <Diagnostic title={problem.title} detail={problem.detail} />
       )}
     </div>
   );
