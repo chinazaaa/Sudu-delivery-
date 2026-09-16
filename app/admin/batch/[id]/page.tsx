@@ -63,7 +63,7 @@ export default async function BatchPage({
         <h1 className="text-lg font-semibold">
           {runDateLabel(batch.run_date)} · {SLOT_LABEL[batch.slot]}
         </h1>
-        <p className="text-sm text-ink/60">
+        <p className="text-sm text-muted">
           Cut-off {clockLabel(batch.cut_off_at)} · {batch.delivery_window_text} ·{" "}
           {batch.status}
         </p>
@@ -93,7 +93,7 @@ export default async function BatchPage({
 
       <section className="card space-y-3">
         <h2 className="font-semibold">Where the run is</h2>
-        <p className="text-sm text-ink/60">
+        <p className="text-sm text-muted">
           Tap a stage as you reach it. Everyone in this batch sees it on their order
           page.
         </p>
@@ -118,7 +118,7 @@ export default async function BatchPage({
 
       <section className="card space-y-2">
         <h2 className="font-semibold">Take the run with you</h2>
-        <p className="text-sm text-ink/60">
+        <p className="text-sm text-muted">
           Send the whole sheet to your own WhatsApp before leaving. Campus signal is
           bad at night, and a message in a chat still opens with no data.
         </p>
@@ -137,11 +137,11 @@ export default async function BatchPage({
 
       <section className="card space-y-3">
         <h2 className="font-semibold">Counter sheet</h2>
-        <p className="text-sm text-ink/60">
+        <p className="text-sm text-muted">
           Paid orders only. Read this out at the counter.
         </p>
         {counter.length === 0 ? (
-          <p className="text-sm text-ink/60">Nothing paid for yet.</p>
+          <p className="text-sm text-muted">Nothing paid for yet.</p>
         ) : (
           counter.map((group) => (
             <div key={group.restaurant} className="rounded-lg border border-black/10 p-3">
@@ -153,7 +153,7 @@ export default async function BatchPage({
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-sm text-ink/70">
+              <p className="mt-2 text-sm text-ink/75">
                 Expected total here: {naira(group.expectedFoodTotal)}
               </p>
             </div>
@@ -163,7 +163,7 @@ export default async function BatchPage({
 
       <section className="card space-y-2">
         <h2 className="font-semibold">Handout list</h2>
-        <p className="text-sm text-ink/60">
+        <p className="text-sm text-muted">
           One bag per name. Anything added later in the week is already merged in.
         </p>
         <HandoutList
@@ -177,7 +177,7 @@ export default async function BatchPage({
           }))}
         />
         {handout.length > 0 && (
-          <details className="text-sm text-ink/60">
+          <details className="text-sm text-muted">
             <summary className="cursor-pointer">Mark delivered / refund</summary>
             <ul className="mt-2 space-y-2">
               {handout.flatMap((bag) =>
@@ -215,7 +215,7 @@ export default async function BatchPage({
       <section className="card space-y-2">
         <h2 className="font-semibold">Unpaid. These do not travel.</h2>
         {unpaid.length === 0 ? (
-          <p className="text-sm text-ink/60">None. Everything is paid for.</p>
+          <p className="text-sm text-muted">None. Everything is paid for.</p>
         ) : (
           <ul className="space-y-3">
             {unpaid.map((order) => (
@@ -223,10 +223,10 @@ export default async function BatchPage({
                 <p className="font-medium">
                   {order.for_name ?? order.customer_name} · {naira(order.total)}
                   {order.for_name && (
-                    <span className="text-ink/50"> · share of {order.customer_name}&apos;s group</span>
+                    <span className="text-muted"> · share of {order.customer_name}&apos;s group</span>
                   )}
                 </p>
-                <p className="text-sm text-ink/60">
+                <p className="text-sm text-muted">
                   {formatPhone(order.customer_phone)} · {order.hostel}
                 </p>
                 <p className="text-sm">
@@ -260,7 +260,7 @@ export default async function BatchPage({
       {refunds.length > 0 && (
         <section className="card space-y-2">
           <h2 className="font-semibold">Refunds owed</h2>
-          <p className="text-sm text-ink/60">
+          <p className="text-sm text-muted">
             A group shrank when unpaid shares dropped out, so its delivery fee fell a
             band. Send these back tonight.
           </p>
@@ -284,7 +284,7 @@ export default async function BatchPage({
         <form action={setFlashFee} className="space-y-2 rounded-lg border border-black/10 p-3">
           <input type="hidden" name="batch_id" value={batch.id} />
           <h3 className="font-medium">Flash fee drop</h3>
-          <p className="text-xs text-ink/50">
+          <p className="text-xs text-muted">
             For rescuing a thin batch, not rewarding customers. Never announce it in
             advance, never make it a fixed day, and always give a reason.
           </p>
@@ -312,12 +312,12 @@ export default async function BatchPage({
             </div>
             <button className="btn-quiet shrink-0">Save</button>
           </div>
-          <p className="text-xs text-ink/50">
+          <p className="text-xs text-muted">
             {batch.flash_fee === null
               ? `Normal bands: ${bandTable(null).map((b) => `${b.label} ${naira(b.fee)}`).join(", ")}`
               : `Tonight: ${bandTable(batch.flash_fee).map((b) => `${b.label} ${naira(b.fee)}`).join(", ")}`}
           </p>
-          <p className="text-xs text-ink/50">
+          <p className="text-xs text-muted">
             Leave the fee blank to go back to normal pricing.
           </p>
         </form>
@@ -351,7 +351,7 @@ export default async function BatchPage({
             </form>
           ))}
         </div>
-        <p className="text-xs text-ink/50">
+        <p className="text-xs text-muted">
           Cancelling a batch does not refund anyone. Refund each order above, same
           night, in full.
         </p>
@@ -375,7 +375,7 @@ function Row({
     tone === "warn" ? "text-brand" : tone === "good" ? "text-green-700" : "";
   return (
     <div className={`flex justify-between gap-4 ${strong ? "font-semibold" : ""}`}>
-      <dt className="text-ink/70">{label}</dt>
+      <dt className="text-ink/75">{label}</dt>
       <dd className={colour}>{value}</dd>
     </div>
   );

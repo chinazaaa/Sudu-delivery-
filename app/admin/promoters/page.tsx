@@ -11,7 +11,7 @@ export default async function PromotersAdmin() {
     <div className="space-y-4">
       <section className="card">
         <h1 className="text-lg font-semibold">Promoters</h1>
-        <p className="text-sm text-ink/60">
+        <p className="text-sm text-muted">
           Give codes to a handful of people, not everyone. Orders counted are for the
           life of the customer, because attribution sticks to the phone number.
         </p>
@@ -26,7 +26,7 @@ export default async function PromotersAdmin() {
               <span className="font-semibold">{naira(promoter.owed)}</span> owed
             </p>
           </div>
-          <p className="break-all text-xs text-ink/50">
+          <p className="break-all text-xs text-muted">
             Their link: /?ref={promoter.code}
           </p>
           <input type="hidden" name="code" value={promoter.code} />

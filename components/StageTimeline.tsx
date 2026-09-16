@@ -26,7 +26,7 @@ export default function StageTimeline({
             <li
               key={step}
               className={`flex items-center gap-2 text-sm ${
-                now ? "font-semibold" : done ? "text-ink/50" : "text-ink/35"
+                now ? "font-semibold" : done ? "text-muted" : "text-ink/35"
               }`}
             >
               <span
@@ -39,7 +39,7 @@ export default function StageTimeline({
           );
         })}
       </ol>
-      <p className="text-xs text-ink/50">Updated {clockLabel(updatedAt)}</p>
+      <p className="text-xs text-muted">Updated {clockLabel(updatedAt)}</p>
     </div>
   );
 }

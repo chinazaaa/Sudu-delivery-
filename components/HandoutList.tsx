@@ -49,7 +49,7 @@ export default function HandoutList({
 
   return (
     <div className="space-y-2">
-      <p className="text-sm text-ink/60">
+      <p className="text-sm text-muted">
         {done}/{entries.length} handed out
       </p>
       <ul className="space-y-2">
@@ -60,16 +60,16 @@ export default function HandoutList({
               onClick={() => toggle(entry.id)}
               className={`w-full rounded-lg border px-3 py-2 text-left ${
                 ticked[entry.id]
-                  ? "border-green-600/30 bg-green-50 text-ink/50 line-through"
+                  ? "border-green-600/30 bg-green-50 text-muted line-through"
                   : "border-black/15 bg-white"
               }`}
             >
               <span className="flex items-baseline justify-between gap-2">
                 <span className="font-semibold">{entry.name}</span>
-                <span className="text-xs text-ink/50">{entry.hostel}</span>
+                <span className="text-xs text-muted">{entry.hostel}</span>
               </span>
               <span className="mt-1 block text-sm">{entry.items.join(", ")}</span>
-              <span className="text-xs text-ink/50">{entry.phone}</span>
+              <span className="text-xs text-muted">{entry.phone}</span>
             </button>
           </li>
         ))}

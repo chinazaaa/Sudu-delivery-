@@ -10,7 +10,7 @@ export default async function SettingsAdmin() {
     <div className="space-y-4">
       <section className="card">
         <h1 className="text-lg font-semibold">Site settings</h1>
-        <p className="text-sm text-ink/60">
+        <p className="text-sm text-muted">
           These appear on every order&apos;s pay page. Change them here. No redeploy,
           no code.
         </p>
@@ -55,7 +55,7 @@ export default async function SettingsAdmin() {
         </div>
 
         <h2 className="border-t border-black/10 pt-3 font-semibold">Paying by card</h2>
-        <p className="text-sm text-ink/60">
+        <p className="text-sm text-muted">
           Card payers are told to message you. You send them a link, then mark the
           order paid on its batch page when the money lands.
         </p>
@@ -69,7 +69,7 @@ export default async function SettingsAdmin() {
             inputMode="tel"
             className="field"
           />
-          <p className="mt-1 text-xs text-ink/50">
+          <p className="mt-1 text-xs text-muted">
             Leave blank to hide the card option entirely.
           </p>
         </div>
@@ -89,7 +89,7 @@ export default async function SettingsAdmin() {
 
       <form action={saveSettings} className="card space-y-3">
         <h2 className="font-semibold">Where to find us</h2>
-        <p className="text-sm text-ink/60">
+        <p className="text-sm text-muted">
           Shown at the bottom of every page. A stranger asked to prepay ₦16,000 will
           check that the business exists, and these are what they check.
         </p>
@@ -114,7 +114,7 @@ export default async function SettingsAdmin() {
             placeholder="https://chat.whatsapp.com/…"
             className="field"
           />
-          <p className="mt-1 text-xs text-ink/50">
+          <p className="mt-1 text-xs text-muted">
             The group is the distribution. Leave blank to hide the link.
           </p>
         </div>
@@ -123,7 +123,7 @@ export default async function SettingsAdmin() {
 
       <form action={saveSettings} className="card space-y-3">
         <h2 className="font-semibold">Product page notes</h2>
-        <p className="text-sm text-ink/60">
+        <p className="text-sm text-muted">
           The reassurance lines under the buy button, one per line. Write{" "}
           {"{restaurant}"} and the restaurant&apos;s name is filled in.
         </p>
@@ -138,7 +138,7 @@ export default async function SettingsAdmin() {
 
       <form action={saveSettings} className="card space-y-3">
         <h2 className="font-semibold">The line under the headline</h2>
-        <p className="text-sm text-ink/60">
+        <p className="text-sm text-muted">
           The first thing a student reads. Reword it whenever the pitch changes.
         </p>
         <textarea

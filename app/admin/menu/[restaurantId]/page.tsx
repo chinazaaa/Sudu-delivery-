@@ -85,18 +85,29 @@ export default async function RestaurantAdmin({
         </div>
         <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm text-brand-dark">
           The banner is the big slide at the top of the shop and the logo is the
-          circle beside the name. Without them the storefront falls back to plain
-          colour, so paste image links here: upload to Supabase Storage, or use any
-          public image URL.
+          circle beside the name. Photograph the real food: it is the single thing
+          that decides whether the site looks worth ordering from.
         </p>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="label">Logo image URL</label>
-            <input name="logo_url" defaultValue={restaurant.logo_url} className="field" />
+            <label className="label" htmlFor="logo">Logo photo</label>
+            <input id="logo" name="logo" type="file" accept="image/*" className="field" />
+            <input
+              name="logo_url"
+              defaultValue={restaurant.logo_url}
+              placeholder="or paste an image link"
+              className="field mt-2 text-sm"
+            />
           </div>
           <div>
-            <label className="label">Banner image URL</label>
-            <input name="banner_url" defaultValue={restaurant.banner_url} className="field" />
+            <label className="label" htmlFor="banner">Banner photo</label>
+            <input id="banner" name="banner" type="file" accept="image/*" className="field" />
+            <input
+              name="banner_url"
+              defaultValue={restaurant.banner_url}
+              placeholder="or paste an image link"
+              className="field mt-2 text-sm"
+            />
           </div>
         </div>
         <div className="h-28 overflow-hidden rounded-xl">
@@ -113,7 +124,7 @@ export default async function RestaurantAdmin({
       <section className="card space-y-3">
         <div>
           <h2 className="font-bold">Categories</h2>
-          <p className="text-sm text-ink/55">
+          <p className="text-sm text-muted">
             How the menu is grouped on the site: Pizzas, Chicken, Sides, Drinks.
           </p>
         </div>
@@ -130,7 +141,7 @@ export default async function RestaurantAdmin({
             </li>
           ))}
           {categoryList.length === 0 && (
-            <li className="text-sm text-ink/55">None yet. Items will show under All.</li>
+            <li className="text-sm text-muted">None yet. Items will show under All.</li>
           )}
         </ul>
         <form action={addCategory} className="flex items-end gap-2">
@@ -156,7 +167,7 @@ export default async function RestaurantAdmin({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{item.name}</span>
-                  <span className="block text-sm text-ink/55">
+                  <span className="block text-sm text-muted">
                     {naira(item.price_food)}
                     {groups.length > 0 && ` · ${groups.map((g) => g.name).join(", ")}`}
                     {!item.available && " · sold out"}
@@ -211,8 +222,14 @@ export default async function RestaurantAdmin({
                     />
                   </div>
                   <div>
-                    <label className="label">Photo URL</label>
-                    <input name="image_url" defaultValue={item.image_url} className="field" />
+                    <label className="label">Photo</label>
+                    <input name="photo" type="file" accept="image/*" className="field" />
+                    <input
+                      name="image_url"
+                      defaultValue={item.image_url}
+                      placeholder="or paste an image link"
+                      className="field mt-2 text-sm"
+                    />
                   </div>
                   <button className="btn-quiet">Save item</button>
                 </form>
@@ -220,7 +237,7 @@ export default async function RestaurantAdmin({
                 <div className="space-y-3 rounded-xl bg-black/[0.03] p-3">
                   <div>
                     <h3 className="font-semibold">Choices</h3>
-                    <p className="text-sm text-ink/55">
+                    <p className="text-sm text-muted">
                       Size, flavour, extras. Each choice can add to the price, and what
                       the customer picks is printed on the counter sheet.
                     </p>
@@ -231,7 +248,7 @@ export default async function RestaurantAdmin({
                       <div className="flex items-baseline justify-between gap-2">
                         <h4 className="font-semibold">
                           {group.name}
-                          <span className="ml-2 text-xs font-normal text-ink/50">
+                          <span className="ml-2 text-xs font-normal text-muted">
                             {group.required ? "required" : "optional"}
                             {group.maxSelect > 1 && `, up to ${group.maxSelect}`}
                           </span>
@@ -360,11 +377,11 @@ export default async function RestaurantAdmin({
             <input name="description" className="field" />
           </div>
           <div>
-            <label className="label">Photo URL</label>
-            <input name="image_url" className="field" />
+            <label className="label">Photo</label>
+            <input name="photo" type="file" accept="image/*" className="field" />
           </div>
           <button className="btn-primary">Add item</button>
-          <p className="text-xs text-ink/50">
+          <p className="text-xs text-muted">
             Add the item first, then open it to give it sizes and flavours.
           </p>
         </form>

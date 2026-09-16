@@ -40,7 +40,7 @@ export default function PeopleBar() {
       >
         <span>
           <span className="block font-semibold">Ordering for friends?</span>
-          <span className="block text-sm text-ink/55">
+          <span className="block text-sm text-muted">
             Add their names and shop for each of them. Bags are labelled at the drop
             point.
           </span>
@@ -57,7 +57,7 @@ export default function PeopleBar() {
         <button
           type="button"
           onClick={clearPeople}
-          className="text-xs text-ink/45 hover:text-brand"
+          className="text-xs text-muted hover:text-brand"
         >
           Turn off group
         </button>
@@ -73,7 +73,7 @@ export default function PeopleBar() {
         >
           Me
           {unassigned > 0 && (
-            <span className={active === "" ? "text-white/70" : "text-ink/45"}>
+            <span className={active === "" ? "text-white/70" : "text-muted"}>
               {unassigned}
             </span>
           )}
@@ -92,7 +92,7 @@ export default function PeopleBar() {
               {person}
             </button>
             {countFor(person) > 0 && (
-              <span className={active === person ? "text-white/70" : "text-ink/45"}>
+              <span className={active === person ? "text-white/70" : "text-muted"}>
                 {countFor(person)}
               </span>
             )}
@@ -138,9 +138,9 @@ export default function PeopleBar() {
         )}
       </div>
 
-      <p className="text-xs text-ink/50">
+      <p className="text-xs text-muted">
         Everything you add now goes to{" "}
-        <span className="font-semibold text-ink/70">{active || "you"}</span>. Tap a name
+        <span className="font-semibold text-ink/75">{active || "you"}</span>. Tap a name
         to switch.
       </p>
     </div>

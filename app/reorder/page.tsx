@@ -26,12 +26,12 @@ export default async function ReorderPage({
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-bold tracking-tight">Order again</h1>
-        <p className="text-ink/70">
+        <p className="text-ink/75">
           Your phone number brings back your last order. No account, no password.
         </p>
         <PhoneLookup initial={(await searchParams).phone} />
         {phone && (
-          <p className="text-sm text-ink/70">
+          <p className="text-sm text-ink/75">
             Nothing found for that number.{" "}
             <Link href="/" className="text-brand underline">
               Order from the menu
@@ -84,7 +84,7 @@ export default async function ReorderPage({
             You have an order in the {weekdayLabel(openOrder.batch.run_date)}{" "}
             {SLOT_LABEL[openOrder.batch.slot]} batch
           </h2>
-          <p className="mt-1 text-sm text-ink/70">
+          <p className="mt-1 text-sm text-ink/75">
             {openOrder.items} item{openOrder.items === 1 ? "" : "s"}, closing{" "}
             {clockLabel(openOrder.batch.cut_off_at)}. Add to it and it goes in the same
             bag under your name. You only pay more delivery if the extra items push you
@@ -100,7 +100,7 @@ export default async function ReorderPage({
       )}
 
       <ReorderCard previous={view} batches={views} />
-      <p className="text-sm text-ink/60">
+      <p className="text-sm text-muted">
         Want something different?{" "}
         <Link href="/" className="text-brand underline">
           Build a new order

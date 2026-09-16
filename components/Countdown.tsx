@@ -35,12 +35,12 @@ export default function Countdown({
         {current.label} batch closes in {remaining(current.cutOffISO)}
       </p>
       {next ? (
-        <p className="text-ink/70">
+        <p className="text-ink/75">
           Next batch ({next.label}) closes in {remaining(next.cutOffISO)}. You can
           order for it now.
         </p>
       ) : (
-        <p className="text-ink/70">This is the last batch currently open.</p>
+        <p className="text-ink/75">This is the last batch currently open.</p>
       )}
     </div>
   );

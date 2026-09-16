@@ -74,7 +74,7 @@ export default async function RestaurantPage({
       {others.length > 0 && (
         <section className="space-y-3 border-t border-black/5 pt-6">
           <h2 className="text-lg font-bold">Add from another restaurant</h2>
-          <p className="text-sm text-ink/55">
+          <p className="text-sm text-muted">
             Mixing restaurants costs no extra delivery.
           </p>
           <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
@@ -94,7 +94,7 @@ export default async function RestaurantPage({
                 </span>
                 <span className="block p-3">
                   <span className="block font-bold">{other.restaurant.name}</span>
-                  <span className="block text-sm text-ink/55">
+                  <span className="block text-sm text-muted">
                     {other.items.length} item{other.items.length === 1 ? "" : "s"}
                   </span>
                 </span>

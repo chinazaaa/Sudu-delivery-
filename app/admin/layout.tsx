@@ -20,7 +20,7 @@ export default async function AdminLayout({
         <Link href="/admin/promoters" className="hover:underline">Promoters</Link>
         <Link href="/admin/settings" className="hover:underline">Settings</Link>
         <form action={logout} className="ml-auto">
-          <button type="submit" className="text-ink/50 hover:underline">Sign out</button>
+          <button type="submit" className="text-muted hover:underline">Sign out</button>
         </form>
       </nav>
       {children}

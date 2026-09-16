@@ -45,14 +45,14 @@ export default function ProductCard({
         <Link href={`/p/${item.id}`} className="min-w-0">
           <h3 className="truncate text-base font-bold leading-tight">{item.name}</h3>
           {item.description && (
-            <p className="mt-0.5 line-clamp-2 text-sm text-ink/55">{item.description}</p>
+            <p className="mt-0.5 line-clamp-2 text-sm text-muted">{item.description}</p>
           )}
         </Link>
 
         <div className="mt-auto flex items-center justify-between gap-2">
           <span className="text-lg font-extrabold">
             {item.groups.length > 0 && (
-              <span className="text-xs font-medium text-ink/50">from </span>
+              <span className="text-xs font-medium text-muted">from </span>
             )}
             {naira(item.price)}
           </span>

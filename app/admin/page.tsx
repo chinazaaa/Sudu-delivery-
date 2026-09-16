@@ -38,7 +38,7 @@ export default async function AdminHome() {
     <div className="space-y-4">
       <section className="card">
         <h1 className="text-lg font-semibold">Runs</h1>
-        <p className="text-sm text-ink/60">
+        <p className="text-sm text-muted">
           {weekTotal} order{weekTotal === 1 ? "" : "s"} across the batches below.
           Minimum is {BATCH_MINIMUM} per batch.
         </p>
@@ -46,7 +46,7 @@ export default async function AdminHome() {
 
       <details className="card">
         <summary className="cursor-pointer font-semibold">Create a run</summary>
-        <p className="mt-1 text-sm text-ink/60">
+        <p className="mt-1 text-sm text-muted">
           Fridays open themselves. Use this for any other day, including exam week
           and late-night runs.
         </p>
@@ -87,7 +87,7 @@ export default async function AdminHome() {
             />
           </div>
           <button className="btn-primary">Create run</button>
-          <p className="text-xs text-ink/50">
+          <p className="text-xs text-muted">
             Times are Lagos time. A day can hold one afternoon and one night batch;
             creating the same one again updates it.
           </p>
@@ -107,7 +107,7 @@ export default async function AdminHome() {
                   <p className="font-medium">
                     {runDateLabel(batch.run_date)} · {SLOT_LABEL[batch.slot]}
                   </p>
-                  <p className="text-sm text-ink/60">
+                  <p className="text-sm text-muted">
                     Cut-off {clockLabel(batch.cut_off_at)} · {batch.status}
                   </p>
                 </div>
@@ -115,7 +115,7 @@ export default async function AdminHome() {
                   <p className={`font-semibold ${short ? "text-brand" : "text-green-700"}`}>
                     {batch.paidCount}/{BATCH_MINIMUM}
                   </p>
-                  <p className="text-xs text-ink/50">
+                  <p className="text-xs text-muted">
                     {batch.orderCount - batch.paidCount} unpaid
                   </p>
                 </div>

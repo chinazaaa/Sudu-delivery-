@@ -33,7 +33,7 @@ export default function PinForm() {
           placeholder="4 digits"
           className="field"
         />
-        <p className="mt-1 text-xs text-ink/50">
+        <p className="mt-1 text-xs text-muted">
           We send your PIN on WhatsApp with your first order. Lost it? Message us and
           we will send it again.
         </p>

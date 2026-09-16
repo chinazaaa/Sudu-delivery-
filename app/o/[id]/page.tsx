@@ -32,11 +32,11 @@ export default async function OrderPage({
         <h1 className="text-xl font-bold">
           {order.customer_name}&apos;s order · {batchLabel}
         </h1>
-        <p className="text-sm text-ink/70">
+        <p className="text-sm text-ink/75">
           {runDateLabel(order.batch.run_date)} · {order.batch.delivery_window_text} ·{" "}
           {order.hostel}
         </p>
-        <p className="text-sm text-ink/70">
+        <p className="text-sm text-ink/75">
           Batch closes {clockLabel(order.batch.cut_off_at)}
         </p>
       </section>
@@ -48,9 +48,9 @@ export default async function OrderPage({
             <li key={line.id} className="flex justify-between">
               <span>
                 {line.qty}× {line.name}{" "}
-                <span className="text-ink/50">({line.restaurant})</span>
+                <span className="text-muted">({line.restaurant})</span>
                 {line.for_name && (
-                  <span className="text-ink/50"> · for {line.for_name}</span>
+                  <span className="text-muted"> · for {line.for_name}</span>
                 )}
               </span>
               <span>{naira(line.qty * line.unit_price_at_order)}</span>
@@ -88,7 +88,7 @@ export default async function OrderPage({
               <li key={share.id} className="flex justify-between gap-3">
                 <span>
                   {share.for_name ?? order.customer_name}
-                  {share.id === order.id && <span className="text-ink/50"> · this link</span>}
+                  {share.id === order.id && <span className="text-muted"> · this link</span>}
                 </span>
                 <span
                   className={
@@ -102,7 +102,7 @@ export default async function OrderPage({
             ))}
           </ul>
           {order.group.mode === "split" && (
-            <p className="text-xs text-ink/50">
+            <p className="text-xs text-muted">
               Send each person their own link. Anything still unpaid at the cut-off is
               dropped and the rest of the order still travels. If that makes the order
               smaller, the delivery fee drops with it and the difference comes back to
@@ -115,7 +115,7 @@ export default async function OrderPage({
       {order.refund_owed > 0 && (
         <section className="card">
           <h2 className="font-semibold">Refund owed: {naira(order.refund_owed)}</h2>
-          <p className="mt-1 text-sm text-ink/70">
+          <p className="mt-1 text-sm text-ink/75">
             Your group got smaller, so the delivery fee dropped a band. The difference
             comes back to you.
           </p>
@@ -125,7 +125,7 @@ export default async function OrderPage({
       {order.status === "paid" || order.status === "delivered" ? (
         <section className="card">
           <h2 className="font-semibold text-green-700">Paid. You are on the run.</h2>
-          <p className="mt-1 text-sm text-ink/70">
+          <p className="mt-1 text-sm text-ink/75">
             Come to the drop point at {order.batch.delivery_window_text.toLowerCase()}.
             Names are called from the list. No reminders will be sent, because paid is
             paid.
@@ -134,7 +134,7 @@ export default async function OrderPage({
       ) : order.status === "refunded" ? (
         <section className="card">
           <h2 className="font-semibold">Refunded</h2>
-          <p className="mt-1 text-sm text-ink/70">
+          <p className="mt-1 text-sm text-ink/75">
             This order was refunded in full. Sorry about that.{" "}
             <Link href="/" className="text-brand underline">
               order into the next batch
@@ -145,7 +145,7 @@ export default async function OrderPage({
       ) : expired ? (
         <section className="card">
           <h2 className="font-semibold">This link has expired</h2>
-          <p className="mt-1 text-sm text-ink/70">
+          <p className="mt-1 text-sm text-ink/75">
             The {batchLabel} batch has left. Nothing was charged.{" "}
             <Link href="/" className="text-brand underline">
               Order into the next batch
@@ -165,7 +165,7 @@ export default async function OrderPage({
                 <Row label="Account number" value={settings.bank_account_number} />
                 <Row label="Use as narration" value={formatPhone(order.customer_phone)} />
               </dl>
-              <p className="text-sm text-ink/70">
+              <p className="text-sm text-ink/75">
                 Put the phone number in the transfer narration. That is how the payment is
                 matched to this order. Transfer only, and no cash at the drop point.
               </p>
@@ -179,7 +179,7 @@ export default async function OrderPage({
           <CardPayment order={order} settings={settings} batchLabel={batchLabel} />
 
           <ShareLink label="Send this to whoever is paying" />
-          <p className="text-xs text-ink/50">
+          <p className="text-xs text-muted">
             Not paying yourself? Send the link. It shows the items and the total, and the
             order confirms once we see the money.
           </p>
@@ -187,7 +187,7 @@ export default async function OrderPage({
       )}
 
       {awaitingPayment && !expired && (
-        <p className="text-center text-xs text-ink/50">
+        <p className="text-center text-xs text-muted">
           Already paid? This page updates once the transfer is matched. Refresh it.
         </p>
       )}
@@ -221,7 +221,7 @@ function CardPayment({
   return (
     <div className="rounded-lg border border-black/10 p-3">
       <h3 className="font-medium">Paying by card instead?</h3>
-      <p className="mt-1 text-sm text-ink/70">{settings.card_note}</p>
+      <p className="mt-1 text-sm text-ink/75">{settings.card_note}</p>
       <a
         href={link}
         target="_blank"
@@ -244,7 +244,7 @@ function feeLabel(order: { lines: { qty: number }[]; for_name: string | null }):
 
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className={`flex justify-between gap-4 ${strong ? "font-semibold" : "text-ink/70"}`}>
+    <div className={`flex justify-between gap-4 ${strong ? "font-semibold" : "text-ink/75"}`}>
       <dt>{label}</dt>
       <dd className="text-right">{value}</dd>
     </div>

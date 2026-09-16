@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { addLine, addPerson, setActivePerson, usePeople } from "@/lib/cart";
 import { naira } from "@/lib/money";
@@ -16,7 +17,7 @@ export default function AddToCart({
   const { people, active } = usePeople();
   const [picked, setPicked] = useState<Record<string, string[]>>({});
   const [qty, setQty] = useState(1);
-  const [added, setAdded] = useState(false);
+  const [added, setAdded] = useState(0);
   const [forWho, setForWho] = useState(false);
   const [friend, setFriend] = useState("");
 
@@ -26,7 +27,7 @@ export default function AddToCart({
   const missing = item.groups.filter((g) => g.required && (picked[g.id] ?? []).length === 0);
 
   function toggle(groupId: string, optionId: string, maxSelect: number) {
-    setAdded(false);
+    setAdded(0);
     setPicked((current) => {
       const already = current[groupId] ?? [];
       if (maxSelect === 1) return { ...current, [groupId]: [optionId] };
@@ -55,7 +56,7 @@ export default function AddToCart({
       },
       qty
     );
-    setAdded(true);
+    setAdded((count) => count + qty);
   }
 
   return (
@@ -64,7 +65,7 @@ export default function AddToCart({
         <fieldset key={group.id} className="space-y-2">
           <legend className="flex w-full items-baseline justify-between gap-2 pb-1">
             <span className="font-semibold">{group.name}</span>
-            <span className="text-xs text-ink/50">
+            <span className="text-xs text-muted">
               {group.required ? "Required" : "Optional"}
               {group.maxSelect > 1 && ` · up to ${group.maxSelect}`}
             </span>
@@ -87,7 +88,7 @@ export default function AddToCart({
                 >
                   {option.name}
                   {option.priceDelta !== 0 && (
-                    <span className={isPicked ? "text-white/70" : "text-ink/50"}>
+                    <span className={isPicked ? "text-white/70" : "text-muted"}>
                       {option.priceDelta > 0 ? "+" : "−"}
                       {naira(Math.abs(option.priceDelta))}
                     </span>
@@ -130,16 +131,25 @@ export default function AddToCart({
             ? "Sold out today"
             : missing.length > 0
               ? `Choose ${missing[0].name.toLowerCase()}`
-              : added
-                ? "Added. Add more?"
-                : `Add${active ? ` for ${active}` : ""} · ${naira(unitPrice * qty)}`}
+              : `Add${active ? ` for ${active}` : ""} · ${naira(unitPrice * qty)}`}
         </button>
       </div>
+
+      {added > 0 && (
+        <p className="flex items-center justify-between gap-2 rounded-xl bg-mint/10 px-3 py-2 text-sm font-semibold text-mint">
+          <span>
+            {added} in your cart{active ? ` for ${active}` : ""}
+          </span>
+          <Link href="/checkout" className="underline">
+            View cart
+          </Link>
+        </p>
+      )}
 
       <div className="space-y-2">
         {people.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-ink/55">Adding for</span>
+            <span className="text-sm text-muted">Adding for</span>
             <button
               type="button"
               onClick={() => setActivePerson("")}

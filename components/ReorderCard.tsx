@@ -36,14 +36,14 @@ export default function ReorderCard({
 
       <div>
         <h2 className="font-semibold">Same again, {previous.name}?</h2>
-        <p className="text-sm text-ink/60">{previous.hostel}</p>
+        <p className="text-sm text-muted">{previous.hostel}</p>
       </div>
 
       <ul className="space-y-1 text-sm">
         {previous.lines.map((line) => (
           <li key={line.id}>
             {line.qty}× {line.name}{" "}
-            <span className="text-ink/50">({line.restaurant})</span>
+            <span className="text-muted">({line.restaurant})</span>
           </li>
         ))}
       </ul>
@@ -55,7 +55,7 @@ export default function ReorderCard({
       </p>
 
       {openable.length === 0 ? (
-        <p className="text-sm text-ink/70">No batch is open right now.</p>
+        <p className="text-sm text-ink/75">No batch is open right now.</p>
       ) : (
         <div>
           <label className="label" htmlFor="batch">Into which batch?</label>

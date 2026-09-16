@@ -6,6 +6,7 @@ import { db } from "@/lib/supabase";
 import { STAGES, type BatchStage } from "@/lib/stages";
 import { DELIVERY_WINDOWS, type BatchSlot } from "@/lib/config";
 import { lagosInstant } from "@/lib/time";
+import { fileFrom, uploadImage } from "@/lib/uploads";
 
 async function assertAdmin(): Promise<void> {
   if (!(await isSignedIn())) throw new Error("Not signed in.");
@@ -102,7 +103,10 @@ export async function updateMenuItem(form: FormData): Promise<void> {
       available: form.get("available") === "on",
       name: String(form.get("name") ?? "").trim() || undefined,
       description: String(form.get("description") ?? "").trim(),
-      image_url: String(form.get("image_url") ?? "").trim(),
+      // A new photo wins; otherwise whatever link is in the box stays.
+      image_url:
+        (await uploadImage(fileFrom(form, "photo"), "items")) ??
+        String(form.get("image_url") ?? "").trim(),
       category_id: String(form.get("category_id") ?? "") || null,
     })
     .eq("id", String(form.get("item_id")));
@@ -122,7 +126,9 @@ export async function addMenuItem(form: FormData): Promise<void> {
     name,
     price_food: Math.round(price),
     description: String(form.get("description") ?? "").trim(),
-    image_url: String(form.get("image_url") ?? "").trim(),
+    image_url:
+      (await uploadImage(fileFrom(form, "photo"), "items")) ??
+      String(form.get("image_url") ?? "").trim(),
     sort_order: 100,
   });
   revalidatePath("/admin/menu");
@@ -246,8 +252,12 @@ export async function updateRestaurant(form: FormData): Promise<void> {
       name: String(form.get("name") ?? "").trim() || undefined,
       address: String(form.get("address") ?? "").trim(),
       closes_at: String(form.get("closes_at") ?? "").trim() || undefined,
-      logo_url: String(form.get("logo_url") ?? "").trim(),
-      banner_url: String(form.get("banner_url") ?? "").trim(),
+      logo_url:
+        (await uploadImage(fileFrom(form, "logo"), "logos")) ??
+        String(form.get("logo_url") ?? "").trim(),
+      banner_url:
+        (await uploadImage(fileFrom(form, "banner"), "banners")) ??
+        String(form.get("banner_url") ?? "").trim(),
       // Off keeps a restaurant and its menu but takes it off the site, which is
       // how the brief adds Panarottis and the rest once the run is boring.
       active: form.get("active") === "on",

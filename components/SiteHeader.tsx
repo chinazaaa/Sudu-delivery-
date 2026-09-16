@@ -19,8 +19,8 @@ export default function SiteHeader({
   const link = (href: string, label: string) => (
     <Link
       href={href}
-      className={`rounded-full px-3 py-1.5 text-sm font-medium transition hover:bg-black/[0.04] ${
-        path === href ? "text-ink" : "text-ink/60"
+      className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold transition hover:bg-black/[0.04] ${
+        path === href ? "bg-black/[0.05] text-ink" : "text-muted"
       }`}
     >
       {label}
@@ -28,7 +28,7 @@ export default function SiteHeader({
   );
 
   return (
-    <header className="sticky top-0 z-30 border-b border-black/5 bg-paper/85 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-black/5 bg-paper/90 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
         <Link href="/" className="flex items-center gap-2">
           <span className="grid size-9 place-items-center rounded-xl bg-brand text-lg font-black text-white">
@@ -43,7 +43,7 @@ export default function SiteHeader({
             <Link
               key={restaurant.id}
               href={`/r/${restaurant.id}`}
-              className="rounded-full px-3 py-1.5 text-sm font-medium text-ink/60 transition hover:bg-black/[0.04] hover:text-ink"
+              className="rounded-full px-3 py-1.5 text-sm font-medium text-muted transition hover:bg-black/[0.04] hover:text-ink"
             >
               {restaurant.name}
             </Link>
@@ -69,13 +69,13 @@ export default function SiteHeader({
         </Link>
       </div>
 
-      <nav className="no-scrollbar flex gap-1 overflow-x-auto border-t border-black/5 px-4 py-1.5 sm:hidden">
+      <nav className="no-scrollbar flex gap-1 overflow-x-auto border-t border-black/5 px-4 py-2 sm:hidden [&>*]:shrink-0">
         {link("/", "Menu")}
         {restaurants.map((restaurant) => (
           <Link
             key={restaurant.id}
             href={`/r/${restaurant.id}`}
-            className="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium text-ink/60"
+            className="shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold text-muted"
           >
             {restaurant.name}
           </Link>

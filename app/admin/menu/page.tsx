@@ -24,7 +24,7 @@ export default async function RestaurantsAdmin() {
     <div className="space-y-4">
       <section>
         <h1 className="text-xl font-extrabold tracking-tight">Restaurants</h1>
-        <p className="text-sm text-ink/60">
+        <p className="text-sm text-muted">
           Each one holds its own categories, items and choices. Switch a restaurant off
           to take it off the site without losing its menu.
         </p>
@@ -35,7 +35,7 @@ export default async function RestaurantsAdmin() {
           <Diagnostic title={problem.title} detail={problem.detail} />
           <form action={seedLaunchRestaurants} className="card space-y-2">
             <h2 className="font-semibold">Start with the launch two</h2>
-            <p className="text-sm text-ink/60">
+            <p className="text-sm text-muted">
               Adds KFC Novare and Domino&apos;s with their usual items at placeholder
               prices.
             </p>
@@ -60,7 +60,7 @@ export default async function RestaurantsAdmin() {
               </span>
               <span className="min-w-0">
                 <span className="block truncate font-semibold">{restaurant.name}</span>
-                <span className="block text-sm text-ink/55">
+                <span className="block text-sm text-muted">
                   {countFor(restaurant.id)} item
                   {countFor(restaurant.id) === 1 ? "" : "s"} · closes{" "}
                   {restaurant.closes_at.slice(0, 5)}
@@ -69,7 +69,7 @@ export default async function RestaurantsAdmin() {
                   className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
                     restaurant.active
                       ? "bg-green-100 text-green-800"
-                      : "bg-black/[0.06] text-ink/60"
+                      : "bg-black/[0.06] text-muted"
                   }`}
                 >
                   {restaurant.active ? "On the site" : "Hidden"}

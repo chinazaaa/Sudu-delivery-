@@ -35,7 +35,7 @@ export default async function HomePage({
         nextRun={nextRun}
         initialRestaurantId={params.restaurant}
       />
-      <p className="pb-4 text-center text-sm text-ink/55">{settings.pitch_line}</p>
+      <p className="pb-4 text-center text-sm text-muted">{settings.pitch_line}</p>
     </div>
   );
 }

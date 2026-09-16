@@ -53,7 +53,7 @@ export default function Collection({ place }: { place: MenuView }) {
           <ProductCard key={item.id} item={item} restaurant={place.restaurant} />
         ))}
         {items.length === 0 && (
-          <p className="col-span-full text-sm text-ink/55">Nothing in this section yet.</p>
+          <p className="col-span-full text-sm text-muted">Nothing in this section yet.</p>
         )}
       </div>
     </div>

@@ -17,7 +17,7 @@ export default async function OrdersPage() {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-bold tracking-tight">My orders</h1>
-        <p className="text-ink/70">
+        <p className="text-ink/75">
           Your phone number and PIN bring back everything you have ordered. No account,
           no password.
         </p>
@@ -33,12 +33,12 @@ export default async function OrdersPage() {
       <div className="flex items-baseline justify-between gap-3">
         <h1 className="text-2xl font-bold tracking-tight">My orders</h1>
         <form action={forgetMe}>
-          <button className="text-sm text-ink/50 hover:underline">Not you?</button>
+          <button className="text-sm text-muted hover:underline">Not you?</button>
         </form>
       </div>
 
       {orders.length === 0 ? (
-        <p className="text-ink/70">Nothing here yet.</p>
+        <p className="text-ink/75">Nothing here yet.</p>
       ) : (
         <ul className="space-y-2">
           {orders.map((order) => (
@@ -48,12 +48,12 @@ export default async function OrdersPage() {
                   <span className="font-medium">
                     {weekdayLabel(order.batch.run_date)} {SLOT_LABEL[order.batch.slot]}
                     {order.for_name && (
-                      <span className="text-ink/50"> · {order.for_name}&apos;s share</span>
+                      <span className="text-muted"> · {order.for_name}&apos;s share</span>
                     )}
                   </span>
                   <span className="font-semibold">{naira(order.total)}</span>
                 </div>
-                <p className="text-sm text-ink/60">
+                <p className="text-sm text-muted">
                   {runDateLabel(order.batch.run_date)} ·{" "}
                   {order.lines.map((l) => `${l.qty}× ${l.name}`).join(", ")}
                 </p>
@@ -66,7 +66,7 @@ export default async function OrdersPage() {
         </ul>
       )}
 
-      <p className="text-sm text-ink/60">
+      <p className="text-sm text-muted">
         <Link href="/" className="text-brand underline">
           Order something new
         </Link>{" "}
@@ -88,7 +88,7 @@ function StatusLine({
   if (order.status === "pending") {
     return <span className="text-brand">Not paid yet. Tap to pay.</span>;
   }
-  if (order.status === "refunded") return <span className="text-ink/60">Refunded</span>;
+  if (order.status === "refunded") return <span className="text-muted">Refunded</span>;
   if (order.status === "delivered") return <span className="text-green-700">Delivered</span>;
   return <span className="text-green-700">Paid. {STAGE_LABEL[order.batch.stage]}</span>;
 }

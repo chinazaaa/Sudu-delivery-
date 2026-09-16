@@ -92,7 +92,7 @@ export default function Checkout({
     return (
       <div className="card mx-auto max-w-md text-center">
         <h1 className="text-lg font-bold">Your cart is empty</h1>
-        <p className="mt-1 text-sm text-ink/60">Pick something from the menu first.</p>
+        <p className="mt-1 text-sm text-muted">Pick something from the menu first.</p>
         <Link href="/" className="btn-primary mt-4 w-full">
           Back to the menu
         </Link>
@@ -126,7 +126,7 @@ export default function Checkout({
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-sm font-semibold">
                   {group.person || "You"}
-                  <span className="font-normal text-ink/50">
+                  <span className="font-normal text-muted">
                     {" "}· {group.items} item{group.items === 1 ? "" : "s"}
                   </span>
                 </h3>
@@ -142,7 +142,7 @@ export default function Checkout({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{line.name}</p>
-                    <p className="text-xs text-ink/50">
+                    <p className="text-xs text-muted">
                       {line.restaurantName}
                       {line.choices.length > 0 && ` · ${line.choices.join(", ")}`}
                     </p>
@@ -220,13 +220,13 @@ export default function Checkout({
           })}
         </select>
         {selected && (
-          <p className="text-sm text-ink/55">
+          <p className="text-sm text-muted">
             Orders close {selected.cutOffLabel}. {selected.deliveryWindow}.
             {selected.flashFee !== null && ` ${naira(selected.flashFee)} delivery today.`}
           </p>
         )}
         {adding && (
-          <p className="text-sm text-ink/55">
+          <p className="text-sm text-muted">
             Fixed to the run you are adding to, so it travels in one bag.
           </p>
         )}
@@ -237,7 +237,7 @@ export default function Checkout({
           <h2 className="font-bold">
             {groupOn ? "Who is in this order" : "Is this a group order?"}
           </h2>
-          <p className="text-sm text-ink/55">
+          <p className="text-sm text-muted">
             {groupOn
               ? "Bags are labelled with these names at the drop point."
               : "Turn it into one: add the names, then say whose each item is. The delivery fee does not change."}
@@ -248,7 +248,7 @@ export default function Checkout({
           {payingGroups.map((group, index) => (
             <span key={group.person || "me"} className="chip border-black/10 bg-white">
               {group.person || "You"}
-              <span className="text-ink/45">
+              <span className="text-muted">
                 {naira(group.food)}
                 {mode === "split" && ` + ${naira(feeShares[index] ?? 0)}`}
               </span>
@@ -354,7 +354,7 @@ export default function Checkout({
             className="field"
             autoComplete="tel"
           />
-          <p className="mt-1 text-xs text-ink/50">
+          <p className="mt-1 text-xs text-muted">
             This is how we find your order. No account needed.
           </p>
         </div>
@@ -373,11 +373,11 @@ export default function Checkout({
       <section className="card space-y-2">
         <h2 className="font-bold">Total</h2>
         <dl className="space-y-1 text-sm">
-          <div className="flex justify-between text-ink/70">
+          <div className="flex justify-between text-ink/75">
             <dt>Food</dt>
             <dd>{naira(subtotal)}</dd>
           </div>
-          <div className="flex justify-between text-ink/70">
+          <div className="flex justify-between text-ink/75">
             <dt>
               {alreadyCharged > 0
                 ? `Delivery top-up (${itemCount + alreadyItems} items in total)`
@@ -416,7 +416,7 @@ export default function Checkout({
           >
             {pending ? "Placing…" : `Place order · ${naira(total)}`}
           </button>
-          <p className="text-center text-xs text-ink/50">
+          <p className="text-center text-xs text-muted">
             Transfer details on the next screen, or message us to pay by card.
           </p>
         </div>

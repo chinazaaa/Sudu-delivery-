@@ -25,7 +25,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
         <SiteHeader restaurants={restaurants} />
         <main className="mx-auto max-w-5xl px-4 pb-24 pt-5">{children}</main>
-        <footer className="mx-auto max-w-5xl space-y-2 px-4 pb-10 text-xs text-ink/50">
+        <footer className="mx-auto max-w-5xl space-y-2 px-4 pb-10 text-xs text-muted">
           <p>
             Sangotedo to Pan-Atlantic University. Paid orders only, refunds the same
             night.

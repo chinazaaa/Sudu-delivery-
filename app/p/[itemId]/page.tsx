@@ -26,7 +26,7 @@ export default async function ProductPage({
 
   return (
     <div className="space-y-8">
-      <nav className="flex flex-wrap items-center gap-1 text-sm text-ink/50">
+      <nav className="flex flex-wrap items-center gap-1 text-sm text-muted">
         <Link href="/" className="hover:text-ink">Menu</Link>
         <span>/</span>
         <Link href={`/r/${place.restaurant.id}`} className="hover:text-ink">
@@ -51,7 +51,7 @@ export default async function ProductPage({
           <div>
             <Link
               href={`/r/${place.restaurant.id}`}
-              className="inline-flex items-center gap-2 text-sm font-medium text-ink/55 hover:text-ink"
+              className="inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-ink"
             >
               <span className="size-6 overflow-hidden rounded-md">
                 <Thumb
@@ -68,16 +68,16 @@ export default async function ProductPage({
             </h1>
             <p className="mt-1 text-2xl font-bold text-brand">{naira(item.price)}</p>
             {item.groups.length > 0 && (
-              <p className="text-sm text-ink/50">Before choices below</p>
+              <p className="text-sm text-muted">Before choices below</p>
             )}
             {item.description && (
-              <p className="mt-3 text-ink/70">{item.description}</p>
+              <p className="mt-3 text-ink/75">{item.description}</p>
             )}
           </div>
 
           <AddToCart item={item} restaurant={place.restaurant} />
 
-          <ul className="space-y-1 border-t border-black/5 pt-4 text-sm text-ink/60">
+          <ul className="space-y-1 border-t border-black/5 pt-4 text-sm text-muted">
             {productNotes(settings, place.restaurant.name).map((note) => (
               <li key={note}>{note}</li>
             ))}

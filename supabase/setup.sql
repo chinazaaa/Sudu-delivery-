@@ -320,5 +320,18 @@ join menu_items m on m.id = g.menu_item_id, (values
 where g.name = 'Size' and m.name = 'Medium pepperoni'
   and not exists (select 1 from item_options x where x.group_id = g.id);
 
+-- Somewhere to keep the photographs, readable by anyone since they are the
+-- pictures on a public menu.
+insert into storage.buckets (id, name, public)
+values ('menu', 'menu', true)
+on conflict (id) do update set public = true;
+
+-- Uploads come from the server with the service role, which bypasses these,
+-- but the files still have to be readable by a browser.
+do $$ begin
+  create policy "menu images are public" on storage.objects
+    for select using (bucket_id = 'menu');
+exception when duplicate_object then null; end $$;
+
 -- Supabase caches the schema; this makes the new tables visible immediately.
 notify pgrst, 'reload schema';

@@ -26,7 +26,7 @@ export default function FeeSummary({
       : `${itemCount} item${itemCount === 1 ? "" : "s"}`;
 
   return (
-    <div className="text-sm text-ink/60">
+    <div className="text-sm text-muted">
       <p>
         Delivery {naira(fee)} for {bandLabel}
         {alreadyCharged > 0 && ", topping up what you already paid"}
