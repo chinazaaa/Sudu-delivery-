@@ -122,6 +122,15 @@ export default async function SettingsAdmin() {
       </form>
 
       <form action={saveSettings} className="card space-y-3">
+        <h2 className="font-semibold">Footer line</h2>
+        <p className="text-sm text-muted">
+          The line at the bottom of every page.
+        </p>
+        <input name="footer_line" defaultValue={settings.footer_line} className="field" />
+        <button className="btn-primary">Save</button>
+      </form>
+
+      <form action={saveSettings} className="card space-y-3">
         <h2 className="font-semibold">Product page notes</h2>
         <p className="text-sm text-muted">
           The reassurance lines under the buy button, one per line. Write{" "}

@@ -10,6 +10,7 @@ export type Settings = {
   whatsapp_group_link: string;
   pitch_line: string;
   product_notes: string;
+  footer_line: string;
 };
 
 const EMPTY: Settings = {
@@ -22,6 +23,7 @@ const EMPTY: Settings = {
   whatsapp_group_link: "",
   pitch_line: "",
   product_notes: "",
+  footer_line: "",
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -29,7 +31,7 @@ export async function getSettings(): Promise<Settings> {
     .from("settings")
     .select(
       "bank_name, bank_account_name, bank_account_number, whatsapp_number, card_note, " +
-        "instagram_handle, whatsapp_group_link, pitch_line, product_notes"
+        "instagram_handle, whatsapp_group_link, pitch_line, product_notes, footer_line"
     )
     .eq("id", true)
     .maybeSingle();

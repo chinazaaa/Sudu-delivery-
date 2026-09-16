@@ -165,6 +165,7 @@ const SETTING_FIELDS = [
   "whatsapp_group_link",
   "pitch_line",
   "product_notes",
+  "footer_line",
 ] as const;
 
 export async function saveSettings(form: FormData): Promise<void> {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AddToCart from "@/components/AddToCart";
-import ProductCard from "@/components/ProductCard";
+
 import Thumb from "@/components/Thumb";
 import { menuView } from "@/lib/menu";
 import { productNotes, safeSettings } from "@/lib/settings";
@@ -40,9 +40,9 @@ export default async function ProductPage({
         )}
       </nav>
 
-      <div className="grid gap-6 sm:grid-cols-2">
-        <div className="overflow-hidden rounded-2xl border border-black/5 bg-white shadow-card">
-          <div className="aspect-square">
+      <div className="grid gap-6 sm:grid-cols-[320px_1fr]">
+        <div className="overflow-hidden rounded-2xl bg-paper shadow-card">
+          <div className="aspect-[4/3] sm:aspect-square">
             <Thumb src={item.imageUrl} name={item.name} rounded="rounded-none" />
           </div>
         </div>
@@ -87,16 +87,27 @@ export default async function ProductPage({
 
       {alsoFrom.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-bold">More from {place.restaurant.name}</h2>
+          <h2 className="section-title">More from {place.restaurant.name}</h2>
           <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-2">
             {alsoFrom.map((other) => (
-              <div key={other.id} className="w-44 shrink-0">
-                <ProductCard item={other} restaurant={place.restaurant} />
-              </div>
+              <Link
+                key={other.id}
+                href={`/p/${other.id}`}
+                className="w-40 shrink-0 overflow-hidden rounded-2xl bg-paper shadow-card"
+              >
+                <span className="block h-28">
+                  <Thumb src={other.imageUrl} name={other.name} rounded="rounded-none" />
+                </span>
+                <span className="block p-3">
+                  <span className="block truncate font-bold">{other.name}</span>
+                  <span className="block text-sm text-muted">{naira(other.price)}</span>
+                </span>
+              </Link>
             ))}
           </div>
         </section>
       )}
+
     </div>
   );
 }

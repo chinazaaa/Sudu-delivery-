@@ -86,6 +86,7 @@ export type Order = {
   group_id: string | null;
   for_name: string | null;
   refund_owed: number;
+  payment_method: "transfer" | "card";
 };
 
 export type OrderItem = {

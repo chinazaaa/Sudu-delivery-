@@ -32,6 +32,7 @@ export async function submitOrder(
     promoterCode:
       String(form.get("ref") ?? "") || (await cookies()).get("sudu_ref")?.value || null,
     groupMode: mode === "one_payer" || mode === "split" ? mode : null,
+    paymentMethod: String(form.get("payment_method") ?? "") === "card" ? "card" : "transfer",
   });
 
   if (!result.ok) return { error: result.error };

@@ -222,6 +222,11 @@ export default async function BatchPage({
               <li key={order.id} className="rounded-lg border border-black/10 p-3">
                 <p className="font-medium">
                   {order.for_name ?? order.customer_name} · {naira(order.total)}
+                  {order.payment_method === "card" && (
+                    <span className="ml-2 rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-white">
+                      wants a card link
+                    </span>
+                  )}
                   {order.for_name && (
                     <span className="text-muted"> · share of {order.customer_name}&apos;s group</span>
                   )}

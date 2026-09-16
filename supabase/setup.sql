@@ -21,6 +21,9 @@ exception when duplicate_object then null; end $$;
 do $$ begin create type group_mode as enum ('one_payer', 'split');
 exception when duplicate_object then null; end $$;
 
+do $$ begin create type payment_method as enum ('transfer', 'card');
+exception when duplicate_object then null; end $$;
+
 do $$ begin create type batch_stage as enum (
   'ordering', 'closed', 'at_counter', 'on_the_road', 'at_drop', 'handed_out');
 exception when duplicate_object then null; end $$;
@@ -141,6 +144,10 @@ alter table orders add column if not exists for_name    text;
 alter table orders add column if not exists refund_owed int not null default 0 check (refund_owed >= 0);
 create index if not exists orders_group_idx on orders (group_id);
 
+-- How the customer said they would pay, so the pay page shows the right thing
+-- and admin knows who is waiting on a card link.
+alter table orders add column if not exists payment_method payment_method not null default 'transfer';
+
 create table if not exists order_items (
   id                  uuid primary key default gen_random_uuid(),
   order_id            uuid not null references orders(id) on delete cascade,
@@ -235,6 +242,10 @@ alter table settings add column if not exists product_notes text not null defaul
   'Collected from {restaurant}, Sangotedo, on the next run.
 Delivery is charged once per order, by how many containers it is.
 Wrong or missing item, refunded in full the same night.';
+
+-- The line at the bottom of every page.
+alter table settings add column if not exists footer_line text not null default
+  'Sangotedo to Pan-Atlantic University. Paid orders only, refunds the same night.';
 
 insert into settings (id) values (true) on conflict (id) do nothing;
 

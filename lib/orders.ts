@@ -23,6 +23,8 @@ export type PlaceOrderInput = {
   promoterCode: string | null;
   /** Present when one person is carting for several (addendum §2). */
   groupMode?: GroupMode | null;
+  /** Transfer, or a card link sent by hand over WhatsApp. */
+  paymentMethod?: "transfer" | "card";
 };
 
 export type PlaceOrderResult =
@@ -68,9 +70,20 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   const returning = await isReturningCustomer(phone);
   const discount = !returning && promoterCode ? FIRST_ORDER_DISCOUNT : 0;
 
+  const paymentMethod = input.paymentMethod ?? "transfer";
+
   const result =
     input.groupMode === "split"
-      ? await placeSplitGroup({ batch, phone, name, hostel, lines: priced.lines, promoterCode, discount })
+      ? await placeSplitGroup({
+          batch,
+          phone,
+          name,
+          hostel,
+          lines: priced.lines,
+          promoterCode,
+          discount,
+          paymentMethod,
+        })
       : await placeSingleOrder({
           batch,
           phone,
@@ -80,6 +93,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           promoterCode,
           discount,
           groupMode: input.groupMode ?? null,
+          paymentMethod,
         });
 
   if (!result.ok) return result;
@@ -160,6 +174,7 @@ async function placeSingleOrder(args: {
   promoterCode: string | null;
   discount: number;
   groupMode: GroupMode | null;
+  paymentMethod: "transfer" | "card";
 }): Promise<PlaceOrderResult> {
   // Adding to an existing order is a second order to the same batch, not an
   // edit: the admin view merges by phone into one bag (addendum §3). Only the
@@ -188,6 +203,7 @@ async function placeSingleOrder(args: {
     promoter_code: args.promoterCode,
     group_id: group?.id ?? null,
     for_name: null,
+    payment_method: args.paymentMethod,
     lines: args.lines,
   });
 
@@ -209,6 +225,7 @@ async function placeSplitGroup(args: {
   lines: PricedLine[];
   promoterCode: string | null;
   discount: number;
+  paymentMethod: "transfer" | "card";
 }): Promise<PlaceOrderResult> {
   const byPerson = new Map<string, PricedLine[]>();
   for (const line of args.lines) {
@@ -244,6 +261,7 @@ async function placeSplitGroup(args: {
       promoter_code: args.promoterCode,
       group_id: group.id,
       for_name: who,
+      payment_method: args.paymentMethod,
       lines,
     });
     if (!id) return { ok: false, error: "Could not save that group order." };
@@ -282,6 +300,7 @@ async function insertOrder(args: {
   promoter_code: string | null;
   group_id: string | null;
   for_name: string | null;
+  payment_method: "transfer" | "card";
   lines: PricedLine[];
 }): Promise<string | null> {
   const total = Math.max(0, args.subtotal_food + args.fee - args.discount);
@@ -300,6 +319,7 @@ async function insertOrder(args: {
       promoter_code: args.promoter_code,
       group_id: args.group_id,
       for_name: args.for_name,
+      payment_method: args.payment_method,
       status: "pending",
     })
     .select("id")

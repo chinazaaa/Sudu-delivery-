@@ -54,7 +54,7 @@ export default function SiteHeader({
         </nav>
 
         <Link
-          href="/checkout"
+          href="/cart"
           className="ml-auto inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink/85"
         >
           <span aria-hidden>🛒</span>

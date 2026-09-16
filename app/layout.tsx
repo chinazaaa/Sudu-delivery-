@@ -26,10 +26,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <SiteHeader restaurants={restaurants} />
         <main className="mx-auto max-w-5xl px-4 pb-24 pt-5">{children}</main>
         <footer className="mx-auto max-w-5xl space-y-2 px-4 pb-10 text-xs text-muted">
-          <p>
-            Sangotedo to Pan-Atlantic University. Paid orders only, refunds the same
-            night.
-          </p>
+          <p>{settings.footer_line}</p>
           {(instagram || settings.whatsapp_group_link) && (
             <p className="flex gap-4">
               {instagram && (

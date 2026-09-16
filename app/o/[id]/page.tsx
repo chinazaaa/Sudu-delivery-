@@ -157,7 +157,11 @@ export default async function OrderPage({
         <section className="card space-y-3">
           <h2 className="font-semibold">Pay {naira(order.total)} to confirm</h2>
           <ExpiryNote cutOffISO={order.batch.cut_off_at} />
-          {hasBankDetails(settings) ? (
+          {order.payment_method === "card" ? (
+            <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
+              You chose to pay by card. Message us and we will send you a card link.
+            </p>
+          ) : hasBankDetails(settings) ? (
             <>
               <dl className="space-y-1 rounded-lg bg-black/5 px-3 py-2 text-sm">
                 <Row label="Bank" value={settings.bank_name} />
