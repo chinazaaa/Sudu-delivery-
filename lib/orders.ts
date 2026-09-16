@@ -25,6 +25,8 @@ export type PlaceOrderInput = {
   groupMode?: GroupMode | null;
   /** Transfer, or a card link sent by hand over WhatsApp. */
   paymentMethod?: "transfer" | "card";
+  /** Whether one person collects every bag, or everyone collects their own. */
+  collectMode?: "leader" | "each";
 };
 
 export type PlaceOrderResult =
@@ -71,6 +73,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   const discount = !returning && promoterCode ? FIRST_ORDER_DISCOUNT : 0;
 
   const paymentMethod = input.paymentMethod ?? "transfer";
+  const collectMode = input.collectMode ?? "leader";
 
   const result =
     input.groupMode === "split"
@@ -83,6 +86,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           promoterCode,
           discount,
           paymentMethod,
+          collectMode,
         })
       : await placeSingleOrder({
           batch,
@@ -94,6 +98,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           discount,
           groupMode: input.groupMode ?? null,
           paymentMethod,
+          collectMode,
         });
 
   if (!result.ok) return result;
@@ -175,6 +180,7 @@ async function placeSingleOrder(args: {
   discount: number;
   groupMode: GroupMode | null;
   paymentMethod: "transfer" | "card";
+  collectMode: "leader" | "each";
 }): Promise<PlaceOrderResult> {
   // Adding to an existing order is a second order to the same batch, not an
   // edit: the admin view merges by phone into one bag (addendum §3). Only the
@@ -188,7 +194,7 @@ async function placeSingleOrder(args: {
 
   let group: OrderGroup | null = null;
   if (args.groupMode === "one_payer") {
-    group = await createGroup(args, "one_payer");
+    group = await createGroup(args, "one_payer", args.collectMode);
     if (!group) return { ok: false, error: "Could not start that group order." };
   }
 
@@ -226,6 +232,7 @@ async function placeSplitGroup(args: {
   promoterCode: string | null;
   discount: number;
   paymentMethod: "transfer" | "card";
+  collectMode: "leader" | "each";
 }): Promise<PlaceOrderResult> {
   const byPerson = new Map<string, PricedLine[]>();
   for (const line of args.lines) {
@@ -236,7 +243,7 @@ async function placeSplitGroup(args: {
     return { ok: false, error: "Tag items with at least two names to split payment." };
   }
 
-  const group = await createGroup(args, "split");
+  const group = await createGroup(args, "split", args.collectMode);
   if (!group) return { ok: false, error: "Could not start that group order." };
 
   // The band is set by the whole load, then shared out by what each person got.
@@ -273,7 +280,8 @@ async function placeSplitGroup(args: {
 
 async function createGroup(
   args: { batch: Batch; phone: string; name: string; hostel: string },
-  mode: GroupMode
+  mode: GroupMode,
+  collectMode: "leader" | "each"
 ): Promise<OrderGroup | null> {
   const { data } = await db()
     .from("order_groups")
@@ -283,6 +291,7 @@ async function createGroup(
       leader_name: args.name,
       hostel: args.hostel,
       mode,
+      collect_mode: collectMode,
     })
     .select("*")
     .single();

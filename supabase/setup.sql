@@ -21,6 +21,11 @@ exception when duplicate_object then null; end $$;
 do $$ begin create type group_mode as enum ('one_payer', 'split');
 exception when duplicate_object then null; end $$;
 
+-- Who picks the food up at the drop point. Paying and collecting are different
+-- questions: one person can pay while four collect their own bags.
+do $$ begin create type collect_mode as enum ('leader', 'each');
+exception when duplicate_object then null; end $$;
+
 do $$ begin create type payment_method as enum ('transfer', 'card');
 exception when duplicate_object then null; end $$;
 
@@ -115,6 +120,7 @@ create table if not exists order_groups (
   created_at   timestamptz not null default now()
 );
 create index if not exists order_groups_batch_idx on order_groups (batch_id);
+alter table order_groups add column if not exists collect_mode collect_mode not null default 'leader';
 
 create table if not exists orders (
   id             uuid primary key default gen_random_uuid(),

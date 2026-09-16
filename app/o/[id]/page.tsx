@@ -101,6 +101,12 @@ export default async function OrderPage({
               </li>
             ))}
           </ul>
+          <p className="rounded-xl bg-black/[0.03] px-3 py-2 text-sm">
+            {order.group.collect_mode === "each"
+              ? "Everyone collects their own bag. Each name is called at the drop point."
+              : `${order.group.leader_name} collects every bag and hands them out.`}
+          </p>
+
           {order.group.mode === "split" && (
             <p className="text-xs text-muted">
               Send each person their own link. Anything still unpaid at the cut-off is

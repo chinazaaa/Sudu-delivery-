@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import BottomNav from "@/components/BottomNav";
 import SiteHeader from "@/components/SiteHeader";
 import { instagramLink, safeSettings } from "@/lib/settings";
-import { openRestaurants } from "@/lib/menu";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [settings, restaurants] = await Promise.all([safeSettings(), openRestaurants()]);
+  const settings = await safeSettings();
   const instagram = instagramLink(settings.instagram_handle);
   return (
     <html lang="en">
@@ -23,8 +23,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
-        <SiteHeader restaurants={restaurants} />
-        <main className="mx-auto max-w-5xl px-4 pb-24 pt-5">{children}</main>
+        <SiteHeader />
+        <main className="mx-auto max-w-5xl px-4 pb-28 pt-4 sm:pb-24">{children}</main>
         <footer className="mx-auto max-w-5xl space-y-2 px-4 pb-10 text-xs text-muted">
           <p>{settings.footer_line}</p>
           {(instagram || settings.whatsapp_group_link) && (
@@ -47,6 +47,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </p>
           )}
         </footer>
+        <BottomNav />
       </body>
     </html>
   );

@@ -105,6 +105,7 @@ export type OrderGroup = {
   leader_name: string;
   hostel: string;
   mode: GroupMode;
+  collect_mode: "leader" | "each";
   created_at: string;
 };
 

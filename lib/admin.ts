@@ -92,7 +92,7 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   return {
     batch,
     counter: groupForCounter(lines.filter((l) => paidIds.has(l.order_id))),
-    handout: bagsFor(paid.map(withLines)),
+    handout: bagsFor(paid.map(withLines), await collectingSeparately(batchId)),
     unpaid: unpaid.map(withLines),
     refunds: await refundsOwed(batchId),
     pins: await pinsFor(orders.map((o) => o.customer_phone)),
@@ -108,6 +108,16 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   };
 }
 
+/** Groups in this batch where each person collects their own bag. */
+async function collectingSeparately(batchId: string): Promise<Set<string>> {
+  const { data } = await db()
+    .from("order_groups")
+    .select("id, collect_mode")
+    .eq("batch_id", batchId)
+    .eq("collect_mode", "each");
+  return new Set((data ?? []).map((row) => row.id as string));
+}
+
 async function pinsFor(phones: string[]): Promise<Record<string, string>> {
   const unique = [...new Set(phones)];
   if (unique.length === 0) return {};
@@ -121,19 +131,25 @@ async function pinsFor(phones: string[]): Promise<Record<string, string>> {
  * payment link each still bags under the name on each share, so the labels
  * match what was ordered.
  */
-function bagsFor(orders: HandoutOrder[]): HandoutBag[] {
+function bagsFor(
+  orders: HandoutOrder[],
+  collectByPerson: Set<string>
+): HandoutBag[] {
   const bags = new Map<string, HandoutBag>();
 
   for (const order of orders) {
-    // A split share is bagged under the person it is for; everything else
-    // under the phone that ordered it.
-    const key = order.for_name
-      ? `${order.customer_phone}|${order.for_name}`
-      : order.customer_phone;
+    // Whoever is collecting decides how this is bagged. If one person takes
+    // everything, it is one name to call; if everyone collects their own, each
+    // name is called separately.
+    const separate = order.group_id !== null && collectByPerson.has(order.group_id);
+    const key =
+      separate && order.for_name
+        ? `${order.customer_phone}|${order.for_name}`
+        : order.customer_phone;
 
     const bag = bags.get(key) ?? {
       key,
-      name: order.for_name ?? order.customer_name,
+      name: separate && order.for_name ? order.for_name : order.customer_name,
       hostel: order.hostel,
       phone: order.customer_phone,
       orders: [],

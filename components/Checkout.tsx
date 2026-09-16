@@ -36,6 +36,7 @@ export default function Checkout({
   const [batchId, setBatchId] = useState(adding?.batchId ?? openable[0]?.id ?? "");
   const [method, setMethod] = useState<"transfer" | "card">("transfer");
   const [mode, setMode] = useState<GroupMode>("one_payer");
+  const [collect, setCollect] = useState<"leader" | "each">("leader");
   const [now, setNow] = useState<number | null>(null);
   const [state, action, pending] = useActionState<SubmitState, FormData>(submitOrder, {
     error: null,
@@ -89,6 +90,7 @@ export default function Checkout({
       <input type="hidden" name="batch_id" value={batchId} />
       <input type="hidden" name="group_mode" value={groupOn ? mode : ""} />
       <input type="hidden" name="payment_method" value={method} />
+      <input type="hidden" name="collect_mode" value={collect} />
       {promoter && <input type="hidden" name="ref" value={promoter.code} />}
 
       <h1 className="text-2xl font-extrabold">Checkout</h1>
@@ -184,6 +186,32 @@ export default function Checkout({
           </ul>
 
           <fieldset className="space-y-2 border-t border-black/5 pt-3">
+            <legend className="label">Who collects at the drop point?</legend>
+            <label className="flex gap-2 text-sm">
+              <input
+                type="radio"
+                checked={collect === "leader"}
+                onChange={() => setCollect("leader")}
+              />
+              <span>
+                <span className="font-semibold">I collect everything.</span> One name is
+                called, I take all the bags and hand them out myself.
+              </span>
+            </label>
+            <label className="flex gap-2 text-sm">
+              <input
+                type="radio"
+                checked={collect === "each"}
+                onChange={() => setCollect("each")}
+              />
+              <span>
+                <span className="font-semibold">Each person collects their own.</span>{" "}
+                Every name is called separately at the drop point.
+              </span>
+            </label>
+          </fieldset>
+
+          <fieldset className="space-y-2 border-t border-black/5 pt-3">
             <legend className="label">Who pays?</legend>
             <label className="flex gap-2 text-sm">
               <input
@@ -262,7 +290,7 @@ export default function Checkout({
         )}
       </section>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-black/5 bg-paper p-3 shadow-bar">
+      <div className="fixed inset-x-0 bottom-[68px] z-30 border-t border-black/5 bg-paper p-3 shadow-bar sm:bottom-0">
         <div className="mx-auto max-w-2xl space-y-2">
           {state.error && (
             <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
