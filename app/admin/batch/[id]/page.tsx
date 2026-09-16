@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import HandoutList from "@/components/HandoutList";
 import { batchSheet } from "@/lib/admin";
@@ -6,11 +7,16 @@ import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { clockLabel, runDateLabel } from "@/lib/time";
 import { bandTable } from "@/lib/fees";
+import { confirmationMessage, whatsappTo } from "@/lib/messages";
+import { getSettings } from "@/lib/settings";
+import { sheetAsText } from "@/lib/sheet-text";
+import { STAGES, STAGE_ACTION } from "@/lib/stages";
 import {
   markDelivered,
   markPaid,
   refundOrder,
   setBatchCapacity,
+  setBatchStage,
   setBatchStatus,
   setFlashFee,
 } from "../../actions";
@@ -25,8 +31,31 @@ export default async function BatchPage({
   const sheet = await batchSheet((await params).id);
   if (!sheet) notFound();
 
-  const { batch, counter, handout, unpaid, summary, refunds } = sheet;
+  const { batch, counter, handout, unpaid, summary, refunds, pins } = sheet;
   const belowMinimum = summary.paidCount < summary.minimum;
+
+  const settings = await getSettings();
+  // Links inside the messages have to be absolute, so they are built from the
+  // request rather than from another environment variable to keep in sync.
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("host") ?? "";
+  const proto = requestHeaders.get("x-forwarded-proto") ?? "https";
+  const siteUrl = host ? `${proto}://${host}` : "";
+  const batchLabel = `${runDateLabel(batch.run_date)} ${SLOT_LABEL[batch.slot]}`;
+
+  const messageFor = (order: (typeof unpaid)[number]) =>
+    whatsappTo(
+      order.customer_phone,
+      confirmationMessage({
+        order,
+        settings,
+        pin: pins[order.customer_phone] ?? null,
+        siteUrl,
+        deliveryWindow: batch.delivery_window_text,
+        runDate: batch.run_date,
+        slot: batch.slot,
+      })
+    );
 
   return (
     <div className="space-y-4">
@@ -60,6 +89,50 @@ export default async function BatchPage({
             carry it. A short batch loses money the next one has to cover.
           </p>
         )}
+      </section>
+
+      <section className="card space-y-3">
+        <h2 className="font-semibold">Where the run is</h2>
+        <p className="text-sm text-ink/60">
+          Tap a stage as you reach it. Everyone in this batch sees it on their order
+          page.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {STAGES.filter((stage) => stage !== "ordering").map((stage) => (
+            <form action={setBatchStage} key={stage}>
+              <input type="hidden" name="batch_id" value={batch.id} />
+              <input type="hidden" name="stage" value={stage} />
+              <button
+                className={
+                  batch.stage === stage
+                    ? "btn-primary px-3 py-1 text-sm"
+                    : "btn-quiet px-3 py-1 text-sm"
+                }
+              >
+                {STAGE_ACTION[stage]}
+              </button>
+            </form>
+          ))}
+        </div>
+      </section>
+
+      <section className="card space-y-2">
+        <h2 className="font-semibold">Take the run with you</h2>
+        <p className="text-sm text-ink/60">
+          Send the whole sheet to your own WhatsApp before leaving. Campus signal is
+          bad at night, and a message in a chat still opens with no data.
+        </p>
+        <a
+          href={whatsappTo(
+            settings.whatsapp_number || "0",
+            sheetAsText(sheet, batchLabel)
+          )}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-quiet w-full"
+        >
+          Send this sheet to WhatsApp
+        </a>
       </section>
 
       <section className="card space-y-3">
@@ -114,6 +187,14 @@ export default async function BatchPage({
                       {bag.name} · {order.status}
                     </span>
                     <span className="flex gap-2">
+                      <a
+                        href={messageFor(order)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-quiet px-2 py-1 text-xs"
+                      >
+                        Confirm on WhatsApp
+                      </a>
                       <form action={markDelivered}>
                         <input type="hidden" name="order_id" value={order.id} />
                         <button className="btn-quiet px-2 py-1 text-xs">Delivered</button>
@@ -151,6 +232,14 @@ export default async function BatchPage({
                 <p className="text-sm">
                   {order.lines.map((l) => `${l.qty}× ${l.name}`).join(", ")}
                 </p>
+                <a
+                  href={messageFor(order)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-quiet mt-2 w-full text-sm"
+                >
+                  Send payment details on WhatsApp
+                </a>
                 <form action={markPaid} className="mt-2 flex gap-2">
                   <input type="hidden" name="order_id" value={order.id} />
                   <input

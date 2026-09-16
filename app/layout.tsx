@@ -20,9 +20,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Link href="/" className="text-lg font-bold tracking-tight">
               Sudu <span className="text-brand">Delivery</span>
             </Link>
-            <Link href="/reorder" className="text-sm font-medium text-brand hover:underline">
-              Order again
-            </Link>
+            <nav className="flex gap-4 text-sm font-medium">
+              <Link href="/reorder" className="text-brand hover:underline">
+                Order again
+              </Link>
+              <Link href="/orders" className="text-brand hover:underline">
+                My orders
+              </Link>
+            </nav>
           </div>
         </header>
         <main className="mx-auto max-w-3xl px-4 pb-24 pt-6">{children}</main>

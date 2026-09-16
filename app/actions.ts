@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { placeOrder } from "@/lib/orders";
 import { lastOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
+import { checkPin, signInCustomer, signOutCustomer } from "@/lib/customer-auth";
 import type { CartLine } from "@/lib/types";
 
 export type SubmitState = { error: string | null };
@@ -70,4 +71,29 @@ export async function lookupLastOrder(
   const phone = normalisePhone(String(form.get("phone") ?? ""));
   if (!phone) return { error: "That phone number doesn't look right." };
   redirect(`/reorder?phone=${phone}`);
+}
+
+export type PinState = { error: string | null };
+
+/**
+ * Order history is unlocked with a phone number and the four digit PIN we give
+ * out on WhatsApp. No signup, no password to reset.
+ */
+export async function signInWithPin(
+  _prev: PinState,
+  form: FormData
+): Promise<PinState> {
+  const phone = normalisePhone(String(form.get("phone") ?? ""));
+  if (!phone) return { error: "That phone number doesn't look right." };
+
+  const result = await checkPin(phone, String(form.get("pin") ?? ""));
+  if (!result.ok) return { error: result.error };
+
+  await signInCustomer(phone);
+  redirect("/orders");
+}
+
+export async function forgetMe(): Promise<void> {
+  await signOutCustomer();
+  redirect("/orders");
 }

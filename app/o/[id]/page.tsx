@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ExpiryNote from "@/components/ExpiryNote";
+import StageTimeline from "@/components/StageTimeline";
 import ShareLink from "@/components/ShareLink";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
@@ -65,6 +66,17 @@ export default async function OrderPage({
           <Row label="Total" value={naira(order.total)} strong />
         </dl>
       </section>
+
+      {(order.status === "paid" || order.status === "delivered") &&
+        order.batch.stage !== "ordering" && (
+          <section className="card space-y-2">
+            <h2 className="font-semibold">Where your food is</h2>
+            <StageTimeline
+              stage={order.batch.stage}
+              updatedAt={order.batch.stage_updated_at}
+            />
+          </section>
+        )}
 
       {order.group && order.shares.length > 1 && (
         <section className="card space-y-2">

@@ -4,6 +4,9 @@ import { groupForCounter } from "../lib/admin";
 import { normalisePhone, formatPhone } from "../lib/phone";
 import { countdown, lagosInstant, lagosToday } from "../lib/time";
 import { bandFor, feeFor, nextBand, splitFee, HEADLINE_FEE } from "../lib/fees";
+import { sheetAsText } from "../lib/sheet-text";
+import { whatsappTo } from "../lib/messages";
+import { newPin } from "../lib/customer-auth";
 import type { OrderLine } from "../lib/orders";
 
 test("phone numbers normalise to one identity however they are typed", () => {
@@ -156,4 +159,48 @@ test("adding to an order charges only the difference in band", () => {
 
   // Staying inside the same band costs nothing extra.
   assert.equal(Math.max(0, feeFor(1 + 1) - feeFor(1)), 0);
+});
+
+
+test("the run sheet reads as plain text that survives a dead signal", () => {
+  const sheet: any = {
+    counter: [
+      {
+        restaurant: "KFC Novare",
+        lines: [{ name: "8pc bucket", qty: 3, unitPrice: 18000 }],
+        expectedFoodTotal: 54000,
+      },
+    ],
+    handout: [
+      {
+        key: "k",
+        name: "Ada",
+        hostel: "Blue Block",
+        phone: "08031234567",
+        orders: [],
+        lines: [{ qty: 1, name: "8pc bucket" }],
+      },
+    ],
+    unpaid: [{ for_name: null, customer_name: "Chidi", total: 14666 }],
+    summary: { paidCount: 1, minimum: 8, foodCost: 54000, net: 4000 },
+  };
+
+  const text = sheetAsText(sheet, "Friday night");
+  assert.match(text, /SUDU RUN: Friday night/);
+  assert.match(text, /3 x 8pc bucket/);
+  assert.match(text, /pay about ₦54,000/);
+  assert.match(text, /Ada \(Blue Block\) 0803 123 4567/);
+  assert.match(text, /NOT PAID, DO NOT TAKE/);
+  assert.match(text, /Chidi ₦14,666/);
+});
+
+test("a WhatsApp link carries a Nigerian number in international form", () => {
+  assert.match(whatsappTo("08031112222", "hi"), /^https:\/\/wa\.me\/2348031112222\?text=hi$/);
+  assert.match(whatsappTo("2348031112222", "hi"), /wa\.me\/2348031112222/);
+});
+
+test("PINs are four digits, zero padded", () => {
+  for (let i = 0; i < 200; i++) {
+    assert.match(newPin(), /^\d{4}$/);
+  }
 });

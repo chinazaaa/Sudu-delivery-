@@ -34,6 +34,8 @@ export type BatchSheet = {
   handout: HandoutBag[];
   unpaid: HandoutOrder[];
   refunds: Order[];
+  /** Phone to PIN, for the confirmation message. */
+  pins: Record<string, string>;
   summary: {
     paidCount: number;
     unpaidCount: number;
@@ -88,6 +90,7 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
     handout: bagsFor(paid.map(withLines)),
     unpaid: unpaid.map(withLines),
     refunds: await refundsOwed(batchId),
+    pins: await pinsFor(orders.map((o) => o.customer_phone)),
     summary: {
       paidCount: paid.length,
       unpaidCount: unpaid.length,
@@ -98,6 +101,14 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
       net: sum(paid, (o) => o.total - o.subtotal_food) - commission,
     },
   };
+}
+
+async function pinsFor(phones: string[]): Promise<Record<string, string>> {
+  const unique = [...new Set(phones)];
+  if (unique.length === 0) return {};
+
+  const { data } = await db().from("customers").select("phone, pin").in("phone", unique);
+  return Object.fromEntries((data ?? []).map((row) => [row.phone as string, row.pin as string]));
 }
 
 /**

@@ -1,4 +1,5 @@
 import type { BatchSlot } from "./config";
+import type { BatchStage } from "./stages";
 
 export type Restaurant = {
   id: string;
@@ -30,6 +31,8 @@ export type Batch = {
   capacity: number | null;
   flash_fee: number | null;
   flash_fee_reason: string;
+  stage: BatchStage;
+  stage_updated_at: string;
 };
 
 export type OrderStatus = "pending" | "paid" | "refunded" | "delivered";

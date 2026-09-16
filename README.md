@@ -31,6 +31,12 @@ a batch cut-off, and the admin screen the driver reads at the counter.
 - Order page that doubles as a **pay-by-link**: it shows the name, items and
   total, and expires at the batch cut-off, so it can be sent to a parent or
   partner to pay
+- **My orders**: a phone number plus a four digit PIN shows every order placed,
+  with status and pay links. No signup and no password to reset. The PIN is
+  generated on the first order and you send it on WhatsApp
+- **Where your food is**: a shared batch stage (closed, at the counter, on the
+  road, at the drop point, handed out) on every paid order. No rider app and no
+  GPS, so there is nothing to break on the road
 - **One-tap reorder.** A phone number brings back the last order and drops it
   into the next open batch at today's prices
 - **Promoter links** (`/?ref=CODE`): ₦500 off the customer's first order, and
@@ -55,6 +61,13 @@ a batch cut-off, and the admin screen the driver reads at the counter.
   commission owed, net before fuel and driver
 - Menu editor (a price changes in under a minute), promoter list with
   per-promoter order counts, and batch status/capacity controls
+- **Stage buttons**: one tap per stage of the run, seen by everyone in the batch
+- **WhatsApp templates**: every order has a click to send message, pre-filled
+  with the confirmation or the transfer details, the order link, and the
+  customer's PIN. Nothing is sent automatically and there is no SMS bill
+- **Take the run with you**: the whole sheet (counter list, handout list, unpaid
+  names, totals) sent to your own WhatsApp as text, so it still opens at the
+  gate with no signal
 - **Settings**: bank details, the WhatsApp number card payers are sent to, the
   Instagram handle and PAU group link shown in the footer, and the line the
   home page opens with. Each section saves on its own, so editing one never
@@ -74,8 +87,13 @@ Paystack or Flutterwave and nothing automated:
 - The order page is itself the shareable link: send it to a parent or partner
   and they see the items, the total and the same bank details
 
-**Deliberately not built:** wallets, accounts, live tracking, ratings, a rider
-app, the run pass. `payment_ref` and `paid_at` exist on every order from day
+PINs are stored as plain four digit numbers, because you have to be able to
+read one off the admin screen and send it. They guard order history and nothing
+else: no money moves and no details change behind them. Five wrong tries lock a
+number for fifteen minutes.
+
+**Deliberately not built:** wallets, passworded accounts, live GPS tracking,
+ratings, a rider app, the run pass. `payment_ref` and `paid_at` exist on every order from day
 one, so if a gateway is ever wanted it slots in without a migration.
 
 ## Running it
@@ -100,6 +118,7 @@ Apply the schema in the Supabase SQL editor, in order:
    orders and per-item name tags
 5. `supabase/migrations/0005_social_and_pitch.sql`: handles and the home page
    pitch line
+6. `supabase/migrations/0006_pins_and_stages.sql`: customer PINs and run stages
 
 Then fill in **Admin, Settings** before ordering opens. Until the bank details
 are set, the pay page says so rather than showing a blank account number.

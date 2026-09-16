@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { isSignedIn, passwordMatches, signIn, signOut } from "@/lib/admin-auth";
 import { db } from "@/lib/supabase";
+import { STAGES, type BatchStage } from "@/lib/stages";
 
 async function assertAdmin(): Promise<void> {
   if (!(await isSignedIn())) throw new Error("Not signed in.");
@@ -190,4 +191,22 @@ export async function setFlashFee(form: FormData): Promise<void> {
 
   revalidatePath("/admin");
   revalidatePath("/");
+}
+
+/**
+ * One tap per stage of the run, shared by everyone in the batch. This is the
+ * whole of tracking: no rider app, no GPS, nothing to go wrong on the road.
+ */
+export async function setBatchStage(form: FormData): Promise<void> {
+  await assertAdmin();
+  const stage = String(form.get("stage"));
+  if (!STAGES.includes(stage as BatchStage)) return;
+
+  await db()
+    .from("batches")
+    .update({ stage, stage_updated_at: new Date().toISOString() })
+    .eq("id", String(form.get("batch_id")));
+
+  revalidatePath("/admin");
+  revalidatePath("/orders");
 }

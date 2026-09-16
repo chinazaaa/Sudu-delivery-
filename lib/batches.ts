@@ -46,6 +46,8 @@ export async function ensureUpcomingBatches(): Promise<void> {
         capacity: null,
         flash_fee: null,
         flash_fee_reason: "",
+        stage: "ordering",
+        stage_updated_at: new Date().toISOString(),
       });
     }
   }
@@ -64,7 +66,7 @@ export async function ensureUpcomingBatches(): Promise<void> {
 export async function closeExpiredBatches(): Promise<void> {
   const { data } = await db()
     .from("batches")
-    .update({ status: "closed" })
+    .update({ status: "closed", stage: "closed", stage_updated_at: new Date().toISOString() })
     .eq("status", "open")
     .lt("cut_off_at", new Date().toISOString())
     .select("*");

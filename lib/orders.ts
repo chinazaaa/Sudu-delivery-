@@ -3,6 +3,7 @@ import { FIRST_ORDER_DISCOUNT } from "./config";
 import { feeFor, splitFee } from "./fees";
 import { getBatch, isOrderable, orderCounts } from "./batches";
 import { normalisePhone } from "./phone";
+import { newPin } from "./customer-auth";
 import type {
   Batch,
   CartLine,
@@ -362,6 +363,7 @@ async function bindCustomer(args: {
     name: args.name,
     hostel: args.hostel,
     promoter_code: args.promoterCode,
+    pin: newPin(),
   });
 }
 
@@ -467,4 +469,19 @@ export async function openOrderForPhone(
 
   const load = await existingLoad(batch.id, phone);
   return { batch, items: load.items };
+}
+
+/** Every order this phone has placed, newest first, for the history page. */
+export async function ordersForPhone(phone: string): Promise<FullOrder[]> {
+  const { data } = await db()
+    .from("orders")
+    .select("id")
+    .eq("customer_phone", phone)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  const orders = await Promise.all(
+    (data ?? []).map((row) => getOrder(row.id as string))
+  );
+  return orders.filter((order): order is FullOrder => order !== null);
 }
