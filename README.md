@@ -131,6 +131,32 @@ Every table read and write goes through the service role in server code, so
 RLS is enabled with no anon policies. The service role key must never reach the
 browser.
 
+## Deploying to Vercel
+
+Three environment variables, set for Production, Preview and Development:
+
+| Variable | Where it comes from |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase, Project Settings, API, Project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase, same page, the `service_role` secret |
+| `ADMIN_PASSWORD` | Anything you choose, long and random |
+
+Nothing else belongs in the environment. Bank details, the WhatsApp number,
+the Instagram handle, the group link and the home page line are all rows in
+the database, edited in Admin, Settings.
+
+Two things worth knowing about `ADMIN_PASSWORD`. It is the only admin
+credential, so treat it as the key to the whole run sheet. It also signs the
+admin cookie and the customer order history cookie, so changing it signs
+everyone out, which is exactly what you want if it ever leaks.
+
+The `service_role` key bypasses every row level security rule in the database.
+It is only ever read in server code, never sent to the browser, and it must not
+be given a `NEXT_PUBLIC_` prefix.
+
+Then point `sudu.ng` at the Vercel project, so students never see a
+`vercel.app` link.
+
 ## Operating settings
 
 All in `lib/config.ts`:
