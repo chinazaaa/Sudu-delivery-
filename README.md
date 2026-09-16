@@ -133,6 +133,10 @@ Errors that name a missing column, such as **"Could not find the 'flash_fee'
 column of 'batches' in the schema cache"**, mean a partly applied schema. Run
 `supabase/setup.sql` again and it fills in what is missing.
 
+To see what a database actually has, paste `supabase/check.sql` and run it. It
+changes nothing and prints a verdict: schema missing, schema partly applied,
+menu empty, or everything in place.
+
 If admin loads but the menu and the runs are both empty, the key is wrong: a
 publishable key is subject to row level security, and since this schema has no
 policies, every query comes back empty rather than failing. Admin now says so
