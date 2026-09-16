@@ -8,6 +8,34 @@ export type Restaurant = {
   closes_at: string;
   active: boolean;
   sort_order: number;
+  logo_url: string;
+  banner_url: string;
+  brand_hex: string;
+};
+
+export type MenuCategory = {
+  id: string;
+  restaurant_id: string;
+  name: string;
+  sort_order: number;
+};
+
+export type OptionGroup = {
+  id: string;
+  menu_item_id: string;
+  name: string;
+  required: boolean;
+  max_select: number;
+  sort_order: number;
+};
+
+export type ItemOption = {
+  id: string;
+  group_id: string;
+  name: string;
+  price_delta: number;
+  available: boolean;
+  sort_order: number;
 };
 
 export type MenuItem = {
@@ -17,6 +45,9 @@ export type MenuItem = {
   price_food: number;
   available: boolean;
   sort_order: number;
+  image_url: string;
+  description: string;
+  category_id: string | null;
 };
 
 export type BatchStatus = "open" | "closed" | "delivered" | "cancelled";
@@ -88,6 +119,8 @@ export type Promoter = {
 export type CartLine = {
   menu_item_id: string;
   qty: number;
+  /** Chosen size, flavour and extras. Priced on the server, never here. */
+  option_ids?: string[];
   /** Whose food this is, in a group cart. Null for a single-person order. */
   for_name?: string | null;
 };

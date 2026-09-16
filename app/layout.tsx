@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getSettings, instagramLink } from "@/lib/settings";
+import SiteHeader from "@/components/SiteHeader";
+import { instagramLink, safeSettings } from "@/lib/settings";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -10,28 +11,20 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const settings = await getSettings();
+  const settings = await safeSettings();
   const instagram = instagramLink(settings.instagram_handle);
   return (
     <html lang="en">
       <body>
-        <header className="border-b border-black/10 bg-white">
-          <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-            <Link href="/" className="text-lg font-bold tracking-tight">
-              Sudu <span className="text-brand">Delivery</span>
-            </Link>
-            <nav className="flex gap-4 text-sm font-medium">
-              <Link href="/reorder" className="text-brand hover:underline">
-                Order again
-              </Link>
-              <Link href="/orders" className="text-brand hover:underline">
-                My orders
-              </Link>
-            </nav>
-          </div>
-        </header>
-        <main className="mx-auto max-w-3xl px-4 pb-24 pt-6">{children}</main>
-        <footer className="mx-auto max-w-3xl space-y-2 px-4 pb-10 text-xs text-ink/50">
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
+        <SiteHeader />
+        <main className="mx-auto max-w-5xl px-4 pb-24 pt-5">{children}</main>
+        <footer className="mx-auto max-w-5xl space-y-2 px-4 pb-10 text-xs text-ink/50">
           <p>
             Sangotedo to Pan-Atlantic University. Paid orders only, refunds the same
             night.

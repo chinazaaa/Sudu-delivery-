@@ -34,6 +34,18 @@ export async function getSettings(): Promise<Settings> {
   return { ...EMPTY, ...((data ?? {}) as Partial<Settings>) };
 }
 
+/**
+ * Settings for chrome that must render even when nothing is configured yet,
+ * such as the footer on the not-found page during a build with no environment.
+ */
+export async function safeSettings(): Promise<Settings> {
+  try {
+    return await getSettings();
+  } catch {
+    return EMPTY;
+  }
+}
+
 export function hasBankDetails(settings: Settings): boolean {
   return Boolean(settings.bank_name && settings.bank_account_number);
 }

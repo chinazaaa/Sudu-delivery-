@@ -5,7 +5,12 @@ import { refundsOwed, settleGroupFees } from "./groups";
 import { linesFor, type OrderLine } from "./orders";
 import type { Batch, Order, Promoter } from "./types";
 
-export type CounterLine = { name: string; qty: number; unitPrice: number };
+export type CounterLine = {
+  name: string;
+  choices: string[];
+  qty: number;
+  unitPrice: number;
+};
 export type CounterGroup = {
   restaurant: string;
   lines: CounterLine[];
@@ -151,10 +156,19 @@ export function groupForCounter(lines: OrderLine[]): CounterGroup[] {
 
   for (const line of lines) {
     const items = byRestaurant.get(line.restaurant) ?? new Map<string, CounterLine>();
-    const key = `${line.name}@${line.unit_price_at_order}`;
+    const choices = [...line.choices].sort();
+    // A large pepperoni and a small margherita are two different things to
+    // order, so the choices are part of what makes a counter line.
+    const key = `${line.name}|${choices.join("|")}@${line.unit_price_at_order}`;
     const existing = items.get(key);
     if (existing) existing.qty += line.qty;
-    else items.set(key, { name: line.name, qty: line.qty, unitPrice: line.unit_price_at_order });
+    else
+      items.set(key, {
+        name: line.name,
+        choices,
+        qty: line.qty,
+        unitPrice: line.unit_price_at_order,
+      });
     byRestaurant.set(line.restaurant, items);
   }
 

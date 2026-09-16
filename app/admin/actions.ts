@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { isSignedIn, passwordMatches, signIn, signOut } from "@/lib/admin-auth";
 import { db } from "@/lib/supabase";
 import { STAGES, type BatchStage } from "@/lib/stages";
+import { DELIVERY_WINDOWS, type BatchSlot } from "@/lib/config";
+import { lagosInstant } from "@/lib/time";
 
 async function assertAdmin(): Promise<void> {
   if (!(await isSignedIn())) throw new Error("Not signed in.");
@@ -99,6 +101,9 @@ export async function updateMenuItem(form: FormData): Promise<void> {
       price_food: Math.round(price),
       available: form.get("available") === "on",
       name: String(form.get("name") ?? "").trim() || undefined,
+      description: String(form.get("description") ?? "").trim(),
+      image_url: String(form.get("image_url") ?? "").trim(),
+      category_id: String(form.get("category_id") ?? "") || null,
     })
     .eq("id", String(form.get("item_id")));
   revalidatePath("/admin/menu");
@@ -113,8 +118,11 @@ export async function addMenuItem(form: FormData): Promise<void> {
 
   await db().from("menu_items").insert({
     restaurant_id: String(form.get("restaurant_id")),
+    category_id: String(form.get("category_id") ?? "") || null,
     name,
     price_food: Math.round(price),
+    description: String(form.get("description") ?? "").trim(),
+    image_url: String(form.get("image_url") ?? "").trim(),
     sort_order: 100,
   });
   revalidatePath("/admin/menu");
@@ -237,6 +245,8 @@ export async function updateRestaurant(form: FormData): Promise<void> {
       name: String(form.get("name") ?? "").trim() || undefined,
       address: String(form.get("address") ?? "").trim(),
       closes_at: String(form.get("closes_at") ?? "").trim() || undefined,
+      logo_url: String(form.get("logo_url") ?? "").trim(),
+      banner_url: String(form.get("banner_url") ?? "").trim(),
       // Off keeps a restaurant and its menu but takes it off the site, which is
       // how the brief adds Panarottis and the rest once the run is boring.
       active: form.get("active") === "on",
@@ -305,6 +315,129 @@ export async function seedLaunchRestaurants(): Promise<void> {
       }))
     );
   }
+  revalidatePath("/admin/menu");
+  revalidatePath("/");
+}
+
+/**
+ * A run on any day, at any cut-off. The automatic Friday batches cover the
+ * usual week; this is for everything else, including exam-week late runs.
+ */
+export async function createBatch(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const runDate = String(form.get("run_date") ?? "").trim();
+  const slot = String(form.get("slot") ?? "night");
+  const time = String(form.get("cut_off_time") ?? "").trim();
+  if (!runDate || !time) return;
+
+  const [hour, minute] = time.split(":").map(Number);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return;
+
+  await db()
+    .from("batches")
+    .upsert(
+      {
+        run_date: runDate,
+        slot,
+        cut_off_at: lagosInstant(runDate, hour, minute),
+        delivery_window_text:
+          String(form.get("delivery_window_text") ?? "").trim() ||
+          DELIVERY_WINDOWS[slot as BatchSlot],
+        status: "open",
+        stage: "ordering",
+      },
+      { onConflict: "run_date,slot" }
+    );
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+}
+
+export async function addCategory(form: FormData): Promise<void> {
+  await assertAdmin();
+  const name = String(form.get("name") ?? "").trim();
+  if (!name) return;
+
+  await db().from("menu_categories").insert({
+    restaurant_id: String(form.get("restaurant_id")),
+    name,
+    sort_order: Number(form.get("sort_order") ?? 100),
+  });
+  revalidatePath("/admin/menu");
+  revalidatePath("/");
+}
+
+export async function deleteCategory(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db().from("menu_categories").delete().eq("id", String(form.get("category_id")));
+  revalidatePath("/admin/menu");
+  revalidatePath("/");
+}
+
+/** A choice on an item: Size, Flavour, Extras. */
+export async function addOptionGroup(form: FormData): Promise<void> {
+  await assertAdmin();
+  const name = String(form.get("name") ?? "").trim();
+  if (!name) return;
+
+  await db().from("item_option_groups").insert({
+    menu_item_id: String(form.get("item_id")),
+    name,
+    required: form.get("required") === "on",
+    max_select: Math.max(1, Number(form.get("max_select") ?? 1)),
+    sort_order: 100,
+  });
+  revalidatePath("/admin/menu");
+  revalidatePath("/");
+}
+
+export async function deleteOptionGroup(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db().from("item_option_groups").delete().eq("id", String(form.get("group_id")));
+  revalidatePath("/admin/menu");
+  revalidatePath("/");
+}
+
+export async function addOption(form: FormData): Promise<void> {
+  await assertAdmin();
+  const name = String(form.get("name") ?? "").trim();
+  if (!name) return;
+
+  await db().from("item_options").insert({
+    group_id: String(form.get("group_id")),
+    name,
+    price_delta: Math.round(Number(form.get("price_delta") ?? 0)) || 0,
+    sort_order: 100,
+  });
+  revalidatePath("/admin/menu");
+  revalidatePath("/");
+}
+
+export async function updateOption(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db()
+    .from("item_options")
+    .update({
+      name: String(form.get("name") ?? "").trim() || undefined,
+      price_delta: Math.round(Number(form.get("price_delta") ?? 0)) || 0,
+      available: form.get("available") === "on",
+    })
+    .eq("id", String(form.get("option_id")));
+  revalidatePath("/admin/menu");
+  revalidatePath("/");
+}
+
+export async function deleteOption(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db().from("item_options").delete().eq("id", String(form.get("option_id")));
+  revalidatePath("/admin/menu");
+  revalidatePath("/");
+}
+
+export async function deleteMenuItem(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db().from("menu_items").delete().eq("id", String(form.get("item_id")));
   revalidatePath("/admin/menu");
   revalidatePath("/");
 }

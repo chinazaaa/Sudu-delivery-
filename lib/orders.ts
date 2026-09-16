@@ -29,7 +29,13 @@ export type PlaceOrderResult =
   | { ok: true; orderId: string; groupId?: string }
   | { ok: false; error: string };
 
-type PricedLine = CartLine & { item: MenuItem };
+type PricedOption = { id: string; name: string; price_delta: number };
+type PricedLine = CartLine & {
+  item: MenuItem;
+  options: PricedOption[];
+  /** Base price plus every chosen option, per unit. */
+  unitPrice: number;
+};
 
 /**
  * The only place an order is priced. The cart posts item ids and quantities;
@@ -82,7 +88,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   return result;
 }
 
-/** Looks every line up in the database; nothing about price comes from the browser. */
+/**
+ * Looks every line up in the database, including the chosen size and flavour.
+ * Nothing about price comes from the browser: a large pepperoni costs what the
+ * menu says a large pepperoni costs.
+ */
 async function priceLines(
   lines: CartLine[]
 ): Promise<{ lines: PricedLine[] } | { error: string }> {
@@ -96,20 +106,50 @@ async function priceLines(
   if (error) return { error: error.message };
 
   const items = new Map((data ?? []).map((i) => [i.id, i as MenuItem]));
+
+  const optionIds = [...new Set(wanted.flatMap((l) => l.option_ids ?? []))];
+  const options = new Map<string, PricedOption & { available: boolean }>();
+
+  if (optionIds.length > 0) {
+    const { data: rows, error: optionError } = await db()
+      .from("item_options")
+      .select("id, name, price_delta, available")
+      .in("id", optionIds);
+    if (optionError) return { error: optionError.message };
+    for (const row of rows ?? []) options.set(row.id as string, row as any);
+  }
+
   const priced: PricedLine[] = [];
 
   for (const line of wanted) {
     const item = items.get(line.menu_item_id);
     if (!item) return { error: "An item in your cart is no longer on the menu." };
     if (!item.available) return { error: `${item.name} is unavailable today.` };
-    priced.push({ ...line, item });
+
+    const chosen: PricedOption[] = [];
+    for (const id of line.option_ids ?? []) {
+      const option = options.get(id);
+      if (!option) return { error: `A choice on ${item.name} is no longer offered.` };
+      if (!option.available) {
+        return { error: `${option.name} is unavailable on ${item.name} today.` };
+      }
+      chosen.push({ id: option.id, name: option.name, price_delta: option.price_delta });
+    }
+
+    priced.push({
+      ...line,
+      item,
+      options: chosen,
+      unitPrice:
+        item.price_food + chosen.reduce((sum, o) => sum + o.price_delta, 0),
+    });
   }
   return { lines: priced };
 }
 
 const countItems = (lines: PricedLine[]) => lines.reduce((sum, l) => sum + l.qty, 0);
 const countFood = (lines: PricedLine[]) =>
-  lines.reduce((sum, l) => sum + l.item.price_food * l.qty, 0);
+  lines.reduce((sum, l) => sum + l.unitPrice * l.qty, 0);
 
 async function placeSingleOrder(args: {
   batch: Batch;
@@ -266,18 +306,39 @@ async function insertOrder(args: {
     .single();
   if (error || !order) return null;
 
-  const { error: linesError } = await db().from("order_items").insert(
-    args.lines.map((l) => ({
-      order_id: order.id,
-      menu_item_id: l.menu_item_id,
-      qty: l.qty,
-      unit_price_at_order: l.item.price_food,
-      for_name: l.for_name ?? args.for_name ?? null,
-    }))
-  );
-  if (linesError) {
+  const { data: savedLines, error: linesError } = await db()
+    .from("order_items")
+    .insert(
+      args.lines.map((l) => ({
+        order_id: order.id,
+        menu_item_id: l.menu_item_id,
+        qty: l.qty,
+        unit_price_at_order: l.unitPrice,
+        for_name: l.for_name ?? args.for_name ?? null,
+      }))
+    )
+    .select("id");
+  if (linesError || !savedLines) {
     await db().from("orders").delete().eq("id", order.id);
     return null;
+  }
+
+  // The chosen size and flavour are copied at order time like the price, so
+  // editing the menu later never rewrites what was actually bought.
+  const chosen = savedLines.flatMap((row, index) =>
+    args.lines[index].options.map((option) => ({
+      order_item_id: row.id,
+      option_id: option.id,
+      name_at_order: option.name,
+      price_delta_at_order: option.price_delta,
+    }))
+  );
+  if (chosen.length > 0) {
+    const { error: optionError } = await db().from("order_item_options").insert(chosen);
+    if (optionError) {
+      await db().from("orders").delete().eq("id", order.id);
+      return null;
+    }
   }
   return order.id as string;
 }
@@ -367,7 +428,12 @@ async function bindCustomer(args: {
   });
 }
 
-export type OrderLine = OrderItem & { name: string; restaurant: string };
+export type OrderLine = OrderItem & {
+  name: string;
+  restaurant: string;
+  /** "Large", "Pepperoni". What she reads out at the counter. */
+  choices: string[];
+};
 export type GroupShare = {
   id: string;
   for_name: string | null;
@@ -419,11 +485,12 @@ export async function linesFor(orderIds: string[]): Promise<OrderLine[]> {
   if (orderIds.length === 0) return [];
   const { data, error } = await db()
     .from("order_items")
-    .select("*, menu_items(name, restaurants(name))")
+    .select("*, menu_items(name, restaurants(name)), order_item_options(name_at_order)")
     .in("order_id", orderIds);
   if (error) throw new Error(error.message);
 
   return (data ?? []).map((row: any) => ({
+    choices: (row.order_item_options ?? []).map((o: any) => o.name_at_order),
     id: row.id,
     order_id: row.order_id,
     menu_item_id: row.menu_item_id,

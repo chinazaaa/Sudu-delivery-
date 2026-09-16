@@ -6,8 +6,36 @@ import type { Batch } from "./types";
 /** Plain shapes handed from server components to client components. */
 
 export type MenuView = {
-  restaurant: { id: string; name: string; closesAt: string };
-  items: { id: string; name: string; price: number; available: boolean }[];
+  restaurant: {
+    id: string;
+    name: string;
+    closesAt: string;
+    logoUrl: string;
+    bannerUrl: string;
+    brandHex: string;
+  };
+  categories: { id: string; name: string }[];
+  items: ItemView[];
+};
+
+export type ItemView = {
+  id: string;
+  name: string;
+  price: number;
+  available: boolean;
+  imageUrl: string;
+  description: string;
+  categoryId: string | null;
+  /** Size, flavour, extras. An item with none of these adds in one tap. */
+  groups: OptionGroupView[];
+};
+
+export type OptionGroupView = {
+  id: string;
+  name: string;
+  required: boolean;
+  maxSelect: number;
+  options: { id: string; name: string; priceDelta: number; available: boolean }[];
 };
 
 export type BatchView = {

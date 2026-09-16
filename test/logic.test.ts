@@ -61,6 +61,7 @@ function line(over: Partial<OrderLine>): OrderLine {
     qty: 1,
     unit_price_at_order: 1000,
     for_name: null,
+    choices: [],
     name: "Wrap meal",
     restaurant: "KFC Novare",
     ...over,
@@ -167,7 +168,7 @@ test("the run sheet reads as plain text that survives a dead signal", () => {
     counter: [
       {
         restaurant: "KFC Novare",
-        lines: [{ name: "8pc bucket", qty: 3, unitPrice: 18000 }],
+        lines: [{ name: "8pc bucket", choices: [], qty: 3, unitPrice: 18000 }],
         expectedFoodTotal: 54000,
       },
     ],
@@ -178,7 +179,7 @@ test("the run sheet reads as plain text that survives a dead signal", () => {
         hostel: "Blue Block",
         phone: "08031234567",
         orders: [],
-        lines: [{ qty: 1, name: "8pc bucket" }],
+        lines: [{ qty: 1, name: "8pc bucket", choices: [] }],
       },
     ],
     unpaid: [{ for_name: null, customer_name: "Chidi", total: 14666 }],
@@ -203,4 +204,24 @@ test("PINs are four digits, zero padded", () => {
   for (let i = 0; i < 200; i++) {
     assert.match(newPin(), /^\d{4}$/);
   }
+});
+
+
+test("the counter sheet keeps sizes and flavours apart", () => {
+  const pizza = (choices: string[], qty: number, price: number) =>
+    line({ name: "Pizza", choices, qty, unit_price_at_order: price, restaurant: "Domino's" });
+
+  const groups = groupForCounter([
+    pizza(["Large", "Pepperoni"], 1, 17000),
+    pizza(["Large", "Pepperoni"], 2, 17000),
+    pizza(["Small", "Margherita"], 1, 11000),
+  ]);
+
+  const domino = groups.find((g) => g.restaurant === "Domino's")!;
+  assert.equal(domino.lines.length, 2);
+  assert.deepEqual(
+    domino.lines.map((l) => `${l.qty}x ${l.name} (${l.choices.join(", ")})`),
+    ["3x Pizza (Large, Pepperoni)", "1x Pizza (Margherita, Small)"]
+  );
+  assert.equal(domino.expectedFoodTotal, 3 * 17000 + 11000);
 });

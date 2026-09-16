@@ -7,13 +7,19 @@ import type { BatchSheet } from "./admin";
  * read at the counter and the gate with no signal. The admin screen needs data;
  * a message in a chat does not.
  */
+const lineText = (l: { qty: number; name: string; choices: string[] }) =>
+  `${l.qty} x ${l.name}${l.choices.length > 0 ? ` (${l.choices.join(", ")})` : ""}`;
+
 export function sheetAsText(sheet: BatchSheet, batchLabel: string): string {
   const lines = [`SUDU RUN: ${batchLabel}`, ""];
 
   lines.push("AT THE COUNTER");
   for (const group of sheet.counter) {
     lines.push(`${group.restaurant}`);
-    for (const item of group.lines) lines.push(`  ${item.qty} x ${item.name}`);
+    for (const item of group.lines) {
+      const choices = item.choices.length > 0 ? ` (${item.choices.join(", ")})` : "";
+      lines.push(`  ${item.qty} x ${item.name}${choices}`);
+    }
     lines.push(`  pay about ${naira(group.expectedFoodTotal)}`);
   }
   if (sheet.counter.length === 0) lines.push("  nothing paid for yet");
@@ -22,7 +28,7 @@ export function sheetAsText(sheet: BatchSheet, batchLabel: string): string {
   for (const bag of sheet.handout) {
     lines.push(
       `${bag.name} (${bag.hostel}) ${formatPhone(bag.phone)}`,
-      `  ${bag.lines.map((l) => `${l.qty} x ${l.name}`).join(", ")}`
+      `  ${bag.lines.map(lineText).join(", ")}`
     );
   }
   if (sheet.handout.length === 0) lines.push("  nobody yet");
