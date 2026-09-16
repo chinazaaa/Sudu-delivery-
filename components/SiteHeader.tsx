@@ -5,7 +5,11 @@ import { usePathname } from "next/navigation";
 import { countItems, useCart, cartSubtotal } from "@/lib/cart";
 import { naira } from "@/lib/money";
 
-export default function SiteHeader() {
+export default function SiteHeader({
+  restaurants = [],
+}: {
+  restaurants?: { id: string; name: string }[];
+}) {
   const cart = useCart();
   const count = countItems(cart);
   const path = usePathname();
@@ -33,8 +37,18 @@ export default function SiteHeader() {
           <span className="text-lg font-extrabold tracking-tight">Sudu</span>
         </Link>
 
-        <nav className="ml-2 hidden gap-1 sm:flex">
+        <nav className="ml-2 hidden items-center gap-1 sm:flex">
           {link("/", "Menu")}
+          {restaurants.map((restaurant) => (
+            <Link
+              key={restaurant.id}
+              href={`/r/${restaurant.id}`}
+              className="rounded-full px-3 py-1.5 text-sm font-medium text-ink/60 transition hover:bg-black/[0.04] hover:text-ink"
+            >
+              {restaurant.name}
+            </Link>
+          ))}
+          <span className="mx-1 h-4 w-px bg-black/10" />
           {link("/orders", "My orders")}
           {link("/reorder", "Order again")}
         </nav>
@@ -55,8 +69,17 @@ export default function SiteHeader() {
         </Link>
       </div>
 
-      <nav className="flex gap-1 border-t border-black/5 px-4 py-1.5 sm:hidden">
+      <nav className="no-scrollbar flex gap-1 overflow-x-auto border-t border-black/5 px-4 py-1.5 sm:hidden">
         {link("/", "Menu")}
+        {restaurants.map((restaurant) => (
+          <Link
+            key={restaurant.id}
+            href={`/r/${restaurant.id}`}
+            className="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium text-ink/60"
+          >
+            {restaurant.name}
+          </Link>
+        ))}
         {link("/orders", "My orders")}
         {link("/reorder", "Order again")}
       </nav>

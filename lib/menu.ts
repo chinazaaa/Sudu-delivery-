@@ -107,3 +107,17 @@ function closesLabel(time: string): string {
   const hour = h % 12 === 0 ? 12 : h % 12;
   return m ? `${hour}:${String(m).padStart(2, "0")}${suffix}` : `${hour}${suffix}`;
 }
+
+/** Just the names, for the navigation bar. Never throws during a build. */
+export async function openRestaurants(): Promise<{ id: string; name: string }[]> {
+  try {
+    const { data } = await db()
+      .from("restaurants")
+      .select("id, name")
+      .eq("active", true)
+      .order("sort_order");
+    return (data ?? []) as { id: string; name: string }[];
+  } catch {
+    return [];
+  }
+}

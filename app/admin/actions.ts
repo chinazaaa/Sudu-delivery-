@@ -158,6 +158,7 @@ const SETTING_FIELDS = [
   "instagram_handle",
   "whatsapp_group_link",
   "pitch_line",
+  "product_notes",
 ] as const;
 
 export async function saveSettings(form: FormData): Promise<void> {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import Carousel from "./Carousel";
 import CountdownBanner from "./CountdownBanner";
+import PeopleBar from "./PeopleBar";
 import ProductCard from "./ProductCard";
 import Thumb from "./Thumb";
 import { cartSubtotal, countItems, useCart } from "@/lib/cart";
@@ -76,6 +77,7 @@ export default function Storefront({
                 src={entry.restaurant.bannerUrl}
                 name={entry.restaurant.name}
                 rounded="rounded-none"
+                variant="banner"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-ink/90 via-ink/60 to-ink/15" />
               <div className="absolute inset-0 flex flex-col justify-center gap-3 p-6 sm:p-10">
@@ -89,17 +91,12 @@ export default function Storefront({
                   {entry.items.length} item{entry.items.length === 1 ? "" : "s"} on the
                   menu. Kitchen closes {entry.restaurant.closesAt}.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPlaceId(entry.restaurant.id);
-                    setCategoryId(null);
-                    document.getElementById("menu")?.scrollIntoView({ behavior: "smooth" });
-                  }}
+                <Link
+                  href={`/r/${entry.restaurant.id}`}
                   className="btn w-fit bg-white px-6 py-3 text-ink hover:bg-white/90"
                 >
                   See the menu
-                </button>
+                </Link>
               </div>
             </div>
           ))}
@@ -136,30 +133,30 @@ export default function Storefront({
             const active = entry.restaurant.id === place.restaurant.id;
             const count = perRestaurant.get(entry.restaurant.id) ?? 0;
             return (
-              <button
+              <Link
                 key={entry.restaurant.id}
-                type="button"
-                onClick={() => {
-                  setPlaceId(entry.restaurant.id);
-                  setCategoryId(null);
-                }}
-                className={`relative w-40 shrink-0 overflow-hidden rounded-2xl border text-left transition ${
-                  active ? "border-brand shadow-card" : "border-black/5 hover:shadow-card"
+                href={`/r/${entry.restaurant.id}`}
+                className={`relative block w-60 shrink-0 overflow-hidden rounded-2xl border-2 text-left transition sm:w-72 ${
+                  active
+                    ? "border-brand shadow-card"
+                    : "border-transparent shadow-card hover:-translate-y-0.5"
                 }`}
               >
-                <span className="block h-24">
+                <span className="block h-36 sm:h-44">
                   <Thumb
                     src={entry.restaurant.bannerUrl || entry.restaurant.logoUrl}
                     name={entry.restaurant.name}
                     rounded="rounded-none"
+                    variant={entry.restaurant.bannerUrl ? "tile" : "banner"}
                   />
                 </span>
-                <span className="block bg-white p-3">
-                  <span className="block truncate font-semibold">
+                <span className="block bg-white p-4">
+                  <span className="block truncate text-lg font-bold">
                     {entry.restaurant.name}
                   </span>
-                  <span className="block text-xs text-ink/50">
-                    closes {entry.restaurant.closesAt}
+                  <span className="block text-sm text-ink/55">
+                    {entry.items.length} item{entry.items.length === 1 ? "" : "s"} · closes{" "}
+                    {entry.restaurant.closesAt}
                   </span>
                 </span>
                 {count > 0 && (
@@ -167,11 +164,13 @@ export default function Storefront({
                     {count}
                   </span>
                 )}
-              </button>
+              </Link>
             );
           })}
         </div>
       </section>
+
+      <PeopleBar />
 
       <section id="menu" className="scroll-mt-24 space-y-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -211,7 +210,7 @@ export default function Storefront({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5">
           {items.map((item) => (
             <ProductCard key={item.id} item={item} restaurant={place.restaurant} />
           ))}
@@ -228,7 +227,7 @@ export default function Storefront({
           <h2 className="text-xl font-extrabold tracking-tight">Popular this week</h2>
           <div className="no-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 pb-2">
             {featured.map(({ item, place: from }) => (
-              <div key={item.id} className="w-48 shrink-0">
+              <div key={item.id} className="w-60 shrink-0">
                 <ProductCard item={item} restaurant={from.restaurant} />
               </div>
             ))}

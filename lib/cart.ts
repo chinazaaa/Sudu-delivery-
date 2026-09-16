@@ -20,7 +20,11 @@ export type CartLine = {
 };
 
 const KEY = "sudu_cart_v1";
+const PEOPLE_KEY = "sudu_people_v1";
+
 let lines: CartLine[] = [];
+let people: string[] = [];
+let activePerson = "";
 let loaded = false;
 const listeners = new Set<() => void>();
 
@@ -29,8 +33,13 @@ function load(): void {
   loaded = true;
   try {
     lines = JSON.parse(window.localStorage.getItem(KEY) ?? "[]");
+    const saved = JSON.parse(window.localStorage.getItem(PEOPLE_KEY) ?? "{}");
+    people = Array.isArray(saved.people) ? saved.people : [];
+    activePerson = typeof saved.active === "string" ? saved.active : "";
   } catch {
     lines = [];
+    people = [];
+    activePerson = "";
   }
 }
 
@@ -44,18 +53,66 @@ function save(next: CartLine[]): void {
   for (const listener of listeners) listener();
 }
 
-export function lineKey(itemId: string, optionIds: string[]): string {
-  return [itemId, ...[...optionIds].sort()].join("|");
+/**
+ * Two people ordering the same thing are two lines, because the bags are
+ * labelled by name at the drop point.
+ */
+export function lineKey(itemId: string, optionIds: string[], forName = ""): string {
+  return [itemId, ...[...optionIds].sort(), `for:${forName}`].join("|");
 }
 
-export function addLine(line: Omit<CartLine, "key" | "qty">, qty = 1): void {
+function savePeople(next: { people: string[]; active: string }): void {
+  people = next.people;
+  activePerson = next.active;
+  try {
+    window.localStorage.setItem(PEOPLE_KEY, JSON.stringify({ people: next.people, active: next.active }));
+  } catch {
+    /* ignore */
+  }
+  for (const listener of listeners) listener();
+}
+
+export function addPerson(name: string): void {
   load();
-  const key = lineKey(line.itemId, line.optionIds);
+  const person = name.trim();
+  if (!person) return;
+  savePeople({
+    people: people.includes(person) ? people : [...people, person],
+    active: person,
+  });
+}
+
+export function removePerson(name: string): void {
+  load();
+  // Their food goes back to unassigned rather than vanishing with them.
+  save(lines.map((l) => (l.forName === name ? { ...l, forName: "" } : l)));
+  savePeople({
+    people: people.filter((p) => p !== name),
+    active: activePerson === name ? "" : activePerson,
+  });
+}
+
+export function setActivePerson(name: string): void {
+  load();
+  savePeople({ people, active: name });
+}
+
+export function clearPeople(): void {
+  load();
+  save(lines.map((l) => ({ ...l, forName: "" })));
+  savePeople({ people: [], active: "" });
+}
+
+export function addLine(line: Omit<CartLine, "key" | "qty" | "forName">, qty = 1): void {
+  load();
+  // Whoever is being shopped for right now owns the line.
+  const forName = activePerson;
+  const key = lineKey(line.itemId, line.optionIds, forName);
   const existing = lines.find((l) => l.key === key);
   save(
     existing
       ? lines.map((l) => (l.key === key ? { ...l, qty: l.qty + qty } : l))
-      : [...lines, { ...line, key, qty }]
+      : [...lines, { ...line, forName, key, qty }]
   );
 }
 
@@ -66,7 +123,19 @@ export function setQty(key: string, qty: number): void {
 
 export function setForName(key: string, forName: string): void {
   load();
-  save(lines.map((l) => (l.key === key ? { ...l, forName } : l)));
+  const line = lines.find((l) => l.key === key);
+  if (!line) return;
+
+  const nextKey = lineKey(line.itemId, line.optionIds, forName);
+  const merging = lines.find((l) => l.key === nextKey && l.key !== key);
+
+  save(
+    merging
+      ? lines
+          .filter((l) => l.key !== key)
+          .map((l) => (l.key === nextKey ? { ...l, qty: l.qty + line.qty } : l))
+      : lines.map((l) => (l.key === key ? { ...l, forName, key: nextKey } : l))
+  );
 }
 
 export function clearCart(): void {
@@ -80,6 +149,27 @@ function subscribe(listener: () => void): () => void {
 }
 
 const EMPTY: CartLine[] = [];
+
+export function usePeople(): { people: string[]; active: string } {
+  return useSyncExternalStore(
+    subscribe,
+    () => {
+      load();
+      return snapshot();
+    },
+    () => EMPTY_PEOPLE
+  );
+}
+
+const EMPTY_PEOPLE = { people: [] as string[], active: "" };
+let peopleSnapshot = EMPTY_PEOPLE;
+
+function snapshot(): { people: string[]; active: string } {
+  if (peopleSnapshot.people !== people || peopleSnapshot.active !== activePerson) {
+    peopleSnapshot = { people, active: activePerson };
+  }
+  return peopleSnapshot;
+}
 
 export function useCart(): CartLine[] {
   return useSyncExternalStore(

@@ -231,6 +231,12 @@ alter table settings add column if not exists whatsapp_group_link text not null 
 alter table settings add column if not exists pitch_line          text not null default
   'One price covering food and delivery, paid once, before the run. Mix restaurants in one order.';
 
+-- The reassurance lines under the buy button on a product page.
+alter table settings add column if not exists product_notes text not null default
+  'Collected from {restaurant}, Sangotedo, on the next run.
+Delivery is charged once per order, by how many containers it is.
+Wrong or missing item, refunded in full the same night.';
+
 insert into settings (id) values (true) on conflict (id) do nothing;
 
 -- Every read and write goes through the service role in server code, so no
@@ -282,6 +288,38 @@ from restaurants r, (values
 where r.name = 'Domino''s Pizza'
   and not exists (select 1 from menu_items m join restaurants rr on rr.id = m.restaurant_id
                   where rr.name = 'Domino''s Pizza');
+
+-- Choices on the seeded items, so a meal that says "and a drink" actually asks
+-- which drink, and a pizza asks for a size and a flavour.
+insert into item_option_groups (menu_item_id, name, required, max_select, sort_order)
+select m.id, 'Drink', true, 1, 1
+from menu_items m join restaurants r on r.id = m.restaurant_id
+where r.name = 'KFC Novare'
+  and m.name in ('Original Recipe 2pc + chips', 'Wrap meal', 'Refuel Meal', 'Zinger burger meal')
+  and not exists (select 1 from item_option_groups g where g.menu_item_id = m.id);
+
+insert into item_options (group_id, name, price_delta, sort_order)
+select g.id, o.name, o.delta, o.sort
+from item_option_groups g, (values
+  ('Coke', 0, 1), ('Fanta', 0, 2), ('Sprite', 0, 3), ('Water', -300, 4)
+) as o(name, delta, sort)
+where g.name = 'Drink'
+  and not exists (select 1 from item_options x where x.group_id = g.id);
+
+insert into item_option_groups (menu_item_id, name, required, max_select, sort_order)
+select m.id, 'Size', true, 1, 1
+from menu_items m join restaurants r on r.id = m.restaurant_id
+where r.name = 'Domino''s Pizza' and m.name = 'Medium pepperoni'
+  and not exists (select 1 from item_option_groups g where g.menu_item_id = m.id);
+
+insert into item_options (group_id, name, price_delta, sort_order)
+select g.id, o.name, o.delta, o.sort
+from item_option_groups g
+join menu_items m on m.id = g.menu_item_id, (values
+  ('Small', -2000, 1), ('Medium', 0, 2), ('Large', 5500, 3)
+) as o(name, delta, sort)
+where g.name = 'Size' and m.name = 'Medium pepperoni'
+  and not exists (select 1 from item_options x where x.group_id = g.id);
 
 -- Supabase caches the schema; this makes the new tables visible immediately.
 notify pgrst, 'reload schema';

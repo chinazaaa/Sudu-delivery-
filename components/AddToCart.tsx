@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { addLine } from "@/lib/cart";
+import { addLine, addPerson, setActivePerson, usePeople } from "@/lib/cart";
 import { naira } from "@/lib/money";
 import type { ItemView } from "@/lib/view";
 
@@ -13,9 +13,12 @@ export default function AddToCart({
   item: ItemView;
   restaurant: { id: string; name: string };
 }) {
+  const { people, active } = usePeople();
   const [picked, setPicked] = useState<Record<string, string[]>>({});
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+  const [forWho, setForWho] = useState(false);
+  const [friend, setFriend] = useState("");
 
   const chosenIds = Object.values(picked).flat();
   const chosen = item.groups.flatMap((g) => g.options).filter((o) => chosenIds.includes(o.id));
@@ -36,6 +39,23 @@ export default function AddToCart({
             : already,
       };
     });
+  }
+
+  function put() {
+    addLine(
+      {
+        itemId: item.id,
+        optionIds: chosenIds,
+        name: item.name,
+        restaurantId: restaurant.id,
+        restaurantName: restaurant.name,
+        imageUrl: item.imageUrl,
+        unitPrice,
+        choices: chosen.map((o) => o.name),
+      },
+      qty
+    );
+    setAdded(true);
   }
 
   return (
@@ -103,23 +123,7 @@ export default function AddToCart({
         <button
           type="button"
           disabled={!item.available || missing.length > 0}
-          onClick={() => {
-            addLine(
-              {
-                itemId: item.id,
-                optionIds: chosenIds,
-                name: item.name,
-                restaurantId: restaurant.id,
-                restaurantName: restaurant.name,
-                imageUrl: item.imageUrl,
-                unitPrice,
-                choices: chosen.map((o) => o.name),
-                forName: "",
-              },
-              qty
-            );
-            setAdded(true);
-          }}
+          onClick={put}
           className="btn-primary flex-1 py-3"
         >
           {!item.available
@@ -128,8 +132,77 @@ export default function AddToCart({
               ? `Choose ${missing[0].name.toLowerCase()}`
               : added
                 ? "Added. Add more?"
-                : `Add to cart · ${naira(unitPrice * qty)}`}
+                : `Add${active ? ` for ${active}` : ""} · ${naira(unitPrice * qty)}`}
         </button>
+      </div>
+
+      <div className="space-y-2">
+        {people.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-ink/55">Adding for</span>
+            <button
+              type="button"
+              onClick={() => setActivePerson("")}
+              className={`chip ${active === "" ? "border-ink bg-ink text-white" : "border-black/10 bg-white"}`}
+            >
+              Me
+            </button>
+            {people.map((person) => (
+              <button
+                key={person}
+                type="button"
+                onClick={() => setActivePerson(person)}
+                className={`chip ${
+                  active === person ? "border-ink bg-ink text-white" : "border-black/10 bg-white"
+                }`}
+              >
+                {person}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {forWho ? (
+          <div className="flex gap-2">
+            <input
+              autoFocus
+              className="field"
+              placeholder="Friend's name"
+              value={friend}
+              onChange={(e) => setFriend(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                if (!friend.trim()) return;
+                addPerson(friend);
+                put();
+                setFriend("");
+                setForWho(false);
+              }}
+            />
+            <button
+              type="button"
+              className="btn-quiet shrink-0"
+              disabled={!friend.trim() || missing.length > 0}
+              onClick={() => {
+                addPerson(friend);
+                put();
+                setFriend("");
+                setForWho(false);
+              }}
+            >
+              Add for them
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setForWho(true)}
+            className="btn-quiet w-full py-2.5 text-sm"
+          >
+            {people.length > 0 ? "Add another person" : "Ordering for a friend too? Start a group"}
+          </button>
+        )}
       </div>
     </div>
   );

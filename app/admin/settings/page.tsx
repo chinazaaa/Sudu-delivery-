@@ -122,6 +122,21 @@ export default async function SettingsAdmin() {
       </form>
 
       <form action={saveSettings} className="card space-y-3">
+        <h2 className="font-semibold">Product page notes</h2>
+        <p className="text-sm text-ink/60">
+          The reassurance lines under the buy button, one per line. Write{" "}
+          {"{restaurant}"} and the restaurant&apos;s name is filled in.
+        </p>
+        <textarea
+          name="product_notes"
+          defaultValue={settings.product_notes}
+          rows={4}
+          className="field"
+        />
+        <button className="btn-primary">Save</button>
+      </form>
+
+      <form action={saveSettings} className="card space-y-3">
         <h2 className="font-semibold">The line under the headline</h2>
         <p className="text-sm text-ink/60">
           The first thing a student reads. Reword it whenever the pitch changes.

@@ -4,6 +4,7 @@ import AddToCart from "@/components/AddToCart";
 import ProductCard from "@/components/ProductCard";
 import Thumb from "@/components/Thumb";
 import { menuView } from "@/lib/menu";
+import { productNotes, safeSettings } from "@/lib/settings";
 import { naira } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export default async function ProductPage({
   params: Promise<{ itemId: string }>;
 }) {
   const { itemId } = await params;
-  const menu = await menuView();
+  const [menu, settings] = await Promise.all([menuView(), safeSettings()]);
 
   const place = menu.find((m) => m.items.some((i) => i.id === itemId));
   const item = place?.items.find((i) => i.id === itemId);
@@ -28,7 +29,7 @@ export default async function ProductPage({
       <nav className="flex flex-wrap items-center gap-1 text-sm text-ink/50">
         <Link href="/" className="hover:text-ink">Menu</Link>
         <span>/</span>
-        <Link href={`/?restaurant=${place.restaurant.id}`} className="hover:text-ink">
+        <Link href={`/r/${place.restaurant.id}`} className="hover:text-ink">
           {place.restaurant.name}
         </Link>
         {category && (
@@ -49,7 +50,7 @@ export default async function ProductPage({
         <div className="space-y-5">
           <div>
             <Link
-              href={`/?restaurant=${place.restaurant.id}`}
+              href={`/r/${place.restaurant.id}`}
               className="inline-flex items-center gap-2 text-sm font-medium text-ink/55 hover:text-ink"
             >
               <span className="size-6 overflow-hidden rounded-md">
@@ -77,9 +78,9 @@ export default async function ProductPage({
           <AddToCart item={item} restaurant={place.restaurant} />
 
           <ul className="space-y-1 border-t border-black/5 pt-4 text-sm text-ink/60">
-            <li>Collected from {place.restaurant.name}, Sangotedo, on the next run.</li>
-            <li>Delivery is charged once per order, by how many containers it is.</li>
-            <li>Wrong or missing item, refunded in full the same night.</li>
+            {productNotes(settings, place.restaurant.name).map((note) => (
+              <li key={note}>{note}</li>
+            ))}
           </ul>
         </div>
       </div>

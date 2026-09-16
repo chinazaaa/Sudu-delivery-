@@ -5,7 +5,17 @@ import { useActionState, useEffect, useState } from "react";
 import Thumb from "./Thumb";
 import FeeSummary from "./FeeSummary";
 import { submitOrder, type SubmitState } from "@/app/actions";
-import { cartSubtotal, countItems, setForName, setQty, toServerLines, useCart } from "@/lib/cart";
+import {
+  addPerson,
+  cartSubtotal,
+  countItems,
+  removePerson,
+  setForName,
+  setQty,
+  toServerLines,
+  useCart,
+  usePeople,
+} from "@/lib/cart";
 import { FIRST_ORDER_DISCOUNT } from "@/lib/config";
 import { feeFor, splitFee } from "@/lib/fees";
 import { naira } from "@/lib/money";
@@ -35,10 +45,10 @@ export default function Checkout({
   const cart = useCart();
   const openable = batches.filter((b) => !b.closed && !b.full);
   const [batchId, setBatchId] = useState(adding?.batchId ?? openable[0]?.id ?? "");
-  const [groupOn, setGroupOn] = useState(false);
+  const { people } = usePeople();
   const [mode, setMode] = useState<GroupMode>("one_payer");
-  const [people, setPeople] = useState<string[]>([]);
   const [newPerson, setNewPerson] = useState("");
+  const groupOn = people.length > 0;
   const [now, setNow] = useState<number | null>(null);
   const [state, action, pending] = useActionState<SubmitState, FormData>(submitOrder, {
     error: null,
@@ -61,21 +71,22 @@ export default function Checkout({
   );
   const total = subtotal + fee;
 
-  const named = people.filter(Boolean);
-  const assigned = cart.filter((l) => l.forName);
-  const everyoneAssigned = groupOn && cart.length > 0 && assigned.length === cart.length;
-  const splitReady = !groupOn || mode === "one_payer" || (everyoneAssigned && named.length >= 2);
+  // The cart is already sorted by person, because that is how it was filled in.
+  const groups = ["", ...people]
+    .map((person) => {
+      const lines = cart.filter((l) => l.forName === person);
+      return {
+        person,
+        lines,
+        items: lines.reduce((n, l) => n + l.qty, 0),
+        food: lines.reduce((sum, l) => sum + l.unitPrice * l.qty, 0),
+      };
+    })
+    .filter((group) => group.lines.length > 0);
 
-  // What each person would pay, so a split is not a surprise at the door.
-  const shares = named.map((person) => {
-    const lines = cart.filter((l) => l.forName === person);
-    return {
-      person,
-      items: lines.reduce((n, l) => n + l.qty, 0),
-      food: lines.reduce((sum, l) => sum + l.unitPrice * l.qty, 0),
-    };
-  });
-  const feeShares = splitFee(fee, shares.map((s) => s.items));
+  const payingGroups = groups.filter((g) => g.items > 0);
+  const splitReady = !groupOn || mode === "one_payer" || payingGroups.length >= 2;
+  const feeShares = splitFee(fee, payingGroups.map((g) => g.items));
 
   if (cart.length === 0) {
     return (
@@ -106,233 +117,214 @@ export default function Checkout({
         </p>
       )}
 
-      <section className="space-y-2">
+      <section className="space-y-3">
         <h2 className="font-bold">Your items</h2>
-        <ul className="space-y-2">
-          {cart.map((line) => (
-            <li key={line.key} className="card flex gap-3 p-3">
-              <span className="size-16 shrink-0 overflow-hidden rounded-xl">
-                <Thumb src={line.imageUrl} name={line.name} rounded="rounded-none" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold">{line.name}</p>
-                <p className="text-xs text-ink/50">
-                  {line.restaurantName}
-                  {line.choices.length > 0 && ` · ${line.choices.join(", ")}`}
-                </p>
-                <div className="mt-1 flex items-center justify-between gap-2">
-                  <span className="font-semibold">{naira(line.unitPrice * line.qty)}</span>
-                  <span className="flex items-center gap-1 rounded-full border border-black/10 p-1">
-                    <button
-                      type="button"
-                      onClick={() => setQty(line.key, line.qty - 1)}
-                      className="size-7 rounded-full text-lg leading-none hover:bg-black/5"
-                      aria-label={`One less ${line.name}`}
-                    >
-                      −
-                    </button>
-                    <span className="w-5 text-center text-sm font-semibold">{line.qty}</span>
-                    <button
-                      type="button"
-                      onClick={() => setQty(line.key, line.qty + 1)}
-                      className="size-7 rounded-full text-lg leading-none hover:bg-black/5"
-                      aria-label={`One more ${line.name}`}
-                    >
-                      +
-                    </button>
-                  </span>
-                </div>
 
-                {groupOn && (
-                  <select
-                    className="field mt-2 py-1 text-sm"
-                    value={line.forName}
-                    onChange={(e) => setForName(line.key, e.target.value)}
-                  >
-                    <option value="">Whose is this?</option>
-                    {named.map((person) => (
-                      <option key={person} value={person}>
-                        {person}
-                      </option>
-                    ))}
-                  </select>
-                )}
+        {groups.map((group) => (
+          <div key={group.person || "me"} className="space-y-2">
+            {people.length > 0 && (
+              <div className="flex items-baseline justify-between gap-2">
+                <h3 className="text-sm font-semibold">
+                  {group.person || "You"}
+                  <span className="font-normal text-ink/50">
+                    {" "}· {group.items} item{group.items === 1 ? "" : "s"}
+                  </span>
+                </h3>
+                <span className="text-sm font-semibold">{naira(group.food)}</span>
               </div>
-            </li>
-          ))}
-        </ul>
+            )}
+
+            <ul className="space-y-2">
+              {group.lines.map((line) => (
+                <li key={line.key} className="card flex gap-3 p-3">
+                  <span className="size-16 shrink-0 overflow-hidden rounded-xl">
+                    <Thumb src={line.imageUrl} name={line.name} rounded="rounded-none" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold">{line.name}</p>
+                    <p className="text-xs text-ink/50">
+                      {line.restaurantName}
+                      {line.choices.length > 0 && ` · ${line.choices.join(", ")}`}
+                    </p>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <span className="font-semibold">
+                        {naira(line.unitPrice * line.qty)}
+                      </span>
+                      <span className="flex items-center gap-1 rounded-full border border-black/10 p-1">
+                        <button
+                          type="button"
+                          onClick={() => setQty(line.key, line.qty - 1)}
+                          className="size-7 rounded-full text-lg leading-none hover:bg-black/5"
+                          aria-label={`One less ${line.name}`}
+                        >
+                          −
+                        </button>
+                        <span className="w-5 text-center text-sm font-semibold">
+                          {line.qty}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setQty(line.key, line.qty + 1)}
+                          className="size-7 rounded-full text-lg leading-none hover:bg-black/5"
+                          aria-label={`One more ${line.name}`}
+                        >
+                          +
+                        </button>
+                      </span>
+                    </div>
+
+                    {people.length > 0 && (
+                      <select
+                        className="field mt-2 py-1 text-sm"
+                        value={line.forName}
+                        onChange={(e) => setForName(line.key, e.target.value)}
+                      >
+                        <option value="">For you</option>
+                        {people.map((person) => (
+                          <option key={person} value={person}>
+                            For {person}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+
         <Link href="/" className="inline-block text-sm font-medium text-brand hover:underline">
           Add something else
         </Link>
       </section>
 
-      <section className="card space-y-3">
-        <div>
-          <h2 className="font-bold">Which run?</h2>
-          <p className="text-sm text-ink/55">
-            Missed one? Order into the next. Nothing is lost.
-          </p>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-2">
-          {batches.map((batch) => {
+      <section className="card space-y-2">
+        <h2 className="font-bold">Which run?</h2>
+        <label className="label" htmlFor="batch">Delivery day</label>
+        <select
+          id="batch"
+          className="field"
+          value={batchId}
+          onChange={(e) => setBatchId(e.target.value)}
+          disabled={adding !== null}
+        >
+          {openable.map((batch) => {
             const left =
-              now === null ? "…" : countdown(new Date(batch.cutOffISO).getTime() - now);
-            const disabled = batch.closed || batch.full || (adding !== null && batch.id !== adding.batchId);
+              now === null ? "" : ` · closes in ${countdown(new Date(batch.cutOffISO).getTime() - now)}`;
             return (
-              <button
-                key={batch.id}
-                type="button"
-                disabled={disabled}
-                onClick={() => setBatchId(batch.id)}
-                className={`rounded-xl border p-3 text-left transition disabled:opacity-45 ${
-                  batch.id === batchId
-                    ? "border-brand bg-brand-tint"
-                    : "border-black/10 hover:bg-black/[0.03]"
-                }`}
-              >
-                <span className={`block font-semibold ${batch.closed ? "line-through" : ""}`}>
-                  {batch.label}
-                </span>
-                <span className="block text-sm text-ink/60">{batch.deliveryWindow}</span>
-                <span className="block text-sm">
-                  {batch.closed ? "Closed" : `Closes in ${left}`}
-                </span>
-                {batch.full && <span className="block text-sm text-brand">Full</span>}
-                {batch.flashFee !== null && !batch.closed && (
-                  <span className="block text-sm font-semibold text-brand">
-                    {naira(batch.flashFee)} delivery
-                  </span>
-                )}
-              </button>
+              <option key={batch.id} value={batch.id}>
+                {batch.label}{left}
+              </option>
             );
           })}
-        </div>
+        </select>
+        {selected && (
+          <p className="text-sm text-ink/55">
+            Orders close {selected.cutOffLabel}. {selected.deliveryWindow}.
+            {selected.flashFee !== null && ` ${naira(selected.flashFee)} delivery today.`}
+          </p>
+        )}
+        {adding && (
+          <p className="text-sm text-ink/55">
+            Fixed to the run you are adding to, so it travels in one bag.
+          </p>
+        )}
       </section>
 
       <section className="card space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="font-bold">Ordering for friends?</h2>
-            <p className="text-sm text-ink/55">
-              One cart, bags labelled by name at the drop point. Same delivery fee.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setGroupOn((on) => !on)}
-            className={groupOn ? "btn-primary px-3 py-1.5 text-sm" : "btn-quiet px-3 py-1.5 text-sm"}
-          >
-            {groupOn ? "On" : "Start"}
-          </button>
+        <div>
+          <h2 className="font-bold">
+            {groupOn ? "Who is in this order" : "Is this a group order?"}
+          </h2>
+          <p className="text-sm text-ink/55">
+            {groupOn
+              ? "Bags are labelled with these names at the drop point."
+              : "Turn it into one: add the names, then say whose each item is. The delivery fee does not change."}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {payingGroups.map((group, index) => (
+            <span key={group.person || "me"} className="chip border-black/10 bg-white">
+              {group.person || "You"}
+              <span className="text-ink/45">
+                {naira(group.food)}
+                {mode === "split" && ` + ${naira(feeShares[index] ?? 0)}`}
+              </span>
+              {group.person && (
+                <button
+                  type="button"
+                  onClick={() => removePerson(group.person)}
+                  aria-label={`Remove ${group.person}`}
+                  className="text-ink/35 hover:text-brand"
+                >
+                  ✕
+                </button>
+              )}
+            </span>
+          ))}
+
+          <span className="flex items-center gap-1">
+            <input
+              className="field w-32 py-1 text-sm"
+              placeholder="Add a name"
+              value={newPerson}
+              onChange={(e) => setNewPerson(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                addPerson(newPerson);
+                setNewPerson("");
+              }}
+            />
+            <button
+              type="button"
+              className="btn-quiet px-3 py-1 text-sm"
+              onClick={() => {
+                addPerson(newPerson);
+                setNewPerson("");
+              }}
+            >
+              Add
+            </button>
+          </span>
         </div>
 
         {groupOn && (
-          <div className="space-y-3 border-t border-black/5 pt-3">
-            <div>
-              <label className="label" htmlFor="person">Who is in this order?</label>
-              <div className="flex gap-2">
-                <input
-                  id="person"
-                  className="field"
-                  placeholder="Name"
-                  value={newPerson}
-                  onChange={(e) => setNewPerson(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter") return;
-                    e.preventDefault();
-                    const name = newPerson.trim();
-                    if (name && !people.includes(name)) setPeople([...people, name]);
-                    setNewPerson("");
-                  }}
-                />
-                <button
-                  type="button"
-                  className="btn-quiet shrink-0"
-                  onClick={() => {
-                    const name = newPerson.trim();
-                    if (name && !people.includes(name)) setPeople([...people, name]);
-                    setNewPerson("");
-                  }}
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-
-            {named.length > 0 && (
-              <ul className="space-y-2">
-                {shares.map((share, index) => (
-                  <li
-                    key={share.person}
-                    className="flex items-baseline justify-between gap-2 rounded-xl bg-black/[0.03] px-3 py-2 text-sm"
-                  >
-                    <span className="font-medium">
-                      {share.person}
-                      <span className="text-ink/50">
-                        {" "}
-                        · {share.items} item{share.items === 1 ? "" : "s"}
-                      </span>
-                    </span>
-                    <span className="flex items-center gap-3">
-                      <span>
-                        {naira(share.food)}
-                        {mode === "split" && ` + ${naira(feeShares[index] ?? 0)} delivery`}
-                      </span>
-                      <button
-                        type="button"
-                        className="text-ink/40 hover:text-brand"
-                        onClick={() => {
-                          setPeople(people.filter((p) => p !== share.person));
-                          for (const line of cart) {
-                            if (line.forName === share.person) setForName(line.key, "");
-                          }
-                        }}
-                        aria-label={`Remove ${share.person}`}
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {named.length > 0 && !everyoneAssigned && (
+          <fieldset className="space-y-2 border-t border-black/5 pt-3">
+            <legend className="label">Who pays?</legend>
+            <label className="flex gap-2 text-sm">
+              <input
+                type="radio"
+                name="who_pays"
+                checked={mode === "one_payer"}
+                onChange={() => setMode("one_payer")}
+              />
+              <span>
+                <span className="font-medium">I pay for everything.</span> Friends settle
+                up with me.
+              </span>
+            </label>
+            <label className="flex gap-2 text-sm">
+              <input
+                type="radio"
+                name="who_pays"
+                checked={mode === "split"}
+                onChange={() => setMode("split")}
+              />
+              <span>
+                <span className="font-medium">Everyone pays their share.</span> One
+                payment link per name. Anyone unpaid by the cut-off is dropped, the rest
+                still travels, and the fee drops with it.
+              </span>
+            </label>
+            {mode === "split" && !splitReady && (
               <p className="text-sm text-brand-dark">
-                Tag every item above with whose it is.
+                Two people at least, each with something in the cart.
               </p>
             )}
-
-            <fieldset className="space-y-2">
-              <legend className="label">Who pays?</legend>
-              <label className="flex gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="who_pays"
-                  checked={mode === "one_payer"}
-                  onChange={() => setMode("one_payer")}
-                />
-                <span>
-                  <span className="font-medium">I pay for everything.</span> Friends settle
-                  up with me.
-                </span>
-              </label>
-              <label className="flex gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="who_pays"
-                  checked={mode === "split"}
-                  onChange={() => setMode("split")}
-                />
-                <span>
-                  <span className="font-medium">Everyone pays their share.</span> One
-                  payment link per name. Anyone unpaid by the cut-off is dropped, the rest
-                  still travels, and the fee drops with it.
-                </span>
-              </label>
-            </fieldset>
-          </div>
+          </fieldset>
         )}
       </section>
 

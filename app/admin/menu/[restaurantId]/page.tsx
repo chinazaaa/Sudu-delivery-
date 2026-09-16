@@ -83,6 +83,12 @@ export default async function RestaurantAdmin({
           <label className="label">Address</label>
           <input name="address" defaultValue={restaurant.address} className="field" />
         </div>
+        <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm text-brand-dark">
+          The banner is the big slide at the top of the shop and the logo is the
+          circle beside the name. Without them the storefront falls back to plain
+          colour, so paste image links here: upload to Supabase Storage, or use any
+          public image URL.
+        </p>
         <div className="grid gap-2 sm:grid-cols-2">
           <div>
             <label className="label">Logo image URL</label>
@@ -92,6 +98,14 @@ export default async function RestaurantAdmin({
             <label className="label">Banner image URL</label>
             <input name="banner_url" defaultValue={restaurant.banner_url} className="field" />
           </div>
+        </div>
+        <div className="h-28 overflow-hidden rounded-xl">
+          <Thumb
+            src={restaurant.banner_url}
+            name={restaurant.name}
+            rounded="rounded-none"
+            variant="banner"
+          />
         </div>
         <button className="btn-quiet">Save restaurant</button>
       </form>

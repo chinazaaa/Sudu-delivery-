@@ -9,6 +9,7 @@ export type Settings = {
   instagram_handle: string;
   whatsapp_group_link: string;
   pitch_line: string;
+  product_notes: string;
 };
 
 const EMPTY: Settings = {
@@ -20,6 +21,7 @@ const EMPTY: Settings = {
   instagram_handle: "",
   whatsapp_group_link: "",
   pitch_line: "",
+  product_notes: "",
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -27,7 +29,7 @@ export async function getSettings(): Promise<Settings> {
     .from("settings")
     .select(
       "bank_name, bank_account_name, bank_account_number, whatsapp_number, card_note, " +
-        "instagram_handle, whatsapp_group_link, pitch_line"
+        "instagram_handle, whatsapp_group_link, pitch_line, product_notes"
     )
     .eq("id", true)
     .maybeSingle();
@@ -65,4 +67,12 @@ export function whatsappLink(number: string, message: string): string | null {
 export function instagramLink(handle: string): string | null {
   const name = handle.trim().replace(/^@/, "");
   return name ? `https://instagram.com/${encodeURIComponent(name)}` : null;
+}
+
+/** The product page notes, one per line, with {restaurant} filled in. */
+export function productNotes(settings: Settings, restaurant: string): string[] {
+  return settings.product_notes
+    .split("\n")
+    .map((line) => line.trim().replaceAll("{restaurant}", restaurant))
+    .filter(Boolean);
 }
