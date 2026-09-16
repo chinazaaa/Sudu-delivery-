@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { submitOrder, type SubmitState } from "@/app/actions";
-import { cartSubtotal, countItems, toServerLines, useCart, usePeople } from "@/lib/cart";
+import {
+  cartSubtotal,
+  countItems,
+  toServerLines,
+  updatePerson,
+  useCart,
+  usePeople,
+} from "@/lib/cart";
 import { FIRST_ORDER_DISCOUNT } from "@/lib/config";
 import { feeFor, splitFee } from "@/lib/fees";
 import { naira } from "@/lib/money";
@@ -60,7 +67,8 @@ export default function Checkout({
   const total = subtotal + fee;
 
   const groupOn = people.length > 0;
-  const shares = ["", ...people]
+  const names = people.map((p) => p.name);
+  const shares = ["", ...names]
     .map((person) => {
       const lines = cart.filter((l) => l.forName === person);
       return {
@@ -71,6 +79,9 @@ export default function Checkout({
     })
     .filter((share) => share.items > 0);
   const feeShares = splitFee(fee, shares.map((s) => s.items));
+  // Two people with food in the cart is what a split needs, whatever they are
+  // called: the leader's share is counted separately from a friend of the same
+  // name.
   const splitReady = !groupOn || mode === "one_payer" || shares.length >= 2;
 
   if (cart.length === 0) {
@@ -91,6 +102,7 @@ export default function Checkout({
       <input type="hidden" name="group_mode" value={groupOn ? mode : ""} />
       <input type="hidden" name="payment_method" value={method} />
       <input type="hidden" name="collect_mode" value={collect} />
+      <input type="hidden" name="people" value={JSON.stringify(people)} />
       {promoter && <input type="hidden" name="ref" value={promoter.code} />}
 
       <h1 className="text-2xl font-extrabold">Checkout</h1>
@@ -173,17 +185,61 @@ export default function Checkout({
             </p>
           </div>
 
-          <ul className="space-y-1 text-sm">
-            {shares.map((share, index) => (
-              <li key={share.person || "me"} className="flex justify-between gap-2">
-                <span className="font-semibold">{share.person || "You"}</span>
-                <span className="text-muted">
-                  {naira(share.food)}
-                  {mode === "split" && ` + ${naira(feeShares[index] ?? 0)} delivery`}
-                </span>
-              </li>
-            ))}
+          <ul className="space-y-3">
+            {shares.map((share, index) => {
+              const person = people.find((p) => p.name === share.person);
+              // Their own number is what a payment link and a transfer
+              // narration need; their own block is what a bag label needs.
+              const wantsPhone = mode === "split" && Boolean(person);
+              const wantsHostel = collect === "each" && Boolean(person);
+
+              return (
+                <li key={share.person || "me"} className="space-y-2">
+                  <div className="flex justify-between gap-2 text-sm">
+                    <span className="font-semibold">{share.person || "You"}</span>
+                    <span className="text-muted">
+                      {naira(share.food)}
+                      {mode === "split" && ` + ${naira(feeShares[index] ?? 0)} delivery`}
+                    </span>
+                  </div>
+
+                  {(wantsPhone || wantsHostel) && person && (
+                    <div className="flex flex-wrap gap-2">
+                      {wantsPhone && (
+                        <input
+                          className="field grow py-1.5 text-sm"
+                          inputMode="tel"
+                          placeholder={`${person.name}'s phone, for their link`}
+                          value={person.phone}
+                          onChange={(e) =>
+                            updatePerson(person.name, { phone: e.target.value })
+                          }
+                        />
+                      )}
+                      {wantsHostel && (
+                        <input
+                          className="field grow py-1.5 text-sm"
+                          placeholder={`${person.name}'s hostel or block`}
+                          value={person.hostel}
+                          onChange={(e) =>
+                            updatePerson(person.name, { hostel: e.target.value })
+                          }
+                        />
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
+
+          {mode === "split" && (
+            <p className="text-xs text-muted">
+              A phone number each means everyone gets their own payment link and
+              their own transfer narration. Leave one blank and that share sits
+              under your number instead.
+            </p>
+          )}
 
           <fieldset className="space-y-2 border-t border-black/5 pt-3">
             <legend className="label">Who collects at the drop point?</legend>

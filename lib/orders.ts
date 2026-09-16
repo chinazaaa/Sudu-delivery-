@@ -27,6 +27,8 @@ export type PlaceOrderInput = {
   paymentMethod?: "transfer" | "card";
   /** Whether one person collects every bag, or everyone collects their own. */
   collectMode?: "leader" | "each";
+  /** The others in a group order, with their own number and block if given. */
+  people?: { name: string; phone: string; hostel: string }[];
 };
 
 export type PlaceOrderResult =
@@ -87,6 +89,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           discount,
           paymentMethod,
           collectMode,
+          people: input.people ?? [],
         })
       : await placeSingleOrder({
           batch,
@@ -198,19 +201,28 @@ async function placeSingleOrder(args: {
     if (!group) return { ok: false, error: "Could not start that group order." };
   }
 
+  // An untagged line in a group belongs to whoever is ordering, so it is
+  // labelled with their name rather than left blank on the bag.
+  const lines = group
+    ? args.lines.map((line) => ({
+        ...line,
+        for_name: line.for_name?.trim() || args.name,
+      }))
+    : args.lines;
+
   const order = await insertOrder({
     batch_id: args.batch.id,
     customer_phone: args.phone,
     customer_name: args.name,
     hostel: args.hostel,
-    subtotal_food: countFood(args.lines),
+    subtotal_food: countFood(lines),
     fee,
     discount: args.discount,
     promoter_code: args.promoterCode,
     group_id: group?.id ?? null,
     for_name: null,
     payment_method: args.paymentMethod,
-    lines: args.lines,
+    lines,
   });
 
   return order
@@ -233,14 +245,23 @@ async function placeSplitGroup(args: {
   discount: number;
   paymentMethod: "transfer" | "card";
   collectMode: "leader" | "each";
+  people: { name: string; phone: string; hostel: string }[];
 }): Promise<PlaceOrderResult> {
+  // The leader's own items are keyed by an empty name, not by what they typed
+  // in "Your name". Keying by the name collapsed the whole group into one payer
+  // whenever a friend happened to share the leader's name.
   const byPerson = new Map<string, PricedLine[]>();
   for (const line of args.lines) {
-    const who = (line.for_name ?? "").trim() || args.name;
+    const who = (line.for_name ?? "").trim();
     byPerson.set(who, [...(byPerson.get(who) ?? []), line]);
   }
   if (byPerson.size < 2) {
-    return { ok: false, error: "Tag items with at least two names to split payment." };
+    return {
+      ok: false,
+      error:
+        "Splitting payment needs two people with food in the cart. " +
+        "Go back to the cart and tap a name under each item.",
+    };
   }
 
   const group = await createGroup(args, "split", args.collectMode);
@@ -254,12 +275,17 @@ async function placeSplitGroup(args: {
   let leaderOrderId: string | null = null;
 
   for (const [index, [who, lines]] of people.entries()) {
-    const isLeader = who === args.name;
+    const isLeader = who === "";
+    // Their own number, when they gave one: it is what their payment link and
+    // their transfer narration hang off, and it gives them their own history.
+    const theirs = args.people.find((p) => p.name === who);
+    const phone = (theirs?.phone && normalisePhone(theirs.phone)) || args.phone;
+
     const id = await insertOrder({
       batch_id: args.batch.id,
-      customer_phone: args.phone,
+      customer_phone: phone,
       customer_name: args.name,
-      hostel: args.hostel,
+      hostel: theirs?.hostel?.trim() || args.hostel,
       subtotal_food: countFood(lines),
       fee: shares[index],
       // The promoter discount belongs to the customer, so it lands once, on
@@ -267,7 +293,8 @@ async function placeSplitGroup(args: {
       discount: isLeader ? args.discount : 0,
       promoter_code: args.promoterCode,
       group_id: group.id,
-      for_name: who,
+      // The leader's share carries their own name on the bag label.
+      for_name: isLeader ? args.name : who,
       payment_method: args.paymentMethod,
       lines,
     });

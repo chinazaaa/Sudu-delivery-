@@ -49,8 +49,10 @@ export default async function OrderPage({
               <span>
                 {line.qty}× {line.name}{" "}
                 <span className="text-muted">({line.restaurant})</span>
-                {line.for_name && (
-                  <span className="text-muted"> · for {line.for_name}</span>
+                {(line.for_name || order.group) && (
+                  <span className="text-muted">
+                    {" "}· for {line.for_name ?? order.customer_name}
+                  </span>
                 )}
               </span>
               <span>{naira(line.qty * line.unit_price_at_order)}</span>

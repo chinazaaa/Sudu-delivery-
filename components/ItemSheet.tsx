@@ -147,16 +147,16 @@ export default function ItemSheet({
               </button>
               {people.map((person) => (
                 <button
-                  key={person}
+                  key={person.name}
                   type="button"
-                  onClick={() => setActivePerson(person)}
+                  onClick={() => setActivePerson(person.name)}
                   className={`chip ${
-                    active === person
+                    active === person.name
                       ? "border-brand bg-brand text-white"
                       : "border-black/10 bg-paper"
                   }`}
                 >
-                  {person}
+                  {person.name}
                 </button>
               ))}
 

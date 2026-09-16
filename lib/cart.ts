@@ -20,10 +20,21 @@ export type CartLine = {
 };
 
 const KEY = "sudu_cart_v1";
-const PEOPLE_KEY = "sudu_people_v1";
+const PEOPLE_KEY = "sudu_people_v2";
+
+/**
+ * Someone else in a group order. The phone and hostel are optional: they are
+ * only needed when that person pays for their own share, or collects their own
+ * bag, and asking for them up front would slow every group down.
+ */
+export type Person = {
+  name: string;
+  phone: string;
+  hostel: string;
+};
 
 let lines: CartLine[] = [];
-let people: string[] = [];
+let people: Person[] = [];
 let activePerson = "";
 let loaded = false;
 const listeners = new Set<() => void>();
@@ -34,7 +45,13 @@ function load(): void {
   try {
     lines = JSON.parse(window.localStorage.getItem(KEY) ?? "[]");
     const saved = JSON.parse(window.localStorage.getItem(PEOPLE_KEY) ?? "{}");
-    people = Array.isArray(saved.people) ? saved.people : [];
+    people = Array.isArray(saved.people)
+      ? saved.people.map((entry: Person | string) =>
+          typeof entry === "string"
+            ? { name: entry, phone: "", hostel: "" }
+            : { name: entry.name, phone: entry.phone ?? "", hostel: entry.hostel ?? "" }
+        )
+      : [];
     activePerson = typeof saved.active === "string" ? saved.active : "";
   } catch {
     lines = [];
@@ -61,7 +78,7 @@ export function lineKey(itemId: string, optionIds: string[], forName = ""): stri
   return [itemId, ...[...optionIds].sort(), `for:${forName}`].join("|");
 }
 
-function savePeople(next: { people: string[]; active: string }): void {
+function savePeople(next: { people: Person[]; active: string }): void {
   people = next.people;
   activePerson = next.active;
   try {
@@ -77,8 +94,19 @@ export function addPerson(name: string): void {
   const person = name.trim();
   if (!person) return;
   savePeople({
-    people: people.includes(person) ? people : [...people, person],
+    people: people.some((p) => p.name === person)
+      ? people
+      : [...people, { name: person, phone: "", hostel: "" }],
     active: person,
+  });
+}
+
+/** Their own number and block, filled in only when the order needs them. */
+export function updatePerson(name: string, patch: Partial<Person>): void {
+  load();
+  savePeople({
+    people: people.map((p) => (p.name === name ? { ...p, ...patch } : p)),
+    active: activePerson,
   });
 }
 
@@ -87,7 +115,7 @@ export function removePerson(name: string): void {
   // Their food goes back to unassigned rather than vanishing with them.
   save(lines.map((l) => (l.forName === name ? { ...l, forName: "" } : l)));
   savePeople({
-    people: people.filter((p) => p !== name),
+    people: people.filter((p) => p.name !== name),
     active: activePerson === name ? "" : activePerson,
   });
 }
@@ -150,7 +178,7 @@ function subscribe(listener: () => void): () => void {
 
 const EMPTY: CartLine[] = [];
 
-export function usePeople(): { people: string[]; active: string } {
+export function usePeople(): { people: Person[]; active: string } {
   return useSyncExternalStore(
     subscribe,
     () => {
@@ -161,10 +189,10 @@ export function usePeople(): { people: string[]; active: string } {
   );
 }
 
-const EMPTY_PEOPLE = { people: [] as string[], active: "" };
+const EMPTY_PEOPLE = { people: [] as Person[], active: "" };
 let peopleSnapshot = EMPTY_PEOPLE;
 
-function snapshot(): { people: string[]; active: string } {
+function snapshot(): { people: Person[]; active: string } {
   if (peopleSnapshot.people !== people || peopleSnapshot.active !== activePerson) {
     peopleSnapshot = { people, active: activePerson };
   }

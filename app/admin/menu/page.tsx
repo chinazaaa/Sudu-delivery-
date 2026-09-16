@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Diagnostic from "@/components/Diagnostic";
 import Thumb from "@/components/Thumb";
+import SaveButton from "@/components/SaveButton";
 import { db } from "@/lib/supabase";
 import { diagnoseEmpty } from "@/lib/health";
 import { addRestaurant, seedLaunchRestaurants } from "../actions";
@@ -39,7 +40,7 @@ export default async function RestaurantsAdmin() {
               Adds KFC Novare and Domino&apos;s with their usual items at placeholder
               prices.
             </p>
-            <button className="btn-primary w-full">Add KFC and Domino&apos;s</button>
+            <SaveButton className="w-full">Add KFC and Domino&apos;s</SaveButton>
           </form>
         </>
       )}
@@ -96,7 +97,7 @@ export default async function RestaurantsAdmin() {
           <label className="label">Address</label>
           <input name="address" placeholder="Novare Mall, Sangotedo" className="field" />
         </div>
-        <button className="btn-primary">Add restaurant</button>
+        <SaveButton>Add restaurant</SaveButton>
       </form>
     </div>
   );

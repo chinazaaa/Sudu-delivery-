@@ -359,3 +359,38 @@ Add`);
   assert.equal(items[0].category, "Streetwise");
   assert.equal(items[0].price, 3500);
 });
+
+
+test("a group member's own phone becomes their identity on a split share", () => {
+  // The rule the server applies: their number when given, the leader's when not.
+  const leader = "08031234567";
+  const people = [
+    { name: "Ada", phone: "0803 999 0001", hostel: "Red Block" },
+    { name: "Femi", phone: "", hostel: "" },
+  ];
+
+  const phoneFor = (who: string) => {
+    const theirs = people.find((p) => p.name === who);
+    return (theirs?.phone && normalisePhone(theirs.phone)) || leader;
+  };
+
+  assert.equal(phoneFor("Ada"), "08039990001");
+  assert.equal(phoneFor("Femi"), leader);
+});
+
+
+test("a friend sharing the leader's name is still a second payer", () => {
+  // Items are grouped by the tag on the line: the leader's are untagged.
+  const lines = [
+    { for_name: "" },
+    { for_name: "Naza" },
+  ];
+  const byPerson = new Set(lines.map((l) => (l.for_name ?? "").trim()));
+  assert.equal(byPerson.size, 2);
+
+  // The old rule keyed the leader's items by their typed name, so a friend
+  // called Naza collapsed the group to one payer and blocked the split.
+  const leaderName = "Naza";
+  const old = new Set(lines.map((l) => (l.for_name ?? "").trim() || leaderName));
+  assert.equal(old.size, 1);
+});

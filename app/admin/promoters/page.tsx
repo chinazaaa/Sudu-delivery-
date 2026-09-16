@@ -1,3 +1,4 @@
+import SaveButton from "@/components/SaveButton";
 import { promoterRows } from "@/lib/admin";
 import { naira } from "@/lib/money";
 import { savePromoter } from "../actions";
@@ -47,7 +48,7 @@ export default async function PromotersAdmin() {
               <input type="checkbox" name="active" defaultChecked={promoter.active} />
               Active
             </label>
-            <button className="btn-quiet">Save</button>
+            <SaveButton quiet>Save</SaveButton>
           </div>
         </form>
       ))}
@@ -75,7 +76,7 @@ export default async function PromotersAdmin() {
             <input type="checkbox" name="active" defaultChecked />
             Active
           </label>
-          <button className="btn-primary">Add</button>
+          <SaveButton>Add</SaveButton>
         </div>
       </form>
     </div>

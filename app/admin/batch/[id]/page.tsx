@@ -1,3 +1,4 @@
+import SaveButton from "@/components/SaveButton";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import HandoutList from "@/components/HandoutList";
@@ -315,7 +316,7 @@ export default async function BatchPage({
                 className="field"
               />
             </div>
-            <button className="btn-quiet shrink-0">Save</button>
+            <SaveButton quiet className="shrink-0">Save</SaveButton>
           </div>
           <p className="text-xs text-muted">
             {batch.flash_fee === null
@@ -340,7 +341,7 @@ export default async function BatchPage({
               className="field"
             />
           </div>
-          <button className="btn-quiet shrink-0">Save</button>
+          <SaveButton quiet className="shrink-0">Save</SaveButton>
         </form>
         <div className="flex flex-wrap gap-2">
           {(["open", "closed", "delivered", "cancelled"] as const).map((status) => (

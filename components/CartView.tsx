@@ -34,7 +34,8 @@ export default function CartView() {
     );
   }
 
-  const groups = ["", ...people]
+  const names = people.map((p) => p.name);
+  const groups = ["", ...names]
     .map((person) => ({
       person,
       lines: cart.filter((l) => l.forName === person),
@@ -70,12 +71,12 @@ export default function CartView() {
 
         <div className="flex flex-wrap gap-2">
           {people.map((person) => (
-            <span key={person} className="chip border-black/10 bg-paper">
-              {person}
+            <span key={person.name} className="chip border-black/10 bg-paper">
+              {person.name}
               <button
                 type="button"
-                onClick={() => removePerson(person)}
-                aria-label={`Remove ${person}`}
+                onClick={() => removePerson(person.name)}
+                aria-label={`Remove ${person.name}`}
                 className="text-muted"
               >
                 ✕
@@ -130,6 +131,7 @@ export default function CartView() {
                 <p className="text-sm text-muted">
                   {line.restaurantName}
                   {line.choices.length > 0 && ` · ${line.choices.join(", ")}`}
+                  {people.length > 0 && ` · for ${line.forName || "you"}`}
                 </p>
 
                 <div className="mt-2 flex items-center justify-between gap-2">
@@ -158,7 +160,7 @@ export default function CartView() {
                 {people.length > 0 && (
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     <span className="text-xs font-semibold text-muted">Whose?</span>
-                    {["", ...people].map((person) => (
+                    {["", ...names].map((person) => (
                       <button
                         key={person || "me"}
                         type="button"

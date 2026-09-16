@@ -34,6 +34,7 @@ export async function submitOrder(
     groupMode: mode === "one_payer" || mode === "split" ? mode : null,
     paymentMethod: String(form.get("payment_method") ?? "") === "card" ? "card" : "transfer",
     collectMode: String(form.get("collect_mode") ?? "") === "each" ? "each" : "leader",
+    people: parsePeople(form.get("people")),
   });
 
   if (!result.ok) return { error: result.error };
@@ -98,4 +99,24 @@ export async function signInWithPin(
 export async function forgetMe(): Promise<void> {
   await signOutCustomer();
   redirect("/orders");
+}
+
+
+/** The group's other members, as the cart recorded them. */
+function parsePeople(
+  value: FormDataEntryValue | null
+): { name: string; phone: string; hostel: string }[] {
+  try {
+    const parsed = JSON.parse(String(value ?? "[]"));
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((entry) => entry && typeof entry.name === "string")
+      .map((entry) => ({
+        name: String(entry.name),
+        phone: String(entry.phone ?? ""),
+        hostel: String(entry.hostel ?? ""),
+      }));
+  } catch {
+    return [];
+  }
 }

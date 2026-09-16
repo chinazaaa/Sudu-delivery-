@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import AddItemDialog from "@/components/AddItemDialog";
 import AdminItemFilter from "@/components/AdminItemFilter";
 import Thumb from "@/components/Thumb";
+import SaveButton from "@/components/SaveButton";
 import { db } from "@/lib/supabase";
 import { optionGroupsFor } from "@/lib/menu";
 import { naira } from "@/lib/money";
@@ -122,7 +124,7 @@ export default async function RestaurantAdmin({
             variant="banner"
           />
         </div>
-        <button className="btn-quiet">Save restaurant</button>
+        <SaveButton quiet>Save restaurant</SaveButton>
       </form>
 
       <section className="card space-y-3">
@@ -193,7 +195,7 @@ export default async function RestaurantAdmin({
                   Separate with commas. Add +amount or -amount for a price difference.
                 </p>
               </div>
-              <button className="btn-quiet">Apply to every item in that category</button>
+              <SaveButton quiet>Apply to every item in that category</SaveButton>
             </form>
           </details>
         )}
@@ -204,17 +206,58 @@ export default async function RestaurantAdmin({
             <label className="label">Add category</label>
             <input name="name" placeholder="Pizzas" className="field" />
           </div>
-          <button className="btn-quiet shrink-0">Add</button>
+          <SaveButton quiet className="shrink-0">Add</SaveButton>
         </form>
       </section>
 
       <section className="space-y-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-bold">Items</h2>
-          <span className="text-sm text-muted">
-            {itemList.length} on the menu, {itemList.filter((i) => i.available).length} on
-            sale
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="font-bold">Items</h2>
+            <span className="text-sm text-muted">
+              {itemList.length} on the menu, {itemList.filter((i) => i.available).length}{" "}
+              on sale
+            </span>
+          </div>
+
+          <AddItemDialog>
+          <form action={addMenuItem} className="space-y-3">
+          <input type="hidden" name="restaurant_id" value={restaurant.id} />
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="grow">
+              <label className="label">Name</label>
+              <input name="name" placeholder="Medium pizza" className="field" />
+            </div>
+            <div className="w-28">
+              <label className="label">Base price</label>
+              <input name="price_food" inputMode="numeric" className="field" />
+            </div>
+            <div className="w-40">
+              <label className="label">Category</label>
+              <select name="category_id" className="field">
+                <option value="">None</option>
+                {categoryList.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="label">Description</label>
+            <input name="description" className="field" />
+          </div>
+          <div>
+            <label className="label">Photo</label>
+            <input name="photo" type="file" accept="image/*" className="field" />
+          </div>
+          <SaveButton>Add item</SaveButton>
+          <p className="text-xs text-muted">
+            Add the item first, then open it to give it sizes and flavours.
+          </p>
+        </form>
+          </AddItemDialog>
         </div>
 
         <AdminItemFilter categories={categoryList.map((c) => ({ id: c.id, name: c.name }))}>
@@ -325,7 +368,7 @@ export default async function RestaurantAdmin({
                       className="field mt-2 text-sm"
                     />
                   </div>
-                  <button className="btn-quiet">Save item</button>
+                  <SaveButton quiet>Save item</SaveButton>
                 </form>
 
                 <div className="space-y-3 rounded-xl bg-black/[0.03] p-3">
@@ -427,7 +470,7 @@ export default async function RestaurantAdmin({
                       <input type="checkbox" name="required" defaultChecked />
                       Required
                     </label>
-                    <button className="btn-quiet">Add group</button>
+                    <SaveButton quiet>Add group</SaveButton>
                   </form>
                 </div>
 
@@ -467,47 +510,10 @@ Premium | Meat Lovers | 17500
 Favourites | BBQ Chicken | 12000
 Sides | Garlic Bread | 3000`}
             />
-            <button className="btn-quiet">Import these</button>
+            <SaveButton quiet>Import these</SaveButton>
           </form>
         </details>
 
-        <form action={addMenuItem} className="card space-y-3">
-          <h3 className="font-semibold">Add an item</h3>
-          <input type="hidden" name="restaurant_id" value={restaurant.id} />
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="grow">
-              <label className="label">Name</label>
-              <input name="name" placeholder="Medium pizza" className="field" />
-            </div>
-            <div className="w-28">
-              <label className="label">Base price</label>
-              <input name="price_food" inputMode="numeric" className="field" />
-            </div>
-            <div className="w-40">
-              <label className="label">Category</label>
-              <select name="category_id" className="field">
-                <option value="">None</option>
-                {categoryList.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="label">Description</label>
-            <input name="description" className="field" />
-          </div>
-          <div>
-            <label className="label">Photo</label>
-            <input name="photo" type="file" accept="image/*" className="field" />
-          </div>
-          <button className="btn-primary">Add item</button>
-          <p className="text-xs text-muted">
-            Add the item first, then open it to give it sizes and flavours.
-          </p>
-        </form>
       </section>
     </div>
   );

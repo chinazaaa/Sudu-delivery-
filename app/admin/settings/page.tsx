@@ -1,3 +1,4 @@
+import SaveButton from "@/components/SaveButton";
 import { getSettings, hasBankDetails } from "@/lib/settings";
 import { saveSettings } from "../actions";
 
@@ -84,7 +85,7 @@ export default async function SettingsAdmin() {
           />
         </div>
 
-        <button className="btn-primary">Save</button>
+        <SaveButton>Save</SaveButton>
       </form>
 
       <form action={saveSettings} className="card space-y-3">
@@ -118,7 +119,7 @@ export default async function SettingsAdmin() {
             The group is the distribution. Leave blank to hide the link.
           </p>
         </div>
-        <button className="btn-primary">Save</button>
+        <SaveButton>Save</SaveButton>
       </form>
 
       <form action={saveSettings} className="card space-y-3">
@@ -127,7 +128,7 @@ export default async function SettingsAdmin() {
           The line at the bottom of every page.
         </p>
         <input name="footer_line" defaultValue={settings.footer_line} className="field" />
-        <button className="btn-primary">Save</button>
+        <SaveButton>Save</SaveButton>
       </form>
 
       <form action={saveSettings} className="card space-y-3">
@@ -142,7 +143,7 @@ export default async function SettingsAdmin() {
           rows={4}
           className="field"
         />
-        <button className="btn-primary">Save</button>
+        <SaveButton>Save</SaveButton>
       </form>
 
       <form action={saveSettings} className="card space-y-3">
@@ -156,7 +157,7 @@ export default async function SettingsAdmin() {
           rows={2}
           className="field"
         />
-        <button className="btn-primary">Save</button>
+        <SaveButton>Save</SaveButton>
       </form>
     </div>
   );
