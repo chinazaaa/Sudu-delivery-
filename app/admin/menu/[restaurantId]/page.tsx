@@ -15,6 +15,7 @@ import {
   deleteOptionGroup,
   updateMenuItem,
   updateOption,
+  importMenu,
   updateRestaurant,
 } from "../../actions";
 import type { MenuCategory, MenuItem, Restaurant } from "@/lib/types";
@@ -347,6 +348,34 @@ export default async function RestaurantAdmin({
             </details>
           );
         })}
+
+        <details className="card">
+          <summary className="cursor-pointer font-semibold">
+            Paste a whole menu
+          </summary>
+          <form action={importMenu} className="mt-3 space-y-2">
+            <input type="hidden" name="restaurant_id" value={restaurant.id} />
+            <p className="text-sm text-muted">
+              One item per line, as{" "}
+              <code className="rounded bg-black/5 px-1">
+                Category | Item | Price | Description
+              </code>
+              . Categories are created as they appear. Add photos and choices
+              afterwards by opening each item.
+            </p>
+            <textarea
+              name="menu_text"
+              rows={8}
+              className="field font-mono text-sm"
+              placeholder={`Classic | Pepperoni | 11000 | Hand tossed, cut into eight
+Classic | Margherita | 9500
+Premium | Meat Lovers | 17500
+Favourites | BBQ Chicken | 12000
+Sides | Garlic Bread | 3000`}
+            />
+            <button className="btn-quiet">Import these</button>
+          </form>
+        </details>
 
         <form action={addMenuItem} className="card space-y-3">
           <h3 className="font-semibold">Add an item</h3>

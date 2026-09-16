@@ -140,7 +140,7 @@ export default function ItemSheet({
                 type="button"
                 onClick={() => setActivePerson("")}
                 className={`chip ${
-                  active === "" ? "border-ink bg-ink text-white" : "border-black/10 bg-paper"
+                  active === "" ? "border-brand bg-brand text-white" : "border-black/10 bg-paper"
                 }`}
               >
                 Me
@@ -152,7 +152,7 @@ export default function ItemSheet({
                   onClick={() => setActivePerson(person)}
                   className={`chip ${
                     active === person
-                      ? "border-ink bg-ink text-white"
+                      ? "border-brand bg-brand text-white"
                       : "border-black/10 bg-paper"
                   }`}
                 >

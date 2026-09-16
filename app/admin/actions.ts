@@ -453,3 +453,77 @@ export async function deleteMenuItem(form: FormData): Promise<void> {
   revalidatePath("/admin/menu");
   revalidatePath("/");
 }
+
+/**
+ * A whole menu in one paste. One item per line:
+ *
+ *   Category | Item name | Price | Description
+ *
+ * Category and description may be left out. Categories are created as they are
+ * met, so a price list copied off a menu goes in without fifty separate forms.
+ */
+export async function importMenu(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const restaurantId = String(form.get("restaurant_id"));
+  const text = String(form.get("menu_text") ?? "");
+  if (!restaurantId || !text.trim()) return;
+
+  const { data: existing } = await db()
+    .from("menu_categories")
+    .select("id, name")
+    .eq("restaurant_id", restaurantId);
+
+  const categories = new Map(
+    ((existing ?? []) as { id: string; name: string }[]).map((c) => [
+      c.name.toLowerCase(),
+      c.id,
+    ])
+  );
+
+  let sort = 100;
+
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+
+    // Accept | or tab or comma between the fields.
+    const parts = line.split(/\s*[|\t]\s*|,(?=\s*\d)/).map((part) => part.trim());
+    if (parts.length < 2) continue;
+
+    const [categoryName, name, priceText, description] =
+      parts.length >= 3
+        ? [parts[0], parts[1], parts[2], parts[3] ?? ""]
+        : ["", parts[0], parts[1], parts[2] ?? ""];
+
+    const price = Math.round(Number(String(priceText).replace(/[^\d.]/g, "")));
+    if (!name || !Number.isFinite(price) || price <= 0) continue;
+
+    let categoryId: string | null = null;
+    if (categoryName) {
+      const key = categoryName.toLowerCase();
+      if (!categories.has(key)) {
+        const { data: created } = await db()
+          .from("menu_categories")
+          .insert({ restaurant_id: restaurantId, name: categoryName, sort_order: sort })
+          .select("id")
+          .single();
+        if (created) categories.set(key, created.id as string);
+      }
+      categoryId = categories.get(key) ?? null;
+    }
+
+    await db().from("menu_items").insert({
+      restaurant_id: restaurantId,
+      category_id: categoryId,
+      name,
+      price_food: price,
+      description,
+      sort_order: sort,
+    });
+    sort += 1;
+  }
+
+  revalidatePath("/admin/menu");
+  revalidatePath("/");
+}

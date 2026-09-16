@@ -148,6 +148,16 @@ export default function Checkout({
         </div>
       </section>
 
+      {!groupOn && (
+        <p className="text-sm text-muted">
+          Ordering for friends?{" "}
+          <Link href="/cart" className="font-semibold text-brand">
+            Add their names in your cart
+          </Link>{" "}
+          and tap a name on each item. Checkout then shows what each person owes.
+        </p>
+      )}
+
       {groupOn && (
         <section className="card space-y-3">
           <div>

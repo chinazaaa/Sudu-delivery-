@@ -108,6 +108,57 @@ function closesLabel(time: string): string {
   return m ? `${hour}:${String(m).padStart(2, "0")}${suffix}` : `${hour}${suffix}`;
 }
 
+/**
+ * One restaurant's menu. The restaurant page used to load every restaurant,
+ * every item and every option in the system to show one of them, which is why
+ * it felt slow to open.
+ */
+export async function menuViewFor(restaurantId: string): Promise<MenuView | null> {
+  const { data } = await db()
+    .from("restaurants")
+    .select("*")
+    .eq("id", restaurantId)
+    .eq("active", true)
+    .maybeSingle();
+  const restaurant = data as Restaurant | null;
+  if (!restaurant) return null;
+
+  const [categories, items] = await Promise.all([
+    db().from("menu_categories").select("*").eq("restaurant_id", restaurantId).order("sort_order"),
+    db().from("menu_items").select("*").eq("restaurant_id", restaurantId).order("sort_order"),
+  ]);
+
+  const menuItems = (items.data ?? []) as MenuItem[];
+  const groupsByItem = await optionGroupsFor(menuItems.map((i) => i.id));
+
+  return {
+    restaurant: {
+      id: restaurant.id,
+      name: restaurant.name,
+      closesAt: closesLabel(restaurant.closes_at),
+      logoUrl: restaurant.logo_url ?? "",
+      bannerUrl: restaurant.banner_url ?? "",
+      brandHex: restaurant.brand_hex ?? "",
+    },
+    categories: ((categories.data ?? []) as MenuCategory[]).map((c) => ({
+      id: c.id,
+      name: c.name,
+    })),
+    items: menuItems.map(
+      (i): ItemView => ({
+        id: i.id,
+        name: i.name,
+        price: i.price_food,
+        available: i.available,
+        imageUrl: i.image_url ?? "",
+        description: i.description ?? "",
+        categoryId: i.category_id ?? null,
+        groups: groupsByItem.get(i.id) ?? [],
+      })
+    ),
+  };
+}
+
 /** Just the names, for the navigation bar. Never throws during a build. */
 export async function openRestaurants(): Promise<{ id: string; name: string }[]> {
   try {

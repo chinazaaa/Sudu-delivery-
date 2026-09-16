@@ -45,6 +45,72 @@ export default function CartView() {
     <div className="space-y-5 pb-36">
       <h1 className="text-2xl font-extrabold">Your cart</h1>
 
+      <section className="card space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="font-bold">
+            {people.length > 0 ? "People in this order" : "Ordering for friends?"}
+          </h2>
+          {people.length > 0 && (
+            <button
+              type="button"
+              onClick={clearPeople}
+              className="shrink-0 text-sm font-semibold text-muted hover:text-brand"
+            >
+              Turn off group
+            </button>
+          )}
+        </div>
+        <div>
+          <p className="text-sm text-muted">
+            {people.length > 0
+              ? "Now tap a name under each item below to say whose it is. Bags are labelled with these names at the drop point."
+              : "Add their names, then tap a name under each item to say whose it is. The delivery fee does not change."}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {people.map((person) => (
+            <span key={person} className="chip border-black/10 bg-paper">
+              {person}
+              <button
+                type="button"
+                onClick={() => removePerson(person)}
+                aria-label={`Remove ${person}`}
+                className="text-muted"
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+
+          <span className="flex items-center gap-1">
+            <input
+              className="field w-32 py-1.5 text-sm"
+              placeholder="Add a name"
+              value={newPerson}
+              onChange={(e) => setNewPerson(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                addPerson(newPerson);
+                setNewPerson("");
+              }}
+            />
+            <button
+              type="button"
+              className="chip border-black/10 bg-paper"
+              onClick={() => {
+                addPerson(newPerson);
+                setNewPerson("");
+              }}
+            >
+              Add
+            </button>
+          </span>
+        </div>
+      </section>
+
+
       {groups.map((group) => (
         <section key={group.person || "me"} className="space-y-3">
           {people.length > 0 && (
@@ -90,88 +156,29 @@ export default function CartView() {
                 </div>
 
                 {people.length > 0 && (
-                  <select
-                    className="field mt-2 py-1.5 text-sm"
-                    value={line.forName}
-                    onChange={(e) => setForName(line.key, e.target.value)}
-                  >
-                    <option value="">For you</option>
-                    {people.map((person) => (
-                      <option key={person} value={person}>
-                        For {person}
-                      </option>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs font-semibold text-muted">Whose?</span>
+                    {["", ...people].map((person) => (
+                      <button
+                        key={person || "me"}
+                        type="button"
+                        onClick={() => setForName(line.key, person)}
+                        className={`rounded-full px-3 py-1 text-sm font-semibold transition ${
+                          line.forName === person
+                            ? "bg-brand text-white"
+                            : "bg-black/[0.06] text-ink/70"
+                        }`}
+                      >
+                        {person || "Me"}
+                      </button>
                     ))}
-                  </select>
+                  </div>
                 )}
               </div>
             </div>
           ))}
         </section>
       ))}
-
-      <section className="card space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <h2 className="font-bold">
-            {people.length > 0 ? "People in this order" : "Ordering for friends?"}
-          </h2>
-          {people.length > 0 && (
-            <button
-              type="button"
-              onClick={clearPeople}
-              className="shrink-0 text-sm font-semibold text-muted hover:text-brand"
-            >
-              Turn off group
-            </button>
-          )}
-        </div>
-        <div>
-          <p className="text-sm text-muted">
-            Add their names and each bag is labelled at the drop point. The delivery fee
-            does not change.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {people.map((person) => (
-            <span key={person} className="chip border-black/10 bg-paper">
-              {person}
-              <button
-                type="button"
-                onClick={() => removePerson(person)}
-                aria-label={`Remove ${person}`}
-                className="text-muted"
-              >
-                ✕
-              </button>
-            </span>
-          ))}
-
-          <span className="flex items-center gap-1">
-            <input
-              className="field w-32 py-1.5 text-sm"
-              placeholder="Add a name"
-              value={newPerson}
-              onChange={(e) => setNewPerson(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter") return;
-                e.preventDefault();
-                addPerson(newPerson);
-                setNewPerson("");
-              }}
-            />
-            <button
-              type="button"
-              className="chip border-black/10 bg-paper"
-              onClick={() => {
-                addPerson(newPerson);
-                setNewPerson("");
-              }}
-            >
-              Add
-            </button>
-          </span>
-        </div>
-      </section>
 
       <Link href="/" className="inline-block font-semibold text-brand">
         Add something else

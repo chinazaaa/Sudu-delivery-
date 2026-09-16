@@ -14,14 +14,14 @@ export default function CartBar() {
     <div className="fixed inset-x-0 bottom-0 z-30 p-3">
       <Link
         href="/cart"
-        className="mx-auto flex max-w-2xl items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-lift"
+        className="mx-auto flex max-w-2xl items-center gap-3 rounded-2xl bg-brand px-4 py-3 text-white shadow-lift"
       >
         <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/15 font-bold">
           {count}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-bold">View cart</span>
-          <span className="block truncate text-sm text-white/65">
+          <span className="block truncate text-sm text-white/80">
             Delivery added at checkout
           </span>
         </span>

@@ -40,7 +40,7 @@ export default function RestaurantMenu({ place }: { place: MenuView }) {
               type="button"
               onClick={() => setFilter(null)}
               className={`chip ${
-                filter === null ? "border-ink bg-ink text-white" : "border-black/10 bg-paper"
+                filter === null ? "border-brand bg-brand text-white" : "border-black/10 bg-paper"
               }`}
             >
               All
@@ -55,7 +55,7 @@ export default function RestaurantMenu({ place }: { place: MenuView }) {
                 onClick={() => setFilter(section.id)}
                 className={`chip ${
                   filter === section.id
-                    ? "border-ink bg-ink text-white"
+                    ? "border-brand bg-brand text-white"
                     : "border-black/10 bg-paper"
                 }`}
               >

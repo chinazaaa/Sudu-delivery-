@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { countItems, useCart, cartSubtotal } from "@/lib/cart";
-import { naira } from "@/lib/money";
+import { countItems, useCart } from "@/lib/cart";
 
+/** One bar: the mark, where you can go, and the cart. */
 export default function SiteHeader({
   restaurants = [],
 }: {
@@ -18,9 +18,10 @@ export default function SiteHeader({
 
   const link = (href: string, label: string) => (
     <Link
+      key={href}
       href={href}
-      className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold transition hover:bg-black/[0.04] ${
-        path === href ? "bg-black/[0.05] text-ink" : "text-muted"
+      className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold transition ${
+        path === href ? "bg-black/[0.06] text-ink" : "text-muted hover:text-ink"
       }`}
     >
       {label}
@@ -28,61 +29,37 @@ export default function SiteHeader({
   );
 
   return (
-    <header className="sticky top-0 z-30 border-b border-black/5 bg-paper/90 backdrop-blur">
-      <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
-        <Link href="/" className="flex items-center gap-2">
+    <header className="sticky top-0 z-30 border-b border-black/5 bg-paper/95 backdrop-blur">
+      <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2.5">
+        <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="Sudu home">
           <span className="grid size-9 place-items-center rounded-xl bg-brand text-lg font-black text-white">
             S
           </span>
-          <span className="text-lg font-extrabold tracking-tight">Sudu</span>
+          <span className="hidden text-lg font-extrabold sm:block">Sudu</span>
         </Link>
 
-        <nav className="ml-2 hidden items-center gap-1 sm:flex">
+        <nav className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
           {link("/", "Menu")}
-          {restaurants.map((restaurant) => (
-            <Link
-              key={restaurant.id}
-              href={`/r/${restaurant.id}`}
-              className="rounded-full px-3 py-1.5 text-sm font-medium text-muted transition hover:bg-black/[0.04] hover:text-ink"
-            >
-              {restaurant.name}
-            </Link>
-          ))}
-          <span className="mx-1 h-4 w-px bg-black/10" />
+          {restaurants.map((restaurant) =>
+            link(`/r/${restaurant.id}`, restaurant.name)
+          )}
           {link("/orders", "My orders")}
           {link("/reorder", "Order again")}
         </nav>
 
         <Link
           href="/cart"
-          className="ml-auto inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink/85"
+          aria-label={`Cart, ${count} item${count === 1 ? "" : "s"}`}
+          className="relative grid size-11 shrink-0 place-items-center rounded-full bg-brand text-white shadow-[0_8px_18px_-10px_rgba(255,90,31,0.9)] transition active:scale-95"
         >
-          <span aria-hidden>🛒</span>
-          {count > 0 ? (
-            <>
-              <span>{count}</span>
-              <span className="hidden sm:inline">· {naira(cartSubtotal(cart))}</span>
-            </>
-          ) : (
-            <span>Cart</span>
+          <span aria-hidden className="text-lg">🛒</span>
+          {count > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 grid min-w-5 place-items-center rounded-full border-2 border-paper bg-ink px-1 text-[11px] font-bold text-white">
+              {count}
+            </span>
           )}
         </Link>
       </div>
-
-      <nav className="no-scrollbar flex gap-1 overflow-x-auto border-t border-black/5 px-4 py-2 sm:hidden [&>*]:shrink-0">
-        {link("/", "Menu")}
-        {restaurants.map((restaurant) => (
-          <Link
-            key={restaurant.id}
-            href={`/r/${restaurant.id}`}
-            className="shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold text-muted"
-          >
-            {restaurant.name}
-          </Link>
-        ))}
-        {link("/orders", "My orders")}
-        {link("/reorder", "Order again")}
-      </nav>
     </header>
   );
 }

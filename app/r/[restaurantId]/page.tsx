@@ -4,7 +4,7 @@ import RestaurantMenu from "@/components/RestaurantMenu";
 import RunStrip from "@/components/RunStrip";
 import Thumb from "@/components/Thumb";
 import { openBatches } from "@/lib/batches";
-import { menuView } from "@/lib/menu";
+import { menuViewFor } from "@/lib/menu";
 import { toBatchView } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -15,9 +15,10 @@ export default async function RestaurantPage({
   params: Promise<{ restaurantId: string }>;
 }) {
   const { restaurantId } = await params;
-  const [menu, batches] = await Promise.all([menuView(), openBatches()]);
-
-  const place = menu.find((m) => m.restaurant.id === restaurantId);
+  const [place, batches] = await Promise.all([
+    menuViewFor(restaurantId),
+    openBatches(),
+  ]);
   if (!place) notFound();
 
   const nextRun = batches.length > 0 ? toBatchView(batches[0]) : null;
