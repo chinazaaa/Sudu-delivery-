@@ -7,6 +7,7 @@ import { STAGES, type BatchStage } from "@/lib/stages";
 import { DELIVERY_WINDOWS, type BatchSlot } from "@/lib/config";
 import { lagosInstant } from "@/lib/time";
 import { fileFrom, uploadImage } from "@/lib/uploads";
+import { parseMenuText } from "@/lib/menu-import";
 
 async function assertAdmin(): Promise<void> {
   if (!(await isSignedIn())) throw new Error("Not signed in.");
@@ -469,6 +470,9 @@ export async function importMenu(form: FormData): Promise<void> {
   const text = String(form.get("menu_text") ?? "");
   if (!restaurantId || !text.trim()) return;
 
+  const parsed = parseMenuText(text);
+  if (parsed.length === 0) return;
+
   const { data: existing } = await db()
     .from("menu_categories")
     .select("id, name")
@@ -483,29 +487,15 @@ export async function importMenu(form: FormData): Promise<void> {
 
   let sort = 100;
 
-  for (const raw of text.split("\n")) {
-    const line = raw.trim();
-    if (!line || line.startsWith("#")) continue;
-
-    // Accept | or tab or comma between the fields.
-    const parts = line.split(/\s*[|\t]\s*|,(?=\s*\d)/).map((part) => part.trim());
-    if (parts.length < 2) continue;
-
-    const [categoryName, name, priceText, description] =
-      parts.length >= 3
-        ? [parts[0], parts[1], parts[2], parts[3] ?? ""]
-        : ["", parts[0], parts[1], parts[2] ?? ""];
-
-    const price = Math.round(Number(String(priceText).replace(/[^\d.]/g, "")));
-    if (!name || !Number.isFinite(price) || price <= 0) continue;
-
+  for (const item of parsed) {
     let categoryId: string | null = null;
-    if (categoryName) {
-      const key = categoryName.toLowerCase();
+
+    if (item.category) {
+      const key = item.category.toLowerCase();
       if (!categories.has(key)) {
         const { data: created } = await db()
           .from("menu_categories")
-          .insert({ restaurant_id: restaurantId, name: categoryName, sort_order: sort })
+          .insert({ restaurant_id: restaurantId, name: item.category, sort_order: sort })
           .select("id")
           .single();
         if (created) categories.set(key, created.id as string);
@@ -516,13 +506,97 @@ export async function importMenu(form: FormData): Promise<void> {
     await db().from("menu_items").insert({
       restaurant_id: restaurantId,
       category_id: categoryId,
-      name,
-      price_food: price,
-      description,
+      name: item.name,
+      price_food: item.price,
+      description: item.description,
+      // Unpriced or sold-out items are created but hidden, so nobody can order
+      // a ₦0 pizza or something the shop has run out of.
+      available: item.available && item.price > 0,
       sort_order: sort,
     });
     sort += 1;
   }
+
+  revalidatePath("/admin/menu");
+  revalidatePath("/");
+}
+
+/**
+ * The same choice group on every item in a category. Fifteen pizzas each
+ * needing Small, Medium and Large is not fifteen forms.
+ */
+export async function applyGroupToCategory(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const categoryId = String(form.get("category_id"));
+  const groupName = String(form.get("group_name") ?? "").trim();
+  const raw = String(form.get("options") ?? "").trim();
+  if (!categoryId || !groupName || !raw) return;
+
+  // "Small, Medium +2000, Large +5500"
+  const options = raw
+    .split(/[,\n]/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part, index) => {
+      const match = part.match(/^(.*?)(?:\s*([+-]\s*[\d,.]+))?$/);
+      const name = (match?.[1] ?? part).trim();
+      const delta = match?.[2]
+        ? Math.round(Number(match[2].replace(/[^\d.-]/g, "")))
+        : 0;
+      return { name, delta: Number.isFinite(delta) ? delta : 0, sort: index + 1 };
+    })
+    .filter((option) => option.name);
+
+  const { data: items } = await db()
+    .from("menu_items")
+    .select("id")
+    .eq("category_id", categoryId);
+
+  for (const item of (items ?? []) as { id: string }[]) {
+    const { data: existing } = await db()
+      .from("item_option_groups")
+      .select("id")
+      .eq("menu_item_id", item.id)
+      .eq("name", groupName)
+      .maybeSingle();
+    if (existing) continue;
+
+    const { data: group } = await db()
+      .from("item_option_groups")
+      .insert({
+        menu_item_id: item.id,
+        name: groupName,
+        required: form.get("required") === "on",
+        max_select: Math.max(1, Number(form.get("max_select") ?? 1)),
+        sort_order: 1,
+      })
+      .select("id")
+      .single();
+    if (!group) continue;
+
+    await db().from("item_options").insert(
+      options.map((option) => ({
+        group_id: group.id,
+        name: option.name,
+        price_delta: option.delta,
+        sort_order: option.sort,
+      }))
+    );
+  }
+
+  revalidatePath("/admin/menu");
+  revalidatePath("/");
+}
+
+/** One tap on and off, for the times a branch has run out mid-week. */
+export async function toggleItemAvailable(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  await db()
+    .from("menu_items")
+    .update({ available: form.get("available") === "true" })
+    .eq("id", String(form.get("item_id")));
 
   revalidatePath("/admin/menu");
   revalidatePath("/");

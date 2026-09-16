@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import AdminItemFilter from "@/components/AdminItemFilter";
 import Thumb from "@/components/Thumb";
 import { db } from "@/lib/supabase";
 import { optionGroupsFor } from "@/lib/menu";
@@ -15,6 +16,8 @@ import {
   deleteOptionGroup,
   updateMenuItem,
   updateOption,
+  applyGroupToCategory,
+  toggleItemAvailable,
   importMenu,
   updateRestaurant,
 } from "../../actions";
@@ -145,6 +148,56 @@ export default async function RestaurantAdmin({
             <li className="text-sm text-muted">None yet. Items will show under All.</li>
           )}
         </ul>
+        {categoryList.length > 0 && (
+          <details className="rounded-xl border border-black/10 p-3">
+            <summary className="cursor-pointer text-sm font-semibold">
+              Give a whole category the same choices
+            </summary>
+            <form action={applyGroupToCategory} className="mt-3 space-y-2">
+              <p className="text-sm text-muted">
+                Every pizza needs Small, Medium and Large. Do it once here instead of
+                item by item. Items that already have this group are left alone.
+              </p>
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="w-40">
+                  <label className="label">Category</label>
+                  <select name="category_id" className="field">
+                    {categoryList.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="w-32">
+                  <label className="label">Choice name</label>
+                  <input name="group_name" placeholder="Size" className="field" />
+                </div>
+                <div className="w-24">
+                  <label className="label">Pick up to</label>
+                  <input name="max_select" inputMode="numeric" defaultValue={1} className="field" />
+                </div>
+                <label className="flex items-center gap-2 pb-2 text-sm">
+                  <input type="checkbox" name="required" defaultChecked />
+                  Required
+                </label>
+              </div>
+              <div>
+                <label className="label">Options</label>
+                <input
+                  name="options"
+                  placeholder="Small, Medium +2000, Large +5500"
+                  className="field"
+                />
+                <p className="mt-1 text-xs text-muted">
+                  Separate with commas. Add +amount or -amount for a price difference.
+                </p>
+              </div>
+              <button className="btn-quiet">Apply to every item in that category</button>
+            </form>
+          </details>
+        )}
+
         <form action={addCategory} className="flex items-end gap-2">
           <input type="hidden" name="restaurant_id" value={restaurant.id} />
           <div className="grow">
@@ -156,27 +209,67 @@ export default async function RestaurantAdmin({
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-bold">Items</h2>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-bold">Items</h2>
+          <span className="text-sm text-muted">
+            {itemList.length} on the menu, {itemList.filter((i) => i.available).length} on
+            sale
+          </span>
+        </div>
 
+        <AdminItemFilter categories={categoryList.map((c) => ({ id: c.id, name: c.name }))}>
         {itemList.map((item) => {
           const groups = groupsByItem.get(item.id) ?? [];
           return (
-            <details key={item.id} className="card">
-              <summary className="flex cursor-pointer items-center gap-3">
+            <div
+              key={item.id}
+              data-item
+              data-name={item.name.toLowerCase()}
+              data-category={
+                categoryList.find((c) => c.id === item.category_id)?.name ?? ""
+              }
+              className="card"
+            >
+              <div className="flex items-center gap-3">
                 <span className="size-12 shrink-0 overflow-hidden rounded-xl">
                   <Thumb src={item.image_url} name={item.name} rounded="rounded-none" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{item.name}</span>
                   <span className="block text-sm text-muted">
-                    {naira(item.price_food)}
+                    {item.price_food > 0 ? naira(item.price_food) : "no price yet"}
                     {groups.length > 0 && ` · ${groups.map((g) => g.name).join(", ")}`}
-                    {!item.available && " · sold out"}
                   </span>
                 </span>
-              </summary>
 
-              <div className="mt-3 space-y-4 border-t border-black/5 pt-3">
+                <form action={toggleItemAvailable} className="shrink-0">
+                  <input type="hidden" name="item_id" value={item.id} />
+                  <input
+                    type="hidden"
+                    name="available"
+                    value={item.available ? "false" : "true"}
+                  />
+                  <button
+                    className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                      item.available
+                        ? "bg-mint/15 text-mint"
+                        : "bg-black/[0.06] text-muted"
+                    }`}
+                    title={
+                      item.price_food === 0
+                        ? "Set a price before this can go on sale"
+                        : undefined
+                    }
+                  >
+                    {item.available ? "On sale" : "Sold out"}
+                  </button>
+                </form>
+              </div>
+
+              <details className="mt-3 space-y-4 border-t border-black/5 pt-3">
+                <summary className="cursor-pointer text-sm font-semibold text-muted">
+                  Edit this item
+                </summary>
                 <form action={updateMenuItem} className="space-y-2">
                   <input type="hidden" name="item_id" value={item.id} />
                   <div className="flex flex-wrap items-end gap-2">
@@ -340,14 +433,15 @@ export default async function RestaurantAdmin({
 
                 <form action={deleteMenuItem}>
                   <input type="hidden" name="item_id" value={item.id} />
-                  <button className="text-sm text-ink/40 hover:text-brand">
+                  <button className="text-sm text-muted hover:text-brand">
                     Delete this item
                   </button>
                 </form>
-              </div>
-            </details>
+              </details>
+            </div>
           );
         })}
+        </AdminItemFilter>
 
         <details className="card">
           <summary className="cursor-pointer font-semibold">

@@ -7,6 +7,7 @@ import { bandFor, feeFor, nextBand, splitFee, HEADLINE_FEE } from "../lib/fees";
 import { sheetAsText } from "../lib/sheet-text";
 import { whatsappTo } from "../lib/messages";
 import { newPin } from "../lib/customer-auth";
+import { parseMenuText } from "../lib/menu-import";
 import type { OrderLine } from "../lib/orders";
 
 test("phone numbers normalise to one identity however they are typed", () => {
@@ -224,4 +225,137 @@ test("the counter sheet keeps sizes and flavours apart", () => {
     ["3x Pizza (Large, Pepperoni)", "1x Pizza (Margherita, Small)"]
   );
   assert.equal(domino.expectedFoodTotal, 3 * 17000 + 11000);
+});
+
+
+test("a menu pasted straight off a website becomes categories and items", () => {
+  const items = parseMenuText(`PIZZA
+VEGGIE
+MARGHERITA Pizza - Tomato Sauce & Extra Mozzarella Cheese
+ADD TO ORDER
+CUSTOMIZE
+MARGHERITA
+
+CHICKEN
+CHICKEN SUYA Pizza - Chicken Suya, Green Peppers, Nigerian Hot Chili Peppers
+CHICKEN SUYA
+
+BREADS
+BREADSTICKS Bread - Hot & fresh oven-baked Breadsticks
+BREADSTICKS
+
+CHICKEN
+Roasted Chicken - 2PCS Wings - ROASTED CHICKEN ONLY. NO DIP POT SAUCE ADDED
+Roasted Chicken - 2PCS
+
+DRINKS
+7UP Drinks -
+7UP`);
+
+  assert.deepEqual(
+    items.map((i) => `${i.category} / ${i.name}`),
+    [
+      "Pizza · Veggie / Margherita",
+      "Pizza · Chicken / Chicken Suya",
+      "Breads / Breadsticks",
+      "Chicken / Roasted Chicken - 2PCS",
+      "Drinks / 7UP",
+    ]
+  );
+});
+
+test("the section comes from the item line, not the heading above it", () => {
+  // CHICKEN heads both a pizza flavour group and a section of its own.
+  const items = parseMenuText(`CHICKEN
+BBQ CHICKEN Pizza - Grilled chicken and onions
+CHICKEN WINGS - 4PCS Wings - Chicken wings only`);
+
+  assert.equal(items[0].category, "Pizza · Chicken");
+  assert.equal(items[1].category, "Chicken");
+  // Shouted names are title-cased for the card, but 4PCS keeps its shape.
+  assert.equal(items[1].name, "Chicken Wings - 4PCS");
+});
+
+test("a name containing a dash survives the description split", () => {
+  const [item] = parseMenuText(
+    "Roasted Chicken With Shawarma - 5PCS Wings - ROASTED CHICKEN WITH SHAWARMA SAUCE DIP POT"
+  );
+  assert.equal(item.name, "Roasted Chicken With Shawarma - 5PCS");
+  assert.equal(item.description, "Roasted chicken with shawarma sauce dip pot");
+});
+
+test("prices are optional, and an unpriced item is not sellable", () => {
+  const items = parseMenuText(`Pizzas | Pepperoni | 11000 | Beef pepperoni
+Pizzas | Margherita`);
+  assert.equal(items[0].price, 11000);
+  assert.equal(items[1].price, 0);
+});
+
+test("labels repeating the item name are not imported twice", () => {
+  const items = parseMenuText(`BREADS
+CHEESY BREAD Bread - Topped with mozzarella
+CHEESY BREAD`);
+  assert.equal(items.length, 1);
+});
+
+
+test("a delivery app listing is read as blocks, with out of stock respected", () => {
+  const items = parseMenuText(`Burgers & sandwiches
+Chief Burger
+Enjoy a Mighty Chief Burger made with Soulfully Spiced Fried Chicken
+₦5,100
+Chicken Republic - Sangotedo Menu & Delivery in Sangotedo | Chowdeck
+Add
+Shawarma
+Soulfully Spiced Fried Chicken with Lettuce in a fresh Tortilla Wrap
+₦4,100
+Chicken Republic - Sangotedo Menu & Delivery in Sangotedo | Chowdeck
+Add
+Big Whizz Meal
+Enjoy a Chickwhizz with one piece of chicken
+Out of stock
+Chicken Republic - Sangotedo Menu & Delivery in Sangotedo | Chowdeck
+
+Drinks
+Fanta Orange (50cl)
+Fanta Orange (50cl)
+₦900
+Add`);
+
+  assert.deepEqual(
+    items.map((i) => `${i.category} / ${i.name} / ${i.price} / ${i.available}`),
+    [
+      "Burgers & sandwiches / Chief Burger / 5100 / true",
+      "Burgers & sandwiches / Shawarma / 4100 / true",
+      "Burgers & sandwiches / Big Whizz Meal / 0 / false",
+      "Drinks / Fanta Orange (50cl) / 900 / true",
+    ]
+  );
+  // A description that merely repeats the name is dropped.
+  assert.equal(items[3].description, "");
+});
+
+test("a From price is taken as the starting price", () => {
+  const [item] = parseMenuText(`Citizens meals
+Citizens Meal without drink
+Two pieces of chicken with a side of your choice
+From ₦6,200
+Add`);
+  assert.equal(item.price, 6200);
+  assert.equal(item.category, "Citizens meals");
+});
+
+
+test("an item whose name mentions the app it was copied from survives", () => {
+  const items = parseMenuText(`Streetwise
+Streetwise Regular Chowdeck
+Large Spicy Rice + 1 pc Chicken
+₦3,500
+KFC - Novare Menu & Delivery in Sangotedo - Order Online | Chowdeck
+Add`);
+
+  assert.equal(items.length, 1);
+  assert.equal(items[0].name, "Streetwise Regular Chowdeck");
+  assert.equal(items[0].category, "Streetwise");
+  assert.equal(items[0].price, 3500);
 });
