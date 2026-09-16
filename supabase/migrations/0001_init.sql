@@ -1,4 +1,4 @@
--- Sudu Delivery — initial schema (see brief §13 "Data model").
+-- Sudu Delivery: initial schema (see brief §13 "Data model").
 -- All money is whole naira, stored as integers. No decimals, no kobo.
 
 create extension if not exists "pgcrypto";

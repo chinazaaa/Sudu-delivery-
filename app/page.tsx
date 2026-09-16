@@ -5,6 +5,7 @@ import { existingLoad } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import { menuView } from "@/lib/menu";
 import { activePromoter } from "@/lib/promoters";
+import { getSettings } from "@/lib/settings";
 import { toBatchView, toClosedBatchView } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -16,14 +17,15 @@ export default async function HomePage({
 }) {
   const params = await searchParams;
   // The proxy sets the ref cookie on *this* response, so it is not readable
-  // until the next request — the code has to come off the URL on the way in.
+  // until the next request, so the code has to come off the URL on the way in.
   const ref = params.ref ?? (await cookies()).get("sudu_ref")?.value;
 
-  const [menu, batches, promoter, justClosed] = await Promise.all([
+  const [menu, batches, promoter, justClosed, settings] = await Promise.all([
     menuView(),
     openBatches(),
     activePromoter(ref),
     recentlyClosedBatch(),
+    getSettings(),
   ]);
 
   const views = [
@@ -45,10 +47,7 @@ export default async function HomePage({
         <h1 className="text-2xl font-bold tracking-tight">
           KFC and Domino&apos;s, delivered to PAU.
         </h1>
-        <p className="mt-1 text-ink/70">
-          One price covering food and delivery, paid once, before the run. Mix
-          restaurants in one order.
-        </p>
+        <p className="mt-1 text-ink/70">{settings.pitch_line}</p>
       </section>
 
       <OrderForm

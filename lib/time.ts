@@ -19,7 +19,7 @@ export function runDateLabel(runDate: string): string {
   return DATE_FMT.format(new Date(runDate + "T12:00:00Z"));
 }
 
-/** "Friday" — used in the countdown lines. */
+/** "Friday", used in the countdown lines. */
 export function weekdayLabel(runDate: string): string {
   return new Intl.DateTimeFormat("en-NG", { timeZone: TZ, weekday: "long" })
     .format(new Date(runDate + "T12:00:00Z"));
@@ -45,7 +45,7 @@ export function lagosToday(now: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(now);
 }
 
-/** "3h 12m", "12m 04s", or "now" — the countdown text. */
+/** The countdown text: "3h 12m", "12m 04s", or "now". */
 export function countdown(msRemaining: number): string {
   if (msRemaining <= 0) return "now";
   const total = Math.floor(msRemaining / 1000);

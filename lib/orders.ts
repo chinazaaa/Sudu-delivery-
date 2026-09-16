@@ -157,8 +157,8 @@ async function placeSingleOrder(args: {
 
 /**
  * Split links: one order per named person, all in one group. Keeping them as
- * separate orders is what lets an unpaid share simply not travel — every order
- * stays wholly paid or wholly unpaid, with no half-paid line items.
+ * separate orders is what lets an unpaid share simply not travel, keeping every
+ * order wholly paid or wholly unpaid, with no half-paid line items.
  */
 async function placeSplitGroup(args: {
   batch: Batch;
@@ -312,7 +312,7 @@ async function checkCapacity(batch: Batch): Promise<string | null> {
   if (batch.capacity === null) return null;
   const count = (await orderCounts([batch.id])).get(batch.id) ?? 0;
   return count >= batch.capacity
-    ? "That batch is full — the car only holds so many boxes. Pick the next one."
+    ? "That batch is full. The car only holds so many boxes, so pick the next one."
     : null;
 }
 
@@ -340,7 +340,7 @@ async function isReturningCustomer(phone: string): Promise<boolean> {
 /**
  * Writes the customer row on first order, binding the promoter code to the
  * phone number permanently. On later orders the name and hostel are refreshed
- * but `promoter_code` is deliberately never touched — that is what makes the
+ * but `promoter_code` is deliberately never touched. That is what makes the
  * commission lifetime (brief §13, "Key rule").
  */
 async function bindCustomer(args: {
@@ -429,11 +429,11 @@ export async function linesFor(orderIds: string[]): Promise<OrderLine[]> {
     unit_price_at_order: row.unit_price_at_order,
     for_name: row.for_name,
     name: row.menu_items?.name ?? "(removed item)",
-    restaurant: row.menu_items?.restaurants?.name ?? "—",
+    restaurant: row.menu_items?.restaurants?.name ?? "Unknown",
   }));
 }
 
-/** The most recent order for a phone number — powers one-tap reorder. */
+/** The most recent order for a phone number. Powers one-tap reorder. */
 export async function lastOrderForPhone(phone: string): Promise<FullOrder | null> {
   const { data } = await db()
     .from("orders")

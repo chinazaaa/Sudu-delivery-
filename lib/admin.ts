@@ -29,7 +29,7 @@ export type HandoutBag = {
 
 export type BatchSheet = {
   batch: Batch;
-  /** Paid orders only — these are the ones that travel. */
+  /** Paid orders only, because those are the ones that travel. */
   counter: CounterGroup[];
   handout: HandoutBag[];
   unpaid: HandoutOrder[];
@@ -132,7 +132,7 @@ function bagsFor(orders: HandoutOrder[]): HandoutBag[] {
 }
 
 /**
- * Orders collapsed by restaurant into totals — this is what she reads aloud at
+ * Orders collapsed by restaurant into totals. This is what she reads aloud at
  * the counter, so it is one line per distinct item, not one per order.
  */
 export function groupForCounter(lines: OrderLine[]): CounterGroup[] {

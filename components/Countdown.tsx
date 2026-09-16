@@ -7,7 +7,7 @@ export type BatchTick = { label: string; cutOffISO: string };
 
 /**
  * The site's only urgency, and it is honest urgency: a real cut-off ticking
- * down. The second line matters as much as the first — without it a student
+ * down. The second line matters as much as the first. Without it a student
  * who misses a cut-off assumes that is the end and leaves (brief §9).
  */
 export default function Countdown({
@@ -36,8 +36,8 @@ export default function Countdown({
       </p>
       {next ? (
         <p className="text-ink/70">
-          Next batch ({next.label}) closes in {remaining(next.cutOffISO)} — you can
-          order for it now
+          Next batch ({next.label}) closes in {remaining(next.cutOffISO)}. You can
+          order for it now.
         </p>
       ) : (
         <p className="text-ink/70">This is the last batch currently open.</p>

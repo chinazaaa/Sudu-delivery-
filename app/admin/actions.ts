@@ -26,7 +26,7 @@ export async function logout(): Promise<void> {
 }
 
 /**
- * Manual "mark paid" — the transfer is matched by the phone number in the
+ * Manual "mark paid". The transfer is matched by the phone number in the
  * narration. This is replaced by a Paystack webhook once reconciliation stops
  * being trivial (brief §13), which is why payment_ref exists from day one.
  */
@@ -55,7 +55,7 @@ export async function markDelivered(form: FormData): Promise<void> {
   revalidatePath("/admin");
 }
 
-/** Refunds are same-night and in full — there are no partial refunds here. */
+/** Refunds are same-night and in full. There are no partial refunds here. */
 export async function refundOrder(form: FormData): Promise<void> {
   await assertAdmin();
   await db()
@@ -74,7 +74,7 @@ export async function setBatchStatus(form: FormData): Promise<void> {
   revalidatePath("/admin");
 }
 
-/** A real capacity cap — only set this when the car genuinely fills up. */
+/** A real capacity cap. Only set this when the car genuinely fills up. */
 export async function setBatchCapacity(form: FormData): Promise<void> {
   await assertAdmin();
   const raw = String(form.get("capacity") ?? "").trim();
@@ -135,23 +135,39 @@ export async function savePromoter(form: FormData): Promise<void> {
   revalidatePath("/admin/promoters");
 }
 
-/** Bank details and the WhatsApp number card payers are sent to. */
+/**
+ * Settings are saved section by section, so only the fields a form actually
+ * posts are written. Anything left out keeps its current value instead of
+ * being blanked by a form that never showed it.
+ */
+const SETTING_FIELDS = [
+  "bank_name",
+  "bank_account_name",
+  "bank_account_number",
+  "whatsapp_number",
+  "card_note",
+  "instagram_handle",
+  "whatsapp_group_link",
+  "pitch_line",
+] as const;
+
 export async function saveSettings(form: FormData): Promise<void> {
   await assertAdmin();
 
+  const patch: Record<string, string> = {};
+  for (const field of SETTING_FIELDS) {
+    const value = form.get(field);
+    if (value !== null) patch[field] = String(value).trim();
+  }
+  if (Object.keys(patch).length === 0) return;
+
   await db()
     .from("settings")
-    .update({
-      bank_name: String(form.get("bank_name") ?? "").trim(),
-      bank_account_name: String(form.get("bank_account_name") ?? "").trim(),
-      bank_account_number: String(form.get("bank_account_number") ?? "").trim(),
-      whatsapp_number: String(form.get("whatsapp_number") ?? "").trim(),
-      card_note: String(form.get("card_note") ?? "").trim(),
-      updated_at: new Date().toISOString(),
-    })
+    .update({ ...patch, updated_at: new Date().toISOString() })
     .eq("id", true);
 
   revalidatePath("/admin/settings");
+  revalidatePath("/");
 }
 
 /**

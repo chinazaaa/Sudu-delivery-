@@ -3,7 +3,7 @@
  * food costs (addendum §1). Containers are countable at a glance at a counter;
  * weight is not, and pricing off value would punish expensive taste.
  *
- * Thresholds are provisional — set them from what the boot actually holds.
+ * Thresholds are provisional. Set them from what the boot actually holds.
  */
 export const FEE_BANDS: { maxItems: number; fee: number }[] = [
   { maxItems: 3, fee: 4000 },
@@ -31,11 +31,11 @@ export function feeFor(itemCount: number, flashFee?: number | null): number {
   return Math.max(0, flashFee + (banded - HEADLINE_FEE));
 }
 
-/** What the bands look like under a flash drop — shown to the admin before saving. */
+/** What the bands look like under a flash drop, shown to the admin before saving. */
 export function bandTable(flashFee?: number | null): { label: string; fee: number }[] {
   return FEE_BANDS.map((band, index) => {
     const from = index === 0 ? 1 : FEE_BANDS[index - 1].maxItems + 1;
-    const label = band.maxItems === Infinity ? `${from}+ items` : `${from}–${band.maxItems} items`;
+    const label = band.maxItems === Infinity ? `${from}+ items` : `${from}-${band.maxItems} items`;
     return { label, fee: feeFor(from, flashFee) };
   });
 }

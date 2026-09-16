@@ -87,8 +87,8 @@ export default async function ReorderPage({
           <p className="mt-1 text-sm text-ink/70">
             {openOrder.items} item{openOrder.items === 1 ? "" : "s"}, closing{" "}
             {clockLabel(openOrder.batch.cut_off_at)}. Add to it and it goes in the same
-            bag under your name — you only pay more delivery if the extra items push
-            you into a bigger load.
+            bag under your name. You only pay more delivery if the extra items push you
+            into a bigger load.
           </p>
           <Link
             href={`/?batch=${openOrder.batch.id}&phone=${previous.customer_phone}`}

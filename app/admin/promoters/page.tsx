@@ -13,7 +13,7 @@ export default async function PromotersAdmin() {
         <h1 className="text-lg font-semibold">Promoters</h1>
         <p className="text-sm text-ink/60">
           Give codes to a handful of people, not everyone. Orders counted are for the
-          life of the customer — attribution sticks to the phone number.
+          life of the customer, because attribution sticks to the phone number.
         </p>
       </section>
 

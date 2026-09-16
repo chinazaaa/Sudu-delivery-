@@ -1,12 +1,12 @@
 // Operating constants. Everything the brief fixes as policy lives here so it
 // can be changed in one place from the UK.
 
-/** Delivery is banded by item count — see lib/fees.ts. */
+/** Delivery is banded by item count. See lib/fees.ts. */
 
 /** Taken off a customer's *first* order when it carries a promoter code. */
 export const FIRST_ORDER_DISCOUNT = 500;
 
-/** Orders below this and the batch loses money. Internal — never shown. */
+/** Orders below this and the batch loses money. Internal, never shown. */
 export const BATCH_MINIMUM = 8;
 
 /** Nigeria does not observe DST, so this is a fixed +01:00 all year. */
@@ -31,7 +31,7 @@ export const SLOT_LABEL: Record<BatchSlot, string> = {
 
 /**
  * Days ordering runs, as JS weekday numbers (0 = Sunday). The brief starts
- * with Friday only (§5) — add days here once the operation is boring.
+ * with Friday only (§5). Add days here once the operation is boring.
  */
 export const RUN_WEEKDAYS = [5];
 

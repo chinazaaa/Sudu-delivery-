@@ -9,9 +9,9 @@ export default async function SettingsAdmin() {
   return (
     <div className="space-y-4">
       <section className="card">
-        <h1 className="text-lg font-semibold">Payment details</h1>
+        <h1 className="text-lg font-semibold">Site settings</h1>
         <p className="text-sm text-ink/60">
-          These appear on every order&apos;s pay page. Change them here — no redeploy,
+          These appear on every order&apos;s pay page. Change them here. No redeploy,
           no code.
         </p>
         {!hasBankDetails(settings) && (
@@ -84,6 +84,54 @@ export default async function SettingsAdmin() {
           />
         </div>
 
+        <button className="btn-primary">Save</button>
+      </form>
+
+      <form action={saveSettings} className="card space-y-3">
+        <h2 className="font-semibold">Where to find us</h2>
+        <p className="text-sm text-ink/60">
+          Shown at the bottom of every page. A stranger asked to prepay ₦16,000 will
+          check that the business exists, and these are what they check.
+        </p>
+        <div>
+          <label className="label" htmlFor="instagram_handle">Instagram handle</label>
+          <input
+            id="instagram_handle"
+            name="instagram_handle"
+            defaultValue={settings.instagram_handle}
+            placeholder="sudu.ng"
+            className="field"
+          />
+        </div>
+        <div>
+          <label className="label" htmlFor="whatsapp_group_link">
+            PAU WhatsApp group link
+          </label>
+          <input
+            id="whatsapp_group_link"
+            name="whatsapp_group_link"
+            defaultValue={settings.whatsapp_group_link}
+            placeholder="https://chat.whatsapp.com/…"
+            className="field"
+          />
+          <p className="mt-1 text-xs text-ink/50">
+            The group is the distribution. Leave blank to hide the link.
+          </p>
+        </div>
+        <button className="btn-primary">Save</button>
+      </form>
+
+      <form action={saveSettings} className="card space-y-3">
+        <h2 className="font-semibold">The line under the headline</h2>
+        <p className="text-sm text-ink/60">
+          The first thing a student reads. Reword it whenever the pitch changes.
+        </p>
+        <textarea
+          name="pitch_line"
+          defaultValue={settings.pitch_line}
+          rows={2}
+          className="field"
+        />
         <button className="btn-primary">Save</button>
       </form>
     </div>

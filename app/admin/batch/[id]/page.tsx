@@ -57,7 +57,7 @@ export default async function BatchPage({
         {belowMinimum && (
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
             Below the {summary.minimum}-order minimum. Cancel and refund in full, or
-            carry it — but a short batch loses money the next one has to cover.
+            carry it. A short batch loses money the next one has to cover.
           </p>
         )}
       </section>
@@ -132,7 +132,7 @@ export default async function BatchPage({
       </section>
 
       <section className="card space-y-2">
-        <h2 className="font-semibold">Unpaid — these do not travel</h2>
+        <h2 className="font-semibold">Unpaid. These do not travel.</h2>
         {unpaid.length === 0 ? (
           <p className="text-sm text-ink/60">None. Everything is paid for.</p>
         ) : (
@@ -263,7 +263,7 @@ export default async function BatchPage({
           ))}
         </div>
         <p className="text-xs text-ink/50">
-          Cancelling a batch does not refund anyone — refund each order above, same
+          Cancelling a batch does not refund anyone. Refund each order above, same
           night, in full.
         </p>
       </section>

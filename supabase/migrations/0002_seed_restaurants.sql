@@ -1,4 +1,4 @@
--- Launch restaurants (brief §4). Prices here are PLACEHOLDERS — check them at
+-- Launch restaurants (brief §4). Prices here are PLACEHOLDERS. Check them at
 -- the counter on the first run and correct them in Admin → Menu, which is
 -- built for exactly that.
 

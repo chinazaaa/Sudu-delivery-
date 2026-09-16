@@ -1,8 +1,8 @@
 -- Addendum: delivery priced by item count, group orders, and flash fee drops.
 
 -- A flash drop rescues a thin batch. It belongs to one batch and carries the
--- reason the customer is shown — a bare cut reads as an admission that the
--- normal fee was always too high.
+-- reason the customer is shown, because a bare cut reads as an admission that
+-- the normal fee was always too high.
 alter table batches
   add column flash_fee        int,
   add column flash_fee_reason text not null default '';

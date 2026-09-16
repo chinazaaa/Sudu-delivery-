@@ -92,9 +92,9 @@ export default async function OrderPage({
           {order.group.mode === "split" && (
             <p className="text-xs text-ink/50">
               Send each person their own link. Anything still unpaid at the cut-off is
-              dropped and the rest of the order still travels — and if that makes the
-              order smaller, the delivery fee drops with it and the difference is
-              refunded.
+              dropped and the rest of the order still travels. If that makes the order
+              smaller, the delivery fee drops with it and the difference comes back to
+              you.
             </p>
           )}
         </section>
@@ -112,17 +112,18 @@ export default async function OrderPage({
 
       {order.status === "paid" || order.status === "delivered" ? (
         <section className="card">
-          <h2 className="font-semibold text-green-700">Paid — you are on the run.</h2>
+          <h2 className="font-semibold text-green-700">Paid. You are on the run.</h2>
           <p className="mt-1 text-sm text-ink/70">
             Come to the drop point at {order.batch.delivery_window_text.toLowerCase()}.
-            Names are called from the list. No reminders will be sent — paid is paid.
+            Names are called from the list. No reminders will be sent, because paid is
+            paid.
           </p>
         </section>
       ) : order.status === "refunded" ? (
         <section className="card">
           <h2 className="font-semibold">Refunded</h2>
           <p className="mt-1 text-sm text-ink/70">
-            This order was refunded in full. Sorry about that —{" "}
+            This order was refunded in full. Sorry about that.{" "}
             <Link href="/" className="text-brand underline">
               order into the next batch
             </Link>
@@ -137,7 +138,7 @@ export default async function OrderPage({
             <Link href="/" className="text-brand underline">
               Order into the next batch
             </Link>{" "}
-            — it takes one tap.
+            . It takes one tap.
           </p>
         </section>
       ) : (
@@ -148,13 +149,13 @@ export default async function OrderPage({
             <>
               <dl className="space-y-1 rounded-lg bg-black/5 px-3 py-2 text-sm">
                 <Row label="Bank" value={settings.bank_name} />
-                <Row label="Account name" value={settings.bank_account_name || "—"} />
+                <Row label="Account name" value={settings.bank_account_name || "Not set"} />
                 <Row label="Account number" value={settings.bank_account_number} />
                 <Row label="Use as narration" value={formatPhone(order.customer_phone)} />
               </dl>
               <p className="text-sm text-ink/70">
-                Put the phone number in the transfer narration — that is how the payment
-                is matched to this order. Transfer only; no cash at the drop point.
+                Put the phone number in the transfer narration. That is how the payment is
+                matched to this order. Transfer only, and no cash at the drop point.
               </p>
             </>
           ) : (
@@ -167,8 +168,8 @@ export default async function OrderPage({
 
           <ShareLink label="Send this to whoever is paying" />
           <p className="text-xs text-ink/50">
-            Not paying yourself? Send the link — it shows the items and the total, and
-            the order confirms once we see the money.
+            Not paying yourself? Send the link. It shows the items and the total, and the
+            order confirms once we see the money.
           </p>
         </section>
       )}
@@ -197,7 +198,7 @@ function CardPayment({
 }) {
   const link = whatsappLink(
     settings.whatsapp_number,
-    `Hi — I want to pay by card for my Sudu Delivery order.\n\n` +
+    `Hi, I want to pay by card for my Sudu Delivery order.\n\n` +
       `Name: ${order.customer_name}\n` +
       `Batch: ${batchLabel}\n` +
       `Total: ${naira(order.total)}\n` +

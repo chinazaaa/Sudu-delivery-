@@ -33,7 +33,7 @@ export default function OrderForm({
   adding: AddingTo | null;
 }) {
   const openable = batches.filter((b) => !b.full && !b.closed);
-  // Default to the next open batch, so ordering is one tap (brief §9) — unless
+  // Default to the next open batch, so ordering is one tap (brief §9), unless
   // we are adding to an order, in which case it has to be that batch.
   const [batchId, setBatchId] = useState(adding?.batchId ?? openable[0]?.id ?? "");
   const [cart, setCart] = useState<Record<string, number>>({});
@@ -89,8 +89,8 @@ export default function OrderForm({
       <div className="card">
         <h2 className="font-semibold">Ordering is closed right now</h2>
         <p className="mt-1 text-sm text-ink/70">
-          The next run day has not been opened yet. Watch the PAU WhatsApp group — the
-          menu goes up on Monday.
+          The next run day has not been opened yet. Watch the PAU WhatsApp group, where
+          the menu goes up on Monday.
         </p>
       </div>
     );
@@ -105,8 +105,8 @@ export default function OrderForm({
 
       {promoter && !adding && (
         <p className="rounded-lg bg-brand/10 px-3 py-2 text-sm text-brand-dark">
-          {promoter.name} sent you — {naira(FIRST_ORDER_DISCOUNT)} off if this is your
-          first order.
+          {promoter.name} sent you, so {naira(FIRST_ORDER_DISCOUNT)} comes off if this
+          is your first order.
         </p>
       )}
 
@@ -124,7 +124,7 @@ export default function OrderForm({
         <div>
           <h2 className="font-semibold">Pick your batch</h2>
           <p className="text-sm text-ink/60">
-            Closed a batch? Order into the next one — nothing is lost.
+            Closed a batch? Order into the next one. Nothing is lost.
           </p>
         </div>
 
@@ -152,7 +152,7 @@ export default function OrderForm({
               </span>
               {batch.closed && (
                 <span className="block text-ink/60">
-                  Missed it — order into the next batch below.
+                  Missed it. Order into the next batch below.
                 </span>
               )}
               {batch.full && <span className="block text-brand">Full</span>}
@@ -187,7 +187,7 @@ export default function OrderForm({
           <div>
             <h2 className="font-semibold">Menu</h2>
             <p className="text-sm text-ink/60">
-              Mix restaurants in one order — one delivery fee either way.
+              Mix restaurants in one order. One delivery fee either way.
             </p>
           </div>
           <button
@@ -243,7 +243,7 @@ export default function OrderForm({
         <>
             <p className="text-sm text-ink/60">
               Tag each item with whose it is, then choose who pays. The delivery fee is
-              the same as any order this size — no extra charge for sharing a cart.
+              the same as any order this size, with no extra charge for sharing a cart.
             </p>
             <div className="space-y-2">
               {lines.length === 0 ? (
@@ -280,8 +280,8 @@ export default function OrderForm({
                   onChange={() => setMode("one_payer")}
                 />
                 <span>
-                  <span className="font-medium">I pay for everything</span> — friends
-                  settle up with me. Simplest.
+                  <span className="font-medium">I pay for everything.</span> Friends settle
+                  up with me. Simplest.
                 </span>
               </label>
               <label className="flex gap-2 text-sm">
@@ -292,8 +292,8 @@ export default function OrderForm({
                   onChange={() => setMode("split")}
                 />
                 <span>
-                  <span className="font-medium">Everyone pays their own share</span> —
-                  you get a payment link per name to send round. Anyone unpaid by the
+                  <span className="font-medium">Everyone pays their own share.</span> You
+                  get a payment link per name to send round. Anyone unpaid by the
                   cut-off is dropped, and the rest still travels.
                 </span>
               </label>
@@ -353,7 +353,7 @@ export default function OrderForm({
                 <Link href="/reorder" className="text-brand underline">
                   Add to your order
                 </Link>{" "}
-                instead — you only pay the difference in delivery, if any.
+                instead, and you only pay the difference in delivery, if any.
               </p>
             )}
             {promoter && (
@@ -393,7 +393,7 @@ export default function OrderForm({
             autoComplete="tel"
           />
           <p className="mt-1 text-xs text-ink/50">
-            This is how we find your order — no account needed.
+            This is how we find your order. No account needed.
           </p>
         </div>
         <div>
@@ -421,8 +421,8 @@ export default function OrderForm({
           {pending ? "Placing…" : `Place order · ${naira(total)}`}
         </button>
         <p className="text-xs text-ink/50">
-          Transfer details come on the next screen — or message us there to pay by
-          card. Orders travel once paid.
+          Transfer details come on the next screen, or message us there to pay by card.
+          Orders travel once paid.
         </p>
       </section>
     </form>

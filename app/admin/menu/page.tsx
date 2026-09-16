@@ -16,8 +16,8 @@ export default async function MenuAdmin() {
       <section className="card">
         <h1 className="text-lg font-semibold">Menu</h1>
         <p className="text-sm text-ink/60">
-          Prices are in naira, food only — the {"₦"}4,000 is added at checkout. Untick
-          an item the branch has actually run out of.
+          Prices are in naira, food only. Delivery is added at checkout. Untick an
+          item the branch has actually run out of.
         </p>
       </section>
 

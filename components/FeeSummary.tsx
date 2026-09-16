@@ -28,7 +28,7 @@ export default function FeeSummary({
   return (
     <div className="text-sm text-ink/60">
       <p>
-        Delivery {naira(fee)} — {bandLabel}
+        Delivery {naira(fee)} for {bandLabel}
         {alreadyCharged > 0 && ", topping up what you already paid"}
       </p>
       {next && (

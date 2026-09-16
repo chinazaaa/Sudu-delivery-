@@ -27,7 +27,7 @@ function addDays(date: string, days: number): string {
 
 /**
  * Opens the batches for every upcoming run day, so nobody has to remember to
- * do it. Existing rows are left alone — a cancelled batch stays cancelled.
+ * do it. Existing rows are left alone, so a cancelled batch stays cancelled.
  */
 export async function ensureUpcomingBatches(): Promise<void> {
   const today = lagosToday();
@@ -59,7 +59,7 @@ export async function ensureUpcomingBatches(): Promise<void> {
 
 /**
  * Marks any batch whose cut-off has passed as closed, and settles the fee on
- * every split group in it — that is the moment unpaid shares stop travelling.
+ * every split group in it. That is the moment unpaid shares stop travelling.
  */
 export async function closeExpiredBatches(): Promise<void> {
   const { data } = await db()

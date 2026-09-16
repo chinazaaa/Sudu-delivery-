@@ -6,7 +6,7 @@ import type { Batch, Order, OrderGroup } from "./types";
  * At the cut-off a split group travels on money, not promises: unpaid shares
  * are simply left behind (they were never marked paid, so they do not travel).
  * If losing them drops the group into a cheaper band, the fee is recalculated
- * in the customer's favour and the difference recorded as a refund owed —
+ * in the customer's favour and the difference recorded as a refund owed,
  * never a top-up demand (addendum §2).
  *
  * Idempotent: running it again on a settled group changes nothing.

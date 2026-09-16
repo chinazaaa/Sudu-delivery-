@@ -19,7 +19,7 @@ export default function ExpiryNote({ cutOffISO }: { cutOffISO: string }) {
 
   return (
     <p className="text-sm text-brand-dark">
-      Pay within {countdown(remaining)} — this link closes when the batch does.
+      Pay within {countdown(remaining)}. This link closes when the batch does.
     </p>
   );
 }

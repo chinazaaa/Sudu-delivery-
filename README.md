@@ -13,25 +13,25 @@ a batch cut-off, and the admin screen the driver reads at the counter.
 **Customer side**
 
 - Menu across multiple restaurants, with items mixable in one cart and one fee
-- **Delivery priced by container count, not food value** — 1–3 items ₦4,000,
-  4–6 ₦6,000, 7–10 ₦8,000, 11+ ₦10,000. One ₦24,000 bucket is one container
+- **Delivery priced by container count, not food value.** 1-3 items ₦4,000,
+  4-6 ₦6,000, 7-10 ₦8,000, 11+ ₦10,000. One ₦24,000 bucket is one container
   and pays the headline ₦4,000. The cart shows the count, the fee and how far
   the next band is
-- **Group orders** — one cart for several people, each item tagged with a name
+- **Group orders.** One cart for several people, each item tagged with a name
   so bags are labelled at the drop point. Either the leader pays for everything
   (default) or each person gets their own payment link. No group discount: the
   bands already price a bigger load correctly
-- **Adding to an order** later in the week — same phone, same batch, merged
+- **Adding to an order** later in the week: same phone, same batch, merged
   into one bag, charged only the difference in delivery if the extra items push
   into a bigger band
 - Batch selector defaulting to the next open batch, with a live two-line
   countdown (this batch, then the one after it)
-- Checkout on name, phone and hostel — no accounts anywhere; the phone number
+- Checkout on name, phone and hostel. No accounts anywhere: the phone number
   is the identity
 - Order page that doubles as a **pay-by-link**: it shows the name, items and
   total, and expires at the batch cut-off, so it can be sent to a parent or
   partner to pay
-- **One-tap reorder** — a phone number brings back the last order and drops it
+- **One-tap reorder.** A phone number brings back the last order and drops it
   into the next open batch at today's prices
 - **Promoter links** (`/?ref=CODE`): ₦500 off the customer's first order, and
   the code binds to their phone number permanently, so every later order pays
@@ -39,31 +39,35 @@ a batch cut-off, and the admin screen the driver reads at the counter.
 
 **Admin side** (`/admin`, one password)
 
-- **Flash fee drop** per batch with the reason the customer is shown — for
+- **Flash fee drop** per batch with the reason the customer is shown, for
   rescuing a thin batch. Every band moves down together, so "₦2,000 delivery
   tonight" is true while a car-load still pays for a car-load
-- **Refunds owed** — when unpaid shares drop out of a group at the cut-off and
+- **Refunds owed.** When unpaid shares drop out of a group at the cut-off and
   the order falls into a cheaper band, the difference is recalculated in the
   customer's favour and listed to be paid back
-- Per-batch **counter sheet** — orders collapsed by restaurant into totals,
+- Per-batch **counter sheet**: orders collapsed by restaurant into totals,
   large enough to read one-handed in a queue, with the expected food total per
   restaurant so the right money is sent ahead of the run
 - **Handout list** by student name and hostel, tickable at the drop point
   (ticks survive a refresh)
-- **Unpaid orders** separated out — unpaid orders do not travel
-- **Batch summary** — paid count against the 8-order minimum, gross, food cost,
+- **Unpaid orders** separated out, because unpaid orders do not travel
+- **Batch summary**: paid count against the 8-order minimum, gross, food cost,
   commission owed, net before fuel and driver
 - Menu editor (a price changes in under a minute), promoter list with
   per-promoter order counts, and batch status/capacity controls
+- **Settings**: bank details, the WhatsApp number card payers are sent to, the
+  Instagram handle and PAU group link shown in the footer, and the line the
+  home page opens with. Each section saves on its own, so editing one never
+  blanks another
 
 **Payment** is bank transfer, plus a by-hand route for card payers. There is no
 Paystack or Flutterwave and nothing automated:
 
-- The bank details and the WhatsApp number live in **Admin → Payment**, so they
+- The bank details and the WhatsApp number live in **Admin, Settings**, so they
   change from a phone in seconds with no redeploy
 - The customer transfers and puts their phone number in the narration, which is
   how the payment is matched to the order
-- Anyone who would rather pay by card taps **Message us on WhatsApp** — the
+- Anyone who would rather pay by card taps **Message us on WhatsApp**. The
   message arrives pre-filled with their name, batch, total and order reference,
   you send them a link, and you mark the order paid on its batch page once you
   see the money
@@ -86,21 +90,23 @@ npm run dev
 
 Apply the schema in the Supabase SQL editor, in order:
 
-1. `supabase/migrations/0001_init.sql` — tables, enums, RLS on
-2. `supabase/migrations/0002_seed_restaurants.sql` — KFC and Domino's, with
+1. `supabase/migrations/0001_init.sql`: tables, enums, RLS on
+2. `supabase/migrations/0002_seed_restaurants.sql`: KFC and Domino's, with
    **placeholder prices that must be corrected** from the counter on the first
    run (Admin → Menu)
-3. `supabase/migrations/0003_settings.sql` — the one settings row holding the
+3. `supabase/migrations/0003_settings.sql`: the one settings row holding the
    bank details and WhatsApp number
-4. `supabase/migrations/0004_bands_groups_additions.sql` — flash fees, group
+4. `supabase/migrations/0004_bands_groups_additions.sql`: flash fees, group
    orders and per-item name tags
+5. `supabase/migrations/0005_social_and_pitch.sql`: handles and the home page
+   pitch line
 
-Then fill in **Admin → Payment** before ordering opens. Until the bank details
+Then fill in **Admin, Settings** before ordering opens. Until the bank details
 are set, the pay page says so rather than showing a blank account number.
 
 Then, on a development project only, `supabase/fake_orders.sql` fills the next
 open batch with fake orders. Use it to read the admin screen on a phone before
-a single real order is taken — that screen decides whether a run goes well.
+a single real order is taken. That screen decides whether a run goes well.
 
 Every table read and write goes through the service role in server code, so
 RLS is enabled with no anon policies. The service role key must never reach the
@@ -112,9 +118,9 @@ All in `lib/config.ts`:
 
 | Setting | Default | Note |
 |---|---|---|
-| `FEE_BANDS` (`lib/fees.ts`) | 4k / 6k / 8k / 10k | By item count. **Provisional — set the thresholds from what the boot actually holds** |
+| `FEE_BANDS` (`lib/fees.ts`) | 4k / 6k / 8k / 10k | By item count. **Provisional: set the thresholds from what the boot actually holds** |
 | `FIRST_ORDER_DISCOUNT` | ₦500 | First order only, promoter links only |
-| `BATCH_MINIMUM` | 8 | Internal — never shown to customers |
+| `BATCH_MINIMUM` | 8 | Internal, never shown to customers |
 | `RUN_WEEKDAYS` | `[5]` (Friday) | Batches open themselves for these days |
 | `CUT_OFFS` | 11:30am / 6:00pm | Lagos time; Nigeria has no DST |
 
