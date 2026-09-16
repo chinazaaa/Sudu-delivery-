@@ -106,7 +106,9 @@ cp .env.example .env.local   # then fill it in
 npm run dev
 ```
 
-Apply the schema in the Supabase SQL editor, in order:
+Apply the schema in the Supabase SQL editor. The quickest way is to paste
+`supabase/setup.sql`, which is all six migrations in order, and run it once on
+a new project. Or run the files one at a time:
 
 1. `supabase/migrations/0001_init.sql`: tables, enums, RLS on
 2. `supabase/migrations/0002_seed_restaurants.sql`: KFC and Domino's, with
@@ -120,7 +122,14 @@ Apply the schema in the Supabase SQL editor, in order:
    pitch line
 6. `supabase/migrations/0006_pins_and_stages.sql`: customer PINs and run stages
 
-Then fill in **Admin, Settings** before ordering opens. Until the bank details
+Then fill in **Admin, Settings** before ordering opens.
+
+If the site loads but every page shows **"Could not find the table
+'public.restaurants' in the schema cache"**, the environment variables are
+right and reaching Supabase, but the schema above has not been run yet. Run it.
+If the tables do exist, Supabase is holding a stale cache: run
+`notify pgrst, 'reload schema';` in the SQL editor, or pause and resume the
+project. Until the bank details
 are set, the pay page says so rather than showing a blank account number.
 
 Then, on a development project only, `supabase/fake_orders.sql` fills the next
