@@ -4,5 +4,8 @@ out/
 .env
 .env.local
 *.tsbuildinfo
+
+# Screenshots taken while checking the UI, not part of the project
+shot-*.png
 next-env.d.ts
 .DS_Store
