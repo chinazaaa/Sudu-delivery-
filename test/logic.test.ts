@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { groupForCounter } from "../lib/admin";
 import { normalisePhone, formatPhone } from "../lib/phone";
 import { countdown, lagosInstant, lagosToday } from "../lib/time";
+import { bandFor, feeFor, nextBand, splitFee, HEADLINE_FEE } from "../lib/fees";
 import type { OrderLine } from "../lib/orders";
 
 test("phone numbers normalise to one identity however they are typed", () => {
@@ -56,6 +57,7 @@ function line(over: Partial<OrderLine>): OrderLine {
     menu_item_id: "m1",
     qty: 1,
     unit_price_at_order: 1000,
+    for_name: null,
     name: "Wrap meal",
     restaurant: "KFC Novare",
     ...over,
@@ -97,4 +99,61 @@ test("an item whose price changed mid-week is not merged with its old price", ()
 
   assert.equal(groups[0].lines.length, 2);
   assert.equal(groups[0].expectedFoodTotal, 11500);
+});
+
+
+test("delivery is banded by how many containers, not what they cost", () => {
+  assert.equal(feeFor(1), 4000);
+  assert.equal(feeFor(3), 4000);
+  assert.equal(feeFor(4), 6000);
+  assert.equal(feeFor(6), 6000);
+  assert.equal(feeFor(7), 8000);
+  assert.equal(feeFor(10), 8000);
+  assert.equal(feeFor(11), 10000);
+  assert.equal(feeFor(40), 10000);
+  // One ₦24,000 bucket is one container and pays the headline fee.
+  assert.equal(feeFor(1), HEADLINE_FEE);
+});
+
+test("an empty cart is still priced as the first band, never free", () => {
+  assert.equal(feeFor(0), 4000);
+});
+
+test("a flash drop lowers every band by the same amount", () => {
+  assert.equal(feeFor(1, 2000), 2000);
+  assert.equal(feeFor(4, 2000), 4000);
+  assert.equal(feeFor(7, 2000), 6000);
+  assert.equal(feeFor(11, 2000), 8000);
+  // A car-load never becomes cheap to carry just because the entry fee dropped.
+  assert.ok(feeFor(11, 2000) > feeFor(1, 2000));
+});
+
+test("the cart can say how far the next band is", () => {
+  assert.deepEqual(nextBand(3), { itemsAway: 1, fee: 6000 });
+  assert.deepEqual(nextBand(1), { itemsAway: 3, fee: 6000 });
+  assert.equal(nextBand(11), null);
+  assert.equal(bandFor(5).fee, 6000);
+});
+
+test("a group's fee splits by what each person ordered and sums exactly", () => {
+  const shares = splitFee(6000, [2, 2, 1]);
+  assert.equal(shares.reduce((a, b) => a + b, 0), 6000);
+  assert.deepEqual(shares, [2400, 2400, 1200]);
+
+  // Rounding remainders land somewhere, never vanish.
+  const awkward = splitFee(8000, [1, 1, 1]);
+  assert.equal(awkward.reduce((a, b) => a + b, 0), 8000);
+
+  const single = splitFee(4000, [3]);
+  assert.deepEqual(single, [4000]);
+});
+
+test("adding to an order charges only the difference in band", () => {
+  // Three items already (₦4,000 paid); two more makes five, a ₦6,000 load.
+  const alreadyCharged = feeFor(3);
+  const topUp = Math.max(0, feeFor(3 + 2) - alreadyCharged);
+  assert.equal(topUp, 2000);
+
+  // Staying inside the same band costs nothing extra.
+  assert.equal(Math.max(0, feeFor(1 + 1) - feeFor(1)), 0);
 });

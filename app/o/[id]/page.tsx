@@ -48,6 +48,9 @@ export default async function OrderPage({
               <span>
                 {line.qty}× {line.name}{" "}
                 <span className="text-ink/50">({line.restaurant})</span>
+                {line.for_name && (
+                  <span className="text-ink/50"> · for {line.for_name}</span>
+                )}
               </span>
               <span>{naira(line.qty * line.unit_price_at_order)}</span>
             </li>
@@ -55,13 +58,57 @@ export default async function OrderPage({
         </ul>
         <dl className="space-y-1 border-t border-black/10 pt-2 text-sm">
           <Row label="Food" value={naira(order.subtotal_food)} />
-          <Row label="Delivery (all in)" value={naira(order.fee)} />
+          <Row label={feeLabel(order)} value={naira(order.fee)} />
           {order.discount > 0 && (
             <Row label="First-order discount" value={`−${naira(order.discount)}`} />
           )}
           <Row label="Total" value={naira(order.total)} strong />
         </dl>
       </section>
+
+      {order.group && order.shares.length > 1 && (
+        <section className="card space-y-2">
+          <h2 className="font-semibold">
+            {order.group.mode === "split" ? "Everyone's share" : "Group order"}
+          </h2>
+          <ul className="space-y-1 text-sm">
+            {order.shares.map((share) => (
+              <li key={share.id} className="flex justify-between gap-3">
+                <span>
+                  {share.for_name ?? order.customer_name}
+                  {share.id === order.id && <span className="text-ink/50"> · this link</span>}
+                </span>
+                <span
+                  className={
+                    share.status === "pending" ? "text-brand" : "text-green-700"
+                  }
+                >
+                  {naira(share.total)} ·{" "}
+                  {share.status === "pending" ? "unpaid" : share.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {order.group.mode === "split" && (
+            <p className="text-xs text-ink/50">
+              Send each person their own link. Anything still unpaid at the cut-off is
+              dropped and the rest of the order still travels — and if that makes the
+              order smaller, the delivery fee drops with it and the difference is
+              refunded.
+            </p>
+          )}
+        </section>
+      )}
+
+      {order.refund_owed > 0 && (
+        <section className="card">
+          <h2 className="font-semibold">Refund owed: {naira(order.refund_owed)}</h2>
+          <p className="mt-1 text-sm text-ink/70">
+            Your group got smaller, so the delivery fee dropped a band. The difference
+            comes back to you.
+          </p>
+        </section>
+      )}
 
       {order.status === "paid" || order.status === "delivered" ? (
         <section className="card">
@@ -172,6 +219,14 @@ function CardPayment({
       </a>
     </div>
   );
+}
+
+/** Delivery is priced by container count, so the line says what it counted. */
+function feeLabel(order: { lines: { qty: number }[]; for_name: string | null }): string {
+  const items = order.lines.reduce((count, line) => count + line.qty, 0);
+  return order.for_name
+    ? `Delivery (your share of ${items} item${items === 1 ? "" : "s"})`
+    : `Delivery (${items} item${items === 1 ? "" : "s"})`;
 }
 
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {

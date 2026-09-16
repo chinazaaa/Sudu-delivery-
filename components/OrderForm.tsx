@@ -1,25 +1,45 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import Countdown from "./Countdown";
+import FeeSummary from "./FeeSummary";
 import { submitOrder, type SubmitState } from "@/app/actions";
-import { DELIVERY_FEE, FIRST_ORDER_DISCOUNT } from "@/lib/config";
+import { feeFor } from "@/lib/fees";
+import { FIRST_ORDER_DISCOUNT } from "@/lib/config";
 import { naira } from "@/lib/money";
 import type { BatchView, MenuView } from "@/lib/view";
+import type { GroupMode } from "@/lib/types";
+
+export type AddingTo = {
+  batchId: string;
+  phone: string;
+  name: string;
+  hostel: string;
+  items: number;
+  feeCharged: number;
+};
 
 export default function OrderForm({
   menu,
   batches,
   promoter,
+  adding,
 }: {
   menu: MenuView[];
   batches: BatchView[];
   promoter: { code: string; name: string } | null;
+  /** Set when this cart is being added to an order already in a batch. */
+  adding: AddingTo | null;
 }) {
-  const openable = batches.filter((b) => !b.full);
-  // Default to the next open batch, so ordering is one tap (brief §9).
-  const [batchId, setBatchId] = useState(openable[0]?.id ?? "");
+  const openable = batches.filter((b) => !b.full && !b.closed);
+  // Default to the next open batch, so ordering is one tap (brief §9) — unless
+  // we are adding to an order, in which case it has to be that batch.
+  const [batchId, setBatchId] = useState(adding?.batchId ?? openable[0]?.id ?? "");
   const [cart, setCart] = useState<Record<string, number>>({});
+  const [forNames, setForNames] = useState<Record<string, string>>({});
+  const [groupOn, setGroupOn] = useState(false);
+  const [mode, setMode] = useState<GroupMode>("one_payer");
   const [state, action, pending] = useActionState<SubmitState, FormData>(submitOrder, {
     error: null,
   });
@@ -31,18 +51,35 @@ export default function OrderForm({
 
   const lines = Object.entries(cart)
     .filter(([, qty]) => qty > 0)
-    .map(([menu_item_id, qty]) => ({ menu_item_id, qty }));
+    .map(([menu_item_id, qty]) => ({
+      menu_item_id,
+      qty,
+      for_name: groupOn ? forNames[menu_item_id]?.trim() || null : null,
+    }));
 
   const subtotal = lines.reduce(
     (total, l) => total + (items.get(l.menu_item_id)?.price ?? 0) * l.qty,
     0
   );
-  const total = subtotal + DELIVERY_FEE;
+  const itemCount = lines.reduce((count, l) => count + l.qty, 0);
 
   const selected = batches.find((b) => b.id === batchId) ?? null;
+  const flashFee = selected?.flashFee ?? null;
+  const alreadyCharged = adding && adding.batchId === batchId ? adding.feeCharged : 0;
+  const alreadyItems = adding && adding.batchId === batchId ? adding.items : 0;
+  // One load, one band: the fee is worked out on everything this phone has in
+  // the batch, and what was already charged comes off (addendum §3).
+  const fee = Math.max(0, feeFor(itemCount + alreadyItems, flashFee) - alreadyCharged);
+  const total = subtotal + fee;
+
   const nextAfter = selected
-    ? batches.find((b) => new Date(b.cutOffISO) > new Date(selected.cutOffISO)) ?? null
+    ? openable.find((b) => new Date(b.cutOffISO) > new Date(selected.cutOffISO)) ?? null
     : null;
+
+  const namesTagged = new Set(
+    lines.map((l) => l.for_name).filter((name): name is string => Boolean(name))
+  );
+  const splitReady = mode === "one_payer" || namesTagged.size >= 2;
 
   const setQty = (id: string, qty: number) =>
     setCart((current) => ({ ...current, [id]: Math.max(0, qty) }));
@@ -63,12 +100,23 @@ export default function OrderForm({
     <form action={action} className="space-y-6">
       <input type="hidden" name="cart" value={JSON.stringify(lines)} />
       <input type="hidden" name="batch_id" value={batchId} />
+      <input type="hidden" name="group_mode" value={groupOn ? mode : ""} />
       {promoter && <input type="hidden" name="ref" value={promoter.code} />}
 
-      {promoter && (
+      {promoter && !adding && (
         <p className="rounded-lg bg-brand/10 px-3 py-2 text-sm text-brand-dark">
           {promoter.name} sent you — {naira(FIRST_ORDER_DISCOUNT)} off if this is your
           first order.
+        </p>
+      )}
+
+      {adding && (
+        <p className="rounded-lg bg-brand/10 px-3 py-2 text-sm text-brand-dark">
+          Adding to your order in the{" "}
+          {batches.find((b) => b.id === adding.batchId)?.label ?? "open"} batch
+          ({adding.items} item{adding.items === 1 ? "" : "s"} already). It goes in the
+          same bag, and you only pay more delivery if the extra items push you into a
+          bigger load.
         </p>
       )}
 
@@ -85,7 +133,9 @@ export default function OrderForm({
             <button
               key={batch.id}
               type="button"
-              disabled={batch.full}
+              disabled={
+                batch.full || batch.closed || (adding !== null && batch.id !== adding.batchId)
+              }
               onClick={() => setBatchId(batch.id)}
               className={`rounded-lg border px-3 py-2 text-left text-sm transition ${
                 batch.id === batchId
@@ -93,14 +143,36 @@ export default function OrderForm({
                   : "border-black/15 hover:bg-black/5"
               } disabled:opacity-40`}
             >
-              <span className="block font-medium">{batch.label}</span>
-              <span className="block text-ink/60">
-                Closes {batch.cutOffLabel} · {batch.deliveryWindow}
+              <span className={`block font-medium ${batch.closed ? "line-through" : ""}`}>
+                {batch.label}
               </span>
+              <span className="block text-ink/60">
+                {batch.closed ? "Closed" : "Closes"} {batch.cutOffLabel} ·{" "}
+                {batch.deliveryWindow}
+              </span>
+              {batch.closed && (
+                <span className="block text-ink/60">
+                  Missed it — order into the next batch below.
+                </span>
+              )}
               {batch.full && <span className="block text-brand">Full</span>}
+              {batch.flashFee !== null && (
+                <span className="block font-medium text-brand">
+                  {naira(batch.flashFee)} delivery
+                </span>
+              )}
             </button>
           ))}
         </div>
+
+        {selected?.flashFee !== null && selected && (
+          <p className="rounded-lg bg-brand/10 px-3 py-2 text-sm text-brand-dark">
+            <span className="font-semibold">
+              {naira(selected.flashFee!)} delivery, {selected.label} batch only.
+            </span>{" "}
+            {selected.flashReason}
+          </p>
+        )}
 
         {selected && (
           <Countdown
@@ -111,11 +183,20 @@ export default function OrderForm({
       </section>
 
       <section className="space-y-4">
-        <div>
-          <h2 className="font-semibold">Menu</h2>
-          <p className="text-sm text-ink/60">
-            Mix restaurants in one order — one delivery fee either way.
-          </p>
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="font-semibold">Menu</h2>
+            <p className="text-sm text-ink/60">
+              Mix restaurants in one order — one delivery fee either way.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setGroupOn((on) => !on)}
+            className={groupOn ? "btn-primary shrink-0" : "btn-quiet shrink-0"}
+          >
+            {groupOn ? "Group order on" : "Start a group order"}
+          </button>
         </div>
 
         {menu.map((group) => (
@@ -150,6 +231,83 @@ export default function OrderForm({
         ))}
       </section>
 
+      {groupOn && (
+      <section className="card space-y-3">
+        <div>
+          <h2 className="font-semibold">Group order</h2>
+          <p className="text-sm text-ink/60">
+            One cart, one payment, bags labelled by name at the drop point.
+          </p>
+        </div>
+
+        <>
+            <p className="text-sm text-ink/60">
+              Tag each item with whose it is, then choose who pays. The delivery fee is
+              the same as any order this size — no extra charge for sharing a cart.
+            </p>
+            <div className="space-y-2">
+              {lines.length === 0 ? (
+                <p className="text-sm text-ink/60">Add something to the cart first.</p>
+              ) : (
+                lines.map((line) => (
+                  <div key={line.menu_item_id} className="flex items-center gap-2">
+                    <span className="min-w-0 grow truncate text-sm">
+                      {line.qty}× {items.get(line.menu_item_id)?.name}
+                    </span>
+                    <input
+                      className="field w-36 py-1 text-sm"
+                      placeholder="For…"
+                      value={forNames[line.menu_item_id] ?? ""}
+                      onChange={(e) =>
+                        setForNames((current) => ({
+                          ...current,
+                          [line.menu_item_id]: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                ))
+              )}
+            </div>
+
+            <fieldset className="space-y-2">
+              <legend className="label">Who pays?</legend>
+              <label className="flex gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="who_pays"
+                  checked={mode === "one_payer"}
+                  onChange={() => setMode("one_payer")}
+                />
+                <span>
+                  <span className="font-medium">I pay for everything</span> — friends
+                  settle up with me. Simplest.
+                </span>
+              </label>
+              <label className="flex gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="who_pays"
+                  checked={mode === "split"}
+                  onChange={() => setMode("split")}
+                />
+                <span>
+                  <span className="font-medium">Everyone pays their own share</span> —
+                  you get a payment link per name to send round. Anyone unpaid by the
+                  cut-off is dropped, and the rest still travels.
+                </span>
+              </label>
+            </fieldset>
+
+            {mode === "split" && !splitReady && (
+              <p className="text-sm text-brand-dark">
+                Tag items with at least two different names to split payment.
+              </p>
+            )}
+        </>
+      </section>
+      )}
+
       <section className="card space-y-2">
         <h2 className="font-semibold">Your order</h2>
         {lines.length === 0 ? (
@@ -163,6 +321,9 @@ export default function OrderForm({
                   <li key={line.menu_item_id} className="flex justify-between">
                     <span>
                       {line.qty}× {item.name}
+                      {line.for_name && (
+                        <span className="text-ink/50"> · for {line.for_name}</span>
+                      )}
                     </span>
                     <span>{naira(item.price * line.qty)}</span>
                   </li>
@@ -171,9 +332,30 @@ export default function OrderForm({
             </ul>
             <dl className="space-y-1 border-t border-black/10 pt-2 text-sm">
               <Row label="Food" value={naira(subtotal)} />
-              <Row label="Delivery (all in)" value={naira(DELIVERY_FEE)} />
+              <Row
+                label={
+                  alreadyCharged > 0
+                    ? `Delivery top-up (${itemCount + alreadyItems} items in total)`
+                    : `Delivery (${itemCount} item${itemCount === 1 ? "" : "s"})`
+                }
+                value={naira(fee)}
+              />
               <Row label="Total" value={naira(total)} strong />
             </dl>
+            <FeeSummary
+              itemCount={itemCount + alreadyItems}
+              flashFee={flashFee}
+              alreadyCharged={alreadyCharged}
+            />
+            {!adding && (
+              <p className="text-xs text-ink/50">
+                Already ordered for this batch?{" "}
+                <Link href="/reorder" className="text-brand underline">
+                  Add to your order
+                </Link>{" "}
+                instead — you only pay the difference in delivery, if any.
+              </p>
+            )}
             {promoter && (
               <p className="text-sm text-brand-dark">
                 {naira(FIRST_ORDER_DISCOUNT)} comes off at checkout if this is your
@@ -188,7 +370,14 @@ export default function OrderForm({
         <h2 className="font-semibold">Where it goes</h2>
         <div>
           <label className="label" htmlFor="name">Name</label>
-          <input id="name" name="name" required className="field" autoComplete="name" />
+          <input
+            id="name"
+            name="name"
+            required
+            defaultValue={adding?.name}
+            className="field"
+            autoComplete="name"
+          />
         </div>
         <div>
           <label className="label" htmlFor="phone">Phone</label>
@@ -198,6 +387,8 @@ export default function OrderForm({
             required
             inputMode="tel"
             placeholder="0803 123 4567"
+            defaultValue={adding?.phone}
+            readOnly={Boolean(adding)}
             className="field"
             autoComplete="tel"
           />
@@ -207,7 +398,13 @@ export default function OrderForm({
         </div>
         <div>
           <label className="label" htmlFor="hostel">Hostel / block</label>
-          <input id="hostel" name="hostel" required className="field" />
+          <input
+            id="hostel"
+            name="hostel"
+            required
+            defaultValue={adding?.hostel}
+            className="field"
+          />
         </div>
 
         {state.error && (
@@ -219,7 +416,7 @@ export default function OrderForm({
         <button
           type="submit"
           className="btn-primary w-full"
-          disabled={pending || lines.length === 0 || !batchId}
+          disabled={pending || lines.length === 0 || !batchId || !splitReady}
         >
           {pending ? "Placing…" : `Place order · ${naira(total)}`}
         </button>

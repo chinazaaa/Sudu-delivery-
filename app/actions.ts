@@ -20,6 +20,8 @@ export async function submitOrder(
     return { error: "Something went wrong with your cart. Please rebuild it." };
   }
 
+  const mode = String(form.get("group_mode") ?? "");
+
   const result = await placeOrder({
     batchId: String(form.get("batch_id") ?? ""),
     name: String(form.get("name") ?? ""),
@@ -28,6 +30,7 @@ export async function submitOrder(
     lines,
     promoterCode:
       String(form.get("ref") ?? "") || (await cookies()).get("sudu_ref")?.value || null,
+    groupMode: mode === "one_payer" || mode === "split" ? mode : null,
   });
 
   if (!result.ok) return { error: result.error };

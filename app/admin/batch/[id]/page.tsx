@@ -5,7 +5,15 @@ import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { clockLabel, runDateLabel } from "@/lib/time";
-import { markDelivered, markPaid, refundOrder, setBatchCapacity, setBatchStatus } from "../../actions";
+import { bandTable } from "@/lib/fees";
+import {
+  markDelivered,
+  markPaid,
+  refundOrder,
+  setBatchCapacity,
+  setBatchStatus,
+  setFlashFee,
+} from "../../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +25,7 @@ export default async function BatchPage({
   const sheet = await batchSheet((await params).id);
   if (!sheet) notFound();
 
-  const { batch, counter, handout, unpaid, summary } = sheet;
+  const { batch, counter, handout, unpaid, summary, refunds } = sheet;
   const belowMinimum = summary.paidCount < summary.minimum;
 
   return (
@@ -82,37 +90,42 @@ export default async function BatchPage({
 
       <section className="card space-y-2">
         <h2 className="font-semibold">Handout list</h2>
+        <p className="text-sm text-ink/60">
+          One bag per name. Anything added later in the week is already merged in.
+        </p>
         <HandoutList
           batchId={batch.id}
-          entries={handout.map((order) => ({
-            id: order.id,
-            name: order.customer_name,
-            hostel: order.hostel,
-            phone: formatPhone(order.customer_phone),
-            items: order.lines.map((l) => `${l.qty}× ${l.name}`),
+          entries={handout.map((bag) => ({
+            id: bag.key,
+            name: bag.name,
+            hostel: bag.hostel,
+            phone: formatPhone(bag.phone),
+            items: bag.lines.map((l) => `${l.qty}× ${l.name}`),
           }))}
         />
         {handout.length > 0 && (
           <details className="text-sm text-ink/60">
             <summary className="cursor-pointer">Mark delivered / refund</summary>
             <ul className="mt-2 space-y-2">
-              {handout.map((order) => (
-                <li key={order.id} className="flex items-center justify-between gap-2">
-                  <span>
-                    {order.customer_name} · {order.status}
-                  </span>
-                  <span className="flex gap-2">
-                    <form action={markDelivered}>
-                      <input type="hidden" name="order_id" value={order.id} />
-                      <button className="btn-quiet px-2 py-1 text-xs">Delivered</button>
-                    </form>
-                    <form action={refundOrder}>
-                      <input type="hidden" name="order_id" value={order.id} />
-                      <button className="btn-quiet px-2 py-1 text-xs">Refund</button>
-                    </form>
-                  </span>
-                </li>
-              ))}
+              {handout.flatMap((bag) =>
+                bag.orders.map((order) => (
+                  <li key={order.id} className="flex items-center justify-between gap-2">
+                    <span>
+                      {bag.name} · {order.status}
+                    </span>
+                    <span className="flex gap-2">
+                      <form action={markDelivered}>
+                        <input type="hidden" name="order_id" value={order.id} />
+                        <button className="btn-quiet px-2 py-1 text-xs">Delivered</button>
+                      </form>
+                      <form action={refundOrder}>
+                        <input type="hidden" name="order_id" value={order.id} />
+                        <button className="btn-quiet px-2 py-1 text-xs">Refund</button>
+                      </form>
+                    </span>
+                  </li>
+                ))
+              )}
             </ul>
           </details>
         )}
@@ -127,7 +140,10 @@ export default async function BatchPage({
             {unpaid.map((order) => (
               <li key={order.id} className="rounded-lg border border-black/10 p-3">
                 <p className="font-medium">
-                  {order.customer_name} · {naira(order.total)}
+                  {order.for_name ?? order.customer_name} · {naira(order.total)}
+                  {order.for_name && (
+                    <span className="text-ink/50"> · share of {order.customer_name}&apos;s group</span>
+                  )}
                 </p>
                 <p className="text-sm text-ink/60">
                   {formatPhone(order.customer_phone)} · {order.hostel}
@@ -152,8 +168,70 @@ export default async function BatchPage({
         )}
       </section>
 
+      {refunds.length > 0 && (
+        <section className="card space-y-2">
+          <h2 className="font-semibold">Refunds owed</h2>
+          <p className="text-sm text-ink/60">
+            A group shrank when unpaid shares dropped out, so its delivery fee fell a
+            band. Send these back tonight.
+          </p>
+          <ul className="space-y-1 text-sm">
+            {refunds.map((order) => (
+              <li key={order.id} className="flex justify-between">
+                <span>
+                  {order.for_name ?? order.customer_name} ·{" "}
+                  {formatPhone(order.customer_phone)}
+                </span>
+                <span className="font-semibold">{naira(order.refund_owed)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="card space-y-3">
         <h2 className="font-semibold">Batch controls</h2>
+
+        <form action={setFlashFee} className="space-y-2 rounded-lg border border-black/10 p-3">
+          <input type="hidden" name="batch_id" value={batch.id} />
+          <h3 className="font-medium">Flash fee drop</h3>
+          <p className="text-xs text-ink/50">
+            For rescuing a thin batch, not rewarding customers. Never announce it in
+            advance, never make it a fixed day, and always give a reason.
+          </p>
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="w-32">
+              <label className="label" htmlFor="flash_fee">Entry fee</label>
+              <input
+                id="flash_fee"
+                name="flash_fee"
+                inputMode="numeric"
+                placeholder="2000"
+                defaultValue={batch.flash_fee ?? ""}
+                className="field"
+              />
+            </div>
+            <div className="grow">
+              <label className="label" htmlFor="flash_fee_reason">Reason shown</label>
+              <input
+                id="flash_fee_reason"
+                name="flash_fee_reason"
+                placeholder="Exam week."
+                defaultValue={batch.flash_fee_reason}
+                className="field"
+              />
+            </div>
+            <button className="btn-quiet shrink-0">Save</button>
+          </div>
+          <p className="text-xs text-ink/50">
+            {batch.flash_fee === null
+              ? `Normal bands: ${bandTable(null).map((b) => `${b.label} ${naira(b.fee)}`).join(", ")}`
+              : `Tonight: ${bandTable(batch.flash_fee).map((b) => `${b.label} ${naira(b.fee)}`).join(", ")}`}
+          </p>
+          <p className="text-xs text-ink/50">
+            Leave the fee blank to go back to normal pricing.
+          </p>
+        </form>
         <form action={setBatchCapacity} className="flex items-end gap-2">
           <input type="hidden" name="batch_id" value={batch.id} />
           <div className="grow">

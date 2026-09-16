@@ -1,6 +1,7 @@
 import { db } from "./supabase";
 import { BATCH_MINIMUM } from "./config";
 import { getBatch } from "./batches";
+import { refundsOwed, settleGroupFees } from "./groups";
 import { linesFor, type OrderLine } from "./orders";
 import type { Batch, Order, Promoter } from "./types";
 
@@ -13,12 +14,26 @@ export type CounterGroup = {
 
 export type HandoutOrder = Order & { lines: OrderLine[] };
 
+/**
+ * One bag per person. Orders added later in the week merge into the same bag,
+ * because the customer experiences it as one order (addendum §3).
+ */
+export type HandoutBag = {
+  key: string;
+  name: string;
+  hostel: string;
+  phone: string;
+  orders: HandoutOrder[];
+  lines: OrderLine[];
+};
+
 export type BatchSheet = {
   batch: Batch;
   /** Paid orders only — these are the ones that travel. */
   counter: CounterGroup[];
-  handout: HandoutOrder[];
+  handout: HandoutBag[];
   unpaid: HandoutOrder[];
+  refunds: Order[];
   summary: {
     paidCount: number;
     unpaidCount: number;
@@ -33,6 +48,10 @@ export type BatchSheet = {
 export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   const batch = await getBatch(batchId);
   if (!batch) return null;
+
+  // Settling is idempotent, and doing it here means a group that shrank is
+  // already correct by the time she reads the sheet.
+  await settleGroupFees(batch);
 
   const { data, error } = await db()
     .from("orders")
@@ -66,8 +85,9 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   return {
     batch,
     counter: groupForCounter(lines.filter((l) => paidIds.has(l.order_id))),
-    handout: paid.map(withLines),
+    handout: bagsFor(paid.map(withLines)),
     unpaid: unpaid.map(withLines),
+    refunds: await refundsOwed(batchId),
     summary: {
       paidCount: paid.length,
       unpaidCount: unpaid.length,
@@ -78,6 +98,37 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
       net: sum(paid, (o) => o.total - o.subtotal_food) - commission,
     },
   };
+}
+
+/**
+ * Orders merged into one bag per person. A group order that was split into a
+ * payment link each still bags under the name on each share, so the labels
+ * match what was ordered.
+ */
+function bagsFor(orders: HandoutOrder[]): HandoutBag[] {
+  const bags = new Map<string, HandoutBag>();
+
+  for (const order of orders) {
+    // A split share is bagged under the person it is for; everything else
+    // under the phone that ordered it.
+    const key = order.for_name
+      ? `${order.customer_phone}|${order.for_name}`
+      : order.customer_phone;
+
+    const bag = bags.get(key) ?? {
+      key,
+      name: order.for_name ?? order.customer_name,
+      hostel: order.hostel,
+      phone: order.customer_phone,
+      orders: [],
+      lines: [],
+    };
+    bag.orders.push(order);
+    bag.lines.push(...order.lines);
+    bags.set(key, bag);
+  }
+
+  return [...bags.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /**

@@ -153,3 +153,25 @@ export async function saveSettings(form: FormData): Promise<void> {
 
   revalidatePath("/admin/settings");
 }
+
+/**
+ * A flash fee drop on one batch. Blank clears it. The reason is shown to
+ * customers, because a bare cut reads as an admission that the normal fee was
+ * always too high (addendum §4).
+ */
+export async function setFlashFee(form: FormData): Promise<void> {
+  await assertAdmin();
+  const raw = String(form.get("flash_fee") ?? "").trim();
+  const fee = raw === "" ? null : Math.round(Number(raw));
+
+  await db()
+    .from("batches")
+    .update({
+      flash_fee: fee !== null && Number.isFinite(fee) && fee >= 0 ? fee : null,
+      flash_fee_reason: String(form.get("flash_fee_reason") ?? "").trim(),
+    })
+    .eq("id", String(form.get("batch_id")));
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+}

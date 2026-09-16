@@ -28,6 +28,8 @@ export type Batch = {
   delivery_window_text: string;
   status: BatchStatus;
   capacity: number | null;
+  flash_fee: number | null;
+  flash_fee_reason: string;
 };
 
 export type OrderStatus = "pending" | "paid" | "refunded" | "delivered";
@@ -47,6 +49,9 @@ export type Order = {
   promoter_code: string | null;
   status: OrderStatus;
   created_at: string;
+  group_id: string | null;
+  for_name: string | null;
+  refund_owed: number;
 };
 
 export type OrderItem = {
@@ -55,6 +60,17 @@ export type OrderItem = {
   menu_item_id: string;
   qty: number;
   unit_price_at_order: number;
+  for_name: string | null;
+};
+
+export type OrderGroup = {
+  id: string;
+  batch_id: string;
+  leader_phone: string;
+  leader_name: string;
+  hostel: string;
+  mode: GroupMode;
+  created_at: string;
 };
 
 export type Promoter = {
@@ -66,4 +82,11 @@ export type Promoter = {
 };
 
 /** What the cart posts to the server. Prices are never trusted from here. */
-export type CartLine = { menu_item_id: string; qty: number };
+export type CartLine = {
+  menu_item_id: string;
+  qty: number;
+  /** Whose food this is, in a group cart. Null for a single-person order. */
+  for_name?: string | null;
+};
+
+export type GroupMode = "one_payer" | "split";

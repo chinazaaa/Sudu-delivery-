@@ -2,12 +2,13 @@ import Link from "next/link";
 import PhoneLookup from "@/components/PhoneLookup";
 import ReorderCard, { type PreviousOrder } from "@/components/ReorderCard";
 import { openBatches } from "@/lib/batches";
-import { DELIVERY_FEE, SLOT_LABEL } from "@/lib/config";
-import { lastOrderForPhone } from "@/lib/orders";
+import { feeFor } from "@/lib/fees";
+import { lastOrderForPhone, openOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
-import { clockLabel, runDateLabel, weekdayLabel } from "@/lib/time";
+import { SLOT_LABEL } from "@/lib/config";
+import { clockLabel, weekdayLabel } from "@/lib/time";
 import { db } from "@/lib/supabase";
-import type { BatchView } from "@/lib/view";
+import { toBatchView } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,8 @@ export default async function ReorderPage({
 }) {
   const phone = normalisePhone((await searchParams).phone ?? "");
   const previous = phone ? await lastOrderForPhone(phone) : null;
+  // An order already in an open batch can be added to, rather than duplicated.
+  const openOrder = phone ? await openOrderForPhone(phone) : null;
 
   if (!previous) {
     return (
@@ -41,14 +44,7 @@ export default async function ReorderPage({
   }
 
   const batches = await openBatches();
-  const views: BatchView[] = batches.map((batch) => ({
-    id: batch.id,
-    label: `${weekdayLabel(batch.run_date)} ${SLOT_LABEL[batch.slot]}`,
-    cutOffISO: batch.cut_off_at,
-    cutOffLabel: `${runDateLabel(batch.run_date)}, ${clockLabel(batch.cut_off_at)}`,
-    deliveryWindow: batch.delivery_window_text,
-    full: batch.full,
-  }));
+  const views = batches.map(toBatchView);
 
   // Prices are re-read live: an old order must never be repeated at a stale price.
   const { data: items } = await db()
@@ -62,6 +58,8 @@ export default async function ReorderPage({
     0
   );
 
+  const previousItems = previous.lines.reduce((count, line) => count + line.qty, 0);
+
   const view: PreviousOrder = {
     phone: previous.customer_phone,
     name: previous.customer_name,
@@ -73,12 +71,34 @@ export default async function ReorderPage({
       restaurant: l.restaurant,
     })),
     foodTotal,
-    total: foodTotal + DELIVERY_FEE,
+    total: foodTotal + feeFor(previousItems, null),
   };
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold tracking-tight">Order again</h1>
+
+      {openOrder && (
+        <div className="card">
+          <h2 className="font-semibold">
+            You have an order in the {weekdayLabel(openOrder.batch.run_date)}{" "}
+            {SLOT_LABEL[openOrder.batch.slot]} batch
+          </h2>
+          <p className="mt-1 text-sm text-ink/70">
+            {openOrder.items} item{openOrder.items === 1 ? "" : "s"}, closing{" "}
+            {clockLabel(openOrder.batch.cut_off_at)}. Add to it and it goes in the same
+            bag under your name — you only pay more delivery if the extra items push
+            you into a bigger load.
+          </p>
+          <Link
+            href={`/?batch=${openOrder.batch.id}&phone=${previous.customer_phone}`}
+            className="btn-primary mt-3 w-full"
+          >
+            Add to this order
+          </Link>
+        </div>
+      )}
+
       <ReorderCard previous={view} batches={views} />
       <p className="text-sm text-ink/60">
         Want something different?{" "}

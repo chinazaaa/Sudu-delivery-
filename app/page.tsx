@@ -1,37 +1,43 @@
 import { cookies } from "next/headers";
 import OrderForm from "@/components/OrderForm";
-import { openBatches } from "@/lib/batches";
+import { openBatches, recentlyClosedBatch } from "@/lib/batches";
+import { existingLoad } from "@/lib/orders";
+import { normalisePhone } from "@/lib/phone";
 import { menuView } from "@/lib/menu";
 import { activePromoter } from "@/lib/promoters";
-import { clockLabel, runDateLabel, weekdayLabel } from "@/lib/time";
-import { SLOT_LABEL } from "@/lib/config";
-import type { BatchView } from "@/lib/view";
+import { toBatchView, toClosedBatchView } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ ref?: string }>;
+  searchParams: Promise<{ ref?: string; batch?: string; phone?: string }>;
 }) {
+  const params = await searchParams;
   // The proxy sets the ref cookie on *this* response, so it is not readable
   // until the next request — the code has to come off the URL on the way in.
-  const ref = (await searchParams).ref ?? (await cookies()).get("sudu_ref")?.value;
+  const ref = params.ref ?? (await cookies()).get("sudu_ref")?.value;
 
-  const [menu, batches, promoter] = await Promise.all([
+  const [menu, batches, promoter, justClosed] = await Promise.all([
     menuView(),
     openBatches(),
     activePromoter(ref),
+    recentlyClosedBatch(),
   ]);
 
-  const views: BatchView[] = batches.map((batch) => ({
-    id: batch.id,
-    label: `${weekdayLabel(batch.run_date)} ${SLOT_LABEL[batch.slot]}`,
-    cutOffISO: batch.cut_off_at,
-    cutOffLabel: `${runDateLabel(batch.run_date)}, ${clockLabel(batch.cut_off_at)}`,
-    deliveryWindow: batch.delivery_window_text,
-    full: batch.full,
-  }));
+  const views = [
+    ...(justClosed ? [toClosedBatchView(justClosed)] : []),
+    ...batches.map(toBatchView),
+  ];
+
+  // Arriving from "add to my order": the same phone and batch, so only the
+  // difference in delivery is charged (addendum §3).
+  const phone = normalisePhone(params.phone ?? "");
+  const adding =
+    phone && params.batch && views.some((v) => v.id === params.batch)
+      ? { ...(await existingLoad(params.batch, phone)), phone, batchId: params.batch }
+      : null;
 
   return (
     <div className="space-y-6">
@@ -45,7 +51,23 @@ export default async function HomePage({
         </p>
       </section>
 
-      <OrderForm menu={menu} batches={views} promoter={promoter} />
+      <OrderForm
+        menu={menu}
+        batches={views}
+        promoter={promoter}
+        adding={
+          adding && adding.items > 0
+            ? {
+                batchId: adding.batchId,
+                phone: adding.phone,
+                name: adding.orders[0]?.customer_name ?? "",
+                hostel: adding.orders[0]?.hostel ?? "",
+                items: adding.items,
+                feeCharged: adding.feeCharged,
+              }
+            : null
+        }
+      />
     </div>
   );
 }

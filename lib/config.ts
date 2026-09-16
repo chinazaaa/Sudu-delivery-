@@ -1,8 +1,7 @@
 // Operating constants. Everything the brief fixes as policy lives here so it
 // can be changed in one place from the UK.
 
-/** Flat, all-in delivery fee per order, in naira (brief §3). */
-export const DELIVERY_FEE = 4000;
+/** Delivery is banded by item count — see lib/fees.ts. */
 
 /** Taken off a customer's *first* order when it carries a promoter code. */
 export const FIRST_ORDER_DISCOUNT = 500;

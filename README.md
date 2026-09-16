@@ -13,6 +13,17 @@ a batch cut-off, and the admin screen the driver reads at the counter.
 **Customer side**
 
 - Menu across multiple restaurants, with items mixable in one cart and one fee
+- **Delivery priced by container count, not food value** — 1–3 items ₦4,000,
+  4–6 ₦6,000, 7–10 ₦8,000, 11+ ₦10,000. One ₦24,000 bucket is one container
+  and pays the headline ₦4,000. The cart shows the count, the fee and how far
+  the next band is
+- **Group orders** — one cart for several people, each item tagged with a name
+  so bags are labelled at the drop point. Either the leader pays for everything
+  (default) or each person gets their own payment link. No group discount: the
+  bands already price a bigger load correctly
+- **Adding to an order** later in the week — same phone, same batch, merged
+  into one bag, charged only the difference in delivery if the extra items push
+  into a bigger band
 - Batch selector defaulting to the next open batch, with a live two-line
   countdown (this batch, then the one after it)
 - Checkout on name, phone and hostel — no accounts anywhere; the phone number
@@ -28,6 +39,12 @@ a batch cut-off, and the admin screen the driver reads at the counter.
 
 **Admin side** (`/admin`, one password)
 
+- **Flash fee drop** per batch with the reason the customer is shown — for
+  rescuing a thin batch. Every band moves down together, so "₦2,000 delivery
+  tonight" is true while a car-load still pays for a car-load
+- **Refunds owed** — when unpaid shares drop out of a group at the cut-off and
+  the order falls into a cheaper band, the difference is recalculated in the
+  customer's favour and listed to be paid back
 - Per-batch **counter sheet** — orders collapsed by restaurant into totals,
   large enough to read one-handed in a queue, with the expected food total per
   restaurant so the right money is sent ahead of the run
@@ -75,6 +92,8 @@ Apply the schema in the Supabase SQL editor, in order:
    run (Admin → Menu)
 3. `supabase/migrations/0003_settings.sql` — the one settings row holding the
    bank details and WhatsApp number
+4. `supabase/migrations/0004_bands_groups_additions.sql` — flash fees, group
+   orders and per-item name tags
 
 Then fill in **Admin → Payment** before ordering opens. Until the bank details
 are set, the pay page says so rather than showing a blank account number.
@@ -93,7 +112,7 @@ All in `lib/config.ts`:
 
 | Setting | Default | Note |
 |---|---|---|
-| `DELIVERY_FEE` | ₦4,000 | All-in, on top of food |
+| `FEE_BANDS` (`lib/fees.ts`) | 4k / 6k / 8k / 10k | By item count. **Provisional — set the thresholds from what the boot actually holds** |
 | `FIRST_ORDER_DISCOUNT` | ₦500 | First order only, promoter links only |
 | `BATCH_MINIMUM` | 8 | Internal — never shown to customers |
 | `RUN_WEEKDAYS` | `[5]` (Friday) | Batches open themselves for these days |
@@ -107,8 +126,10 @@ above, so nobody has to remember to open ordering.
 There is no live order counter and no invented scarcity. The countdown is a
 real cut-off, "Full" appears only when a batch has a capacity set and has
 reached it, and items show as unavailable only when the restaurant is actually
-out. On a campus where everyone knows everyone, a number that never changes is
-noticed within two runs.
+out. A batch that has just closed is shown struck through with the next one
+selected, so a late arrival sees what they missed rather than the list quietly
+changing. On a campus where everyone knows everyone, a number that never
+changes is noticed within two runs.
 
 ## Tests
 
@@ -118,7 +139,13 @@ npm run build
 ```
 
 The full customer and admin flows have been exercised end to end against a
-local Postgres + PostgREST stack: a cart mixing KFC and Domino's on one fee,
+local Postgres + PostgREST stack: the fee bands stepping at 4, 7 and 11 items,
+a single expensive bucket still paying ₦4,000, a split group order settling its
+band when an unpaid share dropped at the cut-off (₦167 refunds recorded for the
+two who paid), an addition merging into one bag and charging only the ₦2,000
+difference, a flash drop showing ₦2,000 entry while eleven items still paid
+₦8,000, a closed batch shown unavailable with the next one selected, a cart
+mixing KFC and Domino's on one fee,
 promoter attribution and the first-order discount, first-order detection across
 `+234`/`0` phone formats, admin-edited bank details and the WhatsApp card
 route appearing on the pay page, the pay link opened by someone other than the

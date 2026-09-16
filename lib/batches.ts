@@ -44,6 +44,8 @@ export async function ensureUpcomingBatches(): Promise<void> {
         delivery_window_text: DELIVERY_WINDOWS[slot],
         status: "open",
         capacity: null,
+        flash_fee: null,
+        flash_fee_reason: "",
       });
     }
   }
@@ -55,13 +57,22 @@ export async function ensureUpcomingBatches(): Promise<void> {
   });
 }
 
-/** Marks any batch whose cut-off has passed as closed. */
+/**
+ * Marks any batch whose cut-off has passed as closed, and settles the fee on
+ * every split group in it — that is the moment unpaid shares stop travelling.
+ */
 export async function closeExpiredBatches(): Promise<void> {
-  await db()
+  const { data } = await db()
     .from("batches")
     .update({ status: "closed" })
     .eq("status", "open")
-    .lt("cut_off_at", new Date().toISOString());
+    .lt("cut_off_at", new Date().toISOString())
+    .select("*");
+
+  const { settleGroupFees } = await import("./groups");
+  for (const batch of (data ?? []) as Batch[]) {
+    await settleGroupFees(batch);
+  }
 }
 
 export type OpenBatch = Batch & { order_count: number; full: boolean };
@@ -109,6 +120,25 @@ export async function orderCounts(batchIds: string[]): Promise<Map<string, numbe
     counts.set(row.batch_id, (counts.get(row.batch_id) ?? 0) + 1);
   }
   return counts;
+}
+
+/**
+ * The batch that just closed, if one did today. It is shown struck through in
+ * the selector so a student who arrives late sees what they missed and which
+ * batch they are being moved to, rather than the list silently changing.
+ */
+export async function recentlyClosedBatch(): Promise<Batch | null> {
+  const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+  const { data } = await db()
+    .from("batches")
+    .select("*")
+    .in("status", ["closed", "delivered"])
+    .gt("cut_off_at", twelveHoursAgo)
+    .lt("cut_off_at", new Date().toISOString())
+    .order("cut_off_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as Batch) ?? null;
 }
 
 export async function getBatch(id: string): Promise<Batch | null> {
