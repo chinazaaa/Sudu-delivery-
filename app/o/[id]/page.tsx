@@ -7,7 +7,7 @@ import ShareLink from "@/components/ShareLink";
 import CopyText from "@/components/CopyText";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira, orderRef } from "@/lib/money";
-import { getOrder, type FullOrder, type OrderLine } from "@/lib/orders";
+import { feeStory, getOrder, type FullOrder, type OrderLine } from "@/lib/orders";
 import { pinFor } from "@/lib/customer-auth";
 import { formatPhone } from "@/lib/phone";
 import { clockLabel, runDateLabel, weekdayLabel } from "@/lib/time";
@@ -26,6 +26,7 @@ export default async function OrderPage({
   if (!order) notFound();
 
   const settings = await getSettings();
+  const fees = await feeStory(order);
   // Only the person who just checked out sees their PIN, and only their own
   // browser gets emptied. A pay-by-link friend opening this sees neither.
   const justPlaced = (await searchParams).placed === "1";
@@ -254,12 +255,28 @@ export default async function OrderPage({
         </ul>
         <dl className="space-y-1 border-t border-black/10 pt-2 text-sm">
           <Row label="Food" value={naira(order.subtotal_food)} />
-          <Row label={feeLabel(order)} value={naira(order.fee)} />
+          <Row label={feeLabel(fees)} value={naira(order.fee)} />
           {order.discount > 0 && (
             <Row label="First-order discount" value={`−${naira(order.discount)}`} />
           )}
           <Row label="Total" value={naira(order.total)} strong />
         </dl>
+        {fees.otherItems > 0 && (
+          <p className="rounded-xl bg-shell px-3 py-2 text-xs text-muted">
+            You already have {fees.otherItems} item
+            {fees.otherItems === 1 ? "" : "s"} in this run, with{" "}
+            {naira(fees.otherFee)} of delivery paid on them. All{" "}
+            {fees.items + fees.otherItems} travel together as one delivery
+            costing {naira(fees.wholeFee)}, so this order only carries the
+            difference.
+          </p>
+        )}
+        {fees.otherItems === 0 && fees.flashFee !== null && (
+          <p className="rounded-xl bg-brand-tint px-3 py-2 text-xs font-semibold text-brand-dark">
+            Delivery is down tonight.{" "}
+            {order.batch.flash_fee_reason || "Enjoy it."}
+          </p>
+        )}
       </section>
 
       {order.refund_owed > 0 && (
@@ -454,11 +471,11 @@ function CardPayment({
 }
 
 /** Delivery is priced by container count, so the line says what it counted. */
-function feeLabel(order: { lines: { qty: number }[]; for_name: string | null }): string {
-  const items = order.lines.reduce((count, line) => count + line.qty, 0);
-  return order.for_name
-    ? `Delivery (your share of ${items} item${items === 1 ? "" : "s"})`
-    : `Delivery (${items} item${items === 1 ? "" : "s"})`;
+function feeLabel(fees: { items: number; otherItems: number }): string {
+  const plural = (n: number) => `${n} item${n === 1 ? "" : "s"}`;
+  return fees.otherItems > 0
+    ? `Delivery top-up (${plural(fees.items + fees.otherItems)} in this run)`
+    : `Delivery (${plural(fees.items)})`;
 }
 
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {

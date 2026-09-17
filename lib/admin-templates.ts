@@ -57,6 +57,9 @@ export function toCard(
     paymentMethod: order.payment_method,
     pin: order.pin,
     paymentLink: order.payment_link,
+    otherItems: order.otherItems,
+    otherFee: order.otherFee,
+    inGroup: order.group_id !== null,
     lines: order.lines.map((line) => ({
       id: line.id,
       qty: line.qty,

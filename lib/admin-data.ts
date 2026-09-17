@@ -6,6 +6,9 @@ import type { Batch, Order } from "./types";
 
 export type FeedOrder = Order & {
   lines: OrderLine[];
+  /** Containers and delivery on that person's other orders in the same run. */
+  otherItems: number;
+  otherFee: number;
   batchLabel: string;
   runDate: string;
   deliveryWindow: string;
@@ -56,10 +59,29 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
   const batches = await batchMap(orders.map((o) => o.batch_id));
   const pins = await pinMap(orders.map((o) => o.customer_phone));
 
-  return orders.map((order) => {
+ return orders.map((order) => {
     const batch = batches.get(order.batch_id);
+    // Adding to an order already in a run charges only the difference, so the
+    // rest of that person's load in this run has to be visible beside it.
+    const siblings = orders.filter(
+      (other) =>
+        other.id !== order.id &&
+        other.batch_id === order.batch_id &&
+        other.customer_phone === order.customer_phone &&
+        other.status !== "refunded"
+    );
+
     return {
       ...order,
+      otherItems: siblings.reduce(
+        (count, other) =>
+          count +
+          lines
+            .filter((line) => line.order_id === other.id)
+            .reduce((sum, line) => sum + line.qty, 0),
+        0
+      ),
+      otherFee: siblings.reduce((sum, other) => sum + other.fee, 0),
       lines: lines.filter((line) => line.order_id === order.id),
       batchLabel: batch
         ? `${weekdayLabel(batch.run_date)} ${SLOT_LABEL[batch.slot]}`

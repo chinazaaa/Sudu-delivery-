@@ -31,6 +31,10 @@ export type OrderCardData = {
   paymentMethod: string;
   pin: string | null;
   paymentLink: string | null;
+  /** That person's other orders in the same run, which this one tops up. */
+  otherItems: number;
+  otherFee: number;
+  inGroup: boolean;
   lines: OrderCardLine[];
   /** Ready-made WhatsApp links, one per template, built on the server. */
   templates: { kind: string; label: string; href: string }[];
@@ -168,7 +172,13 @@ export default function OrderCard({
               <dd>{naira(order.food)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt>Delivery</dt>
+              <dt>
+                {order.otherItems > 0
+                  ? `Delivery top-up (${order.otherItems} more item${
+                      order.otherItems === 1 ? "" : "s"
+                    } already in this run)`
+                  : "Delivery"}
+              </dt>
               <dd>{naira(order.fee)}</dd>
             </div>
             <div className="flex justify-between">
@@ -177,7 +187,13 @@ export default function OrderCard({
             </div>
             {order.pin && (
               <div className="flex justify-between">
-                <dt>Their PIN</dt>
+                {/* A PIN belongs to a phone number, not to a group. In a
+                    one-payer group this is the buyer's, and the friends have
+                    none of their own until they order themselves. */}
+                <dt>
+                  PIN for {formatPhone(order.phone)}
+                  {order.inGroup && " (whoever placed this)"}
+                </dt>
                 <dd className="font-semibold text-ink">{order.pin}</dd>
               </div>
             )}

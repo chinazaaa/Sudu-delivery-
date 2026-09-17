@@ -472,6 +472,40 @@ export async function existingLoad(
   };
 }
 
+export type FeeStory = {
+  /** Containers on this order alone. */
+  items: number;
+  /** Containers on that person's other orders in the same run. */
+  otherItems: number;
+  /** Delivery already charged on those other orders. */
+  otherFee: number;
+  /** What the whole load costs to carry. */
+  wholeFee: number;
+  /** Delivery charged on this order: the difference, when adding. */
+  fee: number;
+  /** A flash drop was on when this was priced. */
+  flashFee: number | null;
+};
+
+/**
+ * Why this order's delivery is what it is. Adding to an order already in a
+ * run charges only the difference, because it is one load either way, which
+ * makes a small number on a big order look wrong without the explanation.
+ */
+export async function feeStory(order: FullOrder): Promise<FeeStory> {
+  const load = await existingLoad(order.batch_id, order.customer_phone);
+  const items = order.lines.reduce((count, line) => count + line.qty, 0);
+
+  return {
+    items,
+    otherItems: Math.max(0, load.items - items),
+    otherFee: Math.max(0, load.feeCharged - order.fee),
+    wholeFee: load.feeCharged,
+    fee: order.fee,
+    flashFee: order.batch.flash_fee,
+  };
+}
+
 async function checkCapacity(batch: Batch): Promise<string | null> {
   if (batch.capacity === null) return null;
   const count = (await orderCounts([batch.id])).get(batch.id) ?? 0;
