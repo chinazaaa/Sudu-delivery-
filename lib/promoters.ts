@@ -32,6 +32,15 @@ export type PromoterRun = {
   earned: number;
 };
 
+/** An order placed but not paid for, in a run that is still taking money. */
+export type ChaseableOrder = {
+  id: string;
+  name: string;
+  phone: string;
+  total: number;
+  label: string;
+};
+
 export type PromoterEarnings = {
   code: string;
   name: string;
@@ -42,6 +51,10 @@ export type PromoterEarnings = {
   /** What has been handed over so far. */
   paid: number;
   owed: number;
+  /** What the unpaid orders would be worth if every one of them paid. */
+  waiting: number;
+  /** Those orders, in runs still open, so a nudge can still land. */
+  chase: ChaseableOrder[];
   payouts: { id: string; amount: number; note: string; paid_at: string }[];
 };
 
@@ -62,14 +75,14 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
 
   const { data: orders } = await db()
     .from("orders")
-    .select("batch_id, status")
+    .select("id, batch_id, status, customer_name, customer_phone, total")
     .neq("status", "refunded");
 
   const batchIds = [...new Set((orders ?? []).map((o) => o.batch_id as string))];
   const { data: batches } = batchIds.length
     ? await db()
         .from("batches")
-        .select("id, run_date, slot")
+        .select("id, run_date, slot, status, stage, cut_off_at")
         .in("id", batchIds)
         .order("run_date", { ascending: false })
     : { data: [] };
@@ -88,6 +101,37 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
     };
   });
 
+  // Only worth chasing while the run can still take the money. Once a run has
+  // closed, the order has to be moved before anyone can pay for it, and that
+  // is not something a promoter can do.
+  const stillOpen = new Set(
+    ((batches ?? []) as any[])
+      .filter(
+        (batch) =>
+          batch.status === "open" &&
+          batch.stage === "ordering" &&
+          new Date(batch.cut_off_at).getTime() > Date.now()
+      )
+      .map((batch) => batch.id as string)
+  );
+
+  const byBatch = new Map(
+    ((batches ?? []) as any[]).map((batch) => [
+      batch.id as string,
+      `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot as BatchSlot]}`,
+    ])
+  );
+
+  const chase: ChaseableOrder[] = (orders ?? [])
+    .filter((o) => o.status === "pending" && stillOpen.has(o.batch_id as string))
+    .map((o) => ({
+      id: o.id as string,
+      name: (o.customer_name as string) || "Someone",
+      phone: o.customer_phone as string,
+      total: o.total as number,
+      label: byBatch.get(o.batch_id as string) ?? "",
+    }));
+
   const { data: payouts } = await db()
     .from("promoter_payouts")
     .select("id, amount, note, paid_at")
@@ -105,6 +149,8 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
     earned,
     paid,
     owed: Math.max(0, earned - paid),
+    waiting: chase.length * rate,
+    chase,
     payouts: (payouts ?? []) as PromoterEarnings["payouts"],
   };
 }

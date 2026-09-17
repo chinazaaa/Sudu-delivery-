@@ -624,3 +624,30 @@ test("the popular row ranks by how much was bought, not how many orders", () => 
   const ranked = [...sold.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
   assert.deepEqual(ranked, ["wrap", "pizza"]);
 });
+
+test("only unpaid orders in a run that can still take money are worth chasing", () => {
+  const now = Date.now();
+  const batches = [
+    { id: "open", status: "open", stage: "ordering", cut_off_at: new Date(now + 3600_000) },
+    { id: "closed", status: "open", stage: "ordering", cut_off_at: new Date(now - 3600_000) },
+    { id: "counter", status: "open", stage: "counter", cut_off_at: new Date(now + 3600_000) },
+  ];
+  const open = new Set(
+    batches
+      .filter(
+        (b) =>
+          b.status === "open" &&
+          b.stage === "ordering" &&
+          b.cut_off_at.getTime() > now
+      )
+      .map((b) => b.id)
+  );
+  const orders = [
+    { id: "a", status: "pending", batch_id: "open" },
+    { id: "b", status: "pending", batch_id: "closed" },
+    { id: "c", status: "pending", batch_id: "counter" },
+    { id: "d", status: "paid", batch_id: "open" },
+  ];
+  const chase = orders.filter((o) => o.status === "pending" && open.has(o.batch_id));
+  assert.deepEqual(chase.map((o) => o.id), ["a"]);
+});

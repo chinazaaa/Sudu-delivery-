@@ -3,6 +3,7 @@ import PromoterLogin from "@/components/PromoterLogin";
 import { currentPromoter } from "@/lib/promoter-auth";
 import { promoterEarnings } from "@/lib/promoters";
 import { naira } from "@/lib/money";
+import { whatsappTo } from "@/lib/messages";
 import { signOut } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -44,10 +45,57 @@ export default async function PromoterPage() {
           {naira(earnings.earned)} earned, {naira(earnings.paid)} already paid.{" "}
           {naira(earnings.rate)} per paid order.
         </p>
-        <p className="mt-3 rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold">
-          Every paid order counts for you.
-        </p>
+        {earnings.waiting > 0 ? (
+          <p className="mt-3 rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold">
+            {naira(earnings.waiting)} more if the {earnings.chase.length} unpaid
+            order{earnings.chase.length === 1 ? "" : "s"} below get paid.
+          </p>
+        ) : (
+          <p className="mt-3 rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold">
+            Every paid order counts for you.
+          </p>
+        )}
       </section>
+
+      {earnings.chase.length > 0 && (
+        <section className="card space-y-2 border-amber-300 bg-amber-50">
+          <div>
+            <h2 className="font-bold">Ordered but not paid for</h2>
+            <p className="text-sm text-muted">
+              These are in runs still taking money. Each one is{" "}
+              {naira(earnings.rate)} to you the moment it is paid. A nudge is
+              usually all it takes: people put an order in and forget.
+            </p>
+          </div>
+          <ul className="divide-y divide-black/5">
+            {earnings.chase.map((order) => (
+              <li
+                key={order.id}
+                className="flex flex-wrap items-center justify-between gap-2 py-2.5"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold">{order.name}</span>
+                  <span className="block text-sm text-muted">
+                    {order.label} · {naira(order.total)}
+                  </span>
+                </span>
+                <a
+                  href={whatsappTo(
+                    order.phone,
+                    `Hi ${order.name}, your Sudu order for ${order.label} is in but ` +
+                      "not paid for yet. Pay before the cut off and it goes on the run."
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="chip shrink-0 border-black/10 bg-white hover:border-ink/30"
+                >
+                  Nudge on WhatsApp
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {earnings.runs.length === 0 ? (
         <p className="card text-sm text-muted">
