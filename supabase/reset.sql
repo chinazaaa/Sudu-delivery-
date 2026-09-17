@@ -36,7 +36,7 @@ delete from customers;
 alter sequence order_no_seq restart with 1001;
 
 -- The placeholder items seeded before the real menus were imported. They were
--- hidden rather than deleted so old orders kept their item names; with the
+-- hidden rather than deleted so old orders kept their item names. With the
 -- orders gone there is nothing left to protect.
 delete from item_options where group_id in (
   select g.id from item_option_groups g

@@ -1,4 +1,4 @@
--- Domino's Nigeria, the whole menu.
+-- Dominos Nigeria, the whole menu.
 --
 -- Built from the price list you exported: 70 products across six
 -- sections. It supersedes dominos_menu.sql and dominos_prices.sql, and is the
@@ -12,19 +12,19 @@
 -- Matching is on the name with case, spaces and punctuation ignored, so an
 -- item you already have as "bbq chicken" is recognised as BBQ Chicken and
 -- corrected, not duplicated. The description from the price list wins, since
--- it is the shop's own wording; anything you have written by hand survives
--- only where the list has nothing to say.
+-- it is the wording the shop itself uses. Anything you have written by
+-- hand survives only where the list has nothing to say.
 --
 -- Past orders are untouched. Each order line keeps its own copy of what was
 -- ordered and what it cost, so rebuilding the choices cannot move old money.
 --
 -- Safe to run twice.
 --
--- FOR A CLEAN START: uncomment the block below to throw the existing Domino's
--- menu away first, so nothing you added by hand survives and the sections come
--- in exactly as the export has them. Photographs go with it. Run reset.sql
--- first if there are orders, because an item that has been ordered cannot be
--- deleted while that order exists.
+-- FOR A CLEAN START: uncomment the block below to throw the existing
+-- Dominos menu away first, so nothing you added by hand survives and the
+-- sections come in exactly as the export has them. Photographs go with it.
+-- Run reset.sql first if there are orders, because an item that has been
+-- ordered cannot be deleted while that order exists.
 --
 -- delete from menu_items m
 -- using restaurants r
@@ -35,7 +35,7 @@
 -- where c.restaurant_id = r.id and r.name ilike '%domino%';
 
 drop table if exists dominos_import;
-create temporary table dominos_import (
+create table dominos_import (
   category    text not null,
   name        text not null,
   alias       text not null,
@@ -117,7 +117,7 @@ insert into dominos_import (category, name, alias, price, description, sort) val
   ('Dessert', 'To Go Strawberry Yoghurt', '', 7000, '14oz tub', 15);
 
 drop table if exists dominos_sizes;
-create temporary table dominos_sizes (
+create table dominos_sizes (
   name     text not null,
   large    int  not null,
   chairman int  not null
@@ -140,7 +140,7 @@ insert into dominos_sizes (name, large, chairman) values
   ('The Lot', 5425, 11725),
   ('Veggie Supreme', 4210, 9775);
 
-do $$
+do $dominos$
 declare
   r uuid;
   moved int;
@@ -148,7 +148,7 @@ declare
 begin
   select id into r from restaurants where name ilike '%domino%' limit 1;
   if r is null then
-    raise exception 'No Domino''''s restaurant found. Add it in admin first.';
+    raise exception 'No Dominos restaurant found. Add it in admin first.';
   end if;
 
   -- The six sections.
@@ -271,7 +271,7 @@ begin
     and c.name in ('Pizza · Veggie', 'Pizza · Beef', 'Pizza · Chicken',
                    'Pizza · Loaded', 'Pizza · Other', 'Breads', 'Chicken', 'Extras')
     and not exists (select 1 from menu_items m where m.category_id = c.id);
-end $$;
+end $dominos$;
 
 -- Anything of yours the price list did not mention: check these by hand, they
 -- are either off the menu now or named differently from the export.
@@ -297,3 +297,9 @@ from menu_items m
      join menu_categories c on c.id = m.category_id
 where r.name ilike '%domino%'
 order by c.sort_order, m.sort_order;
+
+-- The lists were only scaffolding. Ordinary tables rather than temporary ones,
+-- because an editor is free to run each statement on its own connection and a
+-- temporary table would not survive that.
+drop table if exists dominos_import;
+drop table if exists dominos_sizes;
