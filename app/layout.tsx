@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
+import Ribbon from "@/components/Ribbon";
 import SiteHeader from "@/components/SiteHeader";
+import { publicOffer } from "@/lib/coupons";
 import { instagramLink, safeSettings } from "@/lib/settings";
 import "./globals.css";
 
@@ -56,6 +58,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const instagram = instagramLink(settings.instagram_handle);
   const showPromoterLink = settings.hide_promoter_link !== "on";
   const showFooter = settings.hide_footer !== "on";
+  // Read from the code itself, so the strip cannot outlive the offer.
+  const offer = await publicOffer(settings.offer_code);
   return (
     <html lang="en">
       <body>
@@ -67,6 +71,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
         {/* Each line of the footer is there because something is set. Empty
             it in admin and it goes. */}
+        <Ribbon text={settings.ribbon_text} offer={offer} />
         <SiteHeader tagline={settings.tagline || "Sangotedo to PAU"} />
         <main className="mx-auto max-w-5xl px-4 pb-28 pt-4 sm:pb-24">{children}</main>
         {/* Clears both the tab bar and a sticky cart bar, which were sitting

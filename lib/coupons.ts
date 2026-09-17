@@ -146,3 +146,45 @@ export async function listCoupons(): Promise<CouponWithRuns[]> {
       })),
   }));
 }
+
+/** A code announced on the site, as the strip along the top states it. */
+export type PublicOffer = { code: string; line: string };
+
+/**
+ * The offer worth announcing, if there is one.
+ *
+ * It reads the code rather than trusting a sentence typed beside it, so the
+ * strip cannot go on promising ₦500 off after the code has been switched off,
+ * run out, expired, or had its amount changed. Nothing to remember to take
+ * down.
+ */
+export async function publicOffer(code: string): Promise<PublicOffer | null> {
+  const wanted = code.trim().toUpperCase();
+  if (!wanted) return null;
+
+  try {
+    const { data } = await db()
+      .from("coupons")
+      .select("*")
+      .eq("code", wanted)
+      .maybeSingle();
+
+    const coupon = data as Coupon | null;
+    if (!coupon || !coupon.active) return null;
+    if (coupon.expires_at && new Date(coupon.expires_at) <= new Date()) return null;
+    if (coupon.max_uses !== null && coupon.used >= coupon.max_uses) return null;
+
+    const what =
+      coupon.applies_to === "delivery"
+        ? `${naira(coupon.amount)} off delivery`
+        : `${naira(coupon.amount)} off`;
+
+    return {
+      code: coupon.code,
+      line: coupon.first_order_only ? `${what} your first order` : what,
+    };
+  } catch {
+    // A code nobody can read is a code nobody is offered. The site is fine.
+    return null;
+  }
+}

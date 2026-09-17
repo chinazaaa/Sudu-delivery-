@@ -234,5 +234,9 @@ alter table settings add column if not exists hide_footer text not null default 
 alter table settings add column if not exists auto_headline text not null default '';
 alter table settings add column if not exists auto_lines text not null default '';
 
+-- The strip along the top of every page, and a code to announce beside it.
+alter table settings add column if not exists ribbon_text text not null default '';
+alter table settings add column if not exists offer_code text not null default '';
+
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';

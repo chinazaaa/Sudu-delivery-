@@ -731,6 +731,8 @@ const SETTING_FIELDS = [
   "tagline",
   "hide_promoter_link",
   "hide_footer",
+  "ribbon_text",
+  "offer_code",
   "auto_headline",
   "auto_lines",
 ] as const;

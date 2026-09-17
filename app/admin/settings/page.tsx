@@ -136,6 +136,48 @@ export default async function SettingsAdmin() {
       </form>
 
       <form action={saveSettings} className="card space-y-3">
+        <div>
+          <h2 className="font-semibold">The strip along the top</h2>
+          <p className="text-sm text-muted">
+            One line above the header, on every page. It is the place for a
+            claim or a piece of news, so keep it to a few words: a strip that
+            shouts above every page is a strip people learn to scroll past.
+          </p>
+        </div>
+        <div>
+          <label className="label" htmlFor="ribbon_text">What it says</label>
+          <input
+            id="ribbon_text"
+            name="ribbon_text"
+            defaultValue={settings.ribbon_text}
+            maxLength={70}
+            placeholder="Award winning. Since 2021. Sudu is back."
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">
+            Empty and there is no strip at all.
+          </p>
+        </div>
+
+        <div>
+          <label className="label" htmlFor="offer_code">A code to announce beside it</label>
+          <input
+            id="offer_code"
+            name="offer_code"
+            defaultValue={settings.offer_code}
+            placeholder="SUDU500"
+            className="field font-mono uppercase"
+          />
+          <p className="mt-1 text-xs text-muted">
+            A code from Codes. The strip reads it for what it is worth and who
+            it is for, and says nothing while it is off, expired or used up, so
+            there is nothing to remember to take down.
+          </p>
+        </div>
+        <SaveButton>Save</SaveButton>
+      </form>
+
+      <form action={saveSettings} className="card space-y-3">
         <h2 className="font-semibold">Footer line</h2>
         <p className="text-sm text-muted">
           The line at the bottom of every page.

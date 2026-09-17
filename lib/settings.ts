@@ -54,6 +54,17 @@ export type Settings = {
   /** Hides the footer outright, line and links together. */
   hide_footer: string;
   /**
+   * The strip along the top of every page: a claim, a return, a notice. One
+   * line, kept short on purpose. Empty means no strip at all.
+   */
+  ribbon_text: string;
+  /**
+   * A discount code to announce beside it. The strip reads the code itself
+   * for what it is worth and who it is for, and says nothing while the code
+   * is off, expired or used up.
+   */
+  offer_code: string;
+  /**
    * The slider the home page builds when there are no slides of your own.
    * The headline is per restaurant, and the lines rotate beneath it.
    */
@@ -89,6 +100,8 @@ export const EMPTY: Settings = {
   tagline: "",
   hide_promoter_link: "",
   hide_footer: "",
+  ribbon_text: "",
+  offer_code: "",
   auto_headline: "",
   auto_lines: "",
 };

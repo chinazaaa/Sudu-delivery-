@@ -570,6 +570,10 @@ alter table settings add column if not exists hide_footer text not null default 
 alter table settings add column if not exists auto_headline text not null default '';
 alter table settings add column if not exists auto_lines text not null default '';
 
+-- The strip along the top of every page, and a code to announce beside it.
+alter table settings add column if not exists ribbon_text text not null default '';
+alter table settings add column if not exists offer_code text not null default '';
+
 -- Somewhere to keep the photographs, readable by anyone since they are the
 -- pictures on a public menu.
 insert into storage.buckets (id, name, public)
