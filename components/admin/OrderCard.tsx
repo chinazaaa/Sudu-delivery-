@@ -35,6 +35,9 @@ export type OrderCardData = {
   otherItems: number;
   otherFee: number;
   inGroup: boolean;
+  /** The group's own number, when this order is one part of one. */
+  groupRef: string | null;
+  groupSize: number;
   customerNote: string;
   adminNote: string;
   /** What they were told to type in the transfer. */
@@ -76,10 +79,18 @@ export default function OrderCard({
               <span className="text-muted">{order.ref}</span>{" "}
               {order.forName ?? order.name}
             </Link>
-            {order.forName && order.forName !== order.name && (
-              <span className="font-normal text-muted"> · in {order.name}&apos;s group</span>
-            )}
           </h3>
+          {order.groupRef && (
+            <Link
+              href={`/admin/orders?status=all&q=${order.groupRef}`}
+              className="mt-0.5 inline-block text-sm font-semibold text-brand"
+            >
+              Part of group #{order.groupRef} · {order.groupSize} parts
+              {order.forName && order.forName !== order.name && (
+                <span className="font-normal text-muted"> · {order.name} started it</span>
+              )}
+            </Link>
+          )}
           <p className="text-sm text-muted">
             {order.batchLabel} · {order.hostel} · {formatPhone(order.phone)}
           </p>

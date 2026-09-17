@@ -66,6 +66,13 @@ export function toCard(
     otherItems: order.otherItems,
     otherFee: order.otherFee,
     inGroup: order.group_id !== null,
+    // One number ties the parts together, so a group is obvious at a glance
+    // and one click brings up the rest of it.
+    groupRef:
+      order.groupOrders.length > 1
+        ? shareRef(order.groupOrders[0], order.groupOrders).replace("#", "")
+        : null,
+    groupSize: order.groupOrders.length,
     customerNote: order.customer_note ?? "",
     adminNote: order.admin_note ?? "",
     narration: narration(order, order.groupOrders),

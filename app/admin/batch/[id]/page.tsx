@@ -319,9 +319,9 @@ export default async function BatchPage({
                               ? "wants a card link"
                               : "paying by transfer"}
                           </span>
-                          {order.for_name && (
+                          {order.for_name && order.group_id && (
                             <span className="font-normal text-muted">
-                              {" "}· share of {order.customer_name}&apos;s group
+                              {" "}· one part of {order.customer_name}&apos;s group
                             </span>
                           )}
                         </p>
