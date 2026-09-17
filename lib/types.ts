@@ -124,6 +124,8 @@ export type OrderGroup = {
 
 export type Promoter = {
   code: string;
+  /** Their own four-digit sign-in, given out on WhatsApp. */
+  pin?: string;
   name: string;
   phone: string;
   rate: number;

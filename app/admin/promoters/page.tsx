@@ -1,34 +1,38 @@
 import SaveButton from "@/components/SaveButton";
+import PageHeader from "@/components/admin/PageHeader";
 import { promoterRows } from "@/lib/admin";
 import { naira } from "@/lib/money";
-import { savePromoter } from "../actions";
+import { whatsappTo } from "@/lib/messages";
+import { siteUrl } from "@/lib/admin-templates";
+import { recordPayout, savePromoter } from "../actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function PromotersAdmin() {
   const promoters = await promoterRows();
+  const url = await siteUrl();
 
   return (
     <div className="space-y-4">
-      <section className="card">
-        <h1 className="text-lg font-semibold">Promoters</h1>
-        <p className="text-sm text-muted">
-          Give codes to a handful of people, not everyone. Orders counted are for the
-          life of the customer, because attribution sticks to the phone number.
-        </p>
-      </section>
+      <PageHeader
+        title="Promoters"
+        detail="Give codes to a handful of people, not everyone. An order counts for the life of that customer, because attribution sticks to their phone number."
+      />
 
       {promoters.map((promoter) => (
         <form key={promoter.code} action={savePromoter} className="card space-y-2">
           <div className="flex items-baseline justify-between">
             <h2 className="font-semibold">{promoter.code}</h2>
             <p className="text-sm">
-              {promoter.orders} order{promoter.orders === 1 ? "" : "s"} ·{" "}
+              {promoter.orders} paid order{promoter.orders === 1 ? "" : "s"} ·{" "}
               <span className="font-semibold">{naira(promoter.owed)}</span> owed
             </p>
           </div>
+          <p className="text-sm text-muted">
+            {naira(promoter.earned)} earned, {naira(promoter.paidOut)} paid out.
+          </p>
           <p className="break-all text-xs text-muted">
-            Their link: /?ref={promoter.code}
+            Their link: {url}/?ref={promoter.code}
           </p>
           <input type="hidden" name="code" value={promoter.code} />
           <div className="flex flex-wrap items-end gap-2">
@@ -51,6 +55,73 @@ export default async function PromotersAdmin() {
             <SaveButton quiet>Save</SaveButton>
           </div>
         </form>
+      ))}
+
+      {promoters.map((promoter) => (
+        <section key={`pay-${promoter.code}`} className="card space-y-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="font-bold">Paying {promoter.name}</h2>
+            <span className="font-extrabold">{naira(promoter.owed)} owed</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="chip border-black/10 bg-shell">
+              Their PIN{" "}
+              <span className="font-black tracking-wider">{promoter.pin || "not set"}</span>
+            </span>
+            {promoter.phone && (
+              <a
+                href={whatsappTo(
+                  promoter.phone,
+                  `Hi ${promoter.name}, your Sudu promoter code is ${promoter.code} ` +
+                    `and your PIN is ${promoter.pin}.\n\n` +
+                    `See every run your orders landed in, and what you have earned: ` +
+                    `${url}/promoter\n\n` +
+                    `Your link to share: ${url}/?ref=${promoter.code}`
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="chip border-black/10 bg-white hover:border-ink/30"
+              >
+                Send code and PIN
+              </a>
+            )}
+          </div>
+
+          <form action={recordPayout} className="flex flex-wrap items-end gap-2">
+            <input type="hidden" name="code" value={promoter.code} />
+            <div className="w-32">
+              <label className="label" htmlFor={`amount-${promoter.code}`}>
+                Paid them
+              </label>
+              <input
+                id={`amount-${promoter.code}`}
+                name="amount"
+                inputMode="numeric"
+                placeholder={String(promoter.owed || 0)}
+                className="field py-2 text-sm"
+              />
+            </div>
+            <div className="grow">
+              <label className="label" htmlFor={`note-${promoter.code}`}>
+                Note
+              </label>
+              <input
+                id={`note-${promoter.code}`}
+                name="note"
+                placeholder="Transfer, 26 Sept"
+                className="field py-2 text-sm"
+              />
+            </div>
+            <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
+              Record it
+            </SaveButton>
+          </form>
+          <p className="text-xs text-muted">
+            Recording it takes it off what they are owed, on their page as well
+            as this one.
+          </p>
+        </section>
       ))}
 
       <form action={savePromoter} className="card space-y-2">

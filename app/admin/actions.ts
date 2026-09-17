@@ -11,6 +11,7 @@ import { lagosInstant } from "@/lib/time";
 import { ensureUpcomingBatches, openRunsBetween } from "@/lib/batches";
 import { fileFrom, uploadImage } from "@/lib/uploads";
 import { parseMenuText } from "@/lib/menu-import";
+import { newPin } from "@/lib/customer-auth";
 
 async function assertAdmin(): Promise<void> {
   if (!(await isSignedIn())) throw new Error("Not signed in.");
@@ -530,10 +531,34 @@ export async function reopenCart(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
 }
 
+/** Money actually handed to a promoter, so "owed" means what is still owed. */
+export async function recordPayout(form: FormData): Promise<void> {
+  await assertAdmin();
+  const amount = Math.round(Number(form.get("amount") ?? 0));
+  if (!Number.isFinite(amount) || amount <= 0) return;
+
+  await db().from("promoter_payouts").insert({
+    promoter_code: String(form.get("code")),
+    amount,
+    note: String(form.get("note") ?? "").trim(),
+  });
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/promoter");
+}
+
 export async function savePromoter(form: FormData): Promise<void> {
   await assertAdmin();
   const code = String(form.get("code") ?? "").trim().toUpperCase();
   if (!code) return;
+
+  // A new promoter gets a PIN straight away; an existing one keeps theirs,
+  // since it may already be in their WhatsApp.
+  const { data: existing } = await db()
+    .from("promoters")
+    .select("pin")
+    .eq("code", code)
+    .maybeSingle();
 
   await db().from("promoters").upsert({
     code,
@@ -541,8 +566,11 @@ export async function savePromoter(form: FormData): Promise<void> {
     phone: String(form.get("phone") ?? "").trim(),
     rate: Math.round(Number(form.get("rate")) || 500),
     active: form.get("active") === "on",
+    pin: (existing?.pin as string) || newPin(),
   });
+
   revalidatePath("/admin", "layout");
+  revalidatePath("/promoter");
 }
 
 /**

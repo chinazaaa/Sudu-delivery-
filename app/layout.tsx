@@ -36,6 +36,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   Instagram
                 </a>
               )}
+              <Link href="/promoter" className="underline">
+                Promoters
+              </Link>
               {settings.whatsapp_group_link && (
                 <a
                   href={settings.whatsapp_group_link}

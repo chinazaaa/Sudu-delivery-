@@ -285,19 +285,36 @@ export async function batchOverview(window: "recent" | "all" = "recent"): Promis
   });
 }
 
-export type PromoterRow = Promoter & { orders: number; owed: number };
+export type PromoterRow = Promoter & {
+  /** Paid orders carrying this code, which is what commission is earned on. */
+  orders: number;
+  earned: number;
+  paidOut: number;
+  owed: number;
+};
 
 /** Per-promoter order counts, so commission is calculable (brief §13). */
 export async function promoterRows(): Promise<PromoterRow[]> {
   const { data: promoters } = await db().from("promoters").select("*").order("code");
   const { data: orders } = await db()
     .from("orders")
-    .select("promoter_code")
+    .select("promoter_code, status")
     .not("promoter_code", "is", null)
     .neq("status", "refunded");
+  const { data: payouts } = await db()
+    .from("promoter_payouts")
+    .select("promoter_code, amount");
 
   return ((promoters ?? []) as Promoter[]).map((p) => {
-    const count = (orders ?? []).filter((o) => o.promoter_code === p.code).length;
-    return { ...p, orders: count, owed: count * p.rate };
+    // Only a paid order earns: an unpaid one never travelled.
+    const count = (orders ?? []).filter(
+      (o) => o.promoter_code === p.code && o.status !== "pending"
+    ).length;
+    const earned = count * p.rate;
+    const paidOut = (payouts ?? [])
+      .filter((row) => row.promoter_code === p.code)
+      .reduce((total, row) => total + (row.amount as number), 0);
+
+    return { ...p, orders: count, earned, paidOut, owed: Math.max(0, earned - paidOut) };
   });
 }
