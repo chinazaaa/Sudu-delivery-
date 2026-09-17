@@ -1,6 +1,7 @@
 import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import SaveButton from "@/components/SaveButton";
+import ConfirmRemove from "@/components/admin/ConfirmRemove";
 import { openUntil } from "@/lib/batches";
 import { runSchedule, WEEKDAYS } from "@/lib/schedule";
 import { SLOT_LABEL } from "@/lib/config";
@@ -103,14 +104,7 @@ export default async function SchedulePage() {
                     >
                       {run.active ? "Pause" : "Resume"}
                     </button>
-                    <button
-                      formAction={deleteScheduleRun}
-                      name="schedule_id"
-                      value={run.id}
-                      className="chip border-black/10 bg-white py-1.5 text-xs text-brand"
-                    >
-                      Remove
-                    </button>
+                    <ConfirmRemove id={run.id} />
                   </span>
                 </div>
 

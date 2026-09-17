@@ -5,6 +5,8 @@ import HandoutList from "@/components/HandoutList";
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import Tabs from "@/components/admin/Tabs";
+import Checklist from "@/components/admin/Checklist";
+import ConfirmButton from "@/components/admin/ConfirmButton";
 import { batchSheet } from "@/lib/admin";
 import { SLOT_LABEL } from "@/lib/config";
 import Link from "next/link";
@@ -140,7 +142,8 @@ export default async function BatchPage({
                   <h2 className="font-bold">What you pay, stop by stop</h2>
                   <p className="text-sm text-muted">
                     Paid orders only. This is the money that leaves your hand at
-                    each restaurant.
+                    each restaurant. Tick things off as you buy them; the ticks
+                    are yours alone and change nothing.
                   </p>
                   <ul className="mt-3 space-y-1.5 text-sm">
                     {counter.map((group) => (
@@ -172,16 +175,20 @@ export default async function BatchPage({
                         {naira(group.expectedFoodTotal)}
                       </span>
                     </div>
-                    <ul className="mt-2 space-y-1 text-lg leading-snug">
-                      {group.lines.map((line) => (
-                        <li key={`${line.name}|${line.choices.join("|")}`}>
-                          <span className="font-black">{line.qty}×</span> {line.name}
-                          {line.choices.length > 0 && (
-                            <span className="text-muted"> · {line.choices.join(", ")}</span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="mt-2">
+                      <Checklist
+                        id={`counter-${batch.id}-${group.restaurant}`}
+                        label="bought"
+                        items={group.lines.map((line) => ({
+                          key: `${line.name}|${line.choices.join("|")}`,
+                          text: `${line.qty}× ${line.name}`,
+                          detail:
+                            line.choices.length > 0
+                              ? line.choices.join(", ")
+                              : undefined,
+                        }))}
+                      />
+                    </div>
                   </section>
                 ))}
               </>
@@ -197,12 +204,13 @@ export default async function BatchPage({
                   <h2 className="font-bold">One bag per name</h2>
                   <p className="text-sm text-muted">
                     Anything added later in the week is already merged in.
-                    Tapping a bag marks it delivered, which is what the
-                    customer sees on their own page. Tap it again to undo.
+                    Tapping a bag ticks it off your list, which nobody else
+                    sees. Marking it delivered is the button underneath, and it
+                    asks first, because the customer sees that one.
                   </p>
                   <HandoutList
+                    batchId={batch.id}
                     setDelivered={setBagDelivered}
-                    markDelivered={markDelivered}
                     refund={refundOrder}
                     entries={handout.map((bag) => ({
                       id: bag.key,
@@ -310,9 +318,12 @@ export default async function BatchPage({
                             placeholder={`Transfer ref (they should send ${narration(order)})`}
                             className="field py-1.5 text-sm"
                           />
-                          <button className="btn-primary shrink-0 px-3 py-1.5 text-sm">
+                          <ConfirmButton
+                            className="shrink-0 px-3 py-1.5 text-sm"
+                            confirm={`Yes, ${naira(order.total)} received`}
+                          >
                             Mark paid
-                          </button>
+                          </ConfirmButton>
                         </form>
                       </li>
                     ))}
@@ -646,12 +657,13 @@ export default async function BatchPage({
                       <form action={setBatchStatus}>
                         <input type="hidden" name="batch_id" value={batch.id} />
                         <input type="hidden" name="status" value="cancelled" />
-                        <button
-                          className="btn-quiet px-3 py-2 text-sm text-brand"
-                          disabled={batch.status === "cancelled"}
+                        <ConfirmButton
+                          tone="brand"
+                          className="px-3 py-2 text-sm"
+                          confirm="Yes, cancel the run"
                         >
                           Cancel this run
-                        </button>
+                        </ConfirmButton>
                       </form>
                     </div>
                     <p className="mt-2 text-xs text-muted">
@@ -668,9 +680,15 @@ export default async function BatchPage({
                           entirely. A run with orders on it is cancelled
                           instead, never deleted.
                         </p>
-                        <button className="btn-quiet mt-2 px-4 py-2 text-sm text-brand">
-                          Delete this run
-                        </button>
+                        <span className="mt-2 block">
+                          <ConfirmButton
+                            tone="brand"
+                            className="px-4 py-2 text-sm"
+                            confirm="Yes, delete it"
+                          >
+                            Delete this run
+                          </ConfirmButton>
+                        </span>
                       </form>
                     )}
                   </div>

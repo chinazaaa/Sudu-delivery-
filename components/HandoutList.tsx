@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import ConfirmButton from "./admin/ConfirmButton";
 
 export type HandoutEntry = {
   id: string;
@@ -20,29 +22,55 @@ export type HandoutEntry = {
 };
 
 /**
- * Read at the drop point, one-handed, in the dark. Ticking a bag marks its
- * orders delivered for real, so the customer's own page says delivered too;
- * tapping a ticked bag puts it back, for a tap in a pocket.
+ * Read at the drop point, one-handed, in the dark.
+ *
+ * Two different things happen here and they are deliberately not the same
+ * gesture. Tapping a bag ticks it off in this browser: free, reversible, and
+ * seen by nobody, which is what a list is for while you are working through
+ * one. Marking it delivered changes what the customer reads on their own
+ * page, so it asks first.
  */
 export default function HandoutList({
+  batchId,
   entries,
   setDelivered,
-  markDelivered,
   refund,
 }: {
+  batchId: string;
   entries: HandoutEntry[];
   setDelivered: (form: FormData) => Promise<void>;
-  markDelivered: (form: FormData) => Promise<void>;
   refund: (form: FormData) => Promise<void>;
 }) {
-  const done = entries.filter((entry) =>
-    entry.orders.every((order) => order.status === "delivered")
-  ).length;
+  const storageKey = `sudu_handout_${batchId}`;
+  const [ticked, setTicked] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(storageKey);
+      if (saved) setTicked(JSON.parse(saved));
+    } catch {
+      /* Private mode. Ticking still works, it is just not remembered. */
+    }
+  }, [storageKey]);
+
+  function toggle(id: string) {
+    setTicked((current) => {
+      const next = { ...current, [id]: !current[id] };
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
+
+  const done = entries.filter((entry) => ticked[entry.id]).length;
 
   return (
     <div className="space-y-2">
       <p className="text-sm text-muted">
-        {done}/{entries.length} handed out
+        {done}/{entries.length} ticked off
       </p>
       <ul className="space-y-2">
         {entries.map((entry) => {
@@ -50,21 +78,25 @@ export default function HandoutList({
             (order) => order.status === "delivered"
           );
           const ids = entry.orders.map((order) => order.id).join(",");
+          const checked = Boolean(ticked[entry.id]);
 
           return (
             <li
               key={entry.id}
               className={`rounded-xl border ${
-                handedOut ? "border-mint/30 bg-mint/5" : "border-black/15 bg-white"
+                handedOut
+                  ? "border-mint/30 bg-mint/5"
+                  : checked
+                    ? "border-ink/20 bg-black/[0.02]"
+                    : "border-black/15 bg-white"
               }`}
             >
-              <form action={setDelivered}>
-                <input type="hidden" name="order_ids" value={ids} />
-                <input type="hidden" name="delivered" value={String(!handedOut)} />
+              <div>
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={() => toggle(entry.id)}
                   className={`w-full px-3 py-2 text-left ${
-                    handedOut ? "text-muted line-through" : ""
+                    checked ? "text-muted line-through" : ""
                   }`}
                 >
                   <span className="flex items-baseline justify-between gap-2">
@@ -84,11 +116,19 @@ export default function HandoutList({
                     ))}
                   </span>
                   <span className="text-xs text-muted">{entry.phone}</span>
-                  <span className="mt-1 block text-xs font-bold text-mint">
-                    {handedOut ? "Handed over. Tap to undo." : ""}
+                  <span className="mt-1 block text-xs font-bold">
+                    {handedOut ? (
+                      <span className="text-mint">Delivered</span>
+                    ) : checked ? (
+                      <span className="text-muted">
+                        Ticked off. Tap again to untick.
+                      </span>
+                    ) : (
+                      ""
+                    )}
                   </span>
                 </button>
-              </form>
+              </div>
 
               {/* Everything this bag needs, on this bag. With twenty bags,
                   scrolling to a second list to message one of them is not a
@@ -100,6 +140,18 @@ export default function HandoutList({
                 >
                   Call {entry.name}
                 </a>
+
+                {/* The one thing here a customer sees the result of. */}
+                <form action={setDelivered} className="inline">
+                  <input type="hidden" name="order_ids" value={ids} />
+                  <input type="hidden" name="delivered" value={String(!handedOut)} />
+                  <ConfirmButton
+                    className="py-1.5 text-xs"
+                    confirm={handedOut ? "Yes, undo it" : "Yes, delivered"}
+                  >
+                    {handedOut ? "Undo delivered" : "Mark delivered"}
+                  </ConfirmButton>
+                </form>
 
                 {entry.orders.map((order) => (
                   <div key={order.id} className="flex flex-wrap items-center gap-2">
@@ -120,19 +172,15 @@ export default function HandoutList({
                     >
                       Confirm on WhatsApp
                     </a>
-                    {order.status !== "delivered" && entry.orders.length > 1 && (
-                      <form action={markDelivered}>
-                        <input type="hidden" name="order_id" value={order.id} />
-                        <button className="chip border-black/10 bg-white py-1.5 text-xs">
-                          Delivered
-                        </button>
-                      </form>
-                    )}
                     <form action={refund}>
                       <input type="hidden" name="order_id" value={order.id} />
-                      <button className="chip border-black/10 bg-white py-1.5 text-xs text-brand">
+                      <ConfirmButton
+                        tone="brand"
+                        className="py-1.5 text-xs"
+                        confirm="Yes, refund"
+                      >
                         Refund
-                      </button>
+                      </ConfirmButton>
                     </form>
                   </div>
                 ))}

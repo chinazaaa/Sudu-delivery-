@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import ConfirmButton from "./ConfirmButton";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 
@@ -136,14 +137,19 @@ export default function OrderCard({
             }}
           >
             <input type="hidden" name="order_id" value={order.id} />
-            <button className="btn-primary px-4 py-2 text-sm">
+            <ConfirmButton
+              className="px-4 py-2 text-sm"
+              confirm={`Yes, ${naira(order.total)} received`}
+            >
               Mark paid and message
-            </button>
+            </ConfirmButton>
           </form>
         ) : order.status === "paid" ? (
           <form action={markDelivered}>
             <input type="hidden" name="order_id" value={order.id} />
-            <button className="btn-quiet px-4 py-2 text-sm">Mark delivered</button>
+            <ConfirmButton className="px-4 py-2 text-sm" confirm="Yes, delivered">
+              Mark delivered
+            </ConfirmButton>
           </form>
         ) : null}
 
@@ -277,9 +283,9 @@ export default function OrderCard({
             {order.status !== "refunded" && (
               <form action={refund}>
                 <input type="hidden" name="order_id" value={order.id} />
-                <button className="chip border-black/10 bg-white text-brand">
+                <ConfirmButton tone="brand" confirm={`Yes, refund ${naira(order.total)}`}>
                   Refund
-                </button>
+                </ConfirmButton>
               </form>
             )}
           </div>
