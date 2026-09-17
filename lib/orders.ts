@@ -9,6 +9,7 @@ import {
 } from "./coupons";
 import { cartConverted } from "./carts";
 import { emailAdmins } from "./email";
+import { renderEmail, renderText, type Block } from "./email-html";
 import { siteUrl } from "./admin-templates";
 import { naira, orderRef } from "./money";
 import { SLOT_LABEL } from "./config";
@@ -552,21 +553,40 @@ async function announceOrder(args: {
     const url = await siteUrl().catch(() => "");
     const link = url ? `${url}/admin/orders/${args.orderId}` : "";
 
-    await emailAdmins(
+    const title =
       `New order ${order ? orderRef(order) : ""} · ${args.name} · ` +
-        `${naira(order?.total ?? 0)}`,
-      [
-        `${args.name} just ordered for the ${label} run.`,
-        ...(link ? ["", `Open it: ${link}`] : []),
-        "",
-        `Total: ${naira(order?.total ?? 0)} (unpaid until you see the transfer)`,
-        `Number: ${args.phone}`,
-        `Block: ${args.hostel}`,
-        `Items: ${args.items}`,
-        ...(order ? order.lines.map((line) => `  ${line.qty} x ${line.name}`) : []),
-        ...(args.note ? ["", `They asked: ${args.note}`] : []),
-      ].join("\n")
-    );
+      `${naira(order?.total ?? 0)}`;
+
+    // Grouped by restaurant, because the next thing that happens is somebody
+    // ordering it from each one, counter by counter.
+    const byPlace = new Map<string, string[]>();
+    for (const line of order?.lines ?? []) {
+      const place = line.restaurant || "Unknown";
+      const choices = line.choices.length > 0 ? ` (${line.choices.join(", ")})` : "";
+      byPlace.set(place, [...(byPlace.get(place) ?? []), `${line.qty} × ${line.name}${choices}`]);
+    }
+
+    const blocks: Block[] = [
+      { kind: "text", text: `${args.name} just ordered for the ${label} run.` },
+      ...(link ? [{ kind: "button" as const, label: "Open the order", href: link }] : []),
+      {
+        kind: "rows",
+        rows: [
+          { label: "Total", value: `${naira(order?.total ?? 0)} · unpaid` },
+          { label: "Number", value: args.phone },
+          { label: "Block", value: args.hostel },
+          { label: "Items", value: String(args.items) },
+        ],
+      },
+      ...[...byPlace.entries()].map(([place, items]) => ({
+        kind: "list" as const,
+        title: place,
+        items,
+      })),
+      ...(args.note ? [{ kind: "note" as const, text: `They asked: ${args.note}` }] : []),
+    ];
+
+    await emailAdmins(title, renderText(title, blocks), renderEmail(title, blocks));
   } catch {
     /* Never let a notification break an order that is already saved. */
   }

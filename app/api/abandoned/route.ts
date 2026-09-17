@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { abandonedCarts, cartLine, markAlerted } from "@/lib/carts";
 import { emailAdmins } from "@/lib/email";
+import { renderEmail, renderText, type Block } from "@/lib/email-html";
 import { naira } from "@/lib/money";
 import { safeSettings } from "@/lib/settings";
 
@@ -39,21 +40,33 @@ export async function GET(request: Request): Promise<NextResponse> {
   const older = carts.filter((cart) => cart.alerted_at !== null);
   const total = carts.reduce((sum, cart) => sum + cart.value, 0);
 
+  const title = `${naira(total)} left in ${carts.length} cart${
+    carts.length === 1 ? "" : "s"
+  }`;
+
+  const blocks: Block[] = [
+    {
+      kind: "text",
+      text:
+        `${carts.length} cart${carts.length === 1 ? "" : "s"} filled in and ` +
+        `never paid for, worth ${naira(total)}.`,
+    },
+    ...(fresh.length > 0
+      ? [{ kind: "list" as const, title: "Since yesterday", items: fresh.map(cartLine) }]
+      : []),
+    ...(older.length > 0
+      ? [{ kind: "list" as const, title: "Still waiting", items: older.map(cartLine) }]
+      : []),
+    {
+      kind: "note",
+      text: "They are all in admin under Left behind, each with a WhatsApp button. Tapping Done with this takes one off the list.",
+    },
+  ];
+
   const emailed = await emailAdmins(
-    `${naira(total)} left in ${carts.length} cart${carts.length === 1 ? "" : "s"}`,
-    [
-      `${carts.length} cart${carts.length === 1 ? "" : "s"} filled in and never ` +
-        `paid for, worth ${naira(total)}.`,
-      ...(fresh.length > 0
-        ? ["", "SINCE YESTERDAY", ...fresh.map((cart) => `  ${cartLine(cart)}`)]
-        : []),
-      ...(older.length > 0
-        ? ["", "STILL WAITING", ...older.map((cart) => `  ${cartLine(cart)}`)]
-        : []),
-      "",
-      "They are all in admin under Left behind, each with a WhatsApp button.",
-      "Tapping \"Done with this\" takes one off this list.",
-    ].join("\n")
+    title,
+    renderText(title, blocks),
+    renderEmail(title, blocks)
   );
 
   // Marked whether or not the email went out, so a missing key does not leave

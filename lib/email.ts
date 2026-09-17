@@ -9,7 +9,12 @@ import { safeSettings } from "./settings";
  * key set, sending is skipped rather than failing whatever asked for it: an
  * order must never be lost because a notification could not go out.
  */
-export async function emailAdmins(subject: string, body: string): Promise<boolean> {
+export async function emailAdmins(
+  subject: string,
+  body: string,
+  /** The same message with a layout. Clients that refuse it get the words. */
+  html?: string
+): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return false;
 
@@ -29,6 +34,7 @@ export async function emailAdmins(subject: string, body: string): Promise<boolea
         to,
         subject,
         text: body,
+        ...(html ? { html } : {}),
       }),
     });
     return response.ok;

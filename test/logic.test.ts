@@ -13,6 +13,7 @@ import { shareRef } from "../lib/money";
 import { externalUrl, EMPTY as SETTINGS_DEFAULTS, type Settings } from "../lib/settings";
 import { matchPhotos, tidy } from "../lib/match";
 import { groupNames, lineKey as cartLineKey, reclaim } from "../lib/cart";
+import { renderEmail, renderText, type Block } from "../lib/email-html";
 
 /** A settings row with nothing filled in, for the template tests. */
 const EMPTY_SETTINGS: Settings = { ...SETTINGS_DEFAULTS };
@@ -686,4 +687,29 @@ test("groupNames: a name only the cart knows is still shown", () => {
     ["", "Bem", "Ada"],
     "no name twice"
   );
+});
+
+test("email: the layout carries the same words, and nothing typed becomes markup", () => {
+  const blocks: Block[] = [
+    { kind: "text", text: "Ada just ordered." },
+    { kind: "button", label: "Open the order", href: "https://sudu.example/admin/orders/1" },
+    { kind: "rows", rows: [{ label: "Total", value: "₦7,100" }] },
+    { kind: "list", title: "KFC", items: ["2 × Zinger Burger"] },
+    { kind: "note", text: 'They asked: <script>alert("x")</script> & no pepper' },
+  ];
+
+  const html = renderEmail("New order", blocks);
+  const text = renderText("New order", blocks);
+
+  assert.ok(html.includes("https://sudu.example/admin/orders/1"), "the link is there");
+  assert.ok(html.includes("KFC"), "the restaurant is named");
+  assert.ok(!html.includes("<script>"), "nothing typed in is run");
+  assert.ok(html.includes("&lt;script&gt;"), "it is shown as words instead");
+
+  // Everything in the layout is in the plain version too, for the clients
+  // that will not show it.
+  assert.ok(text.includes("Ada just ordered."));
+  assert.ok(text.includes("Open the order: https://sudu.example/admin/orders/1"));
+  assert.ok(text.includes("Total: ₦7,100"));
+  assert.ok(text.includes("2 × Zinger Burger"));
 });
