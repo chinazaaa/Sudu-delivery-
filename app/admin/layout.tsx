@@ -10,13 +10,9 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  if (!(await isSignedIn())) {
-    return (
-      <div className="flex min-h-[70vh] items-center justify-center">
-        <AdminLogin />
-      </div>
-    );
-  }
+  // The login screen covers the shop's header and footer entirely: signing in
+  // to admin is not a page of the shop.
+  if (!(await isSignedIn())) return <AdminLogin />;
 
   return <AdminShell signOut={logout}>{children}</AdminShell>;
 }

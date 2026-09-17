@@ -45,9 +45,35 @@ export default function Checkout({
   const [mode, setMode] = useState<GroupMode>("one_payer");
   const [collect, setCollect] = useState<"leader" | "each">("leader");
   const [now, setNow] = useState<number | null>(null);
+  // React resets an uncontrolled form once its action finishes, which wiped
+  // the name, number and block every time the server rejected something. They
+  // are held here instead, and remembered for the next order.
+  const [name, setName] = useState(adding?.name ?? "");
+  const [phone, setPhone] = useState(adding?.phone ?? "");
+  const [hostel, setHostel] = useState(adding?.hostel ?? "");
   const [state, action, pending] = useActionState<SubmitState, FormData>(submitOrder, {
     error: null,
   });
+
+  useEffect(() => {
+    if (adding) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem("sudu_me_v1") ?? "null");
+      if (saved?.name) setName((current) => current || saved.name);
+      if (saved?.phone) setPhone((current) => current || saved.phone);
+      if (saved?.hostel) setHostel((current) => current || saved.hostel);
+    } catch {
+      /* Nothing saved, or storage is blocked. The fields simply start empty. */
+    }
+  }, [adding]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("sudu_me_v1", JSON.stringify({ name, phone, hostel }));
+    } catch {
+      /* Not worth failing checkout over. */
+    }
+  }, [name, phone, hostel]);
 
   useEffect(() => {
     setNow(Date.now());
@@ -55,6 +81,7 @@ export default function Checkout({
     return () => clearInterval(timer);
   }, []);
 
+  const badPhone = Boolean(state.error?.toLowerCase().includes("phone"));
   const selected = batches.find((b) => b.id === batchId) ?? null;
   const itemCount = countItems(cart);
   const subtotal = cartSubtotal(cart);
@@ -318,7 +345,15 @@ export default function Checkout({
         <h2 className="font-bold">Where it goes</h2>
         <div>
           <label className="label" htmlFor="name">Your name</label>
-          <input id="name" name="name" required defaultValue={adding?.name} className="field" autoComplete="name" />
+          <input
+            id="name"
+            name="name"
+            required
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className="field"
+            autoComplete="name"
+          />
         </div>
         <div>
           <label className="label" htmlFor="phone">Phone</label>
@@ -328,15 +363,29 @@ export default function Checkout({
             required
             inputMode="tel"
             placeholder="0803 123 4567"
-            defaultValue={adding?.phone}
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
             readOnly={Boolean(adding)}
-            className="field"
+            className={`field ${badPhone ? "border-red-400 ring-4 ring-red-100" : ""}`}
             autoComplete="tel"
           />
+          <p className="mt-1 text-xs text-muted">
+            {badPhone
+              ? "A Nigerian mobile: 0803 123 4567, or +234 803 123 4567."
+              : "This is how you are reached, and what matches your transfer."}
+          </p>
         </div>
         <div>
           <label className="label" htmlFor="hostel">Hostel / block</label>
-          <input id="hostel" name="hostel" required defaultValue={adding?.hostel} className="field" />
+          <input
+            id="hostel"
+            name="hostel"
+            required
+            value={hostel}
+            onChange={(event) => setHostel(event.target.value)}
+            placeholder="Block and room, or the hostel name"
+            className="field"
+          />
         </div>
       </section>
 
