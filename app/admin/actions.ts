@@ -8,6 +8,7 @@ import { STAGES, type BatchStage } from "@/lib/stages";
 import { type BatchSlot } from "@/lib/config";
 import { deliveryWindows } from "@/lib/settings";
 import { lagosInstant } from "@/lib/time";
+import { ensureUpcomingBatches } from "@/lib/batches";
 import { fileFrom, uploadImage } from "@/lib/uploads";
 import { parseMenuText } from "@/lib/menu-import";
 
@@ -164,6 +165,62 @@ export async function updateRun(form: FormData): Promise<void> {
   await db().from("batches").update(patch).eq("id", id);
 
   revalidatePath("/admin");
+  revalidatePath("/");
+}
+
+/** One line of the weekly schedule: a day, a slot, a cut-off and a window. */
+export async function saveScheduleRun(form: FormData): Promise<void> {
+  await assertAdmin();
+  const weekday = Number(form.get("weekday"));
+  const slot = String(form.get("slot") ?? "afternoon");
+  const cutOff = String(form.get("cut_off") ?? "").trim();
+  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) return;
+  if (!/^\d{2}:\d{2}$/.test(cutOff)) return;
+
+  await db()
+    .from("run_schedule")
+    .upsert(
+      {
+        weekday,
+        slot,
+        cut_off: cutOff,
+        window_text: String(form.get("window_text") ?? "").trim(),
+        active: true,
+      },
+      { onConflict: "weekday,slot" }
+    );
+
+  revalidatePath("/admin/runs");
+}
+
+/**
+ * Removes a day from the schedule. Runs already opened for it are left alone:
+ * they are deleted one at a time, and only while nothing has been ordered.
+ */
+export async function deleteScheduleRun(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db().from("run_schedule").delete().eq("id", String(form.get("schedule_id")));
+  revalidatePath("/admin/runs");
+}
+
+export async function toggleScheduleRun(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db()
+    .from("run_schedule")
+    .update({ active: form.get("active") === "true" })
+    .eq("id", String(form.get("schedule_id")));
+  revalidatePath("/admin/runs");
+}
+
+/**
+ * Opens every run the schedule calls for, up to the horizon. It happens on its
+ * own whenever admin is opened; this is the button for when a schedule has
+ * just changed and the runs should appear now.
+ */
+export async function generateRuns(): Promise<void> {
+  await assertAdmin();
+  await ensureUpcomingBatches();
+  revalidatePath("/admin/runs");
   revalidatePath("/");
 }
 

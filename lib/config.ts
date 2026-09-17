@@ -12,6 +12,11 @@ export const BATCH_MINIMUM = 8;
 /** Nigeria does not observe DST, so this is a fixed +01:00 all year. */
 export const TZ = "Africa/Lagos";
 
+/**
+ * Where a week starts before the admin sets their own. The real schedule is
+ * the run_schedule table, edited under Runs; these only cover a database that
+ * has not been set up yet.
+ */
 export const CUT_OFFS: Record<BatchSlot, { hour: number; minute: number }> = {
   afternoon: { hour: 11, minute: 30 },
   night: { hour: 18, minute: 0 },
@@ -29,10 +34,7 @@ export const SLOT_LABEL: Record<BatchSlot, string> = {
   night: "night",
 };
 
-/**
- * Days ordering runs, as JS weekday numbers (0 = Sunday). The brief starts
- * with Friday only (§5). Add days here once the operation is boring.
- */
+/** The fallback week: Friday only, as the brief starts (§5). */
 export const RUN_WEEKDAYS = [5];
 
 /** How far ahead batches are opened for ordering. */

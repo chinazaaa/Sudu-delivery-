@@ -5,7 +5,15 @@ import Stat from "@/components/admin/Stat";
 import { batchOverview } from "@/lib/admin";
 import { diagnoseEmpty, keyKind } from "@/lib/health";
 import { ensureUpcomingBatches, closeExpiredBatches } from "@/lib/batches";
-import { createBatch } from "../actions";
+import {
+  createBatch,
+  deleteScheduleRun,
+  generateRuns,
+  saveScheduleRun,
+  toggleScheduleRun,
+} from "../actions";
+import { runSchedule, WEEKDAYS } from "@/lib/schedule";
+import SaveButton from "@/components/SaveButton";
 import { BATCH_MINIMUM, SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
 import { clockLabel, runDateLabel } from "@/lib/time";
@@ -19,6 +27,7 @@ export default async function RunsPage({
 }) {
   const query = await searchParams;
   const showForm = query.new === "1";
+  const schedule = await runSchedule(true);
   const window = query.show === "all" ? "all" : "recent";
 
   let problem: Awaited<ReturnType<typeof diagnoseEmpty>> | null = null;
@@ -98,12 +107,117 @@ export default async function RunsPage({
         />
       </div>
 
+      <section className="card mb-4 space-y-3">
+        <div>
+          <h2 className="font-bold">Your week</h2>
+          <p className="mt-0.5 text-sm text-muted">
+            The days you run, each with its own cut-off and its own delivery
+            time. Runs for these days are opened automatically; the button
+            below opens them now, for a schedule you have just changed.
+          </p>
+        </div>
+
+        <ul className="space-y-2">
+          {schedule.map((run) => (
+            <li
+              key={run.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-black/10 px-3 py-2"
+            >
+              <span className={run.active ? "" : "text-muted line-through"}>
+                <span className="font-bold">{WEEKDAYS[run.weekday]}</span>{" "}
+                <span className="text-muted">
+                  {SLOT_LABEL[run.slot]} · closes {run.cut_off} ·{" "}
+                  {run.window_text || "no window set"}
+                </span>
+              </span>
+              <span className="flex gap-2">
+                <form action={toggleScheduleRun}>
+                  <input type="hidden" name="schedule_id" value={run.id} />
+                  <input type="hidden" name="active" value={String(!run.active)} />
+                  <button className="chip border-black/10 bg-white py-1.5 text-xs">
+                    {run.active ? "Pause" : "Resume"}
+                  </button>
+                </form>
+                <form action={deleteScheduleRun}>
+                  <input type="hidden" name="schedule_id" value={run.id} />
+                  <button className="chip border-black/10 bg-white py-1.5 text-xs text-brand">
+                    Remove
+                  </button>
+                </form>
+              </span>
+            </li>
+          ))}
+          {schedule.length === 0 && (
+            <li className="text-sm text-muted">
+              No days set, so no runs open by themselves.
+            </li>
+          )}
+        </ul>
+
+        <form action={saveScheduleRun} className="grid gap-2 sm:grid-cols-5">
+          <div className="sm:col-span-2">
+            <label className="label" htmlFor="weekday">Day</label>
+            <select id="weekday" name="weekday" className="field py-2 text-sm" defaultValue="5">
+              {WEEKDAYS.map((day, index) => (
+                <option key={day} value={index}>
+                  {day}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label" htmlFor="schedule-slot">Run</label>
+            <select
+              id="schedule-slot"
+              name="slot"
+              className="field py-2 text-sm"
+              defaultValue="afternoon"
+            >
+              <option value="afternoon">Afternoon</option>
+              <option value="night">Night</option>
+            </select>
+          </div>
+          <div>
+            <label className="label" htmlFor="schedule-cutoff">Closes</label>
+            <input
+              id="schedule-cutoff"
+              name="cut_off"
+              type="time"
+              defaultValue="11:30"
+              className="field py-2 text-sm"
+            />
+          </div>
+          <div className="sm:col-span-5">
+            <label className="label" htmlFor="schedule-window">
+              What customers are told
+            </label>
+            <input
+              id="schedule-window"
+              name="window_text"
+              placeholder="On campus ~2:00pm"
+              className="field py-2 text-sm"
+            />
+          </div>
+          <div className="sm:col-span-5">
+            <SaveButton quiet>Add to the week</SaveButton>
+          </div>
+        </form>
+
+        <form action={generateRuns} className="border-t border-black/5 pt-3">
+          <SaveButton>Open the runs for this schedule</SaveButton>
+          <p className="mt-1 text-xs text-muted">
+            Opens every run the schedule calls for, three weeks ahead. Days
+            already open are left exactly as they are, cancellations included.
+          </p>
+        </form>
+      </section>
+
       {showForm && (
         <section className="card mb-4">
-          <h2 className="font-bold">Create a run</h2>
+          <h2 className="font-bold">A one-off run</h2>
           <p className="mt-0.5 text-sm text-muted">
-            Any day, Fridays included. Fridays also open themselves, so creating
-            one that already exists updates it rather than making a second.
+            For a day that is not in your week: exam week, a match, a request.
+            Creating one that already exists updates it.
           </p>
           <form action={createBatch} className="mt-3 space-y-3">
             <div className="grid gap-3 sm:grid-cols-3">

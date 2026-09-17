@@ -1,17 +1,9 @@
 import { db } from "./supabase";
 import { deliveryWindows, safeSettings } from "./settings";
-import {
-  CUT_OFFS,
-  DELIVERY_WINDOWS,
-  RUN_HORIZON_DAYS,
-  RUN_WEEKDAYS,
-  TZ,
-  type BatchSlot,
-} from "./config";
+import { runSchedule } from "./schedule";
+import { RUN_HORIZON_DAYS, TZ } from "./config";
 import { lagosInstant, lagosToday } from "./time";
 import type { Batch } from "./types";
-
-const SLOTS: BatchSlot[] = ["afternoon", "night"];
 
 /** Weekday number (0 = Sunday) of a YYYY-MM-DD date, read in Lagos. */
 function weekdayOf(date: string): number {
@@ -32,19 +24,22 @@ function addDays(date: string, days: number): string {
  */
 export async function ensureUpcomingBatches(): Promise<void> {
   const today = lagosToday();
-  // What customers are told, as the admin has worded it.
+  // The week as the admin has set it: which days run, when each closes, and
+  // what customers are told about when it lands.
+  const schedule = await runSchedule();
   const windows = await deliveryWindows();
   const rows: Array<Omit<Batch, "id">> = [];
 
   for (let i = 0; i < RUN_HORIZON_DAYS; i++) {
     const date = addDays(today, i);
-    if (!RUN_WEEKDAYS.includes(weekdayOf(date))) continue;
-    for (const slot of SLOTS) {
+    const weekday = weekdayOf(date);
+    for (const run of schedule.filter((entry) => entry.weekday === weekday)) {
+      const [hour, minute] = run.cut_off.split(":").map(Number);
       rows.push({
         run_date: date,
-        slot,
-        cut_off_at: lagosInstant(date, CUT_OFFS[slot].hour, CUT_OFFS[slot].minute),
-        delivery_window_text: windows[slot],
+        slot: run.slot,
+        cut_off_at: lagosInstant(date, hour, minute),
+        delivery_window_text: run.window_text || windows[run.slot],
         status: "open",
         capacity: null,
         flash_fee: null,
