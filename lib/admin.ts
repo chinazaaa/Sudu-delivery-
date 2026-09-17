@@ -241,7 +241,9 @@ export async function batchOverview(window: "recent" | "all" = "recent"): Promis
       .gte("run_date", new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10))
       .order("cut_off_at", { ascending: true });
   } else {
-    query = query.order("cut_off_at", { ascending: false }).limit(200);
+    // In date order, not newest first: a list that opens on October while
+    // September is still running does not read as a history of anything.
+    query = query.order("cut_off_at", { ascending: true }).limit(200);
   }
 
   const { data: batches, error } = await query;

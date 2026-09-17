@@ -205,11 +205,22 @@ export default async function RunsPage({
       )}
 
       <ul className="space-y-3">
-        {batches.map((batch) => {
+        {batches.map((batch, index) => {
+          // One line between what has happened and what is still coming.
+          const past = new Date(batch.cut_off_at).getTime() <= Date.now();
+          const firstUpcoming =
+            !past &&
+            index > 0 &&
+            new Date(batches[index - 1].cut_off_at).getTime() <= Date.now();
           const short = batch.paidCount < BATCH_MINIMUM;
           const open = batch.status === "open";
           return (
             <li key={batch.id}>
+              {firstUpcoming && (
+                <p className="mb-2 mt-4 text-xs font-bold uppercase tracking-wide text-muted">
+                  Still to come
+                </p>
+              )}
               <Link
                 href={`/admin/batch/${batch.id}`}
                 className="card flex items-center justify-between gap-3 transition hover:border-brand/40 hover:shadow-lift"
