@@ -1,4 +1,5 @@
 import PageHeader from "@/components/admin/PageHeader";
+import Diagnostic from "@/components/Diagnostic";
 import SaveButton from "@/components/SaveButton";
 import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
@@ -6,12 +7,14 @@ import Reorder from "@/components/admin/Reorder";
 import Thumb from "@/components/Thumb";
 import { readSlides } from "@/lib/slides";
 import { AUTO_HEADLINE, AUTO_LINES, getSettings } from "@/lib/settings";
+import { missingSettings } from "@/lib/health";
 import { deleteSlide, moveSlide, saveSettings, saveSlide } from "../actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomeAdmin() {
   const { slides, ready } = await readSlides(true);
+  const missing = await missingSettings(["auto_headline", "auto_lines"]);
   const settings = await getSettings();
 
   return (
@@ -36,6 +39,19 @@ export default async function HomeAdmin() {
         <SaveButton>Save</SaveButton>
       </form>
 
+      {missing.length > 0 ? (
+        <div className="mb-4">
+          <Diagnostic
+            title="The automatic slider cannot be edited yet"
+            detail={
+              "This database has no column to keep the wording in, so saving " +
+              "it would fail. Run supabase/update.sql in Supabase and this " +
+              "turns into the form. The slider itself is working, in the " +
+              "words it shipped with."
+            }
+          />
+        </div>
+      ) : (
       <form action={saveSettings} className="card mb-4 space-y-3">
         <div>
           <h2 className="font-bold">The automatic slider</h2>
@@ -78,6 +94,7 @@ export default async function HomeAdmin() {
         </div>
         <SaveButton>Save</SaveButton>
       </form>
+      )}
 
       <h2 className="mb-2 font-bold">Slides</h2>
       {!ready ? (

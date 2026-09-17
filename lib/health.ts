@@ -84,3 +84,19 @@ export async function promoterSchema(): Promise<{ ok: boolean; missing: string }
 
   return { ok: true, missing: "" };
 }
+
+/**
+ * Which settings columns the code expects and the database has not got.
+ *
+ * A setting saved to a column that does not exist used to fail in silence and
+ * now fails loudly, and neither is much use while you are standing in front of
+ * the form. Asked first, the page can say so and put the box away.
+ */
+export async function missingSettings(names: string[]): Promise<string[]> {
+  const missing: string[] = [];
+  for (const name of names) {
+    const { error } = await db().from("settings").select(name).limit(1);
+    if (error) missing.push(name);
+  }
+  return missing;
+}
