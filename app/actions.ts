@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { placeOrder } from "@/lib/orders";
 import { lastOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
+import { rememberCart } from "@/lib/carts";
 import {
   checkPin,
   currentCustomer,
@@ -72,6 +73,29 @@ export async function submitReorder(
 
   if (!result.ok) return { error: result.error };
   redirect(`/o/${result.orderId}?placed=1`);
+}
+
+/**
+ * Saves the cart behind a typed phone number, so a checkout that never
+ * finishes can be followed up. Called as the number is typed, and again as the
+ * cart changes, so the admin sees what was nearly bought.
+ */
+export async function keepCart(form: FormData): Promise<void> {
+  const phone = normalisePhone(String(form.get("phone") ?? ""));
+  if (!phone) return;
+
+  const items = Number(form.get("items") ?? 0);
+  if (!Number.isFinite(items) || items <= 0) return;
+
+  await rememberCart({
+    phone,
+    name: String(form.get("name") ?? "").trim(),
+    hostel: String(form.get("hostel") ?? "").trim(),
+    batchId: String(form.get("batch_id") ?? "") || null,
+    items: Math.round(items),
+    value: Math.round(Number(form.get("value") ?? 0)) || 0,
+    summary: String(form.get("summary") ?? "").slice(0, 500),
+  });
 }
 
 export type FillState = {

@@ -156,6 +156,46 @@ export default async function SettingsAdmin() {
         <SaveButton>Save</SaveButton>
       </form>
 
+      <form action={saveSettings} className="card space-y-3">
+        <div>
+          <h2 className="font-semibold">Who gets told</h2>
+          <p className="text-sm text-muted">
+            Every admin who should hear when an order lands and when a cart is
+            left behind. One address per line. Customers are never emailed:
+            they are messaged on WhatsApp, by you.
+          </p>
+        </div>
+        <div>
+          <label className="label" htmlFor="admin_emails">Admin emails</label>
+          <textarea
+            id="admin_emails"
+            name="admin_emails"
+            defaultValue={settings.admin_emails}
+            rows={3}
+            placeholder={"you@sudu.ng\nsecond@sudu.ng"}
+            className="field"
+          />
+        </div>
+        <div className="w-40">
+          <label className="label" htmlFor="abandon_minutes">
+            Abandoned after
+          </label>
+          <input
+            id="abandon_minutes"
+            name="abandon_minutes"
+            inputMode="numeric"
+            defaultValue={settings.abandon_minutes}
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">Minutes untouched.</p>
+        </div>
+        <SaveButton>Save</SaveButton>
+        <p className="text-xs text-muted">
+          Email needs RESEND_API_KEY set in Vercel. Without it, nothing is
+          emailed and everything still shows under Left behind.
+        </p>
+      </form>
+
       <section className="card space-y-3">
         <div>
           <h2 className="font-semibold">Where you deliver</h2>

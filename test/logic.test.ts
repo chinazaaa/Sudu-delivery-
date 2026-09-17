@@ -8,6 +8,7 @@ import { sheetAsText } from "../lib/sheet-text";
 import { template, whatsappTo } from "../lib/messages";
 import { newPin } from "../lib/customer-auth";
 import { parseMenuText } from "../lib/menu-import";
+import { adminEmails } from "../lib/email";
 
 /** A settings row with nothing filled in, for the template tests. */
 const EMPTY_SETTINGS = {
@@ -29,6 +30,8 @@ const EMPTY_SETTINGS = {
   msg_late: "",
   paid_note: "",
   fee_bands: "",
+  admin_emails: "",
+  abandon_minutes: 45,
 };
 import type { OrderLine } from "../lib/orders";
 
@@ -489,4 +492,12 @@ test("tagging some items with a name leaves none of them without an owner", () =
     labelled.map((line) => line.for_name),
     ["Bola", "Naza", "Naza"]
   );
+});
+
+test("admin email addresses are read one per line, commas included", () => {
+  assert.deepEqual(
+    adminEmails("a@sudu.ng\n b@sudu.ng , c@sudu.ng\n\nnot-an-email\n"),
+    ["a@sudu.ng", "b@sudu.ng", "c@sudu.ng"]
+  );
+  assert.deepEqual(adminEmails(""), []);
 });

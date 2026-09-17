@@ -334,6 +334,17 @@ export async function saveCustomerNote(form: FormData): Promise<void> {
   revalidatePath("/admin/customers");
 }
 
+/** A cart dealt with, however it went. It stops being chased. */
+export async function markCartHandled(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db()
+    .from("carts")
+    .update({ handled_at: new Date().toISOString() })
+    .eq("id", String(form.get("cart_id")));
+
+  revalidatePath("/admin/carts");
+}
+
 export async function savePromoter(form: FormData): Promise<void> {
   await assertAdmin();
   const code = String(form.get("code") ?? "").trim().toUpperCase();
@@ -373,6 +384,8 @@ const SETTING_FIELDS = [
   "msg_late",
   "paid_note",
   "fee_bands",
+  "admin_emails",
+  "abandon_minutes",
 ] as const;
 
 export async function saveSettings(form: FormData): Promise<void> {

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
+import AdminLive from "@/components/admin/AdminLive";
 import Stat from "@/components/admin/Stat";
 import OrderCard from "@/components/admin/OrderCard";
 import { orderFeed } from "@/lib/admin-data";
@@ -61,6 +62,7 @@ export default async function OrdersPage({
 
   return (
     <div>
+      <AdminLive />
       <PageHeader
         title="Orders"
         detail="Every order ever placed, whatever run it belongs to."

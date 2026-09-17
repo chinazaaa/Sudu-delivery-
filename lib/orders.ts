@@ -2,6 +2,11 @@ import { db } from "./supabase";
 import { FIRST_ORDER_DISCOUNT } from "./config";
 import { feeFor, splitFee, type Band } from "./fees";
 import { activeBands } from "./settings";
+import { cartConverted } from "./carts";
+import { emailAdmins } from "./email";
+import { naira, orderRef } from "./money";
+import { SLOT_LABEL } from "./config";
+import { weekdayLabel } from "./time";
 import { getBatch, isOrderable, orderCounts } from "./batches";
 import { normalisePhone } from "./phone";
 import { newPin } from "./customer-auth";
@@ -120,6 +125,18 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   if (!result.ok) return result;
 
   await bindCustomer({ phone, name, hostel, promoterCode, returning });
+  // The cart behind this order is no longer abandoned, and the admins are told
+  // rather than having to keep refreshing. Neither can fail the order.
+  await cartConverted(phone, batch.id).catch(() => {});
+  void announceOrder({
+    orderId: result.orderId,
+    name,
+    phone,
+    hostel,
+    batch,
+    items: countItems(priced.lines),
+    note: customerNote,
+  });
   return result;
 }
 
@@ -482,6 +499,43 @@ export async function existingLoad(
     feeCharged: orders.reduce((sum, o) => sum + o.fee, 0),
     orders,
   };
+}
+
+/**
+ * Tells whoever runs the shop that an order has landed. Deliberately not
+ * awaited by the caller: an email provider having a bad minute must not slow
+ * down or fail a checkout.
+ */
+async function announceOrder(args: {
+  orderId: string;
+  name: string;
+  phone: string;
+  hostel: string;
+  batch: Batch;
+  items: number;
+  note: string;
+}): Promise<void> {
+  try {
+    const order = await getOrder(args.orderId);
+    const label = `${weekdayLabel(args.batch.run_date)} ${SLOT_LABEL[args.batch.slot]}`;
+
+    await emailAdmins(
+      `New order ${order ? orderRef(order) : ""} · ${args.name} · ` +
+        `${naira(order?.total ?? 0)}`,
+      [
+        `${args.name} just ordered for the ${label} run.`,
+        "",
+        `Total: ${naira(order?.total ?? 0)} (unpaid until you see the transfer)`,
+        `Number: ${args.phone}`,
+        `Block: ${args.hostel}`,
+        `Items: ${args.items}`,
+        ...(order ? order.lines.map((line) => `  ${line.qty} x ${line.name}`) : []),
+        ...(args.note ? ["", `They asked: ${args.note}`] : []),
+      ].join("\n")
+    );
+  } catch {
+    /* Never let a notification break an order that is already saved. */
+  }
 }
 
 export type RepeatBlock = {

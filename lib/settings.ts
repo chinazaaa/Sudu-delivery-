@@ -23,6 +23,10 @@ export type Settings = {
   paid_note: string;
   /** The delivery price list as JSON. Blank means the shipped bands. */
   fee_bands: string;
+  /** Who to email when something needs a person. One address per line. */
+  admin_emails: string;
+  /** Minutes a cart sits untouched before it counts as abandoned. */
+  abandon_minutes: number;
 };
 
 const EMPTY: Settings = {
@@ -44,6 +48,8 @@ const EMPTY: Settings = {
   msg_late: "",
   paid_note: "",
   fee_bands: "",
+  admin_emails: "",
+  abandon_minutes: 45,
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -53,7 +59,7 @@ export async function getSettings(): Promise<Settings> {
       "bank_name, bank_account_name, bank_account_number, whatsapp_number, card_note, " +
         "instagram_handle, whatsapp_group_link, pitch_line, product_notes, footer_line, " +
         "msg_confirmed, msg_payment, msg_card, msg_pin, msg_ready, msg_late, paid_note, " +
-        "fee_bands"
+        "fee_bands, admin_emails, abandon_minutes"
     )
     .eq("id", true)
     .maybeSingle();

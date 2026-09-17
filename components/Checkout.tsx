@@ -15,6 +15,7 @@ import { FIRST_ORDER_DISCOUNT } from "@/lib/config";
 import { feeFor, splitFee, type Band } from "@/lib/fees";
 import { naira } from "@/lib/money";
 import FillDetails from "@/components/FillDetails";
+import KeepCart from "@/components/KeepCart";
 import { countdown } from "@/lib/time";
 import type { GroupMode } from "@/lib/types";
 import type { BatchView } from "@/lib/view";
@@ -133,6 +134,18 @@ export default function Checkout({
 
   return (
     <form action={action} className="space-y-5 pb-36">
+      <KeepCart
+        phone={phone}
+        name={name}
+        hostel={hostel}
+        batchId={batchId}
+        items={itemCount}
+        value={total}
+        summary={cart
+          .map((line) => `${line.qty}x ${line.name}`)
+          .join(", ")}
+      />
+
       <input type="hidden" name="cart" value={JSON.stringify(toServerLines(cart))} />
       <input type="hidden" name="batch_id" value={batchId} />
       <input type="hidden" name="group_mode" value={groupOn ? mode : ""} />

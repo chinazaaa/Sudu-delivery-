@@ -1,9 +1,12 @@
 import Link from "next/link";
 import Diagnostic from "@/components/Diagnostic";
 import PageHeader from "@/components/admin/PageHeader";
+import AdminLive from "@/components/admin/AdminLive";
 import Stat from "@/components/admin/Stat";
 import { batchOverview } from "@/lib/admin";
 import { dashboard, orderFeed } from "@/lib/admin-data";
+import { abandonedCarts } from "@/lib/carts";
+import { safeSettings } from "@/lib/settings";
 import { diagnoseEmpty, keyKind } from "@/lib/health";
 import { ensureUpcomingBatches, closeExpiredBatches } from "@/lib/batches";
 import { BATCH_MINIMUM, SLOT_LABEL } from "@/lib/config";
@@ -12,19 +15,29 @@ import { clockLabel, runDateLabel } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
+/** Landed within the hour, which is what "while I was away" means in a shop. */
+function isRecent(order: { created_at: string }): boolean {
+  return Date.now() - new Date(order.created_at).getTime() < 3600000;
+}
+
 export default async function AdminHome() {
   let problem: Awaited<ReturnType<typeof diagnoseEmpty>> | null = null;
   let batches: Awaited<ReturnType<typeof batchOverview>> = [];
   let stats: Awaited<ReturnType<typeof dashboard>> | null = null;
   let unpaid: Awaited<ReturnType<typeof orderFeed>> = [];
+  let today: Awaited<ReturnType<typeof orderFeed>> = [];
+  let left: Awaited<ReturnType<typeof abandonedCarts>> = [];
 
   try {
     await ensureUpcomingBatches();
     await closeExpiredBatches();
-    [batches, stats, unpaid] = await Promise.all([
+    const settings = await safeSettings();
+    [batches, stats, unpaid, today, left] = await Promise.all([
       batchOverview(),
       dashboard(),
       orderFeed({ status: "pending", limit: 6 }),
+      orderFeed({ status: "all", limit: 8 }),
+      abandonedCarts(settings.abandon_minutes || 45).catch(() => []),
     ]);
     if (batches.length === 0) problem = await diagnoseEmpty();
   } catch (error) {
@@ -43,6 +56,7 @@ export default async function AdminHome() {
 
   return (
     <div>
+      <AdminLive />
       <PageHeader
         title="Dashboard"
         detail="The last four weeks, and what needs doing today."
@@ -52,6 +66,52 @@ export default async function AdminHome() {
           </Link>
         }
       />
+
+      {/* What landed while nobody was looking. The page refreshes itself, so
+          this is the first thing seen on coming back to it. */}
+      {(today.filter(isRecent).length > 0 || left.length > 0) && (
+        <div className="mb-4 grid gap-3 sm:grid-cols-2">
+          {today.filter(isRecent).length > 0 && (
+            <Link
+              href="/admin/orders?status=all"
+              className="card border-mint/30 bg-mint/5 hover:shadow-lift"
+            >
+              <p className="text-xs font-bold uppercase tracking-wide text-mint">
+                In the last hour
+              </p>
+              <p className="mt-1 text-2xl font-extrabold">
+                {today.filter(isRecent).length} new order
+                {today.filter(isRecent).length === 1 ? "" : "s"}
+              </p>
+              <p className="text-sm text-muted">
+                {today
+                  .filter(isRecent)
+                  .map((order) => order.for_name ?? order.customer_name)
+                  .slice(0, 4)
+                  .join(", ")}
+              </p>
+            </Link>
+          )}
+
+          {left.length > 0 && (
+            <Link
+              href="/admin/carts"
+              className="card border-brand/30 bg-brand-tint hover:shadow-lift"
+            >
+              <p className="text-xs font-bold uppercase tracking-wide text-brand-dark">
+                Left behind
+              </p>
+              <p className="mt-1 text-2xl font-extrabold">
+                {naira(left.reduce((total, cart) => total + cart.value, 0))}
+              </p>
+              <p className="text-sm text-muted">
+                {left.length} cart{left.length === 1 ? "" : "s"} filled in and
+                never paid for. Chase them.
+              </p>
+            </Link>
+          )}
+        </div>
+      )}
 
       {stats && (
         <>
