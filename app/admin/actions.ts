@@ -722,6 +722,7 @@ const SETTING_FIELDS = [
   "window_night",
   "order_horizon_days",
   "tagline",
+  "hide_promoter_link",
   "auto_headline",
   "auto_lines",
 ] as const;

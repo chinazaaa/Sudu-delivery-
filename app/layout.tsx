@@ -25,6 +25,7 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const settings = await safeSettings();
   const instagram = instagramLink(settings.instagram_handle);
+  const showPromoterLink = settings.hide_promoter_link !== "on";
   return (
     <html lang="en">
       <body>
@@ -34,22 +35,26 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
+        {/* Each line of the footer is there because something is set. Empty
+            it in admin and it goes. */}
         <SiteHeader tagline={settings.tagline || "Sangotedo to PAU"} />
         <main className="mx-auto max-w-5xl px-4 pb-28 pt-4 sm:pb-24">{children}</main>
         {/* Clears both the tab bar and a sticky cart bar, which were sitting
             on top of this line. */}
         <footer className="mx-auto max-w-5xl space-y-2 px-4 pb-44 pt-2 text-xs text-muted sm:pb-32">
-          <p>{settings.footer_line}</p>
-          {(instagram || settings.whatsapp_group_link) && (
+          {settings.footer_line && <p>{settings.footer_line}</p>}
+          {(instagram || settings.whatsapp_group_link || showPromoterLink) && (
             <p className="flex gap-4">
               {instagram && (
                 <a href={instagram} target="_blank" rel="noopener noreferrer" className="underline">
                   Instagram
                 </a>
               )}
-              <Link href="/promoter" className="underline">
-                Promoters
-              </Link>
+              {showPromoterLink && (
+                <Link href="/promoter" className="underline">
+                  Promoters
+                </Link>
+              )}
               {settings.whatsapp_group_link && (
                 <a
                   href={settings.whatsapp_group_link}

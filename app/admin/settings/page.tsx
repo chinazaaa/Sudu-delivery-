@@ -141,6 +141,23 @@ export default async function SettingsAdmin() {
           The line at the bottom of every page.
         </p>
         <input name="footer_line" defaultValue={settings.footer_line} className="field" />
+        <p className="text-xs text-muted">
+          Leave it empty and the line goes. The same is true of the Instagram
+          handle and the WhatsApp group link above: each is in the footer
+          because it is filled in.
+        </p>
+        <label className="flex items-center gap-2 text-sm font-semibold">
+          <input
+            type="checkbox"
+            name="hide_promoter_link"
+            defaultChecked={settings.hide_promoter_link === "on"}
+          />
+          Hide the Promoters link
+        </label>
+        <p className="text-xs text-muted">
+          Your promoter can still sign in at /promoter. This only takes the
+          link out of the footer.
+        </p>
         <SaveButton>Save</SaveButton>
       </form>
 

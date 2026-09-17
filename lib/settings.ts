@@ -49,6 +49,8 @@ export type Settings = {
   order_horizon_days: number;
   /** The line under the name in the header. */
   tagline: string;
+  /** Whether the footer offers the promoter sign in. Blank means it does. */
+  hide_promoter_link: string;
   /**
    * The slider the home page builds when there are no slides of your own.
    * The headline is per restaurant, and the lines rotate beneath it.
@@ -57,7 +59,8 @@ export type Settings = {
   auto_lines: string;
 };
 
-const EMPTY: Settings = {
+/** Every setting at its default, which is also what a missing row reads as. */
+export const EMPTY: Settings = {
   bank_name: "",
   bank_account_name: "",
   bank_account_number: "",
@@ -82,6 +85,7 @@ const EMPTY: Settings = {
   window_night: "",
   order_horizon_days: 7,
   tagline: "",
+  hide_promoter_link: "",
   auto_headline: "",
   auto_lines: "",
 };

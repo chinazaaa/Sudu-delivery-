@@ -10,38 +10,12 @@ import { newPin } from "../lib/customer-auth";
 import { parseMenuText } from "../lib/menu-import";
 import { adminEmails } from "../lib/email";
 import { shareRef } from "../lib/money";
-import { externalUrl } from "../lib/settings";
+import { externalUrl, EMPTY as SETTINGS_DEFAULTS, type Settings } from "../lib/settings";
 import { matchPhotos, tidy } from "../lib/match";
 
 /** A settings row with nothing filled in, for the template tests. */
-const EMPTY_SETTINGS = {
-  bank_name: "",
-  bank_account_name: "",
-  bank_account_number: "",
-  whatsapp_number: "",
-  card_note: "",
-  instagram_handle: "",
-  whatsapp_group_link: "",
-  pitch_line: "",
-  product_notes: "",
-  footer_line: "",
-  msg_confirmed: "",
-  msg_payment: "",
-  msg_card: "",
-  msg_pin: "",
-  msg_ready: "",
-  msg_late: "",
-  paid_note: "",
-  fee_bands: "",
-  admin_emails: "",
-  abandon_minutes: 45,
-  window_afternoon: "",
-  window_night: "",
-  order_horizon_days: 7,
-  tagline: "",
-  auto_headline: "",
-  auto_lines: "",
-};
+const EMPTY_SETTINGS: Settings = { ...SETTINGS_DEFAULTS };
+
 import type { OrderLine } from "../lib/orders";
 
 test("phone numbers normalise to one identity however they are typed", () => {
