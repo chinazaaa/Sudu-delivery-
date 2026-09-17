@@ -67,15 +67,6 @@ export async function submitReorder(
   redirect(`/o/${result.orderId}?placed=1`);
 }
 
-export async function lookupLastOrder(
-  _prev: { error: string | null },
-  form: FormData
-): Promise<{ error: string | null }> {
-  const phone = normalisePhone(String(form.get("phone") ?? ""));
-  if (!phone) return { error: "That phone number doesn't look right." };
-  redirect(`/reorder?phone=${phone}`);
-}
-
 export type PinState = { error: string | null };
 
 /**
@@ -93,12 +84,15 @@ export async function signInWithPin(
   if (!result.ok) return { error: result.error };
 
   await signInCustomer(phone);
-  redirect("/orders");
+  // Signing in from Order again should land back there, not on the history.
+  const next = String(form.get("next") ?? "");
+  redirect(next.startsWith("/") ? next : "/orders");
 }
 
-export async function forgetMe(): Promise<void> {
+export async function forgetMe(form?: FormData): Promise<void> {
   await signOutCustomer();
-  redirect("/orders");
+  const next = String(form?.get("next") ?? "");
+  redirect(next.startsWith("/") ? next : "/orders");
 }
 
 

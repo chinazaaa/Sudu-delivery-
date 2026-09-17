@@ -1,5 +1,5 @@
 import Link from "next/link";
-import PhoneLookup from "@/components/PhoneLookup";
+import PinForm from "@/components/PinForm";
 import ReorderCard, { type PreviousOrder } from "@/components/ReorderCard";
 import { openBatches } from "@/lib/batches";
 import { feeFor } from "@/lib/fees";
@@ -36,17 +36,10 @@ export default async function ReorderPage({
         <p className="text-ink/75">
           {signedIn
             ? "Nothing to bring back yet under your number."
-            : "Your phone number brings back your last order. No password needed here."}
+            : "Your number and the four-digit PIN from your first order bring back " +
+              "everything you have ordered."}
         </p>
-        <PhoneLookup initial={(await searchParams).phone} />
-        <p className="text-sm text-ink/75">
-          Looking for everything you have ever ordered? That is{" "}
-          <Link href="/orders" className="font-semibold text-brand underline">
-            My orders
-          </Link>
-          , opened with your number and the four-digit PIN you were given on your
-          first order. Lost it? Message us and we will send it back to you.
-        </p>
+        {!signedIn && <PinForm next="/reorder" label="Bring back my last order" />}
         {phone && (
           <p className="text-sm text-ink/75">
             Nothing found for that number.{" "}
@@ -97,6 +90,7 @@ export default async function ReorderPage({
         <h1 className="text-2xl font-bold tracking-tight">Order again</h1>
         {signedIn ? (
           <form action={forgetMe}>
+            <input type="hidden" name="next" value="/reorder" />
             <button className="text-sm text-muted hover:underline">
               Not {previous.customer_name}?
             </button>

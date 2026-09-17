@@ -494,49 +494,71 @@ export async function repeatLines(order: FullOrder): Promise<RepeatLine[]> {
   const itemIds = [...new Set(order.lines.map((line) => line.menu_item_id))];
   if (itemIds.length === 0) return [];
 
-  const { data: items } = await db()
+  // Read without a join: an embedded select that PostgREST cannot resolve
+  // returns nothing, which silently emptied the whole repeat.
+  const { data: items, error } = await db()
     .from("menu_items")
-    .select("id, name, price_food, image_url, available, restaurants(id, name)")
+    .select("id, name, price_food, image_url, available, restaurant_id")
     .in("id", itemIds);
+  if (error) throw new Error(error.message);
 
-  const byItem = new Map(
-    (items ?? []).map((row: any) => [row.id as string, row])
+  const rows = (items ?? []) as (MenuItem & { restaurant_id: string })[];
+  const byItem = new Map(rows.map((row) => [row.id, row]));
+
+  const { data: restaurants } = await db()
+    .from("restaurants")
+    .select("id, name")
+    .in("id", [...new Set(rows.map((row) => row.restaurant_id))]);
+  const byRestaurant = new Map(
+    (restaurants ?? []).map((row) => [row.id as string, row.name as string])
   );
 
   // The options are read back by id so a size that has since changed price is
   // repeated at what it costs now.
   const { data: chosen } = await db()
     .from("order_item_options")
-    .select("order_item_id, option_id, item_options(id, name, price_delta, available)")
+    .select("order_item_id, option_id")
     .in("order_item_id", order.lines.map((line) => line.id));
 
-  const optionsByLine = new Map<string, any[]>();
-  for (const row of (chosen ?? []) as any[]) {
-    const list = optionsByLine.get(row.order_item_id) ?? [];
-    if (row.item_options) list.push(row.item_options);
-    optionsByLine.set(row.order_item_id, list);
-  }
+  const optionIds = [
+    ...new Set(
+      (chosen ?? [])
+        .map((row) => row.option_id as string | null)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const { data: options } = optionIds.length
+    ? await db()
+        .from("item_options")
+        .select("id, name, price_delta, available")
+        .in("id", optionIds)
+    : { data: [] };
+  const byOption = new Map((options ?? []).map((row: any) => [row.id as string, row]));
 
   const repeats: RepeatLine[] = [];
   for (const line of order.lines) {
     const item = byItem.get(line.menu_item_id);
     if (!item || item.available === false) continue;
 
-    const options = (optionsByLine.get(line.id) ?? []).filter(
-      (option) => option.available !== false
-    );
+    const chosenHere = (chosen ?? [])
+      .filter((row) => row.order_item_id === line.id)
+      .map((row) => byOption.get(row.option_id as string))
+      .filter((option) => option && option.available !== false);
 
     repeats.push({
       itemId: item.id,
-      optionIds: options.map((option) => option.id as string),
-      name: item.name as string,
-      restaurantId: (item.restaurants?.id as string) ?? "",
-      restaurantName: (item.restaurants?.name as string) ?? "",
-      imageUrl: (item.image_url as string) ?? "",
+      optionIds: chosenHere.map((option: any) => option.id as string),
+      name: item.name,
+      restaurantId: item.restaurant_id,
+      restaurantName: byRestaurant.get(item.restaurant_id) ?? "",
+      imageUrl: item.image_url ?? "",
       unitPrice:
-        (item.price_food as number) +
-        options.reduce((sum, option) => sum + (option.price_delta as number), 0),
-      choices: options.map((option) => option.name as string),
+        item.price_food +
+        chosenHere.reduce(
+          (sum: number, option: any) => sum + (option.price_delta as number),
+          0
+        ),
+      choices: chosenHere.map((option: any) => option.name as string),
       qty: line.qty,
       forName: "",
     });

@@ -26,7 +26,9 @@ export default function RepeatOrder({
   if (lines.length === 0) {
     return (
       <p className="text-sm text-muted">
-        Nothing from this order is on the menu today.
+        {missing.length > 0
+          ? `${missing.join(", ")} cannot be ordered right now, so there is nothing to put back in the cart.`
+          : "Nothing from this order is on the menu today."}
       </p>
     );
   }
