@@ -17,7 +17,11 @@ import {
 import { naira } from "@/lib/money";
 
 /** Review and fix the order. Nothing is asked for here except the food. */
-export default function CartView() {
+export default function CartView({
+  restaurants = [],
+}: {
+  restaurants?: { id: string; name: string }[];
+}) {
   const cart = useCart();
   const { people } = usePeople();
   const [newPerson, setNewPerson] = useState("");
@@ -187,9 +191,23 @@ export default function CartView() {
         </section>
       ))}
 
-      <Link href="/" className="inline-block font-semibold text-brand">
-        Add something else
-      </Link>
+      <section className="card space-y-2">
+        <h2 className="font-bold">Add something else</h2>
+        <div className="flex flex-wrap gap-2">
+          {restaurants.map((restaurant) => (
+            <Link
+              key={restaurant.id}
+              href={`/r/${restaurant.id}`}
+              className="chip border-black/10 bg-white hover:border-ink/30"
+            >
+              {restaurant.name}
+            </Link>
+          ))}
+          <Link href="/" className="chip border-black/10 bg-white hover:border-ink/30">
+            Everything
+          </Link>
+        </div>
+      </section>
 
       <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t border-black/5 bg-paper p-3 shadow-bar sm:bottom-0">
         <div className="mx-auto flex max-w-2xl items-center gap-3">

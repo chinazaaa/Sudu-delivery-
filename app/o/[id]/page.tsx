@@ -154,9 +154,17 @@ export default async function OrderPage({
                 <Row label="Account number" value={settings.bank_account_number} strong />
                 <Row label="Narration" value={narration(order, order.shares)} strong />
               </dl>
-              <div className="flex flex-wrap gap-2">
-                <CopyText value={settings.bank_account_number} label="Copy account number" />
-                <CopyText value={narration(order, order.shares)} label="Copy narration" />
+              <div className="grid grid-cols-2 gap-2">
+                <CopyText
+                  value={settings.bank_account_number}
+                  label="Copy account"
+                  className="w-full px-3 py-2.5 text-sm"
+                />
+                <CopyText
+                  value={narration(order, order.shares)}
+                  label="Copy narration"
+                  className="w-full px-3 py-2.5 text-sm"
+                />
               </div>
               <p className="text-sm text-ink/75">
                 Type {narration(order, order.shares)} in the narration. That is

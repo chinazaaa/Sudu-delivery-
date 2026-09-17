@@ -139,10 +139,7 @@ export default function SplitCollect({
                 )}
                 <button
                   type="button"
-                  onClick={() => {
-                    copy(share.url, share.id);
-                    markSent(share.id);
-                  }}
+                  onClick={() => copy(share.url, share.id)}
                   className="chip border-black/10 bg-white py-1.5 text-xs"
                 >
                   {copied === share.id ? "Copied" : "Copy"}
