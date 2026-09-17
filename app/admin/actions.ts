@@ -205,7 +205,7 @@ export async function saveScheduleRun(form: FormData): Promise<void> {
   if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) return;
   if (!/^\d{2}:\d{2}$/.test(cutOff)) return;
 
-  await db()
+  const { error } = await db()
     .from("run_schedule")
     .upsert(
       {
@@ -217,6 +217,7 @@ export async function saveScheduleRun(form: FormData): Promise<void> {
       },
       { onConflict: "weekday,slot" }
     );
+  if (error) throw new Error(`Could not save that day: ${error.message}`);
 
   revalidatePath("/admin", "layout");
 }
@@ -227,16 +228,22 @@ export async function saveScheduleRun(form: FormData): Promise<void> {
  */
 export async function deleteScheduleRun(form: FormData): Promise<void> {
   await assertAdmin();
-  await db().from("run_schedule").delete().eq("id", String(form.get("schedule_id")));
+  const { error } = await db()
+    .from("run_schedule")
+    .delete()
+    .eq("id", String(form.get("schedule_id")));
+  // Saying nothing is how a Remove button that removes nothing goes unnoticed.
+  if (error) throw new Error(`Could not remove that day: ${error.message}`);
   revalidatePath("/admin", "layout");
 }
 
 export async function toggleScheduleRun(form: FormData): Promise<void> {
   await assertAdmin();
-  await db()
+  const { error } = await db()
     .from("run_schedule")
     .update({ active: form.get("active") === "true" })
     .eq("id", String(form.get("schedule_id")));
+  if (error) throw new Error(`Could not change that day: ${error.message}`);
   revalidatePath("/admin", "layout");
 }
 

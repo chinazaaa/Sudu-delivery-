@@ -26,7 +26,13 @@ export const WEEKDAYS = [
  * each, and when each lands. Falls back to what the brief starts with, so a
  * database without the table yet still opens its Friday runs.
  */
-export async function runSchedule(includeHidden = false): Promise<ScheduledRun[]> {
+/**
+ * The week as it is stored, or null when the database cannot answer at all.
+ *
+ * An empty list is a real answer: it means no day is scheduled and no run is
+ * opened. Null means the table is not there, which is a different thing.
+ */
+async function storedSchedule(includeHidden: boolean): Promise<ScheduledRun[] | null> {
   try {
     let query = db().from("run_schedule").select("*").order("weekday").order("cut_off");
     if (!includeHidden) query = query.eq("active", true);
@@ -34,14 +40,29 @@ export async function runSchedule(includeHidden = false): Promise<ScheduledRun[]
     const { data, error } = await query;
     if (error) throw new Error(error.message);
 
-    const rows = (data ?? []) as ScheduledRun[];
-    if (rows.length > 0) {
-      // Postgres hands back "11:30:00"; the time input and the parser want "11:30".
-      return rows.map((row) => ({ ...row, cut_off: row.cut_off.slice(0, 5) }));
-    }
+    // Postgres hands back "11:30:00"; the time input and the parser want "11:30".
+    return ((data ?? []) as ScheduledRun[]).map((row) => ({
+      ...row,
+      cut_off: row.cut_off.slice(0, 5),
+    }));
   } catch {
-    /* No table yet. The default below still opens Friday. */
+    return null;
   }
+}
+
+/**
+ * The week as the admin has set it. Which days run, when ordering closes on
+ * each, and when each lands.
+ *
+ * The fallback below is for a database that has not got the table yet, so a
+ * fresh one still opens its Friday runs. It deliberately does not cover an
+ * empty table: rows invented in code cannot be edited or removed, and a week
+ * somebody has just cleared should stay cleared rather than growing Friday
+ * back with a Remove button that does nothing.
+ */
+export async function runSchedule(includeHidden = false): Promise<ScheduledRun[]> {
+  const rows = await storedSchedule(includeHidden);
+  if (rows !== null) return rows;
 
   return RUN_WEEKDAYS.flatMap((weekday) =>
     (["afternoon", "night"] as BatchSlot[]).map((slot) => ({

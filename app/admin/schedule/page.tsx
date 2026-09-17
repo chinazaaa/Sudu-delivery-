@@ -75,6 +75,13 @@ export default async function SchedulePage() {
           </p>
         </div>
 
+        {schedule.length === 0 && (
+          <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Nothing is scheduled, so no run is opened and nobody can order. Add
+            the day you run below.
+          </p>
+        )}
+
         <ul className="space-y-2">
           {schedule.map((run) => (
             <li
