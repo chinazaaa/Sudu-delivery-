@@ -602,6 +602,7 @@ const SETTING_FIELDS = [
   "window_afternoon",
   "window_night",
   "order_horizon_days",
+  "default_promoter_code",
 ] as const;
 
 export async function saveSettings(form: FormData): Promise<void> {

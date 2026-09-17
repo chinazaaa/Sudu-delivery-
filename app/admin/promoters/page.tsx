@@ -4,12 +4,14 @@ import { promoterRows } from "@/lib/admin";
 import { naira } from "@/lib/money";
 import { whatsappTo } from "@/lib/messages";
 import { siteUrl } from "@/lib/admin-templates";
-import { recordPayout, savePromoter } from "../actions";
+import { recordPayout, savePromoter, saveSettings } from "../actions";
+import { getSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function PromotersAdmin() {
   const promoters = await promoterRows();
+  const settings = await getSettings();
   const url = await siteUrl();
 
   return (
@@ -18,6 +20,38 @@ export default async function PromotersAdmin() {
         title="Promoters"
         detail="Give codes to a handful of people, not everyone. An order counts for the life of that customer, because attribution sticks to their phone number."
       />
+
+      <form action={saveSettings} className="card space-y-3">
+        <div>
+          <h2 className="font-semibold">Who every order counts for</h2>
+          <p className="text-sm text-muted">
+            With one promoter sharing the link, every order is their doing,
+            whether or not the link somebody opened still had a code on the end
+            of it. Pick them here and all of it counts. The first-order
+            discount still needs a real code in the link, so it stays a reason
+            to use one.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="grow">
+            <label className="label" htmlFor="default_promoter_code">Promoter</label>
+            <select
+              id="default_promoter_code"
+              name="default_promoter_code"
+              defaultValue={settings.default_promoter_code}
+              className="field"
+            >
+              <option value="">Nobody: only orders with a code count</option>
+              {promoters.map((promoter) => (
+                <option key={promoter.code} value={promoter.code}>
+                  {promoter.name} ({promoter.code})
+                </option>
+              ))}
+            </select>
+          </div>
+          <SaveButton className="shrink-0">Save</SaveButton>
+        </div>
+      </form>
 
       {promoters.map((promoter) => (
         <form key={promoter.code} action={savePromoter} className="card space-y-2">

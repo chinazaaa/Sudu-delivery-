@@ -157,5 +157,8 @@ update promoters
 set pin = lpad((floor(random() * 10000))::int::text, 4, '0')
 where pin = '';
 
+-- Every order counts for this promoter, ref code or not.
+alter table settings add column if not exists default_promoter_code text not null default '';
+
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';

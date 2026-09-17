@@ -495,6 +495,9 @@ update promoters
 set pin = lpad((floor(random() * 10000))::int::text, 4, '0')
 where pin = '';
 
+-- Every order counts for this promoter, ref code or not.
+alter table settings add column if not exists default_promoter_code text not null default '';
+
 -- Somewhere to keep the photographs, readable by anyone since they are the
 -- pictures on a public menu.
 insert into storage.buckets (id, name, public)

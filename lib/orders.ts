@@ -1,7 +1,7 @@
 import { db } from "./supabase";
 import { FIRST_ORDER_DISCOUNT } from "./config";
 import { feeFor, splitFee, type Band } from "./fees";
-import { activeBands } from "./settings";
+import { activeBands, safeSettings } from "./settings";
 import { cartConverted } from "./carts";
 import { emailAdmins } from "./email";
 import { naira, orderRef } from "./money";
@@ -89,9 +89,14 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   const bands = await activeBands();
   const customerNote = (input.customerNote ?? "").trim();
 
-  const promoterCode = await resolvePromoter(input.promoterCode);
+  // A code in the link is how a customer arrived; the default promoter is who
+  // gets paid when there is only one of them and every order is their doing.
+  // The discount belongs to the first, since it is a reason to use a link, not
+  // something every customer should quietly receive.
+  const cameVia = await resolvePromoter(input.promoterCode);
+  const promoterCode = cameVia ?? (await defaultPromoter());
   const returning = await isReturningCustomer(phone);
-  const discount = !returning && promoterCode ? FIRST_ORDER_DISCOUNT : 0;
+  const discount = !returning && cameVia ? FIRST_ORDER_DISCOUNT : 0;
 
   const paymentMethod = input.paymentMethod ?? "transfer";
   const collectMode = input.collectMode ?? "leader";
@@ -810,6 +815,16 @@ async function checkCapacity(batch: Batch): Promise<string | null> {
   return count >= batch.capacity
     ? "That batch is full. The car only holds so many boxes, so pick the next one."
     : null;
+}
+
+/**
+ * The promoter every order counts for when no code was used. One promoter
+ * sharing the link is the whole reason anybody is on the site, so attribution
+ * should not hinge on whether ?ref= survived being forwarded round WhatsApp.
+ */
+async function defaultPromoter(): Promise<string | null> {
+  const code = (await safeSettings()).default_promoter_code.trim();
+  return code ? resolvePromoter(code) : null;
 }
 
 async function resolvePromoter(code: string | null): Promise<string | null> {

@@ -3,6 +3,7 @@ import PromoterLogin from "@/components/PromoterLogin";
 import { currentPromoter } from "@/lib/promoter-auth";
 import { promoterEarnings } from "@/lib/promoters";
 import { naira } from "@/lib/money";
+import { siteUrl } from "@/lib/admin-templates";
 import { signOut } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function PromoterPage() {
   const code = await currentPromoter();
   const earnings = code ? await promoterEarnings(code) : null;
+  const site = await siteUrl();
 
   if (!earnings) {
     return (
@@ -44,15 +46,22 @@ export default async function PromoterPage() {
           {naira(earnings.earned)} earned, {naira(earnings.paid)} already paid.{" "}
           {naira(earnings.rate)} per paid order.
         </p>
-        <p className="mt-3 break-all rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold">
-          Your link: sudu-delivery.vercel.app/?ref={earnings.code}
-        </p>
+        {earnings.everyOrder ? (
+          <p className="mt-3 rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold">
+            Every order on the site counts for you.
+          </p>
+        ) : (
+          <p className="mt-3 break-all rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold">
+            Your link: {site}/?ref={earnings.code}
+          </p>
+        )}
       </section>
 
       {earnings.runs.length === 0 ? (
         <p className="card text-sm text-muted">
-          Nothing yet. Orders count from the moment someone uses your link, and
-          keep counting every time that person orders again.
+          {earnings.everyOrder
+            ? "Nothing yet. Every order placed on the site counts for you, so this fills up as the next run does."
+            : "Nothing yet. Orders count from the moment someone uses your link, and keep counting every time that person orders again."}
         </p>
       ) : (
         <section className="card space-y-2">
