@@ -20,11 +20,9 @@ const PROMISES = [
 
 export default function Home({
   menu,
-  promoter,
   nextRun,
 }: {
   menu: MenuView[];
-  promoter: { code: string; name: string } | null;
   nextRun: BatchView | null;
 }) {
   const [query, setQuery] = useState("");
@@ -140,11 +138,6 @@ export default function Home({
             ))}
           </Carousel>
 
-          {promoter && (
-            <p className="rounded-2xl bg-brand-tint px-4 py-3 text-sm font-semibold text-brand-dark">
-              {promoter.name} sent you, so ₦500 comes off your first order.
-            </p>
-          )}
 
           <section className="space-y-3">
             <h2 className="section-title">Restaurants</h2>

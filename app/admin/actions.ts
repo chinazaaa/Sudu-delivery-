@@ -547,6 +547,46 @@ export async function recordPayout(form: FormData): Promise<void> {
   revalidatePath("/promoter");
 }
 
+/** A discount code: what it takes off, and how long it lasts. */
+export async function saveCoupon(form: FormData): Promise<void> {
+  await assertAdmin();
+  const code = String(form.get("code") ?? "").trim().toUpperCase();
+  const amount = Math.round(Number(form.get("amount") ?? 0));
+  if (!code || !Number.isFinite(amount) || amount <= 0) return;
+
+  const expires = String(form.get("expires_at") ?? "").trim();
+  const maxUses = Math.round(Number(form.get("max_uses") ?? 0));
+
+  await db().from("coupons").upsert({
+    code,
+    applies_to: form.get("applies_to") === "order" ? "order" : "delivery",
+    amount,
+    note: String(form.get("note") ?? "").trim(),
+    active: form.get("active") === "on",
+    // Blank means no limit, which is the normal case for a code in a group.
+    expires_at: expires ? new Date(`${expires}T23:59:59+01:00`).toISOString() : null,
+    max_uses: Number.isFinite(maxUses) && maxUses > 0 ? maxUses : null,
+    first_order_only: form.get("first_order_only") === "on",
+  });
+
+  revalidatePath("/admin", "layout");
+}
+
+export async function toggleCoupon(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db()
+    .from("coupons")
+    .update({ active: form.get("active") === "true" })
+    .eq("code", String(form.get("code")));
+  revalidatePath("/admin", "layout");
+}
+
+export async function deleteCoupon(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db().from("coupons").delete().eq("code", String(form.get("code")));
+  revalidatePath("/admin", "layout");
+}
+
 export async function savePromoter(form: FormData): Promise<void> {
   await assertAdmin();
   const code = String(form.get("code") ?? "").trim().toUpperCase();
@@ -602,7 +642,6 @@ const SETTING_FIELDS = [
   "window_afternoon",
   "window_night",
   "order_horizon_days",
-  "default_promoter_code",
 ] as const;
 
 export async function saveSettings(form: FormData): Promise<void> {

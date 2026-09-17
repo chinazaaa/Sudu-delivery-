@@ -11,7 +11,6 @@ import {
   useCart,
   usePeople,
 } from "@/lib/cart";
-import { FIRST_ORDER_DISCOUNT } from "@/lib/config";
 import { feeFor, splitFee, type Band } from "@/lib/fees";
 import { naira } from "@/lib/money";
 import FillDetails from "@/components/FillDetails";
@@ -32,13 +31,11 @@ export type AddingTo = {
 
 export default function Checkout({
   batches,
-  promoter,
   adding,
   bands,
   hostels,
 }: {
   batches: BatchView[];
-  promoter: { code: string; name: string } | null;
   adding: AddingTo | null;
   /** The delivery price list in force, read from settings on the server. */
   bands: Band[];
@@ -162,7 +159,6 @@ export default function Checkout({
       <input type="hidden" name="payment_method" value={method} />
       <input type="hidden" name="collect_mode" value={collect} />
       <input type="hidden" name="people" value={JSON.stringify(people)} />
-      {promoter && <input type="hidden" name="ref" value={promoter.code} />}
 
       <h1 className="text-2xl font-extrabold">Checkout</h1>
 
@@ -573,11 +569,22 @@ export default function Checkout({
           <span>Total</span>
           <span>{naira(total)}</span>
         </div>
-        {promoter && (
-          <p className="pt-1 text-brand-dark">
-            {naira(FIRST_ORDER_DISCOUNT)} comes off if this is your first order.
+        {/* A code is a thing somebody was given in a group chat, so it is
+            typed in rather than carried by the link they happened to open. */}
+        <div className="border-t border-black/10 pt-2">
+          <label className="label" htmlFor="coupon">Discount code</label>
+          <input
+            id="coupon"
+            name="coupon"
+            placeholder="If you have one"
+            autoCapitalize="characters"
+            className="field uppercase py-2 text-sm"
+          />
+          <p className="mt-1 text-xs text-muted">
+            It comes off when the order is placed, and the page will say if it
+            is not one we know.
           </p>
-        )}
+        </div>
       </section>
 
       <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t border-black/5 bg-paper p-3 shadow-bar sm:bottom-0">

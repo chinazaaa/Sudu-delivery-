@@ -5,7 +5,6 @@ import Checkout, { type AddingTo } from "@/components/Checkout";
 import { openBatches, recentlyClosedBatch } from "@/lib/batches";
 import { existingLoad } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
-import { activePromoter } from "@/lib/promoters";
 import { toBatchView, toClosedBatchView } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -17,10 +16,9 @@ export default async function CheckoutPage({
 }) {
   const params = await searchParams;
 
-  const [batches, justClosed, promoter] = await Promise.all([
+  const [batches, justClosed] = await Promise.all([
     openBatches(),
     recentlyClosedBatch(),
-    activePromoter((await cookies()).get("sudu_ref")?.value),
   ]);
 
   // The next few runs only. A month of Fridays is a wall, not a choice.
@@ -53,7 +51,6 @@ export default async function CheckoutPage({
   return (
     <Checkout
       batches={views}
-      promoter={promoter}
       adding={adding}
       bands={await activeBands()}
       hostels={await hostelNames()}

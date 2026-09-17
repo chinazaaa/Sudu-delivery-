@@ -3,9 +3,6 @@
 
 /** Delivery is banded by item count. See lib/fees.ts. */
 
-/** Taken off a customer's *first* order when it carries a promoter code. */
-export const FIRST_ORDER_DISCOUNT = 500;
-
 /** Orders below this and the batch loses money. Internal, never shown. */
 export const BATCH_MINIMUM = 8;
 

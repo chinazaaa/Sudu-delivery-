@@ -1,7 +1,7 @@
 import { db } from "./supabase";
-import { FIRST_ORDER_DISCOUNT } from "./config";
 import { feeFor, splitFee, type Band } from "./fees";
-import { activeBands, safeSettings } from "./settings";
+import { activeBands } from "./settings";
+import { checkCoupon, useCoupon, type CouponCheck } from "./coupons";
 import { cartConverted } from "./carts";
 import { emailAdmins } from "./email";
 import { naira, orderRef } from "./money";
@@ -26,7 +26,6 @@ export type PlaceOrderInput = {
   phone: string;
   hostel: string;
   lines: CartLine[];
-  promoterCode: string | null;
   /** Present when one person is carting for several (addendum §2). */
   groupMode?: GroupMode | null;
   /** Transfer, or a card link sent by hand over WhatsApp. */
@@ -43,6 +42,8 @@ export type PlaceOrderInput = {
   }[];
   /** Anything the customer asked for, in their own words. */
   customerNote?: string;
+  /** A discount code typed at checkout. */
+  coupon?: string;
 };
 
 export type PlaceOrderResult =
@@ -88,15 +89,20 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // price change takes effect on the next order and not on a redeploy.
   const bands = await activeBands();
   const customerNote = (input.customerNote ?? "").trim();
-
-  // A code in the link is how a customer arrived; the default promoter is who
-  // gets paid when there is only one of them and every order is their doing.
-  // The discount belongs to the first, since it is a reason to use a link, not
-  // something every customer should quietly receive.
-  const cameVia = await resolvePromoter(input.promoterCode);
-  const promoterCode = cameVia ?? (await defaultPromoter());
   const returning = await isReturningCustomer(phone);
-  const discount = !returning && cameVia ? FIRST_ORDER_DISCOUNT : 0;
+
+  // A discount code is checked against this order's own delivery, so "free
+  // delivery" is worth what delivery actually costs here and no more. The
+  // check happens against the fee the order is about to be charged.
+  const coupon = input.coupon?.trim()
+    ? await checkCoupon({
+        code: input.coupon,
+        fee: feeFor(countItems(priced.lines), batch.flash_fee, bands),
+        food: countFood(priced.lines),
+        returning,
+      })
+    : null;
+  if (coupon && !coupon.ok) return { ok: false, error: coupon.error };
 
   const paymentMethod = input.paymentMethod ?? "transfer";
   const collectMode = input.collectMode ?? "leader";
@@ -109,8 +115,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           name,
           hostel,
           lines: priced.lines,
-          promoterCode,
-          discount,
+          coupon: coupon?.ok ? coupon : null,
           paymentMethod,
           collectMode,
           people: input.people ?? [],
@@ -123,8 +128,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           name,
           hostel,
           lines: priced.lines,
-          promoterCode,
-          discount,
+          coupon: coupon?.ok ? coupon : null,
           groupMode: input.groupMode ?? null,
           paymentMethod,
           collectMode,
@@ -135,7 +139,8 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
 
   if (!result.ok) return result;
 
-  await bindCustomer({ phone, name, hostel, promoterCode, returning });
+  if (coupon?.ok) await useCoupon(coupon.coupon.code);
+  await bindCustomer({ phone, name, hostel, returning });
   // The cart behind this order is no longer abandoned, and the admins are told
   // rather than having to keep refreshing. Neither can fail the order.
   await cartConverted(phone, batch.id).catch(() => {});
@@ -220,8 +225,7 @@ async function placeSingleOrder(args: {
   name: string;
   hostel: string;
   lines: PricedLine[];
-  promoterCode: string | null;
-  discount: number;
+  coupon: Extract<CouponCheck, { ok: true }> | null;
   groupMode: GroupMode | null;
   paymentMethod: "transfer" | "card";
   collectMode: "leader" | "each";
@@ -265,8 +269,8 @@ async function placeSingleOrder(args: {
     hostel: args.hostel,
     subtotal_food: countFood(lines),
     fee,
-    discount: args.discount,
-    promoter_code: args.promoterCode,
+    discount: args.coupon?.discount ?? 0,
+    coupon_code: args.coupon?.coupon.code ?? null,
     group_id: group?.id ?? null,
     for_name: null,
     payment_method: args.paymentMethod,
@@ -290,8 +294,7 @@ async function placeSplitGroup(args: {
   name: string;
   hostel: string;
   lines: PricedLine[];
-  promoterCode: string | null;
-  discount: number;
+  coupon: Extract<CouponCheck, { ok: true }> | null;
   paymentMethod: "transfer" | "card";
   collectMode: "leader" | "each";
   people: {
@@ -345,10 +348,10 @@ async function placeSplitGroup(args: {
       hostel: theirs?.hostel?.trim() || args.hostel,
       subtotal_food: countFood(lines),
       fee: shares[index],
-      // The promoter discount belongs to the customer, so it lands once, on
-      // the share the person who ordered is paying for.
-      discount: isLeader ? args.discount : 0,
-      promoter_code: args.promoterCode,
+      // A discount lands once, on the share the person who typed the code is
+      // paying for.
+      discount: isLeader ? args.coupon?.discount ?? 0 : 0,
+      coupon_code: isLeader ? args.coupon?.coupon.code ?? null : null,
       group_id: group.id,
       // The leader's share carries their own name on the bag label.
       for_name: isLeader ? args.name : who,
@@ -424,7 +427,7 @@ async function insertOrder(args: {
   subtotal_food: number;
   fee: number;
   discount: number;
-  promoter_code: string | null;
+  coupon_code: string | null;
   group_id: string | null;
   for_name: string | null;
   payment_method: "transfer" | "card";
@@ -444,7 +447,7 @@ async function insertOrder(args: {
       fee: args.fee,
       discount: args.discount,
       total,
-      promoter_code: args.promoter_code,
+      coupon_code: args.coupon_code,
       group_id: args.group_id,
       for_name: args.for_name,
       payment_method: args.payment_method,
@@ -817,27 +820,6 @@ async function checkCapacity(batch: Batch): Promise<string | null> {
     : null;
 }
 
-/**
- * The promoter every order counts for when no code was used. One promoter
- * sharing the link is the whole reason anybody is on the site, so attribution
- * should not hinge on whether ?ref= survived being forwarded round WhatsApp.
- */
-async function defaultPromoter(): Promise<string | null> {
-  const code = (await safeSettings()).default_promoter_code.trim();
-  return code ? resolvePromoter(code) : null;
-}
-
-async function resolvePromoter(code: string | null): Promise<string | null> {
-  if (!code) return null;
-  const { data } = await db()
-    .from("promoters")
-    .select("code")
-    .eq("code", code.toUpperCase())
-    .eq("active", true)
-    .maybeSingle();
-  return (data?.code as string) ?? null;
-}
-
 /** First-order detection is simply "does this phone exist in customers". */
 async function isReturningCustomer(phone: string): Promise<boolean> {
   const { data } = await db()
@@ -858,7 +840,6 @@ async function bindCustomer(args: {
   phone: string;
   name: string;
   hostel: string;
-  promoterCode: string | null;
   returning: boolean;
 }): Promise<void> {
   if (args.returning) {
@@ -872,7 +853,6 @@ async function bindCustomer(args: {
     phone: args.phone,
     name: args.name,
     hostel: args.hostel,
-    promoter_code: args.promoterCode,
     pin: newPin(),
   });
 }

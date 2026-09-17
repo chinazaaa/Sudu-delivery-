@@ -205,16 +205,23 @@ export function groupForCounter(lines: OrderLine[]): CounterGroup[] {
   });
 }
 
+/**
+ * Commission on a run: every paid order, at the promoter's rate. There is one
+ * promoter and they are the reason anybody is ordering, so it is not a matter
+ * of which orders carried a code.
+ */
 async function commissionFor(orders: Order[]): Promise<number> {
-  const codes = [...new Set(orders.map((o) => o.promoter_code).filter(Boolean))] as string[];
-  if (codes.length === 0) return 0;
+  if (orders.length === 0) return 0;
 
-  const { data } = await db().from("promoters").select("code, rate").in("code", codes);
-  const rates = new Map((data ?? []).map((p) => [p.code as string, p.rate as number]));
-  return orders.reduce(
-    (total, o) => total + (o.promoter_code ? rates.get(o.promoter_code) ?? 0 : 0),
-    0
-  );
+  const { data } = await db()
+    .from("promoters")
+    .select("rate")
+    .eq("active", true)
+    .order("code")
+    .limit(1)
+    .maybeSingle();
+
+  return orders.length * ((data?.rate as number) ?? 0);
 }
 
 function sum<T>(rows: T[], pick: (row: T) => number): number {
@@ -252,12 +259,12 @@ export async function batchOverview(window: "recent" | "all" = "recent"): Promis
   const rows = (batches ?? []) as Batch[];
   const { data: orders } = await db()
     .from("orders")
-    .select("batch_id, status, total, subtotal_food, promoter_code")
+    .select("batch_id, status, total, subtotal_food")
     .in("batch_id", rows.map((b) => b.id));
 
   const all = (orders ?? []) as Pick<
     Order,
-    "batch_id" | "status" | "total" | "subtotal_food" | "promoter_code"
+    "batch_id" | "status" | "total" | "subtotal_food"
   >[];
   const commission = await commissionFor(
     all.filter((o) => o.status !== "pending" && o.status !== "refunded") as Order[]
@@ -298,18 +305,16 @@ export async function promoterRows(): Promise<PromoterRow[]> {
   const { data: promoters } = await db().from("promoters").select("*").order("code");
   const { data: orders } = await db()
     .from("orders")
-    .select("promoter_code, status")
-    .not("promoter_code", "is", null)
+    .select("status")
     .neq("status", "refunded");
   const { data: payouts } = await db()
     .from("promoter_payouts")
     .select("promoter_code, amount");
 
+  // Only a paid order earns: an unpaid one never travelled.
+  const count = (orders ?? []).filter((o) => o.status !== "pending").length;
+
   return ((promoters ?? []) as Promoter[]).map((p) => {
-    // Only a paid order earns: an unpaid one never travelled.
-    const count = (orders ?? []).filter(
-      (o) => o.promoter_code === p.code && o.status !== "pending"
-    ).length;
     const earned = count * p.rate;
     const paidOut = (payouts ?? [])
       .filter((row) => row.promoter_code === p.code)

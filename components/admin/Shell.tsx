@@ -12,7 +12,8 @@ const NAV = [
   { href: "/admin/schedule", label: "Schedule", icon: "🗓" },
   { href: "/admin/customers", label: "Customers", icon: "☺" },
   { href: "/admin/menu", label: "Restaurants", icon: "🍽" },
-  { href: "/admin/promoters", label: "Promoters", icon: "%" },
+  { href: "/admin/coupons", label: "Codes", icon: "%" },
+  { href: "/admin/promoters", label: "Promoter", icon: "☺" },
   { href: "/admin/settings", label: "Settings", icon: "⚙" },
 ];
 

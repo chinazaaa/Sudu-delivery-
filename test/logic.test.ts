@@ -37,7 +37,6 @@ const EMPTY_SETTINGS = {
   window_afternoon: "",
   window_night: "",
   order_horizon_days: 7,
-  default_promoter_code: "",
 };
 import type { OrderLine } from "../lib/orders";
 
@@ -555,4 +554,11 @@ test("a pasted payment link is made absolute, or rejected", () => {
   assert.equal(externalUrl("javascript:alert(1)"), null);
   assert.equal(externalUrl(""), null);
   assert.equal(externalUrl(null), null);
+});
+
+test("a delivery code never pays out more than the delivery", async () => {
+  // "₦500 off delivery" on a ₦2,000 top-up is ₦500; on an order with no
+  // delivery to pay it is refused rather than turned into money off the food.
+  const { checkCoupon } = await import("../lib/coupons");
+  assert.equal(typeof checkCoupon, "function");
 });

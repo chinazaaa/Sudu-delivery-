@@ -87,7 +87,8 @@ export type Order = {
   total: number;
   payment_ref: string | null;
   paid_at: string | null;
-  promoter_code: string | null;
+  /** The discount code used, if one was. */
+  coupon_code: string | null;
   status: OrderStatus;
   created_at: string;
   group_id: string | null;

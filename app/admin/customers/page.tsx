@@ -74,7 +74,6 @@ export default async function CustomersPage({
                     <h3 className="truncate font-bold">{row.name}</h3>
                     <p className="text-sm text-muted">
                       {formatPhone(row.phone)} · {row.hostel || "No block saved"}
-                      {row.promoterCode && ` · came from ${row.promoterCode}`}
                     </p>
                   </div>
                   <div className="text-right">

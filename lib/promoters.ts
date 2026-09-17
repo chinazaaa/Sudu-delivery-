@@ -1,20 +1,23 @@
 import { db } from "./supabase";
 import { SLOT_LABEL, type BatchSlot } from "./config";
 import { runDateLabel } from "./time";
-import { safeSettings } from "./settings";
 
-/** The promoter behind a ?ref= code, if it is a live one. */
-export async function activePromoter(
-  code: string | null | undefined
-): Promise<{ code: string; name: string } | null> {
-  if (!code) return null;
+/** The one promoter, if there is one set up. */
+export async function thePromoter(): Promise<{
+  code: string;
+  name: string;
+  phone: string;
+  rate: number;
+  pin: string;
+} | null> {
   const { data } = await db()
     .from("promoters")
-    .select("code, name")
-    .eq("code", code.toUpperCase())
+    .select("code, name, phone, rate, pin")
     .eq("active", true)
+    .order("code")
+    .limit(1)
     .maybeSingle();
-  return data ? { code: data.code as string, name: data.name as string } : null;
+  return (data as any) ?? null;
 }
 
 export type PromoterRun = {
@@ -40,8 +43,6 @@ export type PromoterEarnings = {
   paid: number;
   owed: number;
   payouts: { id: string; amount: number; note: string; paid_at: string }[];
-  /** They are the default promoter: every order on the site counts for them. */
-  everyOrder: boolean;
 };
 
 /**
@@ -62,7 +63,6 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
   const { data: orders } = await db()
     .from("orders")
     .select("batch_id, status")
-    .eq("promoter_code", promoter.code)
     .neq("status", "refunded");
 
   const batchIds = [...new Set((orders ?? []).map((o) => o.batch_id as string))];
@@ -97,11 +97,7 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
   const earned = runs.reduce((total, run) => total + run.earned, 0);
   const paid = (payouts ?? []).reduce((total, row) => total + (row.amount as number), 0);
 
-  const settings = await safeSettings();
-
   return {
-    everyOrder:
-      settings.default_promoter_code.trim().toUpperCase() === promoter.code,
     code: promoter.code as string,
     name: promoter.name as string,
     rate,

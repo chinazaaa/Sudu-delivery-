@@ -450,7 +450,10 @@ export default async function OrderPage({
             value={naira(order.fee)}
           />
           {order.discount > 0 && (
-            <Row label="First-order discount" value={`−${naira(order.discount)}`} />
+            <Row
+              label={order.coupon_code ? `Code ${order.coupon_code}` : "Discount"}
+              value={`−${naira(order.discount)}`}
+            />
           )}
           <Row label="Total" value={naira(order.total)} strong />
         </dl>

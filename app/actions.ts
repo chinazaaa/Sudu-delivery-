@@ -37,8 +37,7 @@ export async function submitOrder(
     phone: String(form.get("phone") ?? ""),
     hostel: String(form.get("hostel") ?? ""),
     lines,
-    promoterCode:
-      String(form.get("ref") ?? "") || (await cookies()).get("sudu_ref")?.value || null,
+    coupon: String(form.get("coupon") ?? "").trim(),
     groupMode: mode === "one_payer" || mode === "split" ? mode : null,
     paymentMethod: String(form.get("payment_method") ?? "") === "card" ? "card" : "transfer",
     collectMode: String(form.get("collect_mode") ?? "") === "each" ? "each" : "leader",
@@ -69,7 +68,6 @@ export async function submitReorder(
     phone,
     hostel: previous.hostel,
     lines: previous.lines.map((l) => ({ menu_item_id: l.menu_item_id, qty: l.qty })),
-    promoterCode: null, // Attribution is already bound to this phone number.
   });
 
   if (!result.ok) return { error: result.error };
