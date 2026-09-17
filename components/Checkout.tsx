@@ -586,6 +586,7 @@ export default function Checkout({
           batchId={batchId}
           cart={JSON.stringify(toServerLines(cart))}
           phone={phone}
+          applied={applied}
           onApplied={setApplied}
         />
         {applied && (
