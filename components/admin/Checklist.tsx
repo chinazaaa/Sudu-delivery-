@@ -12,11 +12,14 @@ export default function Checklist({
   id,
   items,
   label,
+  done = false,
 }: {
   /** Anything unique to this list, so two lists never share their ticks. */
   id: string;
   items: { key: string; text: string; detail?: string }[];
   label: string;
+  /** The work this list was for is over: show it settled, not half-ticked. */
+  done?: boolean;
 }) {
   const storageKey = `sudu_check_${id}`;
   const [ticked, setTicked] = useState<Record<string, boolean>>({});
@@ -42,15 +45,17 @@ export default function Checklist({
     });
   }
 
-  const done = items.filter((item) => ticked[item.key]).length;
+  const checked = done
+    ? items.length
+    : items.filter((item) => ticked[item.key]).length;
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-muted">
-          {done}/{items.length} {label}
+          {checked}/{items.length} {label}
         </p>
-        {done > 0 && (
+        {checked > 0 && !done && (
           <button
             type="button"
             onClick={() => {
@@ -74,22 +79,23 @@ export default function Checklist({
             <button
               type="button"
               onClick={() => toggle(item.key)}
-              className={`flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left ${
-                ticked[item.key]
+              disabled={done}
+              className={`flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left disabled:opacity-80 ${
+                done || ticked[item.key]
                   ? "border-mint/30 bg-mint/5 text-muted"
                   : "border-black/10 bg-white"
               }`}
             >
               <span
                 className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-md border text-xs font-black ${
-                  ticked[item.key]
+                  done || ticked[item.key]
                     ? "border-mint bg-mint text-white"
                     : "border-black/20"
                 }`}
               >
-                {ticked[item.key] ? "✓" : ""}
+                {done || ticked[item.key] ? "✓" : ""}
               </span>
-              <span className={ticked[item.key] ? "line-through" : ""}>
+              <span className={done || ticked[item.key] ? "line-through" : ""}>
                 <span className="block font-semibold">{item.text}</span>
                 {item.detail && (
                   <span className="block text-sm text-muted">{item.detail}</span>

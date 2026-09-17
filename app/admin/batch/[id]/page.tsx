@@ -19,7 +19,7 @@ import { bandTable, parseBands } from "@/lib/fees";
 import { narration, template, whatsappTo } from "@/lib/messages";
 import { getSettings } from "@/lib/settings";
 import { sheetAsText } from "@/lib/sheet-text";
-import { STAGES, STAGE_ACTION, STAGE_LABEL } from "@/lib/stages";
+import { STAGES, STAGE_ACTION, STAGE_LABEL, stageIndex } from "@/lib/stages";
 import {
   markDelivered,
   markPaid,
@@ -48,6 +48,10 @@ export default async function BatchPage({
   // A run nobody has ordered into is still just a plan: it can be moved to
   // another day, or dropped altogether.
   const empty = summary.paidCount + summary.unpaidCount === 0;
+  // Past the counter, the shopping is done and the list is history. Past the
+  // handout, so is the run.
+  const shopped = stageIndex(batch.stage) >= stageIndex("on_the_road");
+  const finished = batch.stage === "handed_out";
   const belowMinimum = summary.paidCount < summary.minimum;
 
   const settings = await getSettings();
@@ -145,6 +149,14 @@ export default async function BatchPage({
             badge: String(counter.length),
             content: (
               <>
+                {shopped && (
+                  <p className="rounded-2xl bg-mint/10 px-4 py-3 text-sm font-semibold text-mint">
+                    {finished
+                      ? "This run is finished. The counter sheet is here for the record."
+                      : "The food is bought and on the road. This is here for the record."}
+                  </p>
+                )}
+
                 <section className="card">
                   <h2 className="font-bold">What you pay, stop by stop</h2>
                   <p className="text-sm text-muted">
@@ -186,6 +198,7 @@ export default async function BatchPage({
                       <Checklist
                         id={`counter-${batch.id}-${group.restaurant}`}
                         label="bought"
+                        done={shopped}
                         items={group.lines.map((line) => ({
                           key: `${line.name}|${line.choices.join("|")}`,
                           text: `${line.qty}× ${line.name}`,
@@ -216,7 +229,12 @@ export default async function BatchPage({
                     itself to &quot;Delivered, every bag&quot; at the top does
                     all of them at once.
                   </p>
-                  {handout.length > 0 && (
+                  {handout.length > 0 && finished && (
+                    <p className="rounded-2xl bg-mint/10 px-4 py-3 text-sm font-semibold text-mint">
+                      Every bag on this run is marked delivered.
+                    </p>
+                  )}
+                  {handout.length > 0 && !finished && (
                     <form action={setBagDelivered} className="pb-1">
                       <input
                         type="hidden"
