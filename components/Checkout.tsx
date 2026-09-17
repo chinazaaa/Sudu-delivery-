@@ -63,13 +63,6 @@ export default function Checkout({
     error: null,
   });
 
-  // A code applied to one cart and run is not necessarily worth the same, or
-  // valid at all, on another. Changing either takes it off rather than
-  // showing a discount that will be refused when the order is placed.
-  useEffect(() => {
-    setApplied(null);
-  }, [batchId, itemCount]);
-
   useEffect(() => {
     if (adding) return;
     try {
@@ -100,6 +93,7 @@ export default function Checkout({
   const selected = batches.find((b) => b.id === batchId) ?? null;
   const itemCount = countItems(cart);
   const subtotal = cartSubtotal(cart);
+
   const alreadyItems = adding?.items ?? 0;
   const alreadyCharged = adding?.feeCharged ?? 0;
   const fee = Math.max(
@@ -136,6 +130,13 @@ export default function Checkout({
     }
     return false;
   });
+
+  // A code applied to one cart and run is not necessarily worth the same, or
+  // valid at all, on another. Changing either takes it off rather than
+  // showing a discount that will be refused when the order is placed.
+  useEffect(() => {
+    setApplied(null);
+  }, [batchId, itemCount]);
 
   if (cart.length === 0) {
     return (
