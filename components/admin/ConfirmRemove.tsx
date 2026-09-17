@@ -7,7 +7,15 @@ import { useState } from "react";
  * that quietly stops opening runs, which nobody would notice until a Friday
  * with nothing on it.
  */
-export default function ConfirmRemove({ id }: { id: string }) {
+export default function ConfirmRemove({
+  id,
+  action,
+}: {
+  id: string;
+  /** The server action, handed in rather than imported here. Reaching for it
+   *  from inside the browser made a button whose failures went nowhere. */
+  action: (form: FormData) => Promise<void>;
+}) {
   const [asking, setAsking] = useState(false);
 
   if (!asking) {
@@ -28,10 +36,7 @@ export default function ConfirmRemove({ id }: { id: string }) {
         type="submit"
         name="schedule_id"
         value={id}
-        formAction={async (form: FormData) => {
-          const { deleteScheduleRun } = await import("@/app/admin/actions");
-          await deleteScheduleRun(form);
-        }}
+        formAction={action}
         className="chip border-transparent bg-brand py-1.5 text-xs text-white"
       >
         Yes, remove it

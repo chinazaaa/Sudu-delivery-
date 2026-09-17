@@ -113,7 +113,7 @@ export default async function SchedulePage() {
                     >
                       {run.active ? "Pause" : "Resume"}
                     </ActionButton>
-                    <ConfirmRemove id={run.id} />
+                    <ConfirmRemove id={run.id} action={deleteScheduleRun} />
                   </span>
                 </div>
 
