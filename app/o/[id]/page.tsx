@@ -48,11 +48,13 @@ export default async function OrderPage({
   // An order can change nights right up until its run closes: unpaid because
   // nothing has been charged, paid because the money simply travels with it.
   // After that the food for that run has been bought.
+  // Whether anything else is open is a separate question from whether this
+  // order may move: hiding the control when the list is empty left people
+  // hunting for something the page had silently decided not to show.
   const canStillMove =
     order.batch.status === "open" &&
     order.batch.stage === "ordering" &&
-    new Date(order.batch.cut_off_at).getTime() > Date.now() &&
-    others.length > 0;
+    new Date(order.batch.cut_off_at).getTime() > Date.now();
 
   // Only the person who just checked out has their browser emptied. A
   // pay-by-link friend opening this keeps their own cart.

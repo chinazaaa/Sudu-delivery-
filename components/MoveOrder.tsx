@@ -45,8 +45,9 @@ export default function MoveOrder({
 
   if (runs.length === 0) {
     return (
-      <p className="text-sm text-muted">
-        No other run is open yet. Check back, or message us.
+      <p className="rounded-xl bg-shell px-3 py-2.5 text-sm text-muted">
+        This is the only run taking orders at the moment. Another opens as soon
+        as the next one is within the week.
       </p>
     );
   }
