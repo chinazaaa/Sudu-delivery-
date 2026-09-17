@@ -267,7 +267,14 @@ export default async function RestaurantAdmin({
           </Link>
         </div>
 
-        <AdminItemFilter categories={categoryList.map((c) => ({ id: c.id, name: c.name }))}>
+        <AdminItemFilter
+          categories={categoryList.map((c) => ({ id: c.id, name: c.name }))}
+          counts={{
+            total: itemList.length,
+            soldOut: itemList.filter((item) => !item.available).length,
+            noPhoto: itemList.length - withPhotos,
+          }}
+        >
         {itemList.map((item) => {
           const groups = groupsByItem.get(item.id) ?? [];
           return (
@@ -278,6 +285,8 @@ export default async function RestaurantAdmin({
               data-category={
                 categoryList.find((c) => c.id === item.category_id)?.name ?? ""
               }
+              data-stock={item.available ? "on" : "off"}
+              data-photo={item.image_url ? "yes" : "no"}
               className="card"
             >
               <div className="flex items-center gap-3">
