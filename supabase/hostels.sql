@@ -20,4 +20,19 @@ insert into hostels (name, sort_order) values ('Emerald', 50)
 insert into hostels (name, sort_order) values ('Enterprise Development Centre', 60)
   on conflict (name) do update set active = true;
 
+insert into hostels (name, sort_order) values ('Cooperative Queens', 70)
+  on conflict (name) do update set active = true;
+insert into hostels (name, sort_order) values ('Redwood', 80)
+  on conflict (name) do update set active = true;
+insert into hostels (name, sort_order) values ('Pearl', 90)
+  on conflict (name) do update set active = true;
+insert into hostels (name, sort_order) values ('Trinity', 100)
+  on conflict (name) do update set active = true;
+insert into hostels (name, sort_order) values ('Queen Mary', 110)
+  on conflict (name) do update set active = true;
+insert into hostels (name, sort_order) values ('Trezadel', 120)
+  on conflict (name) do update set active = true;
+insert into hostels (name, sort_order) values ('Cedar', 130)
+  on conflict (name) do update set active = true;
+
 select name, sort_order, active from hostels order by sort_order, name;
