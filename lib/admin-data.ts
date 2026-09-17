@@ -50,6 +50,9 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
       (order) =>
         order.customer_name.toLowerCase().includes(term) ||
         order.customer_phone.includes(term) ||
+        // A transfer's narration is the order number, so that is what gets
+        // typed into this box when matching a payment.
+        String(order.order_no ?? "").includes(term.replace(/^#/, "")) ||
         (order.for_name ?? "").toLowerCase().includes(term) ||
         order.hostel.toLowerCase().includes(term)
     );

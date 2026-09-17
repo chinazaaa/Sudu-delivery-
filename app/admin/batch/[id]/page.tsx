@@ -12,7 +12,7 @@ import { naira, orderRef } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { clockLabel, runDateLabel } from "@/lib/time";
 import { bandTable, parseBands } from "@/lib/fees";
-import { template, whatsappTo } from "@/lib/messages";
+import { narration, template, whatsappTo } from "@/lib/messages";
 import { getSettings } from "@/lib/settings";
 import { sheetAsText } from "@/lib/sheet-text";
 import { STAGES, STAGE_ACTION } from "@/lib/stages";
@@ -326,7 +326,8 @@ export default async function BatchPage({
                           )}
                         </p>
                         <p className="text-sm text-muted">
-                          {formatPhone(order.customer_phone)} · {order.hostel}
+                          {formatPhone(order.customer_phone)} · {order.hostel} ·
+                          narration {narration(order)}
                         </p>
                         <p className="mt-1 text-sm">
                           {order.lines.map((l) => `${l.qty}× ${l.name}`).join(", ")}
@@ -351,7 +352,7 @@ export default async function BatchPage({
                           <input type="hidden" name="order_id" value={order.id} />
                           <input
                             name="payment_ref"
-                            placeholder="Transfer ref (optional)"
+                            placeholder={`Transfer ref (they should send ${narration(order)})`}
                             className="field py-1.5 text-sm"
                           />
                           <button className="btn-primary shrink-0 px-3 py-1.5 text-sm">

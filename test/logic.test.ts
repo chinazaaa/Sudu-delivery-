@@ -471,7 +471,9 @@ test("a message template fills in the order and falls back to the default wordin
   assert.match(asking, /Bola/);
   assert.match(asking, /#1042/);
   assert.match(asking, /0123456789/);
-  assert.match(asking, /08031234567/);
+  // The narration is the order number, not the phone: four digits to type,
+  // and it belongs to this one order rather than every order they place.
+  assert.match(asking, /Put 1042 as the narration/);
   assert.match(asking, /https:\/\/sudu\.ng\/o\/abc/);
 });
 

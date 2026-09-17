@@ -202,7 +202,7 @@ export default function Checkout({
         <div className="grid gap-2 sm:grid-cols-2">
           {(
             [
-              ["transfer", "Bank transfer", "Details on the next screen. Use your phone number as the narration."],
+              ["transfer", "Bank transfer", "Account details on the next screen, with a four-digit number to put in the narration."],
               ["card", "Card", "Message us on WhatsApp and we send you a card link."],
             ] as const
           ).map(([value, title, detail]) => (
@@ -391,7 +391,7 @@ export default function Checkout({
           {mode === "split" && (
             <p className="text-xs text-muted">
               A phone number each means everyone gets their own payment link and
-              their own transfer narration. Leave one blank and that share sits
+              their own narration. Leave one blank and that share sits
               under your number instead.
             </p>
           )}

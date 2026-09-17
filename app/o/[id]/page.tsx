@@ -5,15 +5,14 @@ import ClearCart from "@/components/ClearCart";
 import LiveOrder from "@/components/LiveOrder";
 import ExpiryNote from "@/components/ExpiryNote";
 import StageTimeline from "@/components/StageTimeline";
-import { STAGE_LABEL } from "@/lib/stages";
 import ShareLink from "@/components/ShareLink";
 import SplitCollect from "@/components/SplitCollect";
 import CopyText from "@/components/CopyText";
+import RepeatOrder from "@/components/RepeatOrder";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira, orderRef } from "@/lib/money";
-import { splitFee } from "@/lib/fees";
-import { fillNote, PAID_NOTE_DEFAULT } from "@/lib/messages";
-import RepeatOrder from "@/components/RepeatOrder";
+import { bandFor, splitFee } from "@/lib/fees";
+import { fillNote, narration, PAID_NOTE_DEFAULT } from "@/lib/messages";
 import {
   feeStory,
   getOrder,
@@ -22,8 +21,9 @@ import {
   type OrderLine,
 } from "@/lib/orders";
 import { formatPhone } from "@/lib/phone";
+import { STAGE_LABEL } from "@/lib/stages";
 import { clockLabel, runDateLabel, weekdayLabel } from "@/lib/time";
-import { getSettings, hasBankDetails, whatsappLink } from "@/lib/settings";
+import { activeBands, getSettings, hasBankDetails, whatsappLink } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -38,8 +38,10 @@ export default async function OrderPage({
   if (!order) notFound();
 
   const settings = await getSettings();
+  const bands = await activeBands();
   const fees = await feeStory(order);
   const repeat = await repeatLines(order);
+
   // Only the person who just checked out has their browser emptied. A
   // pay-by-link friend opening this keeps their own cart.
   //
@@ -48,27 +50,43 @@ export default async function OrderPage({
   // person's history. It goes out once, in the message sent after payment.
   const justPlaced = (await searchParams).placed === "1";
 
-  const batchLabel = `${weekdayLabel(order.batch.run_date)} ${SLOT_LABEL[order.batch.slot]}`;
-  const expired = new Date(order.batch.cut_off_at).getTime() <= Date.now();
-  const paid = order.status === "paid" || order.status === "delivered";
-  const awaitingPayment = order.status === "pending";
-  const drops = dropsFor(order);
-  // Links inside a share message have to be absolute, so they come from the
-  // request rather than another environment variable to keep in step.
   const requestHeaders = await headers();
   const host = requestHeaders.get("host") ?? "";
   const site = host
     ? `${requestHeaders.get("x-forwarded-proto") ?? "https"}://${host}`
     : "";
-  // An older order can carry names on some lines and not others. Whoever
-  // ordered owns the rest, so the list never shows an item with no owner.
-  const named = order.lines.some((line) => line.for_name);
+
+  const batchLabel = `${weekdayLabel(order.batch.run_date)} ${SLOT_LABEL[order.batch.slot]}`;
+  const expired = new Date(order.batch.cut_off_at).getTime() <= Date.now();
+  const paid = order.status === "paid" || order.status === "delivered";
+  const drops = dropsFor(order);
+  const split = order.group?.mode === "split" && order.shares.length > 1;
+
+  // The whole load is what delivery is priced on, so the page shows the band
+  // it landed in and how it was shared out. "Why is my delivery ₦2,000?" has
+  // to be answerable from the page itself.
+  const allItems = fees.items + fees.otherItems;
+  const band = bandFor(Math.max(allItems, 1), bands);
+  const bandLabel = Number.isFinite(band.maxItems)
+    ? `up to ${band.maxItems} items`
+    : "a full load";
+
+  const status =
+    order.status === "delivered"
+      ? "Delivered"
+      : paid
+        ? order.batch.stage === "ordering"
+          ? "Paid and on the run"
+          : STAGE_LABEL[order.batch.stage]
+        : order.status === "refunded"
+          ? "Refunded"
+          : expired
+            ? "Batch closed"
+            : "Waiting on payment";
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 pb-10">
       {justPlaced && <ClearCart />}
-      {/* Nothing here is final until the run is: payment is matched by hand and
-          the stage is tapped by hand, so the page watches for both. */}
       {order.status !== "refunded" && order.batch.stage !== "handed_out" && <LiveOrder />}
 
       <header
@@ -79,59 +97,83 @@ export default async function OrderPage({
         }`}
       >
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/75">
-          Order {orderRef(order)} ·{" "}
-          {order.status === "delivered"
-            ? "Delivered"
-            : paid
-              ? order.batch.stage === "ordering"
-                ? "Paid and on the run"
-                : STAGE_LABEL[order.batch.stage]
-              : expired
-                ? "Batch closed"
-                : "Order saved"}
+          Order {orderRef(order)} · {status}
         </p>
         <h1 className="mt-1 text-2xl font-extrabold leading-tight sm:text-3xl">
-          {order.customer_name}&apos;s {batchLabel} order
+          {naira(order.total)}
         </h1>
         <p className="mt-1 text-sm text-white/85">
-          {runDateLabel(order.batch.run_date)} · {order.batch.delivery_window_text}
+          {order.customer_name} · {batchLabel} · {order.batch.delivery_window_text}
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2 text-sm font-semibold">
-          <span className="rounded-full bg-white/20 px-3 py-1.5">
-            {naira(order.total)} total
-          </span>
           <span className="rounded-full bg-white/20 px-3 py-1.5">{order.hostel}</span>
           <span className="rounded-full bg-white/20 px-3 py-1.5">
             {expired ? "Closed" : `Closes ${clockLabel(order.batch.cut_off_at)}`}
           </span>
+          {paid && order.batch.stage !== "ordering" && (
+            <span className="rounded-full bg-white/20 px-3 py-1.5">
+              Updated {clockLabel(order.batch.stage_updated_at)}
+            </span>
+          )}
         </div>
       </header>
 
-      {paid && (
-        <section className="card space-y-2">
-          <h2 className="font-bold">Where your food is</h2>
-          {order.status === "delivered" ? (
-            <p className="text-sm text-ink/75">
-              Delivered. Thank you, and see you on the next run.
-            </p>
-          ) : order.batch.stage === "ordering" ? (
-            <p className="text-sm text-ink/75">
-              Ordering is still open. This updates by itself once the run sets
-              off, through to the moment it reaches you.
-            </p>
+      {/* Paying comes first while it is unpaid, and drops away once it is not. */}
+      {!paid && order.status !== "refunded" && !expired && (
+        <section className="card space-y-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-lg font-extrabold">Pay {naira(order.total)}</h2>
+            <ExpiryNote cutOffISO={order.batch.cut_off_at} />
+          </div>
+
+          {order.payment_method === "card" ? (
+            <>
+              <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
+                You chose to pay by card. Message us and we will send you a link.
+              </p>
+              {order.payment_link && (
+                <a
+                  href={order.payment_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary w-full"
+                >
+                  Open your card link
+                </a>
+              )}
+            </>
+          ) : hasBankDetails(settings) ? (
+            <>
+              <dl className="space-y-2 rounded-2xl bg-shell p-3 text-sm">
+                <Row label="Bank" value={settings.bank_name} />
+                <Row label="Account name" value={settings.bank_account_name || "Not set"} />
+                <Row label="Account number" value={settings.bank_account_number} strong />
+                <Row label="Narration" value={narration(order)} strong />
+              </dl>
+              <div className="flex flex-wrap gap-2">
+                <CopyText value={settings.bank_account_number} label="Copy account number" />
+                <CopyText value={narration(order)} label="Copy narration" />
+              </div>
+              <p className="text-sm text-ink/75">
+                Type {narration(order)} in the narration. Four digits, and it is
+                how this transfer is matched to this order. Transfer only, no
+                cash on delivery.
+              </p>
+            </>
           ) : (
-            <StageTimeline
-              stage={order.batch.stage}
-              updatedAt={order.batch.stage_updated_at}
-            />
+            <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Transfer details are being set up. Message us and we will send them
+              to you.
+            </p>
           )}
+
+          <CardPayment order={order} settings={settings} batchLabel={batchLabel} />
+          {!split && <ShareLink label="Send this to whoever is paying" />}
         </section>
       )}
 
-      {/* Chasing is the work in a split group, so it comes before everything
-          except the money owed. */}
-      {order.group?.mode === "split" && order.shares.length > 1 && (
+      {split && (
         <SplitCollect
           orderId={order.id}
           shares={order.shares.map((share) => {
@@ -153,227 +195,187 @@ export default async function OrderPage({
         />
       )}
 
-      {/* One bag going to one person needs a line, not a section: the header
-          already says whose order this is. */}
-      {drops.length === 1 && drops[0].name !== order.customer_name && (
-        <section className="card flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-bold">Going to {drops[0].name}</h2>
-            <p className="text-sm text-muted">
-              {drops[0].hostel || order.hostel}
-              {drops[0].phone ? ` · ${formatPhone(drops[0].phone)}` : ""}
+      {paid && (
+        <section className="card space-y-2">
+          <h2 className="font-bold">Where your food is</h2>
+          {order.status === "delivered" ? (
+            <p className="text-sm text-ink/75">
+              Delivered. Thank you, and see you on the next run.
             </p>
-          </div>
-          {drops[0].phone && (
-            <div className="flex gap-2">
-              <a href={`tel:${drops[0].phone}`} className="chip border-black/10 bg-white">
-                Call
-              </a>
-              {whatsappLink(drops[0].phone, `Hi ${drops[0].name}, your Sudu order is here.`) && (
-                <a
-                  href={
-                    whatsappLink(
-                      drops[0].phone,
-                      `Hi ${drops[0].name}, your Sudu order is here.`
-                    )!
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="chip border-black/10 bg-white"
-                >
-                  WhatsApp
-                </a>
-              )}
-            </div>
+          ) : order.batch.stage === "ordering" ? (
+            <p className="text-sm text-ink/75">
+              {fillNote(settings.paid_note || PAID_NOTE_DEFAULT, {
+                hostel: order.hostel,
+                window: order.batch.delivery_window_text.toLowerCase(),
+                ref: orderRef(order),
+                name: order.customer_name,
+              })}
+            </p>
+          ) : (
+            <StageTimeline
+              stage={order.batch.stage}
+              updatedAt={order.batch.stage_updated_at}
+            />
           )}
         </section>
       )}
 
-      {drops.length > 1 && (
-        <section className="card space-y-3">
-          <div>
-            <h2 className="font-bold">Where it goes</h2>
-            <p className="text-sm text-muted">
+      {/* One card for the whole order: who has what, where it goes, and what
+          it costs. These used to be three cards repeating each other. */}
+      <section className="card space-y-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-bold">
+            {drops.length > 1 ? "Who has what" : "Your order"}
+          </h2>
+          {drops.length > 1 && (
+            <span className="text-sm text-muted">
               {order.group?.collect_mode === "each"
-                ? "Each bag is delivered to that person, at the block under their name."
-                : `Everything is delivered to ${order.group?.leader_name ?? order.customer_name}, who hands the rest out.`}
-            </p>
-          </div>
+                ? "Delivered to each person"
+                : `All delivered to ${order.group?.leader_name ?? order.customer_name}`}
+            </span>
+          )}
+        </div>
 
-          {drops.map((drop) => (
-            <article
-              key={drop.key}
-              className="space-y-2 rounded-2xl border border-black/10 p-3"
-            >
-              <div className="flex items-baseline justify-between gap-2">
-                <h3 className="font-bold">{drop.name}</h3>
-                <span className="text-right text-sm font-semibold">
-                  {naira(drop.food + drop.delivery)}
-                  <span className="block text-xs font-normal text-muted">
-                    {naira(drop.food)} food + {naira(drop.delivery)} delivery
-                  </span>
-                </span>
-              </div>
-
-              <ul className="space-y-0.5 text-sm text-ink/75">
-                {drop.lines.map((line) => (
-                  <li key={line.id}>
-                    {line.qty}× {line.name}
-                    {line.choices.length > 0 && (
-                      <span className="text-muted"> · {line.choices.join(", ")}</span>
+        {drops.length > 1 ? (
+          <ul className="space-y-3">
+            {drops.map((drop) => (
+              <li key={drop.key} className="rounded-2xl border border-black/10 p-3">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h3 className="font-bold">
+                    {drop.name}
+                    {drop.key === order.id && (
+                      <span className="ml-2 text-xs font-normal text-muted">this link</span>
                     )}
-                    <span className="text-muted"> · {line.restaurant}</span>
-                  </li>
-                ))}
-              </ul>
+                  </h3>
+                  <span className="text-right text-sm font-semibold">
+                    {naira(drop.food + drop.delivery)}
+                    <span className="block text-xs font-normal text-muted">
+                      {naira(drop.food)} + {naira(drop.delivery)} delivery
+                    </span>
+                  </span>
+                </div>
 
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="chip border-black/10 bg-shell font-medium">
-                  {drop.hostel || order.hostel}
-                </span>
-                {drop.phone ? (
-                  <>
-                    <a
-                      href={`tel:${drop.phone}`}
-                      className="chip border-black/10 bg-white hover:border-ink/30"
-                    >
-                      Call {formatPhone(drop.phone)}
-                    </a>
-                    {whatsappLink(drop.phone, `Hi ${drop.name}, your Sudu order is here.`) && (
-                      <a
-                        href={
-                          whatsappLink(
-                            drop.phone,
-                            `Hi ${drop.name}, your Sudu order is here.`
-                          )!
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="chip border-black/10 bg-white hover:border-ink/30"
-                      >
-                        WhatsApp
+                <ul className="mt-1 space-y-0.5 text-sm text-ink/75">
+                  {drop.lines.map((line) => (
+                    <li key={line.id}>
+                      {line.qty}× {line.name}
+                      {line.choices.length > 0 && (
+                        <span className="text-muted"> · {line.choices.join(", ")}</span>
+                      )}
+                      <span className="text-muted"> · {line.restaurant}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-muted">{drop.hostel || order.hostel}</span>
+                  {drop.phone && (
+                    <>
+                      <a href={`tel:${drop.phone}`} className="font-semibold text-brand">
+                        {formatPhone(drop.phone)}
                       </a>
-                    )}
-                  </>
-                ) : (
-                  <span className="text-muted">No number saved for this bag</span>
-                )}
-                {drop.status && (
-                  <span
-                    className={`chip border-transparent ${
-                      drop.status === "pending"
-                        ? "bg-brand-tint text-brand-dark"
-                        : "bg-mint/10 text-mint"
-                    }`}
-                  >
-                    {drop.status === "pending" ? "Unpaid" : drop.status}
-                  </span>
-                )}
-                {drop.key === order.id && (
-                  <span className="text-xs text-muted">This link</span>
-                )}
-              </div>
+                      {whatsappLink(drop.phone, `Hi ${drop.name}, your Sudu order is here.`) && (
+                        <a
+                          href={
+                            whatsappLink(
+                              drop.phone,
+                              `Hi ${drop.name}, your Sudu order is here.`
+                            )!
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-brand"
+                        >
+                          WhatsApp
+                        </a>
+                      )}
+                    </>
+                  )}
+                  {drop.status && (
+                    <span
+                      className={`ml-auto rounded-full px-2.5 py-1 text-xs font-bold ${
+                        drop.status === "pending"
+                          ? "bg-brand-tint text-brand-dark"
+                          : "bg-mint/10 text-mint"
+                      }`}
+                    >
+                      {drop.status === "pending" ? "Unpaid" : drop.status}
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <ul className="space-y-1 text-sm">
+            {order.lines.map((line) => (
+              <li key={line.id} className="flex justify-between gap-3">
+                <span>
+                  {line.qty}× {line.name}
+                  {line.choices.length > 0 && (
+                    <span className="text-muted"> · {line.choices.join(", ")}</span>
+                  )}
+                  <span className="text-muted"> · {line.restaurant}</span>
+                </span>
+                <span className="shrink-0 font-medium">
+                  {naira(line.qty * line.unit_price_at_order)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
 
-            </article>
-          ))}
+        {order.customer_note && (
+          <p className="rounded-xl bg-shell px-3 py-2 text-sm">
+            <span className="font-semibold">You asked: </span>
+            {order.customer_note}
+          </p>
+        )}
 
-          {order.group?.mode === "one_payer" && drops.length > 1 && (
-            <p className="rounded-xl bg-shell px-3 py-2 text-sm">
-              You paid for all of this, delivery included. Everyone&apos;s share
-              of the delivery is worked out by how much they ordered, so what
-              each person owes you is the figure beside their name.
-            </p>
-          )}
-
-          {order.group?.mode === "split" && (
-            <p className="text-xs text-muted">
-              Send each person their own link. Anything still unpaid at the cut-off is
-              dropped and the rest of the order still travels. If that makes the order
-              smaller, the delivery fee drops with it and the difference comes back to
-              you.
-            </p>
-          )}
-        </section>
-      )}
-
-      {order.customer_note && (
-        <section className="card">
-          <h2 className="font-bold">What you asked for</h2>
-          <p className="mt-1 text-sm text-ink/75">{order.customer_note}</p>
-        </section>
-      )}
-
-      <section className="card space-y-2">
-        <h2 className="font-bold">
-          {drops.length > 1 ? "Everything in this order" : "Items"}
-        </h2>
-        <ul className="space-y-1 text-sm">
-          {order.lines.map((line) => (
-            <li key={line.id} className="flex justify-between gap-3">
-              <span>
-                {line.qty}× {line.name}{" "}
-                <span className="text-muted">({line.restaurant})</span>
-                {(line.for_name || order.group || named) && (
-                  <span className="text-muted">
-                    {" "}· for {line.for_name ?? order.customer_name}
-                  </span>
-                )}
-              </span>
-              <span className="shrink-0 font-medium">
-                {naira(line.qty * line.unit_price_at_order)}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <dl className="space-y-1 border-t border-black/10 pt-2 text-sm">
+        <dl className="space-y-1 border-t border-black/10 pt-3 text-sm">
           <Row label="Food" value={naira(order.subtotal_food)} />
-          <Row label={feeLabel(fees)} value={naira(order.fee)} />
+          <Row
+            label={
+              fees.otherItems > 0
+                ? `Delivery top-up (${allItems} items in this run)`
+                : `Delivery (${fees.items} item${fees.items === 1 ? "" : "s"})`
+            }
+            value={naira(order.fee)}
+          />
           {order.discount > 0 && (
             <Row label="First-order discount" value={`−${naira(order.discount)}`} />
           )}
           <Row label="Total" value={naira(order.total)} strong />
         </dl>
-        {fees.otherItems > 0 && (
-          <p className="rounded-xl bg-shell px-3 py-2 text-xs text-muted">
-            You already have {fees.otherItems} item
-            {fees.otherItems === 1 ? "" : "s"} in this run, with{" "}
-            {naira(fees.otherFee)} of delivery paid on them. All{" "}
-            {fees.items + fees.otherItems} travel together as one delivery
-            costing {naira(fees.wholeFee)}, so this order only carries the
-            difference.
-          </p>
-        )}
-        {fees.otherItems === 0 && fees.flashFee !== null && (
-          <p className="rounded-xl bg-brand-tint px-3 py-2 text-xs font-semibold text-brand-dark">
-            Delivery is down tonight.{" "}
-            {order.batch.flash_fee_reason || "Enjoy it."}
-          </p>
-        )}
+
+        {/* The arithmetic, in a line. Delivery is the thing people query. */}
+        <p className="text-xs text-muted">
+          {order.batch.flash_fee !== null && (
+            <>
+              Delivery is down tonight.{" "}
+              {order.batch.flash_fee_reason || "Enjoy it."}{" "}
+            </>
+          )}
+          {allItems} item{allItems === 1 ? "" : "s"} travel together, which is the{" "}
+          {naira(band.fee)} band ({bandLabel}).
+          {drops.length > 1 &&
+            ` That is shared out by what each person ordered, not split down the middle.`}
+          {fees.otherItems > 0 &&
+            ` ${naira(fees.otherFee)} of it was charged on your earlier order, so this one carries the rest.`}
+        </p>
       </section>
 
       {order.refund_owed > 0 && (
         <section className="card border-mint/30 bg-mint/5">
           <h2 className="font-bold">Refund owed: {naira(order.refund_owed)}</h2>
           <p className="mt-1 text-sm text-ink/75">
-            Your group got smaller, so the delivery fee dropped a band. The difference
-            comes back to you.
+            Your group got smaller, so the delivery fee dropped a band. The
+            difference comes back to you.
           </p>
         </section>
       )}
 
-      {paid ? (
-        <section className="card">
-          <h2 className="font-bold text-mint">Paid. You are on the run.</h2>
-          <p className="mt-1 text-sm text-ink/75">
-            {fillNote(settings.paid_note || PAID_NOTE_DEFAULT, {
-              hostel: order.hostel,
-              window: order.batch.delivery_window_text.toLowerCase(),
-              ref: orderRef(order),
-              name: order.customer_name,
-            })}
-          </p>
-        </section>
-      ) : order.status === "refunded" ? (
+      {order.status === "refunded" && (
         <section className="card">
           <h2 className="font-bold">Refunded</h2>
           <p className="mt-1 text-sm text-ink/75">
@@ -384,7 +386,9 @@ export default async function OrderPage({
             .
           </p>
         </section>
-      ) : expired ? (
+      )}
+
+      {!paid && order.status !== "refunded" && expired && (
         <section className="card">
           <h2 className="font-bold">This link has expired</h2>
           <p className="mt-1 text-sm text-ink/75">
@@ -395,76 +399,20 @@ export default async function OrderPage({
             . It takes one tap.
           </p>
         </section>
-      ) : (
-        <section className="card space-y-3">
-          <h2 className="text-lg font-extrabold">
-            Pay {naira(order.total)} to confirm
-          </h2>
-          <ExpiryNote cutOffISO={order.batch.cut_off_at} />
-
-          {order.payment_method === "card" ? (
-            <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
-              You chose to pay by card. Message us and we will send you a card link.
-            </p>
-          ) : hasBankDetails(settings) ? (
-            <>
-              <dl className="space-y-2 rounded-2xl bg-shell p-3 text-sm">
-                <Row label="Bank" value={settings.bank_name} />
-                <Row label="Account name" value={settings.bank_account_name || "Not set"} />
-                <Row label="Account number" value={settings.bank_account_number} strong />
-                <Row label="Narration" value={formatPhone(order.customer_phone)} />
-              </dl>
-              <div className="flex flex-wrap gap-2">
-                <CopyText
-                  value={settings.bank_account_number}
-                  label="Copy account number"
-                />
-                {/* The narration is what matches the transfer to this order,
-                    so it has to be as easy to paste as the account number. */}
-                <CopyText
-                  value={order.customer_phone}
-                  label="Copy narration"
-                />
-              </div>
-              <p className="text-sm text-ink/75">
-                Put your phone number in the transfer narration. That is how the payment
-                is matched to this order. Transfer only, and no cash on delivery.
-              </p>
-            </>
-          ) : (
-            <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              Transfer details are being set up. Message us and we will send them to you.
-            </p>
-          )}
-
-          <CardPayment order={order} settings={settings} batchLabel={batchLabel} />
-
-          <ShareLink label="Send this to whoever is paying" />
-          <p className="text-xs text-muted">
-            Not paying yourself? Send the link. It shows the items and the total, and the
-            order confirms once we see the money.
-          </p>
-        </section>
       )}
 
       {(paid || expired) && (
         <section className="card space-y-2">
           <h2 className="font-bold">Want this again?</h2>
           <p className="text-sm text-muted">
-            It goes back in your cart at today&apos;s prices. Nothing is charged
-            and you are not asked for your details again.
+            Back in your cart at today&apos;s prices, with your details already
+            filled in.
           </p>
           <RepeatOrder lines={repeat.lines} blocked={repeat.blocked} />
         </section>
       )}
 
       <HelpUs settings={settings} order={order} batchLabel={batchLabel} />
-
-      {awaitingPayment && !expired && (
-        <p className="text-center text-xs text-muted">
-          Already paid? This page updates once the transfer is matched. Refresh it.
-        </p>
-      )}
     </div>
   );
 }

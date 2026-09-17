@@ -62,6 +62,7 @@ export const TEMPLATE_DEFAULT: Record<TemplateKind, string> = {
 export const TEMPLATE_TOKENS: { token: string; means: string }[] = [
   { token: "{name}", means: "who the bag is for" },
   { token: "{ref}", means: "the order number, like #1042" },
+  { token: "{narration}", means: "what to type in the transfer, like 1042" },
   { token: "{batch}", means: "Wednesday night, and so on" },
   { token: "{total}", means: "what they owe" },
   { token: "{hostel}", means: "their hostel or block" },
@@ -107,6 +108,15 @@ type TemplateOrder = {
  * template, WhatsApp opens with the words already in it, and she presses send
  * herself. The wording is hers to edit in settings; these are only defaults.
  */
+/**
+ * What to type in the transfer's narration. The order number is four digits
+ * and belongs to one order, so it matches the payment without ambiguity; a
+ * phone number is eleven digits and covers every order that person places.
+ */
+export function narration(order: { order_no: number | null; id: string }): string {
+  return order.order_no ? String(order.order_no) : order.id.slice(0, 6).toUpperCase();
+}
+
 export function template(args: {
   kind: TemplateKind;
   order: TemplateOrder;
@@ -123,12 +133,13 @@ export function template(args: {
   const bank =
     settings.bank_name && settings.bank_account_number
       ? `${settings.bank_account_name} ${settings.bank_account_number} ` +
-        `(${settings.bank_name}). Put ${order.customer_phone} as the narration.`
+        `(${settings.bank_name}). Put ${narration(order)} as the narration.`
       : "Message me for the account details.";
 
   const values: Record<string, string> = {
     "{name}": order.for_name ?? order.customer_name,
     "{ref}": orderRef(order),
+    "{narration}": narration(order),
     "{batch}": batchLabel,
     "{total}": naira(order.total),
     "{hostel}": order.hostel,

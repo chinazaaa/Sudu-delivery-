@@ -1,6 +1,12 @@
 import { headers } from "next/headers";
 import { orderRef } from "./money";
-import { template, whatsappTo, TEMPLATE_LABEL, type TemplateKind } from "./messages";
+import {
+  narration,
+  template,
+  whatsappTo,
+  TEMPLATE_LABEL,
+  type TemplateKind,
+} from "./messages";
 import type { Settings } from "./settings";
 import type { FeedOrder } from "./admin-data";
 import type { OrderCardData } from "@/components/admin/OrderCard";
@@ -62,6 +68,7 @@ export function toCard(
     inGroup: order.group_id !== null,
     customerNote: order.customer_note ?? "",
     adminNote: order.admin_note ?? "",
+    narration: narration(order),
     lines: order.lines.map((line) => ({
       id: line.id,
       qty: line.qty,

@@ -37,6 +37,8 @@ export type OrderCardData = {
   inGroup: boolean;
   customerNote: string;
   adminNote: string;
+  /** What they were told to type in the transfer. */
+  narration: string;
   lines: OrderCardLine[];
   /** Ready-made WhatsApp links, one per template, built on the server. */
   templates: { kind: string; label: string; href: string }[];
@@ -195,6 +197,10 @@ export default function OrderCard({
             <div className="flex justify-between">
               <dt>Pays by</dt>
               <dd>{order.paymentMethod === "card" ? "Card link" : "Transfer"}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>Narration to look for</dt>
+              <dd className="font-semibold text-ink">{order.narration}</dd>
             </div>
             {order.pin && (
               <div className="flex justify-between">
