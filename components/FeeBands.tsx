@@ -17,14 +17,15 @@ export default function FeeBands({
   flashFee = null,
   bands = FEE_BANDS,
 }: {
-  /** Containers in the order, used to mark the band it lands in. */
+  /** Containers in the order, used to mark the band it lands in. Zero marks
+   *  nothing, because an empty cart has not landed anywhere yet. */
   itemCount: number;
   /** A drop for one run moves every band down by the same amount. */
   flashFee?: number | null;
   bands?: Band[];
 }) {
   const rows = bandTable(flashFee, bands);
-  const here = bands.indexOf(bandFor(Math.max(itemCount, 1), bands));
+  const here = itemCount > 0 ? bands.indexOf(bandFor(itemCount, bands)) : -1;
 
   return (
     <details className="group mt-1 text-sm">

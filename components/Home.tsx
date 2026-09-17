@@ -8,7 +8,10 @@ import ItemRow from "./ItemRow";
 import ItemSheet from "./ItemSheet";
 import RunStrip from "./RunStrip";
 import Thumb from "./Thumb";
-import { useCart } from "@/lib/cart";
+import { countItems, useCart } from "@/lib/cart";
+import FeeBands from "./FeeBands";
+import { feeFor, type Band } from "@/lib/fees";
+import { naira } from "@/lib/money";
 import type { ItemView, MenuView, BatchView } from "@/lib/view";
 import type { Slide } from "@/lib/slides";
 
@@ -19,6 +22,7 @@ export default function Home({
   popularIds,
   autoHeadline,
   autoLines,
+  bands,
 }: {
   menu: MenuView[];
   nextRun: BatchView | null;
@@ -29,6 +33,8 @@ export default function Home({
   /** The wording for the slider the page builds when there are no slides. */
   autoHeadline: string;
   autoLines: string[];
+  /** What delivery costs, so the page can say where it starts. */
+  bands: Band[];
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<{ item: ItemView; place: MenuView } | null>(null);
@@ -88,6 +94,26 @@ export default function Home({
   return (
     <div className="space-y-6">
       {nextRun && <RunStrip run={nextRun} />}
+
+      {/* The first question anybody asks. Saying it once, up here, beats
+          finding it out at checkout. */}
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-2xl bg-paper px-4 py-3 shadow-card">
+        <span className="font-bold">
+          Delivery from {naira(feeFor(1, nextRun?.flashFee ?? null, bands))}
+        </span>
+        <span className="text-sm text-muted">
+          one fee for the whole order, however many restaurants
+        </span>
+        <span className="w-full sm:w-auto">
+          {/* Marked against what is actually in the cart, so an empty one
+              claims no band. */}
+          <FeeBands
+            itemCount={countItems(cart)}
+            flashFee={nextRun?.flashFee ?? null}
+            bands={bands}
+          />
+        </span>
+      </div>
 
       <div className="relative">
         <input
