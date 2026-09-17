@@ -9,6 +9,7 @@ import {
   clearPeople,
   cartSubtotal,
   countItems,
+  groupNames,
   removePerson,
   setForName,
   setQty,
@@ -36,7 +37,7 @@ export default function CartView({
   }
 
   const names = people.map((p) => p.name);
-  const groups = ["", ...names]
+  const groups = groupNames(cart, people)
     .map((person) => ({
       person,
       lines: cart.filter((l) => l.forName === person),

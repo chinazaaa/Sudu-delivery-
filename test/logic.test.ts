@@ -12,6 +12,7 @@ import { adminEmails } from "../lib/email";
 import { shareRef } from "../lib/money";
 import { externalUrl, EMPTY as SETTINGS_DEFAULTS, type Settings } from "../lib/settings";
 import { matchPhotos, tidy } from "../lib/match";
+import { groupNames, lineKey as cartLineKey, reclaim } from "../lib/cart";
 
 /** A settings row with nothing filled in, for the template tests. */
 const EMPTY_SETTINGS: Settings = { ...SETTINGS_DEFAULTS };
@@ -624,4 +625,65 @@ test("only unpaid orders in a run that can still take money are worth chasing", 
   ];
   const chase = orders.filter((o) => o.status === "pending" && open.has(o.batch_id));
   assert.deepEqual(chase.map((o) => o.id), ["a"]);
+});
+
+/**
+ * Food labelled for somebody the people list has lost.
+ *
+ * This is what happened when the people moved to a new storage key: the cart
+ * kept the names, the list came back empty, and the lines were rendered by
+ * nobody while still counting towards the fee and the total.
+ */
+test("reclaim: a line for a person who has gone comes back", () => {
+  const line = (forName: string, qty: number, itemId = "a") => ({
+    key: cartLineKey(itemId, [], forName),
+    itemId,
+    optionIds: [] as string[],
+    name: "Wrap",
+    restaurantId: "r",
+    restaurantName: "Chicken Republic",
+    imageUrl: "",
+    unitPrice: 3000,
+    choices: [] as string[],
+    qty,
+    forName,
+  });
+
+  const kept = [line("", 1), line("Ada", 2)];
+  assert.equal(reclaim(kept, [{ name: "Ada", phone: "", hostel: "" }]), kept);
+
+  const healed = reclaim([line("", 1), line("Ada", 2)], []);
+  assert.equal(healed.length, 1, "the two become one line");
+  assert.equal(healed[0].qty, 3);
+  assert.equal(healed[0].forName, "");
+
+  const different = reclaim([line("Ada", 1, "a"), line("Ada", 1, "b")], []);
+  assert.equal(different.length, 2, "different items stay apart");
+  assert.deepEqual(
+    different.map((l) => l.forName),
+    ["", ""]
+  );
+});
+
+test("groupNames: a name only the cart knows is still shown", () => {
+  const line = (forName: string) => ({
+    key: forName,
+    itemId: "a",
+    optionIds: [] as string[],
+    name: "Wrap",
+    restaurantId: "r",
+    restaurantName: "KFC",
+    imageUrl: "",
+    unitPrice: 1,
+    choices: [] as string[],
+    qty: 1,
+    forName,
+  });
+
+  assert.deepEqual(groupNames([line(""), line("Ada")], []), ["", "Ada"]);
+  assert.deepEqual(
+    groupNames([line("Ada"), line("Ada")], [{ name: "Bem", phone: "", hostel: "" }]),
+    ["", "Bem", "Ada"],
+    "no name twice"
+  );
 });

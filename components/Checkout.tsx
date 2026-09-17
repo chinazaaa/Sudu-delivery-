@@ -7,6 +7,7 @@ import { submitOrder, type SubmitState } from "@/app/actions";
 import {
   cartSubtotal,
   countItems,
+  groupNames,
   toServerLines,
   updatePerson,
   useCart,
@@ -106,7 +107,9 @@ export default function Checkout({
 
   const groupOn = people.length > 0;
   const names = people.map((p) => p.name);
-  const shares = ["", ...names]
+  // Anyone the cart still names, whether or not they are on the list, so no
+  // line can be paid for without being ordered.
+  const shares = groupNames(cart, people)
     .map((person) => {
       const lines = cart.filter((l) => l.forName === person);
       return {

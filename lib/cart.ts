@@ -53,15 +53,79 @@ function load(): void {
       ? saved.people.map((entry: Person | string) =>
           typeof entry === "string"
             ? { name: entry, phone: "", hostel: "" }
-            : { name: entry.name, phone: entry.phone ?? "", hostel: entry.hostel ?? "" }
+            : {
+                name: entry.name,
+                phone: entry.phone ?? "",
+                hostel: entry.hostel ?? "",
+                // Where their food goes and how they pay used to be dropped
+                // here, so a refresh at checkout asked for both again.
+                goesTo: entry.goesTo,
+                pays: entry.pays,
+              }
         )
       : [];
     activePerson = typeof saved.active === "string" ? saved.active : "";
+
+    // Food left labelled for somebody the list no longer has comes back to
+    // whoever is ordering. Without this it is invisible in the cart and still
+    // in the count, the subtotal and the delivery fee, which is what happened
+    // when the people were moved to a new key and the old list stopped
+    // loading.
+    const reclaimed = reclaim(lines, people);
+    if (reclaimed !== lines) {
+      lines = reclaimed;
+      window.localStorage.setItem(KEY, JSON.stringify(lines));
+    }
   } catch {
     lines = [];
     people = [];
     activePerson = "";
   }
+}
+
+
+/**
+ * Every name the cart has food under: the people on the list, then anyone a
+ * line still names who is not on it. Grouping by the list alone is what lets
+ * a line go missing, so the grouping asks the cart as well.
+ *
+ * The empty string leads, standing for the person doing the ordering.
+ */
+export function groupNames(list: CartLine[], known: Person[]): string[] {
+  const names = known.map((person) => person.name);
+  const strays = list
+    .map((line) => line.forName)
+    .filter((name) => name && !names.includes(name));
+  return ["", ...names, ...new Set(strays)];
+}
+
+/**
+ * Lines whose owner has gone, handed back to the person ordering.
+ *
+ * A line carries a name, and the cart shows one group per person it knows
+ * about. A name it does not know means a line nobody renders and everybody
+ * pays for. Two lines that become the same thing once the name is off are
+ * added together rather than left as two identical rows.
+ *
+ * The same list comes back untouched when there is nothing to reclaim, so a
+ * load that changes nothing writes nothing.
+ */
+export function reclaim(list: CartLine[], known: Person[]): CartLine[] {
+  const names = new Set(known.map((person) => person.name));
+  if (list.every((line) => !line.forName || names.has(line.forName))) return list;
+
+  const merged: CartLine[] = [];
+  for (const line of list) {
+    if (!line.forName || names.has(line.forName)) {
+      merged.push({ ...line });
+      continue;
+    }
+    const key = lineKey(line.itemId, line.optionIds, "");
+    const twin = merged.find((other) => other.key === key);
+    if (twin) twin.qty += line.qty;
+    else merged.push({ ...line, forName: "", key });
+  }
+  return merged;
 }
 
 function save(next: CartLine[]): void {
