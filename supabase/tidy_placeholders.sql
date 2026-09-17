@@ -38,16 +38,17 @@ where m.name in ('Medium pepperoni', 'Medium BBQ chicken', 'Large meat lovers',
                  'Refuel Meal', 'Zinger burger meal')
   and not exists (select 1 from order_items oi where oi.menu_item_id = m.id);
 
--- Burger Nation was seeded as a placeholder before Burger King had a menu.
--- It goes entirely, along with anything filed under it.
+-- Restaurants the first seed created as placeholders, before any of them had
+-- a real menu. Burger Nation was replaced by Burger King, and Kilimanjaro was
+-- never opened. They go entirely, along with anything filed under them.
 delete from menu_items m
 using restaurants r
 where m.restaurant_id = r.id
-  and r.name ilike '%burger nation%'
+  and (r.name ilike '%burger nation%' or r.name ilike '%kilimanjaro%')
   and not exists (select 1 from order_items oi where oi.menu_item_id = m.id);
 
 delete from restaurants r
-where r.name ilike '%burger nation%'
+where (r.name ilike '%burger nation%' or r.name ilike '%kilimanjaro%')
   and not exists (select 1 from menu_items m where m.restaurant_id = r.id);
 
 -- Anything still switched off across the whole site, so you can see at a

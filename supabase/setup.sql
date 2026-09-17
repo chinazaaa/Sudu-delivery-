@@ -295,9 +295,8 @@ insert into restaurants (name, address, closes_at, active, sort_order)
 select * from (values
   ('KFC Novare',      'Novare Mall, Sangotedo',               time '21:00', true,  1),
   ('Domino''s Pizza', 'KM 34 Lekki-Epe Expy, Emperor Estate', time '22:00', true,  2),
-  -- Added once the operation is boring; off the menu until then.
-  ('Panarottis',      'Shop C05, Novare Mall, Sangotedo',     time '22:00', false, 3),
-  ('Kilimanjaro',     'Novare Mall, Sangotedo',               time '22:00', false, 4)
+  -- Added once the operation is boring, and off the menu until then.
+  ('Panarottis',      'Shop C05, Novare Mall, Sangotedo',     time '22:00', false, 3)
 ) as seed(name, address, closes_at, active, sort_order)
 where not exists (select 1 from restaurants);
 
