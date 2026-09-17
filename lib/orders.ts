@@ -9,6 +9,7 @@ import {
 } from "./coupons";
 import { cartConverted } from "./carts";
 import { emailAdmins } from "./email";
+import { siteUrl } from "./admin-templates";
 import { naira, orderRef } from "./money";
 import { SLOT_LABEL } from "./config";
 import { runDateLabel, weekdayLabel } from "./time";
@@ -546,11 +547,17 @@ async function announceOrder(args: {
     const order = await getOrder(args.orderId);
     const label = `${runDateLabel(args.batch.run_date)} · ${SLOT_LABEL[args.batch.slot]}`;
 
+    // Straight to the order, because the point of the email is to go and do
+    // something about it: send the message, paste the card link, mark it paid.
+    const url = await siteUrl().catch(() => "");
+    const link = url ? `${url}/admin/orders/${args.orderId}` : "";
+
     await emailAdmins(
       `New order ${order ? orderRef(order) : ""} · ${args.name} · ` +
         `${naira(order?.total ?? 0)}`,
       [
         `${args.name} just ordered for the ${label} run.`,
+        ...(link ? ["", `Open it: ${link}`] : []),
         "",
         `Total: ${naira(order?.total ?? 0)} (unpaid until you see the transfer)`,
         `Number: ${args.phone}`,

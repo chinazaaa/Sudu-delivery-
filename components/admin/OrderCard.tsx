@@ -135,7 +135,7 @@ export default function OrderCard({
         </p>
       )}
 
-      {order.paymentMethod === "card" && order.status === "pending" && (
+      {order.status === "pending" && (
         <div className="rounded-2xl bg-brand-tint p-3">
           <form action={savePaymentLink} className="space-y-1.5">
             <label className="label" htmlFor={`link-${order.id}`}>
@@ -157,6 +157,8 @@ export default function OrderCard({
             <p className="text-xs text-muted">
               Saved against this order. &quot;Send card link&quot; then sends
               this one, and their own page turns it into a pay button.
+              {order.paymentMethod !== "card" &&
+                " They asked to pay by transfer, so this is only needed if they change their mind."}
             </p>
           </form>
         </div>

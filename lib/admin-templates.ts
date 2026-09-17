@@ -21,11 +21,10 @@ export async function siteUrl(): Promise<string> {
 
 /** Which templates are worth offering depends on where the order has got to. */
 function kindsFor(order: FeedOrder): TemplateKind[] {
-  if (order.status === "pending") {
-    const asking: TemplateKind[] = ["payment"];
-    if (order.payment_method === "card") asking.push("card");
-    return [...asking, "pin"];
-  }
+  // Card is offered on any unpaid order, not only one that chose card at
+  // checkout. People change their mind about how they want to pay, and the
+  // answer should not be to go and edit the order first.
+  if (order.status === "pending") return ["payment", "card", "pin"];
   if (order.status === "refunded") return ["pin"];
   return ["confirmed", "ready", "late", "pin"];
 }
