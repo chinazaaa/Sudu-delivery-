@@ -80,6 +80,29 @@ export default function Home({
     };
   }, [menu, popularIds]);
 
+  // Said once, wherever it ends up sitting.
+  const feeLine = (
+    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+      <span className="font-bold">
+        Delivery from {naira(feeFor(1, nextRun?.flashFee ?? null, bands))}
+      </span>
+      {/* The explanation is inside the panel below on a phone, where two
+          extra lines of it cost more than they say. */}
+      <span className="hidden text-sm text-muted sm:inline">
+        one fee for the whole order, however many restaurants
+      </span>
+      <span className="sm:w-auto">
+        {/* Marked against what is actually in the cart, so an empty one
+            claims no band. */}
+        <FeeBands
+          itemCount={countItems(cart)}
+          flashFee={nextRun?.flashFee ?? null}
+          bands={bands}
+        />
+      </span>
+    </div>
+  );
+
   if (menu.length === 0) {
     return (
       <div className="card mx-auto mt-10 max-w-md text-center">
@@ -92,28 +115,15 @@ export default function Home({
   }
 
   return (
-    <div className="space-y-6">
-      {nextRun && <RunStrip run={nextRun} />}
-
-      {/* The first question anybody asks. Saying it once, up here, beats
-          finding it out at checkout. */}
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-2xl bg-paper px-4 py-3 shadow-card">
-        <span className="font-bold">
-          Delivery from {naira(feeFor(1, nextRun?.flashFee ?? null, bands))}
-        </span>
-        <span className="text-sm text-muted">
-          one fee for the whole order, however many restaurants
-        </span>
-        <span className="w-full sm:w-auto">
-          {/* Marked against what is actually in the cart, so an empty one
-              claims no band. */}
-          <FeeBands
-            itemCount={countItems(cart)}
-            flashFee={nextRun?.flashFee ?? null}
-            bands={bands}
-          />
-        </span>
-      </div>
+    <div className="space-y-4 sm:space-y-6">
+      {/* What delivery costs rides inside the run strip rather than in a card
+          of its own. Four stacked bars is how the first restaurant ends up
+          off the bottom of a short phone. */}
+      {nextRun ? (
+        <RunStrip run={nextRun} note={feeLine} />
+      ) : (
+        <div className="rounded-2xl bg-paper px-4 py-3 shadow-card">{feeLine}</div>
+      )}
 
       <div className="relative">
         <input
@@ -159,58 +169,6 @@ export default function Home({
         </section>
       ) : (
         <>
-          <Carousel>
-            {(slides.length > 0
-              ? slides.map((slide) => ({
-                  key: slide.id,
-                  image: slide.image_url,
-                  name: slide.headline,
-                  headline: slide.headline,
-                  body: slide.body,
-                  href: slide.link_url,
-                  linkText: slide.link_text || "See the menu",
-                }))
-              : menu.map((place, index) => ({
-                  key: place.restaurant.id,
-                  image: place.restaurant.bannerUrl,
-                  name: place.restaurant.name,
-                  headline: autoHeadline.replace("{restaurant}", place.restaurant.name),
-                  body: autoLines[index % autoLines.length] ?? "",
-                  href: `/r/${place.restaurant.id}`,
-                  linkText: "See the menu",
-                }))
-            ).map((slide) => (
-              <div key={slide.key} className="relative h-64 sm:h-80">
-                <Thumb
-                  src={slide.image}
-                  name={slide.name}
-                  rounded="rounded-none"
-                  variant="banner"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-ink/95 via-ink/60 to-ink/20" />
-                <div className="absolute inset-0 flex flex-col justify-end gap-3 p-5 pb-12 text-white sm:p-8 sm:pb-14">
-                  <h2 className="text-2xl font-extrabold leading-tight sm:text-4xl">
-                    {slide.headline}
-                  </h2>
-                  {slide.body && (
-                    <p className="max-w-md text-sm text-white/80 sm:text-base">
-                      {slide.body}
-                    </p>
-                  )}
-                  {slide.href && (
-                    <Link
-                      href={slide.href}
-                      className="btn w-fit bg-paper px-6 py-3 text-ink"
-                    >
-                      {slide.linkText}
-                    </Link>
-                  )}
-                </div>
-              </div>
-            ))}
-          </Carousel>
-
-
           <section className="space-y-3">
             <h2 className="section-title">Restaurants</h2>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -250,6 +208,59 @@ export default function Home({
               ))}
             </div>
           </section>
+
+          <Carousel>
+            {(slides.length > 0
+              ? slides.map((slide) => ({
+                  key: slide.id,
+                  image: slide.image_url,
+                  name: slide.headline,
+                  headline: slide.headline,
+                  body: slide.body,
+                  href: slide.link_url,
+                  linkText: slide.link_text || "See the menu",
+                }))
+              : menu.map((place, index) => ({
+                  key: place.restaurant.id,
+                  image: place.restaurant.bannerUrl,
+                  name: place.restaurant.name,
+                  headline: autoHeadline.replace("{restaurant}", place.restaurant.name),
+                  body: autoLines[index % autoLines.length] ?? "",
+                  href: `/r/${place.restaurant.id}`,
+                  linkText: "See the menu",
+                }))
+            ).map((slide) => (
+              <div key={slide.key} className="relative h-52 sm:h-72 lg:h-80">
+                <Thumb
+                  src={slide.image}
+                  name={slide.name}
+                  rounded="rounded-none"
+                  variant="banner"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-ink/95 via-ink/60 to-ink/20" />
+                <div className="absolute inset-0 flex flex-col justify-end gap-3 p-5 pb-12 text-white sm:p-8 sm:pb-14">
+                  <h2 className="text-2xl font-extrabold leading-tight sm:text-4xl">
+                    {slide.headline}
+                  </h2>
+                  {slide.body && (
+                    <p className="max-w-md text-sm text-white/80 sm:text-base">
+                      {slide.body}
+                    </p>
+                  )}
+                  {slide.href && (
+                    <Link
+                      href={slide.href}
+                      className="btn w-fit bg-paper px-6 py-3 text-ink"
+                    >
+                      {slide.linkText}
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))}
+          </Carousel>
+
+
 
           {popular.length > 0 && (
             <section className="space-y-3 pb-28">

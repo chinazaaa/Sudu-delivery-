@@ -28,7 +28,7 @@ export default function FeeBands({
   const here = itemCount > 0 ? bands.indexOf(bandFor(itemCount, bands)) : -1;
 
   return (
-    <details className="group mt-1 text-sm">
+    <details className="group text-sm sm:mt-1">
       <summary className="cursor-pointer list-none text-muted underline decoration-dotted underline-offset-4">
         Why this much?
       </summary>
