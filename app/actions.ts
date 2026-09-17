@@ -99,9 +99,13 @@ export async function keepCart(form: FormData): Promise<void> {
   });
 }
 
-export type MoveState = { error: string | null };
+export type MoveState = {
+  error: string | null;
+  /** The run it landed on, so the page can say so rather than just redrawing. */
+  movedTo: string | null;
+};
 
-/** Moves an unpaid order onto another run. Two taps: the button, then the run. */
+/** Moves an order onto another run. Two taps: the button, then the run. */
 export async function moveOrderToRun(
   _prev: MoveState,
   form: FormData
@@ -110,11 +114,11 @@ export async function moveOrderToRun(
     String(form.get("order_id")),
     String(form.get("batch_id"))
   );
-  if (!result.ok) return { error: result.error };
+  if (!result.ok) return { error: result.error, movedTo: null };
 
   revalidatePath(`/o/${result.orderId}`);
   revalidatePath("/orders");
-  return { error: null };
+  return { error: null, movedTo: String(form.get("run_label") ?? "the new run") };
 }
 
 export type FillState = {

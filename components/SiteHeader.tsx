@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { countItems, useCart } from "@/lib/cart";
 
 /**
@@ -12,6 +13,15 @@ export default function SiteHeader() {
   const cart = useCart();
   const count = countItems(cart);
   const path = usePathname();
+  const router = useRouter();
+
+  // The arrow went home from every page, so anyone who had come from their
+  // orders, or a restaurant, was thrown out of what they were doing. It goes
+  // back where they came from, and only falls home when there is no back.
+  const [canGoBack, setCanGoBack] = useState(false);
+  useEffect(() => {
+    setCanGoBack(window.history.length > 1);
+  }, [path]);
 
   if (path.startsWith("/admin")) return null;
 
@@ -21,13 +31,14 @@ export default function SiteHeader() {
     <header className="sticky top-0 z-30 border-b border-black/5 bg-paper/95 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
         {deep ? (
-          <Link
-            href="/"
-            aria-label="Back to the menu"
+          <button
+            type="button"
+            onClick={() => (canGoBack ? router.back() : router.push("/"))}
+            aria-label="Back"
             className="-ml-1 grid size-9 shrink-0 place-items-center rounded-full text-lg hover:bg-black/[0.04]"
           >
             ←
-          </Link>
+          </button>
         ) : (
           <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand text-lg font-black text-white">
             S

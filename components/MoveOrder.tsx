@@ -29,8 +29,19 @@ export default function MoveOrder({
   const [open, setOpen] = useState(!collapsed);
   const [state, action, pending] = useActionState<MoveState, FormData>(
     moveOrderToRun,
-    { error: null }
+    { error: null, movedTo: null }
   );
+
+  if (state.movedTo) {
+    return (
+      <p className="rounded-xl bg-mint/10 px-3 py-2.5 text-sm font-semibold text-mint">
+        Moved to {state.movedTo}.{" "}
+        {paid
+          ? "Nothing more to do: your food comes on that run."
+          : "Pay for it below and you are on that run."}
+      </p>
+    );
+  }
 
   if (runs.length === 0) {
     return (
@@ -55,6 +66,7 @@ export default function MoveOrder({
   return (
     <form action={action} className="space-y-2">
       <input type="hidden" name="order_id" value={orderId} />
+      <input type="hidden" name="run_label" value="" />
 
       <p className="text-sm font-semibold">Move it to:</p>
       <ul className="space-y-2">
@@ -65,6 +77,15 @@ export default function MoveOrder({
               name="batch_id"
               value={run.id}
               disabled={pending}
+              // The label rides along so the confirmation can name the run
+              // rather than saying something moved somewhere.
+              onClick={(event) => {
+                const form = event.currentTarget.form;
+                const field = form?.elements.namedItem(
+                  "run_label"
+                ) as HTMLInputElement | null;
+                if (field) field.value = run.label;
+              }}
               className="flex w-full items-center justify-between gap-3 rounded-xl border border-black/10 bg-white px-3 py-2.5 text-left hover:border-ink/30 disabled:opacity-50"
             >
               <span>
