@@ -124,11 +124,6 @@ export default async function RestaurantAdmin({
           <label className="label">Address</label>
           <input name="address" defaultValue={restaurant.address} className="field" />
         </div>
-        <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm text-brand-dark">
-          The banner is the big slide at the top of the shop and the logo is the
-          circle beside the name. Photograph the real food: it is the single thing
-          that decides whether the site looks worth ordering from.
-        </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="label" htmlFor="logo">Logo photo</label>
