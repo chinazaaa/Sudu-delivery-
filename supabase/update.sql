@@ -126,14 +126,11 @@ create table if not exists run_schedule (
 );
 alter table run_schedule enable row level security;
 
--- Friday afternoon and Friday night, which is where the brief starts. Only
--- seeded into an empty table, so an edited schedule is never overwritten.
-insert into run_schedule (weekday, slot, cut_off, window_text)
-select * from (values
-  (5, 'afternoon'::batch_slot, time '11:30', 'On campus ~2:00pm'),
-  (5, 'night'::batch_slot,     time '18:00', 'On campus ~8:30pm')
-) as seed(weekday, slot, cut_off, window_text)
-where not exists (select 1 from run_schedule);
+-- No days are seeded here. This file is run on a database that is already
+-- working, and a week with nothing in it is a decision somebody made in
+-- admin. Seeding Friday back into an empty table is how a day you deleted
+-- reappeared the next time you ran this. A brand new database gets its
+-- Friday from setup.sql.
 
 -- A promoter signs in with their code and a four-digit PIN, the same way a
 -- customer opens their order history.

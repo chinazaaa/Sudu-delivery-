@@ -95,6 +95,11 @@ export default async function SchedulePage() {
               <form action={saveScheduleRun} className="space-y-2">
                 <input type="hidden" name="weekday" value={run.weekday} />
                 <input type="hidden" name="slot" value={run.slot} />
+                {/* A button carries one name and one value, so what Pause and
+                    Save each need to know about the paused state lives here.
+                    Without this, Pause worked and Resume did nothing. */}
+                <input type="hidden" name="active" value={String(run.active)} />
+                <input type="hidden" name="next_active" value={String(!run.active)} />
 
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className={run.active ? "font-bold" : "font-bold text-muted"}>

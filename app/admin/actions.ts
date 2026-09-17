@@ -213,7 +213,8 @@ export async function saveScheduleRun(form: FormData): Promise<void> {
         slot,
         cut_off: cutOff,
         window_text: String(form.get("window_text") ?? "").trim(),
-        active: true,
+        // Saving a time must not quietly bring a paused day back.
+        active: form.get("active") !== "false",
       },
       { onConflict: "weekday,slot" }
     );
@@ -241,7 +242,7 @@ export async function toggleScheduleRun(form: FormData): Promise<void> {
   await assertAdmin();
   const { error } = await db()
     .from("run_schedule")
-    .update({ active: form.get("active") === "true" })
+    .update({ active: form.get("next_active") === "true" })
     .eq("id", String(form.get("schedule_id")));
   if (error) throw new Error(`Could not change that day: ${error.message}`);
   revalidatePath("/admin", "layout");
@@ -475,7 +476,7 @@ export async function toggleHostel(form: FormData): Promise<void> {
   await assertAdmin();
   await db()
     .from("hostels")
-    .update({ active: form.get("active") === "true" })
+    .update({ active: form.get("next_active") === "true" })
     .eq("id", String(form.get("hostel_id")));
 
   revalidatePath("/admin", "layout");
@@ -657,7 +658,7 @@ export async function toggleCoupon(form: FormData): Promise<void> {
   await assertAdmin();
   await db()
     .from("coupons")
-    .update({ active: form.get("active") === "true" })
+    .update({ active: form.get("next_active") === "true" })
     .eq("code", String(form.get("code")));
   revalidatePath("/admin", "layout");
 }
