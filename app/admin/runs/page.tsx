@@ -121,30 +121,73 @@ export default async function RunsPage({
           {schedule.map((run) => (
             <li
               key={run.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-black/10 px-3 py-2"
+              className={`rounded-xl border p-3 ${
+                run.active ? "border-black/10" : "border-black/5 bg-black/[0.02]"
+              }`}
             >
-              <span className={run.active ? "" : "text-muted line-through"}>
-                <span className="font-bold">{WEEKDAYS[run.weekday]}</span>{" "}
-                <span className="text-muted">
-                  {SLOT_LABEL[run.slot]} · closes {run.cut_off} ·{" "}
-                  {run.window_text || "no window set"}
-                </span>
-              </span>
-              <span className="flex gap-2">
-                <form action={toggleScheduleRun}>
-                  <input type="hidden" name="schedule_id" value={run.id} />
-                  <input type="hidden" name="active" value={String(!run.active)} />
-                  <button className="chip border-black/10 bg-white py-1.5 text-xs">
-                    {run.active ? "Pause" : "Resume"}
-                  </button>
-                </form>
-                <form action={deleteScheduleRun}>
-                  <input type="hidden" name="schedule_id" value={run.id} />
-                  <button className="chip border-black/10 bg-white py-1.5 text-xs text-brand">
-                    Remove
-                  </button>
-                </form>
-              </span>
+              {/* Editable in place: a cut-off that moves half an hour is the
+                  most likely change anyone makes here. */}
+              <form action={saveScheduleRun} className="space-y-2">
+                <input type="hidden" name="weekday" value={run.weekday} />
+                <input type="hidden" name="slot" value={run.slot} />
+
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className={run.active ? "font-bold" : "font-bold text-muted"}>
+                    {WEEKDAYS[run.weekday]} {SLOT_LABEL[run.slot]}
+                    {!run.active && (
+                      <span className="ml-2 text-xs font-semibold">paused</span>
+                    )}
+                  </span>
+                  <span className="flex gap-2">
+                    <button
+                      formAction={toggleScheduleRun}
+                      name="schedule_id"
+                      value={run.id}
+                      className="chip border-black/10 bg-white py-1.5 text-xs"
+                    >
+                      {run.active ? "Pause" : "Resume"}
+                    </button>
+                    <button
+                      formAction={deleteScheduleRun}
+                      name="schedule_id"
+                      value={run.id}
+                      className="chip border-black/10 bg-white py-1.5 text-xs text-brand"
+                    >
+                      Remove
+                    </button>
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="w-32">
+                    <label className="label" htmlFor={`cut-${run.id}`}>
+                      Closes
+                    </label>
+                    <input
+                      id={`cut-${run.id}`}
+                      name="cut_off"
+                      type="time"
+                      defaultValue={run.cut_off}
+                      className="field py-2 text-sm"
+                    />
+                  </div>
+                  <div className="grow">
+                    <label className="label" htmlFor={`window-${run.id}`}>
+                      What customers are told
+                    </label>
+                    <input
+                      id={`window-${run.id}`}
+                      name="window_text"
+                      defaultValue={run.window_text}
+                      placeholder="On campus ~2:00pm"
+                      className="field py-2 text-sm"
+                    />
+                  </div>
+                  <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
+                    Save
+                  </SaveButton>
+                </div>
+              </form>
             </li>
           ))}
           {schedule.length === 0 && (
@@ -154,7 +197,16 @@ export default async function RunsPage({
           )}
         </ul>
 
-        <form action={saveScheduleRun} className="grid gap-2 sm:grid-cols-5">
+        <p className="text-xs text-muted">
+          Changing a time here changes the runs that open from now on. A run
+          already open keeps its own time, which is editable on the run itself.
+        </p>
+
+        <form
+          action={saveScheduleRun}
+          className="grid gap-2 border-t border-black/5 pt-3 sm:grid-cols-5"
+        >
+          <p className="font-semibold sm:col-span-5">Add another day</p>
           <div className="sm:col-span-2">
             <label className="label" htmlFor="weekday">Day</label>
             <select id="weekday" name="weekday" className="field py-2 text-sm" defaultValue="5">
