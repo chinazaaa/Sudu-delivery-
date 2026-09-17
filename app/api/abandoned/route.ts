@@ -7,9 +7,12 @@ import { safeSettings } from "@/lib/settings";
 export const dynamic = "force-dynamic";
 
 /**
- * Checks for carts nobody finished and emails the admins once about each.
- * Vercel's scheduler calls this; it is also safe to open by hand, since a cart
- * is only ever reported once.
+ * The daily recap: every cart nobody finished, with the ones that turned up
+ * since yesterday called out. It repeats what is still outstanding on purpose,
+ * because a cart stops appearing only when it is dealt with in admin.
+ *
+ * Called by a scheduler, either Supabase's pg_cron or Vercel's, and safe to
+ * open by hand at any time.
  *
  * Nothing is sent to the customer. The brief's rule holds: people are messaged
  * by a person, on WhatsApp, not by a robot.
@@ -26,28 +29,36 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   const settings = await safeSettings();
   const minutes = settings.abandon_minutes || 45;
-  const carts = await abandonedCarts(minutes, true);
+  const carts = await abandonedCarts(minutes);
 
   if (carts.length === 0) {
-    return NextResponse.json({ found: 0, emailed: false });
+    return NextResponse.json({ found: 0, fresh: 0, emailed: false });
   }
 
+  const fresh = carts.filter((cart) => cart.alerted_at === null);
+  const older = carts.filter((cart) => cart.alerted_at !== null);
   const total = carts.reduce((sum, cart) => sum + cart.value, 0);
+
   const emailed = await emailAdmins(
-    `${carts.length} cart${carts.length === 1 ? "" : "s"} left behind · ${naira(total)}`,
+    `${naira(total)} left in ${carts.length} cart${carts.length === 1 ? "" : "s"}`,
     [
-      `${carts.length} ${carts.length === 1 ? "person" : "people"} filled a cart ` +
-        `and did not finish. That is ${naira(total)} sitting there.`,
+      `${carts.length} cart${carts.length === 1 ? "" : "s"} filled in and never ` +
+        `paid for, worth ${naira(total)}.`,
+      ...(fresh.length > 0
+        ? ["", "SINCE YESTERDAY", ...fresh.map((cart) => `  ${cartLine(cart)}`)]
+        : []),
+      ...(older.length > 0
+        ? ["", "STILL WAITING", ...older.map((cart) => `  ${cartLine(cart)}`)]
+        : []),
       "",
-      ...carts.map((cart) => cartLine(cart)),
-      "",
-      "Follow them up in admin, under Carts. Each one has a WhatsApp button.",
+      "They are all in admin under Left behind, each with a WhatsApp button.",
+      "Tapping \"Done with this\" takes one off this list.",
     ].join("\n")
   );
 
-  // Marked whether or not the email went out, so a missing key does not turn
-  // into the same carts being reported for ever.
-  await markAlerted(carts.map((cart) => cart.id));
+  // Marked whether or not the email went out, so a missing key does not leave
+  // every cart looking new for ever.
+  await markAlerted(fresh.map((cart) => cart.id));
 
-  return NextResponse.json({ found: carts.length, emailed });
+  return NextResponse.json({ found: carts.length, fresh: fresh.length, emailed });
 }

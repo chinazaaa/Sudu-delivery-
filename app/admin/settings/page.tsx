@@ -191,8 +191,10 @@ export default async function SettingsAdmin() {
         </div>
         <SaveButton>Save</SaveButton>
         <p className="text-xs text-muted">
-          Email needs RESEND_API_KEY set in Vercel. Without it, nothing is
-          emailed and everything still shows under Left behind.
+          Email needs RESEND_API_KEY set where the site is hosted. Without it
+          nothing is emailed and every cart still shows under Left behind. The
+          recap goes out once a day; the schedule itself lives in Supabase, in
+          supabase/cron.sql.
         </p>
       </form>
 
