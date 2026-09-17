@@ -8,8 +8,7 @@ import ItemRow from "./ItemRow";
 import ItemSheet from "./ItemSheet";
 import RunStrip from "./RunStrip";
 import Thumb from "./Thumb";
-import { countItems, useCart } from "@/lib/cart";
-import FeeBands from "./FeeBands";
+import { useCart } from "@/lib/cart";
 import { feeFor, type Band } from "@/lib/fees";
 import { naira } from "@/lib/money";
 import type { ItemView, MenuView, BatchView } from "@/lib/view";
@@ -95,25 +94,16 @@ export default function Home({
     <div className="space-y-6">
       {nextRun && <RunStrip run={nextRun} />}
 
-      {/* The first question anybody asks. Saying it once, up here, beats
-          finding it out at checkout. */}
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-2xl bg-paper px-4 py-3 shadow-card">
-        <span className="font-bold">
-          Delivery from {naira(feeFor(1, nextRun?.flashFee ?? null, bands))}
+      {/* The first question anybody asks, in one line. The whole ladder
+          belongs at checkout, where somebody is deciding, not above a menu
+          nobody has read yet. */}
+      <p className="-mt-2 text-sm text-muted">
+        Delivery from{" "}
+        <span className="font-bold text-ink">
+          {naira(feeFor(1, nextRun?.flashFee ?? null, bands))}
         </span>
-        <span className="text-sm text-muted">
-          one fee for the whole order, however many restaurants
-        </span>
-        <span className="w-full sm:w-auto">
-          {/* Marked against what is actually in the cart, so an empty one
-              claims no band. */}
-          <FeeBands
-            itemCount={countItems(cart)}
-            flashFee={nextRun?.flashFee ?? null}
-            bands={bands}
-          />
-        </span>
-      </div>
+        , one fee for the whole order however many restaurants.
+      </p>
 
       <div className="relative">
         <input
