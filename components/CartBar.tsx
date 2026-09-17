@@ -11,7 +11,7 @@ export default function CartBar() {
   if (count === 0) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-[68px] z-30 p-3 sm:bottom-0">
+    <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 p-3 sm:bottom-0">
       <Link
         href="/cart"
         className="mx-auto flex max-w-2xl items-center gap-3 rounded-2xl bg-brand px-4 py-3 text-white shadow-lift"

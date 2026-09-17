@@ -339,10 +339,18 @@ export default async function OrderPage({
                 <Row label="Account number" value={settings.bank_account_number} strong />
                 <Row label="Narration" value={formatPhone(order.customer_phone)} />
               </dl>
-              <CopyText
-                value={settings.bank_account_number}
-                label="Copy account number"
-              />
+              <div className="flex flex-wrap gap-2">
+                <CopyText
+                  value={settings.bank_account_number}
+                  label="Copy account number"
+                />
+                {/* The narration is what matches the transfer to this order,
+                    so it has to be as easy to paste as the account number. */}
+                <CopyText
+                  value={order.customer_phone}
+                  label="Copy narration"
+                />
+              </div>
               <p className="text-sm text-ink/75">
                 Put your phone number in the transfer narration. That is how the payment
                 is matched to this order. Transfer only, and no cash on delivery.
