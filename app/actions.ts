@@ -2,7 +2,8 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { placeOrder } from "@/lib/orders";
+import { revalidatePath } from "next/cache";
+import { moveOrder, placeOrder } from "@/lib/orders";
 import { lastOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import { rememberCart } from "@/lib/carts";
@@ -96,6 +97,24 @@ export async function keepCart(form: FormData): Promise<void> {
     value: Math.round(Number(form.get("value") ?? 0)) || 0,
     summary: String(form.get("summary") ?? "").slice(0, 500),
   });
+}
+
+export type MoveState = { error: string | null };
+
+/** Moves an unpaid order onto another run. Two taps: the button, then the run. */
+export async function moveOrderToRun(
+  _prev: MoveState,
+  form: FormData
+): Promise<MoveState> {
+  const result = await moveOrder(
+    String(form.get("order_id")),
+    String(form.get("batch_id"))
+  );
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath(`/o/${result.orderId}`);
+  revalidatePath("/orders");
+  return { error: null };
 }
 
 export type FillState = {

@@ -9,6 +9,8 @@ import ShareLink from "@/components/ShareLink";
 import SplitCollect from "@/components/SplitCollect";
 import CopyText from "@/components/CopyText";
 import RepeatOrder from "@/components/RepeatOrder";
+import MoveOrder from "@/components/MoveOrder";
+import { openBatches } from "@/lib/batches";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira, orderRef, shareRef } from "@/lib/money";
 import { bandFor, splitFee } from "@/lib/fees";
@@ -41,6 +43,8 @@ export default async function OrderPage({
   const bands = await activeBands();
   const fees = await feeStory(order);
   const repeat = await repeatLines(order);
+  // The runs it could be moved to, for an order whose own run has gone.
+  const others = (await openBatches()).filter((run) => run.id !== order.batch_id);
 
   // Only the person who just checked out has their browser emptied. A
   // pay-by-link friend opening this keeps their own cart.
@@ -433,12 +437,14 @@ export default async function OrderPage({
               now would not put you on it. Put it in the next run instead.
             </p>
           </div>
-          <RepeatOrder
-            lines={repeat.lines}
-            blocked={repeat.blocked}
-            label="Move this to another run"
-            goTo="/checkout"
-            note="You pick which run at checkout: every one still open is in the list, with its own closing time."
+          <MoveOrder
+            orderId={order.id}
+            total={order.total}
+            runs={others.map((run) => ({
+              id: run.id,
+              label: `${runDateLabel(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
+              closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
+            }))}
           />
         </section>
       )}

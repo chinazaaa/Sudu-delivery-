@@ -551,6 +551,89 @@ async function announceOrder(args: {
   }
 }
 
+export type MoveResult = { ok: true; orderId: string } | { ok: false; error: string };
+
+/**
+ * Moves an unpaid order onto another run, keeping its number and its items.
+ * It is repriced against today's menu and the new run's fee band, because a
+ * week-old price is not a promise anybody made.
+ *
+ * Only unpaid orders move: a paid one has been bought, and the run it
+ * travelled on is history. A split group moves together, since half a group on
+ * another night is nobody's idea of a group order.
+ */
+export async function moveOrder(orderId: string, batchId: string): Promise<MoveResult> {
+  const order = await getOrder(orderId);
+  if (!order) return { ok: false, error: "That order no longer exists." };
+  if (order.status !== "pending") {
+    return { ok: false, error: "That order is already paid, so it stays where it is." };
+  }
+
+  const batch = await getBatch(batchId);
+  if (!batch || !isOrderable(batch)) {
+    return { ok: false, error: "That run is not taking orders. Pick another." };
+  }
+
+  const capacity = await checkCapacity(batch);
+  if (capacity) return { ok: false, error: capacity };
+
+  // The whole group travels together, or none of it does.
+  const moving =
+    order.group_id && order.shares.length > 1
+      ? order.shares.filter((share) => share.status === "pending").map((s) => s.id)
+      : [orderId];
+
+  const bands = await activeBands();
+
+  for (const id of moving) {
+    const one = await getOrder(id);
+    if (!one) continue;
+
+    // Today's prices, today's availability, choices included.
+    const repriced = await repeatLines(one);
+    if (repriced.blocked.length > 0) {
+      const names = repriced.blocked.map((item) => `${item.name} is ${item.reason}`);
+      return { ok: false, error: `${names.join(", ")}. Take it off the order first.` };
+    }
+
+    const food = repriced.lines.reduce(
+      (total, line) => total + line.unitPrice * line.qty,
+      0
+    );
+    const items = repriced.lines.reduce((count, line) => count + line.qty, 0);
+
+    // Whatever that person already has on the new run decides the top-up.
+    const existing = await existingLoad(batch.id, one.customer_phone);
+    const fee = Math.max(
+      0,
+      feeFor(existing.items + items, batch.flash_fee, bands) - existing.feeCharged
+    );
+
+    // The lines carry the new prices too, so the order reads as it is charged.
+    for (const line of one.lines) {
+      const match = repriced.lines.find((row) => row.itemId === line.menu_item_id);
+      if (match && match.unitPrice !== line.unit_price_at_order) {
+        await db()
+          .from("order_items")
+          .update({ unit_price_at_order: match.unitPrice })
+          .eq("id", line.id);
+      }
+    }
+
+    await db()
+      .from("orders")
+      .update({
+        batch_id: batch.id,
+        subtotal_food: food,
+        fee,
+        total: Math.max(0, food + fee - one.discount),
+      })
+      .eq("id", id);
+  }
+
+  return { ok: true, orderId };
+}
+
 export type RepeatBlock = {
   name: string;
   /** Why it cannot go back in the cart, in the customer's words. */
