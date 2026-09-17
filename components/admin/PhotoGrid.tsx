@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { matchPhotos } from "@/lib/match";
 
 type Row = { id: string; name: string; imageUrl: string };
@@ -111,38 +111,25 @@ export default function PhotoGrid({ items }: { items: Row[] }) {
       </div>
 
       {spare.length > 0 && (
-        <div className="card space-y-2 border-amber-300 bg-amber-50">
+        <div className="card space-y-3 border-amber-300 bg-amber-50">
           <h3 className="font-bold">
             {spare.length} picture{spare.length === 1 ? "" : "s"} we could not
             place
           </h3>
           <p className="text-sm text-muted">
-            Pick the item each one belongs to. The filename is shown so you know
-            which is which.
+            Look at each one and type the item it belongs to. A picture is
+            easier to place by eye than by filename.
           </p>
           {spare.map((file) => (
-            <div key={file.name} className="flex flex-wrap items-center gap-2">
-              <span className="grow text-sm font-semibold">{file.name}</span>
-              <select
-                className="field w-auto"
-                defaultValue=""
-                onChange={(event) => {
-                  const item = items.find((i) => i.id === event.target.value);
-                  if (!item) return;
-                  setSpare((rest) => rest.filter((f) => f !== file));
-                  void send(item, file);
-                }}
-              >
-                <option value="" disabled>
-                  Which item?
-                </option>
-                {items.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Spare
+              key={file.name}
+              file={file}
+              items={items}
+              onPick={(item) => {
+                setSpare((rest) => rest.filter((f) => f !== file));
+                void send(item, file);
+              }}
+            />
           ))}
         </div>
       )}
@@ -268,4 +255,95 @@ async function shrink(file: File): Promise<File> {
   } catch {
     return file;
   }
+}
+
+/**
+ * One picture nobody could place, with the item list narrowed as you type.
+ * Sixty items in a dropdown is worse than no dropdown, and scrolling one on a
+ * phone while holding the picture in your head is worse still.
+ */
+function Spare({
+  file,
+  items,
+  onPick,
+}: {
+  file: File;
+  items: Row[];
+  onPick: (item: Row) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const preview = useMemo(() => URL.createObjectURL(file), [file]);
+
+  useEffect(() => () => URL.revokeObjectURL(preview), [preview]);
+
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const matches = words.length
+    ? items.filter((item) => {
+        const name = item.name.toLowerCase();
+        return words.every((word) => name.includes(word));
+      })
+    : items;
+
+  return (
+    <div className="rounded-xl bg-white/70 p-2">
+      <div className="flex items-center gap-2">
+        <span className="size-14 shrink-0 overflow-hidden rounded-lg bg-black/5">
+          {/* A blob URL, so the plain tag rather than next/image. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={preview} alt="" className="size-full object-cover" />
+        </span>
+        <div className="min-w-0 grow">
+          <p className="truncate text-xs text-muted">{file.name}</p>
+          <input
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && matches[0]) {
+                event.preventDefault();
+                onPick(matches[0]);
+              }
+              if (event.key === "Escape") setOpen(false);
+            }}
+            placeholder="Type to find the item"
+            className="field mt-1 py-1.5 text-sm"
+          />
+        </div>
+      </div>
+
+      {open && (
+        <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+          {matches.slice(0, 40).map((item) => (
+            <li key={item.id}>
+              <button
+                type="button"
+                onClick={() => onPick(item)}
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-black/5"
+              >
+                <span className="size-8 shrink-0 overflow-hidden rounded bg-black/5">
+                  {item.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.imageUrl} alt="" className="size-full object-cover" />
+                  )}
+                </span>
+                <span className="min-w-0 grow truncate font-semibold">{item.name}</span>
+                {item.imageUrl && (
+                  <span className="shrink-0 text-xs text-muted">has one</span>
+                )}
+              </button>
+            </li>
+          ))}
+          {matches.length === 0 && (
+            <li className="px-2 py-1.5 text-sm text-muted">
+              Nothing on this menu matches that.
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
 }
