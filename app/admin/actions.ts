@@ -569,6 +569,32 @@ export async function saveCoupon(form: FormData): Promise<void> {
     first_order_only: form.get("first_order_only") === "on",
   });
 
+  // Runs ticked while creating it, so a code made for Wednesday is kept to
+  // Wednesday without a second save.
+  const runs = form.getAll("batch_id").map(String).filter(Boolean);
+  if (runs.length > 0) {
+    await db().from("coupon_runs").delete().eq("coupon_code", code);
+    await db()
+      .from("coupon_runs")
+      .insert(runs.map((batch_id) => ({ coupon_code: code, batch_id })));
+  }
+
+  revalidatePath("/admin", "layout");
+}
+
+/** Which runs a code works on. No runs picked means every run. */
+export async function setCouponRuns(form: FormData): Promise<void> {
+  await assertAdmin();
+  const code = String(form.get("code"));
+  const runs = form.getAll("batch_id").map(String).filter(Boolean);
+
+  await db().from("coupon_runs").delete().eq("coupon_code", code);
+  if (runs.length > 0) {
+    await db()
+      .from("coupon_runs")
+      .insert(runs.map((batch_id) => ({ coupon_code: code, batch_id })));
+  }
+
   revalidatePath("/admin", "layout");
 }
 

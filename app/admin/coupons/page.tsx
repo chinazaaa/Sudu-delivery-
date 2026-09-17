@@ -3,12 +3,19 @@ import SaveButton from "@/components/SaveButton";
 import ActionButton from "@/components/admin/ActionButton";
 import { couponLabel, listCoupons } from "@/lib/coupons";
 import { naira } from "@/lib/money";
-import { deleteCoupon, saveCoupon, toggleCoupon } from "../actions";
+import { SLOT_LABEL } from "@/lib/config";
+import { runDateLabel } from "@/lib/time";
+import { deleteCoupon, saveCoupon, setCouponRuns, toggleCoupon } from "../actions";
+import { batchOverview } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
 export default async function CouponsAdmin() {
   const coupons = await listCoupons();
+  // Only runs still ahead are worth attaching a code to.
+  const runs = (await batchOverview()).filter(
+    (run) => new Date(run.cut_off_at).getTime() > Date.now()
+  );
 
   return (
     <div>
@@ -46,7 +53,44 @@ export default async function CouponsAdmin() {
                   day: "numeric",
                   month: "short",
                 })}`}
+              {" · "}
+              {coupon.runs.length === 0
+                ? "any run"
+                : coupon.runs.map((run) => run.label).join(", ")}
             </p>
+
+            {/* A code is usually for one night. Ticking runs here is how it is
+                kept to that one, or carried into next week's as well. */}
+            {runs.length > 0 && (
+              <form action={setCouponRuns} className="mt-3 space-y-2">
+                <input type="hidden" name="code" value={coupon.code} />
+                <p className="label mb-0">Works on</p>
+                <div className="flex flex-wrap gap-2">
+                  {runs.map((run) => (
+                    <label
+                      key={run.id}
+                      className="chip cursor-pointer border-black/10 bg-white font-medium"
+                    >
+                      <input
+                        type="checkbox"
+                        name="batch_id"
+                        value={run.id}
+                        defaultChecked={coupon.runs.some((r) => r.batchId === run.id)}
+                      />
+                      {runDateLabel(run.run_date)} · {SLOT_LABEL[run.slot]}
+                    </label>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <SaveButton quiet className="px-4 py-2 text-sm">
+                    Save which runs
+                  </SaveButton>
+                  <span className="text-xs text-muted">
+                    Tick none and it works on every run.
+                  </span>
+                </div>
+              </form>
+            )}
 
             <div className="mt-3 flex flex-wrap gap-2">
               <form action={toggleCoupon}>
@@ -119,7 +163,9 @@ export default async function CouponsAdmin() {
             <input id="expires_at" name="expires_at" type="date" className="field" />
           </div>
           <div>
-            <label className="label" htmlFor="max_uses">How many uses (optional)</label>
+            <label className="label" htmlFor="max_uses">
+              How many people can use it
+            </label>
             <input
               id="max_uses"
               name="max_uses"
@@ -127,8 +173,31 @@ export default async function CouponsAdmin() {
               placeholder="No limit"
               className="field"
             />
+            <p className="mt-1 text-xs text-muted">
+              10 means the first ten orders and then it stops.
+            </p>
           </div>
         </div>
+
+        {runs.length > 0 && (
+          <div>
+            <p className="label">Which runs</p>
+            <div className="flex flex-wrap gap-2">
+              {runs.map((run) => (
+                <label
+                  key={run.id}
+                  className="chip cursor-pointer border-black/10 bg-white font-medium"
+                >
+                  <input type="checkbox" name="batch_id" value={run.id} />
+                  {runDateLabel(run.run_date)} · {SLOT_LABEL[run.slot]}
+                </label>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-muted">
+              Tick none and it works on every run, this term and next.
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-4 text-sm font-semibold">
           <label className="flex items-center gap-2">

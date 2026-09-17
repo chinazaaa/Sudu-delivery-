@@ -100,6 +100,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
         fee: feeFor(countItems(priced.lines), batch.flash_fee, bands),
         food: countFood(priced.lines),
         returning,
+        batchId: batch.id,
       })
     : null;
   if (coupon && !coupon.ok) return { ok: false, error: coupon.error };

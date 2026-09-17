@@ -1,5 +1,7 @@
 import { db } from "./supabase";
 import { naira } from "./money";
+import { SLOT_LABEL, type BatchSlot } from "./config";
+import { runDateLabel } from "./time";
 
 export type Coupon = {
   code: string;
@@ -11,6 +13,11 @@ export type Coupon = {
   max_uses: number | null;
   used: number;
   first_order_only: boolean;
+};
+
+export type CouponWithRuns = Coupon & {
+  /** The runs it works on. Empty means every run. */
+  runs: { batchId: string; label: string }[];
 };
 
 export type CouponCheck =
@@ -27,6 +34,8 @@ export async function checkCoupon(args: {
   fee: number;
   food: number;
   returning: boolean;
+  /** The run being ordered into, for a code tied to particular ones. */
+  batchId: string;
 }): Promise<CouponCheck> {
   const wanted = args.code.trim().toUpperCase();
   if (!wanted) return { ok: false, error: "Enter a code." };
@@ -49,6 +58,17 @@ export async function checkCoupon(args: {
   }
   if (coupon.first_order_only && args.returning) {
     return { ok: false, error: "That code is for a first order only." };
+  }
+
+  // A code tied to particular runs works on those and nowhere else. No rows
+  // at all means it works on any run.
+  const { data: runs } = await db()
+    .from("coupon_runs")
+    .select("batch_id")
+    .eq("coupon_code", coupon.code);
+
+  if ((runs ?? []).length > 0 && !runs!.some((row) => row.batch_id === args.batchId)) {
+    return { ok: false, error: "That code is not for this run." };
   }
 
   // Delivery codes never pay out more than the delivery being charged: "free
@@ -91,11 +111,38 @@ export function couponLabel(coupon: Coupon): string {
     : `${naira(coupon.amount)} off the order`;
 }
 
-export async function listCoupons(): Promise<Coupon[]> {
+export async function listCoupons(): Promise<CouponWithRuns[]> {
   const { data, error } = await db()
     .from("coupons")
     .select("*")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return (data ?? []) as Coupon[];
+
+  const coupons = (data ?? []) as Coupon[];
+  if (coupons.length === 0) return [];
+
+  const { data: links } = await db()
+    .from("coupon_runs")
+    .select("coupon_code, batch_id");
+  const batchIds = [...new Set((links ?? []).map((row) => row.batch_id as string))];
+
+  const { data: batches } = batchIds.length
+    ? await db().from("batches").select("id, run_date, slot").in("id", batchIds)
+    : { data: [] };
+  const labels = new Map(
+    ((batches ?? []) as any[]).map((batch) => [
+      batch.id as string,
+      `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot as BatchSlot]}`,
+    ])
+  );
+
+  return coupons.map((coupon) => ({
+    ...coupon,
+    runs: (links ?? [])
+      .filter((row) => row.coupon_code === coupon.code)
+      .map((row) => ({
+        batchId: row.batch_id as string,
+        label: labels.get(row.batch_id as string) ?? "A past run",
+      })),
+  }));
 }
