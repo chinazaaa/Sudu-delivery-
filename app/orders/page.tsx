@@ -64,10 +64,19 @@ export default async function OrdersPage() {
                   <StatusLine order={order} />
                 </p>
               </Link>
-              <RepeatOrder
-                lines={repeats[index].lines}
-                blocked={repeats[index].blocked}
-              />
+              {gone(order) ? (
+                <Link
+                  href={`/o/${order.id}`}
+                  className="btn-quiet w-full py-2.5 text-sm"
+                >
+                  Move it to another run
+                </Link>
+              ) : (
+                <RepeatOrder
+                  lines={repeats[index].lines}
+                  blocked={repeats[index].blocked}
+                />
+              )}
             </li>
           ))}
         </ul>
@@ -83,13 +92,29 @@ export default async function OrdersPage() {
   );
 }
 
+/** An order whose run has closed: nothing more can happen to it where it is. */
+function gone(order: Awaited<ReturnType<typeof ordersForPhone>>[number]): boolean {
+  return (
+    order.status === "pending" &&
+    (order.batch.status !== "open" ||
+      order.batch.stage !== "ordering" ||
+      new Date(order.batch.cut_off_at).getTime() <= Date.now())
+  );
+}
+
 function StatusLine({
   order,
 }: {
   order: Awaited<ReturnType<typeof ordersForPhone>>[number];
 }) {
   if (order.status === "pending") {
-    return <span className="text-brand">Not paid yet. Tap to pay.</span>;
+    // A run that has gone cannot be paid for, so saying "tap to pay" sends
+    // somebody to a page that will refuse their money.
+    return gone(order) ? (
+      <span className="text-brand">Run closed. Move it to another run to pay.</span>
+    ) : (
+      <span className="text-brand">Not paid yet. Tap to pay.</span>
+    );
   }
   if (order.status === "refunded") return <span className="text-muted">Refunded</span>;
   if (order.status === "delivered") return <span className="text-green-700">Delivered</span>;
