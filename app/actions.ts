@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { moveOrder, placeOrder } from "@/lib/orders";
+import { moveOrder, placeOrder, previewCoupon } from "@/lib/orders";
 import { lastOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import { rememberCart } from "@/lib/carts";
@@ -18,14 +18,22 @@ import type { CartLine } from "@/lib/types";
 
 export type SubmitState = { error: string | null };
 
+/** The cart as the browser posted it: ids and quantities, never prices. */
+function parseCart(value: FormDataEntryValue | null): CartLine[] {
+  try {
+    const parsed = JSON.parse(String(value ?? "[]"));
+    return Array.isArray(parsed) ? (parsed as CartLine[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function submitOrder(
   _prev: SubmitState,
   form: FormData
 ): Promise<SubmitState> {
-  let lines: CartLine[];
-  try {
-    lines = JSON.parse(String(form.get("cart") ?? "[]"));
-  } catch {
+  const lines = parseCart(form.get("cart"));
+  if (lines.length === 0) {
     return { error: "Something went wrong with your cart. Please rebuild it." };
   }
 
@@ -95,6 +103,33 @@ export async function keepCart(form: FormData): Promise<void> {
     value: Math.round(Number(form.get("value") ?? 0)) || 0,
     summary: String(form.get("summary") ?? "").slice(0, 500),
   });
+}
+
+export type CouponState = {
+  error: string | null;
+  code: string | null;
+  discount: number;
+  label: string | null;
+};
+
+/** Checking a code at checkout, before anything is placed. */
+export async function tryCoupon(
+  _prev: CouponState,
+  form: FormData
+): Promise<CouponState> {
+  const code = String(form.get("coupon") ?? "").trim().toUpperCase();
+  if (!code) return { error: "Enter a code.", code: null, discount: 0, label: null };
+
+  const result = await previewCoupon({
+    code,
+    batchId: String(form.get("batch_id") ?? ""),
+    lines: parseCart(form.get("cart")),
+    phone: String(form.get("phone") ?? ""),
+  });
+
+  return result.ok
+    ? { error: null, code, discount: result.discount, label: result.label }
+    : { error: result.error, code: null, discount: 0, label: null };
 }
 
 export type MoveState = {

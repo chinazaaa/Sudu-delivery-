@@ -13,6 +13,7 @@ import {
 } from "@/lib/cart";
 import { feeFor, splitFee, type Band } from "@/lib/fees";
 import { naira } from "@/lib/money";
+import CouponBox from "@/components/CouponBox";
 import FillDetails from "@/components/FillDetails";
 import KeepCart from "@/components/KeepCart";
 import { countdown } from "@/lib/time";
@@ -57,9 +58,17 @@ export default function Checkout({
   const [phone, setPhone] = useState(adding?.phone ?? "");
   const [hostel, setHostel] = useState(adding?.hostel ?? "");
   const [filled, setFilled] = useState(false);
+  const [applied, setApplied] = useState<{ code: string; discount: number } | null>(null);
   const [state, action, pending] = useActionState<SubmitState, FormData>(submitOrder, {
     error: null,
   });
+
+  // A code applied to one cart and run is not necessarily worth the same, or
+  // valid at all, on another. Changing either takes it off rather than
+  // showing a discount that will be refused when the order is placed.
+  useEffect(() => {
+    setApplied(null);
+  }, [batchId, itemCount]);
 
   useEffect(() => {
     if (adding) return;
@@ -97,7 +106,7 @@ export default function Checkout({
     0,
     feeFor(itemCount + alreadyItems, selected?.flashFee ?? null, bands) - alreadyCharged
   );
-  const total = subtotal + fee;
+  const total = Math.max(0, subtotal + fee - (applied?.discount ?? 0));
 
   const groupOn = people.length > 0;
   const names = people.map((p) => p.name);
@@ -154,6 +163,7 @@ export default function Checkout({
       />
 
       <input type="hidden" name="cart" value={JSON.stringify(toServerLines(cart))} />
+      <input type="hidden" name="coupon" value={applied?.code ?? ""} />
       <input type="hidden" name="batch_id" value={batchId} />
       <input type="hidden" name="group_mode" value={groupOn ? mode : ""} />
       <input type="hidden" name="payment_method" value={method} />
@@ -571,20 +581,18 @@ export default function Checkout({
         </div>
         {/* A code is a thing somebody was given in a group chat, so it is
             typed in rather than carried by the link they happened to open. */}
-        <div className="border-t border-black/10 pt-2">
-          <label className="label" htmlFor="coupon">Discount code</label>
-          <input
-            id="coupon"
-            name="coupon"
-            placeholder="If you have one"
-            autoCapitalize="characters"
-            className="field uppercase py-2 text-sm"
-          />
-          <p className="mt-1 text-xs text-muted">
-            It comes off when the order is placed, and the page will say if it
-            is not one we know.
-          </p>
-        </div>
+        <CouponBox
+          batchId={batchId}
+          cart={JSON.stringify(toServerLines(cart))}
+          phone={phone}
+          onApplied={setApplied}
+        />
+        {applied && (
+          <div className="flex justify-between text-mint">
+            <span>Code {applied.code}</span>
+            <span>−{naira(applied.discount)}</span>
+          </div>
+        )}
       </section>
 
       <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t border-black/5 bg-paper p-3 shadow-bar sm:bottom-0">

@@ -1,7 +1,12 @@
 import { db } from "./supabase";
 import { feeFor, splitFee, type Band } from "./fees";
 import { activeBands } from "./settings";
-import { checkCoupon, useCoupon, type CouponCheck } from "./coupons";
+import {
+  checkCoupon,
+  couponLabel,
+  useCoupon,
+  type CouponCheck,
+} from "./coupons";
 import { cartConverted } from "./carts";
 import { emailAdmins } from "./email";
 import { naira, orderRef } from "./money";
@@ -558,6 +563,38 @@ async function announceOrder(args: {
   } catch {
     /* Never let a notification break an order that is already saved. */
   }
+}
+
+/**
+ * Checks a code against a cart before the order is placed, so somebody can
+ * see what it is worth rather than typing it and hoping. It prices the cart
+ * the same way placing it does, because a code's worth depends on the
+ * delivery being charged.
+ */
+export async function previewCoupon(args: {
+  code: string;
+  batchId: string;
+  lines: CartLine[];
+  phone: string;
+}): Promise<{ ok: true; discount: number; label: string } | { ok: false; error: string }> {
+  const batch = await getBatch(args.batchId);
+  if (!batch) return { ok: false, error: "Pick a run first." };
+
+  const priced = await priceLines(args.lines);
+  if ("error" in priced) return { ok: false, error: priced.error };
+
+  const phone = normalisePhone(args.phone);
+  const result = await checkCoupon({
+    code: args.code,
+    fee: feeFor(countItems(priced.lines), batch.flash_fee, await activeBands()),
+    food: countFood(priced.lines),
+    returning: phone ? await isReturningCustomer(phone) : false,
+    batchId: batch.id,
+  });
+
+  return result.ok
+    ? { ok: true, discount: result.discount, label: couponLabel(result.coupon) }
+    : { ok: false, error: result.error };
 }
 
 export type MoveResult = { ok: true; orderId: string } | { ok: false; error: string };
