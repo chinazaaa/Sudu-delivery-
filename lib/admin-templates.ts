@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { orderRef } from "./money";
+import { shareRef } from "./money";
 import {
   narration,
   template,
@@ -39,7 +39,7 @@ export function toCard(
   const write = (kind: TemplateKind) =>
     template({
       kind,
-      order,
+      order: { ...order, groupOrders: order.groupOrders },
       settings,
       pin: order.pin,
       siteUrl: url,
@@ -49,7 +49,7 @@ export function toCard(
 
   return {
     id: order.id,
-    ref: orderRef(order),
+    ref: shareRef(order, order.groupOrders),
     name: order.customer_name,
     forName: order.for_name,
     phone: order.customer_phone,
@@ -68,7 +68,7 @@ export function toCard(
     inGroup: order.group_id !== null,
     customerNote: order.customer_note ?? "",
     adminNote: order.admin_note ?? "",
-    narration: narration(order),
+    narration: narration(order, order.groupOrders),
     lines: order.lines.map((line) => ({
       id: line.id,
       qty: line.qty,

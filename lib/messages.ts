@@ -1,4 +1,4 @@
-import { naira, orderRef } from "./money";
+import { naira, orderRef, shareRef } from "./money";
 import type { Settings } from "./settings";
 
 /** wa.me needs international digits with no plus. */
@@ -95,6 +95,8 @@ export function fillNote(
 type TemplateOrder = {
   id: string;
   order_no: number | null;
+  /** The other orders in this one's group, when it is part of one. */
+  groupOrders?: { id: string; order_no: number | null }[];
   customer_name: string;
   customer_phone: string;
   for_name: string | null;
@@ -113,8 +115,12 @@ type TemplateOrder = {
  * and belongs to one order, so it matches the payment without ambiguity; a
  * phone number is eleven digits and covers every order that person places.
  */
-export function narration(order: { order_no: number | null; id: string }): string {
-  return order.order_no ? String(order.order_no) : order.id.slice(0, 6).toUpperCase();
+export function narration(
+  order: { order_no: number | null; id: string },
+  group?: { order_no: number | null; id: string }[]
+): string {
+  const ref = group && group.length > 1 ? shareRef(order, group) : orderRef(order);
+  return ref.replace("#", "");
 }
 
 export function template(args: {
@@ -138,8 +144,8 @@ export function template(args: {
 
   const values: Record<string, string> = {
     "{name}": order.for_name ?? order.customer_name,
-    "{ref}": orderRef(order),
-    "{narration}": narration(order),
+    "{ref}": shareRef(order, order.groupOrders ?? []),
+    "{narration}": narration(order, order.groupOrders),
     "{batch}": batchLabel,
     "{total}": naira(order.total),
     "{hostel}": order.hostel,

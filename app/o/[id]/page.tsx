@@ -10,7 +10,7 @@ import SplitCollect from "@/components/SplitCollect";
 import CopyText from "@/components/CopyText";
 import RepeatOrder from "@/components/RepeatOrder";
 import { SLOT_LABEL } from "@/lib/config";
-import { naira, orderRef } from "@/lib/money";
+import { naira, orderRef, shareRef } from "@/lib/money";
 import { bandFor, splitFee } from "@/lib/fees";
 import { fillNote, narration, PAID_NOTE_DEFAULT } from "@/lib/messages";
 import {
@@ -61,6 +61,9 @@ export default async function OrderPage({
   const paid = order.status === "paid" || order.status === "delivered";
   const drops = dropsFor(order);
   const split = order.group?.mode === "split" && order.shares.length > 1;
+  // One group reads as one order with a part each: 1005a, 1005b, not 1005 and
+  // an unrelated-looking 1006.
+  const ref = shareRef(order, order.shares);
 
   // The whole load is what delivery is priced on, so the page shows the band
   // it landed in and how it was shared out. "Why is my delivery ₦2,000?" has
@@ -97,7 +100,7 @@ export default async function OrderPage({
         }`}
       >
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/75">
-          Order {orderRef(order)} · {status}
+          Order {ref} · {status}
         </p>
         <h1 className="mt-1 text-2xl font-extrabold leading-tight sm:text-3xl">
           {naira(order.total)}
@@ -149,16 +152,16 @@ export default async function OrderPage({
                 <Row label="Bank" value={settings.bank_name} />
                 <Row label="Account name" value={settings.bank_account_name || "Not set"} />
                 <Row label="Account number" value={settings.bank_account_number} strong />
-                <Row label="Narration" value={narration(order)} strong />
+                <Row label="Narration" value={narration(order, order.shares)} strong />
               </dl>
               <div className="flex flex-wrap gap-2">
                 <CopyText value={settings.bank_account_number} label="Copy account number" />
-                <CopyText value={narration(order)} label="Copy narration" />
+                <CopyText value={narration(order, order.shares)} label="Copy narration" />
               </div>
               <p className="text-sm text-ink/75">
-                Type {narration(order)} in the narration. Four digits, and it is
-                how this transfer is matched to this order. Transfer only, no
-                cash on delivery.
+                Type {narration(order, order.shares)} in the narration. That is
+                how this transfer is matched to your part of the order.
+                Transfer only, no cash on delivery.
               </p>
             </>
           ) : (
@@ -182,13 +185,15 @@ export default async function OrderPage({
             return {
               id: share.id,
               name,
+              ref: shareRef(share, order.shares),
               total: share.total,
               paid: share.status !== "pending",
               url,
               whatsapp: whatsappLink(
                 share.customer_phone,
-                `Hi ${name}, here is your share of the Sudu order: ` +
-                  `${naira(share.total)}. Pay here and you are on the run: ${url}`
+                `Hi ${name}, here is your part of the Sudu order ` +
+                  `${shareRef(share, order.shares)}: ${naira(share.total)}. ` +
+                  `Pay here and you are on the run: ${url}`
               ),
             };
           })}
@@ -207,7 +212,7 @@ export default async function OrderPage({
               {fillNote(settings.paid_note || PAID_NOTE_DEFAULT, {
                 hostel: order.hostel,
                 window: order.batch.delivery_window_text.toLowerCase(),
-                ref: orderRef(order),
+                ref,
                 name: order.customer_name,
               })}
             </p>
@@ -243,8 +248,14 @@ export default async function OrderPage({
                 <div className="flex items-baseline justify-between gap-2">
                   <h3 className="font-bold">
                     {drop.name}
-                    {drop.key === order.id && (
-                      <span className="ml-2 text-xs font-normal text-muted">this link</span>
+                    {split && (
+                      <span className="ml-2 text-xs font-normal text-muted">
+                        {shareRef(
+                          order.shares.find((share) => share.id === drop.key) ?? order,
+                          order.shares
+                        )}
+                        {drop.key === order.id && " · this link"}
+                      </span>
                     )}
                   </h3>
                   <span className="text-right text-sm font-semibold">

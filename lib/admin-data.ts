@@ -1,11 +1,14 @@
 import { db } from "./supabase";
 import { linesFor, type OrderLine } from "./orders";
 import { SLOT_LABEL } from "./config";
+import { shareRef } from "./money";
 import { weekdayLabel } from "./time";
 import type { Batch, Order } from "./types";
 
 export type FeedOrder = Order & {
   lines: OrderLine[];
+  /** The other orders in this one's group, for numbering it 1005a, 1005b. */
+  groupOrders: { id: string; order_no: number | null }[];
   /** Containers and delivery on that person's other orders in the same run. */
   otherItems: number;
   otherFee: number;
@@ -50,9 +53,9 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
       (order) =>
         order.customer_name.toLowerCase().includes(term) ||
         order.customer_phone.includes(term) ||
-        // A transfer's narration is the order number, so that is what gets
-        // typed into this box when matching a payment.
-        String(order.order_no ?? "").includes(term.replace(/^#/, "")) ||
+        // A transfer's narration is the order number, sometimes with a letter
+        // on it for one part of a group, so both forms have to find it.
+        matchesRef(order, groups.get(order.group_id ?? "") ?? [], term) ||
         (order.for_name ?? "").toLowerCase().includes(term) ||
         order.hostel.toLowerCase().includes(term)
     );
@@ -61,6 +64,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
   const lines = await linesFor(orders.map((o) => o.id));
   const batches = await batchMap(orders.map((o) => o.batch_id));
   const pins = await pinMap(orders.map((o) => o.customer_phone));
+  const groups = await groupMap(orders.map((o) => o.group_id));
 
  return orders.map((order) => {
     const batch = batches.get(order.batch_id);
@@ -76,6 +80,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
 
     return {
       ...order,
+      groupOrders: order.group_id ? groups.get(order.group_id) ?? [] : [],
       otherItems: siblings.reduce(
         (count, other) =>
           count +
@@ -97,6 +102,30 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
   });
 }
 
+/** Every order in each group, so a share can be numbered within its group. */
+async function groupMap(
+  ids: (string | null)[]
+): Promise<Map<string, { id: string; order_no: number | null }[]>> {
+  const unique = [...new Set(ids.filter((id): id is string => Boolean(id)))];
+  if (unique.length === 0) return new Map();
+
+  const { data } = await db()
+    .from("orders")
+    .select("id, order_no, group_id")
+    .in("group_id", unique)
+    .order("order_no");
+
+  const map = new Map<string, { id: string; order_no: number | null }[]>();
+  for (const row of data ?? []) {
+    const key = row.group_id as string;
+    map.set(key, [
+      ...(map.get(key) ?? []),
+      { id: row.id as string, order_no: (row.order_no as number | null) ?? null },
+    ]);
+  }
+  return map;
+}
+
 async function batchMap(ids: string[]): Promise<Map<string, Batch>> {
   const unique = [...new Set(ids)];
   if (unique.length === 0) return new Map();
@@ -109,6 +138,23 @@ async function pinMap(phones: string[]): Promise<Map<string, string>> {
   if (unique.length === 0) return new Map();
   const { data } = await db().from("customers").select("phone, pin").in("phone", unique);
   return new Map((data ?? []).map((row) => [row.phone as string, row.pin as string]));
+}
+
+/** "1005", "#1005b" or "1005b" all find the order they were typed for. */
+function matchesRef(
+  order: Order,
+  group: { id: string; order_no: number | null }[],
+  term: string
+): boolean {
+  const wanted = term.replace(/[#\s]/g, "").toLowerCase();
+  if (!wanted) return false;
+
+  const own = String(order.order_no ?? "");
+  if (own && own.includes(wanted)) return true;
+
+  const ref = shareRef(order, group).replace("#", "").toLowerCase();
+  // A bare group number finds every part of that group.
+  return ref === wanted || ref.startsWith(wanted);
 }
 
 export type CustomerRow = {

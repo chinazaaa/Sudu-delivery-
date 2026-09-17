@@ -9,6 +9,7 @@ import { template, whatsappTo } from "../lib/messages";
 import { newPin } from "../lib/customer-auth";
 import { parseMenuText } from "../lib/menu-import";
 import { adminEmails } from "../lib/email";
+import { shareRef } from "../lib/money";
 
 /** A settings row with nothing filled in, for the template tests. */
 const EMPTY_SETTINGS = {
@@ -504,4 +505,22 @@ test("admin email addresses are read one per line, commas included", () => {
     ["a@sudu.ng", "b@sudu.ng", "c@sudu.ng"]
   );
   assert.deepEqual(adminEmails(""), []);
+});
+
+test("a split group reads as one order with a part each", () => {
+  const group = [
+    { id: "a", order_no: 1005 },
+    { id: "b", order_no: 1006 },
+    { id: "c", order_no: 1007 },
+  ];
+
+  // Three orders under the bonnet, one order as far as anyone in it is
+  // concerned: 1005a, 1005b, 1005c rather than three unrelated numbers.
+  assert.equal(shareRef(group[0], group), "#1005a");
+  assert.equal(shareRef(group[1], group), "#1005b");
+  assert.equal(shareRef(group[2], group), "#1005c");
+
+  // An order on its own keeps its plain number.
+  assert.equal(shareRef({ id: "x", order_no: 1042 }, []), "#1042");
+  assert.equal(shareRef({ id: "x", order_no: 1042 }, [{ id: "x", order_no: 1042 }]), "#1042");
 });

@@ -6,6 +6,8 @@ import { naira } from "@/lib/money";
 export type Share = {
   id: string;
   name: string;
+  /** This part's number, like #1005b. */
+  ref: string;
   total: number;
   paid: boolean;
   url: string;
@@ -65,7 +67,9 @@ export default function SplitCollect({
   const owed = unpaid.reduce((total, share) => total + share.total, 0);
   const paidCount = shares.length - unpaid.length;
   const everyone = unpaid
-    .map((share) => `${share.name} · ${naira(share.total)} · ${share.url}`)
+    .map(
+      (share) => `${share.name} ${share.ref} · ${naira(share.total)} · ${share.url}`
+    )
     .join("\n");
 
   return (
@@ -99,7 +103,7 @@ export default function SplitCollect({
           <li key={share.id} className="flex flex-wrap items-center gap-2 py-2.5">
             <span className="min-w-0 grow">
               <span className="block truncate font-semibold">
-                {share.name}
+                <span className="text-muted">{share.ref}</span> {share.name}
                 {share.paid && <span className="ml-2 text-xs font-bold text-mint">Paid</span>}
                 {!share.paid && sent[share.id] && (
                   <span className="ml-2 text-xs font-bold text-muted">Link sent</span>

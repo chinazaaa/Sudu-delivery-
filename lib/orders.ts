@@ -765,6 +765,7 @@ export type OrderLine = OrderItem & {
 };
 export type GroupShare = {
   id: string;
+  order_no: number | null;
   for_name: string | null;
   total: number;
   status: Order["status"];
@@ -817,9 +818,11 @@ export async function sharesFor(groupId: string | null): Promise<GroupShare[]> {
   if (!groupId) return [];
   const { data } = await db()
     .from("orders")
-    .select("id, for_name, total, status, customer_name, customer_phone, hostel")
+    .select(
+      "id, order_no, for_name, total, status, customer_name, customer_phone, hostel"
+    )
     .eq("group_id", groupId)
-    .order("for_name");
+    .order("order_no");
 
   const rows = (data ?? []) as Omit<GroupShare, "lines">[];
   const lines = await linesFor(rows.map((row) => row.id));
