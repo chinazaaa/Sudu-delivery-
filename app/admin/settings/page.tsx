@@ -4,6 +4,7 @@ import BandEditor from "@/components/admin/BandEditor";
 import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { parseBands } from "@/lib/fees";
+import { missingSettings } from "@/lib/health";
 import { getSettings, hasBankDetails } from "@/lib/settings";
 import {
   PAID_NOTE_DEFAULT,
@@ -22,6 +23,9 @@ export const dynamic = "force-dynamic";
 export default async function SettingsAdmin() {
   const settings = await getSettings();
   const hostels = await listHostels(true);
+  // Asked up front, so a box whose column is not there says why rather than
+  // taking a line and throwing on save.
+  const missing = await missingSettings(["ribbon_text", "offer_code"]);
 
   return (
     <div className="space-y-4">
@@ -144,6 +148,14 @@ export default async function SettingsAdmin() {
             shouts above every page is a strip people learn to scroll past.
           </p>
         </div>
+
+        {missing.length > 0 && (
+          <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            The database is missing {missing.join(" and ")}, so there is nowhere
+            to keep this yet. Run supabase/update.sql and this box starts
+            working.
+          </p>
+        )}
         <div>
           <label className="label" htmlFor="ribbon_text">What it says</label>
           <input
