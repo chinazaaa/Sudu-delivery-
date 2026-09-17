@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import ConfirmButton from "./ConfirmButton";
+import SaveButton from "@/components/SaveButton";
 import { naira } from "@/lib/money";
 import { STAGE_LABEL, type BatchStage } from "@/lib/stages";
 import { formatPhone } from "@/lib/phone";
@@ -149,7 +150,9 @@ export default function OrderCard({
                 className="field grow py-2 text-sm"
               />
               <input type="hidden" name="order_id" value={order.id} />
-              <button className="btn-quiet shrink-0 px-4 py-2 text-sm">Save</button>
+              <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
+                Save
+              </SaveButton>
             </div>
             <p className="text-xs text-muted">
               Saved against this order. &quot;Send card link&quot; then sends
@@ -279,7 +282,9 @@ export default function OrderCard({
                 className="field grow py-2 text-sm"
               />
               <input type="hidden" name="order_id" value={order.id} />
-              <button className="btn-quiet shrink-0 px-4 py-2 text-sm">Save</button>
+              <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
+                Save
+              </SaveButton>
             </div>
             <p className="text-xs text-muted">Only you see this.</p>
           </form>

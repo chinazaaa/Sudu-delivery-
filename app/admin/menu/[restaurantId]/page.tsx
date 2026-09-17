@@ -404,7 +404,9 @@ export default async function RestaurantAdmin({
                                 <input type="checkbox" name="available" defaultChecked={option.available} />
                                 On
                               </label>
-                              <button className="btn-quiet px-2 py-1 text-xs">Save</button>
+                              <SaveButton quiet className="px-2 py-1 text-xs">
+                                Save
+                              </SaveButton>
                             </form>
                             <form action={deleteOption}>
                               <input type="hidden" name="option_id" value={option.id} />
