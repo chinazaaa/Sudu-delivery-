@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import ConfirmButton from "./ConfirmButton";
 import { naira } from "@/lib/money";
+import { STAGE_LABEL, type BatchStage } from "@/lib/stages";
 import { formatPhone } from "@/lib/phone";
 
 export type OrderCardLine = {
@@ -39,6 +40,8 @@ export type OrderCardData = {
   /** The group's own number, when this order is one part of one. */
   groupRef: string | null;
   groupSize: number;
+  /** Where its run has got to, as the customer is reading it right now. */
+  runStage: BatchStage;
   customerNote: string;
   adminNote: string;
   /** What they were told to type in the transfer. */
@@ -95,6 +98,11 @@ export default function OrderCard({
           <p className="text-sm text-muted">
             {order.batchLabel} · {order.hostel} · {formatPhone(order.phone)}
           </p>
+          {order.status !== "pending" && order.runStage !== "ordering" && (
+            <p className="text-sm font-semibold text-muted">
+              They are seeing: {STAGE_LABEL[order.runStage]}
+            </p>
+          )}
           {/* How they said they would pay is the first thing you need when
               chasing an unpaid order. */}
           <span

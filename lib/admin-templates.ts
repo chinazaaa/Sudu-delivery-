@@ -73,6 +73,7 @@ export function toCard(
         ? shareRef(order.groupOrders[0], order.groupOrders).replace("#", "")
         : null,
     groupSize: order.groupOrders.length,
+    runStage: order.batchStage,
     customerNote: order.customer_note ?? "",
     adminNote: order.admin_note ?? "",
     narration: narration(order, order.groupOrders),

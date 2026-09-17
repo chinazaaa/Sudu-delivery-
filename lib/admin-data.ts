@@ -4,11 +4,14 @@ import { SLOT_LABEL } from "./config";
 import { shareRef } from "./money";
 import { runDateLabel, weekdayLabel } from "./time";
 import type { Batch, Order } from "./types";
+import type { BatchStage } from "./stages";
 
 export type FeedOrder = Order & {
   lines: OrderLine[];
   /** The other orders in this one's group, for numbering it 1005a, 1005b. */
   groupOrders: { id: string; order_no: number | null }[];
+  /** Where that order's run has got to, which its customer is watching. */
+  batchStage: BatchStage;
   /** Containers and delivery on that person's other orders in the same run. */
   otherItems: number;
   otherFee: number;
@@ -94,6 +97,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
       batchLabel: batch
         ? `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`
         : "Unknown run",
+      batchStage: batch?.stage ?? "ordering",
       runDate: batch?.run_date ?? "",
       deliveryWindow: batch?.delivery_window_text ?? "",
       slot: batch?.slot ?? "afternoon",
