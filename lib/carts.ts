@@ -13,6 +13,7 @@ export type SavedCart = {
   converted_at: string | null;
   alerted_at: string | null;
   handled_at: string | null;
+  handled_reason: string;
   created_at: string;
   updated_at: string;
 };
@@ -47,6 +48,7 @@ export async function rememberCart(cart: {
       converted_at: null,
       alerted_at: null,
       handled_at: null,
+      handled_reason: "",
       updated_at: new Date().toISOString(),
     },
     { onConflict: "phone,batch_id" }
@@ -84,6 +86,18 @@ export async function abandonedCarts(
   if (onlyUnalerted) query = query.is("alerted_at", null);
 
   const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as SavedCart[];
+}
+
+/** Carts already dealt with, newest first, so a decision can be undone. */
+export async function closedCarts(limit = 100): Promise<SavedCart[]> {
+  const { data, error } = await db()
+    .from("carts")
+    .select("*")
+    .not("handled_at", "is", null)
+    .order("handled_at", { ascending: false })
+    .limit(limit);
   if (error) throw new Error(error.message);
   return (data ?? []) as SavedCart[];
 }

@@ -334,15 +334,35 @@ export async function saveCustomerNote(form: FormData): Promise<void> {
   revalidatePath("/admin/customers");
 }
 
-/** A cart dealt with, however it went. It stops being chased. */
-export async function markCartHandled(form: FormData): Promise<void> {
+/**
+ * Closing a cart, with what came of it. Chasing someone who has already said
+ * no is the thing this prevents, so the reason is kept rather than a bare
+ * flag: it is also the only record of why the money never arrived.
+ */
+export async function closeCart(form: FormData): Promise<void> {
   await assertAdmin();
   await db()
     .from("carts")
-    .update({ handled_at: new Date().toISOString() })
+    .update({
+      handled_at: new Date().toISOString(),
+      handled_reason: String(form.get("reason") ?? "").trim().slice(0, 120),
+    })
     .eq("id", String(form.get("cart_id")));
 
   revalidatePath("/admin/carts");
+  revalidatePath("/admin");
+}
+
+/** Closed by mistake, or they came back. It goes back on the list. */
+export async function reopenCart(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db()
+    .from("carts")
+    .update({ handled_at: null, handled_reason: "" })
+    .eq("id", String(form.get("cart_id")));
+
+  revalidatePath("/admin/carts");
+  revalidatePath("/admin");
 }
 
 export async function savePromoter(form: FormData): Promise<void> {

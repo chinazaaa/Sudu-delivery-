@@ -1,21 +1,39 @@
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import AdminLive from "@/components/admin/AdminLive";
-import { abandonedCarts } from "@/lib/carts";
+import Link from "next/link";
+import { abandonedCarts, closedCarts } from "@/lib/carts";
 import { getSettings } from "@/lib/settings";
 import { whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
-import { markCartHandled } from "../actions";
+import { closeCart, reopenCart } from "../actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function CartsPage() {
+/** What a chase actually ended in. Anything else is typed in. */
+const OUTCOMES = [
+  "Not interested",
+  "Will order next run",
+  "Ordered another way",
+  "No reply",
+];
+
+export default async function CartsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ show?: string }>;
+}) {
+  const closed = (await searchParams).show === "closed";
   const settings = await getSettings();
   const minutes = settings.abandon_minutes || 45;
-  const carts = await abandonedCarts(minutes);
 
-  const value = carts.reduce((total, cart) => total + cart.value, 0);
+  const [open, done] = await Promise.all([
+    abandonedCarts(minutes),
+    closedCarts(),
+  ]);
+  const carts = closed ? done : open;
+  const value = open.reduce((total, cart) => total + cart.value, 0);
 
   return (
     <div>
@@ -26,18 +44,37 @@ export default async function CartsPage() {
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Stat label="Waiting" value={carts.length} tone={carts.length ? "warn" : undefined} />
+        <Stat label="Waiting" value={open.length} tone={open.length ? "warn" : undefined} />
         <Stat label="Sitting there" value={value} money />
-        <Stat
-          label="Average"
-          value={carts.length === 0 ? 0 : Math.round(value / carts.length)}
-          money
-        />
+        <Stat label="Closed" value={done.length} />
+      </div>
+
+      <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4">
+        <Link
+          href="/admin/carts"
+          className={`chip ${
+            closed ? "border-black/10 bg-white" : "border-ink bg-ink text-white"
+          }`}
+        >
+          Still open
+          <span className="rounded-full bg-black/10 px-1.5 text-xs">{open.length}</span>
+        </Link>
+        <Link
+          href="/admin/carts?show=closed"
+          className={`chip ${
+            closed ? "border-ink bg-ink text-white" : "border-black/10 bg-white"
+          }`}
+        >
+          Closed
+          <span className="rounded-full bg-black/10 px-1.5 text-xs">{done.length}</span>
+        </Link>
       </div>
 
       {carts.length === 0 ? (
         <p className="card text-sm text-muted">
-          Nothing left behind. Every cart with a number on it became an order.
+          {closed
+            ? "Nothing closed yet."
+            : "Nothing left behind. Every cart with a number on it became an order."}
         </p>
       ) : (
         <ul className="space-y-3">
@@ -67,33 +104,69 @@ export default async function CartsPage() {
 
                 <p className="mt-2 text-sm text-ink/75">{cart.summary}</p>
 
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <a
-                    href={message}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-primary px-4 py-2 text-sm"
-                  >
-                    Ask if they still want it
-                  </a>
-                  <a
-                    href={`tel:${cart.phone}`}
-                    className="chip border-black/10 bg-white"
-                  >
-                    Call
-                  </a>
-                  <form action={markCartHandled}>
-                    <input type="hidden" name="cart_id" value={cart.id} />
-                    <button className="chip border-black/10 bg-white">
-                      Done with this
-                    </button>
-                  </form>
-                  {cart.alerted_at && (
+                {closed ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
                     <span className="chip border-transparent bg-black/5 text-muted">
-                      Emailed
+                      {cart.handled_reason || "Closed"}
                     </span>
-                  )}
-                </div>
+                    <form action={reopenCart}>
+                      <input type="hidden" name="cart_id" value={cart.id} />
+                      <button className="chip border-black/10 bg-white">
+                        Put it back on the list
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <a
+                        href={message}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-primary px-4 py-2 text-sm"
+                      >
+                        Ask if they still want it
+                      </a>
+                      <a
+                        href={`tel:${cart.phone}`}
+                        className="chip border-black/10 bg-white"
+                      >
+                        Call
+                      </a>
+                      {cart.alerted_at && (
+                        <span className="chip border-transparent bg-black/5 text-muted">
+                          In the recap
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Closing says what came of it, so nobody is chased twice
+                        and the reason the money never arrived is kept. */}
+                    <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-black/5 pt-2">
+                      <span className="text-sm font-semibold text-muted">Close as</span>
+                      {OUTCOMES.map((outcome) => (
+                        <form action={closeCart} key={outcome}>
+                          <input type="hidden" name="cart_id" value={cart.id} />
+                          <input type="hidden" name="reason" value={outcome} />
+                          <button className="chip border-black/10 bg-white py-1.5 text-xs hover:border-ink/30">
+                            {outcome}
+                          </button>
+                        </form>
+                      ))}
+                      <form action={closeCart} className="flex grow gap-2">
+                        <input type="hidden" name="cart_id" value={cart.id} />
+                        <input
+                          name="reason"
+                          placeholder="Something else"
+                          className="field grow py-1.5 text-sm"
+                        />
+                        <button className="chip border-black/10 bg-white py-1.5 text-xs">
+                          Close
+                        </button>
+                      </form>
+                    </div>
+                  </>
+                )}
               </li>
             );
           })}

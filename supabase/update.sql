@@ -98,5 +98,8 @@ alter table settings add column if not exists admin_emails text not null default
 -- How long a cart sits untouched before it counts as abandoned.
 alter table settings add column if not exists abandon_minutes int not null default 45;
 
+-- Why a cart was closed, once it has been chased.
+alter table carts add column if not exists handled_reason text not null default '';
+
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';
