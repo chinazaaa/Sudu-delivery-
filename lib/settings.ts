@@ -1,5 +1,6 @@
 import { db } from "./supabase";
 import { parseBands, type Band } from "./fees";
+import { DELIVERY_WINDOWS, type BatchSlot } from "./config";
 
 export type Settings = {
   bank_name: string;
@@ -27,6 +28,9 @@ export type Settings = {
   admin_emails: string;
   /** Minutes a cart sits untouched before it counts as abandoned. */
   abandon_minutes: number;
+  /** What customers are told about when each run lands. */
+  window_afternoon: string;
+  window_night: string;
 };
 
 const EMPTY: Settings = {
@@ -50,6 +54,8 @@ const EMPTY: Settings = {
   fee_bands: "",
   admin_emails: "",
   abandon_minutes: 45,
+  window_afternoon: "",
+  window_night: "",
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -59,7 +65,7 @@ export async function getSettings(): Promise<Settings> {
       "bank_name, bank_account_name, bank_account_number, whatsapp_number, card_note, " +
         "instagram_handle, whatsapp_group_link, pitch_line, product_notes, footer_line, " +
         "msg_confirmed, msg_payment, msg_card, msg_pin, msg_ready, msg_late, paid_note, " +
-        "fee_bands, admin_emails, abandon_minutes"
+        "fee_bands, admin_emails, abandon_minutes, window_afternoon, window_night"
     )
     .eq("id", true)
     .maybeSingle();
@@ -110,4 +116,13 @@ export function productNotes(settings: Settings, restaurant: string): string[] {
 /** The delivery bands in force right now, read once per request. */
 export async function activeBands(): Promise<Band[]> {
   return parseBands((await safeSettings()).fee_bands);
+}
+
+/** The delivery window for a slot: the admin's wording, else the shipped one. */
+export async function deliveryWindows(): Promise<Record<BatchSlot, string>> {
+  const settings = await safeSettings();
+  return {
+    afternoon: settings.window_afternoon.trim() || DELIVERY_WINDOWS.afternoon,
+    night: settings.window_night.trim() || DELIVERY_WINDOWS.night,
+  };
 }

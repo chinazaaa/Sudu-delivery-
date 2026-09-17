@@ -101,5 +101,10 @@ alter table settings add column if not exists abandon_minutes int not null defau
 -- Why a cart was closed, once it has been chased.
 alter table carts add column if not exists handled_reason text not null default '';
 
+-- What customers are told about when a run lands, per slot. It was fixed in
+-- code, so moving the afternoon run half an hour meant a deploy.
+alter table settings add column if not exists window_afternoon text not null default '';
+alter table settings add column if not exists window_night     text not null default '';
+
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';

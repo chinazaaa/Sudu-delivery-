@@ -32,6 +32,8 @@ const EMPTY_SETTINGS = {
   fee_bands: "",
   admin_emails: "",
   abandon_minutes: 45,
+  window_afternoon: "",
+  window_night: "",
 };
 import type { OrderLine } from "../lib/orders";
 

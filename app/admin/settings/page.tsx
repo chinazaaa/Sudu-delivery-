@@ -13,6 +13,7 @@ import {
 } from "@/lib/messages";
 import { addHostel, deleteHostel, saveSettings, toggleHostel } from "../actions";
 import { listHostels } from "@/lib/hostels";
+import { DELIVERY_WINDOWS } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -158,6 +159,41 @@ export default async function SettingsAdmin() {
 
       <form action={saveSettings} className="card space-y-3">
         <div>
+          <h2 className="font-semibold">When runs land</h2>
+          <p className="text-sm text-muted">
+            What customers are told about a new run, before you change it on
+            the run itself. It is the {"{window}"} in your messages.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="label" htmlFor="window_afternoon">Afternoon runs</label>
+            <input
+              id="window_afternoon"
+              name="window_afternoon"
+              defaultValue={settings.window_afternoon || DELIVERY_WINDOWS.afternoon}
+              className="field"
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="window_night">Night runs</label>
+            <input
+              id="window_night"
+              name="window_night"
+              defaultValue={settings.window_night || DELIVERY_WINDOWS.night}
+              className="field"
+            />
+          </div>
+        </div>
+        <SaveButton>Save</SaveButton>
+        <p className="text-xs text-muted">
+          A run already created keeps what it was created with. Change that one
+          on the run itself, under Controls.
+        </p>
+      </form>
+
+      <form action={saveSettings} className="card space-y-3">
+        <div>
           <h2 className="font-semibold">Who gets told</h2>
           <p className="text-sm text-muted">
             Every admin who should hear when an order lands and when a cart is
@@ -193,7 +229,7 @@ export default async function SettingsAdmin() {
         <p className="text-xs text-muted">
           Email needs RESEND_API_KEY set where the site is hosted. Without it
           nothing is emailed and every cart still shows under Left behind. The
-          recap goes out once a day; the schedule itself lives in Supabase, in
+          recap goes out once a day, scheduled from Supabase with
           supabase/cron.sql.
         </p>
       </form>

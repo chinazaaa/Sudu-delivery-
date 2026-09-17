@@ -25,6 +25,7 @@ import {
   setBatchStatus,
   setFlashFee,
   setRunCosts,
+  updateRun,
 } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -527,6 +528,46 @@ export default async function BatchPage({
                 </section>
 
                 <section className="card space-y-3">
+                  <form action={updateRun} className="space-y-3">
+                    <input type="hidden" name="batch_id" value={batch.id} />
+                    <div>
+                      <h2 className="font-bold">When this run lands</h2>
+                      <p className="text-sm text-muted">
+                        What customers are told, on the shop and in every
+                        message. Change it here if the run slips.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-end gap-2">
+                      <div className="grow">
+                        <label className="label" htmlFor="delivery_window_text">
+                          What customers are told
+                        </label>
+                        <input
+                          id="delivery_window_text"
+                          name="delivery_window_text"
+                          defaultValue={batch.delivery_window_text}
+                          placeholder="On campus ~2:00pm"
+                          className="field"
+                        />
+                      </div>
+                      <div className="w-36">
+                        <label className="label" htmlFor="cut_off_time">
+                          Orders close
+                        </label>
+                        <input
+                          id="cut_off_time"
+                          name="cut_off_time"
+                          type="time"
+                          defaultValue={clockValue(batch.cut_off_at)}
+                          className="field"
+                        />
+                      </div>
+                      <SaveButton quiet className="shrink-0">Save</SaveButton>
+                    </div>
+                  </form>
+                </section>
+
+                <section className="card space-y-3">
                   <form action={setFlashFee} className="space-y-2">
                     <input type="hidden" name="batch_id" value={batch.id} />
                     <h2 className="font-bold">Flash fee drop</h2>
@@ -637,6 +678,15 @@ export default async function BatchPage({
       />
     </div>
   );
+}
+
+/** A timestamp as an <input type="time"> wants it, in Lagos time. */
+function clockValue(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Africa/Lagos",
+  });
 }
 
 function Row({

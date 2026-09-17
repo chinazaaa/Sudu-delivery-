@@ -121,6 +121,37 @@ export async function setRunCosts(form: FormData): Promise<void> {
   revalidatePath("/admin");
 }
 
+/**
+ * When a run lands and when it closes, changed after the run exists. A run
+ * that slips by an hour has to be able to say so without being recreated.
+ */
+export async function updateRun(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("batch_id"));
+
+  const { data: batch } = await db()
+    .from("batches")
+    .select("run_date")
+    .eq("id", id)
+    .maybeSingle();
+  if (!batch) return;
+
+  const patch: Record<string, string> = {
+    delivery_window_text: String(form.get("delivery_window_text") ?? "").trim(),
+  };
+
+  const time = String(form.get("cut_off_time") ?? "").trim();
+  if (/^\d{2}:\d{2}$/.test(time)) {
+    const [hour, minute] = time.split(":").map(Number);
+    patch.cut_off_at = lagosInstant(batch.run_date as string, hour, minute);
+  }
+
+  await db().from("batches").update(patch).eq("id", id);
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+}
+
 /** A real capacity cap. Only set this when the car genuinely fills up. */
 export async function setBatchCapacity(form: FormData): Promise<void> {
   await assertAdmin();
@@ -406,6 +437,8 @@ const SETTING_FIELDS = [
   "fee_bands",
   "admin_emails",
   "abandon_minutes",
+  "window_afternoon",
+  "window_night",
 ] as const;
 
 export async function saveSettings(form: FormData): Promise<void> {

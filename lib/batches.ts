@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { deliveryWindows } from "./settings";
 import {
   CUT_OFFS,
   DELIVERY_WINDOWS,
@@ -31,6 +32,8 @@ function addDays(date: string, days: number): string {
  */
 export async function ensureUpcomingBatches(): Promise<void> {
   const today = lagosToday();
+  // What customers are told, as the admin has worded it.
+  const windows = await deliveryWindows();
   const rows: Array<Omit<Batch, "id">> = [];
 
   for (let i = 0; i < RUN_HORIZON_DAYS; i++) {
@@ -41,7 +44,7 @@ export async function ensureUpcomingBatches(): Promise<void> {
         run_date: date,
         slot,
         cut_off_at: lagosInstant(date, CUT_OFFS[slot].hour, CUT_OFFS[slot].minute),
-        delivery_window_text: DELIVERY_WINDOWS[slot],
+        delivery_window_text: windows[slot],
         status: "open",
         capacity: null,
         flash_fee: null,
