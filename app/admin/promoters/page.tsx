@@ -25,7 +25,7 @@ export default async function PromotersAdmin() {
     <div>
       <PageHeader
         title="Promoter"
-        detail="The person whose job is getting people onto the site. Every paid order counts, at their rate."
+        detail="The person whose job is getting people onto the site. Every order a customer pays for counts, at their rate."
       />
 
       {!schema.ok && (
@@ -40,7 +40,7 @@ export default async function PromotersAdmin() {
       {promoter && (
         <>
           <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Stat label="Paid orders" value={promoter.orders} />
+            <Stat label="Orders counted" value={promoter.orders} />
             <Stat label="Earned" value={promoter.earned} money />
             <Stat label="Paid out" value={promoter.paidOut} money />
             <Stat
@@ -79,7 +79,7 @@ export default async function PromotersAdmin() {
             <form action={recordPayout} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="code" value={promoter.code} />
               <div className="w-32">
-                <label className="label" htmlFor="amount">Paid them</label>
+                <label className="label" htmlFor="amount">Paid out to them</label>
                 <input
                   id="amount"
                   name="amount"
@@ -122,8 +122,8 @@ export default async function PromotersAdmin() {
                             {run.label}
                           </span>
                           <span className="block text-xs text-muted">
-                            {run.orders} paid order{run.orders === 1 ? "" : "s"}
-                            {run.paidOut > 0 && ` · ${naira(run.paidOut)} already sent`}
+                            {run.orders} order{run.orders === 1 ? "" : "s"} counted
+                            {run.paidOut > 0 && ` · ${naira(run.paidOut)} already paid out`}
                           </span>
                         </span>
                         <form action={recordPayout} className="shrink-0">
@@ -136,7 +136,7 @@ export default async function PromotersAdmin() {
                           />
                           <input type="hidden" name="note" value={run.label} />
                           <SaveButton quiet className="px-3 py-1.5 text-sm">
-                            Paid {naira(run.earned - run.paidOut)}
+                            Pay out {naira(run.earned - run.paidOut)}
                           </SaveButton>
                         </form>
                       </li>
@@ -171,7 +171,7 @@ export default async function PromotersAdmin() {
 
             {promoter.payouts.length > 0 && (
               <div>
-                <h3 className="text-sm font-bold">Already paid</h3>
+                <h3 className="text-sm font-bold">Already paid out</h3>
                 <ul className="mt-1 divide-y divide-black/5 text-sm">
                   {promoter.payouts.map((payout) => (
                     <li key={payout.id} className="flex justify-between gap-3 py-2">
@@ -247,7 +247,7 @@ export default async function PromotersAdmin() {
             </p>
           </div>
           <div>
-            <label className="label" htmlFor="rate">Per paid order</label>
+            <label className="label" htmlFor="rate">Per order a customer pays for</label>
             <input
               id="rate"
               name="rate"

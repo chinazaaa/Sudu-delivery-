@@ -43,8 +43,9 @@ export default async function PromoterPage() {
         </p>
         <p className="mt-1 text-3xl font-extrabold">{naira(earnings.owed)}</p>
         <p className="mt-1 text-sm text-white/85">
-          {naira(earnings.earned)} earned, {naira(earnings.paid)} already paid.{" "}
-          {naira(earnings.rate)} per paid order.
+          {naira(earnings.earned)} earned, {naira(earnings.paid)} already paid
+          out to you. {naira(earnings.rate)} for every order a customer pays
+          for.
         </p>
         {earnings.waiting > 0 ? (
           <p className="mt-3 rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold">
@@ -53,7 +54,7 @@ export default async function PromoterPage() {
           </p>
         ) : (
           <p className="mt-3 rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold">
-            Every paid order counts for you.
+            Every order a customer pays for counts for you.
           </p>
         )}
       </section>
@@ -100,8 +101,8 @@ export default async function PromoterPage() {
 
       {earnings.runs.length === 0 ? (
         <p className="card text-sm text-muted">
-          Nothing yet. Every paid order counts for you, so this fills up as
-          the next run does.
+          Nothing yet. Every order a customer pays for counts for you, so this
+          fills up as the next run does.
         </p>
       ) : (
         <section className="card space-y-2">
@@ -112,8 +113,8 @@ export default async function PromoterPage() {
                 <span>
                   <span className="block font-semibold">{run.label}</span>
                   <span className="block text-sm text-muted">
-                    {run.orders} paid order{run.orders === 1 ? "" : "s"}
-                    {run.unpaid > 0 && ` · ${run.unpaid} not paid for yet`}
+                    {run.orders} order{run.orders === 1 ? "" : "s"} counted
+                    {run.unpaid > 0 && ` · ${run.unpaid} still waiting on the customer`}
                   </span>
                 </span>
                 <span className="shrink-0 text-right">
@@ -125,10 +126,10 @@ export default async function PromoterPage() {
                       }`}
                     >
                       {run.paidOut >= run.earned
-                        ? "Paid to you"
+                        ? "Paid out to you"
                         : run.paidOut > 0
-                          ? `${naira(run.paidOut)} of it paid`
-                          : "Not paid yet"}
+                          ? `${naira(run.paidOut)} of it paid out`
+                          : "Not paid out to you yet"}
                     </span>
                   )}
                 </span>
@@ -136,15 +137,16 @@ export default async function PromoterPage() {
             ))}
           </ul>
           <p className="text-xs text-muted">
-            An order earns when it is paid for. One that never got paid never
-            travelled, so it does not count.
+            An order counts once the customer has paid for it: one that never
+            got paid never travelled. Paid out is the separate thing, and
+            means your money has been sent.
           </p>
         </section>
       )}
 
       {earnings.payouts.length > 0 && (
         <section className="card space-y-2">
-          <h2 className="font-bold">Paid to you</h2>
+          <h2 className="font-bold">Paid out to you</h2>
           <ul className="divide-y divide-black/5 text-sm">
             {earnings.payouts.map((payout) => (
               <li
