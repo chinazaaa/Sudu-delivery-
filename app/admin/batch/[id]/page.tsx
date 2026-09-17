@@ -347,7 +347,11 @@ export default async function BatchPage({
                       />
                     ))}
                     <Row
-                      label="Promoter commission owed"
+                      label={
+                        summary.commission > 0
+                          ? "Promoter commission owed (worked out from the codes)"
+                          : "Promoter commission owed"
+                      }
                       value={`−${naira(summary.commission)}`}
                     />
                     {batch.fuel_cost > 0 && (
