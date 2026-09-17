@@ -229,13 +229,22 @@ export type BatchRow = Batch & {
   gross: number;
 };
 
-/** Every batch from today onward, with live counts, so a weak one shows early. */
-export async function batchOverview(): Promise<BatchRow[]> {
-  const { data: batches, error } = await db()
-    .from("batches")
-    .select("*")
-    .gte("run_date", new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10))
-    .order("cut_off_at", { ascending: true });
+/**
+ * Batches with live counts and profit. The default window is the last few days
+ * and everything ahead, which is what today needs; "all" reaches back through
+ * every run ever made, because a past run is still worth reading.
+ */
+export async function batchOverview(window: "recent" | "all" = "recent"): Promise<BatchRow[]> {
+  let query = db().from("batches").select("*");
+  if (window === "recent") {
+    query = query
+      .gte("run_date", new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10))
+      .order("cut_off_at", { ascending: true });
+  } else {
+    query = query.order("cut_off_at", { ascending: false }).limit(200);
+  }
+
+  const { data: batches, error } = await query;
   if (error) throw new Error(error.message);
 
   const rows = (batches ?? []) as Batch[];

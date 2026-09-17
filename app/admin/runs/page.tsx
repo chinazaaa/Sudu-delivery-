@@ -15,9 +15,11 @@ export const dynamic = "force-dynamic";
 export default async function RunsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ new?: string }>;
+  searchParams: Promise<{ new?: string; show?: string }>;
 }) {
-  const showForm = (await searchParams).new === "1";
+  const query = await searchParams;
+  const showForm = query.new === "1";
+  const window = query.show === "all" ? "all" : "recent";
 
   let problem: Awaited<ReturnType<typeof diagnoseEmpty>> | null = null;
   let batches: Awaited<ReturnType<typeof batchOverview>> = [];
@@ -25,7 +27,7 @@ export default async function RunsPage({
   try {
     await ensureUpcomingBatches();
     await closeExpiredBatches();
-    batches = await batchOverview();
+    batches = await batchOverview(window);
     if (batches.length === 0) problem = await diagnoseEmpty();
   } catch (error) {
     // A blocked write usually means the wrong key, so say that rather than
@@ -49,7 +51,11 @@ export default async function RunsPage({
     <div>
       <PageHeader
         title="Runs"
-        detail="Every batch, open or closed. Fridays open themselves."
+        detail={
+          window === "all"
+            ? "Every run ever made, newest first."
+            : "This week and the days just gone. Fridays open themselves."
+        }
         actions={
           <Link
             href={showForm ? "/admin/runs" : "/admin/runs?new=1"}
@@ -59,6 +65,25 @@ export default async function RunsPage({
           </Link>
         }
       />
+
+      <div className="no-scrollbar -mx-4 mb-3 flex gap-2 overflow-x-auto px-4">
+        <Link
+          href="/admin/runs"
+          className={`chip ${
+            window === "recent" ? "border-ink bg-ink text-white" : "border-black/10 bg-white"
+          }`}
+        >
+          This week
+        </Link>
+        <Link
+          href="/admin/runs?show=all"
+          className={`chip ${
+            window === "all" ? "border-ink bg-ink text-white" : "border-black/10 bg-white"
+          }`}
+        >
+          Every run so far
+        </Link>
+      </div>
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Runs listed" value={live.length} />
