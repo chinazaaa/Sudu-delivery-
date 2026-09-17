@@ -1,6 +1,7 @@
 import PageHeader from "@/components/admin/PageHeader";
 import SaveButton from "@/components/SaveButton";
 import ActionButton from "@/components/admin/ActionButton";
+import ConfirmButton from "@/components/admin/ConfirmButton";
 import { couponLabel, listCoupons } from "@/lib/coupons";
 import { naira } from "@/lib/money";
 import { SLOT_LABEL } from "@/lib/config";
@@ -102,12 +103,13 @@ export default async function CouponsAdmin() {
               </form>
               <form action={deleteCoupon}>
                 <input type="hidden" name="code" value={coupon.code} />
-                <ActionButton
+                <ConfirmButton
+                  tone="bare"
                   className="chip border-black/10 bg-white text-brand"
-                  done="Deleted ✓"
+                  confirm={`Yes, delete ${coupon.code}`}
                 >
                   Delete
-                </ActionButton>
+                </ConfirmButton>
               </form>
             </div>
           </li>

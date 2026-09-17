@@ -17,7 +17,8 @@ export default function ConfirmButton({
   /** What the button says once it is asking. */
   confirm: string;
   className?: string;
-  tone?: "quiet" | "brand";
+  /** "bare" drops the chip styling, for the small inline × and Remove links. */
+  tone?: "quiet" | "brand" | "bare";
 }) {
   const [asking, setAsking] = useState(false);
   const { pending } = useFormStatus();
@@ -27,7 +28,7 @@ export default function ConfirmButton({
       <button
         type="button"
         onClick={() => setAsking(true)}
-        className={`chip border-black/10 bg-white ${
+        className={`${tone === "bare" ? "" : "chip border-black/10 bg-white"} ${
           tone === "brand" ? "text-brand" : ""
         } ${className}`}
       >
@@ -43,7 +44,7 @@ export default function ConfirmButton({
         disabled={pending}
         className={`chip border-transparent ${
           tone === "brand" ? "bg-brand text-white" : "bg-ink text-white"
-        } ${className}`}
+        }`}
       >
         {pending ? "…" : confirm}
       </button>

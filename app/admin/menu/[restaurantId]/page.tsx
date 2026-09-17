@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import AdminItemFilter from "@/components/AdminItemFilter";
 import Thumb from "@/components/Thumb";
 import ActionButton from "@/components/admin/ActionButton";
+import ConfirmButton from "@/components/admin/ConfirmButton";
 import SaveButton from "@/components/SaveButton";
 import { db } from "@/lib/supabase";
 import { optionGroupsFor } from "@/lib/menu";
@@ -174,14 +175,13 @@ export default async function RestaurantAdmin({
               <form action={deleteCategory} className="chip border-black/10 bg-white">
                 <input type="hidden" name="category_id" value={category.id} />
                 {category.name}
-                <ActionButton
+                <ConfirmButton
+                  tone="bare"
                   className="text-ink/35 hover:text-brand"
-                  busy="…"
-                  done="✓"
-                  aria-label={`Delete ${category.name}`}
+                  confirm={`Delete ${category.name}?`}
                 >
                   ✕
-                </ActionButton>
+                </ConfirmButton>
               </form>
             </li>
           ))}
@@ -401,12 +401,13 @@ export default async function RestaurantAdmin({
                         </h4>
                         <form action={deleteOptionGroup}>
                           <input type="hidden" name="group_id" value={group.id} />
-                          <ActionButton
+                          <ConfirmButton
+                            tone="bare"
                             className="text-sm text-ink/40 hover:text-brand"
-                            done="Removed ✓"
+                            confirm={`Yes, remove ${group.name}`}
                           >
                             Remove
-                          </ActionButton>
+                          </ConfirmButton>
                         </form>
                       </div>
 
@@ -437,13 +438,13 @@ export default async function RestaurantAdmin({
                             </form>
                             <form action={deleteOption}>
                               <input type="hidden" name="option_id" value={option.id} />
-                              <ActionButton
+                              <ConfirmButton
+                                tone="bare"
                                 className="px-1 pb-1 text-xs text-ink/40 hover:text-brand"
-                                busy="…"
-                                done="✓"
+                                confirm="Delete?"
                               >
                                 ✕
-                              </ActionButton>
+                              </ConfirmButton>
                             </form>
                           </li>
                         ))}
@@ -496,12 +497,13 @@ export default async function RestaurantAdmin({
 
                 <form action={deleteMenuItem}>
                   <input type="hidden" name="item_id" value={item.id} />
-                  <ActionButton
+                  <ConfirmButton
+                    tone="bare"
                     className="text-sm text-muted hover:text-brand"
-                    done="Deleted ✓"
+                    confirm={`Yes, delete ${item.name}`}
                   >
                     Delete this item
-                  </ActionButton>
+                  </ConfirmButton>
                 </form>
               </details>
             </div>

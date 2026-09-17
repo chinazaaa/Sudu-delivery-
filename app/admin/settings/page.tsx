@@ -2,6 +2,7 @@ import SaveButton from "@/components/SaveButton";
 import PageHeader from "@/components/admin/PageHeader";
 import BandEditor from "@/components/admin/BandEditor";
 import ActionButton from "@/components/admin/ActionButton";
+import ConfirmButton from "@/components/admin/ConfirmButton";
 import { parseBands } from "@/lib/fees";
 import { getSettings, hasBankDetails } from "@/lib/settings";
 import {
@@ -283,12 +284,13 @@ export default async function SettingsAdmin() {
                 </form>
                 <form action={deleteHostel}>
                   <input type="hidden" name="hostel_id" value={hostel.id} />
-                  <ActionButton
+                  <ConfirmButton
+                    tone="bare"
                     className="chip border-black/10 bg-white py-1.5 text-xs text-brand"
-                    done="Removed ✓"
+                    confirm={`Yes, remove ${hostel.name}`}
                   >
                     Remove
-                  </ActionButton>
+                  </ConfirmButton>
                 </form>
               </span>
             </li>

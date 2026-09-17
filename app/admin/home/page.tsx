@@ -1,6 +1,7 @@
 import PageHeader from "@/components/admin/PageHeader";
 import SaveButton from "@/components/SaveButton";
 import ActionButton from "@/components/admin/ActionButton";
+import ConfirmButton from "@/components/admin/ConfirmButton";
 import Thumb from "@/components/Thumb";
 import { listSlides } from "@/lib/slides";
 import { getSettings } from "@/lib/settings";
@@ -113,12 +114,13 @@ export default async function HomeAdmin() {
 
             <form action={deleteSlide} className="mt-2">
               <input type="hidden" name="slide_id" value={slide.id} />
-              <ActionButton
+              <ConfirmButton
+                tone="bare"
                 className="chip border-black/10 bg-white text-brand"
-                done="Deleted ✓"
+                confirm="Yes, delete this slide"
               >
                 Delete this slide
-              </ActionButton>
+              </ConfirmButton>
             </form>
           </li>
         ))}
