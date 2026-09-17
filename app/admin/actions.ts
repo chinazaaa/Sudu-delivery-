@@ -71,6 +71,30 @@ export async function savePaymentLink(form: FormData): Promise<void> {
   revalidatePath("/admin/orders");
 }
 
+/**
+ * Ticking a bag off marks everything in it delivered, and untricking it puts
+ * it back to paid. The tick used to be a private checklist in the browser
+ * that looked identical to the real thing, so a bag could be ticked all
+ * evening while its customer's page still read "paid and on the run".
+ */
+export async function setBagDelivered(form: FormData): Promise<void> {
+  await assertAdmin();
+  const ids = String(form.get("order_ids") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  if (ids.length === 0) return;
+
+  const delivered = form.get("delivered") === "true";
+  await db()
+    .from("orders")
+    .update({ status: delivered ? "delivered" : "paid" })
+    .in("id", ids);
+
+  revalidatePath("/admin");
+  revalidatePath("/orders");
+}
+
 export async function markDelivered(form: FormData): Promise<void> {
   await assertAdmin();
   await db()

@@ -22,6 +22,7 @@ import {
   refundOrder,
   setBatchCapacity,
   setBatchStage,
+  setBagDelivered,
   setBatchStatus,
   setFlashFee,
   setRunCosts,
@@ -195,13 +196,14 @@ export default async function BatchPage({
                 <section className="card space-y-2">
                   <h2 className="font-bold">One bag per name</h2>
                   <p className="text-sm text-muted">
-                    Anything added later in the week is already merged in. Tick
-                    each name as you hand it over.
+                    Anything added later in the week is already merged in.
+                    Tapping a bag marks it delivered, which is what the
+                    customer sees on their own page. Tap it again to undo.
                   </p>
                   <HandoutList
+                    setDelivered={setBagDelivered}
                     markDelivered={markDelivered}
                     refund={refundOrder}
-                    batchId={batch.id}
                     entries={handout.map((bag) => ({
                       id: bag.key,
                       name: bag.name,
