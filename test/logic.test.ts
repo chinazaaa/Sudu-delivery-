@@ -37,6 +37,7 @@ const EMPTY_SETTINGS = {
   window_afternoon: "",
   window_night: "",
   order_horizon_days: 7,
+  tagline: "",
 };
 import type { OrderLine } from "../lib/orders";
 

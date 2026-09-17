@@ -9,7 +9,7 @@ import { countItems, useCart } from "@/lib/cart";
  * A quiet top bar. Restaurants are not links up here: they are the content of
  * the home page, and a row of scrolling text links never looks finished.
  */
-export default function SiteHeader() {
+export default function SiteHeader({ tagline }: { tagline: string }) {
   const cart = useCart();
   const count = countItems(cart);
   const path = usePathname();
@@ -47,9 +47,7 @@ export default function SiteHeader() {
 
         <Link href="/" className="min-w-0 flex-1">
           <span className="block truncate text-lg font-extrabold leading-none">Sudu</span>
-          <span className="block truncate text-xs text-muted">
-            Sangotedo to PAU
-          </span>
+          <span className="block truncate text-xs text-muted">{tagline}</span>
         </Link>
 
         <nav className="hidden items-center gap-1 sm:flex">

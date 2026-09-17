@@ -34,7 +34,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
-        <SiteHeader />
+        <SiteHeader tagline={settings.tagline || "Sangotedo to PAU"} />
         <main className="mx-auto max-w-5xl px-4 pb-28 pt-4 sm:pb-24">{children}</main>
         {/* Clears both the tab bar and a sticky cart bar, which were sitting
             on top of this line. */}

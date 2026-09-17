@@ -547,6 +547,39 @@ export async function recordPayout(form: FormData): Promise<void> {
   revalidatePath("/promoter");
 }
 
+/** A slide on the home page: words, a picture, and where the button goes. */
+export async function saveSlide(form: FormData): Promise<void> {
+  await assertAdmin();
+  const headline = String(form.get("headline") ?? "").trim();
+  if (!headline) return;
+
+  const id = String(form.get("slide_id") ?? "").trim();
+  const row = {
+    headline,
+    body: String(form.get("body") ?? "").trim(),
+    image_url:
+      (await uploadImage(fileFrom(form, "photo"), "slides")) ??
+      String(form.get("image_url") ?? "").trim(),
+    link_url: String(form.get("link_url") ?? "").trim(),
+    link_text: String(form.get("link_text") ?? "").trim(),
+    sort_order: Math.round(Number(form.get("sort_order") ?? 100)) || 100,
+    active: form.get("active") === "on",
+  };
+
+  if (id) await db().from("slides").update(row).eq("id", id);
+  else await db().from("slides").insert(row);
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
+}
+
+export async function deleteSlide(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db().from("slides").delete().eq("id", String(form.get("slide_id")));
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
+}
+
 /** A discount code: what it takes off, and how long it lasts. */
 export async function saveCoupon(form: FormData): Promise<void> {
   await assertAdmin();
@@ -668,6 +701,7 @@ const SETTING_FIELDS = [
   "window_afternoon",
   "window_night",
   "order_horizon_days",
+  "tagline",
 ] as const;
 
 export async function saveSettings(form: FormData): Promise<void> {

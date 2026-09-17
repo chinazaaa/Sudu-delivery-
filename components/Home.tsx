@@ -10,6 +10,7 @@ import RunStrip from "./RunStrip";
 import Thumb from "./Thumb";
 import { useCart } from "@/lib/cart";
 import type { ItemView, MenuView, BatchView } from "@/lib/view";
+import type { Slide } from "@/lib/slides";
 
 /** The promises, carried by the slider rather than listed as cards. */
 const PROMISES = [
@@ -21,9 +22,12 @@ const PROMISES = [
 export default function Home({
   menu,
   nextRun,
+  slides,
 }: {
   menu: MenuView[];
   nextRun: BatchView | null;
+  /** Written in admin. Empty falls back to a slide per restaurant. */
+  slides: Slide[];
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<{ item: ItemView; place: MenuView } | null>(null);
@@ -111,28 +115,51 @@ export default function Home({
       ) : (
         <>
           <Carousel>
-            {menu.map((place, index) => (
-              <div key={place.restaurant.id} className="relative h-64 sm:h-80">
+            {(slides.length > 0
+              ? slides.map((slide) => ({
+                  key: slide.id,
+                  image: slide.image_url,
+                  name: slide.headline,
+                  headline: slide.headline,
+                  body: slide.body,
+                  href: slide.link_url,
+                  linkText: slide.link_text || "See the menu",
+                }))
+              : menu.map((place, index) => ({
+                  key: place.restaurant.id,
+                  image: place.restaurant.bannerUrl,
+                  name: place.restaurant.name,
+                  headline: `${place.restaurant.name}, delivered to your block`,
+                  body: PROMISES[index % PROMISES.length],
+                  href: `/r/${place.restaurant.id}`,
+                  linkText: "See the menu",
+                }))
+            ).map((slide) => (
+              <div key={slide.key} className="relative h-64 sm:h-80">
                 <Thumb
-                  src={place.restaurant.bannerUrl}
-                  name={place.restaurant.name}
+                  src={slide.image}
+                  name={slide.name}
                   rounded="rounded-none"
                   variant="banner"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-ink/95 via-ink/60 to-ink/20" />
                 <div className="absolute inset-0 flex flex-col justify-end gap-3 p-5 pb-12 text-white sm:p-8 sm:pb-14">
                   <h2 className="text-2xl font-extrabold leading-tight sm:text-4xl">
-                    {place.restaurant.name}, delivered to your block
+                    {slide.headline}
                   </h2>
-                  <p className="max-w-md text-sm text-white/80 sm:text-base">
-                    {PROMISES[index % PROMISES.length]}
-                  </p>
-                  <Link
-                    href={`/r/${place.restaurant.id}`}
-                    className="btn w-fit bg-paper px-6 py-3 text-ink"
-                  >
-                    See the menu
-                  </Link>
+                  {slide.body && (
+                    <p className="max-w-md text-sm text-white/80 sm:text-base">
+                      {slide.body}
+                    </p>
+                  )}
+                  {slide.href && (
+                    <Link
+                      href={slide.href}
+                      className="btn w-fit bg-paper px-6 py-3 text-ink"
+                    >
+                      {slide.linkText}
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}
@@ -169,8 +196,8 @@ export default function Home({
                         {place.restaurant.name}
                       </span>
                       <span className="block text-sm text-muted">
-                        {place.items.length} item{place.items.length === 1 ? "" : "s"} ·
-                        closes {place.restaurant.closesAt}
+                        {place.items.length} item{place.items.length === 1 ? "" : "s"} on
+                        the menu
                       </span>
                     </span>
                   </span>
