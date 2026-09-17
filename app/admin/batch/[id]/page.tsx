@@ -7,6 +7,7 @@ import Stat from "@/components/admin/Stat";
 import Tabs from "@/components/admin/Tabs";
 import Checklist from "@/components/admin/Checklist";
 import ConfirmButton from "@/components/admin/ConfirmButton";
+import StagePicker from "@/components/admin/StagePicker";
 import { batchSheet } from "@/lib/admin";
 import { SLOT_LABEL } from "@/lib/config";
 import Link from "next/link";
@@ -17,7 +18,7 @@ import { bandTable, parseBands } from "@/lib/fees";
 import { narration, template, whatsappTo } from "@/lib/messages";
 import { getSettings } from "@/lib/settings";
 import { sheetAsText } from "@/lib/sheet-text";
-import { STAGES, STAGE_ACTION } from "@/lib/stages";
+import { STAGES, STAGE_ACTION, STAGE_LABEL } from "@/lib/stages";
 import {
   markDelivered,
   markPaid,
@@ -78,21 +79,28 @@ export default async function BatchPage({
     <div>
       <PageHeader
         title={batchLabel}
-        detail={`Closes ${clockLabel(batch.cut_off_at)} · ${batch.delivery_window_text} · ${batch.status}`}
+        detail={`Closes ${clockLabel(batch.cut_off_at)} · ${batch.delivery_window_text} · ${STAGE_LABEL[batch.stage]}`}
         backHref="/admin/runs"
         backLabel="All runs"
         actions={
-          <a
-            href={whatsappTo(
-              settings.whatsapp_number || "0",
-              sheetAsText(sheet, batchLabel)
-            )}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-quiet px-4 py-2.5 text-sm"
-          >
-            Send sheet to my WhatsApp
-          </a>
+          <>
+            <StagePicker
+              batchId={batch.id}
+              stage={batch.stage}
+              action={setBatchStage}
+            />
+            <a
+              href={whatsappTo(
+                settings.whatsapp_number || "0",
+                sheetAsText(sheet, batchLabel)
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-quiet px-4 py-2.5 text-sm"
+            >
+              Send sheet to my WhatsApp
+            </a>
+          </>
         }
       />
 
@@ -476,9 +484,10 @@ export default async function BatchPage({
                   <div>
                     <h2 className="font-bold">Where the food is</h2>
                     <p className="text-sm text-muted">
-                      Tap a stage as you reach it. Everyone in this batch sees it on
-                      their order page, and the run closes to new orders by itself
-                      the moment you leave &quot;Ordering&quot;.
+                      The same stages as the dropdown at the top of this page.
+                      Everyone in this run sees the stage on their order page,
+                      and the run closes to new orders by itself the moment you
+                      leave &quot;Ordering&quot;.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
