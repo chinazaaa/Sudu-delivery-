@@ -17,15 +17,28 @@ export type Slide = {
  * frame waiting to be filled in.
  */
 export async function listSlides(includeHidden = false): Promise<Slide[]> {
+  return (await readSlides(includeHidden)).slides;
+}
+
+/**
+ * The same, plus whether the table is actually there.
+ *
+ * Admin needs the difference. No slides yet and no slides table look
+ * identical from here, but one of them means the next thing you do will
+ * fail, so it is worth saying which you are looking at.
+ */
+export async function readSlides(
+  includeHidden = false
+): Promise<{ slides: Slide[]; ready: boolean }> {
   try {
     let query = db().from("slides").select("*").order("sort_order").order("created_at");
     if (!includeHidden) query = query.eq("active", true);
 
     const { data, error } = await query;
     if (error) throw new Error(error.message);
-    return (data ?? []) as Slide[];
+    return { slides: (data ?? []) as Slide[], ready: true };
   } catch {
     // No table yet: the fallback slides still render.
-    return [];
+    return { slides: [], ready: false };
   }
 }

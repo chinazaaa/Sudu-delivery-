@@ -4,14 +4,14 @@ import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import Reorder from "@/components/admin/Reorder";
 import Thumb from "@/components/Thumb";
-import { listSlides } from "@/lib/slides";
+import { readSlides } from "@/lib/slides";
 import { getSettings } from "@/lib/settings";
 import { deleteSlide, moveSlide, saveSettings, saveSlide } from "../actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomeAdmin() {
-  const slides = await listSlides(true);
+  const { slides, ready } = await readSlides(true);
   const settings = await getSettings();
 
   return (
@@ -37,9 +37,19 @@ export default async function HomeAdmin() {
       </form>
 
       <h2 className="mb-2 font-bold">Slides</h2>
-      <p className="mb-2 text-sm text-muted">
-        The order here is the order they appear in the slider.
-      </p>
+      {!ready ? (
+        <p className="card mb-4 border-amber-300 bg-amber-50 text-sm">
+          <span className="block font-bold">The slides table is missing.</span>
+          The home page is showing its automatic slider, and anything you add
+          here will fail to save until the table exists. Run{" "}
+          <span className="font-semibold">supabase/update.sql</span> in
+          Supabase, then come back.
+        </p>
+      ) : (
+        <p className="mb-2 text-sm text-muted">
+          The order here is the order they appear in the slider.
+        </p>
+      )}
       <ul className="mb-4 space-y-3">
         {slides.map((slide, index) => (
           <li key={slide.id} className="card flex items-start gap-2">
@@ -132,8 +142,12 @@ export default async function HomeAdmin() {
         ))}
         {slides.length === 0 && (
           <li className="card text-sm text-muted">
-            No slides yet, so the home page shows one per restaurant with their
-            own banner. Add one below and yours take over.
+            <span className="block font-semibold text-ink">
+              The slider on the home page is being made for you.
+            </span>
+            There is one slide per restaurant, using its banner photograph,
+            headed with its name and a line about the run. That is what you
+            are seeing now. Add a slide below and yours replace the lot.
           </li>
         )}
       </ul>
