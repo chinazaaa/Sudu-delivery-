@@ -151,8 +151,10 @@ export default function OrderCard({
                     <span className="text-muted"> · {line.choices.join(", ")}</span>
                   )}
                   <span className="text-muted"> · {line.restaurant}</span>
-                  {line.for_name && (
-                    <span className="text-muted"> · for {line.for_name}</span>
+                  {(line.for_name || order.lines.some((l) => l.for_name)) && (
+                    <span className="text-muted">
+                      {" "}· for {line.for_name ?? order.name}
+                    </span>
                   )}
                 </span>
                 <span>{naira(line.qty * line.unit_price_at_order)}</span>

@@ -210,7 +210,9 @@ export default async function BatchPage({
                         (l) =>
                           `${l.qty}× ${l.name}` +
                           (l.choices.length > 0 ? ` (${l.choices.join(", ")})` : "") +
-                          (l.for_name && l.for_name !== bag.name ? ` · for ${l.for_name}` : "")
+                          (l.for_name && l.for_name !== bag.name
+                            ? ` · for ${l.for_name}`
+                            : "")
                       ),
                     }))}
                   />

@@ -469,3 +469,24 @@ test("a message template fills in the order and falls back to the default wordin
   assert.match(asking, /08031234567/);
   assert.match(asking, /https:\/\/sudu\.ng\/o\/abc/);
 });
+
+test("tagging some items with a name leaves none of them without an owner", () => {
+  // The cart lets someone tag two items and leave a third alone. Whoever
+  // ordered owns the untagged one, so a bag never holds a nameless item.
+  const name = "Naza";
+  const lines = [
+    { for_name: "Bola" },
+    { for_name: null as string | null },
+    { for_name: "  " },
+  ];
+
+  const tagged = lines.some((line) => line.for_name?.trim());
+  const labelled = tagged
+    ? lines.map((line) => ({ for_name: line.for_name?.trim() || name }))
+    : lines;
+
+  assert.deepEqual(
+    labelled.map((line) => line.for_name),
+    ["Bola", "Naza", "Naza"]
+  );
+});

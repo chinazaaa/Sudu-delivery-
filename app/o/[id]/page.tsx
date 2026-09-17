@@ -36,6 +36,9 @@ export default async function OrderPage({
   const paid = order.status === "paid" || order.status === "delivered";
   const awaitingPayment = order.status === "pending";
   const drops = dropsFor(order);
+  // An older order can carry names on some lines and not others. Whoever
+  // ordered owns the rest, so the list never shows an item with no owner.
+  const named = order.lines.some((line) => line.for_name);
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 pb-10">
@@ -237,7 +240,7 @@ export default async function OrderPage({
               <span>
                 {line.qty}× {line.name}{" "}
                 <span className="text-muted">({line.restaurant})</span>
-                {(line.for_name || order.group) && (
+                {(line.for_name || order.group || named) && (
                   <span className="text-muted">
                     {" "}· for {line.for_name ?? order.customer_name}
                   </span>

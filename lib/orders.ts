@@ -212,9 +212,12 @@ async function placeSingleOrder(args: {
     await saveMembers(group.id, args.people);
   }
 
-  // An untagged line in a group belongs to whoever is ordering, so it is
-  // labelled with their name rather than left blank on the bag.
-  const lines = group
+  // An untagged line belongs to whoever is ordering, so it is labelled with
+  // their name rather than left blank. This applies whenever any line carries
+  // a name at all, not only inside a group: tagging two items in the cart and
+  // leaving a third alone used to produce a bag where one item had no owner.
+  const tagged = group !== null || args.lines.some((line) => line.for_name?.trim());
+  const lines = tagged
     ? args.lines.map((line) => ({
         ...line,
         for_name: line.for_name?.trim() || args.name,
