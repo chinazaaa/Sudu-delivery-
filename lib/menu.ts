@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { db } from "./supabase";
 import type { ItemView, MenuView, OptionGroupView } from "./view";
 import type {
@@ -9,7 +10,7 @@ import type {
 } from "./types";
 
 /** The customer menu: active restaurants, their categories, items and choices. */
-export async function menuView(): Promise<MenuView[]> {
+async function readMenu(): Promise<MenuView[]> {
   const { data: restaurants, error } = await db()
     .from("restaurants")
     .select("*")
@@ -105,7 +106,7 @@ export async function optionGroupsFor(
  * every item and every option in the system to show one of them, which is why
  * it felt slow to open.
  */
-export async function menuViewFor(restaurantId: string): Promise<MenuView | null> {
+async function readMenuFor(restaurantId: string): Promise<MenuView | null> {
   const { data } = await db()
     .from("restaurants")
     .select("*")
@@ -164,3 +165,22 @@ export async function openRestaurants(): Promise<{ id: string; name: string }[]>
     return [];
   }
 }
+
+
+/**
+ * The menu, read once a minute rather than once a visitor.
+ *
+ * Nine restaurants and getting on for eight hundred items is a lot to fetch
+ * and a lot to send, and it is the same for everybody. Admin clears this the
+ * moment anything changes, so the minute only ever covers a stretch where
+ * nothing has.
+ */
+export const menuView = unstable_cache(readMenu, ["menu-view"], {
+  revalidate: 60,
+  tags: ["menu"],
+});
+
+export const menuViewFor = unstable_cache(readMenuFor, ["menu-view-for"], {
+  revalidate: 60,
+  tags: ["menu"],
+});

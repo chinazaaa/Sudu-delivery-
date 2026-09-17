@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { isSignedIn, passwordMatches, signIn, signOut } from "@/lib/admin-auth";
 import { db } from "@/lib/supabase";
 import { STAGES, type BatchStage } from "@/lib/stages";
@@ -192,6 +192,7 @@ export async function updateRun(form: FormData): Promise<void> {
   await db().from("batches").update(patch).eq("id", id);
 
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -259,6 +260,7 @@ export async function generateRuns(form: FormData): Promise<void> {
   }
 
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -323,6 +325,7 @@ export async function updateMenuItem(form: FormData): Promise<void> {
     })
     .eq("id", String(form.get("item_id")));
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -344,6 +347,7 @@ export async function addMenuItem(form: FormData): Promise<void> {
     sort_order: 100,
   });
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -434,6 +438,7 @@ export async function addGroupsToItem(form: FormData): Promise<void> {
   await assertAdmin();
   await saveGroups(String(form.get("item_id")), String(form.get("groups") ?? "[]"));
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -578,6 +583,7 @@ export async function saveSlide(form: FormData): Promise<void> {
   else await db().from("slides").insert(row);
 
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -585,6 +591,7 @@ export async function deleteSlide(form: FormData): Promise<void> {
   await assertAdmin();
   await db().from("slides").delete().eq("id", String(form.get("slide_id")));
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -752,6 +759,7 @@ export async function saveSettings(form: FormData): Promise<void> {
   }
 
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -774,6 +782,7 @@ export async function setFlashFee(form: FormData): Promise<void> {
     .eq("id", String(form.get("batch_id")));
 
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -833,6 +842,7 @@ export async function addRestaurant(form: FormData): Promise<void> {
     sort_order: 100,
   });
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -857,6 +867,7 @@ export async function updateRestaurant(form: FormData): Promise<void> {
     })
     .eq("id", String(form.get("restaurant_id")));
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -920,6 +931,7 @@ export async function seedLaunchRestaurants(): Promise<void> {
     );
   }
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -955,6 +967,7 @@ export async function createBatch(form: FormData): Promise<void> {
     );
 
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -969,6 +982,7 @@ export async function addCategory(form: FormData): Promise<void> {
     sort_order: Number(form.get("sort_order") ?? 100),
   });
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -976,6 +990,7 @@ export async function deleteCategory(form: FormData): Promise<void> {
   await assertAdmin();
   await db().from("menu_categories").delete().eq("id", String(form.get("category_id")));
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -993,6 +1008,7 @@ export async function addOptionGroup(form: FormData): Promise<void> {
     sort_order: 100,
   });
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -1000,6 +1016,7 @@ export async function deleteOptionGroup(form: FormData): Promise<void> {
   await assertAdmin();
   await db().from("item_option_groups").delete().eq("id", String(form.get("group_id")));
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -1015,6 +1032,7 @@ export async function addOption(form: FormData): Promise<void> {
     sort_order: 100,
   });
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -1029,6 +1047,7 @@ export async function updateOption(form: FormData): Promise<void> {
     })
     .eq("id", String(form.get("option_id")));
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -1036,6 +1055,7 @@ export async function deleteOption(form: FormData): Promise<void> {
   await assertAdmin();
   await db().from("item_options").delete().eq("id", String(form.get("option_id")));
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -1043,6 +1063,7 @@ export async function deleteMenuItem(form: FormData): Promise<void> {
   await assertAdmin();
   await db().from("menu_items").delete().eq("id", String(form.get("item_id")));
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -1109,6 +1130,7 @@ export async function importMenu(form: FormData): Promise<void> {
   }
 
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -1177,6 +1199,7 @@ export async function applyGroupToCategory(form: FormData): Promise<void> {
   }
 
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -1190,6 +1213,7 @@ export async function toggleItemAvailable(form: FormData): Promise<void> {
     .eq("id", String(form.get("item_id")));
 
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 
@@ -1230,6 +1254,7 @@ async function shuffle(
   );
 
   revalidatePath("/admin", "layout");
+  updateTag("menu");
   revalidatePath("/", "layout");
 }
 

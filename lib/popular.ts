@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { db } from "./supabase";
 
 /** How far back "this week" reaches, and how many items the row shows. */
@@ -15,7 +16,7 @@ const SHOWN = 12;
  * Quantities are added rather than orders counted, so ten people putting one
  * wrap each in a group order says what it should.
  */
-export async function popularItemIds(days = DAYS, limit = SHOWN): Promise<string[]> {
+async function readPopular(days = DAYS, limit = SHOWN): Promise<string[]> {
   try {
     const since = new Date(Date.now() - days * 86400_000).toISOString();
 
@@ -50,3 +51,14 @@ export async function popularItemIds(days = DAYS, limit = SHOWN): Promise<string
     return [];
   }
 }
+
+
+/**
+ * Held for five minutes. Working this out reads every paid order and every
+ * line on them, which only grows, and what is popular does not change between
+ * one visitor and the next.
+ */
+export const popularItemIds = unstable_cache(readPopular, ["popular-items"], {
+  revalidate: 300,
+  tags: ["orders"],
+});
