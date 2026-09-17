@@ -49,6 +49,10 @@ export type BatchSheet = {
     foodCost: number;
     commission: number;
     net: number;
+    /** Fuel, driver and anything else bought on the night. */
+    costs: number;
+    /** What is actually left: gross, less food, commission and those costs. */
+    profit: number;
   };
 };
 
@@ -88,6 +92,7 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   const paidIds = new Set(paid.map((o) => o.id));
 
   const commission = await commissionFor(paid);
+  const costs = batch.fuel_cost + batch.driver_cost + batch.other_cost;
 
   return {
     batch,
@@ -104,6 +109,8 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
       foodCost: sum(paid, (o) => o.subtotal_food),
       commission,
       net: sum(paid, (o) => o.total - o.subtotal_food) - commission,
+      costs,
+      profit: sum(paid, (o) => o.total - o.subtotal_food) - commission - costs,
     },
   };
 }
@@ -214,7 +221,13 @@ function sum<T>(rows: T[], pick: (row: T) => number): number {
   return rows.reduce((total, row) => total + pick(row), 0);
 }
 
-export type BatchRow = Batch & { orderCount: number; paidCount: number };
+export type BatchRow = Batch & {
+  orderCount: number;
+  paidCount: number;
+  /** Money in, less food, commission and the run's own costs. */
+  profit: number;
+  gross: number;
+};
 
 /** Every batch from today onward, with live counts, so a weak one shows early. */
 export async function batchOverview(): Promise<BatchRow[]> {
@@ -228,17 +241,35 @@ export async function batchOverview(): Promise<BatchRow[]> {
   const rows = (batches ?? []) as Batch[];
   const { data: orders } = await db()
     .from("orders")
-    .select("batch_id, status")
+    .select("batch_id, status, total, subtotal_food, promoter_code")
     .in("batch_id", rows.map((b) => b.id));
 
+  const all = (orders ?? []) as Pick<
+    Order,
+    "batch_id" | "status" | "total" | "subtotal_food" | "promoter_code"
+  >[];
+  const commission = await commissionFor(
+    all.filter((o) => o.status !== "pending" && o.status !== "refunded") as Order[]
+  );
+  const paidEverywhere = all.filter(
+    (o) => o.status !== "pending" && o.status !== "refunded"
+  ).length;
+  // Commission is a flat rate per order, so sharing the total out by order
+  // count gives each run its own share without a second query per run.
+  const perOrderCommission = paidEverywhere === 0 ? 0 : commission / paidEverywhere;
+
   return rows.map((b) => {
-    const mine = (orders ?? []).filter(
-      (o) => o.batch_id === b.id && o.status !== "refunded"
-    );
+    const mine = all.filter((o) => o.batch_id === b.id && o.status !== "refunded");
+    const paid = mine.filter((o) => o.status !== "pending");
+    const margin = sum(paid, (o) => o.total - o.subtotal_food);
+    const costs = b.fuel_cost + b.driver_cost + b.other_cost;
+
     return {
       ...b,
       orderCount: mine.length,
-      paidCount: mine.filter((o) => o.status !== "pending").length,
+      paidCount: paid.length,
+      gross: sum(paid, (o) => o.total),
+      profit: Math.round(margin - paid.length * perOrderCommission - costs),
     };
   });
 }

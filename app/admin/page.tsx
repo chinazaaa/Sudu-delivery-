@@ -60,10 +60,11 @@ export default async function AdminHome() {
             <Stat label="Money in" value={stats.gross} money hint="Paid orders" />
             <Stat label="Delivery fees" value={stats.fees} money hint="Your margin" />
             <Stat
-              label="Average order"
-              value={stats.averageOrder}
+              label="Profit"
+              value={batches.reduce((total, batch) => total + batch.profit, 0)}
               money
-              hint={`${stats.customers} customers, ${stats.newCustomers} new`}
+              tone="good"
+              hint="After food, commission, fuel and driver"
             />
           </div>
 
@@ -174,21 +175,45 @@ export default async function AdminHome() {
             </section>
 
             <section className="card">
-              <h2 className="font-bold">Which run earns</h2>
+              <div className="flex items-baseline justify-between gap-2">
+                <h2 className="font-bold">Profit per run</h2>
+                <Link href="/admin/runs" className="text-sm font-semibold text-brand">
+                  All runs
+                </Link>
+              </div>
               <ul className="mt-3 space-y-2">
-                {stats.byWeekday.length === 0 && (
+                {batches.filter((batch) => batch.paidCount > 0).length === 0 && (
                   <li className="text-sm text-muted">Nothing paid for yet.</li>
                 )}
-                {stats.byWeekday.map((row) => (
-                  <li key={row.label} className="flex justify-between gap-3 text-sm">
-                    <span>
-                      {row.label}
-                      <span className="text-muted"> · {row.orders} orders</span>
-                    </span>
-                    <span className="font-semibold">{naira(row.gross)}</span>
-                  </li>
-                ))}
+                {batches
+                  .filter((batch) => batch.paidCount > 0)
+                  .map((batch) => (
+                    <li key={batch.id}>
+                      <Link
+                        href={`/admin/batch/${batch.id}`}
+                        className="flex items-center justify-between gap-3 rounded-xl px-2 py-2 text-sm hover:bg-black/[0.03]"
+                      >
+                        <span>
+                          {runDateLabel(batch.run_date)} · {SLOT_LABEL[batch.slot]}
+                          <span className="block text-muted">
+                            {batch.paidCount} paid · {naira(batch.gross)} in
+                          </span>
+                        </span>
+                        <span
+                          className={`shrink-0 font-bold ${
+                            batch.profit >= 0 ? "text-mint" : "text-brand"
+                          }`}
+                        >
+                          {naira(batch.profit)}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
               </ul>
+              <p className="mt-2 text-xs text-muted">
+                Put fuel and driver on a run&apos;s Profit tab and these become
+                the real numbers.
+              </p>
             </section>
           </div>
         </>

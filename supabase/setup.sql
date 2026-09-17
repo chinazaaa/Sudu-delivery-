@@ -79,6 +79,14 @@ create index if not exists batches_cutoff_idx on batches (cut_off_at);
 alter table batches add column if not exists flash_fee        int;
 alter table batches add column if not exists flash_fee_reason text not null default '';
 
+-- What a run actually costs to make: fuel, whoever drove, and anything else
+-- bought on the night. Without these the sheet could only say what was left
+-- before those, which is not profit.
+alter table batches add column if not exists fuel_cost   int not null default 0;
+alter table batches add column if not exists driver_cost int not null default 0;
+alter table batches add column if not exists other_cost  int not null default 0;
+alter table batches add column if not exists cost_note   text not null default '';
+
 -- Where the run has got to. One tap per stage, shared by everyone in the batch,
 -- which is the honest version of tracking: no rider app, no GPS.
 alter table batches add column if not exists stage            batch_stage not null default 'ordering';

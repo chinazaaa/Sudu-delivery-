@@ -7,6 +7,7 @@ import { diagnoseEmpty, keyKind } from "@/lib/health";
 import { ensureUpcomingBatches, closeExpiredBatches } from "@/lib/batches";
 import { createBatch } from "../actions";
 import { BATCH_MINIMUM, SLOT_LABEL } from "@/lib/config";
+import { naira } from "@/lib/money";
 import { clockLabel, runDateLabel } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +43,7 @@ export default async function RunsPage({
   const live = batches.filter((batch) => batch.status !== "cancelled");
   const orders = live.reduce((total, batch) => total + batch.orderCount, 0);
   const paid = live.reduce((total, batch) => total + batch.paidCount, 0);
+  const profit = live.reduce((total, batch) => total + batch.profit, 0);
 
   return (
     <div>
@@ -58,10 +60,17 @@ export default async function RunsPage({
         }
       />
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Runs listed" value={live.length} />
         <Stat label="Orders" value={orders} />
         <Stat label="Paid" value={paid} tone="good" hint={`${orders - paid} unpaid`} />
+        <Stat
+          label="Profit"
+          value={profit}
+          money
+          tone={profit >= 0 ? "good" : "warn"}
+          hint="Across the runs below"
+        />
       </div>
 
       {showForm && (
@@ -150,6 +159,15 @@ export default async function RunsPage({
                   <p className="text-xs text-muted">
                     {batch.orderCount - batch.paidCount} unpaid
                   </p>
+                  {batch.paidCount > 0 && (
+                    <p
+                      className={`mt-1 text-sm font-bold ${
+                        batch.profit >= 0 ? "text-mint" : "text-brand"
+                      }`}
+                    >
+                      {naira(batch.profit)} profit
+                    </p>
+                  )}
                 </div>
               </Link>
             </li>

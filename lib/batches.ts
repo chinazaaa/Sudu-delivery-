@@ -48,6 +48,10 @@ export async function ensureUpcomingBatches(): Promise<void> {
         flash_fee_reason: "",
         stage: "ordering",
         stage_updated_at: new Date().toISOString(),
+        fuel_cost: 0,
+        driver_cost: 0,
+        other_cost: 0,
+        cost_note: "",
       });
     }
   }

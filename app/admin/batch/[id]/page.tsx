@@ -24,6 +24,7 @@ import {
   setBatchStage,
   setBatchStatus,
   setFlashFee,
+  setRunCosts,
 } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -101,10 +102,15 @@ export default async function BatchPage({
           hint={`${counter.length} stop${counter.length === 1 ? "" : "s"}`}
         />
         <Stat
-          label="Left after food"
-          value={summary.net}
+          label="Profit"
+          value={summary.profit}
           money
-          hint={`${naira(summary.commission)} promoter commission`}
+          tone={summary.profit >= 0 ? "good" : "warn"}
+          hint={
+            summary.costs > 0
+              ? `after ${naira(summary.costs)} fuel and driver`
+              : "fuel and driver not entered yet"
+          }
         />
       </div>
 
@@ -328,11 +334,11 @@ export default async function BatchPage({
           },
           {
             id: "money",
-            label: "Money",
+            label: "Profit",
             content: (
               <>
                 <section className="card space-y-2">
-                  <h2 className="font-bold">Where the money goes</h2>
+                  <h2 className="font-bold">Profit on this run</h2>
                   <dl className="space-y-1 text-sm">
                     <Row label="Collected from customers" value={naira(summary.gross)} />
                     {counter.map((group) => (
@@ -346,12 +352,92 @@ export default async function BatchPage({
                       label="Promoter commission owed"
                       value={`−${naira(summary.commission)}`}
                     />
-                    <Row
-                      label="Left before fuel and driver"
-                      value={naira(summary.net)}
-                      strong
-                    />
+                    {batch.fuel_cost > 0 && (
+                      <Row label="Fuel" value={`−${naira(batch.fuel_cost)}`} />
+                    )}
+                    {batch.driver_cost > 0 && (
+                      <Row label="Driver" value={`−${naira(batch.driver_cost)}`} />
+                    )}
+                    {batch.other_cost > 0 && (
+                      <Row
+                        label={batch.cost_note || "Anything else"}
+                        value={`−${naira(batch.other_cost)}`}
+                      />
+                    )}
                   </dl>
+                  <p
+                    className={`border-t border-black/10 pt-3 text-3xl font-extrabold ${
+                      summary.profit >= 0 ? "text-mint" : "text-brand"
+                    }`}
+                  >
+                    {naira(summary.profit)}
+                  </p>
+                  <p className="text-sm text-muted">
+                    {summary.costs === 0
+                      ? "Fuel and driver are not in this yet. Put them in below and this becomes the real number."
+                      : `After ${naira(summary.costs)} of fuel, driver and anything else.`}
+                  </p>
+                </section>
+
+                <section className="card space-y-3">
+                  <div>
+                    <h2 className="font-bold">What this run cost you</h2>
+                    <p className="text-sm text-muted">
+                      Fill these in on the night. They come straight off the profit
+                      above, and off this run in the dashboard.
+                    </p>
+                  </div>
+                  <form action={setRunCosts} className="space-y-3">
+                    <input type="hidden" name="batch_id" value={batch.id} />
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div>
+                        <label className="label" htmlFor="fuel_cost">Fuel</label>
+                        <input
+                          id="fuel_cost"
+                          name="fuel_cost"
+                          inputMode="numeric"
+                          defaultValue={batch.fuel_cost || ""}
+                          placeholder="0"
+                          className="field"
+                        />
+                      </div>
+                      <div>
+                        <label className="label" htmlFor="driver_cost">Driver</label>
+                        <input
+                          id="driver_cost"
+                          name="driver_cost"
+                          inputMode="numeric"
+                          defaultValue={batch.driver_cost || ""}
+                          placeholder="0"
+                          className="field"
+                        />
+                      </div>
+                      <div>
+                        <label className="label" htmlFor="other_cost">Anything else</label>
+                        <input
+                          id="other_cost"
+                          name="other_cost"
+                          inputMode="numeric"
+                          defaultValue={batch.other_cost || ""}
+                          placeholder="0"
+                          className="field"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="label" htmlFor="cost_note">
+                        What that other money went on
+                      </label>
+                      <input
+                        id="cost_note"
+                        name="cost_note"
+                        defaultValue={batch.cost_note}
+                        placeholder="Bags, gate fee, airtime"
+                        className="field"
+                      />
+                    </div>
+                    <SaveButton quiet>Save costs</SaveButton>
+                  </form>
                 </section>
 
                 {refunds.length > 0 && (
@@ -386,10 +472,11 @@ export default async function BatchPage({
               <>
                 <section className="card space-y-3">
                   <div>
-                    <h2 className="font-bold">Where the run is</h2>
+                    <h2 className="font-bold">Where the food is</h2>
                     <p className="text-sm text-muted">
                       Tap a stage as you reach it. Everyone in this batch sees it on
-                      their order page.
+                      their order page, and the run closes to new orders by itself
+                      the moment you leave &quot;Ordering&quot;.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -472,25 +559,45 @@ export default async function BatchPage({
                   </form>
 
                   <div className="border-t border-black/5 pt-3">
-                    <h2 className="font-bold">Batch status</h2>
+                    <h2 className="font-bold">Is this run taking orders?</h2>
+                    <p className="mt-0.5 text-sm text-muted">
+                      Currently {batch.status}. The stages above set this for you;
+                      these two are for overriding it by hand.
+                    </p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {(["open", "closed", "delivered", "cancelled"] as const).map(
-                        (status) => (
-                          <form action={setBatchStatus} key={status}>
-                            <input type="hidden" name="batch_id" value={batch.id} />
-                            <input type="hidden" name="status" value={status} />
-                            <button
-                              className="btn-quiet px-3 py-2 text-sm"
-                              disabled={batch.status === status}
-                            >
-                              {status}
-                            </button>
-                          </form>
-                        )
-                      )}
+                      <form action={setBatchStatus}>
+                        <input type="hidden" name="batch_id" value={batch.id} />
+                        <input type="hidden" name="status" value="open" />
+                        <button
+                          className="btn-quiet px-3 py-2 text-sm"
+                          disabled={batch.status === "open"}
+                        >
+                          Reopen for orders
+                        </button>
+                      </form>
+                      <form action={setBatchStatus}>
+                        <input type="hidden" name="batch_id" value={batch.id} />
+                        <input type="hidden" name="status" value="closed" />
+                        <button
+                          className="btn-quiet px-3 py-2 text-sm"
+                          disabled={batch.status === "closed"}
+                        >
+                          Close early
+                        </button>
+                      </form>
+                      <form action={setBatchStatus}>
+                        <input type="hidden" name="batch_id" value={batch.id} />
+                        <input type="hidden" name="status" value="cancelled" />
+                        <button
+                          className="btn-quiet px-3 py-2 text-sm text-brand"
+                          disabled={batch.status === "cancelled"}
+                        >
+                          Cancel this run
+                        </button>
+                      </form>
                     </div>
                     <p className="mt-2 text-xs text-muted">
-                      Cancelling a batch does not refund anyone. Refund each order on
+                      Cancelling a run does not refund anyone. Refund each order on
                       the handout tab, same night, in full.
                     </p>
                   </div>

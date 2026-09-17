@@ -97,6 +97,30 @@ export async function setBatchStatus(form: FormData): Promise<void> {
   revalidatePath("/admin");
 }
 
+/**
+ * What the run cost to make. Typed in on the night, so the money tab can show
+ * profit rather than "left before fuel and driver".
+ */
+export async function setRunCosts(form: FormData): Promise<void> {
+  await assertAdmin();
+  const money = (field: string) => {
+    const value = Math.round(Number(form.get(field) ?? 0));
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  };
+
+  await db()
+    .from("batches")
+    .update({
+      fuel_cost: money("fuel_cost"),
+      driver_cost: money("driver_cost"),
+      other_cost: money("other_cost"),
+      cost_note: String(form.get("cost_note") ?? "").trim(),
+    })
+    .eq("id", String(form.get("batch_id")));
+
+  revalidatePath("/admin");
+}
+
 /** A real capacity cap. Only set this when the car genuinely fills up. */
 export async function setBatchCapacity(form: FormData): Promise<void> {
   await assertAdmin();
@@ -334,9 +358,19 @@ export async function setBatchStage(form: FormData): Promise<void> {
   const stage = String(form.get("stage"));
   if (!STAGES.includes(stage as BatchStage)) return;
 
+  // A stage says where the food is; a status says whether the shop is still
+  // taking orders for it. Keeping the two in step by hand was busywork nobody
+  // should have to remember, so a stage tap carries the status with it.
+  const status =
+    stage === "ordering"
+      ? "open"
+      : stage === "handed_out"
+        ? "delivered"
+        : "closed";
+
   await db()
     .from("batches")
-    .update({ stage, stage_updated_at: new Date().toISOString() })
+    .update({ stage, status, stage_updated_at: new Date().toISOString() })
     .eq("id", String(form.get("batch_id")));
 
   revalidatePath("/admin");

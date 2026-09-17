@@ -64,6 +64,11 @@ export type Batch = {
   flash_fee_reason: string;
   stage: BatchStage;
   stage_updated_at: string;
+  /** What the run cost to make, typed in once it is done. */
+  fuel_cost: number;
+  driver_cost: number;
+  other_cost: number;
+  cost_note: string;
 };
 
 export type OrderStatus = "pending" | "paid" | "refunded" | "delivered";
