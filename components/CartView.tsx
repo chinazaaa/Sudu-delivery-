@@ -64,7 +64,7 @@ export default function CartView() {
         <div>
           <p className="text-sm text-muted">
             {people.length > 0
-              ? "Now tap a name under each item below to say whose it is. Bags are labelled with these names at the drop point."
+              ? "Now tap a name under each item below to say whose it is. Bags are labelled with these names on delivery."
               : "Add their names, then tap a name under each item to say whose it is. The delivery fee does not change."}
           </p>
         </div>
@@ -127,7 +127,12 @@ export default function CartView() {
               </span>
 
               <div className="min-w-0 flex-1">
-                <p className="truncate font-bold">{line.name}</p>
+                {/* The count lives beside the name too: one card holding three
+                    of something read as one item in the cart. */}
+                <p className="truncate font-bold">
+                  {line.qty > 1 && <span className="text-brand">{line.qty}× </span>}
+                  {line.name}
+                </p>
                 <p className="text-sm text-muted">
                   {line.restaurantName}
                   {line.choices.length > 0 && ` · ${line.choices.join(", ")}`}
@@ -191,6 +196,7 @@ export default function CartView() {
           <div className="min-w-0 flex-1">
             <p className="text-sm text-muted">
               {countItems(cart)} item{countItems(cart) === 1 ? "" : "s"}
+              {cart.length !== countItems(cart) && ` · ${cart.length} product${cart.length === 1 ? "" : "s"}`}
             </p>
             <p className="truncate text-lg font-extrabold">{naira(cartSubtotal(cart))}</p>
           </div>

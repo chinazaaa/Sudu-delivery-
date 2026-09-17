@@ -260,7 +260,7 @@ export default function Checkout({
           )}
 
           <fieldset className="space-y-2 border-t border-black/5 pt-3">
-            <legend className="label">Who collects at the drop point?</legend>
+            <legend className="label">Who is it delivered to?</legend>
             <label className="flex gap-2 text-sm">
               <input
                 type="radio"
@@ -268,8 +268,8 @@ export default function Checkout({
                 onChange={() => setCollect("leader")}
               />
               <span>
-                <span className="font-semibold">I collect everything.</span> One name is
-                called, I take all the bags and hand them out myself.
+                <span className="font-semibold">Everything comes to me.</span> It is
+                all delivered to my block and I hand the rest out myself.
               </span>
             </label>
             <label className="flex gap-2 text-sm">
@@ -279,8 +279,8 @@ export default function Checkout({
                 onChange={() => setCollect("each")}
               />
               <span>
-                <span className="font-semibold">Each person collects their own.</span>{" "}
-                Every name is called separately at the drop point.
+                <span className="font-semibold">Each bag goes to its own person.</span>{" "}
+                Delivered to the block under each name.
               </span>
             </label>
           </fieldset>

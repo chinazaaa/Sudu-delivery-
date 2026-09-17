@@ -11,6 +11,15 @@ export type Settings = {
   pitch_line: string;
   product_notes: string;
   footer_line: string;
+  /** Editable WhatsApp templates. Blank means "use the wording below". */
+  msg_confirmed: string;
+  msg_payment: string;
+  msg_card: string;
+  msg_pin: string;
+  msg_ready: string;
+  msg_late: string;
+  /** What a paid customer reads on their order page. */
+  paid_note: string;
 };
 
 const EMPTY: Settings = {
@@ -24,6 +33,13 @@ const EMPTY: Settings = {
   pitch_line: "",
   product_notes: "",
   footer_line: "",
+  msg_confirmed: "",
+  msg_payment: "",
+  msg_card: "",
+  msg_pin: "",
+  msg_ready: "",
+  msg_late: "",
+  paid_note: "",
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -31,7 +47,8 @@ export async function getSettings(): Promise<Settings> {
     .from("settings")
     .select(
       "bank_name, bank_account_name, bank_account_number, whatsapp_number, card_note, " +
-        "instagram_handle, whatsapp_group_link, pitch_line, product_notes, footer_line"
+        "instagram_handle, whatsapp_group_link, pitch_line, product_notes, footer_line, " +
+        "msg_confirmed, msg_payment, msg_card, msg_pin, msg_ready, msg_late, paid_note"
     )
     .eq("id", true)
     .maybeSingle();

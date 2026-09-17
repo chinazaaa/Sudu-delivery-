@@ -1,5 +1,13 @@
 import SaveButton from "@/components/SaveButton";
+import PageHeader from "@/components/admin/PageHeader";
 import { getSettings, hasBankDetails } from "@/lib/settings";
+import {
+  TEMPLATE_DEFAULT,
+  TEMPLATE_FIELD,
+  TEMPLATE_LABEL,
+  TEMPLATE_TOKENS,
+  type TemplateKind,
+} from "@/lib/messages";
 import { saveSettings } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -9,19 +17,16 @@ export default async function SettingsAdmin() {
 
   return (
     <div className="space-y-4">
-      <section className="card">
-        <h1 className="text-lg font-semibold">Site settings</h1>
-        <p className="text-sm text-muted">
-          These appear on every order&apos;s pay page. Change them here. No redeploy,
-          no code.
+      <PageHeader
+        title="Settings"
+        detail="Every word on the site, and every message you send. No redeploy, no code."
+      />
+      {!hasBankDetails(settings) && (
+        <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          No bank details set yet, so customers have nowhere to pay. Fill these in
+          before ordering opens.
         </p>
-        {!hasBankDetails(settings) && (
-          <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            No bank details set yet, so customers have nowhere to pay. Fill these in
-            before ordering opens.
-          </p>
-        )}
-      </section>
+      )}
 
       <form action={saveSettings} className="card space-y-3">
         <h2 className="font-semibold">Bank transfer</h2>
@@ -141,6 +146,67 @@ export default async function SettingsAdmin() {
           name="product_notes"
           defaultValue={settings.product_notes}
           rows={4}
+          className="field"
+        />
+        <SaveButton>Save</SaveButton>
+      </form>
+
+      <form action={saveSettings} className="card space-y-4">
+        <div>
+          <h2 className="font-semibold">WhatsApp messages</h2>
+          <p className="text-sm text-muted">
+            The words behind every template button in Orders. Edit them and the
+            buttons say what you want. Leave one blank to go back to the wording
+            underneath it.
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-shell p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted">
+            Things you can drop into a message
+          </p>
+          <ul className="mt-2 grid gap-1 text-xs sm:grid-cols-2">
+            {TEMPLATE_TOKENS.map((item) => (
+              <li key={item.token}>
+                <code className="font-bold">{item.token}</code>
+                <span className="text-muted"> {item.means}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {(["confirmed", "payment", "card", "pin", "ready", "late"] as TemplateKind[]).map(
+          (kind) => (
+            <div key={kind}>
+              <label className="label" htmlFor={`msg-${kind}`}>
+                {TEMPLATE_LABEL[kind]}
+              </label>
+              <textarea
+                id={`msg-${kind}`}
+                name={TEMPLATE_FIELD[kind]}
+                defaultValue={String(settings[TEMPLATE_FIELD[kind]] ?? "")}
+                placeholder={TEMPLATE_DEFAULT[kind]}
+                rows={4}
+                className="field font-mono text-sm"
+              />
+            </div>
+          )
+        )}
+
+        <SaveButton>Save messages</SaveButton>
+      </form>
+
+      <form action={saveSettings} className="card space-y-3">
+        <h2 className="font-semibold">What a paid customer reads</h2>
+        <p className="text-sm text-muted">
+          The line on their order page once the money lands. Leave it blank and it
+          says where and when the food is coming.
+        </p>
+        <textarea
+          name="paid_note"
+          defaultValue={settings.paid_note}
+          rows={2}
+          placeholder="We deliver to your hostel in the delivery window. You will be called when we are outside."
           className="field"
         />
         <SaveButton>Save</SaveButton>

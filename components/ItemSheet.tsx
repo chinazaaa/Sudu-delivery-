@@ -209,7 +209,7 @@ export default function ItemSheet({
               )}
             </div>
             <p className="text-xs text-muted">
-              Bags are labelled with these names at the drop point.
+              Bags are labelled with these names on delivery.
             </p>
           </div>
         </div>

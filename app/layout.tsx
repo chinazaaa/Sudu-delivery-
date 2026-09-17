@@ -25,7 +25,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
         <SiteHeader />
         <main className="mx-auto max-w-5xl px-4 pb-28 pt-4 sm:pb-24">{children}</main>
-        <footer className="mx-auto max-w-5xl space-y-2 px-4 pb-10 text-xs text-muted">
+        {/* Clears both the tab bar and a sticky cart bar, which were sitting
+            on top of this line. */}
+        <footer className="mx-auto max-w-5xl space-y-2 px-4 pb-44 pt-2 text-xs text-muted sm:pb-32">
           <p>{settings.footer_line}</p>
           {(instagram || settings.whatsapp_group_link) && (
             <p className="flex gap-4">

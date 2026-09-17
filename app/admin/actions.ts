@@ -275,6 +275,13 @@ const SETTING_FIELDS = [
   "pitch_line",
   "product_notes",
   "footer_line",
+  "msg_confirmed",
+  "msg_payment",
+  "msg_card",
+  "msg_pin",
+  "msg_ready",
+  "msg_late",
+  "paid_note",
 ] as const;
 
 export async function saveSettings(form: FormData): Promise<void> {

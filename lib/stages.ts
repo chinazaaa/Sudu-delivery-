@@ -14,9 +14,9 @@ export const STAGE_LABEL: Record<BatchStage, string> = {
   ordering: "Ordering is open",
   closed: "Orders closed, getting ready to go",
   at_counter: "At the counter, food being cooked",
-  on_the_road: "On the road to campus",
-  at_drop: "At the drop point, come and collect",
-  handed_out: "Handed out",
+  on_the_road: "On the road to you",
+  at_drop: "At your hostel now",
+  handed_out: "Delivered",
 };
 
 /** What the admin taps. Shorter, because it is read one-handed in a queue. */
@@ -25,8 +25,8 @@ export const STAGE_ACTION: Record<BatchStage, string> = {
   closed: "Closed",
   at_counter: "At counter",
   on_the_road: "On the road",
-  at_drop: "At drop point",
-  handed_out: "Handed out",
+  at_drop: "At the hostels",
+  handed_out: "Delivered",
 };
 
 export function stageIndex(stage: BatchStage): number {

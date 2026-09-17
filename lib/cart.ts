@@ -72,7 +72,7 @@ function save(next: CartLine[]): void {
 
 /**
  * Two people ordering the same thing are two lines, because the bags are
- * labelled by name at the drop point.
+ * labelled by name on delivery.
  */
 export function lineKey(itemId: string, optionIds: string[], forName = ""): string {
   return [itemId, ...[...optionIds].sort(), `for:${forName}`].join("|");

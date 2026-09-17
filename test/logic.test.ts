@@ -5,9 +5,30 @@ import { normalisePhone, formatPhone } from "../lib/phone";
 import { countdown, lagosInstant, lagosToday } from "../lib/time";
 import { bandFor, feeFor, nextBand, splitFee, HEADLINE_FEE } from "../lib/fees";
 import { sheetAsText } from "../lib/sheet-text";
-import { whatsappTo } from "../lib/messages";
+import { template, whatsappTo } from "../lib/messages";
 import { newPin } from "../lib/customer-auth";
 import { parseMenuText } from "../lib/menu-import";
+
+/** A settings row with nothing filled in, for the template tests. */
+const EMPTY_SETTINGS = {
+  bank_name: "",
+  bank_account_name: "",
+  bank_account_number: "",
+  whatsapp_number: "",
+  card_note: "",
+  instagram_handle: "",
+  whatsapp_group_link: "",
+  pitch_line: "",
+  product_notes: "",
+  footer_line: "",
+  msg_confirmed: "",
+  msg_payment: "",
+  msg_card: "",
+  msg_pin: "",
+  msg_ready: "",
+  msg_late: "",
+  paid_note: "",
+};
 import type { OrderLine } from "../lib/orders";
 
 test("phone numbers normalise to one identity however they are typed", () => {
@@ -393,4 +414,44 @@ test("a friend sharing the leader's name is still a second payer", () => {
   const leaderName = "Naza";
   const old = new Set(lines.map((l) => (l.for_name ?? "").trim() || leaderName));
   assert.equal(old.size, 1);
+});
+
+test("a message template fills in the order and falls back to the default wording", () => {
+  const settings = {
+    ...EMPTY_SETTINGS,
+    bank_name: "GTBank",
+    bank_account_name: "Sudu",
+    bank_account_number: "0123456789",
+    msg_ready: "{name}, food is outside {hostel}.",
+  };
+  const order = {
+    id: "abc",
+    customer_name: "Naza",
+    customer_phone: "08031234567",
+    for_name: "Bola",
+    total: 17600,
+    hostel: "Block C",
+    payment_link: null,
+  };
+  const args = {
+    order,
+    settings,
+    pin: "4579",
+    siteUrl: "https://sudu.ng",
+    batchLabel: "Wednesday night",
+    deliveryWindow: "On campus ~8pm",
+  };
+
+  // The admin's own wording wins, with the order filled into it.
+  assert.equal(
+    template({ ...args, kind: "ready" }),
+    "Bola, food is outside Block C."
+  );
+
+  // Nothing written for this one, so the default is used, account details and all.
+  const asking = template({ ...args, kind: "payment" });
+  assert.match(asking, /Bola/);
+  assert.match(asking, /0123456789/);
+  assert.match(asking, /08031234567/);
+  assert.match(asking, /https:\/\/sudu\.ng\/o\/abc/);
 });

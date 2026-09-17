@@ -1,51 +1,5 @@
 import { naira } from "./money";
-import { SLOT_LABEL } from "./config";
-import { weekdayLabel } from "./time";
 import type { Settings } from "./settings";
-import type { HandoutOrder } from "./admin";
-
-/**
- * The confirmation the brief asks for, written as a message the admin sends by
- * hand on WhatsApp. No SMS provider, no monthly bill, and it reads like a
- * person rather than a robot.
- */
-export function confirmationMessage(args: {
-  order: HandoutOrder;
-  settings: Settings;
-  pin: string | null;
-  siteUrl: string;
-  deliveryWindow: string;
-  runDate: string;
-  slot: keyof typeof SLOT_LABEL;
-}): string {
-  const { order, settings, pin, siteUrl } = args;
-  const batch = `${weekdayLabel(args.runDate)} ${SLOT_LABEL[args.slot]}`;
-  const lines: string[] = [];
-
-  if (order.status === "pending") {
-    lines.push(
-      `Hi ${order.for_name ?? order.customer_name}, your ${batch} order is saved. ` +
-        `Total ${naira(order.total)}.`
-    );
-    if (settings.bank_name && settings.bank_account_number) {
-      lines.push(
-        "",
-        `${settings.bank_account_name} ${settings.bank_account_number} ` +
-          `(${settings.bank_name}). Put ${order.customer_phone} as the narration.`
-      );
-    }
-  } else {
-    lines.push(
-      `Hi ${order.for_name ?? order.customer_name}, your ${batch} order is confirmed. ` +
-        `${args.deliveryWindow}.`
-    );
-  }
-
-  lines.push("", `Your order: ${siteUrl}/o/${order.id}`);
-  if (pin) lines.push(`All your orders: ${siteUrl}/orders, PIN ${pin}`);
-
-  return lines.join("\n");
-}
 
 /** wa.me needs international digits with no plus. */
 export function whatsappTo(phone: string, message: string): string {
@@ -71,6 +25,54 @@ export const TEMPLATE_LABEL: Record<TemplateKind, string> = {
   late: "Running late",
 };
 
+/** Which settings field holds the admin's own wording for each template. */
+export const TEMPLATE_FIELD: Record<TemplateKind, keyof Settings> = {
+  confirmed: "msg_confirmed",
+  payment: "msg_payment",
+  card: "msg_card",
+  pin: "msg_pin",
+  ready: "msg_ready",
+  late: "msg_late",
+};
+
+/** The wording used until the admin writes their own. */
+export const TEMPLATE_DEFAULT: Record<TemplateKind, string> = {
+  confirmed:
+    "Hi {name}, your payment is confirmed. You are on the {batch} run.\n\n" +
+    "We deliver to {hostel}, {window}.\n" +
+    "Your order: {link}\n{pin_line}",
+  payment:
+    "Hi {name}, your {batch} order comes to {total}.\n\n" +
+    "{bank}\n\nYour order: {link}",
+  card:
+    "Hi {name}, here is the card link for your {batch} order ({total}):\n\n" +
+    "{card_link}\n\nYour order: {link}",
+  pin:
+    "Hi {name}, here is your Sudu PIN: {pin}.\n\n" +
+    "Open {site}/orders, put in your number and that PIN, and every order you " +
+    "have placed is there.",
+  ready:
+    "Hi {name}, your food is here. Bringing it to {hostel} now.",
+  late:
+    "Hi {name}, the {batch} run is running a little behind.\n\n" +
+    "Your food is coming. I will message again when it is with you.",
+};
+
+/** Everything a template can say, so the admin can rearrange the wording. */
+export const TEMPLATE_TOKENS: { token: string; means: string }[] = [
+  { token: "{name}", means: "who the bag is for" },
+  { token: "{batch}", means: "Wednesday night, and so on" },
+  { token: "{total}", means: "what they owe" },
+  { token: "{hostel}", means: "their hostel or block" },
+  { token: "{window}", means: "when the run lands" },
+  { token: "{link}", means: "their order page" },
+  { token: "{site}", means: "the site address" },
+  { token: "{pin}", means: "their four-digit PIN" },
+  { token: "{pin_line}", means: "a whole sentence giving them their PIN" },
+  { token: "{bank}", means: "your account details and the narration to use" },
+  { token: "{card_link}", means: "the card link saved on that order" },
+];
+
 type TemplateOrder = {
   id: string;
   customer_name: string;
@@ -82,9 +84,9 @@ type TemplateOrder = {
 };
 
 /**
- * Every message the admin ever sends, written out for her. Nothing is sent by
- * a robot: she taps a template, WhatsApp opens with the words already in it,
- * and she presses send herself.
+ * Every message the admin ever sends. Nothing is sent by a robot: she taps a
+ * template, WhatsApp opens with the words already in it, and she presses send
+ * herself. The wording is hers to edit in settings; these are only defaults.
  */
 export function template(args: {
   kind: TemplateKind;
@@ -96,64 +98,33 @@ export function template(args: {
   deliveryWindow: string;
 }): string {
   const { order, settings, pin, siteUrl, batchLabel } = args;
-  const who = order.for_name ?? order.customer_name;
-  const orderLink = `${siteUrl}/o/${order.id}`;
-  const pinLine = pin ? `Your PIN is ${pin}. Every order you place: ${siteUrl}/orders` : "";
+  const custom = String(settings[TEMPLATE_FIELD[args.kind]] ?? "").trim();
+  const body = custom || TEMPLATE_DEFAULT[args.kind];
 
-  switch (args.kind) {
-    case "confirmed":
-      return [
-        `Hi ${who}, your payment is confirmed. You are on the ${batchLabel} run.`,
-        "",
-        `${args.deliveryWindow}. Your name is called at the drop point.`,
-        `Your order: ${orderLink}`,
-        pinLine,
-      ]
-        .filter(Boolean)
-        .join("\n");
+  const bank =
+    settings.bank_name && settings.bank_account_number
+      ? `${settings.bank_account_name} ${settings.bank_account_number} ` +
+        `(${settings.bank_name}). Put ${order.customer_phone} as the narration.`
+      : "Message me for the account details.";
 
-    case "payment":
-      return [
-        `Hi ${who}, your ${batchLabel} order comes to ${naira(order.total)}.`,
-        settings.bank_name && settings.bank_account_number
-          ? `\n${settings.bank_account_name} ${settings.bank_account_number} (${settings.bank_name}). ` +
-            `Put ${order.customer_phone} as the narration.`
-          : "",
-        `\nYour order: ${orderLink}`,
-      ]
-        .filter(Boolean)
-        .join("\n");
+  const values: Record<string, string> = {
+    "{name}": order.for_name ?? order.customer_name,
+    "{batch}": batchLabel,
+    "{total}": naira(order.total),
+    "{hostel}": order.hostel,
+    "{window}": args.deliveryWindow,
+    "{link}": `${siteUrl}/o/${order.id}`,
+    "{site}": siteUrl,
+    "{pin}": pin ?? "----",
+    "{pin_line}": pin
+      ? `Your PIN is ${pin}. Every order you place: ${siteUrl}/orders`
+      : "",
+    "{bank}": bank,
+    "{card_link}": order.payment_link || "(link coming in the next message)",
+  };
 
-    case "card":
-      return [
-        `Hi ${who}, here is the card link for your ${batchLabel} order ` +
-          `(${naira(order.total)}):`,
-        "",
-        order.payment_link ?? "(link coming in the next message)",
-        "",
-        `Your order: ${orderLink}`,
-      ].join("\n");
-
-    case "pin":
-      return [
-        `Hi ${who}, here is your Sudu PIN: ${pin ?? "----"}.`,
-        "",
-        `Open ${siteUrl}/orders, put in your number and that PIN, and every order ` +
-          `you have placed is there.`,
-      ].join("\n");
-
-    case "ready":
-      return [
-        `Hi ${who}, your food is at the drop point now. ${order.hostel}.`,
-        "",
-        "Come and collect it while it is hot.",
-      ].join("\n");
-
-    case "late":
-      return [
-        `Hi ${who}, the ${batchLabel} run is running a little behind.`,
-        "",
-        "Your food is coming. I will message again when it is at the drop point.",
-      ].join("\n");
-  }
+  return Object.entries(values)
+    .reduce((text, [token, value]) => text.split(token).join(value), body)
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }

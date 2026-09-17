@@ -11,7 +11,7 @@ import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { clockLabel, runDateLabel } from "@/lib/time";
 import { bandTable } from "@/lib/fees";
-import { confirmationMessage, whatsappTo } from "@/lib/messages";
+import { template, whatsappTo } from "@/lib/messages";
 import { getSettings } from "@/lib/settings";
 import { sheetAsText } from "@/lib/sheet-text";
 import { STAGES, STAGE_ACTION } from "@/lib/stages";
@@ -47,17 +47,19 @@ export default async function BatchPage({
   const siteUrl = host ? `${proto}://${host}` : "";
   const batchLabel = `${runDateLabel(batch.run_date)} ${SLOT_LABEL[batch.slot]}`;
 
+  // The wording is whatever the admin has written in settings, so one edit
+  // changes the message everywhere it is offered.
   const messageFor = (order: (typeof unpaid)[number]) =>
     whatsappTo(
       order.customer_phone,
-      confirmationMessage({
+      template({
+        kind: order.status === "pending" ? "payment" : "confirmed",
         order,
         settings,
         pin: pins[order.customer_phone] ?? null,
         siteUrl,
+        batchLabel,
         deliveryWindow: batch.delivery_window_text,
-        runDate: batch.run_date,
-        slot: batch.slot,
       })
     );
 

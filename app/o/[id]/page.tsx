@@ -97,14 +97,50 @@ export default async function OrderPage({
         </section>
       )}
 
+      {/* One bag going to one person needs a line, not a section: the header
+          already says whose order this is. */}
+      {drops.length === 1 && drops[0].name !== order.customer_name && (
+        <section className="card flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-bold">Going to {drops[0].name}</h2>
+            <p className="text-sm text-muted">
+              {drops[0].hostel || order.hostel}
+              {drops[0].phone ? ` · ${formatPhone(drops[0].phone)}` : ""}
+            </p>
+          </div>
+          {drops[0].phone && (
+            <div className="flex gap-2">
+              <a href={`tel:${drops[0].phone}`} className="chip border-black/10 bg-white">
+                Call
+              </a>
+              {whatsappLink(drops[0].phone, `Hi ${drops[0].name}, your Sudu order is here.`) && (
+                <a
+                  href={
+                    whatsappLink(
+                      drops[0].phone,
+                      `Hi ${drops[0].name}, your Sudu order is here.`
+                    )!
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="chip border-black/10 bg-white"
+                >
+                  WhatsApp
+                </a>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
       {drops.length > 1 && (
         <section className="card space-y-3">
           <div>
             <h2 className="font-bold">Where it goes</h2>
             <p className="text-sm text-muted">
               {order.group?.collect_mode === "each"
-                ? "Every name is called separately at the drop point."
-                : `${order.group?.leader_name ?? order.customer_name} collects every bag and hands them out.`}
+                ? "Each bag is delivered to that person, at the block under their name."
+                : `Everything is delivered to ${order.group?.leader_name ?? order.customer_name}, who hands the rest out.`}
             </p>
           </div>
 
@@ -236,9 +272,9 @@ export default async function OrderPage({
         <section className="card">
           <h2 className="font-bold text-mint">Paid. You are on the run.</h2>
           <p className="mt-1 text-sm text-ink/75">
-            Come to the drop point at {order.batch.delivery_window_text.toLowerCase()}.
-            Names are called from the list. No reminders will be sent, because paid is
-            paid.
+            {settings.paid_note ||
+              `We deliver to ${order.hostel}, ${order.batch.delivery_window_text.toLowerCase()}. ` +
+                `You will be called when we are outside.`}
           </p>
         </section>
       ) : order.status === "refunded" ? (
@@ -288,7 +324,7 @@ export default async function OrderPage({
               />
               <p className="text-sm text-ink/75">
                 Put your phone number in the transfer narration. That is how the payment
-                is matched to this order. Transfer only, and no cash at the drop point.
+                is matched to this order. Transfer only, and no cash on delivery.
               </p>
             </>
           ) : (
