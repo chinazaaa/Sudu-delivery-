@@ -35,13 +35,6 @@ export default async function OrderPage({
   const settings = await getSettings();
   const fees = await feeStory(order);
   const repeat = await repeatLines(order);
-  const soldOut = [
-    ...new Set(
-      order.lines
-        .filter((line) => !repeat.some((item) => item.itemId === line.menu_item_id))
-        .map((line) => line.name)
-    ),
-  ];
   // Only the person who just checked out sees their PIN, and only their own
   // browser gets emptied. A pay-by-link friend opening this sees neither.
   const justPlaced = (await searchParams).placed === "1";
@@ -394,7 +387,7 @@ export default async function OrderPage({
             It goes back in your cart at today&apos;s prices. Nothing is charged
             and you are not asked for your details again.
           </p>
-          <RepeatOrder lines={repeat} missing={soldOut} />
+          <RepeatOrder lines={repeat.lines} blocked={repeat.blocked} />
         </section>
       )}
 

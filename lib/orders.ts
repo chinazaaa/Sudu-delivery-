@@ -472,6 +472,17 @@ export async function existingLoad(
   };
 }
 
+export type RepeatBlock = {
+  name: string;
+  /** Why it cannot go back in the cart, in the customer's words. */
+  reason: "sold out today" | "no longer on the menu";
+};
+
+export type RepeatResult = {
+  lines: RepeatLine[];
+  blocked: RepeatBlock[];
+};
+
 export type RepeatLine = {
   itemId: string;
   optionIds: string[];
@@ -490,9 +501,9 @@ export type RepeatLine = {
  * menu, or sold out, is left out rather than quietly repeated: a cart that
  * cannot be bought is worse than a shorter one.
  */
-export async function repeatLines(order: FullOrder): Promise<RepeatLine[]> {
+export async function repeatLines(order: FullOrder): Promise<RepeatResult> {
   const itemIds = [...new Set(order.lines.map((line) => line.menu_item_id))];
-  if (itemIds.length === 0) return [];
+  if (itemIds.length === 0) return { lines: [], blocked: [] };
 
   // Read without a join: an embedded select that PostgREST cannot resolve
   // returns nothing, which silently emptied the whole repeat.
@@ -536,9 +547,18 @@ export async function repeatLines(order: FullOrder): Promise<RepeatLine[]> {
   const byOption = new Map((options ?? []).map((row: any) => [row.id as string, row]));
 
   const repeats: RepeatLine[] = [];
+  const blocked: RepeatBlock[] = [];
+
   for (const line of order.lines) {
     const item = byItem.get(line.menu_item_id);
-    if (!item || item.available === false) continue;
+    if (!item) {
+      blocked.push({ name: line.name, reason: "no longer on the menu" });
+      continue;
+    }
+    if (item.available === false) {
+      blocked.push({ name: item.name, reason: "sold out today" });
+      continue;
+    }
 
     const chosenHere = (chosen ?? [])
       .filter((row) => row.order_item_id === line.id)
@@ -563,7 +583,7 @@ export async function repeatLines(order: FullOrder): Promise<RepeatLine[]> {
       forName: "",
     });
   }
-  return repeats;
+  return { lines: repeats, blocked };
 }
 
 export type FeeStory = {

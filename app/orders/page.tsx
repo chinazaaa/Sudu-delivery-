@@ -30,22 +30,7 @@ export default async function OrdersPage() {
   const orders = await ordersForPhone(phone);
   // Each order is rebuilt at today's prices so it can be repeated in one tap,
   // with anything sold out left out and named.
-  const repeats = await Promise.all(
-    orders.map(async (order) => {
-      const lines = await repeatLines(order);
-      const kept = new Set(lines.map((line) => line.itemId));
-      return {
-        lines,
-        missing: [
-          ...new Set(
-            order.lines
-              .filter((line) => !kept.has(line.menu_item_id))
-              .map((line) => line.name)
-          ),
-        ],
-      };
-    })
-  );
+  const repeats = await Promise.all(orders.map((order) => repeatLines(order)));
 
   return (
     <div className="space-y-4">
@@ -82,7 +67,7 @@ export default async function OrdersPage() {
               </Link>
               <RepeatOrder
                 lines={repeats[index].lines}
-                missing={repeats[index].missing}
+                blocked={repeats[index].blocked}
               />
             </li>
           ))}

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { addLine } from "@/lib/cart";
-import type { RepeatLine } from "@/lib/orders";
+import type { RepeatBlock, RepeatLine } from "@/lib/orders";
 
 /**
  * Puts an old order back in the cart at today's prices. Nothing is charged and
@@ -12,12 +12,12 @@ import type { RepeatLine } from "@/lib/orders";
  */
 export default function RepeatOrder({
   lines,
-  missing,
+  blocked,
   label = "Order this again",
 }: {
   lines: RepeatLine[];
-  /** Items from that order no longer on sale, named so nobody is surprised. */
-  missing: string[];
+  /** Items that cannot come back, each with the reason why. */
+  blocked: RepeatBlock[];
   label?: string;
 }) {
   const router = useRouter();
@@ -25,11 +25,19 @@ export default function RepeatOrder({
 
   if (lines.length === 0) {
     return (
-      <p className="text-sm text-muted">
-        {missing.length > 0
-          ? `${missing.join(", ")} cannot be ordered right now, so there is nothing to put back in the cart.`
-          : "Nothing from this order is on the menu today."}
-      </p>
+      <div className="text-sm text-muted">
+        {blocked.length === 0 ? (
+          <p>Nothing from this order is on the menu today.</p>
+        ) : (
+          <ul className="space-y-0.5">
+            {blocked.map((item) => (
+              <li key={item.name}>
+                {item.name} is {item.reason}.
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     );
   }
 
@@ -60,10 +68,10 @@ export default function RepeatOrder({
       >
         {done ? "In your cart" : label}
       </button>
-      {missing.length > 0 && (
+      {blocked.length > 0 && (
         <p className="text-xs text-brand">
-          {missing.join(", ")} {missing.length === 1 ? "is" : "are"} sold out
-          today, so {missing.length === 1 ? "it is" : "they are"} left out.
+          Left out:{" "}
+          {blocked.map((item) => `${item.name} (${item.reason})`).join(", ")}.
         </p>
       )}
     </div>
