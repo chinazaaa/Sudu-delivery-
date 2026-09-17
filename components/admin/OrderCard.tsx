@@ -17,6 +17,7 @@ export type OrderCardLine = {
 
 export type OrderCardData = {
   id: string;
+  ref: string;
   name: string;
   forName: string | null;
   phone: string;
@@ -61,7 +62,10 @@ export default function OrderCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate font-bold">
-            {order.forName ?? order.name}
+            <Link href={`/admin/orders/${order.id}`} className="hover:text-brand">
+              <span className="text-muted">{order.ref}</span>{" "}
+              {order.forName ?? order.name}
+            </Link>
             {order.forName && order.forName !== order.name && (
               <span className="font-normal text-muted"> · in {order.name}&apos;s group</span>
             )}
@@ -69,17 +73,23 @@ export default function OrderCard({
           <p className="text-sm text-muted">
             {order.batchLabel} · {order.hostel} · {formatPhone(order.phone)}
           </p>
-          {order.paymentMethod === "card" && (
-            <span
-              className={`mt-1 inline-block rounded-full px-2.5 py-1 text-xs font-bold ${
-                order.paymentLink
+          {/* How they said they would pay is the first thing you need when
+              chasing an unpaid order. */}
+          <span
+            className={`mt-1 inline-block rounded-full px-2.5 py-1 text-xs font-bold ${
+              order.paymentMethod !== "card"
+                ? "bg-black/5 text-muted"
+                : order.paymentLink
                   ? "bg-mint/10 text-mint"
                   : "bg-amber-100 text-amber-800"
-              }`}
-            >
-              {order.paymentLink ? "Card link saved" : "Wants a card link"}
-            </span>
-          )}
+            }`}
+          >
+            {order.paymentMethod !== "card"
+              ? "Paying by transfer"
+              : order.paymentLink
+                ? "Card link saved"
+                : "Wants a card link"}
+          </span>
         </div>
         <div className="text-right">
           <p className="font-extrabold">{naira(order.total)}</p>

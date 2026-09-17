@@ -7,7 +7,8 @@ import Stat from "@/components/admin/Stat";
 import Tabs from "@/components/admin/Tabs";
 import { batchSheet } from "@/lib/admin";
 import { SLOT_LABEL } from "@/lib/config";
-import { naira } from "@/lib/money";
+import Link from "next/link";
+import { naira, orderRef } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { clockLabel, runDateLabel } from "@/lib/time";
 import { bandTable } from "@/lib/fees";
@@ -208,9 +209,15 @@ export default async function BatchPage({
                             className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-black/10 p-2.5 text-sm"
                           >
                             <span className="font-semibold">
-                              {bag.name}
+                              <Link
+                                href={`/admin/orders/${order.id}`}
+                                className="hover:text-brand"
+                              >
+                                <span className="text-muted">{orderRef(order)}</span>{" "}
+                                {bag.name}
+                              </Link>
                               <span className="font-normal text-muted">
-                                {" "}· {order.status}
+                                {" "}· {order.status} · {naira(order.total)}
                               </span>
                             </span>
                             <span className="flex flex-wrap gap-2">
@@ -263,12 +270,24 @@ export default async function BatchPage({
                     {unpaid.map((order) => (
                       <li key={order.id} className="rounded-2xl border border-black/10 p-3">
                         <p className="font-semibold">
+                          <Link
+                            href={`/admin/orders/${order.id}`}
+                            className="text-muted hover:text-brand"
+                          >
+                            {orderRef(order)}
+                          </Link>{" "}
                           {order.for_name ?? order.customer_name} · {naira(order.total)}
-                          {order.payment_method === "card" && (
-                            <span className="ml-2 rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-white">
-                              wants a card link
-                            </span>
-                          )}
+                          <span
+                            className={`ml-2 rounded-full px-2 py-0.5 text-xs font-bold ${
+                              order.payment_method === "card"
+                                ? "bg-brand text-white"
+                                : "bg-black/5 text-muted"
+                            }`}
+                          >
+                            {order.payment_method === "card"
+                              ? "wants a card link"
+                              : "paying by transfer"}
+                          </span>
                           {order.for_name && (
                             <span className="font-normal text-muted">
                               {" "}· share of {order.customer_name}&apos;s group

@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { orderRef } from "./money";
 import { template, whatsappTo, TEMPLATE_LABEL, type TemplateKind } from "./messages";
 import type { Settings } from "./settings";
 import type { FeedOrder } from "./admin-data";
@@ -42,6 +43,7 @@ export function toCard(
 
   return {
     id: order.id,
+    ref: orderRef(order),
     name: order.customer_name,
     forName: order.for_name,
     phone: order.customer_phone,

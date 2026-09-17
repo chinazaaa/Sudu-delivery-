@@ -149,6 +149,17 @@ alter table orders add column if not exists for_name    text;
 -- dropped. Always in the customer's favour; never a top-up demand.
 alter table orders add column if not exists refund_owed int not null default 0 check (refund_owed >= 0);
 create index if not exists orders_group_idx on orders (group_id);
+
+-- A short number a person can say out loud. Two orders from the same customer
+-- on the same run were impossible to tell apart on the run sheet.
+create sequence if not exists order_no_seq start 1001;
+alter table orders add column if not exists order_no bigint;
+alter table orders alter column order_no set default nextval('order_no_seq');
+
+-- Anything placed before this column existed still needs a number.
+update orders set order_no = nextval('order_no_seq') where order_no is null;
+
+create unique index if not exists orders_order_no_idx on orders (order_no);
 -- The card link the admin generates by hand, kept so it can be sent again.
 alter table orders add column if not exists payment_link text;
 
@@ -373,8 +384,16 @@ on conflict (id) do update set public = true;
 -- Uploads come from the server with the service role, which bypasses these,
 -- but the files still have to be readable by a browser.
 do $$ begin
-  create policy "menu images are public" on storage.objects
-    for select using (bucket_id = 'menu');
+  -- Skipped when it already exists: creating it blindly can deadlock against
+  -- whatever else is reading storage.objects in the same session.
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'storage' and tablename = 'objects'
+      and policyname = 'menu images are public'
+  ) then
+    create policy "menu images are public" on storage.objects
+      for select using (bucket_id = 'menu');
+  end if;
 exception when duplicate_object then null; end $$;
 
 -- Supabase caches the schema; this makes the new tables visible immediately.

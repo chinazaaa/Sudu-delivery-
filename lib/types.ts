@@ -70,6 +70,8 @@ export type OrderStatus = "pending" | "paid" | "refunded" | "delivered";
 
 export type Order = {
   id: string;
+  /** The short number on the run sheet and in messages: #1042. */
+  order_no: number | null;
   batch_id: string;
   customer_phone: string;
   customer_name: string;

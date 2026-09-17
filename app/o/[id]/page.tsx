@@ -6,7 +6,7 @@ import StageTimeline from "@/components/StageTimeline";
 import ShareLink from "@/components/ShareLink";
 import CopyText from "@/components/CopyText";
 import { SLOT_LABEL } from "@/lib/config";
-import { naira } from "@/lib/money";
+import { naira, orderRef } from "@/lib/money";
 import { getOrder, type FullOrder, type OrderLine } from "@/lib/orders";
 import { pinFor } from "@/lib/customer-auth";
 import { formatPhone } from "@/lib/phone";
@@ -49,6 +49,7 @@ export default async function OrderPage({
         }`}
       >
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/75">
+          Order {orderRef(order)} ·{" "}
           {paid ? "Paid and on the run" : expired ? "Batch closed" : "Order saved"}
         </p>
         <h1 className="mt-1 text-2xl font-extrabold leading-tight sm:text-3xl">

@@ -1,4 +1,4 @@
-import { naira } from "./money";
+import { naira, orderRef } from "./money";
 import type { Settings } from "./settings";
 
 /** wa.me needs international digits with no plus. */
@@ -38,11 +38,11 @@ export const TEMPLATE_FIELD: Record<TemplateKind, keyof Settings> = {
 /** The wording used until the admin writes their own. */
 export const TEMPLATE_DEFAULT: Record<TemplateKind, string> = {
   confirmed:
-    "Hi {name}, your payment is confirmed. You are on the {batch} run.\n\n" +
+    "Hi {name}, your payment for order {ref} is confirmed. You are on the {batch} run.\n\n" +
     "We deliver to {hostel}, {window}.\n" +
     "Your order: {link}\n{pin_line}",
   payment:
-    "Hi {name}, your {batch} order comes to {total}.\n\n" +
+    "Hi {name}, your {batch} order {ref} comes to {total}.\n\n" +
     "{bank}\n\nYour order: {link}",
   card:
     "Hi {name}, here is the card link for your {batch} order ({total}):\n\n" +
@@ -61,6 +61,7 @@ export const TEMPLATE_DEFAULT: Record<TemplateKind, string> = {
 /** Everything a template can say, so the admin can rearrange the wording. */
 export const TEMPLATE_TOKENS: { token: string; means: string }[] = [
   { token: "{name}", means: "who the bag is for" },
+  { token: "{ref}", means: "the order number, like #1042" },
   { token: "{batch}", means: "Wednesday night, and so on" },
   { token: "{total}", means: "what they owe" },
   { token: "{hostel}", means: "their hostel or block" },
@@ -75,6 +76,7 @@ export const TEMPLATE_TOKENS: { token: string; means: string }[] = [
 
 type TemplateOrder = {
   id: string;
+  order_no: number | null;
   customer_name: string;
   customer_phone: string;
   for_name: string | null;
@@ -109,6 +111,7 @@ export function template(args: {
 
   const values: Record<string, string> = {
     "{name}": order.for_name ?? order.customer_name,
+    "{ref}": orderRef(order),
     "{batch}": batchLabel,
     "{total}": naira(order.total),
     "{hostel}": order.hostel,

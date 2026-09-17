@@ -200,11 +200,20 @@ test("the run sheet reads as plain text that survives a dead signal", () => {
         name: "Ada",
         hostel: "Blue Block",
         phone: "08031234567",
-        orders: [],
+        orders: [{ id: "aaaaaaaa", order_no: 1042 }],
         lines: [{ qty: 1, name: "8pc bucket", choices: [] }],
       },
     ],
-    unpaid: [{ for_name: null, customer_name: "Chidi", total: 14666 }],
+    unpaid: [
+      {
+        id: "bbbbbbbb",
+        order_no: 1043,
+        for_name: null,
+        customer_name: "Chidi",
+        total: 14666,
+        payment_method: "card",
+      },
+    ],
     summary: { paidCount: 1, minimum: 8, foodCost: 54000, net: 4000 },
   };
 
@@ -212,9 +221,11 @@ test("the run sheet reads as plain text that survives a dead signal", () => {
   assert.match(text, /SUDU RUN: Friday night/);
   assert.match(text, /3 x 8pc bucket/);
   assert.match(text, /pay about ₦54,000/);
-  assert.match(text, /Ada \(Blue Block\) 0803 123 4567/);
+  assert.match(text, /#1042 Ada \(Blue Block\) 0803 123 4567/);
   assert.match(text, /NOT PAID, DO NOT TAKE/);
-  assert.match(text, /Chidi ₦14,666/);
+  // The number and how they meant to pay are both on the line she reads at
+  // the gate, so two orders from one person are never confused.
+  assert.match(text, /#1043 Chidi ₦14,666 \(card link\)/);
 });
 
 test("a WhatsApp link carries a Nigerian number in international form", () => {
@@ -426,6 +437,7 @@ test("a message template fills in the order and falls back to the default wordin
   };
   const order = {
     id: "abc",
+    order_no: 1042,
     customer_name: "Naza",
     customer_phone: "08031234567",
     for_name: "Bola",
@@ -451,6 +463,7 @@ test("a message template fills in the order and falls back to the default wordin
   // Nothing written for this one, so the default is used, account details and all.
   const asking = template({ ...args, kind: "payment" });
   assert.match(asking, /Bola/);
+  assert.match(asking, /#1042/);
   assert.match(asking, /0123456789/);
   assert.match(asking, /08031234567/);
   assert.match(asking, /https:\/\/sudu\.ng\/o\/abc/);

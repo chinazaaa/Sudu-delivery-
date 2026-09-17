@@ -1,4 +1,4 @@
-import { naira } from "./money";
+import { naira, orderRef } from "./money";
 import { formatPhone } from "./phone";
 import type { BatchSheet } from "./admin";
 
@@ -27,7 +27,8 @@ export function sheetAsText(sheet: BatchSheet, batchLabel: string): string {
   lines.push("", "HANDOUT");
   for (const bag of sheet.handout) {
     lines.push(
-      `${bag.name} (${bag.hostel}) ${formatPhone(bag.phone)}`,
+      `${bag.orders.map(orderRef).join(" ")} ${bag.name} (${bag.hostel}) ` +
+        `${formatPhone(bag.phone)}`,
       `  ${bag.lines.map(lineText).join(", ")}`
     );
   }
@@ -36,7 +37,10 @@ export function sheetAsText(sheet: BatchSheet, batchLabel: string): string {
   if (sheet.unpaid.length > 0) {
     lines.push("", "NOT PAID, DO NOT TAKE");
     for (const order of sheet.unpaid) {
-      lines.push(`  ${order.for_name ?? order.customer_name} ${naira(order.total)}`);
+      lines.push(
+        `  ${orderRef(order)} ${order.for_name ?? order.customer_name} ` +
+          `${naira(order.total)} (${order.payment_method === "card" ? "card link" : "transfer"})`
+      );
     }
   }
 
