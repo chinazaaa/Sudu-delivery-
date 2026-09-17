@@ -5,10 +5,39 @@ import SiteHeader from "@/components/SiteHeader";
 import { instagramLink, safeSettings } from "@/lib/settings";
 import "./globals.css";
 
+/**
+ * Where the site lives, for the absolute links that a share card and a
+ * search engine need. Set NEXT_PUBLIC_SITE_URL to move it without a code
+ * change; everything else on the site builds its links from the request, so
+ * this is the only place a domain is written down.
+ */
+const SITE = new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store");
+
+const BLURB =
+  "KFC, Domino's, Chicken Republic and more from Sangotedo, delivered to " +
+  "Pan-Atlantic University. One payment, one run.";
+
 export const metadata: Metadata = {
-  title: "Sudu Delivery, PAU",
-  description:
-    "KFC and Domino's from Sangotedo, delivered to Pan-Atlantic University. One price, one payment, one run.",
+  metadataBase: SITE,
+  title: {
+    default: "Sudu, your fav foods to PAU",
+    // A restaurant or a product page says its own name, then the shop's.
+    template: "%s · Sudu",
+  },
+  description: BLURB,
+  applicationName: "Sudu",
+  // Nearly everyone arrives from a link pasted into a group chat, so the card
+  // that link draws is the front door.
+  openGraph: {
+    type: "website",
+    siteName: "Sudu",
+    title: "Sudu, your fav foods to PAU",
+    description: BLURB,
+    url: SITE,
+    locale: "en_NG",
+  },
+  twitter: { card: "summary_large_image", title: "Sudu, your fav foods to PAU", description: BLURB },
+  alternates: { canonical: "/" },
 };
 
 /**

@@ -181,8 +181,11 @@ The `service_role` key bypasses every row level security rule in the database.
 It is only ever read in server code, never sent to the browser, and it must not
 be given a `NEXT_PUBLIC_` prefix.
 
-Then point `sudu.ng` at the Vercel project, so students never see a
-`vercel.app` link.
+The site lives at `sudu.store`, pointed at the Vercel project, so students
+never see a `vercel.app` link. Every link the site sends out is built from the
+host the request came in on, so nothing needs editing when the domain changes.
+The one exception is `NEXT_PUBLIC_SITE_URL`, read by the share card, robots and
+sitemap; it defaults to `https://sudu.store`.
 
 ## Operating settings
 
