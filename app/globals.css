@@ -73,4 +73,48 @@ body {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+  /*
+   * A shape standing in for something that has not arrived yet.
+   *
+   * A light sweep rather than a whole block fading in and out: pulsing dims
+   * the page every second, which reads as a fault, while a sweep reads as
+   * work being done. Shapes are laid out where the real thing goes, so the
+   * page does not jump when it lands.
+   */
+  .sk {
+    @apply relative overflow-hidden rounded-xl bg-black/[0.075];
+  }
+  .sk::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.55),
+      transparent
+    );
+    animation: sk-sweep 1.5s ease-in-out infinite;
+  }
+  /* On a photograph or a banner, white on white says nothing. */
+  .sk-dark {
+    @apply bg-black/[0.115];
+  }
+}
+
+@keyframes sk-sweep {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/*
+ * Someone who has asked their phone to stop moving things gets the shapes
+ * without the sweep, which still says the page is on its way.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .sk::after {
+    animation: none;
+  }
 }
