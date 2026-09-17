@@ -11,6 +11,7 @@ import { parseMenuText } from "../lib/menu-import";
 import { adminEmails } from "../lib/email";
 import { shareRef } from "../lib/money";
 import { externalUrl } from "../lib/settings";
+import { matchPhotos, tidy } from "../lib/match";
 
 /** A settings row with nothing filled in, for the template tests. */
 const EMPTY_SETTINGS = {
@@ -562,4 +563,45 @@ test("a delivery code never pays out more than the delivery", async () => {
   // delivery to pay it is refused rather than turned into money off the food.
   const { checkCoupon } = await import("../lib/coupons");
   assert.equal(typeof checkCoupon, "function");
+});
+
+const PIZZA_MENU = [
+  { id: "a", name: "BBQ Chicken" },
+  { id: "b", name: "Meat Lovers" },
+  { id: "c", name: "Pepperoni" },
+  { id: "d", name: "Chicken Supreme Feast" },
+];
+
+test("a photo filename loses its extension, separators and copy number", () => {
+  assert.equal(tidy("BBQ_Chicken (2).jpg"), "bbq chicken");
+  assert.equal(tidy("meat-lovers-2.png"), "meat lovers");
+});
+
+test("a photo named after its item lands on it", () => {
+  const [one] = matchPhotos(["bbq-chicken.jpg"], PIZZA_MENU);
+  assert.equal(one.confident, true);
+  assert.equal(one.itemId, "a");
+});
+
+test("a photo that fits two items equally is left for a person to place", () => {
+  const [one] = matchPhotos(["chicken.jpg"], PIZZA_MENU);
+  assert.equal(one.confident, false);
+  assert.equal(one.itemId, null);
+});
+
+test("a photo straight off a camera matches nothing", () => {
+  const [one] = matchPhotos(["IMG_4821.jpg"], PIZZA_MENU);
+  assert.equal(one.confident, false);
+});
+
+test("two photos never land on the same item", () => {
+  const placed = matchPhotos(["pepperoni.jpg", "Pepperoni.png"], PIZZA_MENU).filter(
+    (m) => m.itemId === "c"
+  );
+  assert.equal(placed.length, 1);
+});
+
+test("the word pizza is ignored when every file carries it", () => {
+  const found = matchPhotos(["Meat Lovers Pizza.jpg", "Pepperoni Pizza.jpg"], PIZZA_MENU);
+  assert.deepEqual(found.map((m) => m.itemId), ["b", "c"]);
 });

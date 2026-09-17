@@ -50,6 +50,7 @@ export default async function RestaurantAdmin({
   const categoryList = (categories ?? []) as MenuCategory[];
   const itemList = (items ?? []) as MenuItem[];
   const groupsByItem = await optionGroupsFor(itemList.map((i) => i.id));
+  const withPhotos = itemList.filter((item) => item.image_url).length;
 
   return (
     <div className="space-y-5">
@@ -74,6 +75,21 @@ export default async function RestaurantAdmin({
           ))}
         </div>
       </div>
+
+      <Link
+        href={`/admin/menu/${restaurant.id}/photos`}
+        className="card flex items-center justify-between gap-3 hover:border-brand"
+      >
+        <span>
+          <span className="block font-extrabold">Photos</span>
+          <span className="block text-sm text-muted">
+            {withPhotos} of {itemList.length} item
+            {itemList.length === 1 ? "" : "s"} have one. Do the whole menu in one
+            go, or drop in a folder named after the items.
+          </span>
+        </span>
+        <span className="text-xl">→</span>
+      </Link>
 
       <form action={updateRestaurant} className="card space-y-3">
         <input type="hidden" name="restaurant_id" value={restaurant.id} />
