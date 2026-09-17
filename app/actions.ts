@@ -115,20 +115,26 @@ export async function fillMyDetails(
   const phone = normalisePhone(String(form.get("phone") ?? ""));
   if (!phone) return { error: "That phone number doesn't look right.", me: null };
 
+  const me = await customerDetails(phone);
+  if (!me) {
+    return {
+      error: "Nothing has been ordered under that number yet. Fill the form in below.",
+      me: null,
+    };
+  }
+
   const pin = String(form.get("pin") ?? "").trim();
   const signedIn = (await currentCustomer()) === phone;
 
   // Already signed in on this device, so the PIN has been given once already.
   if (!signedIn) {
+    if (!pin) return { error: "Your four-digit PIN as well, please.", me: null };
     const result = await checkPin(phone, pin);
     if (!result.ok) return { error: result.error, me: null };
     await signInCustomer(phone);
   }
 
-  const me = await customerDetails(phone);
-  return me
-    ? { error: null, me }
-    : { error: "No orders under that number yet. Just fill it in below.", me: null };
+  return { error: null, me };
 }
 
 export type PinState = { error: string | null };

@@ -59,7 +59,7 @@ export default function Checkout({
   const [name, setName] = useState(adding?.name ?? "");
   const [phone, setPhone] = useState(adding?.phone ?? "");
   const [hostel, setHostel] = useState(adding?.hostel ?? "");
-  const [, setPhoneFilled] = useState(false);
+  const [filled, setFilled] = useState(false);
   const [state, action, pending] = useActionState<SubmitState, FormData>(submitOrder, {
     error: null,
   });
@@ -369,11 +369,17 @@ export default function Checkout({
             phone={phone}
             onFilled={(me) => {
               setName(me.name);
-              setPhoneFilled(true);
+              setFilled(true);
               if (me.hostel) setHostel(me.hostel);
             }}
           />
         </div>
+        {filled && (
+          <p className="rounded-xl bg-mint/10 px-3 py-2 text-sm font-semibold text-mint">
+            Filled in from your last order. Change anything that has moved.
+          </p>
+        )}
+
         <div>
           <label className="label" htmlFor="name">Your name</label>
           <input

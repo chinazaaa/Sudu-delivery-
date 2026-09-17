@@ -1,12 +1,15 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { fillMyDetails, type FillState } from "@/app/actions";
+import { useState, useTransition } from "react";
+import { fillMyDetails } from "@/app/actions";
 
 /**
  * "I have ordered before." The number and PIN bring back the name and block
- * that were used last time, so a regular fills the form in two taps and can
- * still edit anything before placing the order.
+ * used last time, so a regular fills the form in two taps and can still edit
+ * anything before placing the order.
+ *
+ * The action is called directly rather than through a second form: checkout is
+ * already a form, and a form cannot hold another one.
  */
 export default function FillDetails({
   phone,
@@ -16,24 +19,37 @@ export default function FillDetails({
   onFilled: (me: { name: string; hostel: string }) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, action, pending] = useActionState<FillState, FormData>(fillMyDetails, {
-    error: null,
-    me: null,
-  });
+  const [number, setNumber] = useState(phone);
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
 
-  useEffect(() => {
-    if (state.me) {
-      onFilled(state.me);
-      setOpen(false);
-    }
-    // onFilled is a fresh closure each render; the details are what matter.
-  }, [state.me]); // eslint-disable-line react-hooks/exhaustive-deps
+  function submit() {
+    setError(null);
+    start(async () => {
+      const form = new FormData();
+      form.set("phone", number || phone);
+      form.set("pin", pin);
+
+      const result = await fillMyDetails({ error: null, me: null }, form);
+      if (result.me) {
+        onFilled(result.me);
+        setOpen(false);
+        setPin("");
+        return;
+      }
+      setError(result.error ?? "That did not work. Fill it in below instead.");
+    });
+  }
 
   if (!open) {
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpen(true);
+          setNumber(phone || number);
+        }}
         className="text-sm font-semibold text-brand"
       >
         Ordered before? Fill this in for me
@@ -42,51 +58,64 @@ export default function FillDetails({
   }
 
   return (
-    <div className="space-y-2 rounded-2xl border border-black/10 bg-shell p-3">
+    <div className="w-full space-y-2 rounded-2xl border border-black/10 bg-shell p-3">
       <p className="text-sm font-semibold">Your number and PIN</p>
+
       <div className="flex flex-wrap gap-2">
         <input
-          name="phone"
-          form="fill-details"
-          defaultValue={phone}
+          value={number}
+          onChange={(event) => setNumber(event.target.value)}
           inputMode="tel"
+          autoComplete="tel"
           placeholder="0803 123 4567"
           className="field grow py-2 text-sm"
         />
         <input
-          name="pin"
-          form="fill-details"
+          value={pin}
+          onChange={(event) => setPin(event.target.value.replace(/\D/g, ""))}
           inputMode="numeric"
           maxLength={4}
           placeholder="PIN"
           className="field w-24 py-2 text-sm"
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            submit();
+          }}
         />
       </div>
-      {state.error && <p className="text-sm text-red-700">{state.error}</p>}
+
+      {error && (
+        <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+          {error}
+        </p>
+      )}
+
       <div className="flex gap-2">
         <button
-          type="submit"
-          form="fill-details"
-          disabled={pending}
+          type="button"
+          onClick={submit}
+          disabled={pending || number.replace(/\D/g, "").length < 10}
           className="btn-quiet px-4 py-2 text-sm"
         >
           {pending ? "Checking…" : "Fill it in"}
         </button>
         <button
           type="button"
-          onClick={() => setOpen(false)}
+          onClick={() => {
+            setOpen(false);
+            setError(null);
+          }}
           className="text-sm font-semibold text-muted"
         >
           Cancel
         </button>
       </div>
+
       <p className="text-xs text-muted">
         The PIN came with your first order on WhatsApp. It is asked for so that
-        nobody else can look up where you live.
+        nobody else can look up where you live. No PIN? Just fill the form in.
       </p>
-
-      {/* Outside the checkout form: a form cannot be nested in another. */}
-      <form id="fill-details" action={action} className="hidden" />
     </div>
   );
 }
