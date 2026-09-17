@@ -1,6 +1,7 @@
 import SaveButton from "@/components/SaveButton";
 import PageHeader from "@/components/admin/PageHeader";
 import BandEditor from "@/components/admin/BandEditor";
+import ActionButton from "@/components/admin/ActionButton";
 import { parseBands } from "@/lib/fees";
 import { getSettings, hasBankDetails } from "@/lib/settings";
 import {
@@ -273,15 +274,21 @@ export default async function SettingsAdmin() {
                 <form action={toggleHostel}>
                   <input type="hidden" name="hostel_id" value={hostel.id} />
                   <input type="hidden" name="active" value={String(!hostel.active)} />
-                  <button className="chip border-black/10 bg-white py-1.5 text-xs">
+                  <ActionButton
+                    className="chip border-black/10 bg-white py-1.5 text-xs"
+                    done="Done ✓"
+                  >
                     {hostel.active ? "Hide" : "Show"}
-                  </button>
+                  </ActionButton>
                 </form>
                 <form action={deleteHostel}>
                   <input type="hidden" name="hostel_id" value={hostel.id} />
-                  <button className="chip border-black/10 bg-white py-1.5 text-xs text-brand">
+                  <ActionButton
+                    className="chip border-black/10 bg-white py-1.5 text-xs text-brand"
+                    done="Removed ✓"
+                  >
                     Remove
-                  </button>
+                  </ActionButton>
                 </form>
               </span>
             </li>

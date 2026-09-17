@@ -7,6 +7,7 @@ import { runSchedule, WEEKDAYS } from "@/lib/schedule";
 import { SLOT_LABEL } from "@/lib/config";
 import { safeSettings } from "@/lib/settings";
 import { runDateLabel } from "@/lib/time";
+import ActionButton from "@/components/admin/ActionButton";
 import {
   deleteScheduleRun,
   generateRuns,
@@ -96,14 +97,15 @@ export default async function SchedulePage() {
                     )}
                   </span>
                   <span className="flex gap-2">
-                    <button
+                    <ActionButton
                       formAction={toggleScheduleRun}
                       name="schedule_id"
                       value={run.id}
                       className="chip border-black/10 bg-white py-1.5 text-xs"
+                      done={run.active ? "Paused ✓" : "Back on ✓"}
                     >
                       {run.active ? "Pause" : "Resume"}
-                    </button>
+                    </ActionButton>
                     <ConfirmRemove id={run.id} />
                   </span>
                 </div>

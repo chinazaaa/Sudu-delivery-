@@ -19,6 +19,7 @@ import SaveButton from "@/components/SaveButton";
 import { BATCH_MINIMUM, SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
 import { clockLabel, runDateLabel } from "@/lib/time";
+import ActionButton from "@/components/admin/ActionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -195,7 +196,9 @@ export default async function RunsPage({
                 className="field"
               />
             </div>
-            <button className="btn-primary">Create run</button>
+            <ActionButton className="btn-primary" done="Run created ✓">
+              Create run
+            </ActionButton>
             <p className="text-xs text-muted">
               Times are Lagos time. A day holds one afternoon run and one night
               run. Leave the wording blank to use the default from Settings.

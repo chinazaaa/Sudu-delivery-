@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import AdminItemFilter from "@/components/AdminItemFilter";
 import Thumb from "@/components/Thumb";
+import ActionButton from "@/components/admin/ActionButton";
 import SaveButton from "@/components/SaveButton";
 import { db } from "@/lib/supabase";
 import { optionGroupsFor } from "@/lib/menu";
@@ -157,9 +158,14 @@ export default async function RestaurantAdmin({
               <form action={deleteCategory} className="chip border-black/10 bg-white">
                 <input type="hidden" name="category_id" value={category.id} />
                 {category.name}
-                <button className="text-ink/35 hover:text-brand" aria-label={`Delete ${category.name}`}>
+                <ActionButton
+                  className="text-ink/35 hover:text-brand"
+                  busy="…"
+                  done="✓"
+                  aria-label={`Delete ${category.name}`}
+                >
                   ✕
-                </button>
+                </ActionButton>
               </form>
             </li>
           ))}
@@ -277,7 +283,9 @@ export default async function RestaurantAdmin({
                     name="available"
                     value={item.available ? "false" : "true"}
                   />
-                  <button
+                  <ActionButton
+                    busy="…"
+                    done="✓"
                     className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
                       item.available
                         ? "bg-mint/15 text-mint"
@@ -290,7 +298,7 @@ export default async function RestaurantAdmin({
                     }
                   >
                     {item.available ? "On sale" : "Sold out"}
-                  </button>
+                  </ActionButton>
                 </form>
               </div>
 
@@ -377,9 +385,12 @@ export default async function RestaurantAdmin({
                         </h4>
                         <form action={deleteOptionGroup}>
                           <input type="hidden" name="group_id" value={group.id} />
-                          <button className="text-sm text-ink/40 hover:text-brand">
+                          <ActionButton
+                            className="text-sm text-ink/40 hover:text-brand"
+                            done="Removed ✓"
+                          >
                             Remove
-                          </button>
+                          </ActionButton>
                         </form>
                       </div>
 
@@ -410,9 +421,13 @@ export default async function RestaurantAdmin({
                             </form>
                             <form action={deleteOption}>
                               <input type="hidden" name="option_id" value={option.id} />
-                              <button className="px-1 pb-1 text-xs text-ink/40 hover:text-brand">
+                              <ActionButton
+                                className="px-1 pb-1 text-xs text-ink/40 hover:text-brand"
+                                busy="…"
+                                done="✓"
+                              >
                                 ✕
-                              </button>
+                              </ActionButton>
                             </form>
                           </li>
                         ))}
@@ -433,7 +448,9 @@ export default async function RestaurantAdmin({
                             className="field py-1 text-sm"
                           />
                         </div>
-                        <button className="btn-quiet px-3 py-1 text-sm">Add</button>
+                        <ActionButton className="btn-quiet px-3 py-1 text-sm" done="Added ✓">
+                          Add
+                        </ActionButton>
                       </form>
                     </div>
                   ))}
@@ -463,9 +480,12 @@ export default async function RestaurantAdmin({
 
                 <form action={deleteMenuItem}>
                   <input type="hidden" name="item_id" value={item.id} />
-                  <button className="text-sm text-muted hover:text-brand">
+                  <ActionButton
+                    className="text-sm text-muted hover:text-brand"
+                    done="Deleted ✓"
+                  >
                     Delete this item
-                  </button>
+                  </ActionButton>
                 </form>
               </details>
             </div>

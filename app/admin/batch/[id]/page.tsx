@@ -7,6 +7,7 @@ import Stat from "@/components/admin/Stat";
 import Tabs from "@/components/admin/Tabs";
 import Checklist from "@/components/admin/Checklist";
 import ConfirmButton from "@/components/admin/ConfirmButton";
+import ActionButton from "@/components/admin/ActionButton";
 import StagePicker from "@/components/admin/StagePicker";
 import SendSheet from "@/components/admin/SendSheet";
 import { batchSheet } from "@/lib/admin";
@@ -530,15 +531,16 @@ export default async function BatchPage({
                       <form action={setBatchStage} key={stage}>
                         <input type="hidden" name="batch_id" value={batch.id} />
                         <input type="hidden" name="stage" value={stage} />
-                        <button
+                        <ActionButton
                           className={
                             batch.stage === stage
                               ? "btn-primary px-3 py-2 text-sm"
                               : "btn-quiet px-3 py-2 text-sm"
                           }
+                          done="Set ✓"
                         >
                           {STAGE_ACTION[stage]}
-                        </button>
+                        </ActionButton>
                       </form>
                     ))}
                   </div>
@@ -683,22 +685,24 @@ export default async function BatchPage({
                       <form action={setBatchStatus}>
                         <input type="hidden" name="batch_id" value={batch.id} />
                         <input type="hidden" name="status" value="open" />
-                        <button
+                        <ActionButton
                           className="btn-quiet px-3 py-2 text-sm"
                           disabled={batch.status === "open"}
+                          done="Open ✓"
                         >
                           Reopen for orders
-                        </button>
+                        </ActionButton>
                       </form>
                       <form action={setBatchStatus}>
                         <input type="hidden" name="batch_id" value={batch.id} />
                         <input type="hidden" name="status" value="closed" />
-                        <button
+                        <ActionButton
                           className="btn-quiet px-3 py-2 text-sm"
                           disabled={batch.status === "closed"}
+                          done="Closed ✓"
                         >
                           Close early
-                        </button>
+                        </ActionButton>
                       </form>
                       <form action={setBatchStatus}>
                         <input type="hidden" name="batch_id" value={batch.id} />

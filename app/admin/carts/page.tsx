@@ -8,6 +8,7 @@ import { whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { closeCart, reopenCart } from "../actions";
+import ActionButton from "@/components/admin/ActionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -111,9 +112,9 @@ export default async function CartsPage({
                     </span>
                     <form action={reopenCart}>
                       <input type="hidden" name="cart_id" value={cart.id} />
-                      <button className="chip border-black/10 bg-white">
+                      <ActionButton done="Back on the list ✓">
                         Put it back on the list
-                      </button>
+                      </ActionButton>
                     </form>
                   </div>
                 ) : (
@@ -148,9 +149,12 @@ export default async function CartsPage({
                         <form action={closeCart} key={outcome}>
                           <input type="hidden" name="cart_id" value={cart.id} />
                           <input type="hidden" name="reason" value={outcome} />
-                          <button className="chip border-black/10 bg-white py-1.5 text-xs hover:border-ink/30">
+                          <ActionButton
+                            className="chip border-black/10 bg-white py-1.5 text-xs hover:border-ink/30"
+                            done="Closed ✓"
+                          >
                             {outcome}
-                          </button>
+                          </ActionButton>
                         </form>
                       ))}
                       <form action={closeCart} className="flex grow gap-2">
@@ -160,9 +164,12 @@ export default async function CartsPage({
                           placeholder="Something else"
                           className="field grow py-1.5 text-sm"
                         />
-                        <button className="chip border-black/10 bg-white py-1.5 text-xs">
+                        <ActionButton
+                          className="chip border-black/10 bg-white py-1.5 text-xs"
+                          done="Closed ✓"
+                        >
                           Close
-                        </button>
+                        </ActionButton>
                       </form>
                     </div>
                   </>
