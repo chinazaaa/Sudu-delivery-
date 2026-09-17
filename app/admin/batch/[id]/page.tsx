@@ -8,6 +8,7 @@ import Tabs from "@/components/admin/Tabs";
 import Checklist from "@/components/admin/Checklist";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import StagePicker from "@/components/admin/StagePicker";
+import SendSheet from "@/components/admin/SendSheet";
 import { batchSheet } from "@/lib/admin";
 import { SLOT_LABEL } from "@/lib/config";
 import Link from "next/link";
@@ -89,17 +90,15 @@ export default async function BatchPage({
               stage={batch.stage}
               action={setBatchStage}
             />
-            <a
+            <SendSheet
+              batchId={batch.id}
+              open={batch.status === "open" && batch.stage === "ordering"}
+              closeRun={setBatchStage}
               href={whatsappTo(
                 settings.whatsapp_number || "0",
                 sheetAsText(sheet, batchLabel)
               )}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-quiet px-4 py-2.5 text-sm"
-            >
-              Send sheet to my WhatsApp
-            </a>
+            />
           </>
         }
       />

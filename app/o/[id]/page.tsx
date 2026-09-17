@@ -45,6 +45,13 @@ export default async function OrderPage({
   const repeat = await repeatLines(order);
   // The runs it could be moved to, for an order whose own run has gone.
   const others = (await openBatches()).filter((run) => run.id !== order.batch_id);
+  // A paid order can change nights right up until its run closes, after which
+  // the food for it has been bought.
+  const canStillMove =
+    order.batch.status === "open" &&
+    order.batch.stage === "ordering" &&
+    new Date(order.batch.cut_off_at).getTime() > Date.now() &&
+    others.length > 0;
 
   // Only the person who just checked out has their browser emptied. A
   // pay-by-link friend opening this keeps their own cart.
@@ -137,6 +144,26 @@ export default async function OrderPage({
           )}
         </div>
       </header>
+
+      {!paid && order.status !== "refunded" && expired && (
+        <section className="card space-y-3 border-brand/30 bg-brand-tint">
+          <div>
+            <h2 className="font-bold">This run has gone. Do not pay it.</h2>
+            <p className="mt-1 text-sm text-ink/75">
+              Nothing was charged. Move it to another run and it is yours again.
+            </p>
+          </div>
+          <MoveOrder
+            orderId={order.id}
+            total={order.total}
+            runs={others.map((run) => ({
+              id: run.id,
+              label: `${runDateLabel(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
+              closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
+            }))}
+          />
+        </section>
+      )}
 
       {/* Paying comes first while it is unpaid, and drops away once it is not. */}
       {!paid && order.status !== "refunded" && !expired && (
@@ -245,6 +272,21 @@ export default async function OrderPage({
             <StageTimeline
               stage={order.batch.stage}
               updatedAt={order.batch.stage_updated_at}
+            />
+          )}
+
+          {canStillMove && (
+            <MoveOrder
+              orderId={order.id}
+              total={order.total}
+              paid
+              collapsed
+              openLabel="Want it on another night instead?"
+              runs={others.map((run) => ({
+                id: run.id,
+                label: `${runDateLabel(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
+                closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
+              }))}
             />
           )}
         </section>
@@ -421,31 +463,6 @@ export default async function OrderPage({
             </Link>
             .
           </p>
-        </section>
-      )}
-
-      {!paid && order.status !== "refunded" && expired && (
-        <section className="card space-y-3 border-brand/30 bg-brand-tint">
-          <div>
-            <h2 className="font-bold">Too late for this one. Do not pay it.</h2>
-            <p className="mt-1 text-sm text-ink/75">
-              The {runLabel} run is{" "}
-              {order.batch.stage === "ordering"
-                ? "closed"
-                : STAGE_LABEL[order.batch.stage].toLowerCase()}
-              , so this order did not travel. Nothing was charged, and paying
-              now would not put you on it. Put it in the next run instead.
-            </p>
-          </div>
-          <MoveOrder
-            orderId={order.id}
-            total={order.total}
-            runs={others.map((run) => ({
-              id: run.id,
-              label: `${runDateLabel(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
-              closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
-            }))}
-          />
         </section>
       )}
 

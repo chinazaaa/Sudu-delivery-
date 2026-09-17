@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { moveOrderToRun, type MoveState } from "@/app/actions";
 import { naira } from "@/lib/money";
 
@@ -13,11 +13,20 @@ export default function MoveOrder({
   orderId,
   total,
   runs,
+  paid = false,
+  collapsed = false,
+  openLabel = "Change to another run",
 }: {
   orderId: string;
   total: number;
   runs: { id: string; label: string; closes: string }[];
+  /** A paid order moves as it is: no repricing, no refund, no top-up. */
+  paid?: boolean;
+  /** Start as a single line, for a page where moving is not the main thing. */
+  collapsed?: boolean;
+  openLabel?: string;
 }) {
+  const [open, setOpen] = useState(!collapsed);
   const [state, action, pending] = useActionState<MoveState, FormData>(
     moveOrderToRun,
     { error: null }
@@ -28,6 +37,18 @@ export default function MoveOrder({
       <p className="text-sm text-muted">
         No other run is open yet. Check back, or message us.
       </p>
+    );
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="btn-quiet w-full py-2.5 text-sm"
+      >
+        {openLabel}
+      </button>
     );
   }
 
@@ -65,9 +86,9 @@ export default function MoveOrder({
       )}
 
       <p className="text-xs text-muted">
-        Same food, same order number. It is repriced against today&apos;s menu
-        and that run&apos;s delivery, so the total can change from{" "}
-        {naira(total)}.
+        {paid
+          ? `Same food, same order number, same ${naira(total)}. Nothing is charged again.`
+          : `Same food, same order number. It is repriced against today's menu and that run's delivery, so the total can change from ${naira(total)}.`}
       </p>
     </form>
   );

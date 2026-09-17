@@ -554,19 +554,32 @@ async function announceOrder(args: {
 export type MoveResult = { ok: true; orderId: string } | { ok: false; error: string };
 
 /**
- * Moves an unpaid order onto another run, keeping its number and its items.
- * It is repriced against today's menu and the new run's fee band, because a
- * week-old price is not a promise anybody made.
+ * Moves an order onto another run, keeping its number and its items.
  *
- * Only unpaid orders move: a paid one has been bought, and the run it
- * travelled on is history. A split group moves together, since half a group on
- * another night is nobody's idea of a group order.
+ * An unpaid order is repriced against today's menu and the new run's fee band,
+ * because a week-old price is not a promise anybody made. A paid one is not:
+ * the money is settled, so changing one's mind from Friday afternoon to Friday
+ * night must not produce a bill or a refund. That only holds while the run it
+ * is on is still open; once it has closed, that run has been shopped for.
+ *
+ * A split group moves together, since half a group on another night is
+ * nobody's idea of a group order.
  */
 export async function moveOrder(orderId: string, batchId: string): Promise<MoveResult> {
   const order = await getOrder(orderId);
   if (!order) return { ok: false, error: "That order no longer exists." };
-  if (order.status !== "pending") {
-    return { ok: false, error: "That order is already paid, so it stays where it is." };
+  if (order.status === "refunded") {
+    return { ok: false, error: "That order was refunded, so there is nothing to move." };
+  }
+
+  const paid = order.status !== "pending";
+  if (paid && !isOrderable(order.batch)) {
+    return {
+      ok: false,
+      error:
+        "That run has closed and the food has been bought, so this one cannot move. " +
+        "Message us and we will sort it out.",
+    };
   }
 
   const batch = await getBatch(batchId);
@@ -580,7 +593,9 @@ export async function moveOrder(orderId: string, batchId: string): Promise<MoveR
   // The whole group travels together, or none of it does.
   const moving =
     order.group_id && order.shares.length > 1
-      ? order.shares.filter((share) => share.status === "pending").map((s) => s.id)
+      ? order.shares
+          .filter((share) => share.status !== "refunded")
+          .map((share) => share.id)
       : [orderId];
 
   const bands = await activeBands();
@@ -588,6 +603,13 @@ export async function moveOrder(orderId: string, batchId: string): Promise<MoveR
   for (const id of moving) {
     const one = await getOrder(id);
     if (!one) continue;
+
+    // A paid order carries its money across untouched: nothing is re-charged
+    // and nothing is refunded for changing which night it comes on.
+    if (one.status !== "pending") {
+      await db().from("orders").update({ batch_id: batch.id }).eq("id", id);
+      continue;
+    }
 
     // Today's prices, today's availability, choices included.
     const repriced = await repeatLines(one);
