@@ -29,7 +29,7 @@ export default function SendSheet({
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="btn-quiet px-4 py-2.5 text-sm"
+        className="btn-quiet w-full justify-center px-4 py-2.5 text-sm sm:w-auto"
       >
         Send sheet to my WhatsApp
       </a>
@@ -41,7 +41,7 @@ export default function SendSheet({
       <button
         type="button"
         onClick={() => setAsking(true)}
-        className="btn-quiet px-4 py-2.5 text-sm"
+        className="btn-quiet w-full justify-center px-4 py-2.5 text-sm sm:w-auto"
       >
         Send sheet to my WhatsApp
       </button>
@@ -49,13 +49,19 @@ export default function SendSheet({
   }
 
   return (
-    <form action={closeRun} className="flex flex-wrap items-center gap-2">
+    /* Stacked on a phone: three of these in a row is wider than the screen,
+       and the answer to a question should not be somewhere off the side of
+       it. */
+    <form
+      action={closeRun}
+      className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center"
+    >
       <input type="hidden" name="batch_id" value={batchId} />
       <input type="hidden" name="stage" value="closed" />
       <button
         type="submit"
         onClick={() => window.open(href, "_blank", "noopener")}
-        className="btn-primary px-4 py-2.5 text-sm"
+        className="btn-primary w-full justify-center px-4 py-2.5 text-sm sm:w-auto"
       >
         Send and close the run
       </button>
@@ -64,14 +70,14 @@ export default function SendSheet({
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => setAsking(false)}
-        className="btn-quiet px-4 py-2.5 text-sm"
+        className="btn-quiet w-full justify-center px-4 py-2.5 text-sm sm:w-auto"
       >
         Just send it
       </a>
       <button
         type="button"
         onClick={() => setAsking(false)}
-        className="text-sm font-semibold text-muted"
+        className="w-full py-1 text-sm font-semibold text-muted sm:w-auto"
       >
         Cancel
       </button>

@@ -25,7 +25,13 @@ export default function PageHeader({
           <h1 className="text-2xl font-extrabold tracking-tight">{title}</h1>
           {detail && <p className="text-sm text-muted">{detail}</p>}
         </div>
-        {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+        {actions && (
+          /* Full width on a phone, where three buttons side by side ran off
+             the screen and took the whole page sideways with them. */
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
+            {actions}
+          </div>
+        )}
       </div>
     </header>
   );

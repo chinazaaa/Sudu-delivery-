@@ -23,7 +23,7 @@ export default function StagePicker({
   const form = useRef<HTMLFormElement>(null);
 
   return (
-    <form ref={form} action={action} className="flex items-center gap-2">
+    <form ref={form} action={action} className="flex w-full items-center gap-2 sm:w-auto">
       <input type="hidden" name="batch_id" value={batchId} />
       <label className="sr-only" htmlFor="stage">
         Where the run is
@@ -37,7 +37,7 @@ export default function StagePicker({
         key={stage}
         defaultValue={stage}
         onChange={() => form.current?.requestSubmit()}
-        className="field w-auto py-2.5 text-sm font-semibold"
+        className="field w-full py-2.5 text-sm font-semibold sm:w-auto"
       >
         {STAGES.map((step) => (
           <option key={step} value={step}>
