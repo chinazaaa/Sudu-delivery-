@@ -59,7 +59,13 @@ export default async function OrderPage({
   const batchLabel = `${weekdayLabel(order.batch.run_date)} ${SLOT_LABEL[order.batch.slot]}`;
   // Two runs can be open at once, so a weekday on its own does not say which.
   const runLabel = `${runDateLabel(order.batch.run_date)} · ${SLOT_LABEL[order.batch.slot]}`;
-  const expired = new Date(order.batch.cut_off_at).getTime() <= Date.now();
+  // A run stops taking money when its cut-off passes, when it is closed by
+  // hand, and the moment it moves past ordering. Otherwise somebody pays for
+  // food that is already being cooked, and that money has to go back.
+  const expired =
+    new Date(order.batch.cut_off_at).getTime() <= Date.now() ||
+    order.batch.status !== "open" ||
+    order.batch.stage !== "ordering";
   const paid = order.status === "paid" || order.status === "delivered";
   const drops = dropsFor(order);
   const split = order.group?.mode === "split" && order.shares.length > 1;
@@ -193,6 +199,7 @@ export default async function OrderPage({
       {split && (
         <SplitCollect
           orderId={order.id}
+          closed={expired}
           shares={order.shares.map((share) => {
             const name = share.for_name ?? share.customer_name;
             const url = `${site}/o/${share.id}`;
@@ -414,19 +421,27 @@ export default async function OrderPage({
       )}
 
       {!paid && order.status !== "refunded" && expired && (
-        <section className="card">
-          <h2 className="font-bold">This link has expired</h2>
-          <p className="mt-1 text-sm text-ink/75">
-            The {runLabel} run has left. Nothing was charged.{" "}
-            <Link href="/" className="font-semibold text-brand underline">
-              Order into the next batch
-            </Link>
-            . It takes one tap.
-          </p>
+        <section className="card space-y-3 border-brand/30 bg-brand-tint">
+          <div>
+            <h2 className="font-bold">Too late for this one. Do not pay it.</h2>
+            <p className="mt-1 text-sm text-ink/75">
+              The {runLabel} run is{" "}
+              {order.batch.stage === "ordering"
+                ? "closed"
+                : STAGE_LABEL[order.batch.stage].toLowerCase()}
+              , so this order did not travel. Nothing was charged, and paying
+              now would not put you on it. Put it in the next run instead.
+            </p>
+          </div>
+          <RepeatOrder
+            lines={repeat.lines}
+            blocked={repeat.blocked}
+            label="Put this in the next run"
+          />
         </section>
       )}
 
-      {(paid || expired) && (
+      {paid && (
         <section className="card space-y-2">
           <h2 className="font-bold">Want this again?</h2>
           <p className="text-sm text-muted">

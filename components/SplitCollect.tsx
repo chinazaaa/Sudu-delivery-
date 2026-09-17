@@ -24,9 +24,12 @@ export type Share = {
 export default function SplitCollect({
   shares,
   orderId,
+  closed = false,
 }: {
   shares: Share[];
   orderId: string;
+  /** The run has gone: there is nothing left to collect. */
+  closed?: boolean;
 }) {
   const key = `sudu_sent_${orderId}`;
   const [sent, setSent] = useState<Record<string, boolean>>({});
@@ -79,7 +82,9 @@ export default function SplitCollect({
           <h2 className="font-bold">
             {unpaid.length === 0
               ? "Everyone has paid"
-              : `${unpaid.length} still to pay`}
+              : closed
+                ? `${unpaid.length} never paid`
+                : `${unpaid.length} still to pay`}
           </h2>
           <span className="text-sm font-semibold text-muted">
             {paidCount}/{shares.length} paid
@@ -88,7 +93,9 @@ export default function SplitCollect({
         <p className="text-sm text-muted">
           {unpaid.length === 0
             ? "Nothing left to chase. The whole order travels."
-            : `${naira(owed)} outstanding. Anyone unpaid at the cut-off is dropped and the rest still travels.`}
+            : closed
+              ? `${naira(owed)} never came in, so those parts were dropped. Nobody should pay now.`
+              : `${naira(owed)} outstanding. Anyone unpaid at the cut-off is dropped and the rest still travels.`}
         </p>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/5">
           <div
@@ -115,6 +122,10 @@ export default function SplitCollect({
             {share.paid ? (
               <span className="grid size-9 shrink-0 place-items-center rounded-full bg-mint/10 font-bold text-mint">
                 ✓
+              </span>
+            ) : closed ? (
+              <span className="chip shrink-0 border-transparent bg-black/5 py-1.5 text-xs text-muted">
+                Dropped
               </span>
             ) : (
               <span className="flex shrink-0 gap-2">
@@ -150,7 +161,7 @@ export default function SplitCollect({
         ))}
       </ul>
 
-      {unpaid.length > 1 && (
+      {unpaid.length > 1 && !closed && (
         <button
           type="button"
           onClick={() => copy(everyone, "all")}
