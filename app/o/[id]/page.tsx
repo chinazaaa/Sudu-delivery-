@@ -646,11 +646,12 @@ function CardPayment({
       }`}
     >
       <h3 className="font-semibold">
-        {waiting ? "Your card link is coming" : "Paying by card instead?"}
+        {waiting ? "We will send your card link on WhatsApp" : "Paying by card instead?"}
       </h3>
       <p className="mt-1 text-sm text-ink/75">
         {waiting
-          ? "Message us and we will send it. Nothing is charged until you use it."
+          ? "It comes to the number on this order. Message us if you would rather " +
+            "have it now, or to say you have changed your mind and will transfer."
           : settings.card_note}
       </p>
       <a
@@ -659,7 +660,7 @@ function CardPayment({
         rel="noopener noreferrer"
         className="btn-quiet mt-2 w-full"
       >
-        Message us on WhatsApp
+        {waiting ? "Message us about it" : "Message us on WhatsApp"}
       </a>
     </div>
   );
