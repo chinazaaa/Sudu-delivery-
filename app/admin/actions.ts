@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { isSignedIn, passwordMatches, signIn, signOut } from "@/lib/admin-auth";
 import { db } from "@/lib/supabase";
 import { STAGES, type BatchStage } from "@/lib/stages";
-import { DELIVERY_WINDOWS, type BatchSlot } from "@/lib/config";
+import { type BatchSlot } from "@/lib/config";
+import { deliveryWindows } from "@/lib/settings";
 import { lagosInstant } from "@/lib/time";
 import { fileFrom, uploadImage } from "@/lib/uploads";
 import { parseMenuText } from "@/lib/menu-import";
@@ -131,25 +132,68 @@ export async function updateRun(form: FormData): Promise<void> {
 
   const { data: batch } = await db()
     .from("batches")
-    .select("run_date")
+    .select("run_date, slot")
     .eq("id", id)
     .maybeSingle();
   if (!batch) return;
 
+  const orders = await orderCount(id);
+  // The day and the slot decide which orders belong where, so they only move
+  // while the run is still empty. The window and the cut-off change any time.
+  const runDate =
+    orders === 0 && String(form.get("run_date") ?? "").trim()
+      ? String(form.get("run_date")).trim()
+      : (batch.run_date as string);
+  const slot =
+    orders === 0 && String(form.get("slot") ?? "")
+      ? String(form.get("slot"))
+      : (batch.slot as string);
+
   const patch: Record<string, string> = {
+    run_date: runDate,
+    slot,
     delivery_window_text: String(form.get("delivery_window_text") ?? "").trim(),
   };
 
   const time = String(form.get("cut_off_time") ?? "").trim();
   if (/^\d{2}:\d{2}$/.test(time)) {
     const [hour, minute] = time.split(":").map(Number);
-    patch.cut_off_at = lagosInstant(batch.run_date as string, hour, minute);
+    patch.cut_off_at = lagosInstant(runDate, hour, minute);
   }
 
   await db().from("batches").update(patch).eq("id", id);
 
   revalidatePath("/admin");
   revalidatePath("/");
+}
+
+/** Orders on a run that still count. A refunded one is not a reason to keep it. */
+async function orderCount(batchId: string): Promise<number> {
+  const { count } = await db()
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("batch_id", batchId)
+    .neq("status", "refunded");
+  return count ?? 0;
+}
+
+/**
+ * Removes a run entirely. Only ever an empty one: a run with orders on it is
+ * somebody's dinner and a row in the books, so that is cancelled instead.
+ */
+export async function deleteRun(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("batch_id"));
+  if ((await orderCount(id)) > 0) return;
+
+  await db().from("carts").delete().eq("batch_id", id);
+  await db().from("orders").delete().eq("batch_id", id);
+  await db().from("batches").delete().eq("id", id);
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/runs");
+  revalidatePath("/");
+  redirect("/admin/runs");
 }
 
 /** A real capacity cap. Only set this when the car genuinely fills up. */
@@ -638,7 +682,7 @@ export async function createBatch(form: FormData): Promise<void> {
         cut_off_at: lagosInstant(runDate, hour, minute),
         delivery_window_text:
           String(form.get("delivery_window_text") ?? "").trim() ||
-          DELIVERY_WINDOWS[slot as BatchSlot],
+          (await deliveryWindows())[slot as BatchSlot],
         status: "open",
         stage: "ordering",
       },

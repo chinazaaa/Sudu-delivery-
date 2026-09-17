@@ -102,8 +102,8 @@ export default async function RunsPage({
         <section className="card mb-4">
           <h2 className="font-bold">Create a run</h2>
           <p className="mt-0.5 text-sm text-muted">
-            Use this for any day that is not a Friday, including exam week and
-            late-night runs.
+            Any day, Fridays included. Fridays also open themselves, so creating
+            one that already exists updates it rather than making a second.
           </p>
           <form action={createBatch} className="mt-3 space-y-3">
             <div className="grid gap-3 sm:grid-cols-3">
@@ -143,8 +143,8 @@ export default async function RunsPage({
             </div>
             <button className="btn-primary">Create run</button>
             <p className="text-xs text-muted">
-              Times are Lagos time. A day can hold one afternoon and one night
-              batch; creating the same one again updates it.
+              Times are Lagos time. A day holds one afternoon run and one night
+              run. Leave the wording blank to use the default from Settings.
             </p>
           </form>
         </section>
@@ -184,6 +184,9 @@ export default async function RunsPage({
                   <p className="text-xs text-muted">
                     {batch.orderCount - batch.paidCount} unpaid
                   </p>
+                  {batch.orderCount === 0 && (
+                    <p className="mt-1 text-xs text-muted">Nothing ordered yet</p>
+                  )}
                   {batch.paidCount > 0 && (
                     <p
                       className={`mt-1 text-sm font-bold ${

@@ -26,6 +26,7 @@ import {
   setFlashFee,
   setRunCosts,
   updateRun,
+  deleteRun,
 } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,9 @@ export default async function BatchPage({
   if (!sheet) notFound();
 
   const { batch, counter, handout, unpaid, summary, refunds, pins } = sheet;
+  // A run nobody has ordered into is still just a plan: it can be moved to
+  // another day, or dropped altogether.
+  const empty = summary.paidCount + summary.unpaidCount === 0;
   const belowMinimum = summary.paidCount < summary.minimum;
 
   const settings = await getSettings();
@@ -531,12 +535,41 @@ export default async function BatchPage({
                   <form action={updateRun} className="space-y-3">
                     <input type="hidden" name="batch_id" value={batch.id} />
                     <div>
-                      <h2 className="font-bold">When this run lands</h2>
+                      <h2 className="font-bold">This run</h2>
                       <p className="text-sm text-muted">
-                        What customers are told, on the shop and in every
-                        message. Change it here if the run slips.
+                        {empty
+                          ? "Nobody has ordered into it yet, so everything about it can still change."
+                          : "It has orders on it, so the day and the slot are fixed. The window and the cut-off can still move."}
                       </p>
                     </div>
+
+                    {empty && (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="label" htmlFor="run_date">Day</label>
+                          <input
+                            id="run_date"
+                            name="run_date"
+                            type="date"
+                            defaultValue={batch.run_date}
+                            className="field"
+                          />
+                        </div>
+                        <div>
+                          <label className="label" htmlFor="slot">Which run</label>
+                          <select
+                            id="slot"
+                            name="slot"
+                            defaultValue={batch.slot}
+                            className="field"
+                          >
+                            <option value="afternoon">Afternoon</option>
+                            <option value="night">Night</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex flex-wrap items-end gap-2">
                       <div className="grow">
                         <label className="label" htmlFor="delivery_window_text">
@@ -669,6 +702,21 @@ export default async function BatchPage({
                       Cancelling a run does not refund anyone. Refund each order on
                       the handout tab, same night, in full.
                     </p>
+
+                    {empty && (
+                      <form action={deleteRun} className="mt-4 border-t border-black/5 pt-3">
+                        <input type="hidden" name="batch_id" value={batch.id} />
+                        <h3 className="font-bold">Delete this run</h3>
+                        <p className="mt-0.5 text-xs text-muted">
+                          Nothing has been ordered into it, so it can go
+                          entirely. A run with orders on it is cancelled
+                          instead, never deleted.
+                        </p>
+                        <button className="btn-quiet mt-2 px-4 py-2 text-sm text-brand">
+                          Delete this run
+                        </button>
+                      </form>
+                    )}
                   </div>
                 </section>
               </>
