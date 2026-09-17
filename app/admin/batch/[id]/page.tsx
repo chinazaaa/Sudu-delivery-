@@ -216,10 +216,14 @@ export default async function BatchPage({
                       })),
                       // A bag one person carries for a group still needs each
                       // item labelled, or they cannot hand them out.
+                      // The restaurant is part of the item: a Margherita could
+                      // have come from Domino's or Panarottis, and at the gate
+                      // that is the only thing that tells the bags apart.
                       items: bag.lines.map(
                         (l) =>
                           `${l.qty}× ${l.name}` +
                           (l.choices.length > 0 ? ` (${l.choices.join(", ")})` : "") +
+                          ` · ${l.restaurant}` +
                           (l.for_name && l.for_name !== bag.name
                             ? ` · for ${l.for_name}`
                             : "")

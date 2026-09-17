@@ -92,7 +92,13 @@ export default function HandoutList({
                 </span>
                 <span className="text-xs text-muted">{entry.hostel}</span>
               </span>
-              <span className="mt-1 block text-sm">{entry.items.join(", ")}</span>
+              <span className="mt-1 block space-y-0.5 text-sm">
+                {entry.items.map((item) => (
+                  <span key={item} className="block">
+                    {item}
+                  </span>
+                ))}
+              </span>
               <span className="text-xs text-muted">{entry.phone}</span>
             </button>
 
@@ -113,7 +119,7 @@ export default function HandoutList({
                     href={`/admin/orders/${order.id}`}
                     className="chip border-black/10 bg-white py-1.5 text-xs"
                   >
-                    {order.ref}
+                    View {order.ref}
                     <span className="text-muted">
                       {order.status} · {order.total}
                     </span>

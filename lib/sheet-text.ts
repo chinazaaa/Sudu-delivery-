@@ -11,9 +11,11 @@ const lineText = (l: {
   qty: number;
   name: string;
   choices: string[];
+  restaurant?: string;
   for_name?: string | null;
 }) =>
   `${l.qty} x ${l.name}${l.choices.length > 0 ? ` (${l.choices.join(", ")})` : ""}` +
+  (l.restaurant ? ` [${l.restaurant}]` : "") +
   (l.for_name ? ` for ${l.for_name}` : "");
 
 export function sheetAsText(sheet: BatchSheet, batchLabel: string): string {
