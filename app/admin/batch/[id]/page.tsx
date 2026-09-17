@@ -199,7 +199,14 @@ export default async function BatchPage({
                       name: bag.name,
                       hostel: bag.hostel,
                       phone: formatPhone(bag.phone),
-                      items: bag.lines.map((l) => `${l.qty}× ${l.name}`),
+                      // A bag one person carries for a group still needs each
+                      // item labelled, or they cannot hand them out.
+                      items: bag.lines.map(
+                        (l) =>
+                          `${l.qty}× ${l.name}` +
+                          (l.choices.length > 0 ? ` (${l.choices.join(", ")})` : "") +
+                          (l.for_name && l.for_name !== bag.name ? ` · for ${l.for_name}` : "")
+                      ),
                     }))}
                   />
                 </section>

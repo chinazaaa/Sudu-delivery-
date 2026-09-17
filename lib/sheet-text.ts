@@ -7,8 +7,14 @@ import type { BatchSheet } from "./admin";
  * read at the counter and the gate with no signal. The admin screen needs data;
  * a message in a chat does not.
  */
-const lineText = (l: { qty: number; name: string; choices: string[] }) =>
-  `${l.qty} x ${l.name}${l.choices.length > 0 ? ` (${l.choices.join(", ")})` : ""}`;
+const lineText = (l: {
+  qty: number;
+  name: string;
+  choices: string[];
+  for_name?: string | null;
+}) =>
+  `${l.qty} x ${l.name}${l.choices.length > 0 ? ` (${l.choices.join(", ")})` : ""}` +
+  (l.for_name ? ` for ${l.for_name}` : "");
 
 export function sheetAsText(sheet: BatchSheet, batchLabel: string): string {
   const lines = [`SUDU RUN: ${batchLabel}`, ""];
