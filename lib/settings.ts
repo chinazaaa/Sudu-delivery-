@@ -130,3 +130,22 @@ export async function deliveryWindows(): Promise<Record<BatchSlot, string>> {
     night: settings.window_night.trim() || DELIVERY_WINDOWS.night,
   };
 }
+
+/**
+ * A link somebody pasted, made safe to put in an href. Without a scheme the
+ * browser reads it as a path, so "paystack.com/pay/x" became a link to
+ * /o/<order>/paystack.com/pay/x. Anything that is not http or https is
+ * rejected outright rather than rendered as a link.
+ */
+export function externalUrl(raw: string | null | undefined): string | null {
+  const text = (raw ?? "").trim();
+  if (!text) return null;
+
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(text) ? text : `https://${text}`;
+  try {
+    const url = new URL(withScheme);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}

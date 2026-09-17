@@ -1,5 +1,5 @@
 import { naira, orderRef, shareRef } from "./money";
-import type { Settings } from "./settings";
+import { externalUrl, type Settings } from "./settings";
 
 /** wa.me needs international digits with no plus. */
 export function whatsappTo(phone: string, message: string): string {
@@ -157,7 +157,9 @@ export function template(args: {
       ? `Your PIN is ${pin}. Every order you place: ${siteUrl}/orders`
       : "",
     "{bank}": bank,
-    "{card_link}": order.payment_link || "(link coming in the next message)",
+    // With its scheme, so WhatsApp makes it tappable rather than plain text.
+    "{card_link}":
+      externalUrl(order.payment_link) ?? "(link coming in the next message)",
   };
 
   return Object.entries(values)

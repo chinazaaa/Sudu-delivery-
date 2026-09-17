@@ -10,6 +10,7 @@ import { newPin } from "../lib/customer-auth";
 import { parseMenuText } from "../lib/menu-import";
 import { adminEmails } from "../lib/email";
 import { shareRef } from "../lib/money";
+import { externalUrl } from "../lib/settings";
 
 /** A settings row with nothing filled in, for the template tests. */
 const EMPTY_SETTINGS = {
@@ -540,4 +541,17 @@ test("a week's horizon reaches the same weekday next week", () => {
   const nextFridayCutOff = new Date("2026-09-25T11:30:00+01:00");
 
   assert.ok(nextFridayCutOff < new Date(until));
+});
+
+test("a pasted payment link is made absolute, or rejected", () => {
+  // Without a scheme a browser reads it as a path, so the card link became
+  // /o/<order>/paystack.com/pay/x instead of leaving the site.
+  assert.equal(externalUrl("paystack.com/pay/x"), "https://paystack.com/pay/x");
+  assert.equal(externalUrl("https://paystack.com/pay/x"), "https://paystack.com/pay/x");
+  assert.equal(externalUrl("  flutterwave.com/p/abc  "), "https://flutterwave.com/p/abc");
+
+  // Anything that is not a web link is not rendered as one.
+  assert.equal(externalUrl("javascript:alert(1)"), null);
+  assert.equal(externalUrl(""), null);
+  assert.equal(externalUrl(null), null);
 });

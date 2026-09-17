@@ -25,7 +25,13 @@ import {
 import { formatPhone } from "@/lib/phone";
 import { STAGE_LABEL } from "@/lib/stages";
 import { clockLabel, runDateLabel, weekdayLabel } from "@/lib/time";
-import { activeBands, getSettings, hasBankDetails, whatsappLink } from "@/lib/settings";
+import {
+  activeBands,
+  externalUrl,
+  getSettings,
+  hasBankDetails,
+  whatsappLink,
+} from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -177,9 +183,9 @@ export default async function OrderPage({
           </div>
 
           {order.payment_method === "card" ? (
-            order.payment_link ? (
+            externalUrl(order.payment_link) ? (
               <a
-                href={order.payment_link}
+                href={externalUrl(order.payment_link)!}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary w-full"

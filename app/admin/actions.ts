@@ -6,7 +6,7 @@ import { isSignedIn, passwordMatches, signIn, signOut } from "@/lib/admin-auth";
 import { db } from "@/lib/supabase";
 import { STAGES, type BatchStage } from "@/lib/stages";
 import { type BatchSlot } from "@/lib/config";
-import { deliveryWindows } from "@/lib/settings";
+import { deliveryWindows, externalUrl } from "@/lib/settings";
 import { lagosInstant } from "@/lib/time";
 import { ensureUpcomingBatches, openRunsBetween } from "@/lib/batches";
 import { fileFrom, uploadImage } from "@/lib/uploads";
@@ -60,11 +60,13 @@ export async function markPaid(form: FormData): Promise<void> {
  */
 export async function savePaymentLink(form: FormData): Promise<void> {
   await assertAdmin();
-  const link = String(form.get("payment_link") ?? "").trim();
+  // Stored with its scheme, so it is a link to somewhere else rather than a
+  // path on this site.
+  const link = externalUrl(String(form.get("payment_link") ?? ""));
 
   await db()
     .from("orders")
-    .update({ payment_link: link || null })
+    .update({ payment_link: link })
     .eq("id", String(form.get("order_id")));
 
   revalidatePath("/admin", "layout");
