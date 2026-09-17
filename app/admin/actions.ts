@@ -24,13 +24,13 @@ export async function login(
     return { error: "Wrong password." };
   }
   await signIn();
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   return { error: null };
 }
 
 export async function logout(): Promise<void> {
   await signOut();
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
 }
 
 /**
@@ -51,7 +51,7 @@ export async function markPaid(form: FormData): Promise<void> {
       payment_ref: ref || null,
     })
     .eq("id", id);
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
 }
 
 /**
@@ -67,9 +67,8 @@ export async function savePaymentLink(form: FormData): Promise<void> {
     .update({ payment_link: link || null })
     .eq("id", String(form.get("order_id")));
 
-  revalidatePath("/admin");
-  revalidatePath("/admin/orders");
-}
+  revalidatePath("/admin", "layout");
+  }
 
 /**
  * Ticking a bag off marks everything in it delivered, and untricking it puts
@@ -91,8 +90,9 @@ export async function setBagDelivered(form: FormData): Promise<void> {
     .update({ status: delivered ? "delivered" : "paid" })
     .in("id", ids);
 
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   revalidatePath("/orders");
+  revalidatePath("/o", "layout");
 }
 
 export async function markDelivered(form: FormData): Promise<void> {
@@ -101,7 +101,7 @@ export async function markDelivered(form: FormData): Promise<void> {
     .from("orders")
     .update({ status: "delivered" })
     .eq("id", String(form.get("order_id")));
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
 }
 
 /** Refunds are same-night and in full. There are no partial refunds here. */
@@ -111,7 +111,7 @@ export async function refundOrder(form: FormData): Promise<void> {
     .from("orders")
     .update({ status: "refunded" })
     .eq("id", String(form.get("order_id")));
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
 }
 
 export async function setBatchStatus(form: FormData): Promise<void> {
@@ -120,7 +120,7 @@ export async function setBatchStatus(form: FormData): Promise<void> {
     .from("batches")
     .update({ status: String(form.get("status")) })
     .eq("id", String(form.get("batch_id")));
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
 }
 
 /**
@@ -144,7 +144,7 @@ export async function setRunCosts(form: FormData): Promise<void> {
     })
     .eq("id", String(form.get("batch_id")));
 
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
 }
 
 /**
@@ -188,8 +188,8 @@ export async function updateRun(form: FormData): Promise<void> {
 
   await db().from("batches").update(patch).eq("id", id);
 
-  revalidatePath("/admin");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 /** One line of the weekly schedule: a day, a slot, a cut-off and a window. */
@@ -214,7 +214,7 @@ export async function saveScheduleRun(form: FormData): Promise<void> {
       { onConflict: "weekday,slot" }
     );
 
-  revalidatePath("/admin/runs");
+  revalidatePath("/admin", "layout");
 }
 
 /**
@@ -224,7 +224,7 @@ export async function saveScheduleRun(form: FormData): Promise<void> {
 export async function deleteScheduleRun(form: FormData): Promise<void> {
   await assertAdmin();
   await db().from("run_schedule").delete().eq("id", String(form.get("schedule_id")));
-  revalidatePath("/admin/runs");
+  revalidatePath("/admin", "layout");
 }
 
 export async function toggleScheduleRun(form: FormData): Promise<void> {
@@ -233,7 +233,7 @@ export async function toggleScheduleRun(form: FormData): Promise<void> {
     .from("run_schedule")
     .update({ active: form.get("active") === "true" })
     .eq("id", String(form.get("schedule_id")));
-  revalidatePath("/admin/runs");
+  revalidatePath("/admin", "layout");
 }
 
 /**
@@ -255,8 +255,8 @@ export async function generateRuns(form: FormData): Promise<void> {
     await ensureUpcomingBatches();
   }
 
-  revalidatePath("/admin/runs");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 /** Orders on a run that still count. A refunded one is not a reason to keep it. */
@@ -282,8 +282,7 @@ export async function deleteRun(form: FormData): Promise<void> {
   await db().from("orders").delete().eq("batch_id", id);
   await db().from("batches").delete().eq("id", id);
 
-  revalidatePath("/admin");
-  revalidatePath("/admin/runs");
+  revalidatePath("/admin", "layout");
   revalidatePath("/");
   redirect("/admin/runs");
 }
@@ -298,7 +297,7 @@ export async function setBatchCapacity(form: FormData): Promise<void> {
     .from("batches")
     .update({ capacity: Number.isFinite(capacity as number) ? capacity : null })
     .eq("id", String(form.get("batch_id")));
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
 }
 
 export async function updateMenuItem(form: FormData): Promise<void> {
@@ -320,8 +319,8 @@ export async function updateMenuItem(form: FormData): Promise<void> {
       category_id: String(form.get("category_id") ?? "") || null,
     })
     .eq("id", String(form.get("item_id")));
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 export async function addMenuItem(form: FormData): Promise<void> {
@@ -341,8 +340,8 @@ export async function addMenuItem(form: FormData): Promise<void> {
       String(form.get("image_url") ?? "").trim(),
     sort_order: 100,
   });
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 /**
@@ -376,7 +375,7 @@ export async function createFullItem(form: FormData): Promise<void> {
 
   await saveGroups(item.id as string, String(form.get("groups") ?? "[]"));
 
-  revalidatePath("/admin/menu");
+  revalidatePath("/admin", "layout");
   revalidatePath("/");
   redirect(`/admin/menu/${restaurantId}`);
 }
@@ -431,8 +430,8 @@ async function saveGroups(itemId: string, json: string): Promise<void> {
 export async function addGroupsToItem(form: FormData): Promise<void> {
   await assertAdmin();
   await saveGroups(String(form.get("item_id")), String(form.get("groups") ?? "[]"));
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 /** The delivery blocks a customer can pick from. */
@@ -453,7 +452,7 @@ export async function addHostel(form: FormData): Promise<void> {
       { onConflict: "name" }
     );
 
-  revalidatePath("/admin/settings");
+  revalidatePath("/admin", "layout");
   revalidatePath("/checkout");
 }
 
@@ -464,7 +463,7 @@ export async function toggleHostel(form: FormData): Promise<void> {
     .update({ active: form.get("active") === "true" })
     .eq("id", String(form.get("hostel_id")));
 
-  revalidatePath("/admin/settings");
+  revalidatePath("/admin", "layout");
   revalidatePath("/checkout");
 }
 
@@ -474,7 +473,7 @@ export async function deleteHostel(form: FormData): Promise<void> {
   // hostel from the list never rewrites where an old order went.
   await db().from("hostels").delete().eq("id", String(form.get("hostel_id")));
 
-  revalidatePath("/admin/settings");
+  revalidatePath("/admin", "layout");
   revalidatePath("/checkout");
 }
 
@@ -486,9 +485,8 @@ export async function saveOrderNote(form: FormData): Promise<void> {
     .update({ admin_note: String(form.get("admin_note") ?? "").trim() })
     .eq("id", String(form.get("order_id")));
 
-  revalidatePath("/admin");
-  revalidatePath("/admin/orders");
-}
+  revalidatePath("/admin", "layout");
+  }
 
 /** A note on a person, carried across every order they place. */
 export async function saveCustomerNote(form: FormData): Promise<void> {
@@ -516,8 +514,7 @@ export async function closeCart(form: FormData): Promise<void> {
     })
     .eq("id", String(form.get("cart_id")));
 
-  revalidatePath("/admin/carts");
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
 }
 
 /** Closed by mistake, or they came back. It goes back on the list. */
@@ -528,8 +525,7 @@ export async function reopenCart(form: FormData): Promise<void> {
     .update({ handled_at: null, handled_reason: "" })
     .eq("id", String(form.get("cart_id")));
 
-  revalidatePath("/admin/carts");
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
 }
 
 export async function savePromoter(form: FormData): Promise<void> {
@@ -544,7 +540,7 @@ export async function savePromoter(form: FormData): Promise<void> {
     rate: Math.round(Number(form.get("rate")) || 500),
     active: form.get("active") === "on",
   });
-  revalidatePath("/admin/promoters");
+  revalidatePath("/admin", "layout");
 }
 
 /**
@@ -593,8 +589,8 @@ export async function saveSettings(form: FormData): Promise<void> {
     .update({ ...patch, updated_at: new Date().toISOString() })
     .eq("id", true);
 
-  revalidatePath("/admin/settings");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 /**
@@ -615,8 +611,8 @@ export async function setFlashFee(form: FormData): Promise<void> {
     })
     .eq("id", String(form.get("batch_id")));
 
-  revalidatePath("/admin");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 /**
@@ -656,8 +652,9 @@ export async function setBatchStage(form: FormData): Promise<void> {
       .eq("status", "paid");
   }
 
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   revalidatePath("/orders");
+  revalidatePath("/o", "layout");
 }
 
 /** Restaurants are added and edited here, not only by running the seed file. */
@@ -673,8 +670,8 @@ export async function addRestaurant(form: FormData): Promise<void> {
     active: true,
     sort_order: 100,
   });
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 export async function updateRestaurant(form: FormData): Promise<void> {
@@ -697,8 +694,8 @@ export async function updateRestaurant(form: FormData): Promise<void> {
       active: form.get("active") === "on",
     })
     .eq("id", String(form.get("restaurant_id")));
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 /** The two launch restaurants and their menu, for a database with no seed. */
@@ -760,8 +757,8 @@ export async function seedLaunchRestaurants(): Promise<void> {
       }))
     );
   }
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 /**
@@ -795,8 +792,8 @@ export async function createBatch(form: FormData): Promise<void> {
       { onConflict: "run_date,slot" }
     );
 
-  revalidatePath("/admin");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 export async function addCategory(form: FormData): Promise<void> {
@@ -809,15 +806,15 @@ export async function addCategory(form: FormData): Promise<void> {
     name,
     sort_order: Number(form.get("sort_order") ?? 100),
   });
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 export async function deleteCategory(form: FormData): Promise<void> {
   await assertAdmin();
   await db().from("menu_categories").delete().eq("id", String(form.get("category_id")));
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 /** A choice on an item: Size, Flavour, Extras. */
@@ -833,15 +830,15 @@ export async function addOptionGroup(form: FormData): Promise<void> {
     max_select: Math.max(1, Number(form.get("max_select") ?? 1)),
     sort_order: 100,
   });
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 export async function deleteOptionGroup(form: FormData): Promise<void> {
   await assertAdmin();
   await db().from("item_option_groups").delete().eq("id", String(form.get("group_id")));
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 export async function addOption(form: FormData): Promise<void> {
@@ -855,8 +852,8 @@ export async function addOption(form: FormData): Promise<void> {
     price_delta: Math.round(Number(form.get("price_delta") ?? 0)) || 0,
     sort_order: 100,
   });
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 export async function updateOption(form: FormData): Promise<void> {
@@ -869,22 +866,22 @@ export async function updateOption(form: FormData): Promise<void> {
       available: form.get("available") === "on",
     })
     .eq("id", String(form.get("option_id")));
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 export async function deleteOption(form: FormData): Promise<void> {
   await assertAdmin();
   await db().from("item_options").delete().eq("id", String(form.get("option_id")));
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 export async function deleteMenuItem(form: FormData): Promise<void> {
   await assertAdmin();
   await db().from("menu_items").delete().eq("id", String(form.get("item_id")));
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 /**
@@ -949,8 +946,8 @@ export async function importMenu(form: FormData): Promise<void> {
     sort += 1;
   }
 
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 /**
@@ -1017,8 +1014,8 @@ export async function applyGroupToCategory(form: FormData): Promise<void> {
     );
   }
 
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }
 
 /** One tap on and off, for the times a branch has run out mid-week. */
@@ -1030,6 +1027,6 @@ export async function toggleItemAvailable(form: FormData): Promise<void> {
     .update({ available: form.get("available") === "true" })
     .eq("id", String(form.get("item_id")));
 
-  revalidatePath("/admin/menu");
-  revalidatePath("/");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
 }

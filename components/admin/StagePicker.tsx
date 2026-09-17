@@ -31,6 +31,10 @@ export default function StagePicker({
       <select
         id="stage"
         name="stage"
+        // Keyed by the saved stage: when the page comes back with a new one,
+        // the control is rebuilt rather than keeping what was picked, so a
+        // change that did not save is visible instead of silently assumed.
+        key={stage}
         defaultValue={stage}
         onChange={() => form.current?.requestSubmit()}
         className="field w-auto py-2.5 text-sm font-semibold"
