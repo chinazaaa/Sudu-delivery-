@@ -6,6 +6,8 @@ import { feeFor } from "@/lib/fees";
 import { activeBands } from "@/lib/settings";
 import { lastOrderForPhone, openOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
+import { currentCustomer } from "@/lib/customer-auth";
+import { forgetMe } from "@/app/actions";
 import { SLOT_LABEL } from "@/lib/config";
 import { clockLabel, weekdayLabel } from "@/lib/time";
 import { db } from "@/lib/supabase";
@@ -18,7 +20,11 @@ export default async function ReorderPage({
 }: {
   searchParams: Promise<{ phone?: string }>;
 }) {
-  const phone = normalisePhone((await searchParams).phone ?? "");
+  // Signing in on the orders page is enough: nobody should have to type the
+  // number they have already proved is theirs.
+  const typed = normalisePhone((await searchParams).phone ?? "");
+  const phone = typed || (await currentCustomer());
+  const signedIn = !typed && phone !== null;
   const previous = phone ? await lastOrderForPhone(phone) : null;
   // An order already in an open batch can be added to, rather than duplicated.
   const openOrder = phone ? await openOrderForPhone(phone) : null;
@@ -28,7 +34,9 @@ export default async function ReorderPage({
       <div className="space-y-4">
         <h1 className="text-2xl font-bold tracking-tight">Order again</h1>
         <p className="text-ink/75">
-          Your phone number brings back your last order. No password needed here.
+          {signedIn
+            ? "Nothing to bring back yet under your number."
+            : "Your phone number brings back your last order. No password needed here."}
         </p>
         <PhoneLookup initial={(await searchParams).phone} />
         <p className="text-sm text-ink/75">
@@ -85,7 +93,20 @@ export default async function ReorderPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold tracking-tight">Order again</h1>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h1 className="text-2xl font-bold tracking-tight">Order again</h1>
+        {signedIn ? (
+          <form action={forgetMe}>
+            <button className="text-sm text-muted hover:underline">
+              Not {previous.customer_name}?
+            </button>
+          </form>
+        ) : (
+          <Link href="/reorder" className="text-sm text-muted hover:underline">
+            Use another number
+          </Link>
+        )}
+      </div>
 
       {openOrder && (
         <div className="card">
