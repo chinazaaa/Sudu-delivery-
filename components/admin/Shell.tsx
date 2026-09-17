@@ -4,10 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  { href: "/admin", label: "Runs" },
-  { href: "/admin/menu", label: "Menu" },
-  { href: "/admin/promoters", label: "Promoters" },
-  { href: "/admin/settings", label: "Settings" },
+  { href: "/admin", label: "Dashboard", icon: "▦" },
+  { href: "/admin/orders", label: "Orders", icon: "☰" },
+  { href: "/admin/runs", label: "Runs", icon: "◷" },
+  { href: "/admin/customers", label: "Customers", icon: "☺" },
+  { href: "/admin/menu", label: "Restaurants", icon: "🍽" },
+  { href: "/admin/promoters", label: "Promoters", icon: "%" },
+  { href: "/admin/settings", label: "Settings", icon: "⚙" },
 ];
 
 /**
@@ -23,14 +26,12 @@ export default function AdminShell({
 }) {
   const path = usePathname();
   const active = (href: string) =>
-    href === "/admin"
-      ? path === "/admin" || path.startsWith("/admin/batch")
-      : path.startsWith(href);
+    href === "/admin" ? path === "/admin" : path.startsWith(href);
 
   return (
     <div className="min-h-screen bg-shell">
       <div className="mx-auto flex max-w-6xl gap-6 px-4 py-4 sm:py-6">
-        <aside className="hidden w-52 shrink-0 sm:block">
+        <aside className="hidden w-52 shrink-0 lg:block">
           <div className="sticky top-6 space-y-5">
             <Link href="/admin" className="flex items-center gap-2">
               <span className="grid size-9 place-items-center rounded-xl bg-ink text-lg font-black text-white">
@@ -47,12 +48,13 @@ export default function AdminShell({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`block rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
+                  className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
                     active(item.href)
                       ? "bg-ink text-white"
                       : "text-muted hover:bg-black/[0.04] hover:text-ink"
                   }`}
                 >
+                  <span className="w-4 text-center opacity-80">{item.icon}</span>
                   {item.label}
                 </Link>
               ))}
@@ -69,16 +71,16 @@ export default function AdminShell({
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 pb-24 sm:pb-0">{children}</main>
+        <main className="min-w-0 flex-1 pb-24 lg:pb-0">{children}</main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-black/5 bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden">
-        <ul className="flex">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-black/5 bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+        <ul className="no-scrollbar flex overflow-x-auto">
           {NAV.map((item) => (
             <li key={item.href} className="flex-1">
               <Link
                 href={item.href}
-                className={`block py-3 text-center text-xs font-bold ${
+                className={`block whitespace-nowrap px-4 py-3 text-center text-xs font-bold ${
                   active(item.href) ? "text-brand" : "text-muted"
                 }`}
               >

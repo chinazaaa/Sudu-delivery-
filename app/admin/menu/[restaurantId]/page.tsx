@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import AddItemDialog from "@/components/AddItemDialog";
 import AdminItemFilter from "@/components/AdminItemFilter";
 import Thumb from "@/components/Thumb";
 import SaveButton from "@/components/SaveButton";
@@ -9,7 +8,6 @@ import { optionGroupsFor } from "@/lib/menu";
 import { naira } from "@/lib/money";
 import {
   addCategory,
-  addMenuItem,
   addOption,
   addOptionGroup,
   deleteCategory,
@@ -42,7 +40,8 @@ export default async function RestaurantAdmin({
   const restaurant = data as Restaurant | null;
   if (!restaurant) notFound();
 
-  const [{ data: categories }, { data: items }] = await Promise.all([
+  const [{ data: siblings }, { data: categories }, { data: items }] = await Promise.all([
+    db().from("restaurants").select("id, name").order("name"),
     db().from("menu_categories").select("*").eq("restaurant_id", restaurantId).order("sort_order"),
     db().from("menu_items").select("*").eq("restaurant_id", restaurantId).order("sort_order"),
   ]);
@@ -53,9 +52,27 @@ export default async function RestaurantAdmin({
 
   return (
     <div className="space-y-5">
-      <Link href="/admin/menu" className="text-sm font-medium text-brand hover:underline">
-        ← All restaurants
-      </Link>
+      <div className="space-y-2">
+        <Link href="/admin/menu" className="text-sm font-semibold text-muted hover:text-brand">
+          ← All restaurants
+        </Link>
+        {/* Jump straight to another menu rather than going back out first. */}
+        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+          {((siblings ?? []) as { id: string; name: string }[]).map((other) => (
+            <Link
+              key={other.id}
+              href={`/admin/menu/${other.id}`}
+              className={`chip ${
+                other.id === restaurant.id
+                  ? "border-ink bg-ink text-white"
+                  : "border-black/10 bg-white hover:border-ink/30"
+              }`}
+            >
+              {other.name}
+            </Link>
+          ))}
+        </div>
+      </div>
 
       <form action={updateRestaurant} className="card space-y-3">
         <input type="hidden" name="restaurant_id" value={restaurant.id} />
@@ -220,44 +237,12 @@ export default async function RestaurantAdmin({
             </span>
           </div>
 
-          <AddItemDialog>
-          <form action={addMenuItem} className="space-y-3">
-          <input type="hidden" name="restaurant_id" value={restaurant.id} />
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="grow">
-              <label className="label">Name</label>
-              <input name="name" placeholder="Medium pizza" className="field" />
-            </div>
-            <div className="w-28">
-              <label className="label">Base price</label>
-              <input name="price_food" inputMode="numeric" className="field" />
-            </div>
-            <div className="w-40">
-              <label className="label">Category</label>
-              <select name="category_id" className="field">
-                <option value="">None</option>
-                {categoryList.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="label">Description</label>
-            <input name="description" className="field" />
-          </div>
-          <div>
-            <label className="label">Photo</label>
-            <input name="photo" type="file" accept="image/*" className="field" />
-          </div>
-          <SaveButton>Add item</SaveButton>
-          <p className="text-xs text-muted">
-            Add the item first, then open it to give it sizes and flavours.
-          </p>
-        </form>
-          </AddItemDialog>
+          <Link
+            href={`/admin/menu/${restaurant.id}/new`}
+            className="btn-primary px-4 py-2 text-sm"
+          >
+            + Add item
+          </Link>
         </div>
 
         <AdminItemFilter categories={categoryList.map((c) => ({ id: c.id, name: c.name }))}>

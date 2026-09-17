@@ -149,6 +149,8 @@ alter table orders add column if not exists for_name    text;
 -- dropped. Always in the customer's favour; never a top-up demand.
 alter table orders add column if not exists refund_owed int not null default 0 check (refund_owed >= 0);
 create index if not exists orders_group_idx on orders (group_id);
+-- The card link the admin generates by hand, kept so it can be sent again.
+alter table orders add column if not exists payment_link text;
 
 -- How the customer said they would pay, so the pay page shows the right thing
 -- and admin knows who is waiting on a card link.

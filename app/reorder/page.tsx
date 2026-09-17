@@ -27,9 +27,17 @@ export default async function ReorderPage({
       <div className="space-y-4">
         <h1 className="text-2xl font-bold tracking-tight">Order again</h1>
         <p className="text-ink/75">
-          Your phone number brings back your last order. No account, no password.
+          Your phone number brings back your last order. No password needed here.
         </p>
         <PhoneLookup initial={(await searchParams).phone} />
+        <p className="text-sm text-ink/75">
+          Looking for everything you have ever ordered? That is{" "}
+          <Link href="/orders" className="font-semibold text-brand underline">
+            My orders
+          </Link>
+          , opened with your number and the four-digit PIN you were given on your
+          first order. Lost it? Message us and we will send it back to you.
+        </p>
         {phone && (
           <p className="text-sm text-ink/75">
             Nothing found for that number.{" "}

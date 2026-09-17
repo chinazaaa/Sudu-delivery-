@@ -1,10 +1,13 @@
 import Link from "next/link";
 import Diagnostic from "@/components/Diagnostic";
+import PageHeader from "@/components/admin/PageHeader";
+import Stat from "@/components/admin/Stat";
 import { batchOverview } from "@/lib/admin";
+import { dashboard, orderFeed } from "@/lib/admin-data";
 import { diagnoseEmpty, keyKind } from "@/lib/health";
 import { ensureUpcomingBatches, closeExpiredBatches } from "@/lib/batches";
-import { createBatch } from "./actions";
 import { BATCH_MINIMUM, SLOT_LABEL } from "@/lib/config";
+import { naira } from "@/lib/money";
 import { clockLabel, runDateLabel } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -12,15 +15,19 @@ export const dynamic = "force-dynamic";
 export default async function AdminHome() {
   let problem: Awaited<ReturnType<typeof diagnoseEmpty>> | null = null;
   let batches: Awaited<ReturnType<typeof batchOverview>> = [];
+  let stats: Awaited<ReturnType<typeof dashboard>> | null = null;
+  let unpaid: Awaited<ReturnType<typeof orderFeed>> = [];
 
   try {
     await ensureUpcomingBatches();
     await closeExpiredBatches();
-    batches = await batchOverview();
+    [batches, stats, unpaid] = await Promise.all([
+      batchOverview(),
+      dashboard(),
+      orderFeed({ status: "pending", limit: 6 }),
+    ]);
     if (batches.length === 0) problem = await diagnoseEmpty();
   } catch (error) {
-    // A blocked write usually means the wrong key, so say that rather than
-    // repeating a Postgres permission message at someone deploying a site.
     problem =
       keyKind() === "public"
         ? await diagnoseEmpty()
@@ -31,102 +38,166 @@ export default async function AdminHome() {
           };
   }
 
-  const thisWeek = batches.filter((b) => b.status !== "cancelled");
-  const weekTotal = thisWeek.reduce((total, b) => total + b.orderCount, 0);
+  const open = batches.filter((batch) => batch.status === "open");
+  const unpaidValue = unpaid.reduce((total, order) => total + order.total, 0);
 
   return (
-    <div className="space-y-4">
-      <section className="card">
-        <h1 className="text-lg font-semibold">Runs</h1>
-        <p className="text-sm text-muted">
-          {weekTotal} order{weekTotal === 1 ? "" : "s"} across the batches below.
-          Minimum is {BATCH_MINIMUM} per batch.
-        </p>
-      </section>
+    <div>
+      <PageHeader
+        title="Dashboard"
+        detail="The last four weeks, and what needs doing today."
+        actions={
+          <Link href="/admin/runs?new=1" className="btn-primary px-4 py-2.5 text-sm">
+            New run
+          </Link>
+        }
+      />
 
-      <details className="card">
-        <summary className="cursor-pointer font-semibold">Create a run</summary>
-        <p className="mt-1 text-sm text-muted">
-          Fridays open themselves. Use this for any other day, including exam week
-          and late-night runs.
-        </p>
-        <form action={createBatch} className="mt-3 space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <div className="grow">
-              <label className="label" htmlFor="run_date">Day</label>
-              <input id="run_date" name="run_date" type="date" required className="field" />
-            </div>
-            <div className="w-36">
-              <label className="label" htmlFor="cut_off_time">Orders close</label>
-              <input
-                id="cut_off_time"
-                name="cut_off_time"
-                type="time"
-                defaultValue="12:00"
-                required
-                className="field"
-              />
-            </div>
-            <div className="w-40">
-              <label className="label" htmlFor="slot">Which batch</label>
-              <select id="slot" name="slot" className="field" defaultValue="afternoon">
-                <option value="afternoon">Afternoon</option>
-                <option value="night">Night</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="label" htmlFor="delivery_window_text">
-              What customers are told
-            </label>
-            <input
-              id="delivery_window_text"
-              name="delivery_window_text"
-              placeholder="On campus ~2:00pm"
-              className="field"
+      {stats && (
+        <>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Stat label="Paid orders" value={stats.paidOrders} hint="Last 28 days" />
+            <Stat label="Money in" value={stats.gross} money hint="Paid orders" />
+            <Stat label="Delivery fees" value={stats.fees} money hint="Your margin" />
+            <Stat
+              label="Average order"
+              value={stats.averageOrder}
+              money
+              hint={`${stats.customers} customers, ${stats.newCustomers} new`}
             />
           </div>
-          <button className="btn-primary">Create run</button>
-          <p className="text-xs text-muted">
-            Times are Lagos time. A day can hold one afternoon and one night batch;
-            creating the same one again updates it.
-          </p>
-        </form>
-      </details>
 
-      <ul className="space-y-2">
-        {batches.map((batch) => {
-          const short = batch.paidCount < BATCH_MINIMUM;
-          return (
-            <li key={batch.id}>
-              <Link
-                href={`/admin/batch/${batch.id}`}
-                className="card flex items-center justify-between hover:border-brand"
-              >
-                <div>
-                  <p className="font-medium">
-                    {runDateLabel(batch.run_date)} · {SLOT_LABEL[batch.slot]}
-                  </p>
-                  <p className="text-sm text-muted">
-                    Cut-off {clockLabel(batch.cut_off_at)} · {batch.status}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className={`font-semibold ${short ? "text-brand" : "text-green-700"}`}>
-                    {batch.paidCount}/{BATCH_MINIMUM}
-                  </p>
-                  <p className="text-xs text-muted">
-                    {batch.orderCount - batch.paidCount} unpaid
-                  </p>
-                </div>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <section className="card">
+              <div className="flex items-baseline justify-between gap-2">
+                <h2 className="font-bold">Waiting on payment</h2>
+                <Link
+                  href="/admin/orders?status=pending"
+                  className="text-sm font-semibold text-brand"
+                >
+                  All unpaid
+                </Link>
+              </div>
+              <p className="text-sm text-muted">
+                {naira(unpaidValue)} across {unpaid.length} order
+                {unpaid.length === 1 ? "" : "s"} shown.
+              </p>
+              <ul className="mt-3 space-y-2">
+                {unpaid.length === 0 && (
+                  <li className="text-sm text-muted">
+                    Nothing outstanding. Everyone has paid.
+                  </li>
+                )}
+                {unpaid.map((order) => (
+                  <li key={order.id} className="flex justify-between gap-3 text-sm">
+                    <span className="truncate">
+                      {order.for_name ?? order.customer_name}
+                      <span className="text-muted"> · {order.batchLabel}</span>
+                      {order.payment_method === "card" && (
+                        <span className="text-brand"> · card</span>
+                      )}
+                    </span>
+                    <span className="shrink-0 font-semibold">{naira(order.total)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section className="card">
+              <div className="flex items-baseline justify-between gap-2">
+                <h2 className="font-bold">Open runs</h2>
+                <Link href="/admin/runs" className="text-sm font-semibold text-brand">
+                  All runs
+                </Link>
+              </div>
+              <ul className="mt-3 space-y-2">
+                {open.length === 0 && (
+                  <li className="text-sm text-muted">
+                    No run is open. Create one and the shop starts taking orders.
+                  </li>
+                )}
+                {open.map((batch) => (
+                  <li key={batch.id}>
+                    <Link
+                      href={`/admin/batch/${batch.id}`}
+                      className="flex items-center justify-between gap-3 rounded-xl px-2 py-2 text-sm hover:bg-black/[0.03]"
+                    >
+                      <span>
+                        <span className="font-semibold">
+                          {runDateLabel(batch.run_date)} · {SLOT_LABEL[batch.slot]}
+                        </span>
+                        <span className="block text-muted">
+                          Closes {clockLabel(batch.cut_off_at)}
+                        </span>
+                      </span>
+                      <span
+                        className={`shrink-0 font-bold ${
+                          batch.paidCount < BATCH_MINIMUM ? "text-brand" : "text-mint"
+                        }`}
+                      >
+                        {batch.paidCount}/{BATCH_MINIMUM}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section className="card">
+              <h2 className="font-bold">What sells</h2>
+              <ul className="mt-3 space-y-2">
+                {stats.topItems.length === 0 && (
+                  <li className="text-sm text-muted">Nothing paid for yet.</li>
+                )}
+                {stats.topItems.map((item) => (
+                  <li key={`${item.name}|${item.restaurant}`} className="text-sm">
+                    <div className="flex justify-between gap-3">
+                      <span className="truncate">
+                        {item.name}
+                        <span className="text-muted"> · {item.restaurant}</span>
+                      </span>
+                      <span className="shrink-0 font-semibold">{item.qty}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 rounded-full bg-black/5">
+                      <div
+                        className="h-1.5 rounded-full bg-brand"
+                        style={{
+                          width: `${Math.round(
+                            (item.qty / stats.topItems[0].qty) * 100
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section className="card">
+              <h2 className="font-bold">Which run earns</h2>
+              <ul className="mt-3 space-y-2">
+                {stats.byWeekday.length === 0 && (
+                  <li className="text-sm text-muted">Nothing paid for yet.</li>
+                )}
+                {stats.byWeekday.map((row) => (
+                  <li key={row.label} className="flex justify-between gap-3 text-sm">
+                    <span>
+                      {row.label}
+                      <span className="text-muted"> · {row.orders} orders</span>
+                    </span>
+                    <span className="font-semibold">{naira(row.gross)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </div>
+        </>
+      )}
 
       {problem && !problem.ok && (
-        <Diagnostic title={problem.title} detail={problem.detail} />
+        <div className="mt-4">
+          <Diagnostic title={problem.title} detail={problem.detail} />
+        </div>
       )}
     </div>
   );
