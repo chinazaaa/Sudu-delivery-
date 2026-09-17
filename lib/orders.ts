@@ -472,6 +472,78 @@ export async function existingLoad(
   };
 }
 
+export type RepeatLine = {
+  itemId: string;
+  optionIds: string[];
+  name: string;
+  restaurantId: string;
+  restaurantName: string;
+  imageUrl: string;
+  unitPrice: number;
+  choices: string[];
+  qty: number;
+  forName: string;
+};
+
+/**
+ * An old order rebuilt as cart lines at today's prices. Anything taken off the
+ * menu, or sold out, is left out rather than quietly repeated: a cart that
+ * cannot be bought is worse than a shorter one.
+ */
+export async function repeatLines(order: FullOrder): Promise<RepeatLine[]> {
+  const itemIds = [...new Set(order.lines.map((line) => line.menu_item_id))];
+  if (itemIds.length === 0) return [];
+
+  const { data: items } = await db()
+    .from("menu_items")
+    .select("id, name, price_food, image_url, available, restaurants(id, name)")
+    .in("id", itemIds);
+
+  const byItem = new Map(
+    (items ?? []).map((row: any) => [row.id as string, row])
+  );
+
+  // The options are read back by id so a size that has since changed price is
+  // repeated at what it costs now.
+  const { data: chosen } = await db()
+    .from("order_item_options")
+    .select("order_item_id, option_id, item_options(id, name, price_delta, available)")
+    .in("order_item_id", order.lines.map((line) => line.id));
+
+  const optionsByLine = new Map<string, any[]>();
+  for (const row of (chosen ?? []) as any[]) {
+    const list = optionsByLine.get(row.order_item_id) ?? [];
+    if (row.item_options) list.push(row.item_options);
+    optionsByLine.set(row.order_item_id, list);
+  }
+
+  const repeats: RepeatLine[] = [];
+  for (const line of order.lines) {
+    const item = byItem.get(line.menu_item_id);
+    if (!item || item.available === false) continue;
+
+    const options = (optionsByLine.get(line.id) ?? []).filter(
+      (option) => option.available !== false
+    );
+
+    repeats.push({
+      itemId: item.id,
+      optionIds: options.map((option) => option.id as string),
+      name: item.name as string,
+      restaurantId: (item.restaurants?.id as string) ?? "",
+      restaurantName: (item.restaurants?.name as string) ?? "",
+      imageUrl: (item.image_url as string) ?? "",
+      unitPrice:
+        (item.price_food as number) +
+        options.reduce((sum, option) => sum + (option.price_delta as number), 0),
+      choices: options.map((option) => option.name as string),
+      qty: line.qty,
+      forName: "",
+    });
+  }
+  return repeats;
+}
+
 export type FeeStory = {
   /** Containers on this order alone. */
   items: number;

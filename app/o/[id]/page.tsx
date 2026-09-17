@@ -7,7 +7,14 @@ import ShareLink from "@/components/ShareLink";
 import CopyText from "@/components/CopyText";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira, orderRef } from "@/lib/money";
-import { feeStory, getOrder, type FullOrder, type OrderLine } from "@/lib/orders";
+import RepeatOrder from "@/components/RepeatOrder";
+import {
+  feeStory,
+  getOrder,
+  repeatLines,
+  type FullOrder,
+  type OrderLine,
+} from "@/lib/orders";
 import { pinFor } from "@/lib/customer-auth";
 import { formatPhone } from "@/lib/phone";
 import { clockLabel, runDateLabel, weekdayLabel } from "@/lib/time";
@@ -27,6 +34,14 @@ export default async function OrderPage({
 
   const settings = await getSettings();
   const fees = await feeStory(order);
+  const repeat = await repeatLines(order);
+  const soldOut = [
+    ...new Set(
+      order.lines
+        .filter((line) => !repeat.some((item) => item.itemId === line.menu_item_id))
+        .map((line) => line.name)
+    ),
+  ];
   // Only the person who just checked out sees their PIN, and only their own
   // browser gets emptied. A pay-by-link friend opening this sees neither.
   const justPlaced = (await searchParams).placed === "1";
@@ -369,6 +384,17 @@ export default async function OrderPage({
             Not paying yourself? Send the link. It shows the items and the total, and the
             order confirms once we see the money.
           </p>
+        </section>
+      )}
+
+      {(paid || expired) && (
+        <section className="card space-y-2">
+          <h2 className="font-bold">Want this again?</h2>
+          <p className="text-sm text-muted">
+            It goes back in your cart at today&apos;s prices. Nothing is charged
+            and you are not asked for your details again.
+          </p>
+          <RepeatOrder lines={repeat} missing={soldOut} />
         </section>
       )}
 
