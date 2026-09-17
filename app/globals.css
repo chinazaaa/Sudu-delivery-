@@ -7,8 +7,30 @@
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
+html {
+  /* Safari otherwise resizes text of its own accord on rotation. */
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   @apply bg-shell font-sans text-ink antialiased;
+  /* Nothing here is meant to scroll sideways; a single wide element used to
+     take the whole page with it. */
+  overflow-x: hidden;
+}
+
+/*
+ * Safari zooms the page in when a field with text under 16px is focused, and
+ * never zooms back out, which is why a form left the page needing a pinch to
+ * fit again. Fields are 16px on a phone whatever the class on them says, and
+ * keep their smaller size from a tablet up.
+ */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 @layer base {

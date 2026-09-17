@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 import SiteHeader from "@/components/SiteHeader";
@@ -9,6 +9,17 @@ export const metadata: Metadata = {
   title: "Sudu Delivery, PAU",
   description:
     "KFC and Domino's from Sangotedo, delivered to Pan-Atlantic University. One price, one payment, one run.",
+};
+
+/**
+ * Explicit rather than relying on a default. maximumScale is deliberately not
+ * set: pinching to zoom is somebody's way of reading a menu, and taking it
+ * away to stop Safari's own zoom would be fixing the wrong thing.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
