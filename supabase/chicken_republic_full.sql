@@ -27,83 +27,82 @@ create table cr_import (
   sort        int     not null
 );
 
-insert into cr_import (category, name, price, available, description, sort) values
-  ('Burgers & sandwiches', 'Bigwhizz Reloaded', 9700, true, 'Enjoy a Chickwhizz with one piece of Soulfully Spiced Fried Chicken with your choice of Fried Rice, Naija Jollof, plus a drink of your choice', 1),
-  ('Burgers & sandwiches', 'Big Whizz Meal', 8800, true, 'Enjoy a Chickwhizz with one piece of Soulfully Spiced Fried Chicken with your choice of Fried Rice, Naija Jollof, plus a drink of your choice', 2),
-  ('Burgers & sandwiches', 'Original ChickWhizz Breakfast Combo', 3900, true, 'Enjoy our Sandwich filled with Soulfully Spiced Chicken, Lettuce and our Secret Mayo', 3),
-  ('Burgers & sandwiches', 'Pastry Breakfast Combo', 1700, true, 'Kickstart your day with Pastry + Coffee/Tea', 4),
-  ('Burgers & sandwiches', 'Chief Burger', 5100, true, 'Enjoy a Mighty Chief Burger made with Soulfully Spiced Fried Chicken, Lettuce, Cheese and our Secret Sauce on a Fresh Bun', 5),
-  ('Burgers & sandwiches', 'Shawarma', 4100, true, 'Soulfully Spiced Fried Chicken with Lettuce and our Secret Sauce in a fresh Tortilla Wrap', 6),
-  ('Burgers & sandwiches', 'Shawarma Combo', 7100, true, 'Soulfully Spiced Fried Chicken with Lettuce and our Secret Sauce in a fresh Tortilla Wrap served with Regular Chips and a refreshing PET drink', 7),
-  ('Burgers & sandwiches', 'Big Boyz Combo', 9100, true, 'Enjoy a Chief Burger with one piece of Soulfully Spiced Fried Chicken with your choice of Spaghetti, Fried Rice, Naija Jollof or Rice & Beans, plus a drink of your choice', 8),
-  ('Burgers & sandwiches', 'Double ChickWhizz Meal', 8100, true, 'Double the enjoyment with our ChickWhizz Sandwich filled with Soulfully Spiced Fried Chicken, Lettuce and our Secret Mayo served with Regular Chips and a refreshing PET drink', 9),
-  ('Burgers & sandwiches', 'Original ChickWhizz', 3400, true, 'Get the original ChickWhizz sandwich filled with Soulfully Spiced Chicken, Lettuce and our Secret Mayo Sauce', 10),
-  ('Burgers & sandwiches', 'Double Chief Burger Combo', 11500, true, 'Prepare yourself for double the deliciousness and double the satisfaction with our Chief Burger Combo with chips & a PET drink!', 11),
-  ('Burgers & sandwiches', 'Chief Burger Combo', 7900, true, 'Prepare yourself for double the deliciousness and double the satisfaction with our Chief Burger Combo with chips & a PET drink!', 12),
-  ('Burgers & sandwiches', 'ChickWhizz Meal', 6400, false, 'Double the enjoyment with our ChickWhizz Sandwich filled with Soulfully Spiced Fried Chicken, Lettuce and our Secret Mayo served with Regular Chips and a refreshing PET drink', 13),
-  ('Citizens meals', 'Citizens Meal BOGOF', 10600, true, 'Enjoy a Buy 1 get 1 free offer on Citizens meal, comes with four mouth-watering pieces of Soulfully Spiced Chicken served with a side of your choice. Does not include a drink', 1),
-  ('Citizens meals', 'Citizens Meal without drink', 6200, true, 'Two mouth-watering pieces of Soulfully Spiced Chicken served with a side of your choice', 2),
-  ('Citizens meals', 'Citizens Spicy Yam Meal', 7100, true, '2 pieces of Soulfully Spiced Fried Chicken served with our New Spicy Yam, FREE pepper sauce and a PET drink', 3),
-  ('Citizens meals', 'Citizens Meal', 6700, true, 'Two mouth-watering pieces of Soulfully Spiced Chicken served with a side of your choice + a refreshing PET drink', 4),
-  ('Everyday affordable value meals', 'Spicy Yam Meal', 3500, true, 'One piece of Soulfully Spiced Fried Chicken served with our New Spicy Yam and a FREE pepper sauce', 1),
-  ('Everyday affordable value meals', 'Refuel Max Combo', 3900, true, 'One piece of Soulfully Spiced Fried Chicken served with Fried Rice, Naija Jollof, Rice & Beans, White Rice with Saucewith Sauce or Spaghetti + our new yummy sauce + Coleslaw or Moin Moin and a refreshing PET drink', 2),
-  ('Everyday affordable value meals', 'Refuel Meal', 2600, true, 'One piece of Soulfully Spiced Fried Chicken served with your choice of Fried Rice, Naija Jollof, Rice & Beans, White Rice with Saucewith Sauce or Spaghetti with our new yummy sauce.', 3),
-  ('Everyday affordable value meals', 'Express Combo', 5400, true, 'One piece of Soulfully Spiced Fried Chicken with Regular Chips plus a refreshing PET drink', 4),
-  ('Everyday affordable value meals', 'Spicy Yam Combo', 0, false, 'One piece of Soulfully Spiced Fried Chicken served with our New Spicy Yam plus our newly improved Moin Moin or Coleslaw, FREE pepper sauce and a PET drink', 5),
-  ('Everyday affordable value meals', 'Refuel More', 0, false, 'Enjoy our new smokey jollof, it comes with an extra large portion of Jollof, a portion of plantain & a piece of chicken & 60cl drink', 6),
-  ('Pot meals', 'POT Chicken (8 Pieces)', 19700, true, 'Soulfully Spiced Chicken - Available as Spicy Fried, Crunchy or Rotisserie', 1),
-  ('Pot meals', 'MAXI POT Lovers Meal', 30700, true, 'Enjoy 8 pieces of Soulfully Spiced Fried Chicken with your choice of 4 x portions of Spaghetti, Fried Rice, Naija Jollof or Rice & Beans plus 2 x portions of Dodo Cubes, Moin Moin or Coleslaw and 4 x PET drinks', 2),
-  ('Pot meals', 'MEGA Pot Lovers Meal', 41800, true, 'Enjoy 10 pieces of Soulfully Spiced Fried Chicken with your choice of 6 portions of Spaghetti, Fried Rice, Naija Jollof or Rice & Beans plus 4 portions of Dodo Cubes, Moin Moin or Coleslaw and 6 PET drinks', 3),
-  ('Pot meals', 'MINI Pot Lovers Meal', 15350, true, 'Enjoy 4 pieces of Soulfully Spiced Fried Chicken with your choice of 2 portions of Spaghetti, Fried Rice, Naija Jollof or Rice & Beans plus 1 portion of Moin Moin or Coleslaw and 2 PET drinks', 4),
-  ('Pot meals', 'Big Crew Meal', 31200, false, 'Enjoy a succulent full Rotisserie Chicken served with 4 portions of Spaghetti, Fried or Naija Jollof PLUS 2 portions of Coleslaw, Moin-Moin or Dodo Cubes and 4 x PET drinks', 5),
-  ('Rotisserie chicken', 'Full Rotisserie Chicken', 21200, true, 'Succulent & juicy Rotisserie Chicken flavoured to perfection with our authentic West African Herbs & Spices!', 1),
-  ('Rotisserie chicken', 'Quarter Rotisserie Combo', 9100, true, 'Enjoy a succulent 1/4 Rotisserie Chicken served with a side of your choice PLUS a refreshing PET drink', 2),
-  ('Rotisserie chicken', 'Quarter Rotisserie Chicken', 5400, true, 'Succulent & juicy Rotisserie Chicken flavoured to perfection with our authentic West African Herbs & Spices!', 3),
-  ('Rotisserie chicken', 'Half Rotisserie Chicken', 0, false, 'Succulent & juicy Rotisserie Chicken flavoured to perfection with our authentic West African Herbs & Spices!', 4),
-  ('Specials', 'Carribean Meal', 5200, true, 'Soulfully Spiced Basmati rice garnished with veggies, diced chicken and plantain, served with Fried chicken.', 1),
-  ('Specials', 'Citizens Rice & Beans Combo', 7400, true, 'Rice & Beans cooked to perfection and served with our delicious master sauce with drink of choice', 2),
-  ('Specials', 'Rice & Beans Meal', 3300, true, 'Rice & Beans with sauce cooked to perfection and served with our delicious master sauce with 1 piece chicken', 3),
-  ('Specials', 'Carribean Meal Combo', 5700, true, 'Soulfully Spiced Basmati rice garnished with veggies, diced chicken and plantain, served with Quarter Rotisserie chicken and a PET drink.', 4),
-  ('Specials', 'Stir-Fried Meal', 0, false, 'Delicious Basmati rice garnished stir-fried with veggies, served with Soulfully Spiced fried chicken.', 5),
-  ('Specials', 'Stir-Fried Meal Combo', 0, false, 'Delicious Basmati rice garnished stir-fried with veggies, served with Soulfully Spiced fried chicken and a PET drink.', 6),
-  ('Tasty sides', 'Spicy Yam', 2200, true, 'Delicious Spicy Yam Chips served with our signature pepper sauce. Available in Regular or Large', 1),
-  ('Tasty sides', 'Chicken Pie', 1200, true, 'Enjoy our hot, fresh and tasty pies with your choice of delicious Chicken or Beef filling', 2),
-  ('Tasty sides', 'White Rice with Sauce', 1800, true, 'A regular, large or jumbo portion of white rice, does not come with Chicken', 3),
-  ('Tasty sides', 'Amma Jamma - Shitor Sauce', 3500, true, 'Amma Jamma - Shitor Sauce', 4),
-  ('Tasty sides', 'Pepper Sauce', 600, true, 'Pepper sauce', 5),
-  ('Tasty sides', 'Caribbean Rice', 3000, true, 'Soulfully Spiced Basmati rice garnished with veggies, diced chicken and plantain. Does not come with Chicken', 6),
-  ('Tasty sides', 'Soulfully Spiced Fried Chicken', 2500, true, 'Soulfully Spiced Chicken - Available as Spicy Fried, Crunchy or Rotisserie 1piece, 2 pieces, 4 pieces Pot', 7),
-  ('Tasty sides', 'Fried Rice', 1800, true, 'A regular, large or Jumbo portion of Fried Rice - now with more veggies and other secret ingredients for a more delicious flavour. Does not come with Chicken', 8),
-  ('Tasty sides', 'Chips', 2600, true, 'A portion of golden fried chips. Available in Regular or Large', 9),
-  ('Tasty sides', 'Spaghetti', 1800, true, 'A regular, large or jumbo portion of perfectly prepared Spaghetti enhanced with red peppers, herbs and spices. Does not come with Chicken', 10),
-  ('Tasty sides', 'Coleslaw', 1100, true, 'A regular or large portion of garden fresh Coleslaw prepared with our tasty mayonnaise', 11),
-  ('Tasty sides', 'Chicken Salad', 3600, true, 'Garden fresh salad with succulent Rotisserie Chicken and a delicious dressing', 12),
-  ('Tasty sides', 'Amma Jamma - Rodo Sauce', 3500, true, 'Amma Jamma - Rodo Sauce', 13),
-  ('Tasty sides', 'Dodo Cubes', 1100, true, 'A regular or large portion of golden delicious Plantain cubes, fried to perfection', 14),
-  ('Tasty sides', 'Meat Pie', 1200, true, 'Enjoy our hot, fresh and tasty pies with your choice of delicious Chicken or Beef filling', 15),
-  ('Tasty sides', 'Rice & Beans', 2100, true, 'A regular, large or jumbo portion of Rice & Beans cooked to perfection and served with our delicious Rice & Beans. Does not come with chicken', 16),
-  ('Tasty sides', 'Pasta Salad', 0, false, 'A regular or large portion of pasta salad prepared with fresh veggies and our special mayo dressing', 17),
-  ('Tasty sides', 'Stir-Fried Rice', 0, false, 'Delicious Basmati rice, stir-fried garnished with veggies. Does not come with Chicken', 18),
-  ('Tasty sides', 'Republic Loaf', 1900, false, 'Enjoy our hot, fresh and tasty republic loaf', 19),
-  ('Tasty sides', 'Smoky Jollof', 0, false, 'A regular, large or jumbo portion of Naija Jollof Rice. Does not come with chicken', 20),
-  ('Tasty sides', 'Moin-Moin', 1400, false, 'A single portion of our delicious, newly improved Moin Moin now with more flavour and more nutrients', 21),
-  ('Drinks', '5Alive Pulpy Orange (85cl)', 2300, true, '5Alive Pulpy Orange (85cl)', 1),
-  ('Drinks', '5Alive Mango Burst (90cl)', 2300, true, '5Alive Mango Burst (90cl)', 2),
-  ('Drinks', 'Fanta Orange (50cl)', 900, true, 'Fanta Orange (50cl)', 3),
-  ('Drinks', 'Schweppes (40cl)', 900, true, 'Schweppes (40cl)', 4),
-  ('Drinks', '5Alive Pulpy (30cl)', 1300, true, '5Alive Pulpy Orange, Pulpy Lemon, Mango Bits', 5),
-  ('Drinks', 'Coca Cola (50cl)', 900, true, 'Coca Cola (50cl)', 6),
-  ('Drinks', '3 IN 1 Nescafe', 600, true, '3 IN 1 Nescafe', 7),
-  ('Drinks', 'Mineral Water (75cl)', 600, true, 'Mineral Water (75cl)', 8),
-  ('Drinks', 'Sprite (50cl)', 900, true, 'Sprite (50cl)', 9),
-  ('Drinks', 'Monster Energy', 1800, true, 'Monster Energy Regular, Fury, Ultra', 10),
-  ('Drinks', 'Predator', 1200, true, 'Predator Gold, Mean Green', 11),
-  ('Drinks', 'Coca Cola (35cl)', 600, true, 'Coca Cola (35cl)', 12),
-  ('Drinks', 'Sprite (35cl)', 600, true, 'Sprite (50cl)', 13),
-  ('Drinks', 'Fanta Orange (35cl)', 600, true, 'Fanta Orange (35cl)', 14),
-  ('Drinks', '5Alive Cocopine (78cl)', 0, false, '5Alive Cocopine (78cl)', 15),
-  ('Drinks', '5Alive Berry Blast (78cl)', 0, false, '5Alive Berry Blast (78cl)', 16),
-  ('Drinks', '3 IN 1 MILO', 0, false, '3 IN 1 MILO', 17);
+insert into cr_import (category, name, price, available, description, sort) values ('Burgers & sandwiches', 'Bigwhizz Reloaded', 9700, true, 'Enjoy a Chickwhizz with one piece of Soulfully Spiced Fried Chicken with your choice of Fried Rice, Naija Jollof, plus a drink of your choice', 1);
+insert into cr_import (category, name, price, available, description, sort) values ('Burgers & sandwiches', 'Big Whizz Meal', 8800, true, 'Enjoy a Chickwhizz with one piece of Soulfully Spiced Fried Chicken with your choice of Fried Rice, Naija Jollof, plus a drink of your choice', 2);
+insert into cr_import (category, name, price, available, description, sort) values ('Burgers & sandwiches', 'Original ChickWhizz Breakfast Combo', 3900, true, 'Enjoy our Sandwich filled with Soulfully Spiced Chicken, Lettuce and our Secret Mayo', 3);
+insert into cr_import (category, name, price, available, description, sort) values ('Burgers & sandwiches', 'Pastry Breakfast Combo', 1700, true, 'Kickstart your day with Pastry + Coffee/Tea', 4);
+insert into cr_import (category, name, price, available, description, sort) values ('Burgers & sandwiches', 'Chief Burger', 5100, true, 'Enjoy a Mighty Chief Burger made with Soulfully Spiced Fried Chicken, Lettuce, Cheese and our Secret Sauce on a Fresh Bun', 5);
+insert into cr_import (category, name, price, available, description, sort) values ('Burgers & sandwiches', 'Shawarma', 4100, true, 'Soulfully Spiced Fried Chicken with Lettuce and our Secret Sauce in a fresh Tortilla Wrap', 6);
+insert into cr_import (category, name, price, available, description, sort) values ('Burgers & sandwiches', 'Shawarma Combo', 7100, true, 'Soulfully Spiced Fried Chicken with Lettuce and our Secret Sauce in a fresh Tortilla Wrap served with Regular Chips and a refreshing PET drink', 7);
+insert into cr_import (category, name, price, available, description, sort) values ('Burgers & sandwiches', 'Big Boyz Combo', 9100, true, 'Enjoy a Chief Burger with one piece of Soulfully Spiced Fried Chicken with your choice of Spaghetti, Fried Rice, Naija Jollof or Rice & Beans, plus a drink of your choice', 8);
+insert into cr_import (category, name, price, available, description, sort) values ('Burgers & sandwiches', 'Double ChickWhizz Meal', 8100, true, 'Double the enjoyment with our ChickWhizz Sandwich filled with Soulfully Spiced Fried Chicken, Lettuce and our Secret Mayo served with Regular Chips and a refreshing PET drink', 9);
+insert into cr_import (category, name, price, available, description, sort) values ('Burgers & sandwiches', 'Original ChickWhizz', 3400, true, 'Get the original ChickWhizz sandwich filled with Soulfully Spiced Chicken, Lettuce and our Secret Mayo Sauce', 10);
+insert into cr_import (category, name, price, available, description, sort) values ('Burgers & sandwiches', 'Double Chief Burger Combo', 11500, true, 'Prepare yourself for double the deliciousness and double the satisfaction with our Chief Burger Combo with chips & a PET drink!', 11);
+insert into cr_import (category, name, price, available, description, sort) values ('Burgers & sandwiches', 'Chief Burger Combo', 7900, true, 'Prepare yourself for double the deliciousness and double the satisfaction with our Chief Burger Combo with chips & a PET drink!', 12);
+insert into cr_import (category, name, price, available, description, sort) values ('Burgers & sandwiches', 'ChickWhizz Meal', 6400, false, 'Double the enjoyment with our ChickWhizz Sandwich filled with Soulfully Spiced Fried Chicken, Lettuce and our Secret Mayo served with Regular Chips and a refreshing PET drink', 13);
+insert into cr_import (category, name, price, available, description, sort) values ('Citizens meals', 'Citizens Meal BOGOF', 10600, true, 'Enjoy a Buy 1 get 1 free offer on Citizens meal, comes with four mouth-watering pieces of Soulfully Spiced Chicken served with a side of your choice. Does not include a drink', 1);
+insert into cr_import (category, name, price, available, description, sort) values ('Citizens meals', 'Citizens Meal without drink', 6200, true, 'Two mouth-watering pieces of Soulfully Spiced Chicken served with a side of your choice', 2);
+insert into cr_import (category, name, price, available, description, sort) values ('Citizens meals', 'Citizens Spicy Yam Meal', 7100, true, '2 pieces of Soulfully Spiced Fried Chicken served with our New Spicy Yam, FREE pepper sauce and a PET drink', 3);
+insert into cr_import (category, name, price, available, description, sort) values ('Citizens meals', 'Citizens Meal', 6700, true, 'Two mouth-watering pieces of Soulfully Spiced Chicken served with a side of your choice + a refreshing PET drink', 4);
+insert into cr_import (category, name, price, available, description, sort) values ('Everyday affordable value meals', 'Spicy Yam Meal', 3500, true, 'One piece of Soulfully Spiced Fried Chicken served with our New Spicy Yam and a FREE pepper sauce', 1);
+insert into cr_import (category, name, price, available, description, sort) values ('Everyday affordable value meals', 'Refuel Max Combo', 3900, true, 'One piece of Soulfully Spiced Fried Chicken served with Fried Rice, Naija Jollof, Rice & Beans, White Rice with Saucewith Sauce or Spaghetti + our new yummy sauce + Coleslaw or Moin Moin and a refreshing PET drink', 2);
+insert into cr_import (category, name, price, available, description, sort) values ('Everyday affordable value meals', 'Refuel Meal', 2600, true, 'One piece of Soulfully Spiced Fried Chicken served with your choice of Fried Rice, Naija Jollof, Rice & Beans, White Rice with Saucewith Sauce or Spaghetti with our new yummy sauce.', 3);
+insert into cr_import (category, name, price, available, description, sort) values ('Everyday affordable value meals', 'Express Combo', 5400, true, 'One piece of Soulfully Spiced Fried Chicken with Regular Chips plus a refreshing PET drink', 4);
+insert into cr_import (category, name, price, available, description, sort) values ('Everyday affordable value meals', 'Spicy Yam Combo', 0, false, 'One piece of Soulfully Spiced Fried Chicken served with our New Spicy Yam plus our newly improved Moin Moin or Coleslaw, FREE pepper sauce and a PET drink', 5);
+insert into cr_import (category, name, price, available, description, sort) values ('Everyday affordable value meals', 'Refuel More', 0, false, 'Enjoy our new smokey jollof, it comes with an extra large portion of Jollof, a portion of plantain & a piece of chicken & 60cl drink', 6);
+insert into cr_import (category, name, price, available, description, sort) values ('Pot meals', 'POT Chicken (8 Pieces)', 19700, true, 'Soulfully Spiced Chicken - Available as Spicy Fried, Crunchy or Rotisserie', 1);
+insert into cr_import (category, name, price, available, description, sort) values ('Pot meals', 'MAXI POT Lovers Meal', 30700, true, 'Enjoy 8 pieces of Soulfully Spiced Fried Chicken with your choice of 4 x portions of Spaghetti, Fried Rice, Naija Jollof or Rice & Beans plus 2 x portions of Dodo Cubes, Moin Moin or Coleslaw and 4 x PET drinks', 2);
+insert into cr_import (category, name, price, available, description, sort) values ('Pot meals', 'MEGA Pot Lovers Meal', 41800, true, 'Enjoy 10 pieces of Soulfully Spiced Fried Chicken with your choice of 6 portions of Spaghetti, Fried Rice, Naija Jollof or Rice & Beans plus 4 portions of Dodo Cubes, Moin Moin or Coleslaw and 6 PET drinks', 3);
+insert into cr_import (category, name, price, available, description, sort) values ('Pot meals', 'MINI Pot Lovers Meal', 15350, true, 'Enjoy 4 pieces of Soulfully Spiced Fried Chicken with your choice of 2 portions of Spaghetti, Fried Rice, Naija Jollof or Rice & Beans plus 1 portion of Moin Moin or Coleslaw and 2 PET drinks', 4);
+insert into cr_import (category, name, price, available, description, sort) values ('Pot meals', 'Big Crew Meal', 31200, false, 'Enjoy a succulent full Rotisserie Chicken served with 4 portions of Spaghetti, Fried or Naija Jollof PLUS 2 portions of Coleslaw, Moin-Moin or Dodo Cubes and 4 x PET drinks', 5);
+insert into cr_import (category, name, price, available, description, sort) values ('Rotisserie chicken', 'Full Rotisserie Chicken', 21200, true, 'Succulent & juicy Rotisserie Chicken flavoured to perfection with our authentic West African Herbs & Spices!', 1);
+insert into cr_import (category, name, price, available, description, sort) values ('Rotisserie chicken', 'Quarter Rotisserie Combo', 9100, true, 'Enjoy a succulent 1/4 Rotisserie Chicken served with a side of your choice PLUS a refreshing PET drink', 2);
+insert into cr_import (category, name, price, available, description, sort) values ('Rotisserie chicken', 'Quarter Rotisserie Chicken', 5400, true, 'Succulent & juicy Rotisserie Chicken flavoured to perfection with our authentic West African Herbs & Spices!', 3);
+insert into cr_import (category, name, price, available, description, sort) values ('Rotisserie chicken', 'Half Rotisserie Chicken', 0, false, 'Succulent & juicy Rotisserie Chicken flavoured to perfection with our authentic West African Herbs & Spices!', 4);
+insert into cr_import (category, name, price, available, description, sort) values ('Specials', 'Carribean Meal', 5200, true, 'Soulfully Spiced Basmati rice garnished with veggies, diced chicken and plantain, served with Fried chicken.', 1);
+insert into cr_import (category, name, price, available, description, sort) values ('Specials', 'Citizens Rice & Beans Combo', 7400, true, 'Rice & Beans cooked to perfection and served with our delicious master sauce with drink of choice', 2);
+insert into cr_import (category, name, price, available, description, sort) values ('Specials', 'Rice & Beans Meal', 3300, true, 'Rice & Beans with sauce cooked to perfection and served with our delicious master sauce with 1 piece chicken', 3);
+insert into cr_import (category, name, price, available, description, sort) values ('Specials', 'Carribean Meal Combo', 5700, true, 'Soulfully Spiced Basmati rice garnished with veggies, diced chicken and plantain, served with Quarter Rotisserie chicken and a PET drink.', 4);
+insert into cr_import (category, name, price, available, description, sort) values ('Specials', 'Stir-Fried Meal', 0, false, 'Delicious Basmati rice garnished stir-fried with veggies, served with Soulfully Spiced fried chicken.', 5);
+insert into cr_import (category, name, price, available, description, sort) values ('Specials', 'Stir-Fried Meal Combo', 0, false, 'Delicious Basmati rice garnished stir-fried with veggies, served with Soulfully Spiced fried chicken and a PET drink.', 6);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Spicy Yam', 2200, true, 'Delicious Spicy Yam Chips served with our signature pepper sauce. Available in Regular or Large', 1);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Chicken Pie', 1200, true, 'Enjoy our hot, fresh and tasty pies with your choice of delicious Chicken or Beef filling', 2);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'White Rice with Sauce', 1800, true, 'A regular, large or jumbo portion of white rice, does not come with Chicken', 3);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Amma Jamma - Shitor Sauce', 3500, true, 'Amma Jamma - Shitor Sauce', 4);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Pepper Sauce', 600, true, 'Pepper sauce', 5);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Caribbean Rice', 3000, true, 'Soulfully Spiced Basmati rice garnished with veggies, diced chicken and plantain. Does not come with Chicken', 6);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Soulfully Spiced Fried Chicken', 2500, true, 'Soulfully Spiced Chicken - Available as Spicy Fried, Crunchy or Rotisserie 1piece, 2 pieces, 4 pieces Pot', 7);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Fried Rice', 1800, true, 'A regular, large or Jumbo portion of Fried Rice - now with more veggies and other secret ingredients for a more delicious flavour. Does not come with Chicken', 8);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Chips', 2600, true, 'A portion of golden fried chips. Available in Regular or Large', 9);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Spaghetti', 1800, true, 'A regular, large or jumbo portion of perfectly prepared Spaghetti enhanced with red peppers, herbs and spices. Does not come with Chicken', 10);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Coleslaw', 1100, true, 'A regular or large portion of garden fresh Coleslaw prepared with our tasty mayonnaise', 11);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Chicken Salad', 3600, true, 'Garden fresh salad with succulent Rotisserie Chicken and a delicious dressing', 12);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Amma Jamma - Rodo Sauce', 3500, true, 'Amma Jamma - Rodo Sauce', 13);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Dodo Cubes', 1100, true, 'A regular or large portion of golden delicious Plantain cubes, fried to perfection', 14);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Meat Pie', 1200, true, 'Enjoy our hot, fresh and tasty pies with your choice of delicious Chicken or Beef filling', 15);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Rice & Beans', 2100, true, 'A regular, large or jumbo portion of Rice & Beans cooked to perfection and served with our delicious Rice & Beans. Does not come with chicken', 16);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Pasta Salad', 0, false, 'A regular or large portion of pasta salad prepared with fresh veggies and our special mayo dressing', 17);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Stir-Fried Rice', 0, false, 'Delicious Basmati rice, stir-fried garnished with veggies. Does not come with Chicken', 18);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Republic Loaf', 1900, false, 'Enjoy our hot, fresh and tasty republic loaf', 19);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Smoky Jollof', 0, false, 'A regular, large or jumbo portion of Naija Jollof Rice. Does not come with chicken', 20);
+insert into cr_import (category, name, price, available, description, sort) values ('Tasty sides', 'Moin-Moin', 1400, false, 'A single portion of our delicious, newly improved Moin Moin now with more flavour and more nutrients', 21);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', '5Alive Pulpy Orange (85cl)', 2300, true, '5Alive Pulpy Orange (85cl)', 1);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', '5Alive Mango Burst (90cl)', 2300, true, '5Alive Mango Burst (90cl)', 2);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', 'Fanta Orange (50cl)', 900, true, 'Fanta Orange (50cl)', 3);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', 'Schweppes (40cl)', 900, true, 'Schweppes (40cl)', 4);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', '5Alive Pulpy (30cl)', 1300, true, '5Alive Pulpy Orange, Pulpy Lemon, Mango Bits', 5);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', 'Coca Cola (50cl)', 900, true, 'Coca Cola (50cl)', 6);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', '3 IN 1 Nescafe', 600, true, '3 IN 1 Nescafe', 7);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', 'Mineral Water (75cl)', 600, true, 'Mineral Water (75cl)', 8);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', 'Sprite (50cl)', 900, true, 'Sprite (50cl)', 9);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', 'Monster Energy', 1800, true, 'Monster Energy Regular, Fury, Ultra', 10);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', 'Predator', 1200, true, 'Predator Gold, Mean Green', 11);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', 'Coca Cola (35cl)', 600, true, 'Coca Cola (35cl)', 12);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', 'Sprite (35cl)', 600, true, 'Sprite (50cl)', 13);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', 'Fanta Orange (35cl)', 600, true, 'Fanta Orange (35cl)', 14);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', '5Alive Cocopine (78cl)', 0, false, '5Alive Cocopine (78cl)', 15);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', '5Alive Berry Blast (78cl)', 0, false, '5Alive Berry Blast (78cl)', 16);
+insert into cr_import (category, name, price, available, description, sort) values ('Drinks', '3 IN 1 MILO', 0, false, '3 IN 1 MILO', 17);
 
 do $chickenrepublic$
 declare

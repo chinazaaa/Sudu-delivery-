@@ -44,77 +44,76 @@ create table dominos_import (
   sort        int  not null
 );
 
-insert into dominos_import (category, name, alias, price, description, sort) values
-  ('Pizza', 'BBQ Chicken', '', 9350, 'Grilled Chicken & Fresh Onions, with BBQ Sauce & Mozzarella Cheese', 1),
-  ('Pizza', 'BBQ Meatball', '', 8900, 'Meatball with BBQ Sauce & Mozzarella Cheese', 2),
-  ('Pizza', 'BBQ Mega Meat', '', 9800, 'BBQ Sauce, Mozzarella Cheese, Beef Pepperoni, Grilled Chicken, Smoked Sausage and Meatballs', 3),
-  ('Pizza', 'BBQ Suya Mix Grill', '', 9800, 'Beef Suya, Hotdog, Pepper Chicken, Red Chilli, Suya Spice, BBQ Sauce.', 4),
-  ('Pizza', 'Chicken Supreme', '', 9350, 'Grilled Chicken, Sweet Corn, Green Peppers & Fresh Onions, with Tomato Sauce & Mozzarella Cheese', 5),
-  ('Pizza', 'Chicken Suya', '', 9350, 'Chicken Suya, Green Peppers, Nigerian Hot Chili Peppers & Fresh Onions, with Suya infused Tomato Sauce & Mozzarella Cheese', 6),
-  ('Pizza', 'Extravaganza', '', 9800, 'Green pepper, Sweet Corn, Beef Suya, Smoked Sausage, Pepperoni, Onions & Pizza Sauce', 7),
-  ('Pizza', 'Half & Half', '', 8200, 'Any half & half pizza flavours of your choice', 8),
-  ('Pizza', 'Margherita', '', 8600, 'Tomato Sauce & Extra Mozzarella Cheese', 9),
-  ('Pizza', 'Naija Fiesta', '', 9800, 'Thousand Island Sauce, Meatballs, BBQ Base, Red Chilli, Chicken & Onions', 10),
-  ('Pizza', 'Pepperoni', '', 8900, 'Beef Pepperoni, Tomato Sauce & Mozzarella Cheese', 11),
-  ('Pizza', 'Shawarma', '', 9800, 'BBQ Sauce, Mozzarella Cheese, Red Chili, Onions, Grilled Chicken and Smoked Sausage', 12),
-  ('Pizza', 'Southern Style BBQ Chicken', '', 9350, 'Grilled Chicken, Sweet Corn, with Tomato Sauce, Extra BBQ sauce & Mozzarella Cheese', 13),
-  ('Pizza', 'The Lot', '', 9800, '', 14),
-  ('Pizza', 'Veggie Supreme', '', 8600, 'Green Peppers, Fresh Onions, with Tomato Sauce & Mozzarella Cheese', 15),
-  ('Dips & sides', 'BBQ Sauce', '', 700, 'BBQ Dipping Sauce', 1),
-  ('Dips & sides', 'Dip Pot Choco Fudge', '', 700, '', 2),
-  ('Dips & sides', 'Hot Sweet Chilli Sauce', '', 700, '', 3),
-  ('Dips & sides', 'Marinara Sauce', '', 700, 'Tomato Marinara Dipping Sauce.', 4),
-  ('Dips & sides', 'Pepper Sauce', 'Pepper Sauce Sauce', 700, '', 5),
-  ('Dips & sides', 'Shawarma Sauce', '', 700, 'Shawarma Dipping Sauce', 6),
-  ('Dips & sides', 'Sweet Icing', '', 700, 'Creamy Sweet Icing Sugar', 7),
-  ('Bread', 'BBQ Sauce Calzone', '', 8000, '', 1),
-  ('Bread', 'Breadsticks', '', 3400, 'Hot & fresh oven-baked Breadsticks', 2),
-  ('Bread', 'Breadsticks With BBQ Sauce', '', 3400, '', 3),
-  ('Bread', 'Breadsticks With Pepper Sauce', '', 3400, '', 4),
-  ('Bread', 'Breadsticks With Shawarma Sauce', '', 3400, '', 5),
-  ('Bread', 'Cheesy Bread', '', 4000, 'Hot & fresh oven-baked Breadsticks topped with Mozzarella Cheese', 6),
-  ('Bread', 'Cheesy Chicken Suya Bread', '', 5000, '', 7),
-  ('Bread', 'Cheesy Grilled Chicken Bread', '', 5000, '', 8),
-  ('Bread', 'Cheesy Sausage Bread', '', 5000, '', 9),
-  ('Bread', 'Cinnastix', '', 3400, 'Hot & fresh oven-baked Cinnamon Breadsticks', 10),
-  ('Bread', 'Pizza Sauce Calzone', '', 8000, '', 11),
-  ('Bread', 'Sausage Roll Plain', '', 1900, 'Baked with YOU in mind, you get the best deal when you buy our tasty Sausage Rolls.', 12),
-  ('Bread', 'Suya Sauce Calzone', '', 8000, '', 13),
-  ('Chicken & Rice', '250G Rice With 2PCS Roast Chicken', '', 6500, '', 1),
-  ('Chicken & Rice', '250G Rice With 4PCS Wings', '', 6500, '', 2),
-  ('Chicken & Rice', 'Chicken Wings - 4PCS', '', 4000, 'Chicken wings only. No dip pot sauce added', 3),
-  ('Chicken & Rice', 'Chicken Wings With BBQ - 7PCS', '', 7000, 'Chicken wings with BBQ sauce dip pot', 4),
-  ('Chicken & Rice', 'Chicken Wings With Pepper Sauce - 7PCS', '', 7000, 'Chicken wings with pepper sauce dip pot', 5),
-  ('Chicken & Rice', 'Chicken Wings With Shawarma - 7PCS', '', 7000, 'Chicken wings with shawarma sauce dip pot', 6),
-  ('Chicken & Rice', 'Chicken Wings With Marinara - 7PCS', 'Chicken Wings With with Marinara - 7PCS', 7000, 'Chicken wings with marinara sauce dip pot', 7),
-  ('Chicken & Rice', 'Jollof Rice', '', 3000, '', 8),
-  ('Chicken & Rice', 'Roasted Chicken - 2PCS', '', 4000, 'Roasted chicken only. No dip pot sauce added', 9),
-  ('Chicken & Rice', 'Roasted Chicken With BBQ - 5PCS', '', 9000, 'Roasted chicken with BBQ sauce dip pot', 10),
-  ('Chicken & Rice', 'Roasted Chicken With Pepper Sauce - 5PCS', '', 9000, 'Roasted chicken with pepper sauce dip pot', 11),
-  ('Chicken & Rice', 'Roasted Chicken With Shawarma - 5PCS', '', 9000, 'Roasted chicken with shawarma sauce dip pot', 12),
-  ('Chicken & Rice', 'Roasted Chicken With Marinara - 5PCS', 'Roasted Chicken With with Marinara - 5PCS', 9000, 'Roasted chicken with marinara sauce dip pot', 13),
-  ('Drinks', '7UP', '', 800, '500ml bottle', 1),
-  ('Drinks', 'Aquafina', '', 800, '700ml bottle', 2),
-  ('Drinks', 'Mirinda Orange', '', 800, '500ml bottle', 3),
-  ('Drinks', 'Pepsi', '', 800, '500ml bottle', 4),
-  ('Drinks', 'Pepsi Lite', '', 800, '400ml bottle', 5),
-  ('Drinks', 'Supa Komando', '', 800, '300ml bottle', 6),
-  ('Drinks', 'Teem Bitter Lemon', '', 800, '500ml bottle', 7),
-  ('Dessert', 'Brownie', '', 3300, '', 1),
-  ('Dessert', 'Cake Batter', '', 9900, '16oz tub', 2),
-  ('Dessert', 'Caramel Cinnamon Bread', '', 3500, '', 3),
-  ('Dessert', 'Chocolate Fudge Bread', '', 3500, '', 4),
-  ('Dessert', 'Chocolate Spread Bread', '', 3500, '', 5),
-  ('Dessert', 'Cookies N Cream', '', 9900, '16oz tub', 6),
-  ('Dessert', 'Dark Chocolate Devotion', '', 9900, '16oz tub', 7),
-  ('Dessert', 'Founders Favourite', '', 9900, '16oz tub', 8),
-  ('Dessert', 'French Vanilla', '', 9900, '16oz tub', 9),
-  ('Dessert', 'Melted Choco Pocket', '', 3200, 'Hot & fresh oven-baked Bread stuffed with Hot Melted Chocolate & topped with Icing Sugar', 10),
-  ('Dessert', 'Oreo Overload', '', 9900, '16oz tub', 11),
-  ('Dessert', 'Strawberry', '', 9900, '16oz tub', 12),
-  ('Dessert', 'To Go Chocolate Hazelnut', 'To Go Chocolate Hazlenut', 7000, '14oz tub', 13),
-  ('Dessert', 'To Go Original Yoghurt', 'To Go Original Yogurt', 7000, '14oz tub', 14),
-  ('Dessert', 'To Go Strawberry Yoghurt', '', 7000, '14oz tub', 15);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Pizza', 'BBQ Chicken', '', 9350, 'Grilled Chicken & Fresh Onions, with BBQ Sauce & Mozzarella Cheese', 1);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Pizza', 'BBQ Meatball', '', 8900, 'Meatball with BBQ Sauce & Mozzarella Cheese', 2);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Pizza', 'BBQ Mega Meat', '', 9800, 'BBQ Sauce, Mozzarella Cheese, Beef Pepperoni, Grilled Chicken, Smoked Sausage and Meatballs', 3);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Pizza', 'BBQ Suya Mix Grill', '', 9800, 'Beef Suya, Hotdog, Pepper Chicken, Red Chilli, Suya Spice, BBQ Sauce.', 4);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Pizza', 'Chicken Supreme', '', 9350, 'Grilled Chicken, Sweet Corn, Green Peppers & Fresh Onions, with Tomato Sauce & Mozzarella Cheese', 5);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Pizza', 'Chicken Suya', '', 9350, 'Chicken Suya, Green Peppers, Nigerian Hot Chili Peppers & Fresh Onions, with Suya infused Tomato Sauce & Mozzarella Cheese', 6);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Pizza', 'Extravaganza', '', 9800, 'Green pepper, Sweet Corn, Beef Suya, Smoked Sausage, Pepperoni, Onions & Pizza Sauce', 7);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Pizza', 'Half & Half', '', 8200, 'Any half & half pizza flavours of your choice', 8);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Pizza', 'Margherita', '', 8600, 'Tomato Sauce & Extra Mozzarella Cheese', 9);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Pizza', 'Naija Fiesta', '', 9800, 'Thousand Island Sauce, Meatballs, BBQ Base, Red Chilli, Chicken & Onions', 10);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Pizza', 'Pepperoni', '', 8900, 'Beef Pepperoni, Tomato Sauce & Mozzarella Cheese', 11);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Pizza', 'Shawarma', '', 9800, 'BBQ Sauce, Mozzarella Cheese, Red Chili, Onions, Grilled Chicken and Smoked Sausage', 12);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Pizza', 'Southern Style BBQ Chicken', '', 9350, 'Grilled Chicken, Sweet Corn, with Tomato Sauce, Extra BBQ sauce & Mozzarella Cheese', 13);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Pizza', 'The Lot', '', 9800, '', 14);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Pizza', 'Veggie Supreme', '', 8600, 'Green Peppers, Fresh Onions, with Tomato Sauce & Mozzarella Cheese', 15);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dips & sides', 'BBQ Sauce', '', 700, 'BBQ Dipping Sauce', 1);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dips & sides', 'Dip Pot Choco Fudge', '', 700, '', 2);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dips & sides', 'Hot Sweet Chilli Sauce', '', 700, '', 3);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dips & sides', 'Marinara Sauce', '', 700, 'Tomato Marinara Dipping Sauce.', 4);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dips & sides', 'Pepper Sauce', 'Pepper Sauce Sauce', 700, '', 5);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dips & sides', 'Shawarma Sauce', '', 700, 'Shawarma Dipping Sauce', 6);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dips & sides', 'Sweet Icing', '', 700, 'Creamy Sweet Icing Sugar', 7);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Bread', 'BBQ Sauce Calzone', '', 8000, '', 1);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Bread', 'Breadsticks', '', 3400, 'Hot & fresh oven-baked Breadsticks', 2);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Bread', 'Breadsticks With BBQ Sauce', '', 3400, '', 3);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Bread', 'Breadsticks With Pepper Sauce', '', 3400, '', 4);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Bread', 'Breadsticks With Shawarma Sauce', '', 3400, '', 5);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Bread', 'Cheesy Bread', '', 4000, 'Hot & fresh oven-baked Breadsticks topped with Mozzarella Cheese', 6);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Bread', 'Cheesy Chicken Suya Bread', '', 5000, '', 7);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Bread', 'Cheesy Grilled Chicken Bread', '', 5000, '', 8);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Bread', 'Cheesy Sausage Bread', '', 5000, '', 9);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Bread', 'Cinnastix', '', 3400, 'Hot & fresh oven-baked Cinnamon Breadsticks', 10);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Bread', 'Pizza Sauce Calzone', '', 8000, '', 11);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Bread', 'Sausage Roll Plain', '', 1900, 'Baked with YOU in mind, you get the best deal when you buy our tasty Sausage Rolls.', 12);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Bread', 'Suya Sauce Calzone', '', 8000, '', 13);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Chicken & Rice', '250G Rice With 2PCS Roast Chicken', '', 6500, '', 1);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Chicken & Rice', '250G Rice With 4PCS Wings', '', 6500, '', 2);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Chicken & Rice', 'Chicken Wings - 4PCS', '', 4000, 'Chicken wings only. No dip pot sauce added', 3);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Chicken & Rice', 'Chicken Wings With BBQ - 7PCS', '', 7000, 'Chicken wings with BBQ sauce dip pot', 4);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Chicken & Rice', 'Chicken Wings With Pepper Sauce - 7PCS', '', 7000, 'Chicken wings with pepper sauce dip pot', 5);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Chicken & Rice', 'Chicken Wings With Shawarma - 7PCS', '', 7000, 'Chicken wings with shawarma sauce dip pot', 6);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Chicken & Rice', 'Chicken Wings With Marinara - 7PCS', 'Chicken Wings With with Marinara - 7PCS', 7000, 'Chicken wings with marinara sauce dip pot', 7);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Chicken & Rice', 'Jollof Rice', '', 3000, '', 8);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Chicken & Rice', 'Roasted Chicken - 2PCS', '', 4000, 'Roasted chicken only. No dip pot sauce added', 9);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Chicken & Rice', 'Roasted Chicken With BBQ - 5PCS', '', 9000, 'Roasted chicken with BBQ sauce dip pot', 10);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Chicken & Rice', 'Roasted Chicken With Pepper Sauce - 5PCS', '', 9000, 'Roasted chicken with pepper sauce dip pot', 11);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Chicken & Rice', 'Roasted Chicken With Shawarma - 5PCS', '', 9000, 'Roasted chicken with shawarma sauce dip pot', 12);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Chicken & Rice', 'Roasted Chicken With Marinara - 5PCS', 'Roasted Chicken With with Marinara - 5PCS', 9000, 'Roasted chicken with marinara sauce dip pot', 13);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Drinks', '7UP', '', 800, '500ml bottle', 1);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Drinks', 'Aquafina', '', 800, '700ml bottle', 2);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Drinks', 'Mirinda Orange', '', 800, '500ml bottle', 3);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Drinks', 'Pepsi', '', 800, '500ml bottle', 4);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Drinks', 'Pepsi Lite', '', 800, '400ml bottle', 5);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Drinks', 'Supa Komando', '', 800, '300ml bottle', 6);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Drinks', 'Teem Bitter Lemon', '', 800, '500ml bottle', 7);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dessert', 'Brownie', '', 3300, '', 1);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dessert', 'Cake Batter', '', 9900, '16oz tub', 2);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dessert', 'Caramel Cinnamon Bread', '', 3500, '', 3);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dessert', 'Chocolate Fudge Bread', '', 3500, '', 4);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dessert', 'Chocolate Spread Bread', '', 3500, '', 5);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dessert', 'Cookies N Cream', '', 9900, '16oz tub', 6);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dessert', 'Dark Chocolate Devotion', '', 9900, '16oz tub', 7);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dessert', 'Founders Favourite', '', 9900, '16oz tub', 8);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dessert', 'French Vanilla', '', 9900, '16oz tub', 9);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dessert', 'Melted Choco Pocket', '', 3200, 'Hot & fresh oven-baked Bread stuffed with Hot Melted Chocolate & topped with Icing Sugar', 10);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dessert', 'Oreo Overload', '', 9900, '16oz tub', 11);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dessert', 'Strawberry', '', 9900, '16oz tub', 12);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dessert', 'To Go Chocolate Hazelnut', 'To Go Chocolate Hazlenut', 7000, '14oz tub', 13);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dessert', 'To Go Original Yoghurt', 'To Go Original Yogurt', 7000, '14oz tub', 14);
+insert into dominos_import (category, name, alias, price, description, sort) values ('Dessert', 'To Go Strawberry Yoghurt', '', 7000, '14oz tub', 15);
 
 drop table if exists dominos_sizes;
 create table dominos_sizes (
@@ -123,22 +122,21 @@ create table dominos_sizes (
   chairman int  not null
 );
 
-insert into dominos_sizes (name, large, chairman) values
-  ('BBQ Chicken', 4300, 10285),
-  ('BBQ Meatball', 4225, 9580),
-  ('BBQ Mega Meat', 5425, 11725),
-  ('BBQ Suya Mix Grill', 5425, 11725),
-  ('Chicken Supreme', 4300, 10285),
-  ('Chicken Suya', 4300, 10285),
-  ('Extravaganza', 5425, 11725),
-  ('Half & Half', 3300, 9300),
-  ('Margherita', 4210, 9775),
-  ('Naija Fiesta', 5425, 11725),
-  ('Pepperoni', 4225, 9580),
-  ('Shawarma', 5425, 11725),
-  ('Southern Style BBQ Chicken', 4300, 10285),
-  ('The Lot', 5425, 11725),
-  ('Veggie Supreme', 4210, 9775);
+insert into dominos_sizes (name, large, chairman) values ('BBQ Chicken', 4300, 10285);
+insert into dominos_sizes (name, large, chairman) values ('BBQ Meatball', 4225, 9580);
+insert into dominos_sizes (name, large, chairman) values ('BBQ Mega Meat', 5425, 11725);
+insert into dominos_sizes (name, large, chairman) values ('BBQ Suya Mix Grill', 5425, 11725);
+insert into dominos_sizes (name, large, chairman) values ('Chicken Supreme', 4300, 10285);
+insert into dominos_sizes (name, large, chairman) values ('Chicken Suya', 4300, 10285);
+insert into dominos_sizes (name, large, chairman) values ('Extravaganza', 5425, 11725);
+insert into dominos_sizes (name, large, chairman) values ('Half & Half', 3300, 9300);
+insert into dominos_sizes (name, large, chairman) values ('Margherita', 4210, 9775);
+insert into dominos_sizes (name, large, chairman) values ('Naija Fiesta', 5425, 11725);
+insert into dominos_sizes (name, large, chairman) values ('Pepperoni', 4225, 9580);
+insert into dominos_sizes (name, large, chairman) values ('Shawarma', 5425, 11725);
+insert into dominos_sizes (name, large, chairman) values ('Southern Style BBQ Chicken', 4300, 10285);
+insert into dominos_sizes (name, large, chairman) values ('The Lot', 5425, 11725);
+insert into dominos_sizes (name, large, chairman) values ('Veggie Supreme', 4210, 9775);
 
 do $dominos$
 declare
