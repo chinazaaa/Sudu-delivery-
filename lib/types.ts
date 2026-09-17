@@ -131,6 +131,10 @@ export type Promoter = {
   phone: string;
   rate: number;
   active: boolean;
+  /** Where their money goes. They keep it up to date themselves. */
+  bank_name: string;
+  bank_account_name: string;
+  bank_account_number: string;
 };
 
 /** What the cart posts to the server. Prices are never trusted from here. */

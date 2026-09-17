@@ -139,6 +139,15 @@ where not exists (select 1 from run_schedule);
 -- customer opens their order history.
 alter table promoters add column if not exists pin text not null default '';
 
+-- Where to send their money, kept by them so nobody retypes it.
+alter table promoters add column if not exists bank_name text not null default '';
+alter table promoters add column if not exists bank_account_name text not null default '';
+alter table promoters add column if not exists bank_account_number text not null default '';
+
+-- A payout is recorded by you and confirmed by them, so both ends agree.
+alter table promoter_payouts add column if not exists confirmed_at timestamptz;
+
+
 -- What has actually been handed over, so "owed" means what is still owed
 -- rather than everything ever earned.
 create table if not exists promoter_payouts (

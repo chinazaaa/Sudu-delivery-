@@ -101,6 +101,59 @@ export default async function PromotersAdmin() {
               Recording it takes it off what they are owed, here and on their
               own page.
             </p>
+
+            <div className="rounded-2xl bg-shell p-3">
+              <h3 className="text-sm font-bold">Send it here</h3>
+              {promoter.bank_account_number ? (
+                <p className="mt-1 text-sm">
+                  <span className="block font-semibold">
+                    {promoter.bank_account_number}
+                  </span>
+                  <span className="block text-muted">
+                    {promoter.bank_account_name || promoter.name}
+                    {promoter.bank_name && ` · ${promoter.bank_name}`}
+                  </span>
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-muted">
+                  They have not filled their account details in yet. They do
+                  that themselves, on their own page.
+                </p>
+              )}
+            </div>
+
+            {promoter.payouts.length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold">Already paid</h3>
+                <ul className="mt-1 divide-y divide-black/5 text-sm">
+                  {promoter.payouts.map((payout) => (
+                    <li key={payout.id} className="flex justify-between gap-3 py-2">
+                      <span>
+                        {new Date(payout.paid_at).toLocaleDateString("en-NG", {
+                          day: "numeric",
+                          month: "short",
+                        })}
+                        {payout.note && (
+                          <span className="text-muted"> · {payout.note}</span>
+                        )}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <span className="font-semibold">{naira(payout.amount)}</span>
+                        <span
+                          className={`chip border-transparent text-xs font-semibold ${
+                            payout.confirmed_at
+                              ? "bg-mint/20"
+                              : "bg-amber-100 text-amber-900"
+                          }`}
+                        >
+                          {payout.confirmed_at ? "They confirmed it" : "Not confirmed"}
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
         </>
       )}

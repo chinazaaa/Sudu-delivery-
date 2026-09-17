@@ -45,6 +45,8 @@ export type PromoterEarnings = {
   code: string;
   name: string;
   rate: number;
+  /** Where their money goes. Kept by them, read by you. */
+  bank: { name: string; accountName: string; accountNumber: string };
   runs: PromoterRun[];
   /** Everything earned across every run. */
   earned: number;
@@ -55,7 +57,14 @@ export type PromoterEarnings = {
   waiting: number;
   /** Those orders, in runs still open, so a nudge can still land. */
   chase: ChaseableOrder[];
-  payouts: { id: string; amount: number; note: string; paid_at: string }[];
+  payouts: {
+    id: string;
+    amount: number;
+    note: string;
+    paid_at: string;
+    /** When they said it landed. Null until they do. */
+    confirmed_at: string | null;
+  }[];
 };
 
 /**
@@ -66,7 +75,7 @@ export type PromoterEarnings = {
 export async function promoterEarnings(code: string): Promise<PromoterEarnings | null> {
   const { data: promoter } = await db()
     .from("promoters")
-    .select("code, name, rate")
+    .select("code, name, rate, bank_name, bank_account_name, bank_account_number")
     .eq("code", code.toUpperCase())
     .maybeSingle();
   if (!promoter) return null;
@@ -134,7 +143,7 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
 
   const { data: payouts } = await db()
     .from("promoter_payouts")
-    .select("id, amount, note, paid_at")
+    .select("id, amount, note, paid_at, confirmed_at")
     .eq("promoter_code", promoter.code)
     .order("paid_at", { ascending: false });
 
@@ -145,6 +154,11 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
     code: promoter.code as string,
     name: promoter.name as string,
     rate,
+    bank: {
+      name: (promoter.bank_name as string) ?? "",
+      accountName: (promoter.bank_account_name as string) ?? "",
+      accountNumber: (promoter.bank_account_number as string) ?? "",
+    },
     runs,
     earned,
     paid,

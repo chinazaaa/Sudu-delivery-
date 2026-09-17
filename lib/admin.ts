@@ -292,7 +292,17 @@ export async function batchOverview(window: "recent" | "all" = "recent"): Promis
   });
 }
 
+export type PromoterPayout = {
+  id: string;
+  amount: number;
+  note: string;
+  paid_at: string;
+  /** When they said it landed. Null until they do. */
+  confirmed_at: string | null;
+};
+
 export type PromoterRow = Promoter & {
+  payouts: PromoterPayout[];
   /** Paid orders carrying this code, which is what commission is earned on. */
   orders: number;
   earned: number;
@@ -309,7 +319,8 @@ export async function promoterRows(): Promise<PromoterRow[]> {
     .neq("status", "refunded");
   const { data: payouts } = await db()
     .from("promoter_payouts")
-    .select("promoter_code, amount");
+    .select("id, promoter_code, amount, note, paid_at, confirmed_at")
+    .order("paid_at", { ascending: false });
 
   // Only a paid order earns: an unpaid one never travelled.
   const count = (orders ?? []).filter((o) => o.status !== "pending").length;
@@ -320,6 +331,15 @@ export async function promoterRows(): Promise<PromoterRow[]> {
       .filter((row) => row.promoter_code === p.code)
       .reduce((total, row) => total + (row.amount as number), 0);
 
-    return { ...p, orders: count, earned, paidOut, owed: Math.max(0, earned - paidOut) };
+    return {
+      ...p,
+      orders: count,
+      earned,
+      paidOut,
+      owed: Math.max(0, earned - paidOut),
+      payouts: (payouts ?? []).filter(
+        (row) => row.promoter_code === p.code
+      ) as PromoterPayout[],
+    };
   });
 }

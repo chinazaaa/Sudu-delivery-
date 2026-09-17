@@ -4,7 +4,8 @@ import { currentPromoter } from "@/lib/promoter-auth";
 import { promoterEarnings } from "@/lib/promoters";
 import { naira } from "@/lib/money";
 import { whatsappTo } from "@/lib/messages";
-import { signOut } from "./actions";
+import SaveButton from "@/components/SaveButton";
+import { confirmPayout, saveBank, signOut } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -131,7 +132,10 @@ export default async function PromoterPage() {
           <h2 className="font-bold">Paid to you</h2>
           <ul className="divide-y divide-black/5 text-sm">
             {earnings.payouts.map((payout) => (
-              <li key={payout.id} className="flex justify-between gap-3 py-2">
+              <li
+                key={payout.id}
+                className="flex flex-wrap items-center justify-between gap-2 py-2"
+              >
                 <span>
                   {new Date(payout.paid_at).toLocaleDateString("en-NG", {
                     day: "numeric",
@@ -140,12 +144,68 @@ export default async function PromoterPage() {
                   })}
                   {payout.note && <span className="text-muted"> · {payout.note}</span>}
                 </span>
-                <span className="font-semibold">{naira(payout.amount)}</span>
+                <span className="flex items-center gap-2">
+                  <span className="font-semibold">{naira(payout.amount)}</span>
+                  {payout.confirmed_at ? (
+                    <span className="chip border-transparent bg-mint/20 text-xs font-semibold">
+                      You said it landed
+                    </span>
+                  ) : (
+                    <form action={confirmPayout}>
+                      <input type="hidden" name="payout_id" value={payout.id} />
+                      <SaveButton quiet className="px-3 py-1 text-xs">
+                        It landed
+                      </SaveButton>
+                    </form>
+                  )}
+                </span>
               </li>
             ))}
           </ul>
         </section>
       )}
+
+      <form action={saveBank} className="card space-y-3">
+        <div>
+          <h2 className="font-bold">Where your money goes</h2>
+          <p className="text-sm text-muted">
+            Keep this right and nobody has to ask you for it on payday.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="label" htmlFor="bank_account_name">Account name</label>
+            <input
+              id="bank_account_name"
+              name="bank_account_name"
+              defaultValue={earnings.bank.accountName}
+              className="field"
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="bank_name">Bank</label>
+            <input
+              id="bank_name"
+              name="bank_name"
+              defaultValue={earnings.bank.name}
+              placeholder="GTBank"
+              className="field"
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="bank_account_number">Account number</label>
+            <input
+              id="bank_account_number"
+              name="bank_account_number"
+              inputMode="numeric"
+              maxLength={10}
+              defaultValue={earnings.bank.accountNumber}
+              className="field"
+            />
+          </div>
+        </div>
+        <SaveButton>Save</SaveButton>
+      </form>
 
       <p className="text-sm text-muted">
         Questions about a run?{" "}

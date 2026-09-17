@@ -22,6 +22,14 @@ create index if not exists promoter_payouts_code_idx
 
 alter table promoter_payouts enable row level security;
 
+-- Where to send their money, kept by them so nobody retypes it.
+alter table promoters add column if not exists bank_name text not null default '';
+alter table promoters add column if not exists bank_account_name text not null default '';
+alter table promoters add column if not exists bank_account_number text not null default '';
+
+-- A payout is recorded by you and confirmed by them, so both ends agree.
+alter table promoter_payouts add column if not exists confirmed_at timestamptz;
+
 -- Anyone already there without a PIN gets one, so they can sign in.
 update promoters
 set pin = lpad((floor(random() * 10000))::int::text, 4, '0')
