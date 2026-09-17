@@ -45,8 +45,9 @@ export default async function OrderPage({
   const repeat = await repeatLines(order);
   // The runs it could be moved to, for an order whose own run has gone.
   const others = (await openBatches()).filter((run) => run.id !== order.batch_id);
-  // A paid order can change nights right up until its run closes, after which
-  // the food for it has been bought.
+  // An order can change nights right up until its run closes: unpaid because
+  // nothing has been charged, paid because the money simply travels with it.
+  // After that the food for that run has been bought.
   const canStillMove =
     order.batch.status === "open" &&
     order.batch.stage === "ordering" &&
@@ -224,6 +225,22 @@ export default async function OrderPage({
 
           <CardPayment order={order} settings={settings} batchLabel={batchLabel} />
           {!split && <ShareLink label="Send this to whoever is paying" />}
+
+          {/* Before paying is exactly when somebody realises they want another
+              night. Nothing has been charged, so it simply reprices. */}
+          {canStillMove && (
+            <MoveOrder
+              orderId={order.id}
+              total={order.total}
+              collapsed
+              openLabel="Want it on another run instead?"
+              runs={others.map((run) => ({
+                id: run.id,
+                label: `${runDateLabel(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
+                closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
+              }))}
+            />
+          )}
         </section>
       )}
 
