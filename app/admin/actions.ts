@@ -662,7 +662,7 @@ export async function savePromoter(form: FormData): Promise<void> {
 
   const typedPin = String(form.get("pin") ?? "").replace(/\D/g, "").slice(0, 4);
 
-  await db().from("promoters").upsert({
+  const { error } = await db().from("promoters").upsert({
     code,
     name: String(form.get("name") ?? "").trim(),
     phone: String(form.get("phone") ?? "").trim(),
@@ -670,6 +670,15 @@ export async function savePromoter(form: FormData): Promise<void> {
     active: form.get("active") === "on",
     pin: typedPin || (existing?.pin as string) || newPin(),
   });
+
+  // A save that quietly does nothing is worse than one that fails loudly:
+  // the form comes back empty and reads as the data being wiped.
+  if (error) {
+    throw new Error(
+      `Could not save the promoter: ${error.message}. ` +
+        "If it mentions a column, run supabase/update.sql in Supabase."
+    );
+  }
 
   revalidatePath("/admin", "layout");
   revalidatePath("/promoter");

@@ -1,7 +1,9 @@
 import SaveButton from "@/components/SaveButton";
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
+import Diagnostic from "@/components/Diagnostic";
 import { promoterRows } from "@/lib/admin";
+import { promoterSchema } from "@/lib/health";
 import { naira } from "@/lib/money";
 import { whatsappTo } from "@/lib/messages";
 import { siteUrl } from "@/lib/admin-templates";
@@ -10,7 +12,8 @@ import { recordPayout, savePromoter } from "../actions";
 export const dynamic = "force-dynamic";
 
 export default async function PromotersAdmin() {
-  const promoters = await promoterRows();
+  const schema = await promoterSchema();
+  const promoters = schema.ok ? await promoterRows() : [];
   const promoter = promoters[0] ?? null;
   const url = await siteUrl();
 
@@ -20,6 +23,15 @@ export default async function PromotersAdmin() {
         title="Promoter"
         detail="The person whose job is getting people onto the site. Every paid order counts, at their rate."
       />
+
+      {!schema.ok && (
+        <div className="mb-4">
+          <Diagnostic
+            title="This database is missing something"
+            detail={`Saving a promoter will not work until ${schema.missing} exists. Run supabase/promoter_setup.sql in Supabase, then come back.`}
+          />
+        </div>
+      )}
 
       {promoter && (
         <>

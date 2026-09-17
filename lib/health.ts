@@ -66,3 +66,21 @@ export async function diagnoseEmpty(): Promise<Diagnosis> {
       "Supabase SQL editor once, then reload this page.",
   };
 }
+
+/**
+ * Whether the promoter pages have the columns they need.
+ *
+ * The PIN column and the payouts table arrived after the first schema, so a
+ * database set up before then saves nothing and says nothing. Checked up
+ * front so the page can say what to run, rather than leaving a form that
+ * empties itself.
+ */
+export async function promoterSchema(): Promise<{ ok: boolean; missing: string }> {
+  const { error: pinError } = await db().from("promoters").select("pin").limit(1);
+  if (pinError) return { ok: false, missing: "the PIN column on promoters" };
+
+  const { error: payoutError } = await db().from("promoter_payouts").select("id").limit(1);
+  if (payoutError) return { ok: false, missing: "the promoter_payouts table" };
+
+  return { ok: true, missing: "" };
+}
