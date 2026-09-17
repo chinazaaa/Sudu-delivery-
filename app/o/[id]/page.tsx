@@ -436,7 +436,9 @@ export default async function OrderPage({
           <RepeatOrder
             lines={repeat.lines}
             blocked={repeat.blocked}
-            label="Put this in the next run"
+            label="Move this to another run"
+            goTo="/checkout"
+            note="You pick which run at checkout: every one still open is in the list, with its own closing time."
           />
         </section>
       )}
@@ -446,7 +448,7 @@ export default async function OrderPage({
           <h2 className="font-bold">Want this again?</h2>
           <p className="text-sm text-muted">
             Back in your cart at today&apos;s prices, with your details already
-            filled in.
+            filled in. You pick the run at checkout.
           </p>
           <RepeatOrder lines={repeat.lines} blocked={repeat.blocked} />
         </section>

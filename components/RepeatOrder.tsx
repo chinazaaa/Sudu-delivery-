@@ -14,11 +14,16 @@ export default function RepeatOrder({
   lines,
   blocked,
   label = "Order this again",
+  goTo = "/cart",
+  note,
 }: {
   lines: RepeatLine[];
   /** Items that cannot come back, each with the reason why. */
   blocked: RepeatBlock[];
   label?: string;
+  /** Where to land: the cart to adjust it, or checkout to pick a run. */
+  goTo?: "/cart" | "/checkout";
+  note?: string;
 }) {
   const router = useRouter();
   const [done, setDone] = useState(false);
@@ -63,11 +68,12 @@ export default function RepeatOrder({
             );
           }
           setDone(true);
-          router.push("/cart");
+          router.push(goTo);
         }}
       >
         {done ? "In your cart" : label}
       </button>
+      {note && <p className="text-xs text-muted">{note}</p>}
       {blocked.length > 0 && (
         <p className="text-xs text-brand">
           Left out:{" "}
