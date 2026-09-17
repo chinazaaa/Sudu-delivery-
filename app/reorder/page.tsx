@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Empty from "@/components/Empty";
 import PinForm from "@/components/PinForm";
 import ReorderCard, { type PreviousOrder } from "@/components/ReorderCard";
 import { openBatches } from "@/lib/batches";
@@ -33,21 +34,27 @@ export default async function ReorderPage({
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-bold tracking-tight">Order again</h1>
-        <p className="text-ink/75">
-          {signedIn
-            ? "Nothing to bring back yet under your number."
-            : "Your number and the four-digit PIN from your first order bring back " +
-              "everything you have ordered."}
-        </p>
-        {!signedIn && <PinForm next="/reorder" label="Bring back my last order" />}
-        {phone && (
-          <p className="text-sm text-ink/75">
-            Nothing found for that number.{" "}
-            <Link href="/" className="text-brand underline">
-              Order from the menu
-            </Link>
-            .
-          </p>
+
+        {phone ? (
+          // Signed in, or a number typed in, and neither turned anything up.
+          // Saying so once is enough.
+          <Empty
+            icon="repeat"
+            title="Nothing to bring back yet"
+            href="/"
+            action="Browse the menu"
+          >
+            Order once and it waits here for you. One tap puts the whole thing
+            back in your cart at today&apos;s prices.
+          </Empty>
+        ) : (
+          <>
+            <p className="text-ink/75">
+              Your number and the four-digit PIN from your first order bring
+              back everything you have ordered.
+            </p>
+            <PinForm next="/reorder" label="Bring back my last order" />
+          </>
         )}
       </div>
     );

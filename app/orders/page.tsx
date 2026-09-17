@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Empty from "@/components/Empty";
 import PinForm from "@/components/PinForm";
 import { currentCustomer } from "@/lib/customer-auth";
 import { SLOT_LABEL } from "@/lib/config";
@@ -42,7 +43,10 @@ export default async function OrdersPage() {
       </div>
 
       {orders.length === 0 ? (
-        <p className="text-ink/75">Nothing here yet.</p>
+        <Empty icon="bag" title="No orders yet" href="/" action="Browse the menu">
+          Everything you order shows up here, with where it has got to and a
+          button to order the same thing again.
+        </Empty>
       ) : (
         <ul className="space-y-3">
           {orders.map((order, index) => (
@@ -82,12 +86,14 @@ export default async function OrdersPage() {
         </ul>
       )}
 
-      <p className="text-sm text-muted">
-        <Link href="/" className="font-semibold text-brand underline">
-          Order something new
-        </Link>
-        , or tap &quot;Order this again&quot; on any order above.
-      </p>
+      {orders.length > 0 && (
+        <p className="text-sm text-muted">
+          <Link href="/" className="font-semibold text-brand underline">
+            Order something new
+          </Link>
+          , or tap &quot;Order this again&quot; on any order above.
+        </p>
+      )}
     </div>
   );
 }

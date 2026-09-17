@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Empty from "@/components/Empty";
 import { useState } from "react";
 import Thumb from "./Thumb";
 import {
@@ -28,13 +29,9 @@ export default function CartView({
 
   if (cart.length === 0) {
     return (
-      <div className="card mx-auto max-w-md text-center">
-        <h1 className="text-lg font-extrabold">Your cart is empty</h1>
-        <p className="mt-1 text-sm text-muted">Pick something from the menu first.</p>
-        <Link href="/" className="btn-primary mt-4 w-full">
-          Back to the menu
-        </Link>
-      </div>
+      <Empty icon="cart" title="Your cart is empty" href="/" action="Browse the menu">
+        Pick a few things and they gather here, ready to go on the next run.
+      </Empty>
     );
   }
 
