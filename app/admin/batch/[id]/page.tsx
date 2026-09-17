@@ -203,13 +203,11 @@ export default async function BatchPage({
                 <section className="card space-y-2">
                   <h2 className="font-bold">One bag per name</h2>
                   <p className="text-sm text-muted">
-                    Anything added later in the week is already merged in.
-                    Tapping a bag ticks it off your list, which nobody else
-                    sees. Marking it delivered is the button underneath, and it
-                    asks first, because the customer sees that one.
+                    Anything added later in the week is already merged in. Mark
+                    each one delivered as you hand it over: that is the tick,
+                    and the customer sees it on their own page.
                   </p>
                   <HandoutList
-                    batchId={batch.id}
                     setDelivered={setBagDelivered}
                     refund={refundOrder}
                     entries={handout.map((bag) => ({

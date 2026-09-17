@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import ConfirmButton from "./admin/ConfirmButton";
 
 export type HandoutEntry = {
@@ -24,53 +23,27 @@ export type HandoutEntry = {
 /**
  * Read at the drop point, one-handed, in the dark.
  *
- * Two different things happen here and they are deliberately not the same
- * gesture. Tapping a bag ticks it off in this browser: free, reversible, and
- * seen by nobody, which is what a list is for while you are working through
- * one. Marking it delivered changes what the customer reads on their own
- * page, so it asks first.
+ * There is one gesture here, not two: handing a bag over is marking it
+ * delivered. A private tick on top of that would be the same list kept twice,
+ * and the one that mattered would be the one nobody had updated.
  */
 export default function HandoutList({
-  batchId,
   entries,
   setDelivered,
   refund,
 }: {
-  batchId: string;
   entries: HandoutEntry[];
   setDelivered: (form: FormData) => Promise<void>;
   refund: (form: FormData) => Promise<void>;
 }) {
-  const storageKey = `sudu_handout_${batchId}`;
-  const [ticked, setTicked] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(storageKey);
-      if (saved) setTicked(JSON.parse(saved));
-    } catch {
-      /* Private mode. Ticking still works, it is just not remembered. */
-    }
-  }, [storageKey]);
-
-  function toggle(id: string) {
-    setTicked((current) => {
-      const next = { ...current, [id]: !current[id] };
-      try {
-        window.localStorage.setItem(storageKey, JSON.stringify(next));
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  }
-
-  const done = entries.filter((entry) => ticked[entry.id]).length;
+  const done = entries.filter((entry) =>
+    entry.orders.every((order) => order.status === "delivered")
+  ).length;
 
   return (
     <div className="space-y-2">
       <p className="text-sm text-muted">
-        {done}/{entries.length} ticked off
+        {done}/{entries.length} handed over
       </p>
       <ul className="space-y-2">
         {entries.map((entry) => {
@@ -78,7 +51,6 @@ export default function HandoutList({
             (order) => order.status === "delivered"
           );
           const ids = entry.orders.map((order) => order.id).join(",");
-          const checked = Boolean(ticked[entry.id]);
 
           return (
             <li
@@ -86,18 +58,12 @@ export default function HandoutList({
               className={`rounded-xl border ${
                 handedOut
                   ? "border-mint/30 bg-mint/5"
-                  : checked
-                    ? "border-ink/20 bg-black/[0.02]"
-                    : "border-black/15 bg-white"
+                  : "border-black/15 bg-white"
               }`}
             >
               <div>
-                <button
-                  type="button"
-                  onClick={() => toggle(entry.id)}
-                  className={`w-full px-3 py-2 text-left ${
-                    checked ? "text-muted line-through" : ""
-                  }`}
+                <div
+                  className={`px-3 py-2 ${handedOut ? "text-muted line-through" : ""}`}
                 >
                   <span className="flex items-baseline justify-between gap-2">
                     <span className="font-semibold">
@@ -116,18 +82,7 @@ export default function HandoutList({
                     ))}
                   </span>
                   <span className="text-xs text-muted">{entry.phone}</span>
-                  <span className="mt-1 block text-xs font-bold">
-                    {handedOut ? (
-                      <span className="text-mint">Delivered</span>
-                    ) : checked ? (
-                      <span className="text-muted">
-                        Ticked off. Tap again to untick.
-                      </span>
-                    ) : (
-                      ""
-                    )}
-                  </span>
-                </button>
+                </div>
               </div>
 
               {/* Everything this bag needs, on this bag. With twenty bags,
