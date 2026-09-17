@@ -175,21 +175,23 @@ export default async function OrderPage({
           </div>
 
           {order.payment_method === "card" ? (
-            <>
-              <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
-                You chose to pay by card. Message us and we will send you a link.
-              </p>
-              {order.payment_link && (
-                <a
-                  href={order.payment_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-primary w-full"
-                >
-                  Open your card link
-                </a>
-              )}
-            </>
+            order.payment_link ? (
+              <a
+                href={order.payment_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary w-full"
+              >
+                Pay {naira(order.total)} by card
+              </a>
+            ) : (
+              <CardPayment
+                order={order}
+                settings={settings}
+                batchLabel={batchLabel}
+                waiting
+              />
+            )
           ) : hasBankDetails(settings) ? (
             <>
               <dl className="space-y-2 rounded-2xl bg-shell p-3 text-sm">
@@ -223,9 +225,6 @@ export default async function OrderPage({
             </p>
           )}
 
-          <CardPayment order={order} settings={settings} batchLabel={batchLabel} />
-          {!split && <ShareLink label="Send this to whoever is paying" />}
-
           {/* Before paying is exactly when somebody realises they want another
               night. Nothing has been charged, so it simply reprices. */}
           {canStillMove && (
@@ -241,6 +240,11 @@ export default async function OrderPage({
               }))}
             />
           )}
+
+          {order.payment_method !== "card" && (
+            <CardPayment order={order} settings={settings} batchLabel={batchLabel} />
+          )}
+          {!split && <ShareLink label="Send this to whoever is paying" />}
         </section>
       )}
 
@@ -615,10 +619,13 @@ function CardPayment({
   order,
   settings,
   batchLabel,
+  waiting = false,
 }: {
   order: { id: string; customer_name: string; total: number };
   settings: Awaited<ReturnType<typeof getSettings>>;
   batchLabel: string;
+  /** They already chose card and are waiting on the link. */
+  waiting?: boolean;
 }) {
   const link = whatsappLink(
     settings.whatsapp_number,
@@ -631,9 +638,19 @@ function CardPayment({
   if (!link) return null;
 
   return (
-    <div className="rounded-2xl border border-black/10 p-3">
-      <h3 className="font-semibold">Paying by card instead?</h3>
-      <p className="mt-1 text-sm text-ink/75">{settings.card_note}</p>
+    <div
+      className={`rounded-2xl p-3 ${
+        waiting ? "bg-brand-tint" : "border border-black/10"
+      }`}
+    >
+      <h3 className="font-semibold">
+        {waiting ? "Your card link is coming" : "Paying by card instead?"}
+      </h3>
+      <p className="mt-1 text-sm text-ink/75">
+        {waiting
+          ? "Message us and we will send it. Nothing is charged until you use it."
+          : settings.card_note}
+      </p>
       <a
         href={link}
         target="_blank"
