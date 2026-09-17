@@ -14,6 +14,7 @@ import {
 import { FIRST_ORDER_DISCOUNT } from "@/lib/config";
 import { feeFor, splitFee, type Band } from "@/lib/fees";
 import { naira } from "@/lib/money";
+import FillDetails from "@/components/FillDetails";
 import { countdown } from "@/lib/time";
 import type { GroupMode } from "@/lib/types";
 import type { BatchView } from "@/lib/view";
@@ -33,12 +34,15 @@ export default function Checkout({
   promoter,
   adding,
   bands,
+  hostels,
 }: {
   batches: BatchView[];
   promoter: { code: string; name: string } | null;
   adding: AddingTo | null;
   /** The delivery price list in force, read from settings on the server. */
   bands: Band[];
+  /** The blocks the admin delivers to. Empty means anything typed is allowed. */
+  hostels: string[];
 }) {
   const cart = useCart();
   const { people } = usePeople();
@@ -54,6 +58,7 @@ export default function Checkout({
   const [name, setName] = useState(adding?.name ?? "");
   const [phone, setPhone] = useState(adding?.phone ?? "");
   const [hostel, setHostel] = useState(adding?.hostel ?? "");
+  const [, setPhoneFilled] = useState(false);
   const [state, action, pending] = useActionState<SubmitState, FormData>(submitOrder, {
     error: null,
   });
@@ -345,7 +350,17 @@ export default function Checkout({
       )}
 
       <section className="card space-y-3">
-        <h2 className="font-bold">Where it goes</h2>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-bold">Where it goes</h2>
+          <FillDetails
+            phone={phone}
+            onFilled={(me) => {
+              setName(me.name);
+              setPhoneFilled(true);
+              if (me.hostel) setHostel(me.hostel);
+            }}
+          />
+        </div>
         <div>
           <label className="label" htmlFor="name">Your name</label>
           <input
@@ -380,13 +395,53 @@ export default function Checkout({
         </div>
         <div>
           <label className="label" htmlFor="hostel">Hostel / block</label>
-          <input
-            id="hostel"
-            name="hostel"
-            required
-            value={hostel}
-            onChange={(event) => setHostel(event.target.value)}
-            placeholder="Block and room, or the hostel name"
+          {hostels.length > 0 ? (
+            <>
+              <select
+                id="hostel"
+                name="hostel"
+                required
+                value={hostels.includes(hostel) ? hostel : ""}
+                onChange={(event) => setHostel(event.target.value)}
+                className="field"
+              >
+                <option value="">Pick your block</option>
+                {hostels.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+              {hostel !== "" && !hostels.includes(hostel) && (
+                <p className="mt-1 text-xs text-brand">
+                  You used &quot;{hostel}&quot; last time, which is not on the
+                  list any more. Pick the closest block.
+                </p>
+              )}
+            </>
+          ) : (
+            <input
+              id="hostel"
+              name="hostel"
+              required
+              value={hostel}
+              onChange={(event) => setHostel(event.target.value)}
+              placeholder="Block and room, or the hostel name"
+              className="field"
+            />
+          )}
+        </div>
+
+        <div>
+          <label className="label" htmlFor="customer_note">
+            Anything we should know? (optional)
+          </label>
+          <textarea
+            id="customer_note"
+            name="customer_note"
+            rows={2}
+            maxLength={300}
+            placeholder="No pepper, call me when you are outside, room 12"
             className="field"
           />
         </div>

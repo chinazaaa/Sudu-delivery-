@@ -11,12 +11,14 @@ import {
   TEMPLATE_TOKENS,
   type TemplateKind,
 } from "@/lib/messages";
-import { saveSettings } from "../actions";
+import { addHostel, deleteHostel, saveSettings, toggleHostel } from "../actions";
+import { listHostels } from "@/lib/hostels";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsAdmin() {
   const settings = await getSettings();
+  const hostels = await listHostels(true);
 
   return (
     <div className="space-y-4">
@@ -153,6 +155,81 @@ export default async function SettingsAdmin() {
         />
         <SaveButton>Save</SaveButton>
       </form>
+
+      <section className="card space-y-3">
+        <div>
+          <h2 className="font-semibold">Where you deliver</h2>
+          <p className="text-sm text-muted">
+            The blocks a customer picks from at checkout. With nothing on this
+            list they type their own, which is how a hostel ends up spelt four
+            ways on one run sheet.
+          </p>
+        </div>
+
+        <ul className="space-y-2">
+          {hostels.map((hostel) => (
+            <li
+              key={hostel.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-black/10 px-3 py-2"
+            >
+              <span className={hostel.active ? "font-semibold" : "text-muted line-through"}>
+                {hostel.name}
+                {hostel.note && <span className="font-normal text-muted"> · {hostel.note}</span>}
+              </span>
+              <span className="flex gap-2">
+                <form action={toggleHostel}>
+                  <input type="hidden" name="hostel_id" value={hostel.id} />
+                  <input type="hidden" name="active" value={String(!hostel.active)} />
+                  <button className="chip border-black/10 bg-white py-1.5 text-xs">
+                    {hostel.active ? "Hide" : "Show"}
+                  </button>
+                </form>
+                <form action={deleteHostel}>
+                  <input type="hidden" name="hostel_id" value={hostel.id} />
+                  <button className="chip border-black/10 bg-white py-1.5 text-xs text-brand">
+                    Remove
+                  </button>
+                </form>
+              </span>
+            </li>
+          ))}
+          {hostels.length === 0 && (
+            <li className="text-sm text-muted">
+              Nothing yet, so customers type their block by hand.
+            </li>
+          )}
+        </ul>
+
+        <form action={addHostel} className="flex flex-wrap items-end gap-2">
+          <div className="grow">
+            <label className="label" htmlFor="hostel-name">Block name</label>
+            <input
+              id="hostel-name"
+              name="name"
+              placeholder="Trinity Hall"
+              className="field py-2 text-sm"
+            />
+          </div>
+          <div className="w-24">
+            <label className="label" htmlFor="hostel-sort">Order</label>
+            <input
+              id="hostel-sort"
+              name="sort_order"
+              inputMode="numeric"
+              placeholder="100"
+              className="field py-2 text-sm"
+            />
+          </div>
+          <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
+            Add block
+          </SaveButton>
+        </form>
+
+        <p className="text-xs text-muted">
+          Removing a block never changes an old order: every order keeps the
+          block it was placed with.
+        </p>
+      </section>
 
       <form action={saveSettings} className="card space-y-3">
         <div>

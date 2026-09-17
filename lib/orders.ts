@@ -30,6 +30,8 @@ export type PlaceOrderInput = {
   collectMode?: "leader" | "each";
   /** The others in a group order, with their own number and block if given. */
   people?: { name: string; phone: string; hostel: string }[];
+  /** Anything the customer asked for, in their own words. */
+  customerNote?: string;
 };
 
 export type PlaceOrderResult =
@@ -74,6 +76,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // Delivery is priced from whatever bands the admin has set, read here so a
   // price change takes effect on the next order and not on a redeploy.
   const bands = await activeBands();
+  const customerNote = (input.customerNote ?? "").trim();
 
   const promoterCode = await resolvePromoter(input.promoterCode);
   const returning = await isReturningCustomer(phone);
@@ -96,6 +99,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           collectMode,
           people: input.people ?? [],
           bands,
+          customerNote,
         })
       : await placeSingleOrder({
           batch,
@@ -110,6 +114,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           collectMode,
           people: input.people ?? [],
           bands,
+          customerNote,
         });
 
   if (!result.ok) return result;
@@ -194,6 +199,7 @@ async function placeSingleOrder(args: {
   collectMode: "leader" | "each";
   people: { name: string; phone: string; hostel: string }[];
   bands: Band[];
+  customerNote: string;
 }): Promise<PlaceOrderResult> {
   // Adding to an existing order is a second order to the same batch, not an
   // edit: the admin view merges by phone into one bag (addendum §3). Only the
@@ -236,6 +242,7 @@ async function placeSingleOrder(args: {
     group_id: group?.id ?? null,
     for_name: null,
     payment_method: args.paymentMethod,
+    customer_note: args.customerNote,
     lines,
   });
 
@@ -261,6 +268,7 @@ async function placeSplitGroup(args: {
   collectMode: "leader" | "each";
   people: { name: string; phone: string; hostel: string }[];
   bands: Band[];
+  customerNote: string;
 }): Promise<PlaceOrderResult> {
   // The leader's own items are keyed by an empty name, not by what they typed
   // in "Your name". Keying by the name collapsed the whole group into one payer
@@ -312,6 +320,8 @@ async function placeSplitGroup(args: {
       // The leader's share carries their own name on the bag label.
       for_name: isLeader ? args.name : who,
       payment_method: args.paymentMethod,
+      // The note belongs to whoever wrote it, not to everyone in the group.
+      customer_note: isLeader ? args.customerNote : "",
       lines,
     });
     if (!id) return { ok: false, error: "Could not save that group order." };
@@ -383,6 +393,7 @@ async function insertOrder(args: {
   group_id: string | null;
   for_name: string | null;
   payment_method: "transfer" | "card";
+  customer_note: string;
   lines: PricedLine[];
 }): Promise<string | null> {
   const total = Math.max(0, args.subtotal_food + args.fee - args.discount);
@@ -402,6 +413,7 @@ async function insertOrder(args: {
       group_id: args.group_id,
       for_name: args.for_name,
       payment_method: args.payment_method,
+      customer_note: args.customer_note,
       status: "pending",
     })
     .select("id")

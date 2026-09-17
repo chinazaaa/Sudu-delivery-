@@ -9,7 +9,7 @@ import { getSettings } from "@/lib/settings";
 import { siteUrl, toCard } from "@/lib/admin-templates";
 import { naira, orderRef } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
-import { markPaid, markDelivered, refundOrder, savePaymentLink } from "../../actions";
+import { markPaid, markDelivered, refundOrder, savePaymentLink, saveOrderNote } from "../../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +67,7 @@ export default async function AdminOrderPage({
           markDelivered={markDelivered}
           refund={refundOrder}
           savePaymentLink={savePaymentLink}
+          saveNote={saveOrderNote}
         />
       )}
 

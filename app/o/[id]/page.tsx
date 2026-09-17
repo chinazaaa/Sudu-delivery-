@@ -18,7 +18,6 @@ import {
   type FullOrder,
   type OrderLine,
 } from "@/lib/orders";
-import { pinFor } from "@/lib/customer-auth";
 import { formatPhone } from "@/lib/phone";
 import { clockLabel, runDateLabel, weekdayLabel } from "@/lib/time";
 import { getSettings, hasBankDetails, whatsappLink } from "@/lib/settings";
@@ -38,10 +37,13 @@ export default async function OrderPage({
   const settings = await getSettings();
   const fees = await feeStory(order);
   const repeat = await repeatLines(order);
-  // Only the person who just checked out sees their PIN, and only their own
-  // browser gets emptied. A pay-by-link friend opening this sees neither.
+  // Only the person who just checked out has their browser emptied. A
+  // pay-by-link friend opening this keeps their own cart.
+  //
+  // The PIN is deliberately not on this page. Anyone can place an order under
+  // somebody else's number, and printing it here would hand them that
+  // person's history. It goes out once, in the message sent after payment.
   const justPlaced = (await searchParams).placed === "1";
-  const pin = justPlaced ? await pinFor(order.customer_phone) : null;
 
   const batchLabel = `${weekdayLabel(order.batch.run_date)} ${SLOT_LABEL[order.batch.slot]}`;
   const expired = new Date(order.batch.cut_off_at).getTime() <= Date.now();
@@ -95,24 +97,6 @@ export default async function OrderPage({
           </span>
         </div>
       </header>
-
-      {pin && (
-        <section className="card flex flex-wrap items-center justify-between gap-3 border-brand/20 bg-brand-tint">
-          <div>
-            <h2 className="font-bold">Your PIN is {pin}</h2>
-            <p className="text-sm text-ink/75">
-              Keep it. Your phone number and this PIN open every order you have
-              ever placed, on any device.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <CopyText value={pin} label="Copy PIN" />
-            <Link href="/orders" className="btn-quiet">
-              My orders
-            </Link>
-          </div>
-        </section>
-      )}
 
       {paid && (
         <section className="card space-y-2">
@@ -261,6 +245,13 @@ export default async function OrderPage({
               you.
             </p>
           )}
+        </section>
+      )}
+
+      {order.customer_note && (
+        <section className="card">
+          <h2 className="font-bold">What you asked for</h2>
+          <p className="mt-1 text-sm text-ink/75">{order.customer_note}</p>
         </section>
       )}
 

@@ -268,6 +268,72 @@ export async function addGroupsToItem(form: FormData): Promise<void> {
   revalidatePath("/");
 }
 
+/** The delivery blocks a customer can pick from. */
+export async function addHostel(form: FormData): Promise<void> {
+  await assertAdmin();
+  const name = String(form.get("name") ?? "").trim();
+  if (!name) return;
+
+  await db()
+    .from("hostels")
+    .upsert(
+      {
+        name,
+        note: String(form.get("note") ?? "").trim(),
+        sort_order: Math.round(Number(form.get("sort_order") ?? 100)) || 100,
+        active: true,
+      },
+      { onConflict: "name" }
+    );
+
+  revalidatePath("/admin/settings");
+  revalidatePath("/checkout");
+}
+
+export async function toggleHostel(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db()
+    .from("hostels")
+    .update({ active: form.get("active") === "true" })
+    .eq("id", String(form.get("hostel_id")));
+
+  revalidatePath("/admin/settings");
+  revalidatePath("/checkout");
+}
+
+export async function deleteHostel(form: FormData): Promise<void> {
+  await assertAdmin();
+  // Orders keep the block they were placed with, as plain text, so removing a
+  // hostel from the list never rewrites where an old order went.
+  await db().from("hostels").delete().eq("id", String(form.get("hostel_id")));
+
+  revalidatePath("/admin/settings");
+  revalidatePath("/checkout");
+}
+
+/** A note on one order, for the admin's own eyes. */
+export async function saveOrderNote(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db()
+    .from("orders")
+    .update({ admin_note: String(form.get("admin_note") ?? "").trim() })
+    .eq("id", String(form.get("order_id")));
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/orders");
+}
+
+/** A note on a person, carried across every order they place. */
+export async function saveCustomerNote(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db()
+    .from("customers")
+    .update({ admin_note: String(form.get("admin_note") ?? "").trim() })
+    .eq("phone", String(form.get("phone")));
+
+  revalidatePath("/admin/customers");
+}
+
 export async function savePromoter(form: FormData): Promise<void> {
   await assertAdmin();
   const code = String(form.get("code") ?? "").trim().toUpperCase();

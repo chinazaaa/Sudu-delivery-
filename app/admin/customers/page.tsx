@@ -6,6 +6,8 @@ import { siteUrl } from "@/lib/admin-templates";
 import { whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
+import SaveButton from "@/components/SaveButton";
+import { saveCustomerNote } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -108,6 +110,19 @@ export default async function CustomersPage({
                     Their orders
                   </a>
                 </div>
+
+                <form action={saveCustomerNote} className="mt-3 flex gap-2">
+                  <input type="hidden" name="phone" value={row.phone} />
+                  <input
+                    name="admin_note"
+                    defaultValue={row.note}
+                    placeholder="Note about this customer, only you see it"
+                    className="field grow py-2 text-sm"
+                  />
+                  <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
+                    Save
+                  </SaveButton>
+                </form>
               </article>
             );
           })}

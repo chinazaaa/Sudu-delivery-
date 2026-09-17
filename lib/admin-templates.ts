@@ -60,6 +60,8 @@ export function toCard(
     otherItems: order.otherItems,
     otherFee: order.otherFee,
     inGroup: order.group_id !== null,
+    customerNote: order.customer_note ?? "",
+    adminNote: order.admin_note ?? "",
     lines: order.lines.map((line) => ({
       id: line.id,
       qty: line.qty,

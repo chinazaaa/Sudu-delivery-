@@ -117,13 +117,15 @@ export type CustomerRow = {
   orders: number;
   spend: number;
   lastOrder: string | null;
+  /** What the admin wants remembered about this person. */
+  note: string;
 };
 
 /** The customer book: who they are, what they have spent, and their PIN. */
 export async function customerRows(search?: string): Promise<CustomerRow[]> {
   const { data, error } = await db()
     .from("customers")
-    .select("phone, name, hostel, pin, promoter_code")
+    .select("phone, name, hostel, pin, promoter_code, admin_note")
     .order("name");
   if (error) throw new Error(error.message);
 
@@ -142,6 +144,7 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
       hostel: (row.hostel as string) ?? "",
       pin: (row.pin as string) ?? "",
       promoterCode: (row.promoter_code as string | null) ?? null,
+      note: (row.admin_note as string) ?? "",
       orders: mine.length,
       spend: paid.reduce((total, order) => total + (order.total as number), 0),
       lastOrder:

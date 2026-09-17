@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { activeBands } from "@/lib/settings";
+import { hostelNames } from "@/lib/hostels";
 import Checkout, { type AddingTo } from "@/components/Checkout";
 import { openBatches, recentlyClosedBatch } from "@/lib/batches";
 import { existingLoad } from "@/lib/orders";
@@ -55,6 +56,7 @@ export default async function CheckoutPage({
       promoter={promoter}
       adding={adding}
       bands={await activeBands()}
+      hostels={await hostelNames()}
     />
   );
 }

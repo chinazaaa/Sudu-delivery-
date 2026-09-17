@@ -8,7 +8,7 @@ import { getSettings } from "@/lib/settings";
 import { siteUrl, toCard } from "@/lib/admin-templates";
 import { SLOT_LABEL } from "@/lib/config";
 import { runDateLabel } from "@/lib/time";
-import { markPaid, markDelivered, refundOrder, savePaymentLink } from "../actions";
+import { markPaid, markDelivered, refundOrder, savePaymentLink, saveOrderNote } from "../actions";
 import type { OrderStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -135,6 +135,7 @@ export default async function OrdersPage({
               markDelivered={markDelivered}
               refund={refundOrder}
               savePaymentLink={savePaymentLink}
+              saveNote={saveOrderNote}
             />
           ))}
         </div>

@@ -94,12 +94,14 @@ export async function currentCustomer(): Promise<string | null> {
   return sameString(value.slice(at + 1), sign(phone)) ? phone : null;
 }
 
-/** The PIN on a number, for showing someone their own the moment they order. */
-export async function pinFor(phone: string): Promise<string | null> {
+/** Name and block last used by a number, for filling checkout back in. */
+export async function customerDetails(
+  phone: string
+): Promise<{ name: string; hostel: string } | null> {
   const { data } = await db()
     .from("customers")
-    .select("pin")
+    .select("name, hostel")
     .eq("phone", phone)
     .maybeSingle();
-  return (data?.pin as string | undefined) ?? null;
+  return data ? { name: data.name as string, hostel: (data.hostel as string) ?? "" } : null;
 }

@@ -35,6 +35,8 @@ export type OrderCardData = {
   otherItems: number;
   otherFee: number;
   inGroup: boolean;
+  customerNote: string;
+  adminNote: string;
   lines: OrderCardLine[];
   /** Ready-made WhatsApp links, one per template, built on the server. */
   templates: { kind: string; label: string; href: string }[];
@@ -51,12 +53,14 @@ export default function OrderCard({
   markDelivered,
   refund,
   savePaymentLink,
+  saveNote,
 }: {
   order: OrderCardData;
   markPaid: (form: FormData) => Promise<void>;
   markDelivered: (form: FormData) => Promise<void>;
   refund: (form: FormData) => Promise<void>;
   savePaymentLink: (form: FormData) => Promise<void>;
+  saveNote: (form: FormData) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const confirmed = order.templates.find((t) => t.kind === "confirmed");
@@ -100,6 +104,13 @@ export default function OrderCard({
           <StatusPill status={order.status} />
         </div>
       </div>
+
+      {order.customerNote && (
+        <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm text-brand-dark">
+          <span className="font-bold">They asked: </span>
+          {order.customerNote}
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {order.status === "pending" ? (
@@ -198,6 +209,24 @@ export default function OrderCard({
               </div>
             )}
           </dl>
+
+          <form action={saveNote} className="space-y-1.5">
+            <label className="label" htmlFor={`note-${order.id}`}>
+              Your note on this order
+            </label>
+            <div className="flex gap-2">
+              <input
+                id={`note-${order.id}`}
+                name="admin_note"
+                defaultValue={order.adminNote}
+                placeholder="Paid in cash at the gate, wants it early"
+                className="field grow py-2 text-sm"
+              />
+              <input type="hidden" name="order_id" value={order.id} />
+              <button className="btn-quiet shrink-0 px-4 py-2 text-sm">Save</button>
+            </div>
+            <p className="text-xs text-muted">Only you see this.</p>
+          </form>
 
           <form action={savePaymentLink} className="space-y-1.5">
             <label className="label" htmlFor={`link-${order.id}`}>

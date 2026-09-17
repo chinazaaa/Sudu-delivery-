@@ -5,7 +5,13 @@ import { redirect } from "next/navigation";
 import { placeOrder } from "@/lib/orders";
 import { lastOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
-import { checkPin, signInCustomer, signOutCustomer } from "@/lib/customer-auth";
+import {
+  checkPin,
+  currentCustomer,
+  customerDetails,
+  signInCustomer,
+  signOutCustomer,
+} from "@/lib/customer-auth";
 import type { CartLine } from "@/lib/types";
 
 export type SubmitState = { error: string | null };
@@ -35,6 +41,7 @@ export async function submitOrder(
     paymentMethod: String(form.get("payment_method") ?? "") === "card" ? "card" : "transfer",
     collectMode: String(form.get("collect_mode") ?? "") === "each" ? "each" : "leader",
     people: parsePeople(form.get("people")),
+    customerNote: String(form.get("customer_note") ?? "").trim().slice(0, 300),
   });
 
   if (!result.ok) return { error: result.error };
@@ -65,6 +72,39 @@ export async function submitReorder(
 
   if (!result.ok) return { error: result.error };
   redirect(`/o/${result.orderId}?placed=1`);
+}
+
+export type FillState = {
+  error: string | null;
+  me: { name: string; hostel: string } | null;
+};
+
+/**
+ * Fills checkout from a returning customer's own details. It asks for the PIN
+ * as well as the number, because a name and a block are worth protecting: a
+ * number alone would let anyone look up where a classmate lives.
+ */
+export async function fillMyDetails(
+  _prev: FillState,
+  form: FormData
+): Promise<FillState> {
+  const phone = normalisePhone(String(form.get("phone") ?? ""));
+  if (!phone) return { error: "That phone number doesn't look right.", me: null };
+
+  const pin = String(form.get("pin") ?? "").trim();
+  const signedIn = (await currentCustomer()) === phone;
+
+  // Already signed in on this device, so the PIN has been given once already.
+  if (!signedIn) {
+    const result = await checkPin(phone, pin);
+    if (!result.ok) return { error: result.error, me: null };
+    await signInCustomer(phone);
+  }
+
+  const me = await customerDetails(phone);
+  return me
+    ? { error: null, me }
+    : { error: "No orders under that number yet. Just fill it in below.", me: null };
 }
 
 export type PinState = { error: string | null };
