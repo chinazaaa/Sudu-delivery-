@@ -9,8 +9,15 @@ export type HandoutEntry = {
   hostel: string;
   phone: string;
   items: string[];
-  /** Every order in this bag, so a bag can be traced back to its orders. */
-  orders: { id: string; ref: string }[];
+  /** Every order in this bag: one bag can hold several. */
+  orders: {
+    id: string;
+    ref: string;
+    status: string;
+    total: string;
+    /** A prefilled WhatsApp confirmation for that order. */
+    message: string;
+  }[];
 };
 
 /**
@@ -20,9 +27,13 @@ export type HandoutEntry = {
 export default function HandoutList({
   batchId,
   entries,
+  markDelivered,
+  refund,
 }: {
   batchId: string;
   entries: HandoutEntry[];
+  markDelivered: (form: FormData) => Promise<void>;
+  refund: (form: FormData) => Promise<void>;
 }) {
   const storageKey = `sudu_handout_${batchId}`;
   const [ticked, setTicked] = useState<Record<string, boolean>>({});
@@ -85,24 +96,53 @@ export default function HandoutList({
               <span className="text-xs text-muted">{entry.phone}</span>
             </button>
 
-            {/* A bag can hold more than one order, so each is reachable. */}
-            <span className="flex flex-wrap gap-2 border-t border-black/5 px-3 py-2">
-              {entry.orders.map((order) => (
-                <Link
-                  key={order.id}
-                  href={`/admin/orders/${order.id}`}
-                  className="chip border-black/10 bg-white py-1.5 text-xs"
-                >
-                  View {order.ref}
-                </Link>
-              ))}
+            {/* Everything this bag needs, on this bag. With twenty bags,
+                scrolling to a second list to message one of them is not a
+                thing anybody does at a gate in the dark. */}
+            <div className="space-y-2 border-t border-black/5 px-3 py-2">
               <a
                 href={`tel:${entry.phone.replace(/\s/g, "")}`}
                 className="chip border-black/10 bg-white py-1.5 text-xs"
               >
-                Call
+                Call {entry.name}
               </a>
-            </span>
+
+              {entry.orders.map((order) => (
+                <div key={order.id} className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href={`/admin/orders/${order.id}`}
+                    className="chip border-black/10 bg-white py-1.5 text-xs"
+                  >
+                    {order.ref}
+                    <span className="text-muted">
+                      {order.status} · {order.total}
+                    </span>
+                  </Link>
+                  <a
+                    href={order.message}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="chip border-black/10 bg-white py-1.5 text-xs"
+                  >
+                    Confirm on WhatsApp
+                  </a>
+                  {order.status !== "delivered" && (
+                    <form action={markDelivered}>
+                      <input type="hidden" name="order_id" value={order.id} />
+                      <button className="chip border-black/10 bg-white py-1.5 text-xs">
+                        Delivered
+                      </button>
+                    </form>
+                  )}
+                  <form action={refund}>
+                    <input type="hidden" name="order_id" value={order.id} />
+                    <button className="chip border-black/10 bg-white py-1.5 text-xs text-brand">
+                      Refund
+                    </button>
+                  </form>
+                </div>
+              ))}
+            </div>
           </li>
         ))}
       </ul>

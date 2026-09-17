@@ -199,6 +199,8 @@ export default async function BatchPage({
                     each name as you hand it over.
                   </p>
                   <HandoutList
+                    markDelivered={markDelivered}
+                    refund={refundOrder}
                     batchId={batch.id}
                     entries={handout.map((bag) => ({
                       id: bag.key,
@@ -208,6 +210,9 @@ export default async function BatchPage({
                       orders: bag.orders.map((order) => ({
                         id: order.id,
                         ref: orderRef(order),
+                        status: order.status,
+                        total: naira(order.total),
+                        message: messageFor(order),
                       })),
                       // A bag one person carries for a group still needs each
                       // item labelled, or they cannot hand them out.
@@ -223,62 +228,6 @@ export default async function BatchPage({
                   />
                 </section>
 
-                {handout.length > 0 && (
-                  <section className="card space-y-2">
-                    <h2 className="font-bold">Message, deliver, refund</h2>
-                    <ul className="space-y-2">
-                      {handout.flatMap((bag) =>
-                        bag.orders.map((order) => (
-                          <li
-                            key={order.id}
-                            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-black/10 p-2.5 text-sm"
-                          >
-                            <span className="font-semibold">
-                              <Link
-                                href={`/admin/orders/${order.id}`}
-                                className="hover:text-brand"
-                              >
-                                <span className="text-muted">{orderRef(order)}</span>{" "}
-                                {bag.name}
-                              </Link>
-                              <span className="font-normal text-muted">
-                                {" "}· {order.status} · {naira(order.total)}
-                              </span>
-                            </span>
-                            <span className="flex flex-wrap gap-2">
-                              <Link
-                                href={`/admin/orders/${order.id}`}
-                                className="chip border-black/10 bg-white"
-                              >
-                                View order
-                              </Link>
-                              <a
-                                href={messageFor(order)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="chip border-black/10 bg-white"
-                              >
-                                Confirm on WhatsApp
-                              </a>
-                              <form action={markDelivered}>
-                                <input type="hidden" name="order_id" value={order.id} />
-                                <button className="chip border-black/10 bg-white">
-                                  Delivered
-                                </button>
-                              </form>
-                              <form action={refundOrder}>
-                                <input type="hidden" name="order_id" value={order.id} />
-                                <button className="chip border-black/10 bg-white text-brand">
-                                  Refund
-                                </button>
-                              </form>
-                            </span>
-                          </li>
-                        ))
-                      )}
-                    </ul>
-                  </section>
-                )}
               </>
             ),
           },
