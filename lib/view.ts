@@ -9,7 +9,6 @@ export type MenuView = {
   restaurant: {
     id: string;
     name: string;
-    closesAt: string;
     logoUrl: string;
     bannerUrl: string;
     brandHex: string;

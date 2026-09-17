@@ -33,7 +33,6 @@ export async function menuView(): Promise<MenuView[]> {
     restaurant: {
       id: restaurant.id,
       name: restaurant.name,
-      closesAt: closesLabel(restaurant.closes_at),
       logoUrl: restaurant.logo_url ?? "",
       bannerUrl: restaurant.banner_url ?? "",
       brandHex: restaurant.brand_hex ?? "",
@@ -100,14 +99,6 @@ export async function optionGroupsFor(
   return byItem;
 }
 
-/** "21:00:00" to "9pm" */
-function closesLabel(time: string): string {
-  const [h, m] = time.split(":").map(Number);
-  const suffix = h >= 12 ? "pm" : "am";
-  const hour = h % 12 === 0 ? 12 : h % 12;
-  return m ? `${hour}:${String(m).padStart(2, "0")}${suffix}` : `${hour}${suffix}`;
-}
-
 /**
  * One restaurant's menu. The restaurant page used to load every restaurant,
  * every item and every option in the system to show one of them, which is why
@@ -135,7 +126,6 @@ export async function menuViewFor(restaurantId: string): Promise<MenuView | null
     restaurant: {
       id: restaurant.id,
       name: restaurant.name,
-      closesAt: closesLabel(restaurant.closes_at),
       logoUrl: restaurant.logo_url ?? "",
       bannerUrl: restaurant.banner_url ?? "",
       brandHex: restaurant.brand_hex ?? "",

@@ -55,8 +55,8 @@ export default async function RestaurantPage({
               {place.restaurant.name}
             </h1>
             <p className="text-sm text-white/75">
-              {place.items.length} item{place.items.length === 1 ? "" : "s"} · closes{" "}
-              {place.restaurant.closesAt}
+              {place.items.length} item{place.items.length === 1 ? "" : "s"} on
+              the menu
             </p>
           </div>
         </div>
