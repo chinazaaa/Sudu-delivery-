@@ -1,5 +1,5 @@
 import { SLOT_LABEL } from "./config";
-import { clockLabel, runDateLabel, weekdayLabel } from "./time";
+import { clockLabel, runDateLabel } from "./time";
 import type { OpenBatch } from "./batches";
 import type { Batch } from "./types";
 
@@ -73,7 +73,9 @@ export function toClosedBatchView(batch: Batch): BatchView {
 export function toBatchView(batch: OpenBatch): BatchView {
   return {
     id: batch.id,
-    label: `${weekdayLabel(batch.run_date)} ${SLOT_LABEL[batch.slot]}`,
+    // The date is part of the label: two runs can be open at once, and
+    // "Friday night" does not say which Friday in exam week.
+    label: `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`,
     cutOffISO: batch.cut_off_at,
     cutOffLabel: `${runDateLabel(batch.run_date)}, ${clockLabel(batch.cut_off_at)}`,
     deliveryWindow: batch.delivery_window_text,

@@ -2,7 +2,7 @@ import { db } from "./supabase";
 import { linesFor, type OrderLine } from "./orders";
 import { SLOT_LABEL } from "./config";
 import { shareRef } from "./money";
-import { weekdayLabel } from "./time";
+import { runDateLabel, weekdayLabel } from "./time";
 import type { Batch, Order } from "./types";
 
 export type FeedOrder = Order & {
@@ -92,7 +92,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
       otherFee: siblings.reduce((sum, other) => sum + other.fee, 0),
       lines: lines.filter((line) => line.order_id === order.id),
       batchLabel: batch
-        ? `${weekdayLabel(batch.run_date)} ${SLOT_LABEL[batch.slot]}`
+        ? `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`
         : "Unknown run",
       runDate: batch?.run_date ?? "",
       deliveryWindow: batch?.delivery_window_text ?? "",

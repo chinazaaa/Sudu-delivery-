@@ -57,6 +57,8 @@ export default async function OrderPage({
     : "";
 
   const batchLabel = `${weekdayLabel(order.batch.run_date)} ${SLOT_LABEL[order.batch.slot]}`;
+  // Two runs can be open at once, so a weekday on its own does not say which.
+  const runLabel = `${runDateLabel(order.batch.run_date)} · ${SLOT_LABEL[order.batch.slot]}`;
   const expired = new Date(order.batch.cut_off_at).getTime() <= Date.now();
   const paid = order.status === "paid" || order.status === "delivered";
   const drops = dropsFor(order);
@@ -106,13 +108,17 @@ export default async function OrderPage({
           {naira(order.total)}
         </h1>
         <p className="mt-1 text-sm text-white/85">
-          {order.customer_name} · {batchLabel} · {order.batch.delivery_window_text}
+          {order.customer_name} · {runLabel} · {order.batch.delivery_window_text}
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2 text-sm font-semibold">
           <span className="rounded-full bg-white/20 px-3 py-1.5">{order.hostel}</span>
           <span className="rounded-full bg-white/20 px-3 py-1.5">
-            {expired ? "Closed" : `Closes ${clockLabel(order.batch.cut_off_at)}`}
+            {expired
+              ? "Closed"
+              : `Closes ${clockLabel(order.batch.cut_off_at)}, ${runDateLabel(
+                  order.batch.run_date
+                )}`}
           </span>
           {paid && order.batch.stage !== "ordering" && (
             <span className="rounded-full bg-white/20 px-3 py-1.5">
@@ -411,7 +417,7 @@ export default async function OrderPage({
         <section className="card">
           <h2 className="font-bold">This link has expired</h2>
           <p className="mt-1 text-sm text-ink/75">
-            The {batchLabel} batch has left. Nothing was charged.{" "}
+            The {runLabel} run has left. Nothing was charged.{" "}
             <Link href="/" className="font-semibold text-brand underline">
               Order into the next batch
             </Link>

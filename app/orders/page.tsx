@@ -6,7 +6,7 @@ import { naira } from "@/lib/money";
 import RepeatOrder from "@/components/RepeatOrder";
 import { ordersForPhone, repeatLines } from "@/lib/orders";
 import { STAGE_LABEL } from "@/lib/stages";
-import { runDateLabel, weekdayLabel } from "@/lib/time";
+import { runDateLabel } from "@/lib/time";
 import { forgetMe } from "@/app/actions";
 
 export const dynamic = "force-dynamic";
@@ -50,7 +50,7 @@ export default async function OrdersPage() {
               <Link href={`/o/${order.id}`} className="block">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-medium">
-                    {weekdayLabel(order.batch.run_date)} {SLOT_LABEL[order.batch.slot]}
+                    {runDateLabel(order.batch.run_date)} · {SLOT_LABEL[order.batch.slot]}
                     {order.for_name && (
                       <span className="text-muted"> · {order.for_name}&apos;s share</span>
                     )}
@@ -58,7 +58,6 @@ export default async function OrdersPage() {
                   <span className="font-semibold">{naira(order.total)}</span>
                 </div>
                 <p className="text-sm text-muted">
-                  {runDateLabel(order.batch.run_date)} ·{" "}
                   {order.lines.map((l) => `${l.qty}× ${l.name}`).join(", ")}
                 </p>
                 <p className="mt-1 text-sm">

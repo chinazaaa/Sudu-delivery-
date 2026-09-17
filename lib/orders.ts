@@ -6,7 +6,7 @@ import { cartConverted } from "./carts";
 import { emailAdmins } from "./email";
 import { naira, orderRef } from "./money";
 import { SLOT_LABEL } from "./config";
-import { weekdayLabel } from "./time";
+import { runDateLabel, weekdayLabel } from "./time";
 import { getBatch, isOrderable, orderCounts } from "./batches";
 import { normalisePhone } from "./phone";
 import { newPin } from "./customer-auth";
@@ -530,7 +530,7 @@ async function announceOrder(args: {
 }): Promise<void> {
   try {
     const order = await getOrder(args.orderId);
-    const label = `${weekdayLabel(args.batch.run_date)} ${SLOT_LABEL[args.batch.slot]}`;
+    const label = `${runDateLabel(args.batch.run_date)} · ${SLOT_LABEL[args.batch.slot]}`;
 
     await emailAdmins(
       `New order ${order ? orderRef(order) : ""} · ${args.name} · ` +

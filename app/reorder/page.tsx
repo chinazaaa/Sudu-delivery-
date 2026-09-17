@@ -9,7 +9,7 @@ import { normalisePhone } from "@/lib/phone";
 import { currentCustomer } from "@/lib/customer-auth";
 import { forgetMe } from "@/app/actions";
 import { SLOT_LABEL } from "@/lib/config";
-import { clockLabel, weekdayLabel } from "@/lib/time";
+import { clockLabel, runDateLabel } from "@/lib/time";
 import { db } from "@/lib/supabase";
 import { toBatchView } from "@/lib/view";
 
@@ -105,8 +105,8 @@ export default async function ReorderPage({
       {openOrder && (
         <div className="card">
           <h2 className="font-semibold">
-            You have an order in the {weekdayLabel(openOrder.batch.run_date)}{" "}
-            {SLOT_LABEL[openOrder.batch.slot]} batch
+            You have an order in the {runDateLabel(openOrder.batch.run_date)}{" "}
+            {SLOT_LABEL[openOrder.batch.slot]} run
           </h2>
           <p className="mt-1 text-sm text-ink/75">
             {openOrder.items} item{openOrder.items === 1 ? "" : "s"}, closing{" "}
