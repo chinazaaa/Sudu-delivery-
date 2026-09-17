@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ClearCart from "@/components/ClearCart";
+import LiveOrder from "@/components/LiveOrder";
 import ExpiryNote from "@/components/ExpiryNote";
 import StageTimeline from "@/components/StageTimeline";
+import { STAGE_LABEL } from "@/lib/stages";
 import ShareLink from "@/components/ShareLink";
 import CopyText from "@/components/CopyText";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira, orderRef } from "@/lib/money";
+import { fillNote, PAID_NOTE_DEFAULT } from "@/lib/messages";
 import RepeatOrder from "@/components/RepeatOrder";
 import {
   feeStory,
@@ -52,6 +55,9 @@ export default async function OrderPage({
   return (
     <div className="mx-auto max-w-2xl space-y-4 pb-10">
       {justPlaced && <ClearCart />}
+      {/* Nothing here is final until the run is: payment is matched by hand and
+          the stage is tapped by hand, so the page watches for both. */}
+      {order.status !== "refunded" && order.batch.stage !== "handed_out" && <LiveOrder />}
 
       <header
         className={`rounded-3xl p-5 text-white ${
@@ -62,7 +68,15 @@ export default async function OrderPage({
       >
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/75">
           Order {orderRef(order)} ·{" "}
-          {paid ? "Paid and on the run" : expired ? "Batch closed" : "Order saved"}
+          {order.status === "delivered"
+            ? "Delivered"
+            : paid
+              ? order.batch.stage === "ordering"
+                ? "Paid and on the run"
+                : STAGE_LABEL[order.batch.stage]
+              : expired
+                ? "Batch closed"
+                : "Order saved"}
         </p>
         <h1 className="mt-1 text-2xl font-extrabold leading-tight sm:text-3xl">
           {order.customer_name}&apos;s {batchLabel} order
@@ -100,13 +114,24 @@ export default async function OrderPage({
         </section>
       )}
 
-      {paid && order.batch.stage !== "ordering" && (
+      {paid && (
         <section className="card space-y-2">
           <h2 className="font-bold">Where your food is</h2>
-          <StageTimeline
-            stage={order.batch.stage}
-            updatedAt={order.batch.stage_updated_at}
-          />
+          {order.status === "delivered" ? (
+            <p className="text-sm text-ink/75">
+              Delivered. Thank you, and see you on the next run.
+            </p>
+          ) : order.batch.stage === "ordering" ? (
+            <p className="text-sm text-ink/75">
+              Ordering is still open. This updates by itself once the run sets
+              off, through to the moment it reaches you.
+            </p>
+          ) : (
+            <StageTimeline
+              stage={order.batch.stage}
+              updatedAt={order.batch.stage_updated_at}
+            />
+          )}
         </section>
       )}
 
@@ -301,9 +326,12 @@ export default async function OrderPage({
         <section className="card">
           <h2 className="font-bold text-mint">Paid. You are on the run.</h2>
           <p className="mt-1 text-sm text-ink/75">
-            {settings.paid_note ||
-              `We deliver to ${order.hostel}, ${order.batch.delivery_window_text.toLowerCase()}. ` +
-                `You will be called when we are outside.`}
+            {fillNote(settings.paid_note || PAID_NOTE_DEFAULT, {
+              hostel: order.hostel,
+              window: order.batch.delivery_window_text.toLowerCase(),
+              ref: orderRef(order),
+              name: order.customer_name,
+            })}
           </p>
         </section>
       ) : order.status === "refunded" ? (

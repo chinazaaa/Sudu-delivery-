@@ -4,6 +4,7 @@ import BandEditor from "@/components/admin/BandEditor";
 import { parseBands } from "@/lib/fees";
 import { getSettings, hasBankDetails } from "@/lib/settings";
 import {
+  PAID_NOTE_DEFAULT,
   TEMPLATE_DEFAULT,
   TEMPLATE_FIELD,
   TEMPLATE_LABEL,
@@ -199,8 +200,11 @@ export default async function SettingsAdmin() {
               <textarea
                 id={`msg-${kind}`}
                 name={TEMPLATE_FIELD[kind]}
-                defaultValue={String(settings[TEMPLATE_FIELD[kind]] ?? "")}
-                placeholder={TEMPLATE_DEFAULT[kind]}
+                // The wording that is actually in use, so editing it is a
+                // change rather than writing the whole message again.
+                defaultValue={
+                  String(settings[TEMPLATE_FIELD[kind]] ?? "") || TEMPLATE_DEFAULT[kind]
+                }
                 rows={4}
                 className="field font-mono text-sm"
               />
@@ -214,14 +218,13 @@ export default async function SettingsAdmin() {
       <form action={saveSettings} className="card space-y-3">
         <h2 className="font-semibold">What a paid customer reads</h2>
         <p className="text-sm text-muted">
-          The line on their order page once the money lands. Leave it blank and it
-          says where and when the food is coming.
+          The line on their order page once the money lands. It takes the same
+          {" "}{"{hostel}"}, {"{window}"}, {"{ref}"} and {"{name}"} as the messages.
         </p>
         <textarea
           name="paid_note"
-          defaultValue={settings.paid_note}
+          defaultValue={settings.paid_note || PAID_NOTE_DEFAULT}
           rows={2}
-          placeholder="We deliver to your hostel in the delivery window. You will be called when we are outside."
           className="field"
         />
         <SaveButton>Save</SaveButton>

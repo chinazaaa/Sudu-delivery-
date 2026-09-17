@@ -74,6 +74,23 @@ export const TEMPLATE_TOKENS: { token: string; means: string }[] = [
   { token: "{card_link}", means: "the card link saved on that order" },
 ];
 
+/** The line a paid customer reads on their order page, until it is rewritten. */
+export const PAID_NOTE_DEFAULT =
+  "We deliver to {hostel}, {window}. You will be called when we are outside.";
+
+/** Fills the same tokens into a short note that is not a whole message. */
+export function fillNote(
+  text: string,
+  values: { hostel: string; window: string; ref: string; name: string }
+): string {
+  return Object.entries({
+    "{hostel}": values.hostel,
+    "{window}": values.window,
+    "{ref}": values.ref,
+    "{name}": values.name,
+  }).reduce((filled, [token, value]) => filled.split(token).join(value), text);
+}
+
 type TemplateOrder = {
   id: string;
   order_no: number | null;
