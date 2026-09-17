@@ -87,24 +87,21 @@ const EMPTY: Settings = {
 };
 
 export async function getSettings(): Promise<Settings> {
-  const { data } = await db()
+  // Every column, rather than a list of them. Naming each one means that
+  // adding a setting to the code and forgetting to add the column makes the
+  // whole row come back empty, and every setting on the site quietly reverts
+  // to its default. One missing column should cost one setting, not all of
+  // them.
+  const { data, error } = await db()
     .from("settings")
-    .select(
-      "bank_name, bank_account_name, bank_account_number, whatsapp_number, card_note, " +
-        "instagram_handle, whatsapp_group_link, pitch_line, product_notes, footer_line, " +
-        "msg_confirmed, msg_payment, msg_card, msg_pin, msg_ready, msg_late, paid_note, " +
-        "fee_bands, admin_emails, abandon_minutes, window_afternoon, window_night, " +
-        "order_horizon_days, tagline, auto_headline, auto_lines"
-    )
+    .select("*")
     .eq("id", true)
     .maybeSingle();
+  if (error) throw new Error(error.message);
+
   return { ...EMPTY, ...((data ?? {}) as Partial<Settings>) };
 }
 
-/**
- * Settings for chrome that must render even when nothing is configured yet,
- * such as the footer on the not-found page during a build with no environment.
- */
 export async function safeSettings(): Promise<Settings> {
   try {
     return await getSettings();

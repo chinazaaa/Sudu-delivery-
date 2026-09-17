@@ -728,10 +728,19 @@ export async function saveSettings(form: FormData): Promise<void> {
   }
   if (Object.keys(patch).length === 0) return;
 
-  await db()
+  const { error } = await db()
     .from("settings")
     .update({ ...patch, updated_at: new Date().toISOString() })
     .eq("id", true);
+
+  // A setting that saves to nowhere looks exactly like one that will not
+  // stick, and you would have no way to tell which.
+  if (error) {
+    throw new Error(
+      `Could not save that: ${error.message}. ` +
+        "If it mentions a column, run supabase/update.sql in Supabase."
+    );
+  }
 
   revalidatePath("/admin", "layout");
   revalidatePath("/", "layout");
