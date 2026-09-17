@@ -324,14 +324,22 @@ export default async function BatchPage({
                         <p className="mt-1 text-sm">
                           {order.lines.map((l) => `${l.qty}× ${l.name}`).join(", ")}
                         </p>
-                        <a
-                          href={messageFor(order)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn-quiet mt-2 w-full text-sm"
-                        >
-                          Send payment details on WhatsApp
-                        </a>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Link
+                            href={`/admin/orders/${order.id}`}
+                            className="chip border-black/10 bg-white"
+                          >
+                            View order
+                          </Link>
+                          <a
+                            href={messageFor(order)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="chip border-black/10 bg-white"
+                          >
+                            Send payment details on WhatsApp
+                          </a>
+                        </div>
                         <form action={markPaid} className="mt-2 flex gap-2">
                           <input type="hidden" name="order_id" value={order.id} />
                           <input
