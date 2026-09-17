@@ -31,6 +31,8 @@ export type Settings = {
   /** What customers are told about when each run lands. */
   window_afternoon: string;
   window_night: string;
+  /** How many days ahead a customer may order into. */
+  order_horizon_days: number;
 };
 
 const EMPTY: Settings = {
@@ -56,6 +58,7 @@ const EMPTY: Settings = {
   abandon_minutes: 45,
   window_afternoon: "",
   window_night: "",
+  order_horizon_days: 7,
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -65,7 +68,8 @@ export async function getSettings(): Promise<Settings> {
       "bank_name, bank_account_name, bank_account_number, whatsapp_number, card_note, " +
         "instagram_handle, whatsapp_group_link, pitch_line, product_notes, footer_line, " +
         "msg_confirmed, msg_payment, msg_card, msg_pin, msg_ready, msg_late, paid_note, " +
-        "fee_bands, admin_emails, abandon_minutes, window_afternoon, window_night"
+        "fee_bands, admin_emails, abandon_minutes, window_afternoon, window_night, " +
+        "order_horizon_days"
     )
     .eq("id", true)
     .maybeSingle();

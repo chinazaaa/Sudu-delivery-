@@ -35,6 +35,7 @@ const EMPTY_SETTINGS = {
   abandon_minutes: 45,
   window_afternoon: "",
   window_night: "",
+  order_horizon_days: 7,
 };
 import type { OrderLine } from "../lib/orders";
 

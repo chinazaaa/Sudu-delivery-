@@ -483,6 +483,7 @@ const SETTING_FIELDS = [
   "abandon_minutes",
   "window_afternoon",
   "window_night",
+  "order_horizon_days",
 ] as const;
 
 export async function saveSettings(form: FormData): Promise<void> {

@@ -1,5 +1,5 @@
 import { db } from "./supabase";
-import { deliveryWindows } from "./settings";
+import { deliveryWindows, safeSettings } from "./settings";
 import {
   CUT_OFFS,
   DELIVERY_WINDOWS,
@@ -97,11 +97,18 @@ export async function openBatches(): Promise<OpenBatch[]> {
   await ensureUpcomingBatches();
   await closeExpiredBatches();
 
+  // Runs exist three weeks out so they can be planned, but a customer is only
+  // offered the near ones: food is not planned a fortnight ahead, and an order
+  // that sits unpaid that long is priced on a menu that has since moved.
+  const horizon = (await safeSettings()).order_horizon_days || 7;
+  const until = new Date(Date.now() + horizon * 86400000).toISOString();
+
   const { data, error } = await db()
     .from("batches")
     .select("*")
     .eq("status", "open")
     .gt("cut_off_at", new Date().toISOString())
+    .lt("cut_off_at", until)
     .order("cut_off_at", { ascending: true })
     .limit(8);
   if (error) throw new Error(error.message);

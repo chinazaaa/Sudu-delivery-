@@ -185,10 +185,25 @@ export default async function SettingsAdmin() {
             />
           </div>
         </div>
+        <div className="w-44">
+          <label className="label" htmlFor="order_horizon_days">
+            Customers can order
+          </label>
+          <input
+            id="order_horizon_days"
+            name="order_horizon_days"
+            inputMode="numeric"
+            defaultValue={settings.order_horizon_days}
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">Days ahead.</p>
+        </div>
         <SaveButton>Save</SaveButton>
         <p className="text-xs text-muted">
-          A run already created keeps what it was created with. Change that one
-          on the run itself, under Controls.
+          A run already created keeps the wording it was created with; change
+          that one on the run itself, under Controls. Runs are created three
+          weeks ahead either way, so you can plan them; the number above only
+          decides how far ahead a customer is offered one.
         </p>
       </form>
 

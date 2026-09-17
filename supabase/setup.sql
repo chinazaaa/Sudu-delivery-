@@ -444,6 +444,9 @@ alter table carts add column if not exists handled_reason text not null default 
 alter table settings add column if not exists window_afternoon text not null default '';
 alter table settings add column if not exists window_night     text not null default '';
 
+-- How far ahead a customer can order.
+alter table settings add column if not exists order_horizon_days int not null default 7;
+
 -- Somewhere to keep the photographs, readable by anyone since they are the
 -- pictures on a public menu.
 insert into storage.buckets (id, name, public)

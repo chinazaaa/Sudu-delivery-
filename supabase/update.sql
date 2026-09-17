@@ -106,5 +106,8 @@ alter table carts add column if not exists handled_reason text not null default 
 alter table settings add column if not exists window_afternoon text not null default '';
 alter table settings add column if not exists window_night     text not null default '';
 
+-- How far ahead a customer can order.
+alter table settings add column if not exists order_horizon_days int not null default 7;
+
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';
