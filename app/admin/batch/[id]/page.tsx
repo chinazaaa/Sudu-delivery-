@@ -213,8 +213,26 @@ export default async function BatchPage({
                   <p className="text-sm text-muted">
                     Anything added later in the week is already merged in. Mark
                     each one delivered as you hand it over: that is the tick,
-                    and the customer sees it on their own page.
+                    and the customer sees it on their own page. Setting the run
+                    itself to &quot;Delivered, every bag&quot; at the top does
+                    all of them at once.
                   </p>
+                  {handout.length > 0 && (
+                    <form action={setBagDelivered} className="pb-1">
+                      <input
+                        type="hidden"
+                        name="order_ids"
+                        value={handout.flatMap((bag) => bag.orders.map((o) => o.id)).join(",")}
+                      />
+                      <input type="hidden" name="delivered" value="true" />
+                      <ConfirmButton
+                        className="px-4 py-2 text-sm"
+                        confirm={`Yes, all ${handout.length} handed over`}
+                      >
+                        Mark every bag delivered
+                      </ConfirmButton>
+                    </form>
+                  )}
                   <HandoutList
                     setDelivered={setBagDelivered}
                     refund={refundOrder}

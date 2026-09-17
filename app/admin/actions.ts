@@ -638,10 +638,23 @@ export async function setBatchStage(form: FormData): Promise<void> {
         ? "delivered"
         : "closed";
 
+  const batchId = String(form.get("batch_id"));
+
   await db()
     .from("batches")
     .update({ stage, status, stage_updated_at: new Date().toISOString() })
-    .eq("id", String(form.get("batch_id")));
+    .eq("id", batchId);
+
+  // Handed out means handed out: every paid order in the run is delivered,
+  // rather than a run marked delivered sitting above twenty orders that still
+  // read "paid". Anything unpaid is left alone, since it never travelled.
+  if (stage === "handed_out") {
+    await db()
+      .from("orders")
+      .update({ status: "delivered" })
+      .eq("batch_id", batchId)
+      .eq("status", "paid");
+  }
 
   revalidatePath("/admin");
   revalidatePath("/orders");

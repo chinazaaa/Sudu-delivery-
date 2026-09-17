@@ -26,7 +26,7 @@ export const STAGE_ACTION: Record<BatchStage, string> = {
   at_counter: "At counter",
   on_the_road: "On the road",
   at_drop: "At the hostels",
-  handed_out: "Delivered",
+  handed_out: "Delivered, every bag",
 };
 
 export function stageIndex(stage: BatchStage): number {
