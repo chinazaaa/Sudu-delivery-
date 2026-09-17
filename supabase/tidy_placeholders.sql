@@ -38,6 +38,18 @@ where m.name in ('Medium pepperoni', 'Medium BBQ chicken', 'Large meat lovers',
                  'Refuel Meal', 'Zinger burger meal')
   and not exists (select 1 from order_items oi where oi.menu_item_id = m.id);
 
+-- Burger Nation was seeded as a placeholder before Burger King had a menu.
+-- It goes entirely, along with anything filed under it.
+delete from menu_items m
+using restaurants r
+where m.restaurant_id = r.id
+  and r.name ilike '%burger nation%'
+  and not exists (select 1 from order_items oi where oi.menu_item_id = m.id);
+
+delete from restaurants r
+where r.name ilike '%burger nation%'
+  and not exists (select 1 from menu_items m where m.restaurant_id = r.id);
+
 -- Anything still switched off across the whole site, so you can see at a
 -- glance what a customer is being shown as sold out.
 select r.name as restaurant, m.name, m.price_food
