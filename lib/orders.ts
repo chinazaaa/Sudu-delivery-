@@ -102,6 +102,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           groupMode: input.groupMode ?? null,
           paymentMethod,
           collectMode,
+          people: input.people ?? [],
         });
 
   if (!result.ok) return result;
@@ -184,6 +185,7 @@ async function placeSingleOrder(args: {
   groupMode: GroupMode | null;
   paymentMethod: "transfer" | "card";
   collectMode: "leader" | "each";
+  people: { name: string; phone: string; hostel: string }[];
 }): Promise<PlaceOrderResult> {
   // Adding to an existing order is a second order to the same batch, not an
   // edit: the admin view merges by phone into one bag (addendum §3). Only the
@@ -199,6 +201,7 @@ async function placeSingleOrder(args: {
   if (args.groupMode === "one_payer") {
     group = await createGroup(args, "one_payer", args.collectMode);
     if (!group) return { ok: false, error: "Could not start that group order." };
+    await saveMembers(group.id, args.people);
   }
 
   // An untagged line in a group belongs to whoever is ordering, so it is
@@ -266,6 +269,7 @@ async function placeSplitGroup(args: {
 
   const group = await createGroup(args, "split", args.collectMode);
   if (!group) return { ok: false, error: "Could not start that group order." };
+  await saveMembers(group.id, args.people);
 
   // The band is set by the whole load, then shared out by what each person got.
   const people = [...byPerson.entries()];
@@ -323,6 +327,36 @@ async function createGroup(
     .select("*")
     .single();
   return (data as OrderGroup) ?? null;
+}
+
+/**
+ * Keeps the name, number and block of everyone in a group. The bag labels come
+ * from the order lines; this is how anyone can be phoned when the food lands.
+ */
+async function saveMembers(
+  groupId: string,
+  people: { name: string; phone: string; hostel: string }[]
+): Promise<void> {
+  const rows = people
+    .filter((person) => person.name.trim().length > 0)
+    .map((person) => ({
+      group_id: groupId,
+      name: person.name.trim(),
+      phone: normalisePhone(person.phone) ?? person.phone.trim(),
+      hostel: person.hostel.trim(),
+    }));
+  if (rows.length === 0) return;
+  await db().from("group_members").insert(rows);
+}
+
+export async function membersOf(groupId: string | null): Promise<GroupMember[]> {
+  if (!groupId) return [];
+  const { data } = await db()
+    .from("group_members")
+    .select("id, name, phone, hostel")
+    .eq("group_id", groupId)
+    .order("name");
+  return (data ?? []) as GroupMember[];
 }
 
 async function insertOrder(args: {
@@ -495,12 +529,25 @@ export type GroupShare = {
   for_name: string | null;
   total: number;
   status: Order["status"];
+  customer_name: string;
+  customer_phone: string;
+  hostel: string;
+  /** That person's own food, so the page can itemise who has what. */
+  lines: OrderLine[];
+};
+export type GroupMember = {
+  id: string;
+  name: string;
+  phone: string;
+  hostel: string;
 };
 export type FullOrder = Order & {
   batch: Batch;
   lines: OrderLine[];
   group: OrderGroup | null;
   shares: GroupShare[];
+  /** Everyone named in the group, with a number to call. */
+  members: GroupMember[];
 };
 
 export async function getOrder(id: string): Promise<FullOrder | null> {
@@ -516,6 +563,7 @@ export async function getOrder(id: string): Promise<FullOrder | null> {
     lines: await linesFor([id]),
     group: await getGroup(order.group_id),
     shares: await sharesFor(order.group_id),
+    members: await membersOf(order.group_id),
   };
 }
 
@@ -530,10 +578,16 @@ export async function sharesFor(groupId: string | null): Promise<GroupShare[]> {
   if (!groupId) return [];
   const { data } = await db()
     .from("orders")
-    .select("id, for_name, total, status")
+    .select("id, for_name, total, status, customer_name, customer_phone, hostel")
     .eq("group_id", groupId)
     .order("for_name");
-  return (data ?? []) as GroupShare[];
+
+  const rows = (data ?? []) as Omit<GroupShare, "lines">[];
+  const lines = await linesFor(rows.map((row) => row.id));
+  return rows.map((row) => ({
+    ...row,
+    lines: lines.filter((line) => line.order_id === row.id),
+  }));
 }
 
 /** Order lines with the item and restaurant names joined on. */

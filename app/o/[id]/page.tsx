@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ClearCart from "@/components/ClearCart";
 import ExpiryNote from "@/components/ExpiryNote";
 import StageTimeline from "@/components/StageTimeline";
 import ShareLink from "@/components/ShareLink";
+import CopyText from "@/components/CopyText";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
-import { getOrder } from "@/lib/orders";
+import { getOrder, type FullOrder, type OrderLine } from "@/lib/orders";
+import { pinFor } from "@/lib/customer-auth";
 import { formatPhone } from "@/lib/phone";
 import { clockLabel, runDateLabel, weekdayLabel } from "@/lib/time";
 import { getSettings, hasBankDetails, whatsappLink } from "@/lib/settings";
@@ -14,38 +17,186 @@ export const dynamic = "force-dynamic";
 
 export default async function OrderPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ placed?: string }>;
 }) {
   const order = await getOrder((await params).id);
   if (!order) notFound();
 
   const settings = await getSettings();
+  // Only the person who just checked out sees their PIN, and only their own
+  // browser gets emptied. A pay-by-link friend opening this sees neither.
+  const justPlaced = (await searchParams).placed === "1";
+  const pin = justPlaced ? await pinFor(order.customer_phone) : null;
 
   const batchLabel = `${weekdayLabel(order.batch.run_date)} ${SLOT_LABEL[order.batch.slot]}`;
   const expired = new Date(order.batch.cut_off_at).getTime() <= Date.now();
+  const paid = order.status === "paid" || order.status === "delivered";
   const awaitingPayment = order.status === "pending";
+  const drops = dropsFor(order);
 
   return (
-    <div className="space-y-5">
-      <section className="card space-y-1">
-        <h1 className="text-xl font-bold">
-          {order.customer_name}&apos;s order · {batchLabel}
+    <div className="mx-auto max-w-2xl space-y-4 pb-10">
+      {justPlaced && <ClearCart />}
+
+      <header
+        className={`rounded-3xl p-5 text-white ${
+          paid
+            ? "bg-gradient-to-br from-mint to-[#0b7c45]"
+            : "bg-gradient-to-br from-brand to-brand-dark"
+        }`}
+      >
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/75">
+          {paid ? "Paid and on the run" : expired ? "Batch closed" : "Order saved"}
+        </p>
+        <h1 className="mt-1 text-2xl font-extrabold leading-tight sm:text-3xl">
+          {order.customer_name}&apos;s {batchLabel} order
         </h1>
-        <p className="text-sm text-ink/75">
-          {runDateLabel(order.batch.run_date)} · {order.batch.delivery_window_text} ·{" "}
-          {order.hostel}
+        <p className="mt-1 text-sm text-white/85">
+          {runDateLabel(order.batch.run_date)} · {order.batch.delivery_window_text}
         </p>
-        <p className="text-sm text-ink/75">
-          Batch closes {clockLabel(order.batch.cut_off_at)}
-        </p>
-      </section>
+
+        <div className="mt-4 flex flex-wrap gap-2 text-sm font-semibold">
+          <span className="rounded-full bg-white/20 px-3 py-1.5">
+            {naira(order.total)} total
+          </span>
+          <span className="rounded-full bg-white/20 px-3 py-1.5">{order.hostel}</span>
+          <span className="rounded-full bg-white/20 px-3 py-1.5">
+            {expired ? "Closed" : `Closes ${clockLabel(order.batch.cut_off_at)}`}
+          </span>
+        </div>
+      </header>
+
+      {pin && (
+        <section className="card flex flex-wrap items-center justify-between gap-3 border-brand/20 bg-brand-tint">
+          <div>
+            <h2 className="font-bold">Your PIN is {pin}</h2>
+            <p className="text-sm text-ink/75">
+              Keep it. Your phone number and this PIN open every order you have
+              ever placed, on any device.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <CopyText value={pin} label="Copy PIN" />
+            <Link href="/orders" className="btn-quiet">
+              My orders
+            </Link>
+          </div>
+        </section>
+      )}
+
+      {paid && order.batch.stage !== "ordering" && (
+        <section className="card space-y-2">
+          <h2 className="font-bold">Where your food is</h2>
+          <StageTimeline
+            stage={order.batch.stage}
+            updatedAt={order.batch.stage_updated_at}
+          />
+        </section>
+      )}
+
+      {drops.length > 1 && (
+        <section className="card space-y-3">
+          <div>
+            <h2 className="font-bold">Where it goes</h2>
+            <p className="text-sm text-muted">
+              {order.group?.collect_mode === "each"
+                ? "Every name is called separately at the drop point."
+                : `${order.group?.leader_name ?? order.customer_name} collects every bag and hands them out.`}
+            </p>
+          </div>
+
+          {drops.map((drop) => (
+            <article
+              key={drop.key}
+              className="space-y-2 rounded-2xl border border-black/10 p-3"
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <h3 className="font-bold">{drop.name}</h3>
+                <span className="text-sm font-semibold">{naira(drop.food)}</span>
+              </div>
+
+              <ul className="space-y-0.5 text-sm text-ink/75">
+                {drop.lines.map((line) => (
+                  <li key={line.id}>
+                    {line.qty}× {line.name}
+                    {line.choices.length > 0 && (
+                      <span className="text-muted"> · {line.choices.join(", ")}</span>
+                    )}
+                    <span className="text-muted"> · {line.restaurant}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="chip border-black/10 bg-shell font-medium">
+                  {drop.hostel || order.hostel}
+                </span>
+                {drop.phone ? (
+                  <>
+                    <a
+                      href={`tel:${drop.phone}`}
+                      className="chip border-black/10 bg-white hover:border-ink/30"
+                    >
+                      Call {formatPhone(drop.phone)}
+                    </a>
+                    {whatsappLink(drop.phone, `Hi ${drop.name}, your Sudu order is here.`) && (
+                      <a
+                        href={
+                          whatsappLink(
+                            drop.phone,
+                            `Hi ${drop.name}, your Sudu order is here.`
+                          )!
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="chip border-black/10 bg-white hover:border-ink/30"
+                      >
+                        WhatsApp
+                      </a>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-muted">No number saved for this bag</span>
+                )}
+                {drop.status && (
+                  <span
+                    className={`chip border-transparent ${
+                      drop.status === "pending"
+                        ? "bg-brand-tint text-brand-dark"
+                        : "bg-mint/10 text-mint"
+                    }`}
+                  >
+                    {drop.status === "pending" ? "Unpaid" : drop.status}
+                  </span>
+                )}
+                {drop.key === order.id && (
+                  <span className="text-xs text-muted">This link</span>
+                )}
+              </div>
+            </article>
+          ))}
+
+          {order.group?.mode === "split" && (
+            <p className="text-xs text-muted">
+              Send each person their own link. Anything still unpaid at the cut-off is
+              dropped and the rest of the order still travels. If that makes the order
+              smaller, the delivery fee drops with it and the difference comes back to
+              you.
+            </p>
+          )}
+        </section>
+      )}
 
       <section className="card space-y-2">
-        <h2 className="font-semibold">Items</h2>
+        <h2 className="font-bold">
+          {drops.length > 1 ? "Everything in this order" : "Items"}
+        </h2>
         <ul className="space-y-1 text-sm">
           {order.lines.map((line) => (
-            <li key={line.id} className="flex justify-between">
+            <li key={line.id} className="flex justify-between gap-3">
               <span>
                 {line.qty}× {line.name}{" "}
                 <span className="text-muted">({line.restaurant})</span>
@@ -55,7 +206,9 @@ export default async function OrderPage({
                   </span>
                 )}
               </span>
-              <span>{naira(line.qty * line.unit_price_at_order)}</span>
+              <span className="shrink-0 font-medium">
+                {naira(line.qty * line.unit_price_at_order)}
+              </span>
             </li>
           ))}
         </ul>
@@ -69,60 +222,9 @@ export default async function OrderPage({
         </dl>
       </section>
 
-      {(order.status === "paid" || order.status === "delivered") &&
-        order.batch.stage !== "ordering" && (
-          <section className="card space-y-2">
-            <h2 className="font-semibold">Where your food is</h2>
-            <StageTimeline
-              stage={order.batch.stage}
-              updatedAt={order.batch.stage_updated_at}
-            />
-          </section>
-        )}
-
-      {order.group && order.shares.length > 1 && (
-        <section className="card space-y-2">
-          <h2 className="font-semibold">
-            {order.group.mode === "split" ? "Everyone's share" : "Group order"}
-          </h2>
-          <ul className="space-y-1 text-sm">
-            {order.shares.map((share) => (
-              <li key={share.id} className="flex justify-between gap-3">
-                <span>
-                  {share.for_name ?? order.customer_name}
-                  {share.id === order.id && <span className="text-muted"> · this link</span>}
-                </span>
-                <span
-                  className={
-                    share.status === "pending" ? "text-brand" : "text-green-700"
-                  }
-                >
-                  {naira(share.total)} ·{" "}
-                  {share.status === "pending" ? "unpaid" : share.status}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="rounded-xl bg-black/[0.03] px-3 py-2 text-sm">
-            {order.group.collect_mode === "each"
-              ? "Everyone collects their own bag. Each name is called at the drop point."
-              : `${order.group.leader_name} collects every bag and hands them out.`}
-          </p>
-
-          {order.group.mode === "split" && (
-            <p className="text-xs text-muted">
-              Send each person their own link. Anything still unpaid at the cut-off is
-              dropped and the rest of the order still travels. If that makes the order
-              smaller, the delivery fee drops with it and the difference comes back to
-              you.
-            </p>
-          )}
-        </section>
-      )}
-
       {order.refund_owed > 0 && (
-        <section className="card">
-          <h2 className="font-semibold">Refund owed: {naira(order.refund_owed)}</h2>
+        <section className="card border-mint/30 bg-mint/5">
+          <h2 className="font-bold">Refund owed: {naira(order.refund_owed)}</h2>
           <p className="mt-1 text-sm text-ink/75">
             Your group got smaller, so the delivery fee dropped a band. The difference
             comes back to you.
@@ -130,9 +232,9 @@ export default async function OrderPage({
         </section>
       )}
 
-      {order.status === "paid" || order.status === "delivered" ? (
+      {paid ? (
         <section className="card">
-          <h2 className="font-semibold text-green-700">Paid. You are on the run.</h2>
+          <h2 className="font-bold text-mint">Paid. You are on the run.</h2>
           <p className="mt-1 text-sm text-ink/75">
             Come to the drop point at {order.batch.delivery_window_text.toLowerCase()}.
             Names are called from the list. No reminders will be sent, because paid is
@@ -141,49 +243,56 @@ export default async function OrderPage({
         </section>
       ) : order.status === "refunded" ? (
         <section className="card">
-          <h2 className="font-semibold">Refunded</h2>
+          <h2 className="font-bold">Refunded</h2>
           <p className="mt-1 text-sm text-ink/75">
             This order was refunded in full. Sorry about that.{" "}
-            <Link href="/" className="text-brand underline">
-              order into the next batch
+            <Link href="/" className="font-semibold text-brand underline">
+              Order into the next batch
             </Link>
             .
           </p>
         </section>
       ) : expired ? (
         <section className="card">
-          <h2 className="font-semibold">This link has expired</h2>
+          <h2 className="font-bold">This link has expired</h2>
           <p className="mt-1 text-sm text-ink/75">
             The {batchLabel} batch has left. Nothing was charged.{" "}
-            <Link href="/" className="text-brand underline">
+            <Link href="/" className="font-semibold text-brand underline">
               Order into the next batch
-            </Link>{" "}
+            </Link>
             . It takes one tap.
           </p>
         </section>
       ) : (
         <section className="card space-y-3">
-          <h2 className="font-semibold">Pay {naira(order.total)} to confirm</h2>
+          <h2 className="text-lg font-extrabold">
+            Pay {naira(order.total)} to confirm
+          </h2>
           <ExpiryNote cutOffISO={order.batch.cut_off_at} />
+
           {order.payment_method === "card" ? (
             <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
               You chose to pay by card. Message us and we will send you a card link.
             </p>
           ) : hasBankDetails(settings) ? (
             <>
-              <dl className="space-y-1 rounded-lg bg-black/5 px-3 py-2 text-sm">
+              <dl className="space-y-2 rounded-2xl bg-shell p-3 text-sm">
                 <Row label="Bank" value={settings.bank_name} />
                 <Row label="Account name" value={settings.bank_account_name || "Not set"} />
-                <Row label="Account number" value={settings.bank_account_number} />
-                <Row label="Use as narration" value={formatPhone(order.customer_phone)} />
+                <Row label="Account number" value={settings.bank_account_number} strong />
+                <Row label="Narration" value={formatPhone(order.customer_phone)} />
               </dl>
+              <CopyText
+                value={settings.bank_account_number}
+                label="Copy account number"
+              />
               <p className="text-sm text-ink/75">
-                Put the phone number in the transfer narration. That is how the payment is
-                matched to this order. Transfer only, and no cash at the drop point.
+                Put your phone number in the transfer narration. That is how the payment
+                is matched to this order. Transfer only, and no cash at the drop point.
               </p>
             </>
           ) : (
-            <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
               Transfer details are being set up. Message us and we will send them to you.
             </p>
           )}
@@ -205,6 +314,64 @@ export default async function OrderPage({
       )}
     </div>
   );
+}
+
+type Drop = {
+  key: string;
+  name: string;
+  phone: string;
+  hostel: string;
+  lines: OrderLine[];
+  food: number;
+  status: string | null;
+};
+
+/**
+ * Who gets what at the drop point. A split group is one order per person, so
+ * the shares carry it; a one-payer group is a single order whose lines are
+ * labelled, so the names and numbers come from the group's members.
+ */
+function dropsFor(order: FullOrder): Drop[] {
+  if (order.shares.length > 1) {
+    return order.shares.map((share) => {
+      const name = share.for_name ?? share.customer_name;
+      return {
+        key: share.id,
+        name,
+        phone: share.customer_phone,
+        hostel: share.hostel,
+        lines: share.lines,
+        food: foodOf(share.lines),
+        status: share.status,
+      };
+    });
+  }
+
+  if (!order.group) return [];
+
+  const byName = new Map<string, OrderLine[]>();
+  for (const line of order.lines) {
+    const who = line.for_name?.trim() || order.customer_name;
+    byName.set(who, [...(byName.get(who) ?? []), line]);
+  }
+
+  return [...byName.entries()].map(([name, lines]) => {
+    const member = order.members.find((m) => m.name === name);
+    const isLeader = name === order.customer_name;
+    return {
+      key: name,
+      name,
+      phone: isLeader ? order.customer_phone : member?.phone ?? "",
+      hostel: (isLeader ? order.hostel : member?.hostel) || order.hostel,
+      lines,
+      food: foodOf(lines),
+      status: null,
+    };
+  });
+}
+
+function foodOf(lines: OrderLine[]): number {
+  return lines.reduce((sum, line) => sum + line.qty * line.unit_price_at_order, 0);
 }
 
 /**
@@ -231,8 +398,8 @@ function CardPayment({
   if (!link) return null;
 
   return (
-    <div className="rounded-lg border border-black/10 p-3">
-      <h3 className="font-medium">Paying by card instead?</h3>
+    <div className="rounded-2xl border border-black/10 p-3">
+      <h3 className="font-semibold">Paying by card instead?</h3>
       <p className="mt-1 text-sm text-ink/75">{settings.card_note}</p>
       <a
         href={link}

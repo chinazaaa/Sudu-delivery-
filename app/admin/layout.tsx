@@ -1,4 +1,4 @@
-import Link from "next/link";
+import AdminShell from "@/components/admin/Shell";
 import AdminLogin from "@/components/AdminLogin";
 import { isSignedIn } from "@/lib/admin-auth";
 import { logout } from "./actions";
@@ -10,20 +10,13 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  if (!(await isSignedIn())) return <AdminLogin />;
+  if (!(await isSignedIn())) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center">
+        <AdminLogin />
+      </div>
+    );
+  }
 
-  return (
-    <div className="space-y-4">
-      <nav className="flex flex-wrap items-center gap-3 text-sm">
-        <Link href="/admin" className="font-semibold hover:underline">Runs</Link>
-        <Link href="/admin/menu" className="hover:underline">Menu</Link>
-        <Link href="/admin/promoters" className="hover:underline">Promoters</Link>
-        <Link href="/admin/settings" className="hover:underline">Settings</Link>
-        <form action={logout} className="ml-auto">
-          <button type="submit" className="text-muted hover:underline">Sign out</button>
-        </form>
-      </nav>
-      {children}
-    </div>
-  );
+  return <AdminShell signOut={logout}>{children}</AdminShell>;
 }

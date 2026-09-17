@@ -73,6 +73,7 @@ export default function Checkout({
       const lines = cart.filter((l) => l.forName === person);
       return {
         person,
+        lines,
         items: lines.reduce((n, l) => n + l.qty, 0),
         food: lines.reduce((sum, l) => sum + l.unitPrice * l.qty, 0),
       };
@@ -188,50 +189,67 @@ export default function Checkout({
           <ul className="space-y-3">
             {shares.map((share, index) => {
               const person = people.find((p) => p.name === share.person);
-              // Their own number is what a payment link and a transfer
-              // narration need; their own block is what a bag label needs.
-              const wantsPhone = mode === "split" && Boolean(person);
-              const wantsHostel = collect === "each" && Boolean(person);
 
               return (
-                <li key={share.person || "me"} className="space-y-2">
-                  <div className="flex justify-between gap-2 text-sm">
-                    <span className="font-semibold">{share.person || "You"}</span>
-                    <span className="text-muted">
+                <li
+                  key={share.person || "me"}
+                  className="space-y-2 rounded-2xl border border-black/10 bg-white p-3"
+                >
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="font-bold">{share.person || "You"}</span>
+                    <span className="text-sm font-semibold">
                       {naira(share.food)}
-                      {mode === "split" && ` + ${naira(feeShares[index] ?? 0)} delivery`}
+                      {mode === "split" && (
+                        <span className="font-normal text-muted">
+                          {" "}+ {naira(feeShares[index] ?? 0)} delivery
+                        </span>
+                      )}
                     </span>
                   </div>
 
-                  {(wantsPhone || wantsHostel) && person && (
+                  <ul className="space-y-0.5 text-sm text-ink/75">
+                    {share.lines.map((line) => (
+                      <li key={line.key}>
+                        {line.qty}× {line.name}
+                        {line.choices.length > 0 && (
+                          <span className="text-muted"> · {line.choices.join(", ")}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Their own number is how they get called when the food
+                      lands, and what a payment link hangs off in a split. */}
+                  {person && (
                     <div className="flex flex-wrap gap-2">
-                      {wantsPhone && (
-                        <input
-                          className="field grow py-1.5 text-sm"
-                          inputMode="tel"
-                          placeholder={`${person.name}'s phone, for their link`}
-                          value={person.phone}
-                          onChange={(e) =>
-                            updatePerson(person.name, { phone: e.target.value })
-                          }
-                        />
-                      )}
-                      {wantsHostel && (
-                        <input
-                          className="field grow py-1.5 text-sm"
-                          placeholder={`${person.name}'s hostel or block`}
-                          value={person.hostel}
-                          onChange={(e) =>
-                            updatePerson(person.name, { hostel: e.target.value })
-                          }
-                        />
-                      )}
+                      <input
+                        className="field grow py-1.5 text-sm"
+                        inputMode="tel"
+                        placeholder={`${person.name}'s phone`}
+                        value={person.phone}
+                        onChange={(e) =>
+                          updatePerson(person.name, { phone: e.target.value })
+                        }
+                      />
+                      <input
+                        className="field grow py-1.5 text-sm"
+                        placeholder={`${person.name}'s hostel or block`}
+                        value={person.hostel}
+                        onChange={(e) =>
+                          updatePerson(person.name, { hostel: e.target.value })
+                        }
+                      />
                     </div>
                   )}
                 </li>
               );
             })}
           </ul>
+
+          <p className="text-xs text-muted">
+            A number each is how anyone in the group gets called when their bag
+            lands. Leave one blank and that bag comes to you.
+          </p>
 
           {mode === "split" && (
             <p className="text-xs text-muted">

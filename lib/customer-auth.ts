@@ -93,3 +93,13 @@ export async function currentCustomer(): Promise<string | null> {
   const phone = value.slice(0, at);
   return sameString(value.slice(at + 1), sign(phone)) ? phone : null;
 }
+
+/** The PIN on a number, for showing someone their own the moment they order. */
+export async function pinFor(phone: string): Promise<string | null> {
+  const { data } = await db()
+    .from("customers")
+    .select("pin")
+    .eq("phone", phone)
+    .maybeSingle();
+  return (data?.pin as string | undefined) ?? null;
+}

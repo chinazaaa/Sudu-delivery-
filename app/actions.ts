@@ -38,7 +38,7 @@ export async function submitOrder(
   });
 
   if (!result.ok) return { error: result.error };
-  redirect(`/o/${result.orderId}`);
+  redirect(`/o/${result.orderId}?placed=1`);
 }
 
 export type ReorderState = { error: string | null };
@@ -64,7 +64,7 @@ export async function submitReorder(
   });
 
   if (!result.ok) return { error: result.error };
-  redirect(`/o/${result.orderId}`);
+  redirect(`/o/${result.orderId}?placed=1`);
 }
 
 export async function lookupLastOrder(
