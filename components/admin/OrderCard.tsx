@@ -134,6 +134,31 @@ export default function OrderCard({
         </p>
       )}
 
+      {order.paymentMethod === "card" && order.status === "pending" && (
+        <div className="rounded-2xl bg-brand-tint p-3">
+          <form action={savePaymentLink} className="space-y-1.5">
+            <label className="label" htmlFor={`link-${order.id}`}>
+              Card payment link
+            </label>
+            <div className="flex gap-2">
+              <input
+                id={`link-${order.id}`}
+                name="payment_link"
+                defaultValue={order.paymentLink ?? ""}
+                placeholder="Paste the link you generated"
+                className="field grow py-2 text-sm"
+              />
+              <input type="hidden" name="order_id" value={order.id} />
+              <button className="btn-quiet shrink-0 px-4 py-2 text-sm">Save</button>
+            </div>
+            <p className="text-xs text-muted">
+              Saved against this order. &quot;Send card link&quot; then sends
+              this one, and their own page turns it into a pay button.
+            </p>
+          </form>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {order.status === "pending" ? (
           <form
@@ -257,27 +282,6 @@ export default function OrderCard({
               <button className="btn-quiet shrink-0 px-4 py-2 text-sm">Save</button>
             </div>
             <p className="text-xs text-muted">Only you see this.</p>
-          </form>
-
-          <form action={savePaymentLink} className="space-y-1.5">
-            <label className="label" htmlFor={`link-${order.id}`}>
-              Card payment link
-            </label>
-            <div className="flex gap-2">
-              <input
-                id={`link-${order.id}`}
-                name="payment_link"
-                defaultValue={order.paymentLink ?? ""}
-                placeholder="Paste the link you generated"
-                className="field grow py-2 text-sm"
-              />
-              <input type="hidden" name="order_id" value={order.id} />
-              <button className="btn-quiet shrink-0 px-4 py-2 text-sm">Save</button>
-            </div>
-            <p className="text-xs text-muted">
-              Saved against this order, so you can send it again without
-              generating another one.
-            </p>
           </form>
 
           <div className="flex flex-wrap gap-2">
