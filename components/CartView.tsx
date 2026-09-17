@@ -124,19 +124,32 @@ export default function CartView({
 
           {group.lines.map((line) => (
             <div key={line.key} className="card flex gap-3">
-              <span className="size-20 shrink-0 overflow-hidden rounded-xl">
+              {/* The picture and the name go back to the product, which is
+                  where you go to check what is in it or change the choices. */}
+              <Link
+                href={`/p/${line.itemId}`}
+                aria-label={`Open ${line.name}`}
+                className="size-20 shrink-0 overflow-hidden rounded-xl"
+              >
                 <Thumb src={line.imageUrl} name={line.name} rounded="rounded-none" />
-              </span>
+              </Link>
 
               <div className="min-w-0 flex-1">
                 {/* The count lives beside the name too: one card holding three
                     of something read as one item in the cart. */}
                 <p className="truncate font-bold">
                   {line.qty > 1 && <span className="text-brand">{line.qty}× </span>}
-                  {line.name}
+                  <Link href={`/p/${line.itemId}`} className="hover:underline">
+                    {line.name}
+                  </Link>
                 </p>
                 <p className="text-sm text-muted">
-                  {line.restaurantName}
+                  <Link
+                    href={`/r/${line.restaurantId}`}
+                    className="font-semibold hover:text-ink hover:underline"
+                  >
+                    {line.restaurantName}
+                  </Link>
                   {line.choices.length > 0 && ` · ${line.choices.join(", ")}`}
                   {people.length > 0 && ` · for ${line.forName || "you"}`}
                 </p>
