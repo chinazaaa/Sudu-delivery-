@@ -553,9 +553,13 @@ async function announceOrder(args: {
     const url = await siteUrl().catch(() => "");
     const link = url ? `${url}/admin/orders/${args.orderId}` : "";
 
+    // Card is the one that needs something doing by hand: the link goes out
+    // on WhatsApp. It belongs in the subject, where it is read first.
+    const byCard = order?.payment_method === "card";
+
     const title =
       `New order ${order ? orderRef(order) : ""} · ${args.name} · ` +
-      `${naira(order?.total ?? 0)}`;
+      `${naira(order?.total ?? 0)}${byCard ? " · card link" : ""}`;
 
     // Grouped by restaurant, because the next thing that happens is somebody
     // ordering it from each one, counter by counter.
@@ -573,6 +577,10 @@ async function announceOrder(args: {
         kind: "rows",
         rows: [
           { label: "Total", value: `${naira(order?.total ?? 0)} · unpaid` },
+          {
+            label: "Paying by",
+            value: byCard ? "Card, link not sent yet" : "Bank transfer",
+          },
           { label: "Number", value: args.phone },
           { label: "Block", value: args.hostel },
           { label: "Items", value: String(args.items) },
@@ -583,6 +591,16 @@ async function announceOrder(args: {
         title: place,
         items,
       })),
+      ...(byCard
+        ? [
+            {
+              kind: "note" as const,
+              text:
+                "They chose to pay by card, so send them the payment link on " +
+                "WhatsApp. The order stays unpaid until you mark it paid.",
+            },
+          ]
+        : []),
       ...(args.note ? [{ kind: "note" as const, text: `They asked: ${args.note}` }] : []),
     ];
 
