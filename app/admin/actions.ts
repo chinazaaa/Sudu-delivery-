@@ -1160,3 +1160,63 @@ export async function toggleItemAvailable(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
   revalidatePath("/", "layout");
 }
+
+/**
+ * Move one row up or down a list that the customer sees.
+ *
+ * The whole list is renumbered rather than the two rows swapped, because a
+ * seeded list is full of ties: everything arrives at sort_order 100 and a
+ * swap between two hundreds changes nothing. Renumbering also means the
+ * order you see in admin is the order that gets saved.
+ */
+async function shuffle(
+  table: "restaurants" | "slides",
+  id: string,
+  direction: "up" | "down"
+): Promise<void> {
+  // Restaurants have no created_at, so ties break on the name instead.
+  const tiebreak = table === "slides" ? "created_at" : "name";
+  const { data } = await db()
+    .from(table)
+    .select("id")
+    .order("sort_order")
+    .order(tiebreak);
+
+  const list = (data ?? []) as { id: string }[];
+  const at = list.findIndex((row) => row.id === id);
+  if (at < 0) return;
+
+  const to = direction === "up" ? at - 1 : at + 1;
+  if (to < 0 || to >= list.length) return;
+
+  [list[at], list[to]] = [list[to], list[at]];
+
+  await Promise.all(
+    list.map((row, index) =>
+      db().from(table).update({ sort_order: index + 1 }).eq("id", row.id)
+    )
+  );
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
+}
+
+/** Reorder the restaurant list, which is the order on the home page. */
+export async function moveRestaurant(form: FormData): Promise<void> {
+  await assertAdmin();
+  await shuffle(
+    "restaurants",
+    String(form.get("restaurant_id")),
+    form.get("direction") === "up" ? "up" : "down"
+  );
+}
+
+/** Reorder the home page slider. */
+export async function moveSlide(form: FormData): Promise<void> {
+  await assertAdmin();
+  await shuffle(
+    "slides",
+    String(form.get("slide_id")),
+    form.get("direction") === "up" ? "up" : "down"
+  );
+}

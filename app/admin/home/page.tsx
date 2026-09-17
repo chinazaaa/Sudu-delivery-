@@ -2,10 +2,11 @@ import PageHeader from "@/components/admin/PageHeader";
 import SaveButton from "@/components/SaveButton";
 import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
+import Reorder from "@/components/admin/Reorder";
 import Thumb from "@/components/Thumb";
 import { listSlides } from "@/lib/slides";
 import { getSettings } from "@/lib/settings";
-import { deleteSlide, saveSettings, saveSlide } from "../actions";
+import { deleteSlide, moveSlide, saveSettings, saveSlide } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -36,10 +37,21 @@ export default async function HomeAdmin() {
       </form>
 
       <h2 className="mb-2 font-bold">Slides</h2>
+      <p className="mb-2 text-sm text-muted">
+        The order here is the order they appear in the slider.
+      </p>
       <ul className="mb-4 space-y-3">
-        {slides.map((slide) => (
-          <li key={slide.id} className="card">
-            <form action={saveSlide} className="space-y-3">
+        {slides.map((slide, index) => (
+          <li key={slide.id} className="card flex items-start gap-2">
+            <Reorder
+              action={moveSlide}
+              field="slide_id"
+              id={slide.id}
+              first={index === 0}
+              last={index === slides.length - 1}
+              label={slide.headline || "this slide"}
+            />
+            <form action={saveSlide} className="grow space-y-3">
               <input type="hidden" name="slide_id" value={slide.id} />
               <input type="hidden" name="image_url" value={slide.image_url} />
 
@@ -81,13 +93,7 @@ export default async function HomeAdmin() {
                   placeholder="What it says"
                   className="field py-2 text-sm"
                 />
-                <input
-                  name="sort_order"
-                  inputMode="numeric"
-                  defaultValue={slide.sort_order}
-                  placeholder="Order"
-                  className="field py-2 text-sm"
-                />
+                <input type="hidden" name="sort_order" value={slide.sort_order} />
               </div>
 
               <div>

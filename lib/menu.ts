@@ -14,7 +14,8 @@ export async function menuView(): Promise<MenuView[]> {
     .from("restaurants")
     .select("*")
     .eq("active", true)
-    .order("sort_order");
+    .order("sort_order")
+    .order("name");
   if (error) throw new Error(error.message);
 
   const places = (restaurants ?? []) as Restaurant[];
@@ -156,7 +157,8 @@ export async function openRestaurants(): Promise<{ id: string; name: string }[]>
       .from("restaurants")
       .select("id, name")
       .eq("active", true)
-      .order("sort_order");
+      .order("sort_order")
+      .order("name");
     return (data ?? []) as { id: string; name: string }[];
   } catch {
     return [];

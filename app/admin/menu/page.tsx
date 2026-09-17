@@ -1,10 +1,11 @@
 import Link from "next/link";
 import Diagnostic from "@/components/Diagnostic";
+import Reorder from "@/components/admin/Reorder";
 import Thumb from "@/components/Thumb";
 import SaveButton from "@/components/SaveButton";
 import { db } from "@/lib/supabase";
 import { diagnoseEmpty } from "@/lib/health";
-import { addRestaurant, seedLaunchRestaurants } from "../actions";
+import { addRestaurant, moveRestaurant, seedLaunchRestaurants } from "../actions";
 import type { MenuItem, Restaurant } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,8 @@ export default async function RestaurantsAdmin() {
   const { data: restaurants } = await db()
     .from("restaurants")
     .select("*")
-    .order("sort_order");
+    .order("sort_order")
+    .order("name");
   const { data: items } = await db().from("menu_items").select("id, restaurant_id");
 
   const list = (restaurants ?? []) as Restaurant[];
@@ -45,12 +47,24 @@ export default async function RestaurantsAdmin() {
         </>
       )}
 
+      <p className="text-sm text-muted">
+        The order here is the order a customer sees on the home page.
+      </p>
+
       <ul className="grid gap-3 sm:grid-cols-2">
-        {list.map((restaurant) => (
-          <li key={restaurant.id}>
+        {list.map((restaurant, index) => (
+          <li key={restaurant.id} className="flex items-stretch gap-2">
+            <Reorder
+              action={moveRestaurant}
+              field="restaurant_id"
+              id={restaurant.id}
+              first={index === 0}
+              last={index === list.length - 1}
+              label={restaurant.name}
+            />
             <Link
               href={`/admin/menu/${restaurant.id}`}
-              className="card flex items-center gap-3 transition hover:border-brand"
+              className="card flex grow items-center gap-3 transition hover:border-brand"
             >
               <span className="size-14 shrink-0 overflow-hidden rounded-xl">
                 <Thumb
