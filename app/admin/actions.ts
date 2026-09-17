@@ -7,7 +7,7 @@ import { db } from "@/lib/supabase";
 import { STAGES, type BatchStage } from "@/lib/stages";
 import { type BatchSlot } from "@/lib/config";
 import { deliveryWindows, externalUrl } from "@/lib/settings";
-import { lagosInstant } from "@/lib/time";
+import { lagosInstant, lagosToday } from "@/lib/time";
 import { ensureUpcomingBatches, openRunsBetween } from "@/lib/batches";
 import { fileFrom, uploadImage } from "@/lib/uploads";
 import { parseMenuText } from "@/lib/menu-import";
@@ -235,6 +235,38 @@ export async function deleteScheduleRun(form: FormData): Promise<void> {
     .eq("id", String(form.get("schedule_id")));
   // Saying nothing is how a Remove button that removes nothing goes unnoticed.
   if (error) throw new Error(`Could not remove that day: ${error.message}`);
+
+  // The runs it already opened go with it, or Friday is off the schedule and
+  // still on the shop, which is what "I deleted it and it is still there"
+  // turned out to mean. Only ones still to come, and only while nothing has
+  // been ordered on them: a run somebody has paid into is never swept away by
+  // an edit to the week.
+  const weekday = Number(form.get("weekday"));
+  const slot = String(form.get("slot") ?? "");
+  if (Number.isInteger(weekday) && slot) {
+    const { data: rows } = await db()
+      .from("batches")
+      .select("id, run_date")
+      .eq("slot", slot)
+      .gte("run_date", lagosToday());
+
+    // Midday UTC, so the day cannot slip either side of midnight.
+    const sameDay = ((rows ?? []) as { id: string; run_date: string }[]).filter(
+      (row) => new Date(`${row.run_date}T12:00:00Z`).getUTCDay() === weekday
+    );
+
+    if (sameDay.length > 0) {
+      const ids = sameDay.map((row) => row.id);
+      const { data: taken } = await db()
+        .from("orders")
+        .select("batch_id")
+        .in("batch_id", ids);
+      const busy = new Set((taken ?? []).map((row) => row.batch_id as string));
+      const empty = ids.filter((id) => !busy.has(id));
+      if (empty.length > 0) await db().from("batches").delete().in("id", empty);
+    }
+  }
+
   revalidatePath("/admin", "layout");
 }
 
