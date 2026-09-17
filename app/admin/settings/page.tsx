@@ -149,6 +149,18 @@ export default async function SettingsAdmin() {
         <label className="flex items-center gap-2 text-sm font-semibold">
           <input
             type="checkbox"
+            name="hide_footer"
+            defaultChecked={settings.hide_footer === "on"}
+          />
+          Hide the whole footer
+        </label>
+        <p className="text-xs text-muted">
+          The line and all three links go together. The pages keep their
+          spacing, so nothing jumps.
+        </p>
+        <label className="flex items-center gap-2 text-sm font-semibold">
+          <input
+            type="checkbox"
             name="hide_promoter_link"
             defaultChecked={settings.hide_promoter_link === "on"}
           />

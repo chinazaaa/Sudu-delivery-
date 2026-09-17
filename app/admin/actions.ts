@@ -730,6 +730,7 @@ const SETTING_FIELDS = [
   "order_horizon_days",
   "tagline",
   "hide_promoter_link",
+  "hide_footer",
   "auto_headline",
   "auto_lines",
 ] as const;

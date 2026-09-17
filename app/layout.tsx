@@ -26,6 +26,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const settings = await safeSettings();
   const instagram = instagramLink(settings.instagram_handle);
   const showPromoterLink = settings.hide_promoter_link !== "on";
+  const showFooter = settings.hide_footer !== "on";
   return (
     <html lang="en">
       <body>
@@ -41,6 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <main className="mx-auto max-w-5xl px-4 pb-28 pt-4 sm:pb-24">{children}</main>
         {/* Clears both the tab bar and a sticky cart bar, which were sitting
             on top of this line. */}
+        {showFooter && (
         <footer className="mx-auto max-w-5xl space-y-2 px-4 pb-44 pt-2 text-xs text-muted sm:pb-32">
           {settings.footer_line && <p>{settings.footer_line}</p>}
           {(instagram || settings.whatsapp_group_link || showPromoterLink) && (
@@ -68,6 +70,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </p>
           )}
         </footer>
+        )}
+        {/* The footer carried the clearance for the tab bar and the sticky
+            cart. With it hidden, that space still has to be there. */}
+        {!showFooter && <div aria-hidden className="pb-44 sm:pb-32" />}
         <BottomNav />
       </body>
     </html>

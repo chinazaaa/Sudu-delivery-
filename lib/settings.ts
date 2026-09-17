@@ -51,6 +51,8 @@ export type Settings = {
   tagline: string;
   /** Whether the footer offers the promoter sign in. Blank means it does. */
   hide_promoter_link: string;
+  /** Hides the footer outright, line and links together. */
+  hide_footer: string;
   /**
    * The slider the home page builds when there are no slides of your own.
    * The headline is per restaurant, and the lines rotate beneath it.
@@ -86,6 +88,7 @@ export const EMPTY: Settings = {
   order_horizon_days: 7,
   tagline: "",
   hide_promoter_link: "",
+  hide_footer: "",
   auto_headline: "",
   auto_lines: "",
 };
