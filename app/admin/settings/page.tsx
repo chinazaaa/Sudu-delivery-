@@ -1,5 +1,7 @@
 import SaveButton from "@/components/SaveButton";
 import PageHeader from "@/components/admin/PageHeader";
+import BandEditor from "@/components/admin/BandEditor";
+import { parseBands } from "@/lib/fees";
 import { getSettings, hasBankDetails } from "@/lib/settings";
 import {
   TEMPLATE_DEFAULT,
@@ -149,6 +151,19 @@ export default async function SettingsAdmin() {
           className="field"
         />
         <SaveButton>Save</SaveButton>
+      </form>
+
+      <form action={saveSettings} className="card space-y-3">
+        <div>
+          <h2 className="font-semibold">What delivery costs</h2>
+          <p className="text-sm text-muted">
+            Delivery is priced by how many containers travel, not by what the
+            food costs. Set the bands here and the shop, the cart and every
+            new order follow them.
+          </p>
+        </div>
+        <BandEditor initial={parseBands(settings.fee_bands)} />
+        <SaveButton>Save prices</SaveButton>
       </form>
 
       <form action={saveSettings} className="card space-y-4">

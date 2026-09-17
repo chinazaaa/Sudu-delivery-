@@ -45,5 +45,8 @@ alter table batches add column if not exists driver_cost int not null default 0;
 alter table batches add column if not exists other_cost  int not null default 0;
 alter table batches add column if not exists cost_note   text not null default '';
 
+-- The delivery price list, so it can be changed without a deploy.
+alter table settings add column if not exists fee_bands text not null default '';
+
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';

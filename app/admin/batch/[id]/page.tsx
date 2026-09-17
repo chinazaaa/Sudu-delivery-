@@ -11,7 +11,7 @@ import Link from "next/link";
 import { naira, orderRef } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { clockLabel, runDateLabel } from "@/lib/time";
-import { bandTable } from "@/lib/fees";
+import { bandTable, parseBands } from "@/lib/fees";
 import { template, whatsappTo } from "@/lib/messages";
 import { getSettings } from "@/lib/settings";
 import { sheetAsText } from "@/lib/sheet-text";
@@ -41,6 +41,7 @@ export default async function BatchPage({
   const belowMinimum = summary.paidCount < summary.minimum;
 
   const settings = await getSettings();
+  const bands = parseBands(settings.fee_bands);
   // Links inside the messages have to be absolute, so they are built from the
   // request rather than from another environment variable to keep in sync.
   const requestHeaders = await headers();
@@ -199,6 +200,10 @@ export default async function BatchPage({
                       name: bag.name,
                       hostel: bag.hostel,
                       phone: formatPhone(bag.phone),
+                      orders: bag.orders.map((order) => ({
+                        id: order.id,
+                        ref: orderRef(order),
+                      })),
                       // A bag one person carries for a group still needs each
                       // item labelled, or they cannot hand them out.
                       items: bag.lines.map(
@@ -234,6 +239,12 @@ export default async function BatchPage({
                               </span>
                             </span>
                             <span className="flex flex-wrap gap-2">
+                              <Link
+                                href={`/admin/orders/${order.id}`}
+                                className="chip border-black/10 bg-white"
+                              >
+                                View order
+                              </Link>
                               <a
                                 href={messageFor(order)}
                                 target="_blank"
@@ -542,8 +553,8 @@ export default async function BatchPage({
                     </div>
                     <p className="text-xs text-muted">
                       {batch.flash_fee === null
-                        ? `Normal bands: ${bandTable(null).map((b) => `${b.label} ${naira(b.fee)}`).join(", ")}`
-                        : `Tonight: ${bandTable(batch.flash_fee).map((b) => `${b.label} ${naira(b.fee)}`).join(", ")}`}
+                        ? `Normal bands: ${bandTable(null, bands).map((b) => `${b.label} ${naira(b.fee)}`).join(", ")}`
+                        : `Tonight: ${bandTable(batch.flash_fee, bands).map((b) => `${b.label} ${naira(b.fee)}`).join(", ")}`}
                       . Leave the fee blank to go back to normal pricing.
                     </p>
                   </form>

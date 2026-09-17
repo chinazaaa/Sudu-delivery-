@@ -3,6 +3,7 @@ import PhoneLookup from "@/components/PhoneLookup";
 import ReorderCard, { type PreviousOrder } from "@/components/ReorderCard";
 import { openBatches } from "@/lib/batches";
 import { feeFor } from "@/lib/fees";
+import { activeBands } from "@/lib/settings";
 import { lastOrderForPhone, openOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import { SLOT_LABEL } from "@/lib/config";
@@ -79,7 +80,7 @@ export default async function ReorderPage({
       restaurant: l.restaurant,
     })),
     foodTotal,
-    total: foodTotal + feeFor(previousItems, null),
+    total: foodTotal + feeFor(previousItems, null, await activeBands()),
   };
 
   return (

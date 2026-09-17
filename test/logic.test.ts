@@ -28,6 +28,7 @@ const EMPTY_SETTINGS = {
   msg_ready: "",
   msg_late: "",
   paid_note: "",
+  fee_bands: "",
 };
 import type { OrderLine } from "../lib/orders";
 

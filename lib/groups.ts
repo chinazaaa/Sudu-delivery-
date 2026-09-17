@@ -1,5 +1,6 @@
 import { db } from "./supabase";
 import { feeFor, splitFee } from "./fees";
+import { activeBands } from "./settings";
 import type { Batch, Order, OrderGroup } from "./types";
 
 /**
@@ -43,7 +44,8 @@ async function settleGroup(group: OrderGroup, batch: Batch): Promise<void> {
   const counts = travelling.map((o) => countFor(o.id));
   const settledFee = feeFor(
     counts.reduce((sum, count) => sum + count, 0),
-    batch.flash_fee
+    batch.flash_fee,
+    await activeBands()
   );
   const shares = splitFee(settledFee, counts);
 

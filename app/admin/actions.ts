@@ -306,6 +306,7 @@ const SETTING_FIELDS = [
   "msg_ready",
   "msg_late",
   "paid_note",
+  "fee_bands",
 ] as const;
 
 export async function saveSettings(form: FormData): Promise<void> {

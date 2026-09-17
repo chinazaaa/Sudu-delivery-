@@ -1,6 +1,7 @@
 import { db } from "./supabase";
 import { FIRST_ORDER_DISCOUNT } from "./config";
-import { feeFor, splitFee } from "./fees";
+import { feeFor, splitFee, type Band } from "./fees";
+import { activeBands } from "./settings";
 import { getBatch, isOrderable, orderCounts } from "./batches";
 import { normalisePhone } from "./phone";
 import { newPin } from "./customer-auth";
@@ -70,6 +71,10 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   const priced = await priceLines(input.lines);
   if ("error" in priced) return { ok: false, error: priced.error };
 
+  // Delivery is priced from whatever bands the admin has set, read here so a
+  // price change takes effect on the next order and not on a redeploy.
+  const bands = await activeBands();
+
   const promoterCode = await resolvePromoter(input.promoterCode);
   const returning = await isReturningCustomer(phone);
   const discount = !returning && promoterCode ? FIRST_ORDER_DISCOUNT : 0;
@@ -90,6 +95,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           paymentMethod,
           collectMode,
           people: input.people ?? [],
+          bands,
         })
       : await placeSingleOrder({
           batch,
@@ -103,6 +109,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           paymentMethod,
           collectMode,
           people: input.people ?? [],
+          bands,
         });
 
   if (!result.ok) return result;
@@ -186,6 +193,7 @@ async function placeSingleOrder(args: {
   paymentMethod: "transfer" | "card";
   collectMode: "leader" | "each";
   people: { name: string; phone: string; hostel: string }[];
+  bands: Band[];
 }): Promise<PlaceOrderResult> {
   // Adding to an existing order is a second order to the same batch, not an
   // edit: the admin view merges by phone into one bag (addendum §3). Only the
@@ -194,7 +202,7 @@ async function placeSingleOrder(args: {
   const combined = existing.items + countItems(args.lines);
   const fee = Math.max(
     0,
-    feeFor(combined, args.batch.flash_fee) - existing.feeCharged
+    feeFor(combined, args.batch.flash_fee, args.bands) - existing.feeCharged
   );
 
   let group: OrderGroup | null = null;
@@ -249,6 +257,7 @@ async function placeSplitGroup(args: {
   paymentMethod: "transfer" | "card";
   collectMode: "leader" | "each";
   people: { name: string; phone: string; hostel: string }[];
+  bands: Band[];
 }): Promise<PlaceOrderResult> {
   // The leader's own items are keyed by an empty name, not by what they typed
   // in "Your name". Keying by the name collapsed the whole group into one payer
@@ -273,7 +282,7 @@ async function placeSplitGroup(args: {
 
   // The band is set by the whole load, then shared out by what each person got.
   const people = [...byPerson.entries()];
-  const groupFee = feeFor(countItems(args.lines), args.batch.flash_fee);
+  const groupFee = feeFor(countItems(args.lines), args.batch.flash_fee, args.bands);
   const shares = splitFee(groupFee, people.map(([, lines]) => countItems(lines)));
 
   let leaderOrderId: string | null = null;

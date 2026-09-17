@@ -383,6 +383,9 @@ alter table settings add column if not exists msg_late      text not null defaul
 -- What a paid customer is told on their order page.
 alter table settings add column if not exists paid_note     text not null default '';
 
+-- The delivery price list, so it can be changed without a deploy.
+alter table settings add column if not exists fee_bands text not null default '';
+
 -- Somewhere to keep the photographs, readable by anyone since they are the
 -- pictures on a public menu.
 insert into storage.buckets (id, name, public)

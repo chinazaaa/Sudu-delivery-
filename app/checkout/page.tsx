@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { activeBands } from "@/lib/settings";
 import Checkout, { type AddingTo } from "@/components/Checkout";
 import { openBatches, recentlyClosedBatch } from "@/lib/batches";
 import { existingLoad } from "@/lib/orders";
@@ -48,5 +49,12 @@ export default async function CheckoutPage({
     }
   }
 
-  return <Checkout batches={views} promoter={promoter} adding={adding} />;
+  return (
+    <Checkout
+      batches={views}
+      promoter={promoter}
+      adding={adding}
+      bands={await activeBands()}
+    />
+  );
 }

@@ -12,7 +12,7 @@ import {
   usePeople,
 } from "@/lib/cart";
 import { FIRST_ORDER_DISCOUNT } from "@/lib/config";
-import { feeFor, splitFee } from "@/lib/fees";
+import { feeFor, splitFee, type Band } from "@/lib/fees";
 import { naira } from "@/lib/money";
 import { countdown } from "@/lib/time";
 import type { GroupMode } from "@/lib/types";
@@ -32,10 +32,13 @@ export default function Checkout({
   batches,
   promoter,
   adding,
+  bands,
 }: {
   batches: BatchView[];
   promoter: { code: string; name: string } | null;
   adding: AddingTo | null;
+  /** The delivery price list in force, read from settings on the server. */
+  bands: Band[];
 }) {
   const cart = useCart();
   const { people } = usePeople();
@@ -89,7 +92,7 @@ export default function Checkout({
   const alreadyCharged = adding?.feeCharged ?? 0;
   const fee = Math.max(
     0,
-    feeFor(itemCount + alreadyItems, selected?.flashFee ?? null) - alreadyCharged
+    feeFor(itemCount + alreadyItems, selected?.flashFee ?? null, bands) - alreadyCharged
   );
   const total = subtotal + fee;
 

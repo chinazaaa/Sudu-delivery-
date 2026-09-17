@@ -33,7 +33,10 @@ export default function AdminShell({
   useEffect(() => setOpen(false), [path]);
 
   const active = (href: string) =>
-    href === "/admin" ? path === "/admin" : path.startsWith(href);
+    href === "/admin"
+      ? path === "/admin"
+      : // A run sheet lives under /admin/batch but belongs to Runs.
+        path.startsWith(href) || (href === "/admin/runs" && path.startsWith("/admin/batch"));
 
   const current = NAV.find((item) => active(item.href))?.label ?? "Admin";
 

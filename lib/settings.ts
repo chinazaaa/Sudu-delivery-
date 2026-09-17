@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { parseBands, type Band } from "./fees";
 
 export type Settings = {
   bank_name: string;
@@ -20,6 +21,8 @@ export type Settings = {
   msg_late: string;
   /** What a paid customer reads on their order page. */
   paid_note: string;
+  /** The delivery price list as JSON. Blank means the shipped bands. */
+  fee_bands: string;
 };
 
 const EMPTY: Settings = {
@@ -40,6 +43,7 @@ const EMPTY: Settings = {
   msg_ready: "",
   msg_late: "",
   paid_note: "",
+  fee_bands: "",
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -48,7 +52,8 @@ export async function getSettings(): Promise<Settings> {
     .select(
       "bank_name, bank_account_name, bank_account_number, whatsapp_number, card_note, " +
         "instagram_handle, whatsapp_group_link, pitch_line, product_notes, footer_line, " +
-        "msg_confirmed, msg_payment, msg_card, msg_pin, msg_ready, msg_late, paid_note"
+        "msg_confirmed, msg_payment, msg_card, msg_pin, msg_ready, msg_late, paid_note, " +
+        "fee_bands"
     )
     .eq("id", true)
     .maybeSingle();
@@ -94,4 +99,9 @@ export function productNotes(settings: Settings, restaurant: string): string[] {
     .split("\n")
     .map((line) => line.trim().replaceAll("{restaurant}", restaurant))
     .filter(Boolean);
+}
+
+/** The delivery bands in force right now, read once per request. */
+export async function activeBands(): Promise<Band[]> {
+  return parseBands((await safeSettings()).fee_bands);
 }
