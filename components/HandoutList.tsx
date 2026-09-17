@@ -51,6 +51,7 @@ export default function HandoutList({
             (order) => order.status === "delivered"
           );
           const ids = entry.orders.map((order) => order.id).join(",");
+          const refs = entry.orders.map((order) => order.ref).join(" and ");
 
           return (
             <li
@@ -96,15 +97,24 @@ export default function HandoutList({
                   Call {entry.name}
                 </a>
 
-                {/* The one thing here a customer sees the result of. */}
+                {/* The one thing here a customer sees the result of. A bag can
+                    hold more than one order, so it says which it covers. */}
                 <form action={setDelivered} className="inline">
                   <input type="hidden" name="order_ids" value={ids} />
                   <input type="hidden" name="delivered" value={String(!handedOut)} />
                   <ConfirmButton
                     className="py-1.5 text-xs"
-                    confirm={handedOut ? "Yes, undo it" : "Yes, delivered"}
+                    confirm={
+                      handedOut
+                        ? `Yes, undo ${refs}`
+                        : `Yes, ${refs} delivered`
+                    }
                   >
-                    {handedOut ? "Undo delivered" : "Mark delivered"}
+                    {handedOut
+                      ? "Undo delivered"
+                      : entry.orders.length > 1
+                        ? `Mark all ${entry.orders.length} delivered`
+                        : "Mark delivered"}
                   </ConfirmButton>
                 </form>
 
@@ -127,12 +137,24 @@ export default function HandoutList({
                     >
                       Confirm on WhatsApp
                     </a>
+                    {entry.orders.length > 1 && order.status !== "delivered" && (
+                      <form action={setDelivered}>
+                        <input type="hidden" name="order_ids" value={order.id} />
+                        <input type="hidden" name="delivered" value="true" />
+                        <ConfirmButton
+                          className="py-1.5 text-xs"
+                          confirm={`Yes, ${order.ref} only`}
+                        >
+                          Deliver {order.ref} only
+                        </ConfirmButton>
+                      </form>
+                    )}
                     <form action={refund}>
                       <input type="hidden" name="order_id" value={order.id} />
                       <ConfirmButton
                         tone="brand"
                         className="py-1.5 text-xs"
-                        confirm="Yes, refund"
+                        confirm={`Yes, refund ${order.ref}`}
                       >
                         Refund
                       </ConfirmButton>
