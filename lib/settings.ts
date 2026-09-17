@@ -2,6 +2,20 @@ import { db } from "./supabase";
 import { parseBands, type Band } from "./fees";
 import { DELIVERY_WINDOWS, type BatchSlot } from "./config";
 
+/**
+ * The slider the home page builds for itself, in the words it uses today.
+ *
+ * Admin shows these rather than an empty box, so what you are editing is
+ * what is on the site rather than a guess at it.
+ */
+export const AUTO_HEADLINE = "{restaurant}, delivered to your block";
+
+export const AUTO_LINES = [
+  "One payment. Food and delivery together, before the car leaves.",
+  "Mix restaurants in one cart and pay one delivery fee.",
+  "Wrong or missing item? Money back the same night.",
+].join("\n");
+
 export type Settings = {
   bank_name: string;
   bank_account_name: string;
@@ -35,6 +49,12 @@ export type Settings = {
   order_horizon_days: number;
   /** The line under the name in the header. */
   tagline: string;
+  /**
+   * The slider the home page builds when there are no slides of your own.
+   * The headline is per restaurant, and the lines rotate beneath it.
+   */
+  auto_headline: string;
+  auto_lines: string;
 };
 
 const EMPTY: Settings = {
@@ -62,6 +82,8 @@ const EMPTY: Settings = {
   window_night: "",
   order_horizon_days: 7,
   tagline: "",
+  auto_headline: "",
+  auto_lines: "",
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -72,7 +94,7 @@ export async function getSettings(): Promise<Settings> {
         "instagram_handle, whatsapp_group_link, pitch_line, product_notes, footer_line, " +
         "msg_confirmed, msg_payment, msg_card, msg_pin, msg_ready, msg_late, paid_note, " +
         "fee_bands, admin_emails, abandon_minutes, window_afternoon, window_night, " +
-        "order_horizon_days, tagline"
+        "order_horizon_days, tagline, auto_headline, auto_lines"
     )
     .eq("id", true)
     .maybeSingle();

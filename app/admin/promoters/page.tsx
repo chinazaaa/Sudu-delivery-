@@ -101,6 +101,7 @@ export default async function PromotersAdmin() {
             <input
               id="code"
               name="code"
+              required
               defaultValue={promoter?.code}
               placeholder="TOBI"
               className="field"
@@ -116,6 +117,22 @@ export default async function PromotersAdmin() {
           <div>
             <label className="label" htmlFor="phone">Phone</label>
             <input id="phone" name="phone" defaultValue={promoter?.phone} className="field" />
+          </div>
+          <div>
+            <label className="label" htmlFor="pin">PIN</label>
+            <input
+              id="pin"
+              name="pin"
+              inputMode="numeric"
+              maxLength={4}
+              defaultValue={promoter?.pin}
+              placeholder="Made up for you"
+              className="field"
+            />
+            <p className="mt-1 text-xs text-muted">
+              Four digits, with their code, is how they sign in. Leave it
+              alone and one is made up for you.
+            </p>
           </div>
           <div>
             <label className="label" htmlFor="rate">Per paid order</label>

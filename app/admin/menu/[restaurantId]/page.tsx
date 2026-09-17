@@ -243,7 +243,7 @@ export default async function RestaurantAdmin({
           <input type="hidden" name="restaurant_id" value={restaurant.id} />
           <div className="grow">
             <label className="label">Add category</label>
-            <input name="name" placeholder="Pizzas" className="field" />
+            <input name="name" required placeholder="Pizzas" className="field" />
           </div>
           <SaveButton quiet className="shrink-0">Add</SaveButton>
         </form>
@@ -463,7 +463,7 @@ export default async function RestaurantAdmin({
                         <input type="hidden" name="group_id" value={group.id} />
                         <div className="grow">
                           <label className="label">Add choice</label>
-                          <input name="name" placeholder="Large" className="field py-1 text-sm" />
+                          <input name="name" required placeholder="Large" className="field py-1 text-sm" />
                         </div>
                         <div className="w-28">
                           <label className="label">Extra cost</label>
@@ -485,7 +485,7 @@ export default async function RestaurantAdmin({
                     <input type="hidden" name="item_id" value={item.id} />
                     <div className="grow">
                       <label className="label">Add a choice group</label>
-                      <input name="name" placeholder="Size" className="field" />
+                      <input name="name" required placeholder="Size" className="field" />
                     </div>
                     <div className="w-24">
                       <label className="label">Pick up to</label>

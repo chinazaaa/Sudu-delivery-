@@ -5,7 +5,7 @@ import ConfirmButton from "@/components/admin/ConfirmButton";
 import Reorder from "@/components/admin/Reorder";
 import Thumb from "@/components/Thumb";
 import { readSlides } from "@/lib/slides";
-import { getSettings } from "@/lib/settings";
+import { AUTO_HEADLINE, AUTO_LINES, getSettings } from "@/lib/settings";
 import { deleteSlide, moveSlide, saveSettings, saveSlide } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +33,49 @@ export default async function HomeAdmin() {
           defaultValue={settings.tagline || "Sangotedo to PAU"}
           className="field"
         />
+        <SaveButton>Save</SaveButton>
+      </form>
+
+      <form action={saveSettings} className="card mb-4 space-y-3">
+        <div>
+          <h2 className="font-bold">The automatic slider</h2>
+          <p className="text-sm text-muted">
+            What the home page shows while you have no slides of your own: one
+            slide per restaurant, with its banner. These are the words on the
+            site right now. Add a slide below and none of this is used.
+          </p>
+        </div>
+        <div>
+          <label className="label" htmlFor="auto_headline">
+            Headline
+          </label>
+          <input
+            id="auto_headline"
+            name="auto_headline"
+            defaultValue={settings.auto_headline || AUTO_HEADLINE}
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">
+            <span className="font-semibold">{"{restaurant}"}</span> becomes the
+            name of whichever restaurant the slide is for.
+          </p>
+        </div>
+        <div>
+          <label className="label" htmlFor="auto_lines">
+            The line underneath
+          </label>
+          <textarea
+            id="auto_lines"
+            name="auto_lines"
+            rows={4}
+            defaultValue={settings.auto_lines || AUTO_LINES}
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">
+            One per line. They take it in turns, so each restaurant gets a
+            different one.
+          </p>
+        </div>
         <SaveButton>Save</SaveButton>
       </form>
 
@@ -154,7 +197,7 @@ export default async function HomeAdmin() {
 
       <form action={saveSlide} className="card space-y-3">
         <h2 className="font-bold">A new slide</h2>
-        <input name="headline" placeholder="Headline" className="field" />
+        <input name="headline" required placeholder="Headline" className="field" />
         <input name="body" placeholder="The line under it" className="field" />
         <div className="grid gap-2 sm:grid-cols-3">
           <input

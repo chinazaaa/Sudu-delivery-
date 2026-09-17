@@ -12,22 +12,20 @@ import { useCart } from "@/lib/cart";
 import type { ItemView, MenuView, BatchView } from "@/lib/view";
 import type { Slide } from "@/lib/slides";
 
-/** The promises, carried by the slider rather than listed as cards. */
-const PROMISES = [
-  "One payment. Food and delivery together, before the car leaves.",
-  "Mix restaurants in one cart and pay one delivery fee.",
-  "Wrong or missing item? Money back the same night.",
-];
-
 export default function Home({
   menu,
   nextRun,
   slides,
+  autoHeadline,
+  autoLines,
 }: {
   menu: MenuView[];
   nextRun: BatchView | null;
   /** Written in admin. Empty falls back to a slide per restaurant. */
   slides: Slide[];
+  /** The wording for the slider the page builds when there are no slides. */
+  autoHeadline: string;
+  autoLines: string[];
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<{ item: ItemView; place: MenuView } | null>(null);
@@ -129,8 +127,8 @@ export default function Home({
                   key: place.restaurant.id,
                   image: place.restaurant.bannerUrl,
                   name: place.restaurant.name,
-                  headline: `${place.restaurant.name}, delivered to your block`,
-                  body: PROMISES[index % PROMISES.length],
+                  headline: autoHeadline.replace("{restaurant}", place.restaurant.name),
+                  body: autoLines[index % autoLines.length] ?? "",
                   href: `/r/${place.restaurant.id}`,
                   linkText: "See the menu",
                 }))

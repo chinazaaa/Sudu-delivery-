@@ -57,6 +57,7 @@ export default function ItemWizard({
             <input
               id="item-name"
               name="name"
+              required
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Pepperoni pizza"
@@ -68,6 +69,7 @@ export default function ItemWizard({
             <input
               id="item-price"
               name="price_food"
+              required
               inputMode="numeric"
               value={price}
               onChange={(event) => setPrice(event.target.value)}

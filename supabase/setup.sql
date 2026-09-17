@@ -550,6 +550,10 @@ alter table slides enable row level security;
 -- The line under the name in the header.
 alter table settings add column if not exists tagline text not null default '';
 
+-- The slider the home page builds for itself when there are no slides.
+alter table settings add column if not exists auto_headline text not null default '';
+alter table settings add column if not exists auto_lines text not null default '';
+
 -- Somewhere to keep the photographs, readable by anyone since they are the
 -- pictures on a public menu.
 insert into storage.buckets (id, name, public)

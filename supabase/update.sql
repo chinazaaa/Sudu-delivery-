@@ -214,5 +214,9 @@ alter table slides enable row level security;
 -- The line under the name in the header.
 alter table settings add column if not exists tagline text not null default '';
 
+-- The slider the home page builds for itself when there are no slides.
+alter table settings add column if not exists auto_headline text not null default '';
+alter table settings add column if not exists auto_lines text not null default '';
+
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';

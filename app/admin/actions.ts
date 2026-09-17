@@ -651,13 +651,16 @@ export async function savePromoter(form: FormData): Promise<void> {
   const code = String(form.get("code") ?? "").trim().toUpperCase();
   if (!code) return;
 
-  // A new promoter gets a PIN straight away; an existing one keeps theirs,
-  // since it may already be in their WhatsApp.
+  // A new promoter gets a PIN straight away, and an existing one keeps
+  // theirs, since it may already be in their WhatsApp. Typing one over the
+  // top wins, for when they have forgotten it.
   const { data: existing } = await db()
     .from("promoters")
     .select("pin")
     .eq("code", code)
     .maybeSingle();
+
+  const typedPin = String(form.get("pin") ?? "").replace(/\D/g, "").slice(0, 4);
 
   await db().from("promoters").upsert({
     code,
@@ -665,7 +668,7 @@ export async function savePromoter(form: FormData): Promise<void> {
     phone: String(form.get("phone") ?? "").trim(),
     rate: Math.round(Number(form.get("rate")) || 500),
     active: form.get("active") === "on",
-    pin: (existing?.pin as string) || newPin(),
+    pin: typedPin || (existing?.pin as string) || newPin(),
   });
 
   revalidatePath("/admin", "layout");
@@ -702,6 +705,8 @@ const SETTING_FIELDS = [
   "window_night",
   "order_horizon_days",
   "tagline",
+  "auto_headline",
+  "auto_lines",
 ] as const;
 
 export async function saveSettings(form: FormData): Promise<void> {

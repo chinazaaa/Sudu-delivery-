@@ -100,7 +100,7 @@ export default async function RestaurantsAdmin() {
         <div className="flex flex-wrap items-end gap-2">
           <div className="grow">
             <label className="label">Name</label>
-            <input name="name" placeholder="Chicken Republic" className="field" />
+            <input name="name" required placeholder="Chicken Republic" className="field" />
           </div>
           <div className="w-32">
             <label className="label">Closes</label>

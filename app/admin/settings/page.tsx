@@ -308,6 +308,7 @@ export default async function SettingsAdmin() {
             <input
               id="hostel-name"
               name="name"
+              required
               placeholder="Trinity Hall"
               className="field py-2 text-sm"
             />
