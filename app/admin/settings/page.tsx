@@ -326,12 +326,6 @@ export default async function SettingsAdmin() {
           <p className="mt-1 text-xs text-muted">Minutes untouched.</p>
         </div>
         <SaveButton>Save</SaveButton>
-        <p className="text-xs text-muted">
-          Email needs RESEND_API_KEY set where the site is hosted. Without it
-          nothing is emailed and every cart still shows under Left behind. The
-          recap goes out once a day, scheduled from Supabase with
-          supabase/cron.sql.
-        </p>
       </form>
 
       <section className="card space-y-3">
