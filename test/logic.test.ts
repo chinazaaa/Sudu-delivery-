@@ -607,3 +607,20 @@ test("the word pizza is ignored when every file carries it", () => {
   const found = matchPhotos(["Meat Lovers Pizza.jpg", "Pepperoni Pizza.jpg"], PIZZA_MENU);
   assert.deepEqual(found.map((m) => m.itemId), ["b", "c"]);
 });
+
+test("the popular row ranks by how much was bought, not how many orders", () => {
+  // Ten people in one group order each taking a wrap should beat three
+  // separate orders of one pizza.
+  const lines = [
+    { menu_item_id: "wrap", qty: 10 },
+    { menu_item_id: "pizza", qty: 1 },
+    { menu_item_id: "pizza", qty: 1 },
+    { menu_item_id: "pizza", qty: 1 },
+  ];
+  const sold = new Map<string, number>();
+  for (const line of lines) {
+    sold.set(line.menu_item_id, (sold.get(line.menu_item_id) ?? 0) + line.qty);
+  }
+  const ranked = [...sold.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
+  assert.deepEqual(ranked, ["wrap", "pizza"]);
+});

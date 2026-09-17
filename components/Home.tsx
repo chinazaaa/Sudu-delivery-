@@ -16,6 +16,7 @@ export default function Home({
   menu,
   nextRun,
   slides,
+  popularIds,
   autoHeadline,
   autoLines,
 }: {
@@ -23,6 +24,8 @@ export default function Home({
   nextRun: BatchView | null;
   /** Written in admin. Empty falls back to a slide per restaurant. */
   slides: Slide[];
+  /** Menu item ids, most bought first. Empty until people have ordered. */
+  popularIds: string[];
   /** The wording for the slider the page builds when there are no slides. */
   autoHeadline: string;
   autoLines: string[];
@@ -49,9 +52,27 @@ export default function Home({
     );
   }, [menu, query]);
 
-  const popular = menu.flatMap((place) =>
-    place.items.filter((i) => i.available).slice(0, 3).map((item) => ({ item, place }))
-  );
+  // What people actually bought, in that order. Until there is enough of
+  // that, a few things from each menu, which is not the same claim.
+  const { popular, measured } = useMemo(() => {
+    const everything = menu.flatMap((place) =>
+      place.items.filter((i) => i.available).map((item) => ({ item, place }))
+    );
+
+    const rank = new Map(popularIds.map((id, index) => [id, index]));
+    const bought = everything
+      .filter(({ item }) => rank.has(item.id))
+      .sort((a, b) => (rank.get(a.item.id) ?? 0) - (rank.get(b.item.id) ?? 0));
+
+    if (bought.length >= 3) return { popular: bought, measured: true };
+
+    return {
+      popular: menu.flatMap((place) =>
+        place.items.filter((i) => i.available).slice(0, 3).map((item) => ({ item, place }))
+      ),
+      measured: false,
+    };
+  }, [menu, popularIds]);
 
   if (menu.length === 0) {
     return (
@@ -206,7 +227,9 @@ export default function Home({
 
           {popular.length > 0 && (
             <section className="space-y-3 pb-28">
-              <h2 className="section-title">Popular this week</h2>
+              <h2 className="section-title">
+                {measured ? "Popular this week" : "From the menu"}
+              </h2>
               {popular.map(({ item, place }) => (
                 <ItemRow
                   key={item.id}
