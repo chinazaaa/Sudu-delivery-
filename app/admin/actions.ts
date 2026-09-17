@@ -537,11 +537,19 @@ export async function recordPayout(form: FormData): Promise<void> {
   const amount = Math.round(Number(form.get("amount") ?? 0));
   if (!Number.isFinite(amount) || amount <= 0) return;
 
-  await db().from("promoter_payouts").insert({
+  const { error } = await db().from("promoter_payouts").insert({
     promoter_code: String(form.get("code")),
     amount,
     note: String(form.get("note") ?? "").trim(),
+    // Which run it settles. Left empty for a payment covering several.
+    batch_id: String(form.get("batch_id") ?? "") || null,
   });
+  if (error) {
+    throw new Error(
+      `Could not record that: ${error.message}. ` +
+        "If it mentions a column, run supabase/promoter_setup.sql in Supabase."
+    );
+  }
 
   revalidatePath("/admin", "layout");
   revalidatePath("/promoter");

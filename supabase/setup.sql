@@ -487,6 +487,16 @@ create table if not exists promoter_payouts (
 create index if not exists promoter_payouts_code_idx
   on promoter_payouts (promoter_code, paid_at desc);
 alter table promoter_payouts enable row level security;
+-- Where their money goes, kept by them so nobody retypes it.
+alter table promoters add column if not exists bank_name           text not null default '';
+alter table promoters add column if not exists bank_account_name   text not null default '';
+alter table promoters add column if not exists bank_account_number text not null default '';
+
+-- A payout is recorded by you and confirmed by them, so both ends agree, and
+-- it says which run it was for. Null is still allowed, for a payment that
+-- covers several runs or none of them.
+alter table promoter_payouts add column if not exists confirmed_at timestamptz;
+alter table promoter_payouts add column if not exists batch_id uuid references batches(id) on delete set null;
 
 -- Anyone without a PIN gets one, so an existing promoter can sign in.
 update promoters

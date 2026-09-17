@@ -3,6 +3,7 @@ import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import Diagnostic from "@/components/Diagnostic";
 import { promoterRows } from "@/lib/admin";
+import { promoterEarnings } from "@/lib/promoters";
 import { promoterSchema } from "@/lib/health";
 import { naira } from "@/lib/money";
 import { whatsappTo } from "@/lib/messages";
@@ -14,6 +15,9 @@ export const dynamic = "force-dynamic";
 export default async function PromotersAdmin() {
   const schema = await promoterSchema();
   const promoters = schema.ok ? await promoterRows() : [];
+  const first = promoters[0] ?? null;
+  // Run by run, from the same place the promoter sees it, so the two agree.
+  const earnings = first && schema.ok ? await promoterEarnings(first.code) : null;
   const promoter = promoters[0] ?? null;
   const url = await siteUrl();
 
@@ -101,6 +105,49 @@ export default async function PromotersAdmin() {
               Recording it takes it off what they are owed, here and on their
               own page.
             </p>
+
+            {earnings && earnings.runs.some((run) => run.earned > run.paidOut) && (
+              <div>
+                <h3 className="text-sm font-bold">Runs still to settle</h3>
+                <ul className="mt-1 space-y-2">
+                  {earnings.runs
+                    .filter((run) => run.earned > run.paidOut)
+                    .map((run) => (
+                      <li
+                        key={run.batchId}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-shell p-2.5"
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold">
+                            {run.label}
+                          </span>
+                          <span className="block text-xs text-muted">
+                            {run.orders} paid order{run.orders === 1 ? "" : "s"}
+                            {run.paidOut > 0 && ` · ${naira(run.paidOut)} already sent`}
+                          </span>
+                        </span>
+                        <form action={recordPayout} className="shrink-0">
+                          <input type="hidden" name="code" value={promoter.code} />
+                          <input type="hidden" name="batch_id" value={run.batchId} />
+                          <input
+                            type="hidden"
+                            name="amount"
+                            value={run.earned - run.paidOut}
+                          />
+                          <input type="hidden" name="note" value={run.label} />
+                          <SaveButton quiet className="px-3 py-1.5 text-sm">
+                            Paid {naira(run.earned - run.paidOut)}
+                          </SaveButton>
+                        </form>
+                      </li>
+                    ))}
+                </ul>
+                <p className="mt-1 text-xs text-muted">
+                  One tap records exactly what that run is worth, against that
+                  run. The box above is for anything that does not fit.
+                </p>
+              </div>
+            )}
 
             <div className="rounded-2xl bg-shell p-3">
               <h3 className="text-sm font-bold">Send it here</h3>

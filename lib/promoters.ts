@@ -30,6 +30,8 @@ export type PromoterRun = {
   /** Orders placed but not paid for. They earn nothing until they are. */
   unpaid: number;
   earned: number;
+  /** What has been handed over against this run in particular. */
+  paidOut: number;
 };
 
 /** An order placed but not paid for, in a run that is still taking money. */
@@ -62,6 +64,9 @@ export type PromoterEarnings = {
     amount: number;
     note: string;
     paid_at: string;
+    /** Which run it was for, and what that run is called. */
+    batch_id: string | null;
+    runLabel: string;
     /** When they said it landed. Null until they do. */
     confirmed_at: string | null;
   }[];
@@ -96,6 +101,18 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
         .order("run_date", { ascending: false })
     : { data: [] };
 
+  const { data: payoutRows } = await db()
+    .from("promoter_payouts")
+    .select("id, amount, note, paid_at, confirmed_at, batch_id")
+    .eq("promoter_code", promoter.code)
+    .order("paid_at", { ascending: false });
+
+  const paidPerRun = new Map<string, number>();
+  for (const row of (payoutRows ?? []) as any[]) {
+    if (!row.batch_id) continue;
+    paidPerRun.set(row.batch_id, (paidPerRun.get(row.batch_id) ?? 0) + row.amount);
+  }
+
   const runs: PromoterRun[] = ((batches ?? []) as any[]).map((batch) => {
     const mine = (orders ?? []).filter((o) => o.batch_id === batch.id);
     const paidOrders = mine.filter((o) => o.status !== "pending").length;
@@ -107,6 +124,7 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
       orders: paidOrders,
       unpaid: mine.length - paidOrders,
       earned: paidOrders * rate,
+      paidOut: paidPerRun.get(batch.id as string) ?? 0,
     };
   });
 
@@ -141,14 +159,13 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
       label: byBatch.get(o.batch_id as string) ?? "",
     }));
 
-  const { data: payouts } = await db()
-    .from("promoter_payouts")
-    .select("id, amount, note, paid_at, confirmed_at")
-    .eq("promoter_code", promoter.code)
-    .order("paid_at", { ascending: false });
+  const payouts = ((payoutRows ?? []) as any[]).map((row) => ({
+    ...row,
+    runLabel: row.batch_id ? byBatch.get(row.batch_id) ?? "" : "",
+  }));
 
   const earned = runs.reduce((total, run) => total + run.earned, 0);
-  const paid = (payouts ?? []).reduce((total, row) => total + (row.amount as number), 0);
+  const paid = payouts.reduce((total, row) => total + (row.amount as number), 0);
 
   return {
     code: promoter.code as string,
@@ -165,6 +182,6 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
     owed: Math.max(0, earned - paid),
     waiting: chase.length * rate,
     chase,
-    payouts: (payouts ?? []) as PromoterEarnings["payouts"],
+    payouts: payouts as PromoterEarnings["payouts"],
   };
 }

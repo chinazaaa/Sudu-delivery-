@@ -116,7 +116,22 @@ export default async function PromoterPage() {
                     {run.unpaid > 0 && ` · ${run.unpaid} not paid for yet`}
                   </span>
                 </span>
-                <span className="shrink-0 font-bold">{naira(run.earned)}</span>
+                <span className="shrink-0 text-right">
+                  <span className="block font-bold">{naira(run.earned)}</span>
+                  {run.earned > 0 && (
+                    <span
+                      className={`text-xs font-semibold ${
+                        run.paidOut >= run.earned ? "text-green-700" : "text-muted"
+                      }`}
+                    >
+                      {run.paidOut >= run.earned
+                        ? "Paid to you"
+                        : run.paidOut > 0
+                          ? `${naira(run.paidOut)} of it paid`
+                          : "Not paid yet"}
+                    </span>
+                  )}
+                </span>
               </li>
             ))}
           </ul>
@@ -142,7 +157,12 @@ export default async function PromoterPage() {
                     month: "short",
                     year: "numeric",
                   })}
-                  {payout.note && <span className="text-muted"> · {payout.note}</span>}
+                  {(payout.runLabel || payout.note) && (
+                    <span className="text-muted">
+                      {" "}
+                      · {payout.runLabel || payout.note}
+                    </span>
+                  )}
                 </span>
                 <span className="flex items-center gap-2">
                   <span className="font-semibold">{naira(payout.amount)}</span>

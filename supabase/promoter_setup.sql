@@ -29,6 +29,9 @@ alter table promoters add column if not exists bank_account_number text not null
 
 -- A payout is recorded by you and confirmed by them, so both ends agree.
 alter table promoter_payouts add column if not exists confirmed_at timestamptz;
+-- Which run a payout was for. Null is still allowed, for a payment that
+-- covers several runs or none of them.
+alter table promoter_payouts add column if not exists batch_id uuid references batches(id) on delete set null;
 
 -- Anyone already there without a PIN gets one, so they can sign in.
 update promoters
