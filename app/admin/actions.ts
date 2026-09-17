@@ -8,7 +8,7 @@ import { STAGES, type BatchStage } from "@/lib/stages";
 import { type BatchSlot } from "@/lib/config";
 import { deliveryWindows } from "@/lib/settings";
 import { lagosInstant } from "@/lib/time";
-import { ensureUpcomingBatches } from "@/lib/batches";
+import { ensureUpcomingBatches, openRunsBetween } from "@/lib/batches";
 import { fileFrom, uploadImage } from "@/lib/uploads";
 import { parseMenuText } from "@/lib/menu-import";
 
@@ -217,9 +217,20 @@ export async function toggleScheduleRun(form: FormData): Promise<void> {
  * own whenever admin is opened; this is the button for when a schedule has
  * just changed and the runs should appear now.
  */
-export async function generateRuns(): Promise<void> {
+export async function generateRuns(form: FormData): Promise<void> {
   await assertAdmin();
-  await ensureUpcomingBatches();
+
+  // A month at a time, because that is how somebody plans a term: "October is
+  // open" is a thing you can hold in your head, "the next 21 days" is not.
+  const month = String(form.get("month") ?? "").trim();
+  if (/^\d{4}-\d{2}$/.test(month)) {
+    const [year, index] = month.split("-").map(Number);
+    const last = new Date(Date.UTC(year, index, 0)).getUTCDate();
+    await openRunsBetween(`${month}-01`, `${month}-${String(last).padStart(2, "0")}`);
+  } else {
+    await ensureUpcomingBatches();
+  }
+
   revalidatePath("/admin/runs");
   revalidatePath("/");
 }

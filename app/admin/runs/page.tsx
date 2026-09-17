@@ -3,6 +3,8 @@ import Diagnostic from "@/components/Diagnostic";
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import { batchOverview } from "@/lib/admin";
+import { openUntil } from "@/lib/batches";
+import { safeSettings } from "@/lib/settings";
 import { diagnoseEmpty, keyKind } from "@/lib/health";
 import { ensureUpcomingBatches, closeExpiredBatches } from "@/lib/batches";
 import {
@@ -20,6 +22,14 @@ import { clockLabel, runDateLabel } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
+/** Days between today and the last day anything is open for. */
+function coverDays(until: string | null): number {
+  if (!until) return 0;
+  return Math.round(
+    (new Date(until + "T12:00:00Z").getTime() - Date.now()) / 86400000
+  );
+}
+
 export default async function RunsPage({
   searchParams,
 }: {
@@ -28,7 +38,11 @@ export default async function RunsPage({
   const query = await searchParams;
   const showForm = query.new === "1";
   const schedule = await runSchedule(true);
+  // How far ahead the shop can actually take orders, and the months worth
+  // offering to open next.
+  const until = await openUntil();
   const window = query.show === "all" ? "all" : "recent";
+  const horizon = (await safeSettings()).order_horizon_days || 7;
 
   let problem: Awaited<ReturnType<typeof diagnoseEmpty>> | null = null;
   let batches: Awaited<ReturnType<typeof batchOverview>> = [];
@@ -66,12 +80,17 @@ export default async function RunsPage({
             : "This week and the days just gone. Fridays open themselves."
         }
         actions={
-          <Link
-            href={showForm ? "/admin/runs" : "/admin/runs?new=1"}
-            className="btn-primary px-4 py-2.5 text-sm"
-          >
-            {showForm ? "Close" : "New run"}
-          </Link>
+          <>
+            <Link href="/admin/schedule" className="btn-quiet px-4 py-2.5 text-sm">
+              Schedule
+            </Link>
+            <Link
+              href={showForm ? "/admin/runs" : "/admin/runs?new=1"}
+              className="btn-primary px-4 py-2.5 text-sm"
+            >
+              {showForm ? "Close" : "One-off run"}
+            </Link>
+          </>
         }
       />
 
@@ -94,6 +113,32 @@ export default async function RunsPage({
         </Link>
       </div>
 
+      {/* The thing that quietly kills a shop: ordering open, but nothing left
+          to order into. */}
+      <div
+        className={`card mb-4 ${
+          coverDays(until) < 14 ? "border-brand/30 bg-brand-tint" : ""
+        }`}
+      >
+        <h2 className="font-bold">
+          {until
+            ? `Ordering is open through ${runDateLabel(until)}`
+            : "No runs are open"}
+        </h2>
+        <p className="mt-0.5 text-sm text-ink/75">
+          {!until
+            ? "Nobody can order anything until a month is opened."
+            : coverDays(until) < 14
+              ? `That is ${coverDays(until)} day${coverDays(until) === 1 ? "" : "s"} away. Open the next month before it runs out.`
+              : `Customers see the runs closing in the next ${horizon} days; the rest are yours to plan.`}
+        </p>
+        {(!until || coverDays(until) < 14) && (
+          <Link href="/admin/schedule" className="btn-primary mt-3 px-4 py-2.5 text-sm">
+            Open a month
+          </Link>
+        )}
+      </div>
+
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Runs listed" value={live.length} />
         <Stat label="Orders" value={orders} />
@@ -106,163 +151,6 @@ export default async function RunsPage({
           hint="Across the runs below"
         />
       </div>
-
-      <section className="card mb-4 space-y-3">
-        <div>
-          <h2 className="font-bold">Your week</h2>
-          <p className="mt-0.5 text-sm text-muted">
-            The days you run, each with its own cut-off and its own delivery
-            time. Runs for these days are opened automatically; the button
-            below opens them now, for a schedule you have just changed.
-          </p>
-        </div>
-
-        <ul className="space-y-2">
-          {schedule.map((run) => (
-            <li
-              key={run.id}
-              className={`rounded-xl border p-3 ${
-                run.active ? "border-black/10" : "border-black/5 bg-black/[0.02]"
-              }`}
-            >
-              {/* Editable in place: a cut-off that moves half an hour is the
-                  most likely change anyone makes here. */}
-              <form action={saveScheduleRun} className="space-y-2">
-                <input type="hidden" name="weekday" value={run.weekday} />
-                <input type="hidden" name="slot" value={run.slot} />
-
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className={run.active ? "font-bold" : "font-bold text-muted"}>
-                    {WEEKDAYS[run.weekday]} {SLOT_LABEL[run.slot]}
-                    {!run.active && (
-                      <span className="ml-2 text-xs font-semibold">paused</span>
-                    )}
-                  </span>
-                  <span className="flex gap-2">
-                    <button
-                      formAction={toggleScheduleRun}
-                      name="schedule_id"
-                      value={run.id}
-                      className="chip border-black/10 bg-white py-1.5 text-xs"
-                    >
-                      {run.active ? "Pause" : "Resume"}
-                    </button>
-                    <button
-                      formAction={deleteScheduleRun}
-                      name="schedule_id"
-                      value={run.id}
-                      className="chip border-black/10 bg-white py-1.5 text-xs text-brand"
-                    >
-                      Remove
-                    </button>
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap items-end gap-2">
-                  <div className="w-32">
-                    <label className="label" htmlFor={`cut-${run.id}`}>
-                      Closes
-                    </label>
-                    <input
-                      id={`cut-${run.id}`}
-                      name="cut_off"
-                      type="time"
-                      defaultValue={run.cut_off}
-                      className="field py-2 text-sm"
-                    />
-                  </div>
-                  <div className="grow">
-                    <label className="label" htmlFor={`window-${run.id}`}>
-                      What customers are told
-                    </label>
-                    <input
-                      id={`window-${run.id}`}
-                      name="window_text"
-                      defaultValue={run.window_text}
-                      placeholder="On campus ~2:00pm"
-                      className="field py-2 text-sm"
-                    />
-                  </div>
-                  <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
-                    Save
-                  </SaveButton>
-                </div>
-              </form>
-            </li>
-          ))}
-          {schedule.length === 0 && (
-            <li className="text-sm text-muted">
-              No days set, so no runs open by themselves.
-            </li>
-          )}
-        </ul>
-
-        <p className="text-xs text-muted">
-          Changing a time here changes the runs that open from now on. A run
-          already open keeps its own time, which is editable on the run itself.
-        </p>
-
-        <form
-          action={saveScheduleRun}
-          className="grid gap-2 border-t border-black/5 pt-3 sm:grid-cols-5"
-        >
-          <p className="font-semibold sm:col-span-5">Add another day</p>
-          <div className="sm:col-span-2">
-            <label className="label" htmlFor="weekday">Day</label>
-            <select id="weekday" name="weekday" className="field py-2 text-sm" defaultValue="5">
-              {WEEKDAYS.map((day, index) => (
-                <option key={day} value={index}>
-                  {day}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="label" htmlFor="schedule-slot">Run</label>
-            <select
-              id="schedule-slot"
-              name="slot"
-              className="field py-2 text-sm"
-              defaultValue="afternoon"
-            >
-              <option value="afternoon">Afternoon</option>
-              <option value="night">Night</option>
-            </select>
-          </div>
-          <div>
-            <label className="label" htmlFor="schedule-cutoff">Closes</label>
-            <input
-              id="schedule-cutoff"
-              name="cut_off"
-              type="time"
-              defaultValue="11:30"
-              className="field py-2 text-sm"
-            />
-          </div>
-          <div className="sm:col-span-5">
-            <label className="label" htmlFor="schedule-window">
-              What customers are told
-            </label>
-            <input
-              id="schedule-window"
-              name="window_text"
-              placeholder="On campus ~2:00pm"
-              className="field py-2 text-sm"
-            />
-          </div>
-          <div className="sm:col-span-5">
-            <SaveButton quiet>Add to the week</SaveButton>
-          </div>
-        </form>
-
-        <form action={generateRuns} className="border-t border-black/5 pt-3">
-          <SaveButton>Open the runs for this schedule</SaveButton>
-          <p className="mt-1 text-xs text-muted">
-            Opens every run the schedule calls for, three weeks ahead. Days
-            already open are left exactly as they are, cancellations included.
-          </p>
-        </form>
-      </section>
 
       {showForm && (
         <section className="card mb-4">

@@ -24,14 +24,24 @@ function addDays(date: string, days: number): string {
  */
 export async function ensureUpcomingBatches(): Promise<void> {
   const today = lagosToday();
+  await openRunsBetween(today, addDays(today, RUN_HORIZON_DAYS - 1));
+}
+
+/**
+ * Opens every run the schedule calls for between two dates, inclusive. Runs
+ * that already exist are left exactly as they are, so a cancelled run stays
+ * cancelled and a run with orders on it is never rewritten.
+ *
+ * Returns how many were opened, so a month can report what it did.
+ */
+export async function openRunsBetween(from: string, to: string): Promise<number> {
   // The week as the admin has set it: which days run, when each closes, and
   // what customers are told about when it lands.
   const schedule = await runSchedule();
   const windows = await deliveryWindows();
   const rows: Array<Omit<Batch, "id">> = [];
 
-  for (let i = 0; i < RUN_HORIZON_DAYS; i++) {
-    const date = addDays(today, i);
+  for (let date = from; date <= to; date = addDays(date, 1)) {
     const weekday = weekdayOf(date);
     for (const run of schedule.filter((entry) => entry.weekday === weekday)) {
       const [hour, minute] = run.cut_off.split(":").map(Number);
@@ -53,7 +63,16 @@ export async function ensureUpcomingBatches(): Promise<void> {
       });
     }
   }
-  if (rows.length === 0) return;
+  if (rows.length === 0) return 0;
+
+  const existing = await db()
+    .from("batches")
+    .select("run_date, slot")
+    .gte("run_date", from)
+    .lte("run_date", to);
+  const already = new Set(
+    (existing.data ?? []).map((row) => `${row.run_date}|${row.slot}`)
+  );
 
   const { error } = await db().from("batches").upsert(rows, {
     onConflict: "run_date,slot",
@@ -61,6 +80,21 @@ export async function ensureUpcomingBatches(): Promise<void> {
   });
   // A blocked write here is why batches would otherwise just never appear.
   if (error) throw new Error(`Could not open batches: ${error.message}`);
+
+  return rows.filter((row) => !already.has(`${row.run_date}|${row.slot}`)).length;
+}
+
+/** The last day anything is open for, so admin can see how far ahead it runs. */
+export async function openUntil(): Promise<string | null> {
+  const { data } = await db()
+    .from("batches")
+    .select("run_date")
+    .eq("status", "open")
+    .gte("run_date", lagosToday())
+    .order("run_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data?.run_date as string) ?? null;
 }
 
 /**
