@@ -525,3 +525,19 @@ test("a split group reads as one order with a part each", () => {
   assert.equal(shareRef({ id: "x", order_no: 1042 }, []), "#1042");
   assert.equal(shareRef({ id: "x", order_no: 1042 }, [{ id: "x", order_no: 1042 }]), "#1042");
 });
+
+test("a week's horizon reaches the same weekday next week", () => {
+  // Counting hours from "now" put next Friday's 11:30 cut-off outside a
+  // seven-day window, so on a Friday the only run on offer was that night's.
+  const addDays = (date: string, days: number) => {
+    const d = new Date(date + "T12:00:00Z");
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+  };
+
+  const friday = "2026-09-18";
+  const until = `${addDays(friday, 7)}T23:59:59+01:00`;
+  const nextFridayCutOff = new Date("2026-09-25T11:30:00+01:00");
+
+  assert.ok(nextFridayCutOff < new Date(until));
+});

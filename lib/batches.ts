@@ -130,7 +130,10 @@ export async function openBatches(): Promise<OpenBatch[]> {
   // offered the near ones: food is not planned a fortnight ahead, and an order
   // that sits unpaid that long is priced on a menu that has since moved.
   const horizon = (await safeSettings()).order_horizon_days || 7;
-  const until = new Date(Date.now() + horizon * 86400000).toISOString();
+  // Whole days, to the end of the last one. Counting in hours from right now
+  // put next Friday's 11:30 cut-off a few hours outside a seven-day window, so
+  // on a Friday the only run anybody could see was that same night's.
+  const until = `${addDays(lagosToday(), horizon)}T23:59:59+01:00`;
 
   const { data, error } = await db()
     .from("batches")
