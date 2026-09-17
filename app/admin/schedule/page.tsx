@@ -72,6 +72,9 @@ export default async function SchedulePage() {
             The days you run, each with its own cut-off and its own delivery
             time. Runs for these days are opened automatically; the button
             below opens them now, for a schedule you have just changed.
+            Changing a time moves every run still to come that nobody has
+            ordered on. A run with orders on it keeps the time its customers
+            were told, and removing a day takes its empty runs with it.
           </p>
         </div>
 

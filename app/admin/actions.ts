@@ -220,6 +220,39 @@ export async function saveScheduleRun(form: FormData): Promise<void> {
     );
   if (error) throw new Error(`Could not save that day: ${error.message}`);
 
+  // The runs already opened for that day follow the new time. Only ones still
+  // to come, and only while nothing has been ordered on them: a run with
+  // orders keeps the cut-off and the delivery time its customers were told.
+  const windowText = String(form.get("window_text") ?? "").trim();
+  const { data: rows } = await db()
+    .from("batches")
+    .select("id, run_date")
+    .eq("slot", slot)
+    .gte("run_date", lagosToday());
+
+  // Midday UTC, so the day cannot slip either side of midnight.
+  const sameDay = ((rows ?? []) as { id: string; run_date: string }[]).filter(
+    (row) => new Date(`${row.run_date}T12:00:00Z`).getUTCDay() === weekday
+  );
+
+  if (sameDay.length > 0) {
+    const ids = sameDay.map((row) => row.id);
+    const { data: taken } = await db().from("orders").select("batch_id").in("batch_id", ids);
+    const busy = new Set((taken ?? []).map((row) => row.batch_id as string));
+    const [hour, minute] = cutOff.split(":").map(Number);
+
+    for (const row of sameDay) {
+      if (busy.has(row.id)) continue;
+      await db()
+        .from("batches")
+        .update({
+          cut_off_at: lagosInstant(row.run_date, hour, minute),
+          ...(windowText ? { delivery_window_text: windowText } : {}),
+        })
+        .eq("id", row.id);
+    }
+  }
+
   revalidatePath("/admin", "layout");
 }
 
