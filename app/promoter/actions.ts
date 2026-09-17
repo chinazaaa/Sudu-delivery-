@@ -75,3 +75,28 @@ export async function confirmPayout(form: FormData): Promise<void> {
   revalidatePath("/promoter");
   revalidatePath("/admin", "layout");
 }
+
+/**
+ * Their own wording for a nudge.
+ *
+ * Emptying the box puts the standard one back rather than sending nothing,
+ * because a blank message is the one outcome nobody wants at the point of
+ * tapping Nudge.
+ */
+export async function saveNudge(form: FormData): Promise<void> {
+  const code = await currentPromoter();
+  if (!code) return;
+
+  const { error } = await db()
+    .from("promoters")
+    .update({ nudge_template: String(form.get("nudge_template") ?? "").trim() })
+    .eq("code", code);
+  if (error) {
+    throw new Error(
+      `Could not save that: ${error.message}. If it mentions nudge_template, ` +
+        "run supabase/update.sql."
+    );
+  }
+
+  revalidatePath("/promoter");
+}

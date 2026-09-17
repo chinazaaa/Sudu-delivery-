@@ -1,6 +1,7 @@
 import { db } from "./supabase";
 import { SLOT_LABEL, type BatchSlot } from "./config";
 import { runDateLabel } from "./time";
+import { NUDGE_DEFAULT } from "./messages";
 
 /** The one promoter, if there is one set up. */
 export async function thePromoter(): Promise<{
@@ -47,6 +48,8 @@ export type PromoterEarnings = {
   code: string;
   name: string;
   rate: number;
+  /** Their own wording for a nudge, or the one everybody starts with. */
+  nudge: string;
   /** Where their money goes. Kept by them, read by you. */
   bank: { name: string; accountName: string; accountNumber: string };
   runs: PromoterRun[];
@@ -80,7 +83,9 @@ export type PromoterEarnings = {
 export async function promoterEarnings(code: string): Promise<PromoterEarnings | null> {
   const { data: promoter } = await db()
     .from("promoters")
-    .select("code, name, rate, bank_name, bank_account_name, bank_account_number")
+    // Every column. Naming them means adding one here and forgetting the
+    // column makes the whole row come back empty.
+    .select("*")
     .eq("code", code.toUpperCase())
     .maybeSingle();
   if (!promoter) return null;
@@ -171,6 +176,7 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
     code: promoter.code as string,
     name: promoter.name as string,
     rate,
+    nudge: ((promoter.nudge_template as string) || "").trim() || NUDGE_DEFAULT,
     bank: {
       name: (promoter.bank_name as string) ?? "",
       accountName: (promoter.bank_account_name as string) ?? "",

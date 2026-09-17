@@ -86,6 +86,18 @@ export async function promoterSchema(): Promise<{ ok: boolean; missing: string }
 }
 
 /**
+ * Whether the promoter can write their own nudge yet.
+ *
+ * The column arrived after the table did, so a database that has not had
+ * update.sql run on it has everything else and not this. Asked first, the
+ * page can leave the box out rather than offer a save that throws.
+ */
+export async function hasNudgeColumn(): Promise<boolean> {
+  const { error } = await db().from("promoters").select("nudge_template").limit(1);
+  return !error;
+}
+
+/**
  * Which settings columns the code expects and the database has not got.
  *
  * A setting saved to a column that does not exist used to fail in silence and

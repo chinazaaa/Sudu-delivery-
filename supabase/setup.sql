@@ -492,6 +492,10 @@ alter table promoters add column if not exists bank_name           text not null
 alter table promoters add column if not exists bank_account_name   text not null default '';
 alter table promoters add column if not exists bank_account_number text not null default '';
 
+-- The promoter writes their own nudge to somebody who ordered and did not
+-- pay. Empty means the standard wording.
+alter table promoters add column if not exists nudge_template text not null default '';
+
 -- A payout is recorded by you and confirmed by them, so both ends agree, and
 -- it says which run it was for. Null is still allowed, for a payment that
 -- covers several runs or none of them.

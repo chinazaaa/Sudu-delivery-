@@ -3,15 +3,22 @@ import PromoterLogin from "@/components/PromoterLogin";
 import { currentPromoter } from "@/lib/promoter-auth";
 import { promoterEarnings } from "@/lib/promoters";
 import { naira } from "@/lib/money";
-import { whatsappTo } from "@/lib/messages";
+import { fillNudge, whatsappTo, NUDGE_TOKENS } from "@/lib/messages";
+import { siteUrl } from "@/lib/admin-templates";
+import { hasNudgeColumn } from "@/lib/health";
 import SaveButton from "@/components/SaveButton";
-import { confirmPayout, saveBank, signOut } from "./actions";
+import { confirmPayout, saveBank, saveNudge, signOut } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function PromoterPage() {
   const code = await currentPromoter();
   const earnings = code ? await promoterEarnings(code) : null;
+  // Links inside a message have to be absolute, so they come from the request.
+  const site = await siteUrl().catch(() => "");
+  // The box only appears once the column is there, rather than offering a
+  // save that throws on a database that has not had update.sql run on it.
+  const canEditNudge = earnings ? await hasNudgeColumn() : false;
 
   if (!earnings) {
     return (
@@ -84,8 +91,12 @@ export default async function PromoterPage() {
                 <a
                   href={whatsappTo(
                     order.phone,
-                    `Hi ${order.name}, your Sudu order for ${order.label} is in but ` +
-                      "not paid for yet. Pay before the cut off and it goes on the run."
+                    fillNudge(earnings.nudge, {
+                      name: order.name,
+                      batch: order.label,
+                      total: naira(order.total),
+                      link: site ? `${site}/o/${order.id}` : "",
+                    })
                   )}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -185,6 +196,29 @@ export default async function PromoterPage() {
             ))}
           </ul>
         </section>
+      )}
+
+      {canEditNudge && (
+      <form action={saveNudge} className="card space-y-3">
+        <div>
+          <h2 className="font-bold">What your nudge says</h2>
+          <p className="text-sm text-muted">
+            This is the message that opens in WhatsApp when you tap Nudge. Say
+            it the way you would say it. Empty the box to put the standard one
+            back.
+          </p>
+        </div>
+        <textarea
+          name="nudge_template"
+          rows={5}
+          defaultValue={earnings.nudge}
+          className="field font-mono text-sm"
+        />
+        <p className="text-xs text-muted">
+          {NUDGE_TOKENS.map((token) => `${token.token} is ${token.means}`).join(" · ")}
+        </p>
+        <SaveButton>Save the wording</SaveButton>
+      </form>
       )}
 
       <form action={saveBank} className="card space-y-3">

@@ -75,6 +75,39 @@ export const TEMPLATE_TOKENS: { token: string; means: string }[] = [
   { token: "{card_link}", means: "the card link saved on that order" },
 ];
 
+/**
+ * The promoter's own nudge, sent to somebody who ordered and did not pay.
+ *
+ * It is theirs to change: the person sending it knows how they talk to the
+ * people they brought in, and a message that reads like a form letter does
+ * not get answered. The tokens below are the only moving parts.
+ */
+export const NUDGE_DEFAULT =
+  "Hi {name}, your Sudu order for {batch} is in but not paid for yet. " +
+  "Pay before the cut off and it goes on the run.\n\n" +
+  "Your order ({total}): {link}";
+
+/** What a nudge can say. Fewer than a whole message needs. */
+export const NUDGE_TOKENS: { token: string; means: string }[] = [
+  { token: "{name}", means: "who ordered" },
+  { token: "{batch}", means: "Thursday night, and so on" },
+  { token: "{total}", means: "what they owe" },
+  { token: "{link}", means: "their order page, where they pay" },
+];
+
+/** Fills a nudge in. Anything unknown is left alone rather than blanked. */
+export function fillNudge(
+  text: string,
+  values: { name: string; batch: string; total: string; link: string }
+): string {
+  return text
+    .replaceAll("{name}", values.name)
+    .replaceAll("{batch}", values.batch)
+    .replaceAll("{total}", values.total)
+    .replaceAll("{link}", values.link)
+    .trim();
+}
+
 /** The line a paid customer reads on their order page, until it is rewritten. */
 export const PAID_NOTE_DEFAULT =
   "We deliver to {hostel}, {window}. You will be called when we are outside.";

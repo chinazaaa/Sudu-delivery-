@@ -144,6 +144,10 @@ alter table promoters add column if not exists bank_name text not null default '
 alter table promoters add column if not exists bank_account_name text not null default '';
 alter table promoters add column if not exists bank_account_number text not null default '';
 
+-- The promoter writes their own nudge to somebody who ordered and did not
+-- pay. Empty means the standard wording.
+alter table promoters add column if not exists nudge_template text not null default '';
+
 -- A payout is recorded by you and confirmed by them, so both ends agree.
 alter table promoter_payouts add column if not exists confirmed_at timestamptz;
 alter table promoter_payouts add column if not exists batch_id uuid references batches(id) on delete set null;
