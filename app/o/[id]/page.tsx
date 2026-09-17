@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import ClearCart from "@/components/ClearCart";
+import FeeBands from "@/components/FeeBands";
 import LiveOrder from "@/components/LiveOrder";
 import ExpiryNote from "@/components/ExpiryNote";
 import StageTimeline from "@/components/StageTimeline";
@@ -457,6 +458,14 @@ export default async function OrderPage({
           )}
           <Row label="Total" value={naira(order.total)} strong />
         </dl>
+
+        {/* The whole ladder, for anyone wondering why four items cost more
+            than three. */}
+        <FeeBands
+          itemCount={allItems}
+          flashFee={order.batch.flash_fee}
+          bands={bands}
+        />
 
         {/* The arithmetic, in a line. Delivery is the thing people query. */}
         <p className="text-xs text-muted">

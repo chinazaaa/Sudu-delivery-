@@ -13,6 +13,7 @@ import {
   usePeople,
 } from "@/lib/cart";
 import { feeFor, splitFee, type Band } from "@/lib/fees";
+import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
 import CouponBox from "@/components/CouponBox";
 import FillDetails from "@/components/FillDetails";
@@ -574,6 +575,13 @@ export default function Checkout({
           </span>
           <span>{naira(fee)}</span>
         </div>
+        {/* Four items costing more than three looks arbitrary until the whole
+            ladder is there, so it is one tap away. */}
+        <FeeBands
+          itemCount={itemCount + alreadyItems}
+          flashFee={selected?.flashFee ?? null}
+          bands={bands}
+        />
         <div className="flex justify-between border-t border-black/10 pt-2 text-lg font-extrabold">
           <span>Total</span>
           <span>{naira(total)}</span>

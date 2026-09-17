@@ -196,7 +196,7 @@ begin
     and m.restaurant_id = r
     and upper(regexp_replace(m.name, '[^a-zA-Z0-9]', '', 'g'))
       = upper(regexp_replace(k.item, '[^a-zA-Z0-9]', '', 'g'))
-    and g.name = k.question;
+    and lower(g.name) = lower(k.question);
 
   for spec in
     select distinct item, question, question_sort, max_select
