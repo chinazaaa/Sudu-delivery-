@@ -31,6 +31,10 @@ export type Person = {
   name: string;
   phone: string;
   hostel: string;
+  /** Unset until the person ordering says where this one's food goes. */
+  goesTo?: "mine" | "theirs";
+  /** How this person pays, when everyone pays their own share. */
+  pays?: "transfer" | "card";
 };
 
 let lines: CartLine[] = [];

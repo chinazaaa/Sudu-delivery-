@@ -169,7 +169,12 @@ export async function forgetMe(form?: FormData): Promise<void> {
 /** The group's other members, as the cart recorded them. */
 function parsePeople(
   value: FormDataEntryValue | null
-): { name: string; phone: string; hostel: string }[] {
+): {
+  name: string;
+  phone: string;
+  hostel: string;
+  pays?: "transfer" | "card";
+}[] {
   try {
     const parsed = JSON.parse(String(value ?? "[]"));
     if (!Array.isArray(parsed)) return [];
@@ -179,6 +184,7 @@ function parsePeople(
         name: String(entry.name),
         phone: String(entry.phone ?? ""),
         hostel: String(entry.hostel ?? ""),
+        pays: entry.pays === "card" ? ("card" as const) : ("transfer" as const),
       }));
   } catch {
     return [];

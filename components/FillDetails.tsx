@@ -16,7 +16,7 @@ export default function FillDetails({
   onFilled,
 }: {
   phone: string;
-  onFilled: (me: { name: string; hostel: string }) => void;
+  onFilled: (me: { name: string; hostel: string; phone: string }) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [number, setNumber] = useState(phone);
@@ -33,7 +33,7 @@ export default function FillDetails({
 
       const result = await fillMyDetails({ error: null, me: null }, form);
       if (result.me) {
-        onFilled(result.me);
+        onFilled({ ...result.me, phone: number || phone });
         setOpen(false);
         setPin("");
         return;

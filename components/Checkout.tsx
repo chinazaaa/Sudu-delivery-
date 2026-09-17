@@ -121,6 +121,16 @@ export default function Checkout({
   // name.
   const splitReady = !groupOn || mode === "one_payer" || shares.length >= 2;
 
+  // Everyone in the cart has to be resolved before the order can be placed.
+  const unresolved = people.filter((person) => {
+    if (!shares.some((share) => share.person === person.name)) return false;
+    if (!person.goesTo) return true;
+    if (person.goesTo === "theirs") {
+      return person.phone.replace(/\D/g, "").length < 10 || person.hostel.trim() === "";
+    }
+    return false;
+  });
+
   if (cart.length === 0) {
     return (
       <div className="card mx-auto max-w-md text-center">
@@ -266,37 +276,116 @@ export default function Checkout({
                     ))}
                   </ul>
 
-                  {/* Their own number is how they get called when the food
-                      lands, and what a payment link hangs off in a split. */}
                   {person && (
-                    <div className="flex flex-wrap gap-2">
-                      <input
-                        className="field grow py-1.5 text-sm"
-                        inputMode="tel"
-                        placeholder={`${person.name}'s phone`}
-                        value={person.phone}
-                        onChange={(e) =>
-                          updatePerson(person.name, { phone: e.target.value })
-                        }
-                      />
-                      <input
-                        className="field grow py-1.5 text-sm"
-                        placeholder={`${person.name}'s hostel or block`}
-                        value={person.hostel}
-                        onChange={(e) =>
-                          updatePerson(person.name, { hostel: e.target.value })
-                        }
-                      />
+                    <div className="space-y-2 border-t border-black/5 pt-2">
+                      {/* Nothing is assumed. Sending a friend's food to your own
+                          block because a field was left blank is the kind of
+                          mistake that loses a customer. */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-muted">
+                          {person.name}&apos;s food goes
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updatePerson(person.name, {
+                              goesTo: "mine",
+                              hostel: "",
+                              phone: "",
+                            })
+                          }
+                          className={`chip py-1.5 text-xs ${
+                            person.goesTo === "mine"
+                              ? "border-ink bg-ink text-white"
+                              : "border-black/10 bg-white"
+                          }`}
+                        >
+                          Where mine goes
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updatePerson(person.name, { goesTo: "theirs" })}
+                          className={`chip py-1.5 text-xs ${
+                            person.goesTo === "theirs"
+                              ? "border-ink bg-ink text-white"
+                              : "border-black/10 bg-white"
+                          }`}
+                        >
+                          To them
+                        </button>
+                      </div>
+
+                      {person.goesTo === "theirs" && (
+                        <div className="flex flex-wrap gap-2">
+                          <input
+                            className="field grow py-1.5 text-sm"
+                            inputMode="tel"
+                            placeholder={`${person.name}'s phone`}
+                            value={person.phone}
+                            onChange={(event) =>
+                              updatePerson(person.name, { phone: event.target.value })
+                            }
+                          />
+                          {hostels.length > 0 ? (
+                            <select
+                              className="field grow py-1.5 text-sm"
+                              value={hostels.includes(person.hostel) ? person.hostel : ""}
+                              onChange={(event) =>
+                                updatePerson(person.name, { hostel: event.target.value })
+                              }
+                            >
+                              <option value="">{person.name}&apos;s block</option>
+                              {hostels.map((name) => (
+                                <option key={name} value={name}>
+                                  {name}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              className="field grow py-1.5 text-sm"
+                              placeholder={`${person.name}'s hostel or block`}
+                              value={person.hostel}
+                              onChange={(event) =>
+                                updatePerson(person.name, { hostel: event.target.value })
+                              }
+                            />
+                          )}
+                        </div>
+                      )}
+
+                      {mode === "split" && (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-muted">
+                            {person.name} pays by
+                          </span>
+                          {(["transfer", "card"] as const).map((way) => (
+                            <button
+                              key={way}
+                              type="button"
+                              onClick={() => updatePerson(person.name, { pays: way })}
+                              className={`chip py-1.5 text-xs ${
+                                (person.pays ?? "transfer") === way
+                                  ? "border-ink bg-ink text-white"
+                                  : "border-black/10 bg-white"
+                              }`}
+                            >
+                              {way === "transfer" ? "Transfer" : "Card link"}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
+
                 </li>
               );
             })}
           </ul>
 
           <p className="text-xs text-muted">
-            A number each is how anyone in the group gets called when their bag
-            lands. Leave one blank and that bag comes to you.
+            A number each is how anyone in the group gets called when their food
+            lands, and in a split it is what their payment link hangs off.
           </p>
 
           {mode === "split" && (
@@ -370,6 +459,7 @@ export default function Checkout({
             onFilled={(me) => {
               setName(me.name);
               setFilled(true);
+              if (me.phone) setPhone(me.phone);
               if (me.hostel) setHostel(me.hostel);
             }}
           />
@@ -492,6 +582,12 @@ export default function Checkout({
 
       <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t border-black/5 bg-paper p-3 shadow-bar sm:bottom-0">
         <div className="mx-auto max-w-2xl space-y-2">
+          {unresolved.length > 0 && (
+            <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
+              Say where {unresolved[0].name}&apos;s food goes: to your block with
+              yours, or to them with their own number.
+            </p>
+          )}
           {state.error && (
             <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
               {state.error}
@@ -500,7 +596,7 @@ export default function Checkout({
           <button
             type="submit"
             className="btn-primary w-full py-4 text-base"
-            disabled={pending || !batchId || !splitReady}
+            disabled={pending || !batchId || !splitReady || unresolved.length > 0}
           >
             {pending ? "Placing…" : `Place order · ${naira(total)}`}
           </button>

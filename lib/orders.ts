@@ -34,7 +34,13 @@ export type PlaceOrderInput = {
   /** Whether one person collects every bag, or everyone collects their own. */
   collectMode?: "leader" | "each";
   /** The others in a group order, with their own number and block if given. */
-  people?: { name: string; phone: string; hostel: string }[];
+  people?: {
+    name: string;
+    phone: string;
+    hostel: string;
+    /** How that person pays their own share, in a split group. */
+    pays?: "transfer" | "card";
+  }[];
   /** Anything the customer asked for, in their own words. */
   customerNote?: string;
 };
@@ -283,7 +289,12 @@ async function placeSplitGroup(args: {
   discount: number;
   paymentMethod: "transfer" | "card";
   collectMode: "leader" | "each";
-  people: { name: string; phone: string; hostel: string }[];
+  people: {
+    name: string;
+    phone: string;
+    hostel: string;
+    pays?: "transfer" | "card";
+  }[];
   bands: Band[];
   customerNote: string;
 }): Promise<PlaceOrderResult> {
@@ -336,7 +347,9 @@ async function placeSplitGroup(args: {
       group_id: group.id,
       // The leader's share carries their own name on the bag label.
       for_name: isLeader ? args.name : who,
-      payment_method: args.paymentMethod,
+      // Everyone pays their own share their own way: one friend can send a
+      // transfer while another waits for a card link.
+      payment_method: isLeader ? args.paymentMethod : theirs?.pays ?? args.paymentMethod,
       // The note belongs to whoever wrote it, not to everyone in the group.
       customer_note: isLeader ? args.customerNote : "",
       lines,

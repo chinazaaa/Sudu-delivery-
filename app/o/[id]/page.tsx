@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import ClearCart from "@/components/ClearCart";
 import LiveOrder from "@/components/LiveOrder";
@@ -6,9 +7,11 @@ import ExpiryNote from "@/components/ExpiryNote";
 import StageTimeline from "@/components/StageTimeline";
 import { STAGE_LABEL } from "@/lib/stages";
 import ShareLink from "@/components/ShareLink";
+import SplitCollect from "@/components/SplitCollect";
 import CopyText from "@/components/CopyText";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira, orderRef } from "@/lib/money";
+import { splitFee } from "@/lib/fees";
 import { fillNote, PAID_NOTE_DEFAULT } from "@/lib/messages";
 import RepeatOrder from "@/components/RepeatOrder";
 import {
@@ -50,6 +53,13 @@ export default async function OrderPage({
   const paid = order.status === "paid" || order.status === "delivered";
   const awaitingPayment = order.status === "pending";
   const drops = dropsFor(order);
+  // Links inside a share message have to be absolute, so they come from the
+  // request rather than another environment variable to keep in step.
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("host") ?? "";
+  const site = host
+    ? `${requestHeaders.get("x-forwarded-proto") ?? "https"}://${host}`
+    : "";
   // An older order can carry names on some lines and not others. Whoever
   // ordered owns the rest, so the list never shows an item with no owner.
   const named = order.lines.some((line) => line.for_name);
@@ -119,6 +129,30 @@ export default async function OrderPage({
         </section>
       )}
 
+      {/* Chasing is the work in a split group, so it comes before everything
+          except the money owed. */}
+      {order.group?.mode === "split" && order.shares.length > 1 && (
+        <SplitCollect
+          orderId={order.id}
+          shares={order.shares.map((share) => {
+            const name = share.for_name ?? share.customer_name;
+            const url = `${site}/o/${share.id}`;
+            return {
+              id: share.id,
+              name,
+              total: share.total,
+              paid: share.status !== "pending",
+              url,
+              whatsapp: whatsappLink(
+                share.customer_phone,
+                `Hi ${name}, here is your share of the Sudu order: ` +
+                  `${naira(share.total)}. Pay here and you are on the run: ${url}`
+              ),
+            };
+          })}
+        />
+      )}
+
       {/* One bag going to one person needs a line, not a section: the header
           already says whose order this is. */}
       {drops.length === 1 && drops[0].name !== order.customer_name && (
@@ -173,7 +207,12 @@ export default async function OrderPage({
             >
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="font-bold">{drop.name}</h3>
-                <span className="text-sm font-semibold">{naira(drop.food)}</span>
+                <span className="text-right text-sm font-semibold">
+                  {naira(drop.food + drop.delivery)}
+                  <span className="block text-xs font-normal text-muted">
+                    {naira(drop.food)} food + {naira(drop.delivery)} delivery
+                  </span>
+                </span>
               </div>
 
               <ul className="space-y-0.5 text-sm text-ink/75">
@@ -234,8 +273,17 @@ export default async function OrderPage({
                   <span className="text-xs text-muted">This link</span>
                 )}
               </div>
+
             </article>
           ))}
+
+          {order.group?.mode === "one_payer" && drops.length > 1 && (
+            <p className="rounded-xl bg-shell px-3 py-2 text-sm">
+              You paid for all of this, delivery included. Everyone&apos;s share
+              of the delivery is worked out by how much they ordered, so what
+              each person owes you is the figure beside their name.
+            </p>
+          )}
 
           {order.group?.mode === "split" && (
             <p className="text-xs text-muted">
@@ -410,6 +458,8 @@ export default async function OrderPage({
         </section>
       )}
 
+      <HelpUs settings={settings} order={order} batchLabel={batchLabel} />
+
       {awaitingPayment && !expired && (
         <p className="text-center text-xs text-muted">
           Already paid? This page updates once the transfer is matched. Refresh it.
@@ -426,6 +476,8 @@ type Drop = {
   hostel: string;
   lines: OrderLine[];
   food: number;
+  /** Their share of the delivery, by how many containers they put in. */
+  delivery: number;
   status: string | null;
 };
 
@@ -445,6 +497,8 @@ function dropsFor(order: FullOrder): Drop[] {
         hostel: share.hostel,
         lines: share.lines,
         food: foodOf(share.lines),
+        // A split group is one order each, so the fee is already theirs.
+        delivery: share.total - foodOf(share.lines),
         status: share.status,
       };
     });
@@ -458,7 +512,15 @@ function dropsFor(order: FullOrder): Drop[] {
     byName.set(who, [...(byName.get(who) ?? []), line]);
   }
 
-  return [...byName.entries()].map(([name, lines]) => {
+  // One order, one payer: the delivery is shared out by container count so the
+  // person who paid knows what to collect from everyone else.
+  const entries = [...byName.entries()];
+  const shares = splitFee(
+    order.fee,
+    entries.map(([, lines]) => lines.reduce((count, line) => count + line.qty, 0))
+  );
+
+  return entries.map(([name, lines], index) => {
     const member = order.members.find((m) => m.name === name);
     const isLeader = name === order.customer_name;
     return {
@@ -468,6 +530,7 @@ function dropsFor(order: FullOrder): Drop[] {
       hostel: (isLeader ? order.hostel : member?.hostel) || order.hostel,
       lines,
       food: foodOf(lines),
+      delivery: shares[index] ?? 0,
       status: null,
     };
   });
@@ -475,6 +538,43 @@ function dropsFor(order: FullOrder): Drop[] {
 
 function foodOf(lines: OrderLine[]): number {
   return lines.reduce((sum, line) => sum + line.qty * line.unit_price_at_order, 0);
+}
+
+/** A way to reach a person, on every order, whatever state it is in. */
+function HelpUs({
+  settings,
+  order,
+  batchLabel,
+}: {
+  settings: Awaited<ReturnType<typeof getSettings>>;
+  order: { id: string; customer_name: string; order_no: number | null };
+  batchLabel: string;
+}) {
+  const link = whatsappLink(
+    settings.whatsapp_number,
+    `Hi, about my Sudu order ${orderRef(order)} (${order.customer_name}, ${batchLabel}):`
+  );
+  if (!link) return null;
+
+  return (
+    <section className="card flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 className="font-bold">Need anything?</h2>
+        <p className="text-sm text-muted">
+          A change, a question, or something wrong with the order. A person
+          answers.
+        </p>
+      </div>
+      <a
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn-quiet px-4 py-2.5 text-sm"
+      >
+        Message us on WhatsApp
+      </a>
+    </section>
+  );
 }
 
 /**
