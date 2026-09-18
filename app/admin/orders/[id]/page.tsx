@@ -21,6 +21,34 @@ export default async function AdminOrderPage({
 }) {
   const { id } = await params;
 
+  // Temporary while a failure on this page is being chased: production hides
+  // the reason and shows a React number instead, which names nothing. Admin is
+  // behind a password, so the message can be shown to the person who needs it.
+  try {
+    return await orderPage(id);
+  } catch (error) {
+    // notFound() and redirect() travel as errors and must not be caught.
+    const digest = (error as { digest?: unknown }).digest;
+    if (typeof digest === "string" && digest.startsWith("NEXT_")) throw error;
+
+    const detail = error instanceof Error ? error : new Error(String(error));
+    return (
+      <div className="card space-y-2 border-red-200 bg-red-50">
+        <h1 className="font-extrabold text-red-800">This order would not open</h1>
+        <p className="break-words text-sm text-red-900">{detail.message}</p>
+        <pre className="overflow-x-auto whitespace-pre-wrap rounded-xl bg-white/70 p-3 text-xs text-red-900">
+          {(detail.stack ?? "").split("\n").slice(0, 6).join("\n")}
+        </pre>
+        <Link href="/admin/orders" className="btn-quiet w-fit px-4 py-2 text-sm">
+          Back to orders
+        </Link>
+      </div>
+    );
+  }
+}
+
+async function orderPage(id: string) {
+
   const [order, settings, url] = await Promise.all([
     getOrder(id),
     getSettings(),
