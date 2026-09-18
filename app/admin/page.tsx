@@ -52,6 +52,7 @@ export default async function AdminHome() {
   }
 
   const open = batches.filter((batch) => batch.status === "open");
+  const profit = batches.reduce((total, batch) => total + batch.profit, 0);
   const unpaidValue = unpaid.reduce((total, order) => total + order.total, 0);
 
   return (
@@ -119,11 +120,13 @@ export default async function AdminHome() {
             <Stat label="Paid orders" value={stats.paidOrders} hint="Last 28 days" />
             <Stat label="Money in" value={stats.gross} money hint="Paid orders" />
             <Stat label="Delivery fees" value={stats.fees} money hint="Your margin" />
+            {/* A loss is not good news, whatever colour the card would rather
+                be. The tone follows the number. */}
             <Stat
               label="Profit"
-              value={batches.reduce((total, batch) => total + batch.profit, 0)}
+              value={profit}
               money
-              tone="good"
+              tone={profit >= 0 ? "good" : "warn"}
               hint="After food, commission, fuel and driver"
             />
           </div>
