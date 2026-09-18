@@ -1,6 +1,6 @@
 "use client";
 
-import GroupLink, { readParty } from "./GroupLink";
+import { readGroup } from "./GroupLink";
 
 import { useEffect, useState } from "react";
 import Thumb from "./Thumb";
@@ -24,7 +24,7 @@ export default function ItemSheet({
   // Somebody in a group is ordering their own food, so naming bags and
   // offering a link they already have is two things they do not need.
   const [inParty, setInParty] = useState(false);
-  useEffect(() => setInParty(readParty() !== ""), []);
+  useEffect(() => setInParty(readGroup() !== ""), []);
 
   const { people, active } = usePeople();
   const [picked, setPicked] = useState<Record<string, string[]>>({});
@@ -215,14 +215,9 @@ export default function ItemSheet({
                   + A friend
                 </button>
               )}
-              {/* The other kind of together: they order their own food on
-                  their own phone and it rides in the same car. One tap, no
-                  form, because the link is the whole point. */}
-              <GroupLink small />
             </div>
             <p className="text-xs text-muted">
-              Names label the bags. The link lets friends order their own and split
-              one delivery with you.
+              Bags are labelled with these names on delivery.
             </p>
           </div>
           )}

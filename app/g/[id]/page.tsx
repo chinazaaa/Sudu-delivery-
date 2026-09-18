@@ -1,22 +1,25 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { groupView } from "@/lib/group-view";
 import { safeSettings } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
 import { naira } from "@/lib/money";
 import { SLOT_LABEL } from "@/lib/config";
-import { clockLabel, runDateLabel } from "@/lib/time";
+import { runDateLabel } from "@/lib/time";
 import GroupBoard from "@/components/GroupBoard";
 
 export const dynamic = "force-dynamic";
 
 /**
- * A shared delivery, from inside it.
+ * A shared delivery, and the page the link lands on.
  *
  * Before it closes this is a waiting room: who is in, who has finished, how
  * long is left, and no figure for delivery because there is not one yet.
  * After it closes it is a bill: one even share each, and everybody pays their
  * own on their own order page.
+ *
+ * The group exists from the moment the link is made, so this page is never a
+ * dead end: somebody who opens the link sees whose group it is and when the
+ * food lands before they have ordered anything at all.
  */
 export default async function GroupPage({
   params,
@@ -43,17 +46,18 @@ export default async function GroupPage({
     );
   }
 
-  // Which of them is reading. Their own order page sets this when it sends
-  // them here, and a friend who just ordered arrives with it in the address.
+  // Which of them is reading. Their own order sets this when it sends them
+  // here; the board remembers it after that.
   const asked = (await searchParams).me ?? "";
-  const mine =
-    group.members.find((one) => one.orderId === asked)?.orderId ??
-    (await cookies()).get("sudu_group_me")?.value ??
-    null;
+  const mine = group.members.find((one) => one.orderId === asked)?.orderId ?? null;
   const me = group.members.find((one) => one.orderId === mine) ?? null;
 
-  const label = `${runDateLabel(group.batch.run_date)} · ${SLOT_LABEL[group.batch.slot]}`;
-  const shareUrl = `${site}/join/${group.members[0]?.orderId ?? ""}`;
+  // A group that picked a time says the time and nothing else. Putting a run
+  // beside it reads as a second option, and there is not one.
+  const label = group.sameDay
+    ? ""
+    : `${runDateLabel(group.batch.run_date)} · ${SLOT_LABEL[group.batch.slot]}`;
+  const shareUrl = `${site}/g/${group.id}`;
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
@@ -62,11 +66,12 @@ export default async function GroupPage({
           {group.leaderName}&apos;s delivery
         </p>
         <h1 className="text-2xl font-bold tracking-tight">
-          {group.members.length} {group.members.length === 1 ? "person" : "people"},{" "}
-          {group.items} item{group.items === 1 ? "" : "s"}
+          {group.members.length === 0
+            ? "Waiting for the first order"
+            : `${group.members.length} ${group.members.length === 1 ? "person" : "people"}, ${group.items} item${group.items === 1 ? "" : "s"}`}
         </h1>
         <p className="text-ink/75">
-          {label}, arriving {group.batch.delivery_window_text}.
+          {label && `${label}, `}arriving {group.batch.delivery_window_text}.
         </p>
       </section>
 
@@ -122,7 +127,7 @@ export default async function GroupPage({
           members={group.members}
           mine={mine}
           closesAt={group.closesAt!}
-          isLeader={me?.isLeader ?? false}
+          leaderOnServer={me?.isLeader ?? false}
           shareUrl={shareUrl}
           leaderName={group.leaderName}
         />

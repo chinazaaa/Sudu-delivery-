@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { clearCart, clearPeople } from "@/lib/cart";
 import { clearJoin } from "@/components/JoinDelivery";
-import { leaveParty } from "@/components/GroupLink";
+import { leaveGroup } from "@/components/GroupLink";
 
 /**
  * The cart lives in the browser, so the server redirect after checkout cannot
@@ -17,7 +17,7 @@ export default function ClearCart() {
     // The friend's delivery has been joined now. Leaving it set would quietly
     // attach their next order to the same one, days later.
     clearJoin();
-    leaveParty();
+    leaveGroup();
   }, []);
   return null;
 }

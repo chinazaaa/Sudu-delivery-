@@ -28,9 +28,18 @@ export type GroupView = {
   /** What each of them owes for delivery, once it has been closed. */
   share: number;
   ready: number;
+  /** Whether this car is one they picked a time for, rather than a run. */
+  sameDay: boolean;
 };
 
-/** One shared delivery, as everybody in it sees it. */
+/**
+ * One shared delivery, as everybody in it sees it.
+ *
+ * A group is real from the moment somebody asks for a link, so this has to
+ * work with nobody in it yet. That empty state is the first thing the person
+ * who made the link sees, and the first thing their friends see when they
+ * open it, so it cannot be a missing page.
+ */
 export async function groupView(groupId: string): Promise<GroupView | null> {
   const group = await getSharedGroup(groupId);
   if (!group || !group.closes_at) return null;
@@ -41,10 +50,13 @@ export async function groupView(groupId: string): Promise<GroupView | null> {
   ]);
   if (!batch) return null;
 
-  const { data: rows } = await db()
-    .from("order_items")
-    .select("order_id, qty")
-    .in("order_id", orders.map((one) => one.id));
+  const { data: rows } =
+    orders.length === 0
+      ? { data: [] as { order_id: string; qty: number }[] }
+      : await db()
+          .from("order_items")
+          .select("order_id, qty")
+          .in("order_id", orders.map((one) => one.id));
 
   const countFor = (id: string) =>
     (rows ?? [])
@@ -58,7 +70,7 @@ export async function groupView(groupId: string): Promise<GroupView | null> {
     food: order.subtotal_food,
     done: order.done_at !== null,
     paid: order.status !== "pending",
-    isLeader: order.customer_phone === group.leader_phone,
+    isLeader: group.leader_phone !== "" && order.customer_phone === group.leader_phone,
     phone: group.closed_at || order.done_at ? "" : order.customer_phone,
   }));
 
@@ -72,5 +84,6 @@ export async function groupView(groupId: string): Promise<GroupView | null> {
     items: members.reduce((sum, one) => sum + one.items, 0),
     share: group.closed_at ? orders[0]?.fee ?? 0 : 0,
     ready: members.filter((one) => one.done).length,
+    sameDay: batch.kind === "same_day",
   };
 }

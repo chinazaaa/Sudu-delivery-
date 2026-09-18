@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as Notifications from "expo-notifications";
+import Track from "@/components/Track";
 import { landingFor } from "@/lib/landing";
 import { T } from "@/lib/theme";
 
@@ -43,6 +44,9 @@ export default function Layout() {
   return (
     <>
       <StatusBar style="dark" />
+      {/* Above the stack, so it sees every screen rather than only the ones
+          somebody remembered to add it to. */}
+      <Track />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: T.paper },

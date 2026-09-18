@@ -19,7 +19,12 @@ import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
 import CouponBox from "@/components/CouponBox";
 import { clearJoin, readJoin } from "@/components/JoinDelivery";
-import GroupLink, { joinedViaLink, PARTY_CHANGED, readParty } from "@/components/GroupLink";
+import GroupLink, {
+  joinedViaLink,
+  leaveGroup,
+  PARTY_CHANGED,
+  readGroup,
+} from "@/components/GroupLink";
 import type { Slot } from "@/lib/same-day";
 import FillDetails from "@/components/FillDetails";
 import KeepCart from "@/components/KeepCart";
@@ -154,47 +159,68 @@ export default function Checkout({
   // Sharing a delivery, either starting one or joining one. Neither has a
   // delivery fee yet: it is split evenly when the group closes, once it is
   // known how many are in the car.
-  // A group link this browser has taken. Read on mount, because localStorage
+  // The group this browser is in, if any. Read on mount, because localStorage
   // does not exist while the server renders.
+  //
+  // A group now has its car from the moment its link is made, so there is no
+  // waiting-for-the-leader state left: whoever is in one is on the trip the
+  // leader already picked, and this page only has to say which trip that is.
   const [party, setParty] = useState("");
-  // Once somebody in the party has ordered, the car is theirs and everybody
-  // else rides in it rather than choosing again.
-  const [partyStarted, setPartyStarted] = useState(false);
   const [partyWhen, setPartyWhen] = useState("");
   const [partyLeader, setPartyLeader] = useState("");
-  // Whether this browser arrived on somebody else's link. Anybody else is
-  // free to set the group up, which is what stops a lost flag from locking
-  // everyone out of their own group.
+  const [partyPeople, setPartyPeople] = useState(0);
+  // Whether this browser arrived on somebody else's link, so the wording can
+  // be theirs rather than the leader's. Recorded when the link is taken, never
+  // guessed from something being missing.
   const [joinedLink, setJoinedLink] = useState(false);
 
   useEffect(() => {
+    let alive = true;
+
+    const look = (id: string) => {
+      if (!id) return;
+      void fetch(`/api/party/${id}`)
+        .then((response) => response.json())
+        .then(
+          (data: {
+            started?: boolean;
+            when?: string;
+            leader?: string;
+            people?: number;
+            closed?: boolean;
+          }) => {
+            if (!alive) return;
+            // Gone or already priced. Staying in it would show a delivery fee
+            // of nothing and then charge the full one, so the browser lets go.
+            if (!data.started || data.closed) {
+              leaveGroup();
+              setParty("");
+              return;
+            }
+            setPartyWhen(data.when ?? "");
+            setPartyLeader(data.leader ?? "");
+            setPartyPeople(data.people ?? 0);
+          }
+        )
+        .catch(() => {
+          /* Offline. They still order into the group they are in. */
+        });
+    };
+
     // A link can be made from this very page, so this listens rather than
     // reading once and believing it for ever.
     const reread = () => {
-      setParty(readParty());
+      const found = readGroup();
+      setParty(found);
       setJoinedLink(joinedViaLink());
+      look(found);
     };
     window.addEventListener(PARTY_CHANGED, reread);
+    reread();
 
-    const token = readParty();
-    setParty(token);
-    setJoinedLink(joinedViaLink());
-    if (!token) return () => window.removeEventListener(PARTY_CHANGED, reread);
-
-    let alive = true;
-    void fetch(`/api/party/${token}`)
-      .then((response) => response.json())
-      .then((data: { started?: boolean; when?: string; leader?: string }) => {
-        if (!alive) return;
-        setPartyStarted(Boolean(data.started));
-        setPartyWhen(data.when ?? "");
-        setPartyLeader(data.leader ?? "");
-      })
-      .catch(() => {
-        /* Not knowing only means they are offered the choice. */
-      });
     return () => {
       alive = false;
+      window.removeEventListener(PARTY_CHANGED, reread);
     };
   }, []);
   // Same day instead of a run. Empty means they are on a run, which is the
@@ -263,17 +289,10 @@ export default function Checkout({
     setApplied(null);
   }, [batchId, itemCount]);
 
-  // A group picks a time like anybody else. Only somebody joining a party
-  // that has already ordered cannot, because the car is already chosen.
+  // A group already has its car, picked when the link was made, so nobody in
+  // one is asked again. Everybody else picks here.
   const offersSameDay =
-    sameDaySlots.length > 0 &&
-    !adding &&
-    !joining &&
-    (party === "" || (!joinedLink && !partyStarted));
-
-  // Only somebody who actually came in on a link waits. Anybody else can set
-  // the group up, so an unknown is never a locked door.
-  const waitingOnLeader = party !== "" && joinedLink && !partyStarted;
+    sameDaySlots.length > 0 && !adding && !joining && party === "";
 
   // Adding to an order, joining a friend and being in a group are all a run by
   // definition, so a default of "today" would price them wrongly and silently.
@@ -366,7 +385,8 @@ export default function Checkout({
       <input type="hidden" name="payment_method" value={method} />
       <input type="hidden" name="collect_mode" value={collect} />
       <input type="hidden" name="join_order_id" value={joining?.id ?? ""} />
-      <input type="hidden" name="party_token" value={party} />
+      <input type="hidden" name="party_id" value={party} />
+      <input type="hidden" name="party_leader" value={joinedLink ? "" : "1"} />
       <input type="hidden" name="deliver_at" value={deliverAt} />
       <input type="hidden" name="people" value={JSON.stringify(people)} />
 
@@ -383,13 +403,29 @@ export default function Checkout({
           offer one. Ordering FOR friends is one cart you pay for. Ordering
           WITH friends is everybody buying their own food out of one car. */}
 
-      {/* One question, then the answer to it. Which run it goes on and what
-          time it lands are the same decision, so they are the same card: pick
-          how you want it, then pick the when.
-          Hidden entirely when the choice is not theirs: offering a run picker
-          under the words "waiting for somebody else to pick the time" is the
-          page arguing with itself. */}
-      {!waitingOnLeader && !partyStarted && (
+      {/* In a group the car was chosen when the link was made, so this says
+          which one it is and asks nothing. Offering a picker here would be a
+          second car, which is the opposite of sharing a delivery. */}
+      {party !== "" ? (
+        <section className="card space-y-1">
+          <h2 className="font-bold">
+            {joinedLink && partyLeader
+              ? `In ${partyLeader}'s group`
+              : "Your group"}
+          </h2>
+          <p className="text-sm text-ink/80">
+            {partyWhen
+              ? `Arriving ${partyWhen}.`
+              : "Everything ordered under your link rides in the same car."}
+            {partyPeople > 0 &&
+              ` ${partyPeople} ${partyPeople === 1 ? "order" : "orders"} in it so far.`}
+          </p>
+          <p className="text-sm text-muted">
+            You pay for your own food. The delivery is one fee for the whole car,
+            split evenly when the group closes.
+          </p>
+        </section>
+      ) : (
       <section className="card space-y-3">
         <h2 className="font-bold">When do you want it?</h2>
 
@@ -467,7 +503,12 @@ export default function Checkout({
           finished ordering. */}
       {!groupOn && !joining && party === "" && (
         <section className="space-y-3">
-          <GroupLink />
+          <GroupLink
+            runs={openable.map((batch) => ({ id: batch.id, label: batch.label }))}
+            slots={sameDaySlots}
+            sameDayFrom={sameDayBands[0]?.fee ?? 6500}
+            runFrom={bands[0]?.fee ?? 4000}
+          />
         </section>
       )}
 
@@ -899,12 +940,15 @@ export default function Checkout({
             type="submit"
             className="btn-primary w-full py-4 text-base"
             disabled={
-              pending || !batchId || !splitReady || unresolved.length > 0 || waitingOnLeader
+              pending ||
+              // A group brings its own car, so an empty run list is not a
+              // reason to lock the button: there may be no run open at all.
+              (!batchId && party === "" && !sameDay) ||
+              !splitReady ||
+              unresolved.length > 0
             }
           >
-            {waitingOnLeader
-              ? "Waiting for the group to be set up"
-              : pending
+            {pending
               ? "Placing…"
               : shared
                 ? "Put my food in"

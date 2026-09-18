@@ -12,6 +12,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api, naira, sameDayFeeFor, type Shop, type Slot } from "@/lib/api";
 import { cart, cartTotal, countItems, me, mine, people, useStored } from "@/lib/store";
+import KeepCart from "@/components/KeepCart";
 import { registerForPush } from "@/lib/push";
 import { T } from "@/lib/theme";
 
@@ -182,6 +183,15 @@ export default function Checkout() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60, gap: 14 }}>
+      <KeepCart
+        phone={phone}
+        name={name}
+        hostel={hostel}
+        batchId={runId}
+        items={items}
+        value={food + fee}
+        summary={lines.map((line) => `${line.qty}x ${line.name}`).join(", ")}
+      />
       <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 10 }}>
         <Text style={{ fontWeight: "800", color: T.ink }}>
           {slots.length > 0 ? "When do you want it?" : "Which run?"}

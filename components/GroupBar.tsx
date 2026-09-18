@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { leaveParty, PARTY_CHANGED, readParty } from "./GroupLink";
+import { joinedViaLink, leaveGroup, PARTY_CHANGED, readGroup } from "./GroupLink";
 
 type Party = {
   started: boolean;
@@ -25,15 +25,22 @@ type Party = {
 export default function GroupBar() {
   const [token, setToken] = useState("");
   const [party, setParty] = useState<Party | null>(null);
+  // Whose group it is reads differently depending on which of them is looking,
+  // and getting that wrong is what made the leader think they were a guest.
+  const [joined, setJoined] = useState(false);
 
   useEffect(() => {
     // Re-read whenever a party starts or ends, because somebody can make a
     // link from the page they are already standing on.
-    const reread = () => setToken(readParty());
+    const reread = () => {
+      setToken(readGroup());
+      setJoined(joinedViaLink());
+    };
     window.addEventListener(PARTY_CHANGED, reread);
 
-    const found = readParty();
+    const found = readGroup();
     setToken(found);
+    setJoined(joinedViaLink());
     if (!found) return () => window.removeEventListener(PARTY_CHANGED, reread);
 
     let alive = true;
@@ -44,9 +51,10 @@ export default function GroupBar() {
           if (!alive) return;
           setParty(data);
           // Once it has been closed and priced, the party is over and the bar
-          // would only be in the way.
-          if (data.closed) {
-            leaveParty();
+          // would only be in the way. A group that is no longer there is the
+          // same: better to say nothing than to say something untrue.
+          if (data.closed || !data.started) {
+            leaveGroup();
             setToken("");
           }
         })
@@ -72,26 +80,24 @@ export default function GroupBar() {
       <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2">
         <span className="min-w-0 flex-1 text-sm">
           <span className="font-extrabold">
-            {party?.started && party.leader
-              ? `In ${party.leader}'s group`
-              : "Ordering with your group"}
+            {joined && party?.leader ? `In ${party.leader}'s group` : "Your group"}
           </span>
           <span className="block truncate text-white/85">
-            {party?.started
-              ? [
-                  party.names?.join(", "),
-                  party.when ? `arriving ${party.when}` : "",
-                  others > 0 ? "one delivery between you" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" · ")
-              : "Add your food. You pay for your own, and the delivery is split evenly."}
+            {[
+              party?.names && party.names.length > 0
+                ? party.names.join(", ")
+                : "Nobody has added food yet",
+              party?.when ? `arriving ${party.when}` : "",
+              others > 0 ? "one delivery between you" : "",
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </span>
         </span>
 
-        {party?.started && party.id ? (
+        {token ? (
           <Link
-            href={`/g/${party.id}`}
+            href={`/g/${token}`}
             className="shrink-0 rounded-full bg-white/20 px-3 py-1 text-xs font-bold"
           >
             See group
@@ -101,7 +107,7 @@ export default function GroupBar() {
         <button
           type="button"
           onClick={() => {
-            leaveParty();
+            leaveGroup();
             setToken("");
           }}
           className="shrink-0 text-xs font-semibold text-white/80 underline"

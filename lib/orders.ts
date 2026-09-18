@@ -1,5 +1,5 @@
 import { db } from "./supabase";
-import { existingParty, groupForParty, openGroupFor, startSharedGroup } from "./groups";
+import { claimLeader, joinableGroup, openGroupFor, startSharedGroup } from "./groups";
 import { feeFor, sameDayFee, splitFee, type Band } from "./fees";
 import { activeBands, deliveryHours, safeSettings, sameDayPricing } from "./settings";
 import {
@@ -58,9 +58,12 @@ export type PlaceOrderInput = {
   /** Start a shared delivery that friends can add to for the next fifteen
    *  minutes. Nobody in one has a delivery fee until it closes. */
   shareDelivery?: boolean;
-  /** The token from a group link. Whoever orders first under it makes the
-   *  group; everybody after joins it. */
-  partyToken?: string;
+  /** The group this order is joining, from the link. The group already
+   *  exists, and already knows which car it is on. */
+  partyId?: string;
+  /** Set only by the browser that made the link, so the group learns whose
+   *  it is the moment its leader orders. */
+  partyLeader?: boolean;
   /** Same day instead of a run: the instant they asked for it to land. A car
    *  goes out for this order alone, priced on the same day ladder. */
   deliverAt?: string;
@@ -131,7 +134,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // A party that is already going has a car. Whoever ordered first chose it,
   // for a time or for a run, and everybody after rides in that one: letting a
   // joiner pick their own would be two cars, which is not sharing a delivery.
-  const party = input.partyToken ? await existingParty(input.partyToken) : null;
+  const party = input.partyId ? await joinableGroup(input.partyId) : null;
 
   const batch = party
     ? await getBatch(party.batch_id)
@@ -190,11 +193,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // depends on who else turns up and what they order between them.
   // A group can pick a time like anybody else. The fee waits for the close
   // either way, and is split evenly off whichever ladder its car belongs to.
-  const sharedGroupId = input.partyToken
-    ? party?.id ??
-      (await groupForParty({ token: input.partyToken, batch, phone, name, hostel }))?.id ??
-      null
-    : sameDay
+  const sharedGroupId = party
+    ? party.id
+    : input.partyId
+      ? null // The link has closed or gone. This is an ordinary order.
+      : sameDay
       ? null
       : joinRootId
         ? (await openGroupFor(joinRootId))?.id ?? null
@@ -226,7 +229,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           coupon: coupon?.ok ? coupon : null,
           joinRootId: sameDay ? null : joinRootId,
           sharedGroupId,
-          sameDayFee: sameDay && !input.partyToken
+          sameDayFee: sameDay && !party
             ? sameDayFee(
                 countItems(priced.lines),
                 sameDay.slot.urgent,
@@ -245,6 +248,10 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   if (!result.ok) return result;
 
   if (coupon?.ok) await useCoupon(coupon.coupon.code);
+  // The person who made the link is the one who can close it. Until they
+  // order, the group only knows their first name; now it knows their number,
+  // so every other page can tell who the leader is without being told.
+  if (party && input.partyLeader) await claimLeader(party.id, phone);
   await bindCustomer({ phone, name, hostel, returning });
   // The cart behind this order is no longer abandoned, and the admins are told
   // rather than having to keep refreshing. Neither can fail the order.
