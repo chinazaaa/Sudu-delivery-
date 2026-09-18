@@ -12,7 +12,7 @@ import {
 import { Link, useFocusEffect, useRouter } from "expo-router";
 import { useCallback } from "react";
 import { api, naira, type Item, type OrderView, type Shop } from "@/lib/api";
-import { cart, countItems, mine, useStored } from "@/lib/store";
+import { mine } from "@/lib/store";
 import { T } from "@/lib/theme";
 
 /**
@@ -27,14 +27,13 @@ export default function Home() {
   const [shop, setShop] = useState<Shop | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [lines] = useStored(cart.read, []);
   const [latest, setLatest] = useState<OrderView | null>(null);
   const [query, setQuery] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (fresh = false) => {
     setBusy(true);
     try {
-      setShop(await api.shop());
+      setShop(await api.shop(fresh));
       setError("");
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : "Could not reach the shop.");
@@ -79,13 +78,13 @@ export default function Home() {
   }, [shop, query]);
 
   const run = shop?.runs[0] ?? null;
-  const items = countItems(lines);
-
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 14 }}
-        refreshControl={<RefreshControl refreshing={busy} onRefresh={load} tintColor={T.brand} />}
+        contentContainerStyle={{ padding: 16, paddingBottom: 24, gap: 14 }}
+        refreshControl={
+          <RefreshControl refreshing={busy} onRefresh={() => load(true)} tintColor={T.brand} />
+        }
       >
         {latest && (
           <Pressable
@@ -108,50 +107,6 @@ export default function Home() {
             </Text>
           </Pressable>
         )}
-
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          <Pressable
-            onPress={() => router.push("/orders")}
-            style={{
-              flex: 1,
-              backgroundColor: T.paper,
-              borderRadius: T.radius,
-              paddingVertical: 12,
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ fontWeight: "800", color: T.ink }}>My orders</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/cart")}
-            style={{
-              flex: 1,
-              backgroundColor: T.paper,
-              borderRadius: T.radius,
-              paddingVertical: 12,
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ fontWeight: "800", color: T.ink }}>
-              Cart{items > 0 ? ` · ${items}` : ""}
-            </Text>
-          </Pressable>
-          {/* On the home screen rather than behind a menu: deleting your own
-              record has to be somewhere a person can actually find it. */}
-          <Pressable
-            onPress={() => router.push("/account")}
-            accessibilityLabel="Your data and privacy"
-            style={{
-              backgroundColor: T.paper,
-              borderRadius: T.radius,
-              paddingVertical: 12,
-              paddingHorizontal: 16,
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ fontWeight: "800", color: T.ink }}>You</Text>
-          </Pressable>
-        </View>
 
         {run && (
           <View style={card()}>
@@ -279,25 +234,6 @@ export default function Home() {
         ))}
       </ScrollView>
 
-      {items > 0 && (
-        <Pressable
-          onPress={() => router.push("/cart")}
-          style={{
-            position: "absolute",
-            left: 16,
-            right: 16,
-            bottom: 24,
-            backgroundColor: T.brand,
-            borderRadius: 999,
-            paddingVertical: 16,
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: T.paper, fontWeight: "800", fontSize: 16 }}>
-            View cart · {items} item{items === 1 ? "" : "s"}
-          </Text>
-        </Pressable>
-      )}
     </View>
   );
 }

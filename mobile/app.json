@@ -13,7 +13,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#ff5a1f"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "store.sudu.app",
@@ -41,7 +43,9 @@
           "icon": "./assets/notification-icon.png",
           "color": "#ff5a1f"
         }
-      ]
+      ],
+      "expo-asset",
+      "expo-font"
     ],
     "extra": {
       "api": "https://sudu.store"

@@ -59,6 +59,17 @@ async function readMenu(): Promise<MenuView[]> {
   }));
 }
 
+/**
+ * Ids in mouthfuls a query string can hold. A hundred uuids is about four
+ * kilobytes, which every layer between here and the database accepts, and it
+ * also keeps each answer well under the thousand rows one request returns.
+ */
+function inBatches(ids: string[], size = 100): string[][] {
+  const batches: string[][] = [];
+  for (let at = 0; at < ids.length; at += size) batches.push(ids.slice(at, at + size));
+  return batches;
+}
+
 /** Option groups with their options, keyed by item. */
 export async function optionGroupsFor(
   itemIds: string[]
@@ -66,20 +77,33 @@ export async function optionGroupsFor(
   const byItem = new Map<string, OptionGroupView[]>();
   if (itemIds.length === 0) return byItem;
 
-  const { data: groups } = await db()
-    .from("item_option_groups")
-    .select("*")
-    .in("menu_item_id", itemIds)
-    .order("sort_order");
-
-  const groupRows = (groups ?? []) as OptionGroup[];
+  // One `in()` holding every id on the shop is tens of kilobytes of query
+  // string, and the database refuses it. Asking for a whole menu then quietly
+  // returned no options at all, so a combo that must ask which drink came
+  // through as a plain item at the wrong price. Ask in batches, and let a
+  // real failure be a failure rather than an empty answer.
+  const groupRows: OptionGroup[] = [];
+  for (const batch of inBatches(itemIds)) {
+    const { data, error } = await db()
+      .from("item_option_groups")
+      .select("*")
+      .in("menu_item_id", batch)
+      .order("sort_order");
+    if (error) throw new Error(error.message);
+    groupRows.push(...((data ?? []) as OptionGroup[]));
+  }
   if (groupRows.length === 0) return byItem;
 
-  const { data: options } = await db()
-    .from("item_options")
-    .select("*")
-    .in("group_id", groupRows.map((g) => g.id))
-    .order("sort_order");
+  const optionRows: ItemOption[] = [];
+  for (const batch of inBatches(groupRows.map((g) => g.id))) {
+    const { data, error } = await db()
+      .from("item_options")
+      .select("*")
+      .in("group_id", batch)
+      .order("sort_order");
+    if (error) throw new Error(error.message);
+    optionRows.push(...((data ?? []) as ItemOption[]));
+  }
 
   for (const group of groupRows) {
     const view: OptionGroupView = {
@@ -87,7 +111,7 @@ export async function optionGroupsFor(
       name: group.name,
       required: group.required,
       maxSelect: group.max_select,
-      options: ((options ?? []) as ItemOption[])
+      options: optionRows
         .filter((o) => o.group_id === group.id)
         .map((o) => ({
           id: o.id,
