@@ -199,6 +199,8 @@ export type Feedback = {
   /** The ones with something written, newest first. Those are the ones worth
    *  reading; a bare five stars says only that it went fine. */
   recent: Verdict[];
+  /** Every answer, written or not, for the page that is only about these. */
+  all: Verdict[];
 };
 
 /**
@@ -240,6 +242,15 @@ export async function feedback(days = 28): Promise<Feedback> {
       : null,
     count: rows.length,
     spread,
+    all: rows.map((row) => ({
+      id: row.id,
+      ref: row.order_no ? `#${row.order_no}` : "",
+      name: row.for_name ?? row.customer_name,
+      rating: row.rating,
+      feedback: row.feedback,
+      when: row.rated_at,
+      run: labels.get(row.batch_id) ?? "",
+    })),
     recent: rows
       .filter((row) => row.feedback.trim() !== "")
       .slice(0, 25)
