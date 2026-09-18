@@ -148,11 +148,6 @@ alter table promoters add column if not exists bank_account_number text not null
 -- pay. Empty means the standard wording.
 alter table promoters add column if not exists nudge_template text not null default '';
 
--- A payout is recorded by you and confirmed by them, so both ends agree.
-alter table promoter_payouts add column if not exists confirmed_at timestamptz;
-alter table promoter_payouts add column if not exists batch_id uuid references batches(id) on delete set null;
-
-
 -- What has actually been handed over, so "owed" means what is still owed
 -- rather than everything ever earned.
 create table if not exists promoter_payouts (
@@ -165,6 +160,13 @@ create table if not exists promoter_payouts (
 create index if not exists promoter_payouts_code_idx
   on promoter_payouts (promoter_code, paid_at desc);
 alter table promoter_payouts enable row level security;
+
+-- A payout is recorded by you and confirmed by them, so both ends agree.
+-- These sit after the table is made, not before it: altering something that
+-- does not exist yet stops the whole file on a database that has never had a
+-- payout in it.
+alter table promoter_payouts add column if not exists confirmed_at timestamptz;
+alter table promoter_payouts add column if not exists batch_id uuid references batches(id) on delete set null;
 
 -- Anyone without a PIN gets one, so an existing promoter can sign in.
 update promoters
