@@ -90,6 +90,35 @@ export default function Home() {
           </Pressable>
         )}
 
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <Pressable
+            onPress={() => router.push("/orders")}
+            style={{
+              flex: 1,
+              backgroundColor: T.paper,
+              borderRadius: T.radius,
+              paddingVertical: 12,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ fontWeight: "800", color: T.ink }}>My orders</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/cart")}
+            style={{
+              flex: 1,
+              backgroundColor: T.paper,
+              borderRadius: T.radius,
+              paddingVertical: 12,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ fontWeight: "800", color: T.ink }}>
+              Cart{items > 0 ? ` · ${items}` : ""}
+            </Text>
+          </Pressable>
+        </View>
+
         {run && (
           <View style={card()}>
             <Text style={{ fontWeight: "800", fontSize: 16, color: T.ink }}>

@@ -27,6 +27,7 @@ export default function Layout() {
       >
         <Stack.Screen name="index" options={{ title: "Sudu" }} />
         <Stack.Screen name="r/[id]" options={{ title: "" }} />
+        <Stack.Screen name="orders" options={{ title: "My orders" }} />
         <Stack.Screen name="cart" options={{ title: "Your cart" }} />
         <Stack.Screen name="checkout" options={{ title: "Checkout" }} />
         <Stack.Screen name="order/[id]" options={{ title: "Your order" }} />

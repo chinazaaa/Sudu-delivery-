@@ -108,6 +108,20 @@ export const api = {
     paymentMethod: "transfer" | "card";
     customerNote?: string;
   }) => post<{ orderId: string; token: string | null }>("/order", order),
+  again: (token: string) =>
+    get<{
+      lines: {
+        itemId: string;
+        optionIds: string[];
+        name: string;
+        restaurant: string;
+        imageUrl: string;
+        unitPrice: number;
+        qty: number;
+        choices: string[];
+      }[];
+      blocked: { name: string; reason: string }[];
+    }>("/again", token),
   registerPush: (pushToken: string, platform: string, token?: string | null) =>
     post<{ ok: boolean }>("/push", { token: pushToken, platform }, token),
 };
