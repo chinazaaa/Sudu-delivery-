@@ -10,6 +10,7 @@ import ConfirmButton from "@/components/admin/ConfirmButton";
 import ActionButton from "@/components/admin/ActionButton";
 import StagePicker from "@/components/admin/StagePicker";
 import SendSheet from "@/components/admin/SendSheet";
+import { payableAccounts } from "@/lib/banks";
 import { batchSheet } from "@/lib/admin";
 import { SLOT_LABEL } from "@/lib/config";
 import Link from "next/link";
@@ -56,6 +57,8 @@ export default async function BatchPage({
   const belowMinimum = summary.paidCount < summary.minimum;
 
   const settings = await getSettings();
+  // The account the payment message quotes: the first on the list.
+  const bank = (await payableAccounts(settings))[0] ?? null;
   const bands = parseBands(settings.fee_bands);
   // Links inside the messages have to be absolute, so they are built from the
   // request rather than from another environment variable to keep in sync.
@@ -78,6 +81,7 @@ export default async function BatchPage({
         siteUrl,
         batchLabel,
         deliveryWindow: batch.delivery_window_text,
+        bank,
       })
     );
 

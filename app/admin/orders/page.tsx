@@ -6,6 +6,7 @@ import OrderCard from "@/components/admin/OrderCard";
 import { orderFeed } from "@/lib/admin-data";
 import { batchOverview } from "@/lib/admin";
 import { getSettings } from "@/lib/settings";
+import { payableAccounts } from "@/lib/banks";
 import { siteUrl, toCard } from "@/lib/admin-templates";
 import { SLOT_LABEL } from "@/lib/config";
 import { runDateLabel } from "@/lib/time";
@@ -46,6 +47,8 @@ export default async function OrdersPage({
     getSettings(),
     siteUrl(),
   ]);
+  // The account every payment message quotes: the first on the list.
+  const bank = (await payableAccounts(settings))[0] ?? null;
 
   const unpaidTotal = orders
     .filter((order) => order.status === "pending")
@@ -132,7 +135,7 @@ export default async function OrdersPage({
           {orders.map((order) => (
             <OrderCard
               key={order.id}
-              order={toCard(order, settings, url)}
+              order={toCard(order, settings, url, bank)}
               markPaid={markPaid}
               markDelivered={markDelivered}
               refund={refundOrder}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import ClearCart from "@/components/ClearCart";
+import PayTo from "@/components/PayTo";
 import FeeBands from "@/components/FeeBands";
 import LiveOrder from "@/components/LiveOrder";
 import ExpiryNote from "@/components/ExpiryNote";
@@ -30,9 +31,9 @@ import {
   activeBands,
   externalUrl,
   getSettings,
-  hasBankDetails,
   whatsappLink,
 } from "@/lib/settings";
+import { payableAccounts } from "@/lib/banks";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,8 @@ export default async function OrderPage({
 
   const settings = await getSettings();
   const bands = await activeBands();
+  // Every account they may pay into, best first.
+  const accounts = await payableAccounts(settings);
   const fees = await feeStory(order);
   const repeat = await repeatLines(order);
   // The runs it could be moved to, for an order whose own run has gone.
@@ -201,26 +204,9 @@ export default async function OrderPage({
                 waiting
               />
             )
-          ) : hasBankDetails(settings) ? (
+          ) : accounts.length > 0 ? (
             <>
-              <dl className="space-y-2 rounded-2xl bg-shell p-3 text-sm">
-                <Row label="Bank" value={settings.bank_name} />
-                <Row label="Account name" value={settings.bank_account_name || "Not set"} />
-                <Row label="Account number" value={settings.bank_account_number} strong />
-                <Row label="Narration" value={narration(order, order.shares)} strong />
-              </dl>
-              <div className="grid grid-cols-2 gap-2">
-                <CopyText
-                  value={settings.bank_account_number}
-                  label="Copy account"
-                  className="w-full px-3 py-2.5 text-sm"
-                />
-                <CopyText
-                  value={narration(order, order.shares)}
-                  label="Copy narration"
-                  className="w-full px-3 py-2.5 text-sm"
-                />
-              </div>
+              <PayTo accounts={accounts} narration={narration(order, order.shares)} />
               <p className="text-sm text-ink/75">
                 Type {narration(order, order.shares)} in the narration. That is
                 how this transfer is matched to your part of the order.

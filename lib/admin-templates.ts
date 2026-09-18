@@ -33,7 +33,9 @@ function kindsFor(order: FeedOrder): TemplateKind[] {
 export function toCard(
   order: FeedOrder,
   settings: Settings,
-  url: string
+  url: string,
+  /** The account the message quotes. The first on the list. */
+  bank?: { bank_name: string; account_name: string; account_number: string } | null
 ): OrderCardData {
   const write = (kind: TemplateKind) =>
     template({
@@ -44,6 +46,7 @@ export function toCard(
       siteUrl: url,
       batchLabel: order.batchLabel,
       deliveryWindow: order.deliveryWindow,
+      bank,
     });
 
   return {

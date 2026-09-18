@@ -1353,3 +1353,53 @@ export async function moveSlide(form: FormData): Promise<void> {
     form.get("direction") === "up" ? "up" : "down"
   );
 }
+
+/**
+ * An account customers can pay into.
+ *
+ * Three accounts is not three times the choice: it is one account for most
+ * people and a shorter, cheaper transfer for anyone who banks where you do.
+ */
+export async function addBankAccount(form: FormData): Promise<void> {
+  await assertAdmin();
+  const bank = String(form.get("bank_name") ?? "").trim();
+  const number = String(form.get("account_number") ?? "").replace(/\D/g, "");
+  if (!bank || number.length < 6) return;
+
+  const { error } = await db().from("bank_accounts").insert({
+    bank_name: bank,
+    account_name: String(form.get("account_name") ?? "").trim(),
+    account_number: number,
+    sort_order: Number(form.get("sort_order")) || 100,
+  });
+  if (error) {
+    throw new Error(
+      `Could not add that account: ${error.message}. If it mentions ` +
+        "bank_accounts, run supabase/update.sql."
+    );
+  }
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
+}
+
+export async function toggleBankAccount(form: FormData): Promise<void> {
+  await assertAdmin();
+  const { error } = await db()
+    .from("bank_accounts")
+    .update({ active: form.get("next_active") === "true" })
+    .eq("id", String(form.get("account_id")));
+  if (error) throw new Error(`Could not change that account: ${error.message}`);
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
+}
+
+export async function deleteBankAccount(form: FormData): Promise<void> {
+  await assertAdmin();
+  const { error } = await db()
+    .from("bank_accounts")
+    .delete()
+    .eq("id", String(form.get("account_id")));
+  if (error) throw new Error(`Could not remove that account: ${error.message}`);
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
+}

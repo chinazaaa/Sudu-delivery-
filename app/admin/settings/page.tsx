@@ -5,7 +5,8 @@ import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { parseBands } from "@/lib/fees";
 import { missingSettings } from "@/lib/health";
-import { getSettings, hasBankDetails } from "@/lib/settings";
+import { getSettings } from "@/lib/settings";
+import { allAccounts } from "@/lib/banks";
 import {
   PAID_NOTE_DEFAULT,
   TEMPLATE_DEFAULT,
@@ -14,7 +15,15 @@ import {
   TEMPLATE_TOKENS,
   type TemplateKind,
 } from "@/lib/messages";
-import { addHostel, deleteHostel, saveSettings, toggleHostel } from "../actions";
+import {
+  addBankAccount,
+  addHostel,
+  deleteBankAccount,
+  deleteHostel,
+  saveSettings,
+  toggleBankAccount,
+  toggleHostel,
+} from "../actions";
 import { listHostels } from "@/lib/hostels";
 import { DELIVERY_WINDOWS } from "@/lib/config";
 
@@ -26,6 +35,9 @@ export default async function SettingsAdmin() {
   // Asked up front, so a box whose column is not there says why rather than
   // taking a line and throwing on save.
   const missing = await missingSettings(["ribbon_text", "offer_code"]);
+  // Null means the table is not there yet, which reads differently from an
+  // empty list and is worth saying out loud.
+  const accounts = await allAccounts();
 
   return (
     <div className="space-y-4">
@@ -33,45 +45,143 @@ export default async function SettingsAdmin() {
         title="Settings"
         detail="Every word on the site, and every message you send. No redeploy, no code."
       />
-      {!hasBankDetails(settings) && (
-        <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          No bank details set yet, so customers have nowhere to pay. Fill these in
-          before ordering opens.
+      <section className="card space-y-3">
+        <div>
+          <h2 className="font-semibold">Where they pay</h2>
+          <p className="text-sm text-muted">
+            Every account somebody can transfer into. The first is the one the
+            order page shows and the one your WhatsApp message quotes; the
+            rest are one tap away, for anyone who banks where you do and would
+            rather send it there.
+          </p>
+        </div>
+
+        {accounts === null && (
+          <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            The database has no bank_accounts table yet, so this is still the
+            single account below. Run supabase/update.sql and the list starts
+            working, with that account already on it.
+          </p>
+        )}
+
+        {accounts !== null && accounts.length === 0 && (
+          <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            No account on the list, so customers have nowhere to pay. Add one
+            before ordering opens.
+          </p>
+        )}
+
+        <ul className="space-y-2">
+          {(accounts ?? []).map((account, index) => (
+            <li
+              key={account.id}
+              className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 ${
+                account.active ? "border-black/10" : "border-black/5 bg-black/[0.02]"
+              }`}
+            >
+              <span className={account.active ? "" : "text-muted"}>
+                <span className="block font-semibold">
+                  {account.bank_name}
+                  {index === 0 && account.active && (
+                    <span className="ml-2 rounded-full bg-brand-tint px-2 py-0.5 text-xs font-bold text-brand-dark">
+                      shown first
+                    </span>
+                  )}
+                  {!account.active && (
+                    <span className="ml-2 text-xs font-semibold">hidden</span>
+                  )}
+                </span>
+                <span className="block text-sm text-muted">
+                  {account.account_number}
+                  {account.account_name && ` · ${account.account_name}`}
+                </span>
+              </span>
+              <span className="flex shrink-0 gap-2">
+                <form action={toggleBankAccount}>
+                  <input type="hidden" name="account_id" value={account.id} />
+                  <input
+                    type="hidden"
+                    name="next_active"
+                    value={String(!account.active)}
+                  />
+                  <ActionButton
+                    className="chip border-black/10 bg-white py-1.5 text-xs"
+                    done="Done ✓"
+                  >
+                    {account.active ? "Hide" : "Show"}
+                  </ActionButton>
+                </form>
+                <form action={deleteBankAccount}>
+                  <input type="hidden" name="account_id" value={account.id} />
+                  <ConfirmButton
+                    tone="bare"
+                    className="chip border-black/10 bg-white py-1.5 text-xs text-brand"
+                    confirm={`Yes, remove ${account.bank_name}`}
+                  >
+                    Remove
+                  </ConfirmButton>
+                </form>
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <form action={addBankAccount} className="grid gap-2 sm:grid-cols-4">
+          <div className="sm:col-span-1">
+            <label className="label" htmlFor="bank_name">Bank</label>
+            <input
+              id="bank_name"
+              name="bank_name"
+              required
+              placeholder="GTBank"
+              className="field py-2 text-sm"
+            />
+          </div>
+          <div className="sm:col-span-1">
+            <label className="label" htmlFor="account_number">Number</label>
+            <input
+              id="account_number"
+              name="account_number"
+              required
+              inputMode="numeric"
+              placeholder="0123456789"
+              className="field py-2 text-sm"
+            />
+          </div>
+          <div className="sm:col-span-1">
+            <label className="label" htmlFor="account_name">Account name</label>
+            <input
+              id="account_name"
+              name="account_name"
+              placeholder="Sudu Delivery"
+              className="field py-2 text-sm"
+            />
+          </div>
+          <div className="sm:col-span-1">
+            <label className="label" htmlFor="sort_order">Order</label>
+            <input
+              id="sort_order"
+              name="sort_order"
+              inputMode="numeric"
+              placeholder="100"
+              className="field py-2 text-sm"
+            />
+          </div>
+          <div className="sm:col-span-4">
+            <SaveButton quiet className="px-4 py-2 text-sm">
+              Add account
+            </SaveButton>
+          </div>
+        </form>
+
+        <p className="text-xs text-muted">
+          Hiding an account takes it off the site and keeps the details.
+          Removing it is forever. Neither changes an order somebody has
+          already paid.
         </p>
-      )}
+      </section>
 
       <form action={saveSettings} className="card space-y-3">
-        <h2 className="font-semibold">Bank transfer</h2>
-        <div>
-          <label className="label" htmlFor="bank_name">Bank</label>
-          <input
-            id="bank_name"
-            name="bank_name"
-            defaultValue={settings.bank_name}
-            placeholder="GTBank"
-            className="field"
-          />
-        </div>
-        <div>
-          <label className="label" htmlFor="bank_account_name">Account name</label>
-          <input
-            id="bank_account_name"
-            name="bank_account_name"
-            defaultValue={settings.bank_account_name}
-            className="field"
-          />
-        </div>
-        <div>
-          <label className="label" htmlFor="bank_account_number">Account number</label>
-          <input
-            id="bank_account_number"
-            name="bank_account_number"
-            defaultValue={settings.bank_account_number}
-            inputMode="numeric"
-            className="field"
-          />
-        </div>
-
         <h2 className="border-t border-black/10 pt-3 font-semibold">Paying by card</h2>
         <p className="text-sm text-muted">
           Card payers are told to message you. You send them a link, then mark the

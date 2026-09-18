@@ -235,5 +235,29 @@ alter table settings add column if not exists auto_lines text not null default '
 alter table settings add column if not exists ribbon_text text not null default '';
 alter table settings add column if not exists offer_code text not null default '';
 
+-- More than one account to pay into. A customer paying from the same bank
+-- gets an instant transfer and no fee, which is worth a choice.
+create table if not exists bank_accounts (
+  id             uuid primary key default gen_random_uuid(),
+  bank_name      text not null,
+  account_name   text not null default '',
+  account_number text not null,
+  sort_order     int not null default 100,
+  active         boolean not null default true,
+  created_at     timestamptz not null default now(),
+  unique (bank_name, account_number)
+);
+alter table bank_accounts enable row level security;
+
+-- The account already in settings becomes the first one on the list, so
+-- nothing changes for anybody the day this runs. Only into an empty table.
+insert into bank_accounts (bank_name, account_name, account_number, sort_order)
+select s.bank_name, s.bank_account_name, s.bank_account_number, 10
+from settings s
+where s.id
+  and s.bank_name <> ''
+  and s.bank_account_number <> ''
+  and not exists (select 1 from bank_accounts);
+
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';

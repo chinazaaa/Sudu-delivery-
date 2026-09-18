@@ -164,15 +164,26 @@ export function template(args: {
   siteUrl: string;
   batchLabel: string;
   deliveryWindow: string;
+  /** The account to quote. Without one, the single account in settings. */
+  bank?: { bank_name: string; account_name: string; account_number: string } | null;
 }): string {
   const { order, settings, pin, siteUrl, batchLabel } = args;
   const custom = String(settings[TEMPLATE_FIELD[args.kind]] ?? "").trim();
   const body = custom || TEMPLATE_DEFAULT[args.kind];
 
+  // One account in a message, whatever else is on the list. Three of them in
+  // a WhatsApp message is a wall to read on a phone; the order page carries
+  // the rest, one tap apart.
+  const account = args.bank ?? {
+    bank_name: settings.bank_name,
+    account_name: settings.bank_account_name,
+    account_number: settings.bank_account_number,
+  };
+
   const bank =
-    settings.bank_name && settings.bank_account_number
-      ? `${settings.bank_account_name} ${settings.bank_account_number} ` +
-        `(${settings.bank_name}). Put ${narration(order)} as the narration.`
+    account.bank_name && account.account_number
+      ? `${account.account_name} ${account.account_number} ` +
+        `(${account.bank_name}). Put ${narration(order)} as the narration.`
       : "Message me for the account details.";
 
   const values: Record<string, string> = {

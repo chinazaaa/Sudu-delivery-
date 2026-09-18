@@ -6,6 +6,7 @@ import OrderCard from "@/components/admin/OrderCard";
 import { orderFeed } from "@/lib/admin-data";
 import { getOrder } from "@/lib/orders";
 import { getSettings } from "@/lib/settings";
+import { payableAccounts } from "@/lib/banks";
 import { siteUrl, toCard } from "@/lib/admin-templates";
 import { naira, orderRef } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
@@ -25,6 +26,8 @@ export default async function AdminOrderPage({
     getSettings(),
     siteUrl(),
   ]);
+  // The account every payment message quotes: the first on the list.
+  const bank = (await payableAccounts(settings))[0] ?? null;
   if (!order) notFound();
 
   // The card wants the feed's shape, so this one order is read the same way.
@@ -62,7 +65,7 @@ export default async function AdminOrderPage({
 
       {card && (
         <OrderCard
-          order={toCard(card, settings, url)}
+          order={toCard(card, settings, url, bank)}
           markPaid={markPaid}
           markDelivered={markDelivered}
           refund={refundOrder}

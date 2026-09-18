@@ -130,9 +130,6 @@ export async function safeSettings(): Promise<Settings> {
   }
 }
 
-export function hasBankDetails(settings: Settings): boolean {
-  return Boolean(settings.bank_name && settings.bank_account_number);
-}
 
 /**
  * wa.me wants international digits with no plus and no spaces, so a number
