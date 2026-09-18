@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { countdown } from "@/lib/time";
+import { clockLabel, countdown } from "@/lib/time";
 
 /** How long is left to pay. The link dies at the batch cut-off (brief §3a). */
 export default function ExpiryNote({ cutOffISO }: { cutOffISO: string }) {
@@ -19,7 +19,10 @@ export default function ExpiryNote({ cutOffISO }: { cutOffISO: string }) {
 
   return (
     <p className="text-sm text-brand-dark">
-      Pay within {countdown(remaining)}. This link closes when the batch does.
+      {/* The deadline as a time, then the countdown. A number of hours is a
+          sum somebody has to do while deciding whether to pay now. */}
+      Pay by {clockLabel(cutOffISO)}, {countdown(remaining)} from now. This link
+      closes when the batch does.
     </p>
   );
 }

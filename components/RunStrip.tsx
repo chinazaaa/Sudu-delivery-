@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { countdown } from "@/lib/time";
+import { clockLabel, countdown } from "@/lib/time";
 import { naira } from "@/lib/money";
 import type { BatchView } from "@/lib/view";
 
@@ -33,7 +33,12 @@ export default function RunStrip({
           <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand opacity-75" />
           <span className="relative inline-flex size-2 rounded-full bg-brand" />
         </span>
-        <span className="font-bold">{run.label} batch closes in {left}</span>
+        {/* The clock time as well as the countdown. Twenty-eight hours is a
+            sum to do; 11:45am on Saturday is a time you already know. */}
+        <span className="font-bold">
+          {run.label} batch closes {clockLabel(run.cutOffISO)}
+        </span>
+        <span className="text-sm text-muted">in {left}</span>
         <span className="text-sm text-muted">{run.deliveryWindow}</span>
         {run.flashFee !== null && (
           <span className="rounded-full bg-brand px-2.5 py-0.5 text-xs font-bold text-white">
