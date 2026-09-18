@@ -1,4 +1,6 @@
 import { db } from "./supabase";
+import { SLOT_LABEL } from "./config";
+import { runDateLabel } from "./time";
 
 export type Traffic = {
   days: number;
@@ -175,4 +177,92 @@ export async function funnel(days = 7): Promise<Funnel> {
     orders,
     paid,
   };
+}
+
+export type Verdict = {
+  id: string;
+  ref: string;
+  name: string;
+  rating: number;
+  feedback: string;
+  when: string;
+  run: string;
+};
+
+export type Feedback = {
+  /** Null while nothing has been rated, so the page can say so rather than
+   *  claiming an average of nothing. */
+  average: number | null;
+  count: number;
+  /** How many gave each score, one to five. */
+  spread: Record<number, number>;
+  /** The ones with something written, newest first. Those are the ones worth
+   *  reading; a bare five stars says only that it went fine. */
+  recent: Verdict[];
+};
+
+/**
+ * What people said about their food.
+ *
+ * Read from the orders themselves rather than a table of its own, because a
+ * rating belongs to one order and only that order can carry it.
+ */
+export async function feedback(days = 28): Promise<Feedback> {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+
+  const { data } = await db()
+    .from("orders")
+    .select("id, order_no, customer_name, for_name, rating, feedback, rated_at, batch_id")
+    .not("rating", "is", null)
+    .gte("rated_at", since)
+    .order("rated_at", { ascending: false })
+    .limit(200);
+
+  const rows = (data ?? []) as {
+    id: string;
+    order_no: number | null;
+    customer_name: string;
+    for_name: string | null;
+    rating: number;
+    feedback: string;
+    rated_at: string;
+    batch_id: string;
+  }[];
+
+  const spread: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  for (const row of rows) spread[row.rating] = (spread[row.rating] ?? 0) + 1;
+
+  const labels = await runLabels([...new Set(rows.map((row) => row.batch_id))]);
+
+  return {
+    average: rows.length
+      ? Math.round((rows.reduce((sum, row) => sum + row.rating, 0) / rows.length) * 10) / 10
+      : null,
+    count: rows.length,
+    spread,
+    recent: rows
+      .filter((row) => row.feedback.trim() !== "")
+      .slice(0, 25)
+      .map((row) => ({
+        id: row.id,
+        ref: row.order_no ? `#${row.order_no}` : "",
+        name: row.for_name ?? row.customer_name,
+        rating: row.rating,
+        feedback: row.feedback,
+        when: row.rated_at,
+        run: labels.get(row.batch_id) ?? "",
+      })),
+  };
+}
+
+/** Run labels for a set of batches, so a comment says which run it was about. */
+async function runLabels(ids: string[]): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const { data } = await db().from("batches").select("id, run_date, slot").in("id", ids);
+  return new Map(
+    (data ?? []).map((row) => [
+      row.id as string,
+      `${runDateLabel(row.run_date as string)} · ${SLOT_LABEL[row.slot as keyof typeof SLOT_LABEL]}`,
+    ])
+  );
 }

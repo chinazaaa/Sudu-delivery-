@@ -649,5 +649,24 @@ do $$ begin
   end if;
 exception when duplicate_object then null; end $$;
 
+-- How it went, in the customer's own words.
+--
+-- Asked once, on the order page, after the food has arrived. One rating per
+-- order, so in a group each person answers for their own bag rather than the
+-- person who paid answering for everybody.
+alter table orders add column if not exists rating    int;
+alter table orders add column if not exists feedback  text not null default '';
+alter table orders add column if not exists rated_at  timestamptz;
+
+do $rating_bounds$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'orders_rating_range'
+  ) then
+    alter table orders add constraint orders_rating_range
+      check (rating is null or rating between 1 and 5);
+  end if;
+end $rating_bounds$;
+
 -- Supabase caches the schema; this makes the new tables visible immediately.
 notify pgrst, 'reload schema';

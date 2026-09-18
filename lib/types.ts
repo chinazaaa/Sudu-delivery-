@@ -89,6 +89,10 @@ export type Order = {
   paid_at: string | null;
   /** The discount code used, if one was. */
   coupon_code: string | null;
+  /** One to five, once the food has arrived and they have said. */
+  rating: number | null;
+  feedback: string;
+  rated_at: string | null;
   status: OrderStatus;
   created_at: string;
   group_id: string | null;

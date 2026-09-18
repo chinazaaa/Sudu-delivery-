@@ -1,7 +1,7 @@
 import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
-import { funnel, traffic } from "@/lib/analytics";
+import { feedback, funnel, traffic } from "@/lib/analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,11 @@ export default async function AnalyticsPage({
   const days = RANGES.includes(asked as (typeof RANGES)[number]) ? asked : 7;
 
   // Null means nothing is counting yet. The rest of the page still works.
-  const [views, steps] = await Promise.all([traffic(days), funnel(days)]);
+  const [views, steps, said] = await Promise.all([
+    traffic(days),
+    funnel(days),
+    feedback(days),
+  ]);
   const busiest = views ? Math.max(...views.perDay.map((day) => day.views), 1) : 1;
 
   return (
@@ -130,6 +134,76 @@ export default async function AnalyticsPage({
           </p>
         </section>
       )}
+
+      <section className="card space-y-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-bold">What people said</h2>
+          {said.average !== null && (
+            <span className="text-sm text-muted">
+              <span className="text-lg font-extrabold text-ink">{said.average}</span> out of 5,
+              from {said.count} {said.count === 1 ? "answer" : "answers"}
+            </span>
+          )}
+        </div>
+
+        {said.count === 0 ? (
+          <p className="text-sm text-muted">
+            Nobody has rated a run yet. The stars appear on their order page once the
+            food has been handed out.
+          </p>
+        ) : (
+          <>
+            {/* Five rows rather than an average alone: one furious customer and
+                nine happy ones average out to something that sounds fine. */}
+            <ul className="space-y-1">
+              {[5, 4, 3, 2, 1].map((score) => (
+                <li key={score} className="flex items-center gap-2 text-sm">
+                  <span className="w-10 shrink-0 font-semibold">{score} ★</span>
+                  <span className="h-2 grow overflow-hidden rounded-full bg-black/[0.06]">
+                    <span
+                      className={`block h-full rounded-full ${
+                        score <= 2 ? "bg-brand-dark" : "bg-brand"
+                      }`}
+                      style={{
+                        width: `${Math.round(((said.spread[score] ?? 0) / said.count) * 100)}%`,
+                      }}
+                    />
+                  </span>
+                  <span className="w-6 shrink-0 text-right text-muted">
+                    {said.spread[score] ?? 0}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            {said.recent.length > 0 && (
+              <ul className="divide-y divide-black/5">
+                {said.recent.map((one) => (
+                  <li key={one.id} className="py-3">
+                    <div className="flex flex-wrap items-baseline gap-2 text-sm">
+                      <span className={one.rating <= 2 ? "font-bold text-brand-dark" : "font-bold"}>
+                        {"★".repeat(one.rating)}
+                        <span className="text-black/20">{"★".repeat(5 - one.rating)}</span>
+                      </span>
+                      <span className="font-semibold">{one.name}</span>
+                      <span className="text-muted">{one.run}</span>
+                      {one.ref && (
+                        <Link
+                          href={`/admin/orders/${one.id}`}
+                          className="text-xs font-semibold text-brand"
+                        >
+                          {one.ref}
+                        </Link>
+                      )}
+                    </div>
+                    <p className="mt-1 text-sm text-ink/80">{one.feedback}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="card space-y-2">

@@ -6,6 +6,7 @@ import PayTo from "@/components/PayTo";
 import FeeBands from "@/components/FeeBands";
 import LiveOrder from "@/components/LiveOrder";
 import ExpiryNote from "@/components/ExpiryNote";
+import RateOrder from "@/components/RateOrder";
 import StageTimeline from "@/components/StageTimeline";
 import ShareLink from "@/components/ShareLink";
 import SplitCollect from "@/components/SplitCollect";
@@ -310,6 +311,18 @@ export default async function OrderPage({
           )}
         </section>
       )}
+
+      {/* Asked only once the food has actually arrived, and only of somebody
+          holding this order's own link. In a group each share asks separately,
+          because each share is one person's bag. */}
+      {(order.status === "delivered" || order.batch.stage === "handed_out") &&
+        order.status !== "refunded" && (
+          <RateOrder
+            orderId={order.id}
+            rating={order.rating ?? null}
+            feedback={order.feedback ?? ""}
+          />
+        )}
 
       {/* One card for the whole order: who has what, where it goes, and what
           it costs. These used to be three cards repeating each other. */}
