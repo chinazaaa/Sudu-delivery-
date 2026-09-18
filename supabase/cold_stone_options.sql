@@ -147,6 +147,8 @@ declare
   n      int;
   g      int;
   o      int;
+  stale  int;
+  twice  int;
 begin
   select count(*) into places from restaurants
   where name ilike '%cold stone%' or name ilike '%coldstone%';
@@ -167,20 +169,21 @@ begin
 
   -- Rebuilt rather than patched, so this file is the whole truth about these
   -- groups and a second run cannot double anything up.
+  --
+  -- Cleared across the whole restaurant rather than inside the three sections.
+  -- Tying the clean up to a section was the bug behind a flavour asking for a
+  -- cup size twice: a group written while the flavour sat somewhere else was
+  -- never reached, so the rename left the old one standing beside the new.
+  -- Anything ending in cup size goes, whatever it is called, because there is
+  -- no such question on a Cold Stone item that this file did not write.
   delete from item_option_groups gg
-  using menu_items m, menu_categories c, restaurants rr
+  using menu_items m, restaurants rr
   where gg.menu_item_id = m.id
-    and c.id = m.category_id
     and rr.id = m.restaurant_id
     and (rr.name ilike '%cold stone%' or rr.name ilike '%coldstone%')
-    and c.name in ('Ice cream by the scoop', 'Signature creations', 'Ready to love flavours')
     and (
       gg.name in (select distinct grp from cs_opt)
-      -- Names an earlier version of this file used. Without this the old
-      -- group survives its own rename and the item asks for a cup size
-      -- twice, which is exactly the sort of thing a customer notices and we
-      -- do not.
-      or gg.name in ('Cyo cup size', 'Rtl cup size', 'Signature cup size')
+      or gg.name ilike '%cup size%'
     );
 
   insert into item_option_groups (menu_item_id, name, required, max_select, sort_order)
@@ -210,6 +213,29 @@ begin
   get diagnostics o = row_count;
 
   raise notice '% flavours now carry % question groups and % choices.', n, g, o;
+
+  -- Said out loud, because the only way to know this worked is to look. Both
+  -- of these must read 0. Anything else means a flavour is still asking the
+  -- same question twice.
+  select count(*) into stale
+  from item_option_groups gg
+       join menu_items m on m.id = gg.menu_item_id
+       join restaurants rr on rr.id = m.restaurant_id
+  where (rr.name ilike '%cold stone%' or rr.name ilike '%coldstone%')
+    and gg.name ilike '%cup size%'
+    and gg.name <> 'Cup size';
+  raise notice 'Old cup size groups left behind: %', stale;
+
+  select count(*) into twice from (
+    select gg.menu_item_id
+    from item_option_groups gg
+         join menu_items m on m.id = gg.menu_item_id
+         join restaurants rr on rr.id = m.restaurant_id
+    where rr.name ilike '%cold stone%' or rr.name ilike '%coldstone%'
+    group by gg.menu_item_id, gg.name
+    having count(*) > 1
+  ) d;
+  raise notice 'Flavours asking the same question twice: %', twice;
 end $coldstoneopts$;
 
 drop table if exists cs_opt;
