@@ -13,6 +13,7 @@ import {
   addOption,
   addOptionGroup,
   deleteCategory,
+  renameCategory,
   deleteMenuItem,
   deleteOption,
   deleteOptionGroup,
@@ -162,22 +163,46 @@ export default async function RestaurantAdmin({
           <h2 className="font-bold">Categories</h2>
           <p className="text-sm text-muted">
             How the menu is grouped on the site: Pizzas, Chicken, Sides, Drinks.
+            Type over a name to rename it, which keeps every item where it is.
           </p>
         </div>
         <ul className="flex flex-wrap gap-2">
           {categoryList.map((category) => (
             <li key={category.id}>
-              <form action={deleteCategory} className="chip border-black/10 bg-white">
-                <input type="hidden" name="category_id" value={category.id} />
-                {category.name}
-                <ConfirmButton
-                  tone="bare"
-                  className="text-ink/35 hover:text-brand"
-                  confirm={`Delete ${category.name}?`}
+              {/* The name is the field. Type over it and press Enter, or use
+                  the tick. Renaming in place matters because deleting a
+                  category and adding it back leaves every item in it with no
+                  category at all. Two forms rather than one, because a form
+                  cannot be nested inside another. */}
+              <div className="chip border-black/10 bg-white">
+                <form
+                  action={renameCategory}
+                  className="flex items-center gap-1"
+                  id={`rename-${category.id}`}
                 >
-                  ✕
-                </ConfirmButton>
-              </form>
+                  <input type="hidden" name="category_id" value={category.id} />
+                  <input
+                    name="name"
+                    defaultValue={category.name}
+                    aria-label={`Rename ${category.name}`}
+                    size={Math.max(category.name.length, 6)}
+                    className="min-w-0 rounded bg-transparent px-1 py-0.5 font-semibold outline-none focus:bg-black/[0.04] focus:ring-2 focus:ring-brand/30"
+                  />
+                  <SaveButton quiet className="px-1.5 py-0.5 text-xs">
+                    ✓
+                  </SaveButton>
+                </form>
+                <form action={deleteCategory} className="flex">
+                  <input type="hidden" name="category_id" value={category.id} />
+                  <ConfirmButton
+                    tone="bare"
+                    className="text-ink/35 hover:text-brand"
+                    confirm={`Delete ${category.name}? Items in it lose their category.`}
+                  >
+                    ✕
+                  </ConfirmButton>
+                </form>
+              </div>
             </li>
           ))}
           {categoryList.length === 0 && (

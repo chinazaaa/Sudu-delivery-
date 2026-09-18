@@ -1118,6 +1118,25 @@ export async function addCategory(form: FormData): Promise<void> {
   revalidatePath("/", "layout");
 }
 
+/**
+ * Rename a category in place.
+ *
+ * Deleting one and adding it back would leave every item in it with no
+ * category, so a name that is simply wrong needs a rename rather than a
+ * round trip. The items keep their id, so nothing moves.
+ */
+export async function renameCategory(form: FormData): Promise<void> {
+  await assertAdmin();
+  const name = String(form.get("name") ?? "").trim();
+  const id = String(form.get("category_id") ?? "");
+  if (!name || !id) return;
+
+  await db().from("menu_categories").update({ name }).eq("id", id);
+  revalidatePath("/admin", "layout");
+  updateTag("menu");
+  revalidatePath("/", "layout");
+}
+
 export async function deleteCategory(form: FormData): Promise<void> {
   await assertAdmin();
   await db().from("menu_categories").delete().eq("id", String(form.get("category_id")));
