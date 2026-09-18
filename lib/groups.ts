@@ -92,7 +92,12 @@ export type SharedGroup = {
 };
 
 export async function getSharedGroup(id: string): Promise<SharedGroup | null> {
-  const { data } = await db().from("order_groups").select("*").eq("id", id).maybeSingle();
+  const { data, error } = await db()
+    .from("order_groups")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) return null;
   return (data as SharedGroup) ?? null;
 }
 
@@ -191,12 +196,14 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
 
 /** Closes every shared delivery whose time is up. Run from a schedule. */
 export async function closeDueGroups(): Promise<number> {
-  const { data } = await db()
+  const { data, error } = await db()
     .from("order_groups")
     .select("id")
     .is("closed_at", null)
     .not("closes_at", "is", null)
     .lte("closes_at", new Date().toISOString());
+
+  if (error) return 0;
 
   let closed = 0;
   for (const row of data ?? []) {

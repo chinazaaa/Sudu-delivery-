@@ -122,13 +122,17 @@ async function openGroups(ids: (string | null)[]): Promise<Set<string>> {
   const unique = [...new Set(ids.filter((id): id is string => Boolean(id)))];
   if (unique.length === 0) return new Set();
 
-  const { data } = await db()
+  // Tolerant of a database that has not had the migration run yet. This runs
+  // on the orders feed, and a missing column must never be able to take that
+  // page down: no shared deliveries is the right answer in that case anyway.
+  const { data, error } = await db()
     .from("order_groups")
     .select("id")
     .in("id", unique)
     .not("closes_at", "is", null)
     .is("closed_at", null);
 
+  if (error) return new Set();
   return new Set((data ?? []).map((row) => row.id as string));
 }
 

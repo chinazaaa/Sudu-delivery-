@@ -401,13 +401,15 @@ export type Shortfall = {
  * one that turns up later as a run that mysteriously made no money.
  */
 export async function shortfalls(batchId: string): Promise<Shortfall[]> {
-  const { data: groups } = await db()
+  // Same tolerance as the orders feed: the run page is the busiest thing in
+  // admin and must not depend on a migration having been run first.
+  const { data: groups, error } = await db()
     .from("order_groups")
     .select("id, leader_name")
     .eq("batch_id", batchId)
     .not("closes_at", "is", null);
 
-  if (!groups || groups.length === 0) return [];
+  if (error || !groups || groups.length === 0) return [];
 
   const bands = await activeBands();
   const { data: batch } = await db()
