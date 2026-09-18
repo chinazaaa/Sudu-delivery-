@@ -92,6 +92,11 @@ export type OrderView = {
 
 export const api = {
   shop: () => get<Shop>("/menu"),
+  signIn: (phone: string, pin: string) =>
+    post<{ token: string; phone: string; name: string; hostel: string }>("/signin", {
+      phone,
+      pin,
+    }),
   order: (id: string) => get<OrderView>(`/order/${id}`),
   myOrders: (token: string) =>
     get<{ orders: { id: string; ref: string; status: string; stage: string; total: number; items: number; run: string }[] }>(

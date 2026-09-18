@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
+import SignIn from "@/components/SignIn";
 import { api, naira } from "@/lib/api";
 import { cart, me, useStored } from "@/lib/store";
 import { T } from "@/lib/theme";
@@ -18,8 +19,9 @@ type Row = {
 /**
  * Everything ordered from this phone, and one tap to have it again.
  *
- * Nobody signs in: the token comes from the last order placed here. A phone
- * that has never ordered sees the reason rather than an empty page.
+ * Nobody has to sign in: the token comes from the last order placed here. A
+ * phone that has never ordered gets the phone-and-PIN box instead, so orders
+ * placed on the website, or from an older handset, are still theirs.
  */
 export default function Orders() {
   const router = useRouter();
@@ -94,25 +96,29 @@ export default function Orders() {
 
   if (rows.length === 0) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <Text style={{ fontSize: 18, fontWeight: "800", color: T.ink }}>No orders yet</Text>
-        <Text style={{ color: T.muted, textAlign: "center", marginTop: 6 }}>
-          Everything you order from this phone shows up here, with where it has got to and a
-          button to order the same thing again.
-        </Text>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
+        <View style={{ alignItems: "center", paddingVertical: 12 }}>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: T.ink }}>No orders yet</Text>
+          <Text style={{ color: T.muted, textAlign: "center", marginTop: 6 }}>
+            Everything you order from this phone shows up here, with where it has got to and a
+            button to order the same thing again.
+          </Text>
+        </View>
+
+        {!saved.token && <SignIn onDone={load} />}
+
         <Pressable
           onPress={() => router.replace("/")}
           style={{
-            marginTop: 16,
             backgroundColor: T.brand,
             borderRadius: 999,
-            paddingHorizontal: 24,
-            paddingVertical: 12,
+            paddingVertical: 14,
+            alignItems: "center",
           }}
         >
           <Text style={{ color: T.paper, fontWeight: "800" }}>Browse the menu</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     );
   }
 
