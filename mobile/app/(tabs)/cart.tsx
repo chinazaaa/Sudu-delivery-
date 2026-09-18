@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { api, naira } from "@/lib/api";
-import { cart, cartTotal, countItems, people, useStored } from "@/lib/store";
+import { cart, cartTotal, countItems, people, useStored, type Line } from "@/lib/store";
 import { T } from "@/lib/theme";
 
 /** What is in the bag, and what it will cost to bring it. */
@@ -16,6 +17,23 @@ export default function Cart() {
   const items = countItems(lines);
   const food = cartTotal(lines);
   const run = shop?.runs[0] ?? null;
+
+  /** One block per person, in the order the names were added, exactly as the
+   *  website stacks them: everything of mine, then everything of Bola's. */
+  const blocks = (() => {
+    const names = friends.map((friend) => friend.name);
+    const strays = [
+      ...new Set(lines.map((line) => line.forName).filter((name) => name !== "" && !names.includes(name))),
+    ];
+    return ["", ...names, ...strays]
+      .map((person) => ({ person, lines: lines.filter((line) => line.forName === person) }))
+      .filter((block) => block.lines.length > 0);
+  })();
+
+  /** The menu a line came off, found by the dish rather than by the name of
+   *  the restaurant, so renaming one in admin does not break the link. */
+  const placeOf = (line: Line) =>
+    shop?.menu.find((place) => place.items.some((one) => one.id === line.itemId)) ?? null;
   const fee =
     shop && run ? feeFrom(items, shop.bands, run.flashFee) : null;
 
@@ -113,52 +131,88 @@ export default function Cart() {
           </View>
         </View>
 
-        {lines.map((line) => (
-          <View key={line.key} style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14 }}>
-            <Text style={{ fontWeight: "800", color: T.ink }}>{line.name}</Text>
-            <Text style={{ color: T.muted, marginTop: 2 }}>
-              {line.restaurant}
-              {line.choices.length > 0 ? ` · ${line.choices.join(", ")}` : ""}
-            </Text>
-            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, gap: 12 }}>
-              <Text style={{ fontWeight: "800", flex: 1, color: T.ink }}>
-                {naira(line.unitPrice * line.qty)}
-              </Text>
-              <Pressable onPress={() => cart.setQty(line.key, line.qty - 1)} style={round()}>
-                <Text style={{ fontSize: 18 }}>−</Text>
-              </Pressable>
-              <Text style={{ fontWeight: "800", minWidth: 20, textAlign: "center" }}>{line.qty}</Text>
-              <Pressable onPress={() => cart.setQty(line.key, line.qty + 1)} style={round()}>
-                <Text style={{ fontSize: 18 }}>+</Text>
-              </Pressable>
-            </View>
-
+        {blocks.map((block) => (
+          <View key={block.person === "" ? "me" : block.person} style={{ gap: 10 }}>
             {friends.length > 0 && (
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
-                <Text style={{ color: T.muted, fontWeight: "700", alignSelf: "center" }}>
-                  Whose?
-                </Text>
-                {["", ...friends.map((friend) => friend.name)].map((name) => {
-                  const on = line.forName === name;
-                  return (
-                    <Pressable
-                      key={name === "" ? "me" : name}
-                      onPress={() => cart.setForName(line.key, name)}
-                      style={{
-                        borderRadius: 999,
-                        paddingHorizontal: 12,
-                        paddingVertical: 5,
-                        backgroundColor: on ? T.brand : "rgba(20,17,15,0.06)",
-                      }}
-                    >
-                      <Text style={{ color: on ? T.paper : T.ink, fontWeight: "700", fontSize: 13 }}>
-                        {name === "" ? "Me" : name}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              <Text
+                style={{
+                  fontWeight: "800",
+                  fontSize: 13,
+                  letterSpacing: 0.6,
+                  color: T.muted,
+                  textTransform: "uppercase",
+                  marginTop: 6,
+                }}
+              >
+                {block.person === "" ? "You" : block.person}
+              </Text>
             )}
+            {block.lines.map((line) => (
+              <View key={line.key} style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14 }}>
+                {/* The same as the website: the dish in the cart is a way back to
+                    the dish itself, for a second look or a second one. */}
+                <Pressable
+                  onPress={() => {
+                    const place = placeOf(line);
+                    if (place) router.push(`/r/${place.restaurant.id}?item=${line.itemId}`);
+                  }}
+                  disabled={placeOf(line) === null}
+                  accessibilityRole="link"
+                  accessibilityLabel={`${line.name}, open on the ${line.restaurant} menu`}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: "800", color: T.ink }}>{line.name}</Text>
+                    <Text style={{ color: T.muted, marginTop: 2 }}>
+                      {line.restaurant}
+                      {line.choices.length > 0 ? ` · ${line.choices.join(", ")}` : ""}
+                    </Text>
+                  </View>
+                  {placeOf(line) !== null && (
+                    <Ionicons name="chevron-forward" size={18} color={T.muted} />
+                  )}
+                </Pressable>
+                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, gap: 12 }}>
+                  <Text style={{ fontWeight: "800", flex: 1, color: T.ink }}>
+                    {naira(line.unitPrice * line.qty)}
+                  </Text>
+                  <Pressable onPress={() => cart.setQty(line.key, line.qty - 1)} style={round()}>
+                    <Text style={{ fontSize: 18 }}>−</Text>
+                  </Pressable>
+                  <Text style={{ fontWeight: "800", minWidth: 20, textAlign: "center" }}>{line.qty}</Text>
+                  <Pressable onPress={() => cart.setQty(line.key, line.qty + 1)} style={round()}>
+                    <Text style={{ fontSize: 18 }}>+</Text>
+                  </Pressable>
+                </View>
+
+                {friends.length > 0 && (
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                    <Text style={{ color: T.muted, fontWeight: "700", alignSelf: "center" }}>
+                      Whose?
+                    </Text>
+                    {["", ...friends.map((friend) => friend.name)].map((name) => {
+                      const on = line.forName === name;
+                      return (
+                        <Pressable
+                          key={name === "" ? "me" : name}
+                          onPress={() => cart.setForName(line.key, name)}
+                          style={{
+                            borderRadius: 999,
+                            paddingHorizontal: 12,
+                            paddingVertical: 5,
+                            backgroundColor: on ? T.brand : "rgba(20,17,15,0.06)",
+                          }}
+                        >
+                          <Text style={{ color: on ? T.paper : T.ink, fontWeight: "700", fontSize: 13 }}>
+                            {name === "" ? "Me" : name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+            ))}
           </View>
         ))}
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   Text,
@@ -8,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { api, naira, type Shop } from "@/lib/api";
 import { cart, cartTotal, countItems, me, mine, people, useStored } from "@/lib/store";
 import { registerForPush } from "@/lib/push";
@@ -32,6 +34,10 @@ export default function Checkout() {
   const [mode, setMode] = useState<"one_payer" | "split">("one_payer");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  /** The blocks admin delivers to. Older servers do not send them, and then
+   *  the checkout asks for a typed answer as it always did. */
+  const hostels = shop?.hostels ?? [];
+
   /** What this number already has on the chosen run, if anything. */
   const [adding, setAdding] = useState<{ items: number; feeCharged: number }>({
     items: 0,
@@ -253,10 +259,11 @@ export default function Checkout() {
                     onChange={(next) => people.update(friend.name, { phone: next })}
                     keyboard="phone-pad"
                   />
-                  <Field
+                  <Blocks
                     label={`${friend.name}'s block`}
                     value={friend.hostel}
                     onChange={(next) => people.update(friend.name, { hostel: next })}
+                    all={hostels}
                   />
                 </View>
               )}
@@ -304,7 +311,7 @@ export default function Checkout() {
         </Text>
         <Field label="Your name" value={name} onChange={setName} />
         <Field label="Phone number" value={phone} onChange={setPhone} keyboard="phone-pad" />
-        <Field label="Hostel or block" value={hostel} onChange={setHostel} />
+        <Blocks label="Hostel or block" value={hostel} onChange={setHostel} all={hostels} />
       </View>
 
       <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
@@ -458,6 +465,108 @@ export default function Checkout() {
         </Text>
       </Pressable>
     </ScrollView>
+  );
+}
+
+/**
+ * The blocks admin delivers to, picked rather than typed.
+ *
+ * A typed block is misspelt often enough to make a run sheet impossible to
+ * sort, which is why the website asks people to pick. With no list set up
+ * this is the old text box, so a shop that has not filled one in still works.
+ */
+function Blocks({
+  label,
+  value,
+  onChange,
+  all,
+}: {
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+  all: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  if (all.length === 0) return <Field label={label} value={value} onChange={onChange} />;
+
+  return (
+    <View>
+      <Text style={{ color: T.muted, fontWeight: "700", marginBottom: 4 }}>{label}</Text>
+      <Pressable
+        onPress={() => setOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={value === "" ? `Choose ${label.toLowerCase()}` : value}
+        style={{
+          borderWidth: 1,
+          borderColor: T.line,
+          borderRadius: 12,
+          paddingHorizontal: 12,
+          paddingVertical: 14,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        <Text style={{ flex: 1, fontSize: 16, color: value === "" ? T.muted : T.ink }}>
+          {value === "" ? "Choose yours" : value}
+        </Text>
+        <Ionicons name="chevron-down" size={18} color={T.muted} />
+      </Pressable>
+
+      <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(20,17,15,0.45)", justifyContent: "flex-end" }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setOpen(false)} accessibilityLabel="Close" />
+          <View
+            style={{
+              backgroundColor: T.shell,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              maxHeight: "70%",
+              overflow: "hidden",
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", padding: 14, gap: 8 }}>
+              <Text style={{ flex: 1, fontWeight: "800", fontSize: 17, color: T.ink }}>{label}</Text>
+              <Pressable onPress={() => setOpen(false)} hitSlop={8} accessibilityLabel="Close">
+                <Ionicons name="close" size={22} color={T.ink} />
+              </Pressable>
+            </View>
+            <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
+              {all.map((one) => (
+                <Pressable
+                  key={one}
+                  onPress={() => {
+                    onChange(one);
+                    setOpen(false);
+                  }}
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    borderTopWidth: 1,
+                    borderTopColor: T.line,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontSize: 16,
+                      color: one === value ? T.brand : T.ink,
+                      fontWeight: one === value ? "800" : "400",
+                    }}
+                  >
+                    {one}
+                  </Text>
+                  {one === value && <Ionicons name="checkmark" size={18} color={T.brand} />}
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 

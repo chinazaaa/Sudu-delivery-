@@ -25,13 +25,15 @@ export default function Layout() {
           contentStyle: { backgroundColor: T.shell },
         }}
       >
-        <Stack.Screen name="index" options={{ title: "Sudu" }} />
+        {/* The tabs carry their own headers, so this one would be a second.
+            The title is still wanted: iOS labels the back button with it, and
+            without one it says "(tabs)" at people. */}
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, title: "Sudu" }} />
+        {/* Pushed over the tabs: each of these is somewhere you came from
+            somewhere, and leaving is going back rather than sideways. */}
         <Stack.Screen name="r/[id]" options={{ title: "" }} />
-        <Stack.Screen name="orders" options={{ title: "My orders" }} />
-        <Stack.Screen name="cart" options={{ title: "Your cart" }} />
         <Stack.Screen name="checkout" options={{ title: "Checkout" }} />
         <Stack.Screen name="order/[id]" options={{ title: "Your order" }} />
-        <Stack.Screen name="account" options={{ title: "Your data" }} />
       </Stack>
     </>
   );

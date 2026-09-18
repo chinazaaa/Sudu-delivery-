@@ -47,7 +47,7 @@ export type Item = {
     name: string;
     required: boolean;
     maxSelect: number;
-    options: { id: string; name: string; priceDelta: number }[];
+    options: { id: string; name: string; priceDelta: number; available?: boolean }[];
   }[];
 };
 
@@ -67,6 +67,9 @@ export type Run = {
 
 export type Shop = {
   menu: Place[];
+  /** The blocks admin delivers to. Empty means the list is not set up, and
+   *  the checkout falls back to a typed answer exactly as the website does. */
+  hostels?: string[];
   runs: Run[];
   bands: { maxItems: number | null; fee: number }[];
   shop: { tagline: string; ribbon: string; whatsapp: string };
@@ -92,8 +95,22 @@ export type OrderView = {
   accounts: { bank: string; name: string; number: string }[];
 };
 
+/**
+ * The whole menu is a quarter of a megabyte and takes a couple of seconds to
+ * arrive, and every screen wants it. Fetching it again on each move between
+ * screens is what made opening one feel like waiting, so it is held for a
+ * minute. Pulling down asks for it fresh.
+ */
+let held: { at: number; shop: Shop } | null = null;
+const HELD_FOR = 60_000;
+
 export const api = {
-  shop: () => get<Shop>("/menu"),
+  shop: async (fresh = false): Promise<Shop> => {
+    if (!fresh && held !== null && Date.now() - held.at < HELD_FOR) return held.shop;
+    const shop = await get<Shop>("/menu");
+    held = { at: Date.now(), shop };
+    return shop;
+  },
   signIn: (phone: string, pin: string) =>
     post<{ token: string; phone: string; name: string; hostel: string }>("/signin", {
       phone,

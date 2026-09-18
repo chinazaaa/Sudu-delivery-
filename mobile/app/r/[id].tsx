@@ -10,6 +10,8 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { api, naira, type Item, type Place } from "@/lib/api";
 import { cart, countItems, useStored } from "@/lib/store";
 import { T } from "@/lib/theme";
@@ -25,6 +27,8 @@ export default function Restaurant() {
   const [place, setPlace] = useState<Place | null>(null);
   const [open, setOpen] = useState<Item | null>(null);
   const [query, setQuery] = useState("");
+  /** Which category is being looked at. Empty means the whole menu. */
+  const [tab, setTab] = useState("");
   const [lines] = useStored(cart.read, []);
 
   useEffect(() => {
@@ -57,6 +61,25 @@ export default function Restaurant() {
     );
   }, [place, query]);
 
+  /** The menu under its own headings, in the order admin arranged them.
+   *  A hundred and forty dishes in one unbroken list is not a menu. */
+  const sections = useMemo(() => {
+    if (!place) return [];
+    const only = place.categories.filter((category) => tab === "" || category.id === tab);
+    const named = only
+      .map((category) => ({
+        name: category.name,
+        items: shown.filter((one) => one.categoryId === category.id),
+      }))
+      .filter((section) => section.items.length > 0);
+
+    if (tab !== "") return named;
+
+    const known = new Set(place.categories.map((category) => category.id));
+    const rest = shown.filter((one) => one.categoryId === null || !known.has(one.categoryId));
+    return rest.length > 0 ? [...named, { name: "More", items: rest }] : named;
+  }, [place, shown, tab]);
+
   if (!place) return <ActivityIndicator color={T.brand} style={{ marginTop: 40 }} />;
 
   return (
@@ -79,49 +102,94 @@ export default function Restaurant() {
           }}
         />
 
+        {place.categories.length > 0 && query.trim().length < 2 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+          >
+            {[{ id: "", name: "All" }, ...place.categories].map((category) => {
+              const on = tab === category.id;
+              return (
+                <Pressable
+                  key={category.id === "" ? "all" : category.id}
+                  onPress={() => setTab(category.id)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: on }}
+                  style={{
+                    borderRadius: 999,
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    backgroundColor: on ? T.brand : T.paper,
+                  }}
+                >
+                  <Text style={{ color: on ? T.paper : T.ink, fontWeight: "700" }}>
+                    {category.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
+
         {shown.length === 0 && (
           <Text style={{ color: T.muted, marginTop: 8 }}>
             Nothing on this menu matches that.
           </Text>
         )}
 
-        {shown.map((item) => (
-          <Pressable
-            key={item.id}
-            onPress={() => item.available && setOpen(item)}
-            style={{
-              flexDirection: "row",
-              gap: 12,
-              backgroundColor: T.paper,
-              borderRadius: T.radius,
-              padding: 12,
-              opacity: item.available ? 1 : 0.5,
-            }}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: "800", color: T.ink }}>{item.name}</Text>
-              {item.description !== "" && (
-                <Text numberOfLines={2} style={{ color: T.muted, marginTop: 2 }}>
-                  {item.description}
-                </Text>
-              )}
-              <Text style={{ fontWeight: "800", marginTop: 6, color: T.ink }}>
-                {item.groups.length > 0 ? "from " : ""}
-                {naira(item.price)}
-              </Text>
-              {!item.available && (
-                <Text style={{ color: T.muted, fontWeight: "700", marginTop: 2 }}>
-                  Sold out today
-                </Text>
-              )}
-            </View>
-            {item.imageUrl !== "" && (
-              <Image
-                source={{ uri: item.imageUrl }}
-                style={{ width: 92, height: 92, borderRadius: 12 }}
-              />
-            )}
-          </Pressable>
+        {sections.map((section) => (
+          <View key={section.name} style={{ gap: 10, marginTop: 6 }}>
+            <Text
+              style={{
+                fontWeight: "800",
+                fontSize: 13,
+                letterSpacing: 0.6,
+                color: T.muted,
+                textTransform: "uppercase",
+              }}
+            >
+              {section.name}
+            </Text>
+            {section.items.map((item) => (
+              <Pressable
+                key={item.id}
+                onPress={() => item.available && setOpen(item)}
+                style={{
+                  flexDirection: "row",
+                  gap: 12,
+                  backgroundColor: T.paper,
+                  borderRadius: T.radius,
+                  padding: 12,
+                  opacity: item.available ? 1 : 0.5,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: "800", color: T.ink }}>{item.name}</Text>
+                  {blurbOf(item) !== "" && (
+                    <Text numberOfLines={2} style={{ color: T.muted, marginTop: 2 }}>
+                      {blurbOf(item)}
+                    </Text>
+                  )}
+                  <Text style={{ fontWeight: "800", marginTop: 6, color: T.ink }}>
+                    {item.groups.length > 0 ? "from " : ""}
+                    {naira(item.price)}
+                  </Text>
+                  {!item.available && (
+                    <Text style={{ color: T.muted, fontWeight: "700", marginTop: 2 }}>
+                      Sold out today
+                    </Text>
+                  )}
+                </View>
+                {item.imageUrl !== "" && (
+                  <Image
+                    source={{ uri: item.imageUrl }}
+                    style={{ width: 92, height: 92, borderRadius: 12 }}
+                  />
+                )}
+              </Pressable>
+            ))}
+          </View>
         ))}
       </ScrollView>
 
@@ -145,10 +213,26 @@ export default function Restaurant() {
         </Pressable>
       )}
 
-      <Modal visible={open !== null} animationType="slide" onRequestClose={() => setOpen(null)}>
-        {open && (
-          <ItemSheet item={open} restaurant={place.restaurant.name} onDone={() => setOpen(null)} />
-        )}
+      <Modal
+        visible={open !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setOpen(null)}
+      >
+        <View
+          style={{ flex: 1, backgroundColor: "rgba(20,17,15,0.45)", justifyContent: "flex-end" }}
+        >
+          {/* The dimmed part is a way out too, the one people try first. */}
+          <Pressable
+            style={{ flex: 1 }}
+            onPress={() => setOpen(null)}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+          />
+          {open && (
+            <ItemSheet item={open} restaurant={place.restaurant.name} onDone={() => setOpen(null)} />
+          )}
+        </View>
       </Modal>
     </View>
   );
@@ -215,9 +299,38 @@ function ItemSheet({
     onDone();
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={{ flex: 1, backgroundColor: T.shell }}>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 140, gap: 14 }}>
+    <View
+      style={{
+        backgroundColor: T.shell,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        maxHeight: "92%",
+        overflow: "hidden",
+      }}
+    >
+      {/* Without this there is no way out of the sheet on an iPhone: a full
+          screen modal cannot be swiped away, and only Android has a back. */}
+      <View style={{ flexDirection: "row", justifyContent: "flex-end", padding: 10 }}>
+        <Pressable
+          onPress={onDone}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+          hitSlop={8}
+          style={round()}
+        >
+          <Ionicons name="close" size={22} color={T.ink} />
+        </Pressable>
+      </View>
+
+      {/* Shrinks to what is on it, so a drink with nothing to ask does not
+          open a screenful of empty grey. */}
+      <ScrollView
+        style={{ flexShrink: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16, gap: 14 }}
+      >
         {item.imageUrl !== "" && (
           <Image
             source={{ uri: item.imageUrl }}
@@ -225,7 +338,7 @@ function ItemSheet({
           />
         )}
         <Text style={{ fontSize: 24, fontWeight: "800", color: T.ink }}>{item.name}</Text>
-        {item.description !== "" && <Text style={{ color: T.muted }}>{item.description}</Text>}
+        {blurbOf(item) !== "" && <Text style={{ color: T.muted }}>{blurbOf(item)}</Text>}
 
         {item.groups.map((group) => (
           <View key={group.id} style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14 }}>
@@ -236,16 +349,21 @@ function ItemSheet({
             </Text>
             {group.options.map((option) => {
               const on = (picked[group.id] ?? []).includes(option.id);
+              // A sold out choice is shown but cannot be picked, the same as
+              // on the website: knowing it exists is worth the grey line.
+              const sold = option.available === false;
               return (
                 <Pressable
                   key={option.id}
                   onPress={() => choose(group.id, option.id, group.maxSelect)}
+                  disabled={sold}
                   style={{
                     flexDirection: "row",
                     justifyContent: "space-between",
                     paddingVertical: 10,
                     borderTopWidth: 1,
                     borderTopColor: T.line,
+                    opacity: sold ? 0.4 : 1,
                   }}
                 >
                   <Text style={{ color: on ? T.brand : T.ink, fontWeight: on ? "800" : "400" }}>
@@ -264,11 +382,8 @@ function ItemSheet({
 
       <View
         style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
           padding: 16,
+          paddingBottom: 16 + insets.bottom,
           backgroundColor: T.paper,
           flexDirection: "row",
           gap: 12,
@@ -303,6 +418,13 @@ function ItemSheet({
       </View>
     </View>
   );
+}
+
+/** The description worth printing: some menus just repeat the name into it,
+ *  and saying the same thing twice reads as a mistake. */
+function blurbOf(item: Item): string {
+  const described = item.description.trim();
+  return described.toLowerCase() === item.name.trim().toLowerCase() ? "" : described;
 }
 
 function round() {
