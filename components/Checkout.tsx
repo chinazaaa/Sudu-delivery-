@@ -371,10 +371,48 @@ export default function Checkout({
         </p>
       )}
 
+      {/* Two different situations, and people get them mixed up if you only
+          offer one. Ordering FOR friends is one cart you pay for. Ordering
+          WITH friends is everybody buying their own food out of one car. */}
+      {party !== "" && (
+        <div className="rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-3">
+          <p className="font-bold text-brand-dark">Ordering with your group</p>
+          <p className="mt-0.5 text-sm text-ink/80">
+            Your food goes in the same car as theirs. You pay for your own food, and
+            the delivery is split evenly once everybody is done.
+          </p>
+          {partyStarted && partyWhen !== "" && (
+            <p className="mt-1 text-sm font-semibold text-brand-dark">
+              Arriving {partyWhen}
+              {partyLeader ? `, as ${partyLeader} chose` : ""}.
+            </p>
+          )}
+          {waitingOnLeader && (
+            <p className="mt-1 text-sm font-semibold text-brand-dark">
+              Waiting for whoever started this to pick the time. Your food is ready to
+              go in the moment they do.
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              leaveParty();
+              setParty("");
+            }}
+            className="mt-2 text-xs font-semibold text-brand-dark underline"
+          >
+            Order on my own instead
+          </button>
+        </div>
+      )}
+
       {/* One question, then the answer to it. Which run it goes on and what
           time it lands are the same decision, so they are the same card: pick
-          how you want it, then pick the when. Two cards with one of them
-          hidden read as two unrelated things. */}
+          how you want it, then pick the when.
+          Hidden entirely when the choice is not theirs: offering a run picker
+          under the words "waiting for somebody else to pick the time" is the
+          page arguing with itself. */}
+      {!waitingOnLeader && !partyStarted && (
       <section className="card space-y-3">
         <h2 className="font-bold">When do you want it?</h2>
 
@@ -442,6 +480,7 @@ export default function Checkout({
           <RunPicker />
         )}
       </section>
+      )}
 
       <section className="card space-y-3">
         <h2 className="font-bold">How are you paying?</h2>
@@ -469,40 +508,6 @@ export default function Checkout({
         </div>
       </section>
 
-      {/* Two different situations, and people get them mixed up if you only
-          offer one. Ordering FOR friends is one cart you pay for. Ordering
-          WITH friends is everybody buying their own food out of one car. */}
-      {party !== "" && (
-        <div className="rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-3">
-          <p className="font-bold text-brand-dark">Ordering with your group</p>
-          <p className="mt-0.5 text-sm text-ink/80">
-            Your food goes in the same car as theirs. You pay for your own food, and
-            the delivery is split evenly once everybody is done.
-          </p>
-          {partyStarted && partyWhen !== "" && (
-            <p className="mt-1 text-sm font-semibold text-brand-dark">
-              Arriving {partyWhen}
-              {partyLeader ? `, as ${partyLeader} chose` : ""}.
-            </p>
-          )}
-          {waitingOnLeader && (
-            <p className="mt-1 text-sm font-semibold text-brand-dark">
-              Waiting for whoever started this to pick the time. Your food is ready to
-              go in the moment they do.
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              leaveParty();
-              setParty("");
-            }}
-            className="mt-2 text-xs font-semibold text-brand-dark underline"
-          >
-            Order on my own instead
-          </button>
-        </div>
-      )}
 
       {/* The same one tap as the cart and the item sheet. There used to be a
           tick box here saying "put your food in and you get a link", which is
