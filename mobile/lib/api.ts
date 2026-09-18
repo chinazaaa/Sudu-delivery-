@@ -98,6 +98,13 @@ export const api = {
       pin,
     }),
   order: (id: string) => get<OrderView>(`/order/${id}`),
+  /** What this number already has on a run, so adding to it tops up the
+   *  delivery rather than paying it twice. */
+  adding: (batchId: string, phone: string, token?: string | null) =>
+    get<{ items: number; feeCharged: number; name?: string; hostel?: string }>(
+      `/adding?batchId=${encodeURIComponent(batchId)}&phone=${encodeURIComponent(phone)}`,
+      token
+    ),
   myOrders: (token: string) =>
     get<{ orders: { id: string; ref: string; status: string; stage: string; total: number; items: number; run: string }[] }>(
       "/orders",

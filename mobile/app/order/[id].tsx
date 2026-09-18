@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { api, naira, type OrderView } from "@/lib/api";
 import { T } from "@/lib/theme";
 
 /** One order: where to pay, what was ordered, and where it has got to. */
 export default function Order() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const [order, setOrder] = useState<OrderView | null>(null);
   const [chosen, setChosen] = useState(0);
   const [copied, setCopied] = useState("");
@@ -119,6 +120,25 @@ export default function Order() {
         {order.discount > 0 && <Row label="Discount" value={`−${naira(order.discount)}`} />}
         <Row label="Total" value={naira(order.total)} strong />
       </View>
+
+      {/* Until the run closes, anything else goes in the same delivery. The
+          checkout works the fee out from what is already on this run, so this
+          is only the way back to the menu. */}
+      {new Date(order.run.cutOffISO).getTime() > Date.now() && (
+        <Pressable
+          onPress={() => router.push("/")}
+          style={{
+            backgroundColor: T.brand,
+            borderRadius: 999,
+            paddingVertical: 16,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color: T.paper, fontWeight: "800", fontSize: 16 }}>
+            Add more to this order
+          </Text>
+        </Pressable>
+      )}
     </ScrollView>
   );
 }

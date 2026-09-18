@@ -32,6 +32,11 @@ export default function Checkout() {
   const [mode, setMode] = useState<"one_payer" | "split">("one_payer");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  /** What this number already has on the chosen run, if anything. */
+  const [adding, setAdding] = useState<{ items: number; feeCharged: number }>({
+    items: 0,
+    feeCharged: 0,
+  });
 
   useEffect(() => {
     void api
@@ -57,6 +62,29 @@ export default function Checkout() {
     setApplied(null);
   }, [runId, lines.length]);
 
+  // An order already placed on this run is topped up, not duplicated: only
+  // the difference in delivery is charged. Re-asked whenever the run or the
+  // number changes, because both decide the answer.
+  useEffect(() => {
+    let alive = true;
+    if (!runId || phone.trim().length < 10) {
+      setAdding({ items: 0, feeCharged: 0 });
+      return;
+    }
+    void api
+      .adding(runId, phone.trim(), saved.token)
+      .then((next) => {
+        if (alive) setAdding({ items: next.items, feeCharged: next.feeCharged });
+      })
+      .catch(() => {
+        // Not knowing means the ordinary fee, which is what it would be anyway.
+        if (alive) setAdding({ items: 0, feeCharged: 0 });
+      });
+    return () => {
+      alive = false;
+    };
+  }, [runId, phone, saved.token]);
+
   // Only the people with food in this cart matter to the order.
   const sharing = friends.filter((friend) =>
     lines.some((line) => line.forName === friend.name)
@@ -81,7 +109,12 @@ export default function Checkout() {
   const items = countItems(lines);
   const food = cartTotal(lines);
   const run = shop?.runs.find((one) => one.id === runId) ?? null;
-  const fee = shop && run ? feeFrom(items, shop.bands, run.flashFee) : 0;
+  // Delivery is priced on everything travelling for this number on this run,
+  // less whatever the earlier order already paid for it.
+  const fee =
+    shop && run
+      ? Math.max(0, feeFrom(items + adding.items, shop.bands, run.flashFee) - adding.feeCharged)
+      : 0;
 
   const place = async () => {
     setError("");
@@ -299,9 +332,28 @@ export default function Checkout() {
         ))}
       </View>
 
+      {adding.items > 0 && (
+        <View style={{ backgroundColor: T.tint, borderRadius: T.radius, padding: 14 }}>
+          <Text style={{ fontWeight: "800", color: T.brandDark }}>
+            Adding to the order you already have on this run
+          </Text>
+          <Text style={{ color: T.ink, marginTop: 2 }}>
+            You already have {adding.items} item{adding.items === 1 ? "" : "s"} coming. This goes
+            in the same delivery, so you only pay the difference, never a second delivery fee.
+          </Text>
+        </View>
+      )}
+
       <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 6 }}>
         <Row label="Food" value={naira(food)} />
-        <Row label={`Delivery (${items} item${items === 1 ? "" : "s"})`} value={naira(fee)} />
+        <Row
+          label={
+            adding.items > 0
+              ? `Delivery top-up (${items + adding.items} items)`
+              : `Delivery (${items} item${items === 1 ? "" : "s"})`
+          }
+          value={naira(fee)}
+        />
         {applied && <Row label={`Code ${applied.code}`} value={`−${naira(applied.discount)}`} />}
         <View style={{ height: 1, backgroundColor: T.line, marginVertical: 4 }} />
         <Row label="Total" value={naira(Math.max(0, food + fee - (applied?.discount ?? 0)))} strong />

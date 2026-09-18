@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
@@ -15,12 +16,15 @@ import { T } from "@/lib/theme";
 
 /** One restaurant: its menu, and a sheet for the questions a meal asks. */
 export default function Restaurant() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // `item` arrives when somebody tapped a search result, so the sheet for
+  // that dish opens on top of its own menu rather than making them find it.
+  const { id, item: wanted } = useLocalSearchParams<{ id: string; item?: string }>();
   const navigation = useNavigation();
   const router = useRouter();
 
   const [place, setPlace] = useState<Place | null>(null);
   const [open, setOpen] = useState<Item | null>(null);
+  const [query, setQuery] = useState("");
   const [lines] = useStored(cart.read, []);
 
   useEffect(() => {
@@ -29,19 +33,59 @@ export default function Restaurant() {
       .then((shop) => {
         const found = shop.menu.find((one) => one.restaurant.id === id) ?? null;
         setPlace(found);
-        if (found) navigation.setOptions({ title: found.restaurant.name });
+        if (found) {
+          navigation.setOptions({ title: found.restaurant.name });
+          const asked = wanted ? found.items.find((one) => one.id === wanted) : null;
+          if (asked && asked.available) setOpen(asked);
+        }
       })
       .catch(() => setPlace(null));
-  }, [id, navigation]);
+  }, [id, wanted, navigation]);
 
   const items = countItems(lines);
+
+  /** The menu, narrowed by whatever has been typed. One letter narrows
+   *  nothing worth narrowing, so it waits for two. */
+  const shown = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    const all = place?.items ?? [];
+    if (needle.length < 2) return all;
+    return all.filter(
+      (one) =>
+        one.name.toLowerCase().includes(needle) ||
+        one.description.toLowerCase().includes(needle)
+    );
+  }, [place, query]);
 
   if (!place) return <ActivityIndicator color={T.brand} style={{ marginTop: 40 }} />;
 
   return (
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 10 }}>
-        {place.items.map((item) => (
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder={`Search ${place.restaurant.name}`}
+          placeholderTextColor={T.muted}
+          returnKeyType="search"
+          autoCorrect={false}
+          style={{
+            backgroundColor: T.paper,
+            borderRadius: T.radius,
+            paddingHorizontal: 16,
+            paddingVertical: 14,
+            fontSize: 16,
+            color: T.ink,
+          }}
+        />
+
+        {shown.length === 0 && (
+          <Text style={{ color: T.muted, marginTop: 8 }}>
+            Nothing on this menu matches that.
+          </Text>
+        )}
+
+        {shown.map((item) => (
           <Pressable
             key={item.id}
             onPress={() => item.available && setOpen(item)}

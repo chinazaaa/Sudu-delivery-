@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -6,11 +6,12 @@ import {
   RefreshControl,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { Link, useFocusEffect, useRouter } from "expo-router";
 import { useCallback } from "react";
-import { api, naira, type OrderView, type Shop } from "@/lib/api";
+import { api, naira, type Item, type OrderView, type Shop } from "@/lib/api";
 import { cart, countItems, mine, useStored } from "@/lib/store";
 import { T } from "@/lib/theme";
 
@@ -28,6 +29,7 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [lines] = useStored(cart.read, []);
   const [latest, setLatest] = useState<OrderView | null>(null);
+  const [query, setQuery] = useState("");
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -58,6 +60,23 @@ export default function Home() {
       void load();
     }, [load])
   );
+
+  /** Every dish on every menu that matches, the way the website searches.
+   *  One letter matches too much to be worth showing, so it waits for two. */
+  const found = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (needle.length < 2 || !shop) return null;
+    return shop.menu.flatMap((place) =>
+      place.items
+        .filter(
+          (item) =>
+            item.name.toLowerCase().includes(needle) ||
+            item.description.toLowerCase().includes(needle) ||
+            place.restaurant.name.toLowerCase().includes(needle)
+        )
+        .map((item) => ({ item, restaurant: place.restaurant }))
+    );
+  }, [shop, query]);
 
   const run = shop?.runs[0] ?? null;
   const items = countItems(lines);
@@ -137,7 +156,84 @@ export default function Home() {
 
         {!shop && !error && <ActivityIndicator color={T.brand} style={{ marginTop: 40 }} />}
 
-        {shop?.menu.map((place) => (
+        {shop && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search chicken, pizza, wings…"
+              placeholderTextColor={T.muted}
+              returnKeyType="search"
+              autoCorrect={false}
+              style={{
+                flex: 1,
+                backgroundColor: T.paper,
+                borderRadius: T.radius,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                fontSize: 16,
+                color: T.ink,
+              }}
+            />
+            {query !== "" && (
+              <Pressable onPress={() => setQuery("")} style={{ paddingHorizontal: 8 }}>
+                <Text style={{ color: T.muted, fontWeight: "800" }}>Clear</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        {found !== null && (
+          <View style={{ gap: 10 }}>
+            <Text style={{ fontWeight: "800", fontSize: 16, color: T.ink }}>
+              {found.length} result{found.length === 1 ? "" : "s"}
+            </Text>
+            {found.length === 0 && (
+              <Text style={{ color: T.muted }}>
+                Nothing matches that. Try a shorter word, like chicken or pizza.
+              </Text>
+            )}
+            {found.map(({ item, restaurant }) => (
+              <Pressable
+                key={item.id}
+                // Straight to the dish on its own menu, where the sheet asks
+                // whatever the meal asks before anything joins the cart.
+                onPress={() => router.push(`/r/${restaurant.id}?item=${item.id}`)}
+                style={{
+                  flexDirection: "row",
+                  gap: 12,
+                  backgroundColor: T.paper,
+                  borderRadius: T.radius,
+                  padding: 12,
+                  opacity: item.available ? 1 : 0.5,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: "800", color: T.ink }}>{item.name}</Text>
+                  <Text style={{ color: T.muted, marginTop: 2 }}>{restaurant.name}</Text>
+                  <Text style={{ fontWeight: "800", marginTop: 6, color: T.ink }}>
+                    {item.groups.length > 0 ? "from " : ""}
+                    {naira(item.price)}
+                  </Text>
+                  {!item.available && (
+                    <Text style={{ color: T.muted, fontWeight: "700", marginTop: 2 }}>
+                      Sold out today
+                    </Text>
+                  )}
+                </View>
+                {item.imageUrl !== "" && (
+                  <Image
+                    source={{ uri: item.imageUrl }}
+                    style={{ width: 92, height: 92, borderRadius: 12 }}
+                  />
+                )}
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {found === null &&
+          shop?.menu.map((place) => (
           <Link key={place.restaurant.id} href={`/r/${place.restaurant.id}`} asChild>
             <Pressable style={{ borderRadius: T.radius, overflow: "hidden", backgroundColor: T.paper }}>
               {place.restaurant.bannerUrl !== "" && (
