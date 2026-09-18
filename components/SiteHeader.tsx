@@ -41,9 +41,15 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
             ←
           </button>
         ) : (
-          <span className="block size-9 shrink-0 overflow-hidden rounded-xl">
+          // The name beside it went home and the mark did not, which is not a
+          // distinction anybody makes when they tap a logo.
+          <Link
+            href="/"
+            aria-label="Sudu home"
+            className="block size-9 shrink-0 overflow-hidden rounded-xl"
+          >
             <Mark />
-          </span>
+          </Link>
         )}
 
         <Link href="/" className="min-w-0 flex-1">
