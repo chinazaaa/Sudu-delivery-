@@ -225,3 +225,51 @@ export async function markDone(orderId: string): Promise<CloseResult | null> {
   const everybody = orders.length > 0 && orders.every((one) => one.done_at !== null);
   return everybody ? closeGroup(order.group_id as string) : null;
 }
+
+/**
+ * Start a shared delivery.
+ *
+ * Open for fifteen minutes, and never past the run's own cut off, because a
+ * group that outlived its run would collect people for a car that had already
+ * gone. Nobody in it has a delivery fee until it closes.
+ */
+export async function startSharedGroup(args: {
+  batch: Batch;
+  phone: string;
+  name: string;
+  hostel: string;
+}): Promise<string | null> {
+  const cutOff = new Date(args.batch.cut_off_at).getTime();
+  const wanted = Date.now() + SHARE_MINUTES * 60_000;
+
+  const { data } = await db()
+    .from("order_groups")
+    .insert({
+      batch_id: args.batch.id,
+      leader_phone: args.phone,
+      leader_name: args.name,
+      hostel: args.hostel,
+      mode: "split",
+      collect_mode: "each",
+      closes_at: new Date(Math.min(wanted, cutOff)).toISOString(),
+    })
+    .select("id")
+    .single();
+
+  return (data?.id as string) ?? null;
+}
+
+/** The shared group an order belongs to, if it is in one that is still open. */
+export async function openGroupFor(orderId: string): Promise<SharedGroup | null> {
+  const { data: order } = await db()
+    .from("orders")
+    .select("group_id")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (!order?.group_id) return null;
+
+  const group = await getSharedGroup(order.group_id as string);
+  if (!group || !group.closes_at || group.closed_at) return null;
+  return group;
+}
