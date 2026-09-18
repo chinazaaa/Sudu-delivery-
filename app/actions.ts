@@ -54,9 +54,17 @@ export async function submitOrder(
     people: parsePeople(form.get("people")),
     customerNote: String(form.get("customer_note") ?? "").trim().slice(0, 300),
     joinOrderId: String(form.get("join_order_id") ?? "") || undefined,
+    shareDelivery: String(form.get("share_delivery") ?? "") === "on",
   });
 
   if (!result.ok) return { error: result.error };
+
+  // In a shared delivery the next thing that matters is the group filling up,
+  // not this one order: there is no total to pay yet. So they land on the
+  // board, with their own order marked so it knows which of them they are.
+  if (result.sharedGroupId) {
+    redirect(`/g/${result.sharedGroupId}?me=${result.orderId}&placed=1`);
+  }
   redirect(`/o/${result.orderId}?placed=1`);
 }
 

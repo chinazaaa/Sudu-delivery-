@@ -11,7 +11,7 @@ import ActionButton from "@/components/admin/ActionButton";
 import StagePicker from "@/components/admin/StagePicker";
 import SendSheet from "@/components/admin/SendSheet";
 import { payableAccounts } from "@/lib/banks";
-import { batchSheet, typicalCosts } from "@/lib/admin";
+import { batchSheet, typicalCosts, shortfalls } from "@/lib/admin";
 import { SLOT_LABEL } from "@/lib/config";
 import Link from "next/link";
 import { naira, orderRef, refsIn } from "@/lib/money";
@@ -66,6 +66,9 @@ export default async function BatchPage({
   // reads high at exactly the moment the decision to drive is made. What past
   // runs actually cost is a far better guess than nothing.
   const usual = summary.costs === 0 ? await typicalCosts() : null;
+  // Shared deliveries where somebody has not paid, and what that leaves the
+  // car short by.
+  const short = await shortfalls(batch.id);
   const likely = usual === null ? null : summary.profit - usual;
 
   const settings = await getSettings();
@@ -169,6 +172,67 @@ export default async function BatchPage({
           and roughly {naira(usual!)} of fuel and driver going by the last few runs.
           Put this run&apos;s real costs in under Profit and this becomes exact.
         </p>
+      )}
+
+      {short.length > 0 && (
+        <section className="card mb-4 space-y-3">
+          <div>
+            <h2 className="font-bold">Shared deliveries waiting on money</h2>
+            <p className="text-sm text-muted">
+              Everybody in one pays an even share of a single fee. When some of them
+              never pay, their food does not travel, but the fee for what is left
+              does not fall as fast as the heads do. Nobody can be asked for more
+              after the fact, so this is a judgement: chase them, carry it, or
+              refund the ones who paid.
+            </p>
+          </div>
+          {short.map((one) => (
+            <div key={one.groupId} className="rounded-xl border border-black/10 p-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="font-bold">{one.leader}&apos;s delivery</span>
+                <span className="text-sm text-muted">
+                  {one.paidPeople} of {one.people} paid
+                </span>
+              </div>
+              {one.short > 0 ? (
+                <p className="mt-1 text-sm">
+                  You hold <span className="font-semibold">{naira(one.collected)}</span>{" "}
+                  of delivery. What still travels is worth{" "}
+                  <span className="font-semibold">{naira(one.needed)}</span>, so it is{" "}
+                  <span className="font-bold text-brand">{naira(one.short)} short</span>.
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-muted">
+                  The money in still covers what travels. Nothing to do but chase.
+                </p>
+              )}
+              <ul className="mt-2 space-y-1 text-sm">
+                {one.unpaid.map((who) => (
+                  <li key={who.id} className="flex items-center justify-between gap-3">
+                    <span>
+                      {who.name}
+                      <span className="text-muted"> · owes {naira(who.owed)}</span>
+                    </span>
+                    <span className="flex shrink-0 gap-2">
+                      <a
+                        href={`tel:${who.phone}`}
+                        className="chip border-black/10 bg-white py-1 text-xs"
+                      >
+                        Call
+                      </a>
+                      <Link
+                        href={`/admin/orders/${who.id}`}
+                        className="chip border-black/10 bg-white py-1 text-xs"
+                      >
+                        Open
+                      </Link>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
       )}
 
       {belowMinimum && (

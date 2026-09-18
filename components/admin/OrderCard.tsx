@@ -32,6 +32,8 @@ export type OrderCardData = {
   food: number;
   /** True when they came in on somebody else's delivery link. */
   joinedDelivery: boolean;
+  /** In a shared delivery that has not closed, so it has no fee yet. */
+  awaitingGroup: boolean;
   /** Taken off the total by a code, if one was typed. */
   discount: number;
   /** The code that took it off, so the money can be explained. */
@@ -168,6 +170,17 @@ export default function OrderCard({
             </p>
           </form>
         </div>
+      )}
+
+      {/* Marking this paid now would take food money and no delivery, because
+          the fee is not worked out until the group closes. */}
+      {order.awaitingGroup && order.status === "pending" && (
+        <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <span className="font-bold">Their group has not closed yet.</span> There is
+          no delivery fee on this order, so {naira(order.total)} is the food alone.
+          Wait for the group to close, or you will be marking it paid for less than
+          it will cost.
+        </p>
       )}
 
       <div className="flex flex-wrap gap-2">

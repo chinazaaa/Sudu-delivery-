@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { openGroupFor, startSharedGroup } from "./groups";
 import { feeFor, splitFee, type Band } from "./fees";
 import { activeBands } from "./settings";
 import {
@@ -53,10 +54,13 @@ export type PlaceOrderInput = {
   coupon?: string;
   /** The order whose join link they opened, so their food rides along with it. */
   joinOrderId?: string;
+  /** Start a shared delivery that friends can add to for the next fifteen
+   *  minutes. Nobody in one has a delivery fee until it closes. */
+  shareDelivery?: boolean;
 };
 
 export type PlaceOrderResult =
-  | { ok: true; orderId: string; groupId?: string }
+  | { ok: true; orderId: string; groupId?: string; sharedGroupId?: string }
   | { ok: false; error: string };
 
 type PricedOption = { id: string; name: string; price_delta: number };
@@ -126,6 +130,15 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
       ? joined.id
       : null;
 
+  // A shared delivery, either joined or started here. Everybody in one waits
+  // for it to close before they have a delivery fee at all, because the fee
+  // depends on who else turns up and what they order between them.
+  const sharedGroupId = joinRootId
+    ? (await openGroupFor(joinRootId))?.id ?? null
+    : input.shareDelivery && input.groupMode !== "split"
+      ? await startSharedGroup({ batch, phone, name, hostel })
+      : null;
+
   const result =
     input.groupMode === "split"
       ? await placeSplitGroup({
@@ -149,6 +162,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           lines: priced.lines,
           coupon: coupon?.ok ? coupon : null,
           joinRootId,
+          sharedGroupId,
           groupMode: input.groupMode ?? null,
           paymentMethod,
           collectMode,
@@ -255,6 +269,8 @@ async function placeSingleOrder(args: {
   /** The delivery being joined, already resolved back to the order that
    *  started it. */
   joinRootId: string | null;
+  /** The shared delivery this order belongs to, when there is one. */
+  sharedGroupId: string | null;
 }): Promise<PlaceOrderResult> {
   // Adding to an existing order is a second order to the same batch, not an
   // edit: the admin view merges by phone into one bag (addendum §3). Only the
@@ -263,14 +279,18 @@ async function placeSingleOrder(args: {
   // off this phone's own orders: it is one load in the car either way. Nobody
   // already in it is altered, so a reference somebody has already been told to
   // type in their transfer cannot change underneath them.
-  const existing = args.joinRootId
-    ? await deliveryLoad(args.batch.id, args.joinRootId)
-    : await existingLoad(args.batch.id, args.phone);
+  const existing = await existingLoad(args.batch.id, args.phone);
   const combined = existing.items + countItems(args.lines);
-  const fee = Math.max(
-    0,
-    feeFor(combined, args.batch.flash_fee, args.bands) - existing.feeCharged
-  );
+
+  // In a shared delivery nobody has a fee until the group closes: it is split
+  // evenly then, once it is known how many are in the car. Writing a figure
+  // now would be quoting a number that is about to change.
+  const fee = args.sharedGroupId
+    ? 0
+    : Math.max(
+        0,
+        feeFor(combined, args.batch.flash_fee, args.bands) - existing.feeCharged
+      );
 
   let group: OrderGroup | null = null;
   if (args.groupMode === "one_payer") {
@@ -300,8 +320,8 @@ async function placeSingleOrder(args: {
     fee,
     discount: args.coupon?.discount ?? 0,
     coupon_code: args.coupon?.coupon.code ?? null,
-    group_id: group?.id ?? null,
-    for_name: null,
+    group_id: group?.id ?? args.sharedGroupId,
+    for_name: args.sharedGroupId ? args.name : null,
     payment_method: args.paymentMethod,
     customer_note: args.customerNote,
     shared_with: args.joinRootId,
@@ -309,7 +329,7 @@ async function placeSingleOrder(args: {
   });
 
   return order
-    ? { ok: true, orderId: order, groupId: group?.id }
+    ? { ok: true, orderId: order, groupId: group?.id, sharedGroupId: args.sharedGroupId ?? undefined }
     : { ok: false, error: "Could not save that order." };
 }
 

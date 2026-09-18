@@ -139,12 +139,20 @@ export default function Checkout({
     if (joining) setBatchId(joining.batchId);
   }, [joining]);
 
-  const alreadyItems = joining ? joining.items : adding?.items ?? 0;
-  const alreadyCharged = joining ? joining.feeCharged : adding?.feeCharged ?? 0;
-  const fee = Math.max(
-    0,
-    feeFor(itemCount + alreadyItems, selected?.flashFee ?? null, bands) - alreadyCharged
-  );
+  // Sharing a delivery, either starting one or joining one. Neither has a
+  // delivery fee yet: it is split evenly when the group closes, once it is
+  // known how many are in the car.
+  const [share, setShare] = useState(false);
+  const shared = share || joining !== null;
+
+  const alreadyItems = adding?.items ?? 0;
+  const alreadyCharged = adding?.feeCharged ?? 0;
+  const fee = shared
+    ? 0
+    : Math.max(
+        0,
+        feeFor(itemCount + alreadyItems, selected?.flashFee ?? null, bands) - alreadyCharged
+      );
   const total = Math.max(0, subtotal + fee - (applied?.discount ?? 0));
 
   const groupOn = people.length > 0;
@@ -245,6 +253,7 @@ export default function Checkout({
       <input type="hidden" name="payment_method" value={method} />
       <input type="hidden" name="collect_mode" value={collect} />
       <input type="hidden" name="join_order_id" value={joining?.id ?? ""} />
+      <input type="hidden" name="share_delivery" value={share ? "on" : ""} />
       <input type="hidden" name="people" value={JSON.stringify(people)} />
 
       <h1 className="text-2xl font-extrabold">Checkout</h1>
@@ -306,14 +315,38 @@ export default function Checkout({
         </div>
       </section>
 
-      {!groupOn && (
-        <p className="text-sm text-muted">
-          Ordering for friends?{" "}
-          <Link href="/cart" className="font-semibold text-brand">
-            Add their names in your cart
-          </Link>{" "}
-          and tap a name on each item. Checkout then shows what each person owes.
-        </p>
+      {/* Two different situations, and people get them mixed up if you only
+          offer one. Ordering FOR friends is one cart you pay for. Ordering
+          WITH friends is everybody buying their own food out of one car. */}
+      {!groupOn && !joining && (
+        <section className="card space-y-3">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={share}
+              onChange={(event) => setShare(event.target.checked)}
+              className="mt-1 size-5 shrink-0 accent-brand"
+            />
+            <span>
+              <span className="block font-bold">Ordering with friends?</span>
+              <span className="mt-0.5 block text-sm text-muted">
+                Put your food in and you get a link for the group chat. Whoever adds
+                theirs in the next 15 minutes shares one delivery fee with you, split
+                evenly. Everybody pays for their own food.
+              </span>
+            </span>
+          </label>
+
+          {!share && (
+            <p className="border-t border-black/10 pt-3 text-sm text-muted">
+              Ordering <em>for</em> friends instead, and paying yourself?{" "}
+              <Link href="/cart" className="font-semibold text-brand">
+                Add their names in your cart
+              </Link>{" "}
+              and tap a name on each item.
+            </p>
+          )}
+        </section>
       )}
 
       {groupOn && (
@@ -647,23 +680,34 @@ export default function Checkout({
         </div>
         <div className="flex justify-between text-muted">
           <span>
-            {alreadyCharged > 0
-              ? `Delivery top-up (${itemCount + alreadyItems} items)`
-              : `Delivery (${itemCount} item${itemCount === 1 ? "" : "s"})`}
+            {shared
+              ? "Delivery"
+              : alreadyCharged > 0
+                ? `Delivery top-up (${itemCount + alreadyItems} items)`
+                : `Delivery (${itemCount} item${itemCount === 1 ? "" : "s"})`}
           </span>
-          <span>{naira(fee)}</span>
+          <span>{shared ? "worked out when the group closes" : naira(fee)}</span>
         </div>
         {/* Four items costing more than three looks arbitrary until the whole
             ladder is there, so it is one tap away. */}
-        <FeeBands
-          itemCount={itemCount + alreadyItems}
-          flashFee={selected?.flashFee ?? null}
-          bands={bands}
-        />
+        {!shared && (
+          <FeeBands
+            itemCount={itemCount + alreadyItems}
+            flashFee={selected?.flashFee ?? null}
+            bands={bands}
+          />
+        )}
         <div className="flex justify-between border-t border-black/10 pt-2 text-lg font-extrabold">
-          <span>Total</span>
+          <span>{shared ? "Food so far" : "Total"}</span>
           <span>{naira(total)}</span>
         </div>
+        {shared && (
+          <p className="text-xs text-muted">
+            One delivery fee for the whole car, split evenly between everybody in
+            it. The more of you there are, the less each of you pays, so nobody
+            can be told their share until the last person is done.
+          </p>
+        )}
         {/* A code is a thing somebody was given in a group chat, so it is
             typed in rather than carried by the link they happened to open. */}
         <CouponBox
@@ -704,7 +748,11 @@ export default function Checkout({
             className="btn-primary w-full py-4 text-base"
             disabled={pending || !batchId || !splitReady || unresolved.length > 0}
           >
-            {pending ? "Placing…" : `Place order · ${naira(total)}`}
+            {pending
+              ? "Placing…"
+              : shared
+                ? "Put my food in"
+                : `Place order · ${naira(total)}`}
           </button>
         </div>
       </div>

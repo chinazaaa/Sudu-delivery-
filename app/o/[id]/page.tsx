@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import ClearCart from "@/components/ClearCart";
+import { openGroupFor } from "@/lib/groups";
 import PayTo from "@/components/PayTo";
 import FeeBands from "@/components/FeeBands";
 import LiveOrder from "@/components/LiveOrder";
@@ -63,6 +64,11 @@ export default async function OrderPage({
   // Whether anything else is open is a separate question from whether this
   // order may move: hiding the control when the list is empty left people
   // hunting for something the page had silently decided not to show.
+  // A shared delivery that has not closed has no delivery fee yet, so this
+  // page must not show a total or ask for money. It sends them to the board
+  // instead, which is where the thing they are waiting on is happening.
+  const waitingOnGroup = await openGroupFor(order.id);
+
   const canStillMove =
     order.batch.status === "open" &&
     order.batch.stage === "ordering" &&
@@ -124,6 +130,25 @@ export default async function OrderPage({
   return (
     <div className="mx-auto max-w-2xl space-y-4 pb-10">
       {justPlaced && <ClearCart />}
+
+      {waitingOnGroup && (
+        <section className="rounded-2xl border-2 border-brand/30 bg-brand-tint p-4">
+          <h2 className="font-bold text-brand-dark">
+            Waiting for the group to close
+          </h2>
+          <p className="mt-1 text-sm text-ink/80">
+            Your food is in. There is nothing to pay yet, because the delivery fee
+            is split evenly between everybody in the car and more of them may
+            still be adding.
+          </p>
+          <Link
+            href={`/g/${waitingOnGroup.id}?me=${order.id}`}
+            className="btn-primary mt-3 block w-full text-center"
+          >
+            See who is in
+          </Link>
+        </section>
+      )}
       {order.status !== "refunded" && order.batch.stage !== "handed_out" && <LiveOrder />}
 
       <header
@@ -160,7 +185,7 @@ export default async function OrderPage({
         </div>
       </header>
 
-      {!paid && order.status !== "refunded" && expired && (
+      {!paid && !waitingOnGroup && order.status !== "refunded" && expired && (
         <section className="card space-y-3 border-brand/30 bg-brand-tint">
           <div>
             <h2 className="font-bold">This run has gone. Do not pay it.</h2>
@@ -181,7 +206,7 @@ export default async function OrderPage({
       )}
 
       {/* Paying comes first while it is unpaid, and drops away once it is not. */}
-      {!paid && order.status !== "refunded" && !expired && (
+      {!paid && !waitingOnGroup && order.status !== "refunded" && !expired && (
         <section className="card space-y-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-lg font-extrabold">Pay {naira(order.total)}</h2>

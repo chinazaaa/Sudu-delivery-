@@ -6,16 +6,17 @@
 --
 --   1. Chase the carts nobody finished, once a morning.
 --   2. Tell people a run is closing, ninety minutes before the cut off.
+--   3. Close shared deliveries whose fifteen minutes are up.
 --
 -- Neither sends anything twice: an abandoned cart is marked once it has been
 -- reported, and a run carries the time it was warned about.
 --
 -- BEFORE YOU RUN THIS
 --
--- Replace REPLACE_WITH_CRON_SECRET in both places below with whatever
--- CRON_SECRET is set to in Vercel. If you have not set one, delete the whole
--- "?key=REPLACE_WITH_CRON_SECRET" from both addresses and the endpoints will
--- answer without it. Setting one is better: without it anybody who guesses the
+-- Replace REPLACE_WITH_CRON_SECRET everywhere below, in all three addresses,
+-- with whatever CRON_SECRET is set to in Vercel. If you have not set one,
+-- delete the whole "?key=REPLACE_WITH_CRON_SECRET" from each address and the
+-- endpoints will answer without it. Setting one is better: without it anybody who guesses the
 -- address can make the shop send notifications.
 --
 -- Safe to run twice: each job is unscheduled first, so running this again
@@ -53,6 +54,24 @@ select cron.schedule(
   $$
   select net.http_get(
     url := 'https://sudu.store/api/notify/closing?key=REPLACE_WITH_CRON_SECRET',
+    timeout_milliseconds := 20000
+  );
+  $$
+);
+
+-- Shared deliveries whose fifteen minutes are up. Checked every minute,
+-- because until a group closes nobody in it has a delivery fee and so nobody
+-- can pay, and fifteen minutes is short enough that an hourly check would
+-- leave people waiting three quarters of an hour for a total.
+select cron.unschedule('sudu-close-shared-deliveries')
+where exists (select 1 from cron.job where jobname = 'sudu-close-shared-deliveries');
+
+select cron.schedule(
+  'sudu-close-shared-deliveries',
+  '* * * * *',
+  $$
+  select net.http_get(
+    url := 'https://sudu.store/api/groups/close?key=REPLACE_WITH_CRON_SECRET',
     timeout_milliseconds := 20000
   );
   $$

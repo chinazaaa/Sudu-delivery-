@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { deliveryLoad, rootOrder } from "@/lib/orders";
+import { openGroupFor } from "@/lib/groups";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,11 @@ export async function GET(
       new Date(order.batch.cut_off_at).getTime() > Date.now();
 
     if (!order || !open) return NextResponse.json({ ok: false });
+
+    // A shared delivery that has closed has had its fees worked out and told
+    // to everybody. Letting somebody else in now would change what they owe.
+    const group = await openGroupFor(order.id);
+    if (!group) return NextResponse.json({ ok: false, closed: true });
 
     const load = await deliveryLoad(order.batch_id, order.id);
     return NextResponse.json({

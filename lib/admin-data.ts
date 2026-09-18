@@ -20,6 +20,9 @@ export type FeedOrder = Order & {
   deliveryWindow: string;
   slot: Batch["slot"];
   pin: string | null;
+  /** In a shared delivery that has not closed, so it has no fee yet and
+   *  marking it paid would take the food money alone. */
+  awaitingGroup: boolean;
 };
 
 export type OrderFilter = {
@@ -56,6 +59,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
   // after it, the search threw before it could run, and every admin page that
   // searches went down with it.
   const groups = await groupMap(orders.map((o) => o.group_id));
+  const stillOpen = await openGroups(orders.map((o) => o.group_id));
 
   const term = filter.search?.trim().toLowerCase();
   if (term) {
@@ -108,8 +112,24 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
       deliveryWindow: batch?.delivery_window_text ?? "",
       slot: batch?.slot ?? "afternoon",
       pin: pins.get(order.customer_phone) ?? null,
+      awaitingGroup: order.group_id ? stillOpen.has(order.group_id) : false,
     };
   });
+}
+
+/** Shared deliveries among these groups that have not closed yet. */
+async function openGroups(ids: (string | null)[]): Promise<Set<string>> {
+  const unique = [...new Set(ids.filter((id): id is string => Boolean(id)))];
+  if (unique.length === 0) return new Set();
+
+  const { data } = await db()
+    .from("order_groups")
+    .select("id")
+    .in("id", unique)
+    .not("closes_at", "is", null)
+    .is("closed_at", null);
+
+  return new Set((data ?? []).map((row) => row.id as string));
 }
 
 /** Every order in each group, so a share can be numbered within its group. */
