@@ -108,6 +108,12 @@ export const api = {
     paymentMethod: "transfer" | "card";
     customerNote?: string;
   }) => post<{ orderId: string; token: string | null }>("/order", order),
+  coupon: (data: {
+    code: string;
+    batchId: string;
+    phone: string;
+    lines: { menu_item_id: string; qty: number; option_ids?: string[] }[];
+  }) => post<{ discount: number; label: string }>("/coupon", data),
   again: (token: string) =>
     get<{
       lines: {

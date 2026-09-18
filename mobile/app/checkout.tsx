@@ -25,6 +25,9 @@ export default function Checkout() {
   const [phone, setPhone] = useState("");
   const [hostel, setHostel] = useState("");
   const [method, setMethod] = useState<"transfer" | "card">("transfer");
+  const [code, setCode] = useState("");
+  const [applied, setApplied] = useState<{ code: string; discount: number; label: string } | null>(null);
+  const [codeError, setCodeError] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -48,6 +51,10 @@ export default function Checkout() {
     setHostel((was) => was || saved.hostel);
   }, [saved]);
 
+  useEffect(() => {
+    setApplied(null);
+  }, [runId, lines.length]);
+
   const items = countItems(lines);
   const food = cartTotal(lines);
   const run = shop?.runs.find((one) => one.id === runId) ?? null;
@@ -68,6 +75,7 @@ export default function Checkout() {
           option_ids: line.optionIds,
         })),
         paymentMethod: method,
+        coupon: applied?.code ?? "",
       });
 
       await me.save({ name, phone, hostel, token: result.token });
@@ -147,8 +155,71 @@ export default function Checkout() {
       <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 6 }}>
         <Row label="Food" value={naira(food)} />
         <Row label={`Delivery (${items} item${items === 1 ? "" : "s"})`} value={naira(fee)} />
+        {applied && <Row label={`Code ${applied.code}`} value={`−${naira(applied.discount)}`} />}
         <View style={{ height: 1, backgroundColor: T.line, marginVertical: 4 }} />
-        <Row label="Total" value={naira(food + fee)} strong />
+        <Row label="Total" value={naira(Math.max(0, food + fee - (applied?.discount ?? 0)))} strong />
+
+        {/* A code is something somebody was given in a group chat, so it is
+            typed in rather than carried by a link. Checked here, by the same
+            rule that will check it when the order is placed. */}
+        <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+          <TextInput
+            value={code}
+            onChangeText={(next) => {
+              setCode(next.toUpperCase());
+              setCodeError("");
+            }}
+            placeholder="Discount code"
+            autoCapitalize="characters"
+            style={{
+              flex: 1,
+              borderWidth: 1,
+              borderColor: T.line,
+              borderRadius: 12,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              color: T.ink,
+            }}
+          />
+          <Pressable
+            onPress={async () => {
+              setCodeError("");
+              try {
+                const result = await api.coupon({
+                  code,
+                  batchId: runId,
+                  phone,
+                  lines: lines.map((line) => ({
+                    menu_item_id: line.itemId,
+                    qty: line.qty,
+                    option_ids: line.optionIds,
+                  })),
+                });
+                setApplied({ code: code.trim().toUpperCase(), ...result });
+              } catch (problem) {
+                setApplied(null);
+                setCodeError(problem instanceof Error ? problem.message : "That code did not work.");
+              }
+            }}
+            disabled={code.trim() === "" || runId === ""}
+            style={{
+              borderRadius: 12,
+              paddingHorizontal: 18,
+              justifyContent: "center",
+              backgroundColor: code.trim() === "" ? "rgba(20,17,15,0.08)" : T.ink,
+            }}
+          >
+            <Text style={{ color: code.trim() === "" ? T.muted : T.paper, fontWeight: "800" }}>
+              Apply
+            </Text>
+          </Pressable>
+        </View>
+        {applied && (
+          <Text style={{ color: "#0f9d58", fontWeight: "700" }}>{applied.label} applied.</Text>
+        )}
+        {codeError !== "" && (
+          <Text style={{ color: T.brandDark, fontWeight: "700" }}>{codeError}</Text>
+        )}
       </View>
 
       {error !== "" && (
@@ -166,7 +237,9 @@ export default function Checkout() {
         }}
       >
         <Text style={{ color: T.paper, fontWeight: "800", fontSize: 16 }}>
-          {busy ? "Placing…" : `Place order · ${naira(food + fee)}`}
+          {busy
+            ? "Placing…"
+            : `Place order · ${naira(Math.max(0, food + fee - (applied?.discount ?? 0)))}`}
         </Text>
       </Pressable>
     </ScrollView>

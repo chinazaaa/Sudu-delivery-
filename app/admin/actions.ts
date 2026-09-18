@@ -912,6 +912,38 @@ export async function setBatchStage(form: FormData): Promise<void> {
     .update({ stage, status, stage_updated_at: new Date().toISOString() })
     .eq("id", batchId);
 
+  // The two stages a customer is actually waiting for. Told once, to the
+  // people on that run who have paid and have the app, and never awaited: a
+  // notification must not hold up the tap that moves a run along.
+  if (stage === "on_the_road" || stage === "at_drop") {
+    void (async () => {
+      try {
+        const { data } = await db()
+          .from("orders")
+          .select("customer_phone")
+          .eq("batch_id", batchId)
+          .neq("status", "pending")
+          .neq("status", "refunded");
+
+        const phones = [
+          ...new Set(((data ?? []) as { customer_phone: string }[]).map((row) => row.customer_phone)),
+        ];
+
+        for (const phone of phones) {
+          await pushToPhone(phone, {
+            title: stage === "on_the_road" ? "On the road to you" : "We are at your hostel",
+            body:
+              stage === "on_the_road"
+                ? "Your food has left the restaurants. Keep your phone near you."
+                : "Come down when you are ready, or we will call you.",
+          });
+        }
+      } catch {
+        /* The run still moved on, which is the part that matters. */
+      }
+    })();
+  }
+
   // Handed out means handed out: every paid order in the run is delivered,
   // rather than a run marked delivered sitting above twenty orders that still
   // read "paid". Anything unpaid is left alone, since it never travelled.
