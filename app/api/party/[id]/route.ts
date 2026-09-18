@@ -5,25 +5,20 @@ import { groupOrders } from "@/lib/groups";
 export const dynamic = "force-dynamic";
 
 /**
- * Who is in a party, for the bar that follows somebody round the site.
- *
- * A token means nothing until the first person in it orders, so this answers
- * honestly before that: nobody has ordered yet. Once somebody has, it can say
- * whose group it is and how many are in it, which is what makes the rest of
- * the site stop feeling like ordering alone.
+ * Who is in a group, for the bar that follows somebody round the site.
  *
  * First names only. A group link gets pasted into a chat, so anybody with it
  * can read this, and it must not hand out numbers or addresses.
  */
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ token: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
     const { data } = await db()
       .from("order_groups")
       .select("id, leader_name, closes_at, closed_at, batch_id")
-      .eq("party_token", (await params).token)
+      .eq("id", (await params).id)
       .maybeSingle();
 
     if (!data) return NextResponse.json({ started: false });

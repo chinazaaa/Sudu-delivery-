@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { naira } from "@/lib/money";
+import type { Slot } from "@/lib/same-day";
 
-const KEY = "sudu_party_v1";
-const JOINED = "sudu_party_joined_v1";
+const KEY = "sudu_group_v2";
+const JOINED = "sudu_group_joined_v2";
 
-/** The party this browser is ordering in, if any. */
-export function readParty(): string {
+export const PARTY_CHANGED = "sudu:party";
+
+/** The group this browser is ordering in, if any. */
+export function readGroup(): string {
   try {
     return window.localStorage.getItem(KEY) ?? "";
   } catch {
@@ -14,19 +18,10 @@ export function readParty(): string {
   }
 }
 
-/**
- * Take a party token. `viaLink` is set only when somebody arrived on
- * another person's link, never when they made one themselves.
- *
- * Recorded as a positive fact rather than inferred from a missing one. An
- * earlier version marked the person who made the link instead, so a browser
- * that had somehow lost that mark was treated as a joiner, and the one person
- * who could set the group up was the one locked out of setting it up.
- */
-export function joinParty(token: string, viaLink = false): void {
+export function enterGroup(id: string, viaLink = false): void {
   try {
-    window.localStorage.setItem(KEY, token);
-    if (viaLink) window.localStorage.setItem(JOINED, token);
+    window.localStorage.setItem(KEY, id);
+    if (viaLink) window.localStorage.setItem(JOINED, id);
     else window.localStorage.removeItem(JOINED);
   } catch {
     /* Without storage they simply order alone, which still works. */
@@ -34,33 +29,17 @@ export function joinParty(token: string, viaLink = false): void {
   announce();
 }
 
-/**
- * Everything showing party state reads it once, when it mounts. Somebody who
- * makes a link while already standing on the checkout page would otherwise
- * have created a group the rest of that page never heard about: no banner, no
- * bar, and the fee still worked out as if they were ordering alone.
- */
-export const PARTY_CHANGED = "sudu:party";
-
-function announce(): void {
-  try {
-    window.dispatchEvent(new Event(PARTY_CHANGED));
-  } catch {
-    /* Older browsers simply see it on the next page they open. */
-  }
-}
-
 /** Whether this browser arrived on somebody else's link. */
 export function joinedViaLink(): boolean {
   try {
-    const token = window.localStorage.getItem(KEY);
-    return Boolean(token) && window.localStorage.getItem(JOINED) === token;
+    const id = window.localStorage.getItem(KEY);
+    return Boolean(id) && window.localStorage.getItem(JOINED) === id;
   } catch {
     return false;
   }
 }
 
-export function leaveParty(): void {
+export function leaveGroup(): void {
   try {
     window.localStorage.removeItem(KEY);
     window.localStorage.removeItem(JOINED);
@@ -70,104 +49,175 @@ export function leaveParty(): void {
   announce();
 }
 
+function announce(): void {
+  try {
+    window.dispatchEvent(new Event(PARTY_CHANGED));
+  } catch {
+    /* Older browsers see it on the next page they open. */
+  }
+}
+
 /**
- * One tap, and there is a link to paste in the group chat.
+ * Start a group: your name, when it arrives, and then the link.
  *
- * The token is made here, in the browser, before anybody has typed a name or
- * picked a run. Nothing is written down anywhere until the first person in the
- * party actually orders, which is the point: asking somebody to fill in a
- * checkout before they can invite anybody is backwards.
+ * Both answers are needed before there is anything to share. Without a name
+ * the group is nobody's, and without a car nobody joining can be told when
+ * their food is coming, which is the first thing anybody asks. Two taps buys
+ * a group that is real and complete the moment the link exists.
  */
 export default function GroupLink({
-  small = false,
-  /** Hidden once there is a group, because the bar at the top says so and
-   *  sending the link again belongs there. */
-  hideWhenJoined = false,
+  runs,
+  slots,
+  sameDayFrom,
+  runFrom,
 }: {
-  small?: boolean;
-  hideWhenJoined?: boolean;
+  runs: { id: string; label: string }[];
+  slots: Slot[];
+  sameDayFrom: number;
+  runFrom: number;
 }) {
-  const [token, setToken] = useState("");
-  const [joined, setJoined] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [ready, setReady] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  // One control, two kinds of answer. A time is the instant itself; a run is
+  // its id behind a marker, because the two cannot share a value space.
+  const [choice, setChoice] = useState(
+    slots[0] ? slots[0].at : runs[0] ? `run:${runs[0].id}` : ""
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [inGroup, setInGroup] = useState(false);
 
   useEffect(() => {
-    setToken(readParty());
-    setJoined(joinedViaLink());
-    setReady(true);
+    const read = () => setInGroup(readGroup() !== "");
+    read();
+    window.addEventListener(PARTY_CHANGED, read);
+    return () => window.removeEventListener(PARTY_CHANGED, read);
   }, []);
 
-  const share = async () => {
-    let id = token;
-    if (!id) {
-      id =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID().replace(/-/g, "").slice(0, 16)
-          : String(Date.now()) + Math.random().toString(36).slice(2, 10);
-      joinParty(id);
-      setJoined(false);
-      setToken(id);
-    }
-
-    const url = `${window.location.origin}/j/${id}`;
-    const text = `Ordering food to campus with Sudu. Add yours to mine and we split one delivery fee: ${url}`;
-
+  const start = async () => {
+    setError("");
+    setBusy(true);
     try {
-      // Only `text`, which already ends in the link. Passing `url` as well
-      // makes the share sheet append it a second time, so the message arrives
-      // with the link in it twice.
-      if (navigator.share) {
-        await navigator.share({ text });
+      const response = await fetch("/api/party", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          choice.startsWith("run:")
+            ? { name, batchId: choice.slice(4) }
+            : { name, deliverAt: choice }
+        ),
+      });
+      const data = (await response.json()) as { id?: string; error?: string };
+      if (!response.ok || !data.id) {
+        setError(data.error ?? "Could not start that group.");
         return;
       }
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+
+      enterGroup(data.id);
+      const url = `${window.location.origin}/g/${data.id}`;
+      const text = `${name} is ordering food to campus with Sudu. Add yours and we split one delivery fee: ${url}`;
+
+      try {
+        // Only `text`, which already ends in the link. Passing `url` as well
+        // makes the share sheet append it a second time.
+        if (navigator.share) await navigator.share({ text });
+        else await navigator.clipboard.writeText(text);
+      } catch {
+        /* They closed the share sheet. The group is made either way. */
+      }
+      window.location.href = `/g/${data.id}`;
     } catch {
-      /* They closed the share sheet. Nothing to report. */
+      setError("Could not start that group.");
+    } finally {
+      setBusy(false);
     }
   };
 
-  // Rendered only once the browser has been read, so it cannot flash the
-  // wrong wording on the way in.
-  if (!ready) return null;
-  // Nothing to offer somebody who joined: it is not their link, and the bar at
-  // the top already says they are in a group.
-  if (token && joined) return null;
-  if (hideWhenJoined && token) return null;
+  // In a group already, the bar at the top says so and this would repeat it.
+  if (inGroup) return null;
 
-  if (small) {
+  if (!open) {
     return (
       <button
         type="button"
-        onClick={share}
-        className="chip border-brand/40 bg-brand-tint text-xs text-brand-dark"
+        onClick={() => setOpen(true)}
+        className="flex w-full items-center justify-between gap-3 rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-3 text-left transition active:scale-[0.99]"
       >
-        {copied ? "Link copied" : token ? "Send the link again" : "Order together"}
+        <span>
+          <span className="block font-bold text-brand-dark">Ordering with friends?</span>
+          <span className="block text-sm text-ink/75">
+            Start a group and send them a link. Everybody orders their own food and
+            you split one delivery.
+          </span>
+        </span>
+        <span className="shrink-0 text-sm font-extrabold text-brand-dark">Start</span>
       </button>
     );
   }
 
   return (
-    <button
-      type="button"
-      onClick={share}
-      className="flex w-full items-center justify-between gap-3 rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-3 text-left transition active:scale-[0.99]"
-    >
-      <span>
-        <span className="block font-bold text-brand-dark">
-          {token ? "Your group link" : "Ordering with friends?"}
-        </span>
-        <span className="block text-sm text-ink/75">
-          {copied
-            ? "Copied. Paste it in the group chat."
-            : "Send them a link. Whatever they add rides in the same delivery and you split one fee."}
-        </span>
-      </span>
-      <span className="shrink-0 text-sm font-extrabold text-brand-dark">
-        {token ? "Send again" : "Get link"}
-      </span>
-    </button>
+    <div className="space-y-3 rounded-2xl border-2 border-brand/30 bg-brand-tint p-4">
+      <p className="font-bold text-brand-dark">Start a group</p>
+
+      <div>
+        <label className="label" htmlFor="group_name">
+          Your first name
+        </label>
+        <input
+          id="group_name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Nasa"
+          className="field"
+        />
+        <p className="mt-1 text-xs text-ink/70">So they know whose group they joined.</p>
+      </div>
+
+      <div>
+        <label className="label" htmlFor="group_when">
+          When does it arrive?
+        </label>
+        <select
+          id="group_when"
+          value={choice}
+          onChange={(event) => setChoice(event.target.value)}
+          className="field"
+        >
+          {slots.length > 0 && (
+            <optgroup label={`A car to yourselves · from ${naira(sameDayFrom)}`}>
+              {slots.map((slot) => (
+                <option key={slot.at} value={slot.at}>
+                  {slot.label}
+                  {slot.urgent ? " · urgent" : ""}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {runs.length > 0 && (
+          <optgroup label={`On a run, shared · from ${naira(runFrom)}`}>
+            {runs.map((run) => (
+              <option key={run.id} value={`run:${run.id}`}>
+                {run.label}
+              </option>
+            ))}
+          </optgroup>
+          )}
+        </select>
+        <p className="mt-1 text-xs text-ink/70">
+          You pick it once, for everybody. They see it when they join.
+        </p>
+      </div>
+
+      {error !== "" && <p className="text-sm font-semibold text-brand-dark">{error}</p>}
+
+      <button
+        type="button"
+        onClick={start}
+        disabled={busy || name.trim().length < 2 || choice === ""}
+        className="btn-primary w-full"
+      >
+        {busy ? "Starting…" : "Start it and send the link"}
+      </button>
+    </div>
   );
 }

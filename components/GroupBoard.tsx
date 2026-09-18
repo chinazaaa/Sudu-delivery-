@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { finishOrdering, closeSharedGroup } from "@/app/actions";
+import { enterGroup, joinedViaLink, readGroup } from "./GroupLink";
 import { naira } from "@/lib/money";
 
 type Member = {
@@ -16,6 +17,26 @@ type Member = {
   phone: string;
 };
 
+const MINE = "sudu_group_mine_v1";
+
+/** Which order on this page is the person reading it, remembered per group. */
+function rememberMine(groupId: string, orderId: string): void {
+  try {
+    window.localStorage.setItem(MINE, JSON.stringify({ groupId, orderId }));
+  } catch {
+    /* Without storage the address bar still says, until they refresh. */
+  }
+}
+
+function recallMine(groupId: string): string {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(MINE) ?? "null");
+    return saved?.groupId === groupId ? String(saved.orderId ?? "") : "";
+  } catch {
+    return "";
+  }
+}
+
 /**
  * A shared delivery while it is still filling up.
  *
@@ -23,31 +44,58 @@ type Member = {
  * left. Nobody has a delivery fee yet, because it depends on who else turns up
  * and what they order. Saying that plainly is better than showing a figure
  * that is about to change.
+ *
+ * This is also where somebody who has just opened the link lands, so the first
+ * thing it has to do is get them to their food.
  */
 export default function GroupBoard({
   groupId,
   members,
-  mine,
+  mine: fromAddress,
   closesAt,
-  isLeader,
+  leaderOnServer,
   shareUrl,
   leaderName,
 }: {
   groupId: string;
   members: Member[];
-  /** Which of them is the person reading this, if any. */
+  /** The order the address bar says is theirs, if it says anything. */
   mine: string | null;
   closesAt: string;
-  isLeader: boolean;
+  /** Whether the server can already tell the reader is the leader, which it
+   *  only can once the leader has ordered. */
+  leaderOnServer: boolean;
   shareUrl: string;
   leaderName: string;
 }) {
   const router = useRouter();
   const [left, setLeft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [mine, setMine] = useState<string | null>(fromAddress);
+  const [inGroup, setInGroup] = useState(false);
+  const [leader, setLeader] = useState(leaderOnServer);
 
-  // The board is only true for as long as nobody else has moved, so it
-  // re-reads itself while it is open.
+  // Everything below runs on every render, never under a return, because a
+  // hook that comes and goes takes the page down with it.
+  useEffect(() => {
+    if (fromAddress) {
+      rememberMine(groupId, fromAddress);
+      setMine(fromAddress);
+    } else {
+      const recalled = recallMine(groupId);
+      if (recalled) setMine(recalled);
+    }
+  }, [groupId, fromAddress]);
+
+  useEffect(() => {
+    const here = readGroup() === groupId;
+    setInGroup(here);
+    // Before the leader has ordered there is nothing on the server that says
+    // whose group it is, so the browser that made the link is the only thing
+    // that knows. It never guesses: making a link records it positively.
+    if (here && !joinedViaLink()) setLeader(true);
+  }, [groupId, leaderOnServer]);
+
   useEffect(() => {
     const tick = () => {
       const ms = new Date(closesAt).getTime() - Date.now();
@@ -72,14 +120,20 @@ export default function GroupBoard({
   const ready = members.filter((one) => one.done).length;
   const me = members.find((one) => one.orderId === mine) ?? null;
 
+  const addMine = () => {
+    // Taking the link is what puts their food in this car. Doing it here,
+    // rather than on a page in between, is the whole point of the group page.
+    enterGroup(groupId, !leader);
+    router.push("/");
+  };
+
   const share = async () => {
     const text =
-      `Ordering food to campus with ${leaderName}. Add yours and we split one ` +
-      `delivery fee: ${shareUrl}`;
+      `${leaderName} is ordering food to campus with Sudu. Add yours and we ` +
+      `split one delivery fee: ${shareUrl}`;
     try {
       // Only `text`, which already ends in the link. Passing `url` as well
-      // makes the share sheet append it a second time, so the message arrives
-      // with the link in it twice.
+      // makes the share sheet append it a second time.
       if (navigator.share) await navigator.share({ text });
       else await navigator.clipboard.writeText(text);
     } catch {
@@ -89,56 +143,78 @@ export default function GroupBoard({
 
   return (
     <div className="space-y-4">
+      {/* The one thing somebody who has just opened the link came to do. */}
+      {!me && (
+        <section className="card space-y-2 border-2 border-brand/30 bg-brand-tint">
+          <h2 className="font-bold text-brand-dark">
+            {inGroup ? "You have not added anything yet" : `Join ${leaderName}'s delivery`}
+          </h2>
+          <p className="text-sm text-ink/75">
+            Pick your own food and pay for your own food. The delivery is one fee for
+            the whole car, split evenly between everybody in it.
+          </p>
+          <button type="button" onClick={addMine} className="btn-primary w-full">
+            Add my food
+          </button>
+        </section>
+      )}
+
       <section className="card space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-bold">
-            {ready} of {members.length} ready
+            {members.length === 0
+              ? "Nobody has added food yet"
+              : `${ready} of ${members.length} ready`}
           </h2>
           <span className="text-sm font-semibold text-brand-dark">closes in {left}</span>
         </div>
 
         <p className="text-sm text-muted">
-          {ready === members.length
-            ? "Everybody is done, so this is closing now."
-            : isLeader
-              ? "Close it as soon as everyone has finished, or wait for the clock."
-              : `Waiting for ${leaderName} to close it, or for the clock to run out.`}
+          {members.length === 0
+            ? "Send the link round, then add yours. Everything ordered under it rides in the same car."
+            : ready === members.length
+              ? "Everybody is done, so this is closing now."
+              : leader
+                ? "Close it as soon as everyone has finished, or wait for the clock."
+                : `Waiting for ${leaderName} to close it, or for the clock to run out.`}
         </p>
 
-        <ul className="divide-y divide-black/5">
-          {members.map((one) => (
-            <li key={one.orderId} className="flex items-center justify-between gap-3 py-2">
-              <span className="min-w-0">
-                <span className="font-semibold">
-                  {one.name}
-                  {one.orderId === mine && <span className="text-muted"> · you</span>}
+        {members.length > 0 && (
+          <ul className="divide-y divide-black/5">
+            {members.map((one) => (
+              <li key={one.orderId} className="flex items-center justify-between gap-3 py-2">
+                <span className="min-w-0">
+                  <span className="font-semibold">
+                    {one.name}
+                    {one.orderId === mine && <span className="text-muted"> · you</span>}
+                  </span>
+                  <span className="block text-xs text-muted">
+                    {one.items} item{one.items === 1 ? "" : "s"} · {naira(one.food)}
+                  </span>
                 </span>
-                <span className="block text-xs text-muted">
-                  {one.items} item{one.items === 1 ? "" : "s"} · {naira(one.food)}
+                <span className="flex shrink-0 items-center gap-2">
+                  {one.done ? (
+                    <span className="text-sm font-bold text-mint">Ready</span>
+                  ) : (
+                    <>
+                      <span className="text-sm text-muted">Still adding</span>
+                      {/* Only for somebody being waited on, and only while it
+                          is open. There is no other reason to have a number. */}
+                      {one.phone && one.orderId !== mine && (
+                        <a
+                          href={`tel:${one.phone}`}
+                          className="chip border-black/10 bg-white py-1 text-xs"
+                        >
+                          Nudge
+                        </a>
+                      )}
+                    </>
+                  )}
                 </span>
-              </span>
-              <span className="flex shrink-0 items-center gap-2">
-                {one.done ? (
-                  <span className="text-sm font-bold text-mint">Ready</span>
-                ) : (
-                  <>
-                    <span className="text-sm text-muted">Still adding</span>
-                    {/* Only for somebody being waited on, and only while it is
-                        open. There is no other reason to have their number. */}
-                    {one.phone && one.orderId !== mine && (
-                      <a
-                        href={`tel:${one.phone}`}
-                        className="chip border-black/10 bg-white py-1 text-xs"
-                      >
-                        Nudge
-                      </a>
-                    )}
-                  </>
-                )}
-              </span>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="card space-y-3">
@@ -160,17 +236,17 @@ export default function GroupBoard({
           </form>
         )}
 
-        {me?.done && !isLeader && (
+        {me?.done && !leader && (
           <p className="rounded-xl bg-mint/10 px-3 py-2 text-sm font-semibold text-mint">
             You are ready. You will get your total the moment this closes.
           </p>
         )}
 
         <button type="button" onClick={share} className="btn-quiet w-full">
-          Add somebody else
+          {members.length === 0 ? "Send the link" : "Add somebody else"}
         </button>
 
-        {isLeader && (
+        {leader && members.length > 0 && (
           <form
             action={closeSharedGroup}
             onSubmit={() => setBusy(true)}

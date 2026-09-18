@@ -82,8 +82,6 @@ export const SHARE_MINUTES = 15;
 
 export type SharedGroup = {
   id: string;
-  /** The token from the link this party was started with, when it was. */
-  party_token: string | null;
   batch_id: string;
   leader_phone: string;
   leader_name: string;
@@ -154,7 +152,19 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
   if (!group) return { ok: false, error: "That group could not be found." };
 
   const orders = await groupOrders(groupId);
-  if (orders.length === 0) return { ok: false, error: "Nobody has ordered in that group." };
+
+  // A link somebody made and never used. Shut it so the clock stops coming
+  // back to it every minute, and so nobody can wander in an hour later.
+  if (orders.length === 0) {
+    if (!group.closed_at) {
+      await db()
+        .from("order_groups")
+        .update({ closed_at: new Date().toISOString() })
+        .eq("id", groupId)
+        .is("closed_at", null);
+    }
+    return { ok: false, error: "Nobody has ordered in that group." };
+  }
 
   if (group.closed_at) {
     return {
@@ -312,74 +322,27 @@ export async function openGroupFor(orderId: string): Promise<SharedGroup | null>
 }
 
 /**
- * The group behind a link, making it if this is the first order in it.
+ * The group a link points at, if it can still be added to.
  *
- * The link is made in the browser before anybody has ordered, so the group it
- * refers to may not exist yet. Whoever checks out first brings it into being;
- * everybody after them finds it. The unique index on the token is what makes
- * that safe when two friends check out in the same second: one insert wins,
- * the other comes back and reads what the winner made.
+ * The group is made the moment somebody asks for a link now, so the link is
+ * its id and there is nothing to bring into being later. A closed group has
+ * been priced and everybody in it told what they owe, so nobody else gets in.
  */
-/** A party that already exists, without making one. */
-export async function existingParty(token: string): Promise<SharedGroup | null> {
-  const { data } = await db()
-    .from("order_groups")
-    .select("*")
-    .eq("party_token", token)
-    .maybeSingle();
-
-  const group = (data as SharedGroup) ?? null;
-  // A closed party has been priced and everybody told. Nobody else gets in.
-  return group && !group.closed_at ? group : null;
+export async function joinableGroup(id: string): Promise<SharedGroup | null> {
+  const group = await getSharedGroup(id);
+  if (!group || !group.closes_at || group.closed_at) return null;
+  return group;
 }
 
-export async function groupForParty(args: {
-  token: string;
-  batch: Batch;
-  phone: string;
-  name: string;
-  hostel: string;
-}): Promise<SharedGroup | null> {
-  const existing = await db()
+/**
+ * Whoever made the link is the leader, and this is where that becomes a fact
+ * the server knows rather than a flag in one browser. Only ever filled in
+ * once: the first claim wins, so a second browser cannot take the group.
+ */
+export async function claimLeader(groupId: string, phone: string): Promise<void> {
+  await db()
     .from("order_groups")
-    .select("*")
-    .eq("party_token", args.token)
-    .maybeSingle();
-
-  if (existing.data) {
-    const group = existing.data as SharedGroup;
-    // A party that has already been closed and priced cannot take anybody
-    // else: the people in it have been told what they owe.
-    return group.closed_at ? null : group;
-  }
-
-  const cutOff = new Date(args.batch.cut_off_at).getTime();
-  const wanted = Date.now() + SHARE_MINUTES * 60_000;
-
-  const { data, error } = await db()
-    .from("order_groups")
-    .insert({
-      batch_id: args.batch.id,
-      leader_phone: args.phone,
-      leader_name: args.name,
-      hostel: args.hostel,
-      mode: "split",
-      collect_mode: "each",
-      party_token: args.token,
-      closes_at: new Date(Math.min(wanted, cutOff)).toISOString(),
-    })
-    .select("*")
-    .single();
-
-  if (!error && data) return data as SharedGroup;
-
-  // Somebody beat us to it by a fraction of a second. Theirs is the group.
-  const raced = await db()
-    .from("order_groups")
-    .select("*")
-    .eq("party_token", args.token)
-    .maybeSingle();
-
-  const group = (raced.data as SharedGroup) ?? null;
-  return group && !group.closed_at ? group : null;
+    .update({ leader_phone: phone })
+    .eq("id", groupId)
+    .eq("leader_phone", "");
 }

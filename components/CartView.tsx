@@ -1,6 +1,7 @@
 "use client";
 
-import GroupLink, { readParty } from "./GroupLink";
+import GroupLink, { PARTY_CHANGED, readGroup } from "./GroupLink";
+import type { Slot } from "@/lib/same-day";
 
 import Link from "next/link";
 import Empty from "@/components/Empty";
@@ -23,14 +24,31 @@ import { naira } from "@/lib/money";
 /** Review and fix the order. Nothing is asked for here except the food. */
 export default function CartView({
   restaurants = [],
+  runs = [],
+  slots = [],
+  sameDayFrom = 6500,
+  runFrom = 4000,
 }: {
   restaurants?: { id: string; name: string }[];
+  /** What a group could be put on, worked out on the server so the clock and
+   *  the prices are the shop's. */
+  runs?: { id: string; label: string }[];
+  slots?: Slot[];
+  sameDayFrom?: number;
+  runFrom?: number;
 }) {
   // In somebody's group already, ordering for friends as well is two group
   // ideas at once and nobody untangles them. The bar at the top says which
   // one is happening.
   const [inParty, setInParty] = useState(false);
-  useEffect(() => setInParty(readParty() !== ""), []);
+  useEffect(() => {
+    // A group can start or end from the page somebody is standing on, so this
+    // listens rather than reading once and believing it for ever.
+    const read = () => setInParty(readGroup() !== "");
+    read();
+    window.addEventListener(PARTY_CHANGED, read);
+    return () => window.removeEventListener(PARTY_CHANGED, read);
+  }, []);
 
   const cart = useCart();
   const { people } = usePeople();
@@ -59,7 +77,12 @@ export default function CartView({
       {/* Before anything else, because it costs nothing to send and it is what
           makes the delivery cheaper for all of them. In a group already, the
           bar at the top says so and this would only repeat it. */}
-      <GroupLink />
+      <GroupLink
+        runs={runs}
+        slots={slots}
+        sameDayFrom={sameDayFrom}
+        runFrom={runFrom}
+      />
 
       {!inParty && (
       <section className="card space-y-3">
