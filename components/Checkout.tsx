@@ -212,7 +212,9 @@ export default function Checkout({
           {(
             [
               ["transfer", "Bank transfer", "Account details on the next screen, with a four-digit number to put in the narration."],
-              ["card", "Card", "Message us on WhatsApp and we send you a card link."],
+              // Nothing for them to do: the link comes to them. The old
+              // wording read as a chore before they had even ordered.
+              ["card", "Card", "We send the link to your WhatsApp after you order. Pay it there."],
             ] as const
           ).map(([value, title, detail]) => (
             <button

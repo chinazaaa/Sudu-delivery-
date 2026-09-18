@@ -656,7 +656,9 @@ function CardPayment({
         {waiting
           ? "It comes to the number on this order. Message us if you would rather " +
             "have it now, or to say you have changed your mind and will transfer."
-          : settings.card_note}
+          : settings.card_note ||
+            "Message us and we will send you a card link for this order. " +
+              "It stays unpaid until the money lands."}
       </p>
       <a
         href={link}
