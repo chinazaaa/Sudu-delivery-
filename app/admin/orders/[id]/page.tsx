@@ -21,9 +21,10 @@ export default async function AdminOrderPage({
 }) {
   const { id } = await params;
 
-  // Temporary while a failure on this page is being chased: production hides
-  // the reason and shows a React number instead, which names nothing. Admin is
-  // behind a password, so the message can be shown to the person who needs it.
+  // Production hides why a server render failed and shows a React number
+  // instead, which names nothing and cannot be searched for. Admin is behind a
+  // password, so the page says what actually went wrong to the one person who
+  // can do something about it.
   try {
     return await orderPage(id);
   } catch (error) {

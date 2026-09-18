@@ -1,11 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { login } from "@/app/admin/actions";
 
 /** The whole screen, not a card floating in the shop's chrome. */
 export default function AdminLogin() {
   const [state, action, pending] = useActionState(login, { error: null });
+  // Typing a long password blind on a phone keyboard is how people end up
+  // locked out of their own admin.
+  const [shown, setShown] = useState(false);
 
   return (
     <div className="fixed inset-0 z-50 grid overflow-y-auto bg-ink lg:grid-cols-2">
@@ -40,15 +43,25 @@ export default function AdminLogin() {
 
           <div>
             <label className="label" htmlFor="password">Password</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              autoFocus
-              autoComplete="current-password"
-              className="field"
-            />
+            <span className="relative block">
+              <input
+                id="password"
+                name="password"
+                type={shown ? "text" : "password"}
+                required
+                autoFocus
+                autoComplete="current-password"
+                className="field pr-16"
+              />
+              <button
+                type="button"
+                onClick={() => setShown((was) => !was)}
+                aria-pressed={shown}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1.5 text-xs font-bold text-muted hover:bg-black/5"
+              >
+                {shown ? "Hide" : "Show"}
+              </button>
+            </span>
           </div>
 
           {state.error && (

@@ -50,6 +50,13 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
   if (error) throw new Error(error.message);
 
   let orders = (data ?? []) as Order[];
+
+  // Read before the search below, which needs it: a group's order numbers are
+  // how "1042b" written in a transfer narration finds its order. Declared
+  // after it, the search threw before it could run, and every admin page that
+  // searches went down with it.
+  const groups = await groupMap(orders.map((o) => o.group_id));
+
   const term = filter.search?.trim().toLowerCase();
   if (term) {
     orders = orders.filter(
@@ -67,7 +74,6 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
   const lines = await linesFor(orders.map((o) => o.id));
   const batches = await batchMap(orders.map((o) => o.batch_id));
   const pins = await pinMap(orders.map((o) => o.customer_phone));
-  const groups = await groupMap(orders.map((o) => o.group_id));
 
  return orders.map((order) => {
     const batch = batches.get(order.batch_id);
