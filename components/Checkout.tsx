@@ -224,6 +224,18 @@ export default function Checkout({
     setApplied(null);
   }, [batchId, itemCount]);
 
+  const offersSameDay = sameDaySlots.length > 0 && !adding && !joining && !party;
+
+  // Adding to an order, joining a friend and being in a group are all a run by
+  // definition, so a default of "today" would price them wrongly and silently.
+  //
+  // Above the empty-cart return on purpose. Every hook has to run on every
+  // render: below it, an empty cart ran fewer of them than a full one, and
+  // React refuses to carry on when the count changes.
+  useEffect(() => {
+    if (!offersSameDay && deliverAt) setDeliverAt("");
+  }, [offersSameDay, deliverAt]);
+
   if (cart.length === 0) {
     return (
       <Empty icon="cart" title="Your cart is empty" href="/" action="Browse the menu">
@@ -231,14 +243,6 @@ export default function Checkout({
       </Empty>
     );
   }
-
-  const offersSameDay = sameDaySlots.length > 0 && !adding && !joining && !party;
-
-  // Those three ways of ordering are all a run by definition, so a default of
-  // "today" would otherwise price them wrongly and silently.
-  useEffect(() => {
-    if (!offersSameDay && deliverAt) setDeliverAt("");
-  }, [offersSameDay, deliverAt]);
 
   /** Which run, and what it says underneath. The same control wherever it is
    *  shown, so the two ways of ordering read as one decision. */
@@ -433,6 +437,12 @@ export default function Checkout({
           <p className="mt-0.5 text-sm text-ink/80">
             Your food goes in the same car as theirs. You pay for your own food, and
             the delivery is split evenly once everybody is done.
+          </p>
+          {/* Said rather than silently done: the time picker is missing here on
+              purpose, because a group is one car and one car is a run. */}
+          <p className="mt-1 text-sm text-ink/80">
+            A group goes on a run, so everybody travels together. Picking your own
+            time is a car to yourself, which is the opposite of sharing one.
           </p>
           <button
             type="button"

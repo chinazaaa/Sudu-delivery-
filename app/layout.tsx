@@ -3,6 +3,7 @@ import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 import Track from "@/components/Track";
 import Ribbon from "@/components/Ribbon";
+import GroupBar from "@/components/GroupBar";
 import SiteHeader from "@/components/SiteHeader";
 import { publicOffer } from "@/lib/coupons";
 import { instagramLink, safeSettings } from "@/lib/settings";
@@ -74,6 +75,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             it in admin and it goes. */}
         <Ribbon text={settings.ribbon_text} offer={offer} />
         <SiteHeader tagline={settings.tagline || "Sangotedo to PAU"} />
+        {/* Directly under the header, so being in a group is the first thing
+            read on every page rather than something found at checkout. */}
+        <GroupBar />
         <main className="mx-auto max-w-5xl px-4 pb-28 pt-4 sm:pb-24">{children}</main>
         {/* Clears both the tab bar and a sticky cart bar, which were sitting
             on top of this line. */}

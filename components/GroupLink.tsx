@@ -37,12 +37,22 @@ export function leaveParty(): void {
  * party actually orders, which is the point: asking somebody to fill in a
  * checkout before they can invite anybody is backwards.
  */
-export default function GroupLink({ small = false }: { small?: boolean }) {
+export default function GroupLink({
+  small = false,
+  /** Hidden once there is a group, because the bar at the top says so and
+   *  sending the link again belongs there. */
+  hideWhenJoined = false,
+}: {
+  small?: boolean;
+  hideWhenJoined?: boolean;
+}) {
   const [token, setToken] = useState("");
   const [copied, setCopied] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     setToken(readParty());
+    setReady(true);
   }, []);
 
   const share = async () => {
@@ -74,6 +84,10 @@ export default function GroupLink({ small = false }: { small?: boolean }) {
       /* They closed the share sheet. Nothing to report. */
     }
   };
+
+  // Rendered only once the browser has been read, so it cannot flash the
+  // wrong wording on the way in.
+  if (!ready || (hideWhenJoined && token)) return null;
 
   if (small) {
     return (

@@ -51,7 +51,8 @@ export default function CartView({
       <h1 className="text-2xl font-extrabold">Your cart</h1>
 
       {/* Before anything else, because it costs nothing to send and it is what
-          makes the delivery cheaper for all of them. */}
+          makes the delivery cheaper for all of them. In a group already, the
+          bar at the top says so and this would only repeat it. */}
       <GroupLink />
 
       <section className="card space-y-3">
