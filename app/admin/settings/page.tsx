@@ -3,7 +3,7 @@ import PageHeader from "@/components/admin/PageHeader";
 import BandEditor from "@/components/admin/BandEditor";
 import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
-import { parseBands } from "@/lib/fees";
+import { parseBands, SAME_DAY_BANDS, URGENT_EXTRA } from "@/lib/fees";
 import { missingSettings } from "@/lib/health";
 import { getSettings } from "@/lib/settings";
 import { allAccounts } from "@/lib/banks";
@@ -532,6 +532,66 @@ export default async function SettingsAdmin() {
         </div>
         <BandEditor initial={parseBands(settings.fee_bands)} />
         <SaveButton>Save prices</SaveButton>
+      </form>
+
+      <form action={saveSettings} className="card space-y-3">
+        <div>
+          <h2 className="font-semibold">Pick a time, instead of a run</h2>
+          <p className="text-sm text-muted">
+            A car going out for one order at a time the customer chose, rather than
+            everybody sharing one. Times run noon to 6pm, nothing goes out after 6pm,
+            and nothing is offered sooner than three hours from now because that is
+            how long it takes to fetch and deliver. When today has run out it offers
+            tomorrow.
+          </p>
+        </div>
+
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            name="same_day_on"
+            value="on"
+            defaultChecked={settings.same_day_on === "on"}
+            className="mt-1 size-5 shrink-0 accent-brand"
+          />
+          <span>
+            <span className="block font-semibold">Offer it</span>
+            <span className="block text-sm text-muted">
+              Switch this off on a day you cannot do it and customers only see the
+              runs. Orders already placed are unaffected.
+            </span>
+          </span>
+        </label>
+
+        <div className="border-t border-black/10 pt-3">
+          <p className="label">What it costs</p>
+          <BandEditor
+            initial={
+              settings.same_day_bands ? parseBands(settings.same_day_bands) : SAME_DAY_BANDS
+            }
+            field="same_day_bands"
+          />
+        </div>
+
+        <div>
+          <label className="label" htmlFor="same_day_urgent_extra">
+            Extra when it is under five hours away
+          </label>
+          <input
+            id="same_day_urgent_extra"
+            name="same_day_urgent_extra"
+            inputMode="numeric"
+            defaultValue={settings.same_day_urgent_extra || String(URGENT_EXTRA)}
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">
+            Added to every step above. A car that cannot wait is a car doing nothing
+            else. Ordering at 9 for noon is inside the five hours; ordering at 9 for
+            three o&apos;clock is not.
+          </p>
+        </div>
+
+        <SaveButton>Save same day prices</SaveButton>
       </form>
 
       <form action={saveSettings} className="card space-y-4">

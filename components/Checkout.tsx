@@ -13,12 +13,13 @@ import {
   useCart,
   usePeople,
 } from "@/lib/cart";
-import { feeFor, splitFee, type Band } from "@/lib/fees";
+import { feeFor, sameDayFee, splitFee, type Band } from "@/lib/fees";
 import { normalisePhone } from "@/lib/phone";
 import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
 import CouponBox from "@/components/CouponBox";
 import { clearJoin, readJoin } from "@/components/JoinDelivery";
+import type { Slot } from "@/lib/same-day";
 import FillDetails from "@/components/FillDetails";
 import KeepCart from "@/components/KeepCart";
 import { countdown } from "@/lib/time";
@@ -46,11 +47,21 @@ export type AddingTo = {
 export default function Checkout({
   batches,
   adding,
+  sameDaySlots,
+  sameDayBands,
+  urgentExtra,
   bands,
   hostels,
 }: {
   batches: BatchView[];
   adding: AddingTo | null;
+  /** Times still available today, worked out on the server so the clock is
+   *  the shop's rather than the phone's. Empty means same day is off. */
+  sameDaySlots: Slot[];
+  /** The pick-a-time ladder as the admin has it, so what is shown is what is
+   *  charged. */
+  sameDayBands: Band[];
+  urgentExtra: number;
   /** The delivery price list in force, read from settings on the server. */
   bands: Band[];
   /** The blocks the admin delivers to. Empty means anything typed is allowed. */
@@ -143,11 +154,17 @@ export default function Checkout({
   // delivery fee yet: it is split evenly when the group closes, once it is
   // known how many are in the car.
   const [share, setShare] = useState(false);
+  // Same day instead of a run. Empty means they are on a run, which is the
+  // cheap way and stays the default.
+  const [deliverAt, setDeliverAt] = useState("");
+  const sameDay = sameDaySlots.find((one) => one.at === deliverAt) ?? null;
   const shared = share || joining !== null;
 
   const alreadyItems = adding?.items ?? 0;
   const alreadyCharged = adding?.feeCharged ?? 0;
-  const fee = shared
+  const fee = sameDay
+    ? sameDayFee(itemCount, sameDay.urgent, sameDayBands, urgentExtra)
+    : shared
     ? 0
     : Math.max(
         0,
@@ -254,6 +271,7 @@ export default function Checkout({
       <input type="hidden" name="collect_mode" value={collect} />
       <input type="hidden" name="join_order_id" value={joining?.id ?? ""} />
       <input type="hidden" name="share_delivery" value={share ? "on" : ""} />
+      <input type="hidden" name="deliver_at" value={deliverAt} />
       <input type="hidden" name="people" value={JSON.stringify(people)} />
 
       <h1 className="text-2xl font-extrabold">Checkout</h1>
@@ -265,7 +283,73 @@ export default function Checkout({
         </p>
       )}
 
-      <section className="card space-y-2">
+      {/* Same day is a car going out for one order, so it is offered as a
+          choice against the runs rather than hidden inside them. The cheap
+          way stays selected until somebody actively wants otherwise. */}
+      {sameDaySlots.length > 0 && !adding && !share && !joining && (
+        <section className="card space-y-3">
+          <h2 className="font-bold">When do you want it?</h2>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setDeliverAt("")}
+              className={`rounded-xl border p-3 text-left transition ${
+                !sameDay ? "border-brand bg-brand-tint" : "border-black/10"
+              }`}
+            >
+              <span className="block font-bold">On a run</span>
+              <span className="block text-sm text-muted">
+                Shared with everybody else going out, from {naira(bands[0]?.fee ?? 4000)}.
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeliverAt(sameDaySlots[0].at)}
+              className={`rounded-xl border p-3 text-left transition ${
+                sameDay ? "border-brand bg-brand-tint" : "border-black/10"
+              }`}
+            >
+              <span className="block font-bold">
+                {sameDaySlots[0]?.day === "today" ? "Today, at a time I pick" : "At a time I pick"}
+              </span>
+              <span className="block text-sm text-muted">
+                A car for your order alone, from {naira(sameDayBands[0]?.fee ?? 6500)}. Soonest{" "}
+                {sameDaySlots[0]?.label}.
+              </span>
+            </button>
+          </div>
+
+          {sameDay && (
+            <div className="space-y-2 border-t border-black/10 pt-3">
+              <label className="label" htmlFor="deliver_at">
+                What time?
+              </label>
+              <select
+                id="deliver_at"
+                className="field"
+                value={deliverAt}
+                onChange={(event) => setDeliverAt(event.target.value)}
+              >
+                {sameDaySlots.map((slot) => (
+                  <option key={slot.at} value={slot.at}>
+                    {slot.label}
+                    {slot.urgent ? " · urgent" : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="text-sm text-muted">
+                {sameDay.urgent
+                  ? "Under five hours' notice, so this is urgent and costs more. Pick a later time and it drops."
+                  : "More than five hours away, so this is the ordinary price."}{" "}
+                It takes about three hours to fetch and deliver, and nothing goes out
+                after 6pm.
+              </p>
+            </div>
+          )}
+        </section>
+      )}
+
+      <section className={`card space-y-2 ${sameDay ? "hidden" : ""}`}>
         <h2 className="font-bold">Which run?</h2>
         <select
           className="field"
@@ -680,13 +764,17 @@ export default function Checkout({
         </div>
         <div className="flex justify-between text-muted">
           <span>
-            {shared
+            {sameDay
+              ? `Delivery ${sameDay.label}${sameDay.urgent ? " · urgent" : ""}`
+              : shared
               ? "Delivery"
               : alreadyCharged > 0
                 ? `Delivery top-up (${itemCount + alreadyItems} items)`
                 : `Delivery (${itemCount} item${itemCount === 1 ? "" : "s"})`}
           </span>
-          <span>{shared ? "worked out when the group closes" : naira(fee)}</span>
+          <span>
+            {shared && !sameDay ? "worked out when the group closes" : naira(fee)}
+          </span>
         </div>
         {/* Four items costing more than three looks arbitrary until the whole
             ladder is there, so it is one tap away. */}

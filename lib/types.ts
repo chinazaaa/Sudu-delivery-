@@ -64,6 +64,10 @@ export type Batch = {
   flash_fee_reason: string;
   stage: BatchStage;
   stage_updated_at: string;
+  /** A scheduled run everybody shares, or one person's same day delivery. */
+  kind: "run" | "same_day";
+  /** The time asked for. Only ever set on a same day delivery. */
+  deliver_at: string | null;
   /** What the run cost to make, typed in once it is done. */
   fuel_cost: number;
   driver_cost: number;

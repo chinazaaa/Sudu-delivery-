@@ -3,8 +3,16 @@ import { openBatches } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
 import { listSlides } from "@/lib/slides";
 import { popularItemIds } from "@/lib/popular";
-import { activeBands, AUTO_HEADLINE, AUTO_LINES, safeSettings } from "@/lib/settings";
+import {
+  activeBands,
+  AUTO_HEADLINE,
+  AUTO_LINES,
+  safeSettings,
+  sameDayPricing,
+} from "@/lib/settings";
+import { sameDayFee } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
+import { deliverySlots } from "@/lib/same-day";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +25,7 @@ export default async function HomePage() {
     popularItemIds(),
     activeBands(),
   ]);
+  const sameDay = await sameDayPricing();
 
   const lines = (settings.auto_lines || AUTO_LINES)
     .split("\n")
@@ -32,6 +41,10 @@ export default async function HomePage() {
       autoLines={lines.length > 0 ? lines : [""]}
       bands={bands}
       nextRun={batches.length > 0 ? toBatchView(batches[0]) : null}
+      // The soonest time we can actually hit, from the shop's clock rather
+      // than the phone's, and only when same day is switched on today.
+      soonest={settings.same_day_on === "on" ? deliverySlots()[0] ?? null : null}
+      soonestFrom={sameDayFee(1, deliverySlots()[0]?.urgent ?? false, sameDay.bands, sameDay.urgentExtra)}
     />
   );
 }

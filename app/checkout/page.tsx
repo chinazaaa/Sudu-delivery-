@@ -1,9 +1,10 @@
 import { cookies } from "next/headers";
-import { activeBands } from "@/lib/settings";
+import { activeBands, safeSettings, sameDayPricing } from "@/lib/settings";
 import { hostelNames } from "@/lib/hostels";
 import Checkout, { type AddingTo } from "@/components/Checkout";
 import { openBatches, recentlyClosedBatch } from "@/lib/batches";
 import { existingLoad } from "@/lib/orders";
+import { deliverySlots } from "@/lib/same-day";
 import { normalisePhone } from "@/lib/phone";
 import { toBatchView, toClosedBatchView } from "@/lib/view";
 
@@ -52,6 +53,12 @@ export default async function CheckoutPage({
     <Checkout
       batches={views}
       adding={adding}
+      // Worked out here so the clock is the shop's, not whatever the phone
+      // says, and so a page left open all morning cannot offer a time that
+      // has already gone.
+      sameDaySlots={(await safeSettings()).same_day_on === "on" ? deliverySlots() : []}
+      sameDayBands={(await sameDayPricing()).bands}
+      urgentExtra={(await sameDayPricing()).urgentExtra}
       bands={await activeBands()}
       hostels={await hostelNames()}
     />

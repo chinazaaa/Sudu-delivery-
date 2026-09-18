@@ -3,7 +3,16 @@ import { test } from "node:test";
 import { groupForCounter } from "../lib/admin";
 import { normalisePhone, formatPhone } from "../lib/phone";
 import { countdown, lagosInstant, lagosToday } from "../lib/time";
-import { bandFor, evenShare, feeFor, nextBand, splitFee, HEADLINE_FEE } from "../lib/fees";
+import {
+  bandFor,
+  evenShare,
+  feeFor,
+  isUrgent,
+  nextBand,
+  sameDayFee,
+  splitFee,
+  HEADLINE_FEE,
+} from "../lib/fees";
 import { sheetAsText } from "../lib/sheet-text";
 import { template, whatsappTo } from "../lib/messages";
 import { newPin } from "../lib/customer-auth";
@@ -14,6 +23,7 @@ import { externalUrl, EMPTY as SETTINGS_DEFAULTS, type Settings } from "../lib/s
 import { matchPhotos, tidy } from "../lib/match";
 import { groupNames, lineKey as cartLineKey, reclaim } from "../lib/cart";
 import { renderEmail, renderText, type Block } from "../lib/email-html";
+import { deliverySlots, slotFee, slotsToday } from "../lib/same-day";
 
 /** A settings row with nothing filled in, for the template tests. */
 const EMPTY_SETTINGS: Settings = { ...SETTINGS_DEFAULTS };
@@ -810,4 +820,107 @@ test("nobody in a shared delivery pays more than they would alone", () => {
       );
     }
   }
+});
+
+test("same day delivery is its own ladder, two thousand above the batched one", () => {
+  assert.equal(sameDayFee(1, false), 6500);
+  assert.equal(sameDayFee(4, false), 6500);
+  assert.equal(sameDayFee(5, false), 8500);
+  assert.equal(sameDayFee(10, false), 10500);
+  assert.equal(sameDayFee(40, false), 12500);
+});
+
+test("urgent is the same ladder with two thousand on every step", () => {
+  for (const items of [1, 4, 5, 6, 10, 11, 30]) {
+    assert.equal(sameDayFee(items, true), sameDayFee(items, false) + 2000);
+  }
+  // The number quoted out loud for a small urgent order.
+  assert.equal(sameDayFee(1, true), 8500);
+});
+
+test("urgent is decided by the notice given, not by the hour of the day", () => {
+  const nine = new Date("2026-09-21T09:00:00+01:00");
+  const noon = new Date("2026-09-21T12:00:00+01:00");
+  const three = new Date("2026-09-21T15:00:00+01:00");
+
+  // Ordering at nine for noon is three hours, so urgent.
+  assert.equal(isUrgent(noon, nine), true);
+  // Ordering at nine for three is six hours, so not.
+  assert.equal(isUrgent(three, nine), false);
+  // Exactly five hours is not urgent: the rule is less than five.
+  assert.equal(isUrgent(new Date("2026-09-21T14:00:00+01:00"), nine), false);
+});
+
+test("same day is never cheaper than putting the same order on a run", () => {
+  for (let items = 1; items <= 40; items++) {
+    assert.ok(sameDayFee(items, false) >= feeFor(items), `${items} items`);
+  }
+});
+
+test("picking a time always costs more than the same order on a run", () => {
+  // The ladders step at different places, so four items used to cost the same
+  // either way. At 6,500 the pick-a-time price is above the run at every size,
+  // which is the point: a car to yourself is not a shared car.
+  for (let items = 1; items <= 40; items++) {
+    assert.ok(sameDayFee(items, false) > feeFor(items), `${items} items`);
+  }
+});
+
+test("same day never offers a time sooner than it takes to get there", () => {
+  const at = (lagos: string) => slotsToday(new Date(`2026-09-21T${lagos}+01:00`));
+
+  // Nine in the morning: three hours from now is noon, so the whole day.
+  assert.deepEqual(at("09:00:00")[0].label, "12pm");
+  assert.equal(at("09:00:00").at(-1)!.label, "6pm");
+
+  // One o'clock: nothing before four, whatever anybody would like.
+  assert.deepEqual(at("13:00:00").map((s) => s.label), [
+    "4pm",
+    "4:30pm",
+    "5pm",
+    "5:30pm",
+    "6pm",
+  ]);
+
+  // Three o'clock is the last moment anything can be ordered at all, and six
+  // is the only time left.
+  assert.deepEqual(at("15:00:00").map((s) => s.label), ["6pm"]);
+
+  // Past three, six is already out of reach, so same day is simply not on.
+  assert.deepEqual(at("15:30:00"), []);
+  assert.deepEqual(at("18:00:00"), []);
+});
+
+test("a slot knows whether it is urgent, so its price is the real one", () => {
+  const nine = new Date("2026-09-21T08:00:00Z"); // 9am Lagos
+  const slots = slotsToday(nine);
+
+  const noon = slots.find((s) => s.label === "12pm")!;
+  const three = slots.find((s) => s.label === "3pm")!;
+
+  assert.equal(noon.urgent, true, "9am for noon is three hours");
+  assert.equal(three.urgent, false, "9am for three is six hours");
+
+  assert.equal(slotFee(noon, 2), 8500);
+  assert.equal(slotFee(three, 2), 6500);
+});
+
+test("when today has run out, the soonest time is tomorrow rather than nothing", () => {
+  // Five o'clock: three hours from now is eight, and nothing goes out after
+  // six, so today is finished.
+  const late = deliverySlots(new Date("2026-09-21T17:00:00+01:00"));
+  assert.ok(late.length > 0, "there is always something to offer");
+  assert.equal(late[0].label, "12pm tomorrow");
+  assert.equal(late[0].day, "tomorrow");
+  assert.equal(late.every((s) => s.day === "tomorrow"), true);
+
+  // And tomorrow is never urgent, because it is never within five hours.
+  assert.equal(late.some((s) => s.urgent), false);
+});
+
+test("earlier in the day, today comes first and tomorrow follows it", () => {
+  const one = deliverySlots(new Date("2026-09-21T13:00:00+01:00"));
+  assert.equal(one[0].label, "4pm");
+  assert.equal(one[0].day, "today");
+  assert.ok(one.some((s) => s.day === "tomorrow"), "tomorrow is still offered");
 });

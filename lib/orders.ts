@@ -1,7 +1,7 @@
 import { db } from "./supabase";
 import { openGroupFor, startSharedGroup } from "./groups";
-import { feeFor, splitFee, type Band } from "./fees";
-import { activeBands } from "./settings";
+import { feeFor, sameDayFee, splitFee, type Band } from "./fees";
+import { activeBands, safeSettings, sameDayPricing } from "./settings";
 import {
   checkCoupon,
   couponLabel,
@@ -15,7 +15,8 @@ import { siteUrl } from "./admin-templates";
 import { naira, orderRef } from "./money";
 import { SLOT_LABEL } from "./config";
 import { runDateLabel, weekdayLabel } from "./time";
-import { getBatch, isOrderable, orderCounts } from "./batches";
+import { createSameDayBatch, getBatch, isOrderable, orderCounts } from "./batches";
+import { deliverySlots, type Slot } from "./same-day";
 import { normalisePhone } from "./phone";
 import { newPin } from "./customer-auth";
 import type {
@@ -57,6 +58,9 @@ export type PlaceOrderInput = {
   /** Start a shared delivery that friends can add to for the next fifteen
    *  minutes. Nobody in one has a delivery fee until it closes. */
   shareDelivery?: boolean;
+  /** Same day instead of a run: the instant they asked for it to land. A car
+   *  goes out for this order alone, priced on the same day ladder. */
+  deliverAt?: string;
 };
 
 export type PlaceOrderResult =
@@ -70,6 +74,32 @@ type PricedLine = CartLine & {
   /** Base price plus every chosen option, per unit. */
   unitPrice: number;
 };
+
+/**
+ * Is that time still on offer?
+ *
+ * A page left open since the morning will still be showing this morning's
+ * times, and the prices beside them. Both are checked here against the real
+ * clock, because the one on the customer's phone is whatever it was when the
+ * page loaded.
+ */
+async function checkSameDay(
+  wanted: string
+): Promise<{ slot: Slot; pricing: Awaited<ReturnType<typeof sameDayPricing>> } | { error: string }> {
+  if (((await safeSettings()).same_day_on || "") !== "on") {
+    return { error: "Same day delivery is not running today. Pick a run instead." };
+  }
+
+  const slot = deliverySlots().find((one) => one.at === wanted);
+  if (!slot) {
+    return {
+      error:
+        "That time has passed. Nothing goes out after 6pm, so pick another time " +
+        "or put it on the next run.",
+    };
+  }
+  return { slot, pricing: await sameDayPricing() };
+}
 
 /**
  * The only place an order is priced. The cart posts item ids and quantities;
@@ -86,9 +116,19 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   const hostel = input.hostel.trim();
   if (hostel.length < 1) return { ok: false, error: "Please enter your hostel or block." };
 
-  const batch = await getBatch(input.batchId);
+  // Same day makes its own trip rather than joining one, so the batch is
+  // created here instead of chosen. Checked against the real clock, because a
+  // page left open since this morning will still be offering this morning's
+  // times.
+  const sameDay = input.deliverAt ? await checkSameDay(input.deliverAt) : null;
+  if (sameDay && "error" in sameDay) return { ok: false, error: sameDay.error };
+
+  const batch = sameDay
+    ? await createSameDayBatch({ deliverAt: sameDay.slot.at, label: `Today, ${sameDay.slot.label}` })
+    : await getBatch(input.batchId);
+
   if (!batch) return { ok: false, error: "That batch no longer exists." };
-  if (!isOrderable(batch)) {
+  if (!sameDay && !isOrderable(batch)) {
     return { ok: false, error: "That batch has closed. Pick the next one." };
   }
 
@@ -133,7 +173,9 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // A shared delivery, either joined or started here. Everybody in one waits
   // for it to close before they have a delivery fee at all, because the fee
   // depends on who else turns up and what they order between them.
-  const sharedGroupId = joinRootId
+  const sharedGroupId = sameDay
+    ? null
+    : joinRootId
     ? (await openGroupFor(joinRootId))?.id ?? null
     : input.shareDelivery && input.groupMode !== "split"
       ? await startSharedGroup({ batch, phone, name, hostel })
@@ -161,8 +203,16 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           hostel,
           lines: priced.lines,
           coupon: coupon?.ok ? coupon : null,
-          joinRootId,
+          joinRootId: sameDay ? null : joinRootId,
           sharedGroupId,
+          sameDayFee: sameDay
+            ? sameDayFee(
+                countItems(priced.lines),
+                sameDay.slot.urgent,
+                sameDay.pricing.bands,
+                sameDay.pricing.urgentExtra
+              )
+            : null,
           groupMode: input.groupMode ?? null,
           paymentMethod,
           collectMode,
@@ -271,6 +321,9 @@ async function placeSingleOrder(args: {
   joinRootId: string | null;
   /** The shared delivery this order belongs to, when there is one. */
   sharedGroupId: string | null;
+  /** Already worked out for a same day trip, which is priced on its own
+   *  ladder rather than by the banding the runs use. */
+  sameDayFee: number | null;
 }): Promise<PlaceOrderResult> {
   // Adding to an existing order is a second order to the same batch, not an
   // edit: the admin view merges by phone into one bag (addendum §3). Only the
@@ -285,12 +338,15 @@ async function placeSingleOrder(args: {
   // In a shared delivery nobody has a fee until the group closes: it is split
   // evenly then, once it is known how many are in the car. Writing a figure
   // now would be quoting a number that is about to change.
-  const fee = args.sharedGroupId
-    ? 0
-    : Math.max(
-        0,
-        feeFor(combined, args.batch.flash_fee, args.bands) - existing.feeCharged
-      );
+  const fee =
+    args.sameDayFee !== null
+      ? args.sameDayFee
+      : args.sharedGroupId
+        ? 0
+        : Math.max(
+            0,
+            feeFor(combined, args.batch.flash_fee, args.bands) - existing.feeCharged
+          );
 
   let group: OrderGroup | null = null;
   if (args.groupMode === "one_payer") {

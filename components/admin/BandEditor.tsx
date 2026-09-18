@@ -9,7 +9,15 @@ import { naira } from "@/lib/money";
  * so no order can ever fall through the bottom of the table and price as
  * nothing.
  */
-export default function BandEditor({ initial }: { initial: Band[] }) {
+export default function BandEditor({
+  initial,
+  field = "fee_bands",
+}: {
+  initial: Band[];
+  /** Which settings row it writes to. The runs and the pick-a-time service
+   *  have separate ladders, edited by the same control. */
+  field?: string;
+}) {
   const [bands, setBands] = useState(
     initial.map((band) => ({
       maxItems: Number.isFinite(band.maxItems) ? String(band.maxItems) : "",
@@ -32,7 +40,7 @@ export default function BandEditor({ initial }: { initial: Band[] }) {
 
   return (
     <div className="space-y-3">
-      <input type="hidden" name="fee_bands" value={serialiseBands(parsed)} />
+      <input type="hidden" name={field} value={serialiseBands(parsed)} />
 
       <ul className="space-y-2">
         {bands.map((band, index) => {

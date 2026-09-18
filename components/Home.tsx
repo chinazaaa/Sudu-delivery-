@@ -7,6 +7,8 @@ import CartBar from "./CartBar";
 import ItemRow from "./ItemRow";
 import ItemSheet from "./ItemSheet";
 import RunStrip from "./RunStrip";
+import SameDayStrip from "./SameDayStrip";
+import type { Slot } from "@/lib/same-day";
 import Thumb from "./Thumb";
 import { countItems, useCart } from "@/lib/cart";
 import FeeBands from "./FeeBands";
@@ -23,9 +25,17 @@ export default function Home({
   autoHeadline,
   autoLines,
   bands,
+  soonest,
+  soonestFrom,
 }: {
   menu: MenuView[];
   nextRun: BatchView | null;
+  /** The soonest time we can actually hit, today or tomorrow, or null when
+   *  the pick-a-time service is off. Worked out on the server, from the
+   *  shop's clock rather than the phone's. */
+  soonest: Slot | null;
+  /** What the cheapest pick-a-time delivery costs right now. */
+  soonestFrom: number;
   /** Written in admin. Empty falls back to a slide per restaurant. */
   slides: Slide[];
   /** Menu item ids, most bought first. Empty until people have ordered. */
@@ -119,6 +129,11 @@ export default function Home({
       {/* What delivery costs rides inside the run strip rather than in a card
           of its own. Four stacked bars is how the first restaurant ends up
           off the bottom of a short phone. */}
+      {/* Today first, the timetable second. Somebody hungry now wants a time,
+          not a schedule, and the run is cheaper so it keeps its place right
+          underneath rather than being buried. */}
+      {soonest && <SameDayStrip soonest={soonest} from={soonestFrom} />}
+
       {nextRun ? (
         <RunStrip run={nextRun} note={feeLine} />
       ) : (

@@ -1,5 +1,5 @@
 import { db } from "./supabase";
-import { parseBands, type Band } from "./fees";
+import { parseBands, SAME_DAY_BANDS, URGENT_EXTRA, type Band } from "./fees";
 import { DELIVERY_WINDOWS, type BatchSlot } from "./config";
 
 /**
@@ -58,6 +58,13 @@ export type Settings = {
    * line, kept short on purpose. Empty means no strip at all.
    */
   ribbon_text: string;
+  /** Same day delivery is on today, or it is not. "on" or empty. */
+  same_day_on: string;
+  /** The same day price ladder, as JSON, so it can be changed without a
+   *  deploy. Empty means the built in one. */
+  same_day_bands: string;
+  /** What being inside the five hours adds, on every step. */
+  same_day_urgent_extra: string;
   /**
    * A discount code to announce beside it. The strip reads the code itself
    * for what it is worth and who it is for, and says nothing while the code
@@ -101,6 +108,9 @@ export const EMPTY: Settings = {
   hide_promoter_link: "",
   hide_footer: "",
   ribbon_text: "",
+  same_day_on: "",
+  same_day_bands: "",
+  same_day_urgent_extra: "",
   offer_code: "",
   auto_headline: "",
   auto_lines: "",
@@ -159,6 +169,15 @@ export function productNotes(settings: Settings, restaurant: string): string[] {
 /** The delivery bands in force right now, read once per request. */
 export async function activeBands(): Promise<Band[]> {
   return parseBands((await safeSettings()).fee_bands);
+}
+
+/** The pick-a-time ladder, and what urgency adds to every step of it. */
+export async function sameDayPricing(): Promise<{ bands: Band[]; urgentExtra: number }> {
+  const settings = await safeSettings();
+  return {
+    bands: settings.same_day_bands ? parseBands(settings.same_day_bands) : SAME_DAY_BANDS,
+    urgentExtra: Number(settings.same_day_urgent_extra) || URGENT_EXTRA,
+  };
 }
 
 /** The delivery window for a slot: the admin's wording, else the shipped one. */

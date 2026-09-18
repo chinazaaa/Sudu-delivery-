@@ -704,5 +704,27 @@ create index if not exists order_groups_closing_idx on order_groups (closes_at)
 -- fifteen minutes of nobody being able to pay.
 alter table orders add column if not exists done_at timestamptz;
 
+-- Same day delivery, which is a different business from the batched runs.
+--
+-- A run carries everybody in one car and is cheap because of it. Same day is a
+-- car going out for one order, at a time the customer picked, so it is priced
+-- on its own ladder and kept out of the run list customers choose from.
+--
+-- `kind` is what keeps them apart. Every batch that already exists is a run,
+-- which is why it defaults to one and why nothing changes the day this runs.
+alter table batches add column if not exists kind text not null default 'run'
+  check (kind in ('run', 'same_day'));
+-- The time the customer asked for. Only ever set on a same day delivery.
+alter table batches add column if not exists deliver_at timestamptz;
+create index if not exists batches_kind_idx on batches (kind, run_date desc);
+
+-- The two same day ladders, so the prices can be changed without a deploy,
+-- exactly as the batched bands already can. Empty means the built in ones.
+alter table settings add column if not exists same_day_bands text not null default '';
+-- Switch same day off entirely on a day you cannot do it.
+alter table settings add column if not exists same_day_on text not null default '';
+-- What being inside the five hours adds, on every step of the ladder.
+alter table settings add column if not exists same_day_urgent_extra text not null default '';
+
 -- Supabase caches the schema; this makes the new tables visible immediately.
 notify pgrst, 'reload schema';

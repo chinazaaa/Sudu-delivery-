@@ -56,6 +56,8 @@ export async function openRunsBetween(from: string, to: string): Promise<number>
         flash_fee_reason: "",
         stage: "ordering",
         stage_updated_at: new Date().toISOString(),
+        kind: "run",
+        deliver_at: null,
         fuel_cost: 0,
         driver_cost: 0,
         other_cost: 0,
@@ -139,6 +141,10 @@ export async function openBatches(): Promise<OpenBatch[]> {
     .from("batches")
     .select("*")
     .eq("status", "open")
+    // A same day delivery is one person's car at a time they chose. It is a
+    // batch so the stages and the run sheet work, but it is nobody else's to
+    // join, so it never appears in the list a customer picks from.
+    .eq("kind", "run")
     .gt("cut_off_at", new Date().toISOString())
     .lt("cut_off_at", until)
     .order("cut_off_at", { ascending: true })
@@ -199,4 +205,46 @@ export async function getBatch(id: string): Promise<Batch | null> {
 /** A batch takes orders only while it is open, uncancelled and pre-cut-off. */
 export function isOrderable(batch: Batch): boolean {
   return batch.status === "open" && new Date(batch.cut_off_at).getTime() > Date.now();
+}
+
+/**
+ * A car going out for one order, at the time somebody asked for.
+ *
+ * It is a batch because everything downstream already understands batches:
+ * the stages the customer watches, the run sheet, the profit on a trip. What
+ * makes it different is `kind`, which keeps it out of the list customers pick
+ * a run from, because this one is not theirs to join.
+ *
+ * The cut-off is now. There is nothing to wait for: the food is being fetched
+ * as soon as it is paid for.
+ */
+export async function createSameDayBatch(args: {
+  deliverAt: string;
+  label: string;
+}): Promise<Batch | null> {
+  const at = new Date(args.deliverAt);
+
+  const { data } = await db()
+    .from("batches")
+    .insert({
+      run_date: lagosToday(at),
+      // The enum only knows these two, and the real time is on deliver_at.
+      // Five is the sensible line between them and nothing reads it for a
+      // same day trip anyway.
+      slot: at.getUTCHours() >= 16 ? "night" : "afternoon",
+      cut_off_at: new Date().toISOString(),
+      delivery_window_text: args.label,
+      status: "open",
+      capacity: null,
+      flash_fee: null,
+      flash_fee_reason: "",
+      stage: "ordering",
+      stage_updated_at: new Date().toISOString(),
+      kind: "same_day",
+      deliver_at: args.deliverAt,
+    })
+    .select("*")
+    .single();
+
+  return (data as Batch) ?? null;
 }

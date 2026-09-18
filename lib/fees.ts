@@ -154,3 +154,60 @@ export function evenShare(
   const band = feeFor(items, flashFee, bands);
   return Math.ceil(band / people / 100) * 100;
 }
+
+/**
+ * Same day delivery, which is a different business from the batched runs.
+ *
+ * A run carries everybody's food in one car, which is why it is cheap. Same
+ * day is a car going out for one order at a time somebody chose, so it is
+ * priced on its own ladder: the same steps, two thousand higher, and two
+ * thousand higher again when there is not enough notice to fold the trip into
+ * anything else.
+ */
+export const SAME_DAY_BANDS: Band[] = [
+  { maxItems: 4, fee: 6500 },
+  { maxItems: 6, fee: 8500 },
+  { maxItems: 10, fee: 10500 },
+  { maxItems: Infinity, fee: 12500 },
+];
+
+/** What being inside the five hours adds, on every step of the ladder. */
+export const URGENT_EXTRA = 2000;
+
+/** How much notice a same day order needs before it stops being urgent. */
+export const URGENT_HOURS = 5;
+
+/**
+ * How long it actually takes: to the restaurant, wait for the food, drive it
+ * to campus. Nothing sooner than this can be offered, however much somebody
+ * would like it, because offering it is promising it.
+ */
+export const DELIVERY_LEAD_HOURS = 3;
+
+/** What the last delivery of the day is, because nothing goes out after it. */
+export const LAST_DELIVERY_HOUR = 18;
+
+/** The first hour of the day a same day delivery can be asked for. */
+export const FIRST_DELIVERY_HOUR = 12;
+
+/**
+ * Less than five hours between asking and wanting it. Ordering at 9 for noon
+ * is urgent; ordering at 9 for three o'clock is not.
+ */
+export function isUrgent(wantedAt: Date, now: Date = new Date()): boolean {
+  return wantedAt.getTime() - now.getTime() < URGENT_HOURS * 3_600_000;
+}
+
+/**
+ * What a same day delivery costs. Urgent is the same ladder again with two
+ * thousand on every step, because a car that cannot wait is a car doing
+ * nothing else.
+ */
+export function sameDayFee(
+  itemCount: number,
+  urgent: boolean,
+  bands: Band[] = SAME_DAY_BANDS,
+  urgentExtra: number = URGENT_EXTRA
+): number {
+  return bandFor(itemCount, bands).fee + (urgent ? urgentExtra : 0);
+}
