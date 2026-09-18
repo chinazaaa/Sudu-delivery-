@@ -11,7 +11,7 @@ import ActionButton from "@/components/admin/ActionButton";
 import StagePicker from "@/components/admin/StagePicker";
 import SendSheet from "@/components/admin/SendSheet";
 import { payableAccounts } from "@/lib/banks";
-import { batchSheet } from "@/lib/admin";
+import { batchSheet, typicalCosts } from "@/lib/admin";
 import { SLOT_LABEL } from "@/lib/config";
 import Link from "next/link";
 import { naira, orderRef, refsIn } from "@/lib/money";
@@ -61,6 +61,12 @@ export default async function BatchPage({
   const shopped = stageIndex(batch.stage) >= stageIndex("on_the_road");
   const finished = batch.stage === "handed_out";
   const belowMinimum = summary.paidCount < summary.minimum;
+
+  // Before a run is driven nobody has entered its fuel or driver, so profit
+  // reads high at exactly the moment the decision to drive is made. What past
+  // runs actually cost is a far better guess than nothing.
+  const usual = summary.costs === 0 ? await typicalCosts() : null;
+  const likely = usual === null ? null : summary.profit - usual;
 
   const settings = await getSettings();
   // The account the payment message quotes: the first on the list.
@@ -144,6 +150,26 @@ export default async function BatchPage({
           }
         />
       </div>
+
+      {/* A plain verdict while the run can still be called off. The numbers
+          above are all there, but at cut off what is wanted is the answer, not
+          the arithmetic. */}
+      {batch.stage !== "handed_out" && likely !== null && (
+        <p
+          className={`mb-4 rounded-2xl px-4 py-3 text-sm ${
+            likely >= 0 ? "bg-mint/10 text-mint" : "bg-amber-50 text-amber-800"
+          }`}
+        >
+          <span className="font-bold">
+            {likely >= 0
+              ? `Worth driving: about ${naira(likely)} left over.`
+              : `This run loses about ${naira(Math.abs(likely))}.`}
+          </span>{" "}
+          {naira(summary.gross)} paid in, {naira(summary.foodCost)} to the counters,
+          and roughly {naira(usual!)} of fuel and driver going by the last few runs.
+          Put this run&apos;s real costs in under Profit and this becomes exact.
+        </p>
+      )}
 
       {belowMinimum && (
         <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">

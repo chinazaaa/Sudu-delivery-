@@ -343,3 +343,30 @@ export async function promoterRows(): Promise<PromoterRow[]> {
     };
   });
 }
+
+/**
+ * What a run usually costs to drive, from the runs that have been driven.
+ *
+ * Profit on a run that has not happened yet ignores fuel and the driver,
+ * because nobody has typed them in. That makes an open run look better than it
+ * is, at exactly the moment the decision to drive is being made. Averaging the
+ * last few runs that did have costs entered is a far better guess than zero.
+ *
+ * Null when there is nothing to average yet, so the page can say it does not
+ * know rather than inventing a number.
+ */
+export async function typicalCosts(): Promise<number | null> {
+  const { data } = await db()
+    .from("batches")
+    .select("fuel_cost, driver_cost, other_cost")
+    .eq("stage", "handed_out")
+    .order("run_date", { ascending: false })
+    .limit(6);
+
+  const runs = (data ?? [])
+    .map((row) => (row.fuel_cost ?? 0) + (row.driver_cost ?? 0) + (row.other_cost ?? 0))
+    .filter((cost) => cost > 0);
+
+  if (runs.length === 0) return null;
+  return Math.round(runs.reduce((sum, cost) => sum + cost, 0) / runs.length);
+}

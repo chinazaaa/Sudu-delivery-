@@ -16,12 +16,24 @@ export default async function RestaurantsAdmin() {
     .select("*")
     .order("sort_order")
     .order("name");
-  const { data: items } = await db().from("menu_items").select("id, restaurant_id");
+  const { data: items } = await db()
+    .from("menu_items")
+    .select("id, restaurant_id, name, image_url, description, available");
 
   const list = (restaurants ?? []) as Restaurant[];
   const problem = list.length === 0 ? await diagnoseEmpty() : null;
-  const countFor = (id: string) =>
-    ((items ?? []) as MenuItem[]).filter((i) => i.restaurant_id === id).length;
+  const rows = (items ?? []) as MenuItem[];
+  const countFor = (id: string) => rows.filter((i) => i.restaurant_id === id).length;
+
+  // A photo is the single biggest thing between an item and being ordered, and
+  // a missing one is invisible from here: you would have to open every
+  // restaurant to find it. Only items actually on sale count, because an item
+  // switched off is nobody's problem.
+  const onSale = rows.filter((item) => item.available);
+  const noPhoto = onSale.filter((item) => !item.image_url);
+  const noWords = onSale.filter((item) => !(item.description ?? "").trim());
+  const nameOf = (id: string) =>
+    list.find((one) => one.id === id)?.name ?? "";
 
   return (
     <div className="space-y-4">
@@ -45,6 +57,51 @@ export default async function RestaurantsAdmin() {
             <SaveButton className="w-full">Add KFC and Domino&apos;s</SaveButton>
           </form>
         </>
+      )}
+
+      {(noPhoto.length > 0 || noWords.length > 0) && (
+        <section className="card space-y-2">
+          <div>
+            <h2 className="font-bold">Gaps in the menu</h2>
+            <p className="text-sm text-muted">
+              Of {onSale.length} items on sale. A photo sells food better than
+              anything else on the page.
+            </p>
+          </div>
+          <ul className="space-y-2 text-sm">
+            {[
+              { label: "No photo", items: noPhoto },
+              { label: "No description", items: noWords },
+            ]
+              .filter((gap) => gap.items.length > 0)
+              .map((gap) => (
+                <li key={gap.label}>
+                  <p className="font-semibold">
+                    {gap.items.length} with {gap.label.toLowerCase()}
+                  </p>
+                  <p className="text-muted">
+                    {[...new Set(gap.items.map((item) => item.restaurant_id))].map(
+                      (id, index, all) => (
+                        <span key={id}>
+                          <Link
+                            href={`/admin/menu/${id}`}
+                            className="font-semibold text-brand"
+                          >
+                            {nameOf(id)}
+                          </Link>
+                          <span>
+                            {" "}
+                            ({gap.items.filter((item) => item.restaurant_id === id).length})
+                            {index < all.length - 1 ? ", " : ""}
+                          </span>
+                        </span>
+                      )
+                    )}
+                  </p>
+                </li>
+              ))}
+          </ul>
+        </section>
       )}
 
       <p className="text-sm text-muted">
