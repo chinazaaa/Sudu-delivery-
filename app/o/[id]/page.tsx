@@ -504,7 +504,12 @@ export default async function OrderPage({
         </section>
       )}
 
-      <HelpUs settings={settings} order={order} batchLabel={batchLabel} />
+      <HelpUs
+        settings={settings}
+        order={order}
+        ref={shareRef(order, order.shares)}
+        batchLabel={batchLabel}
+      />
     </div>
   );
 }
@@ -584,15 +589,18 @@ function foodOf(lines: OrderLine[]): number {
 function HelpUs({
   settings,
   order,
+  ref,
   batchLabel,
 }: {
   settings: Awaited<ReturnType<typeof getSettings>>;
   order: { id: string; customer_name: string; order_no: number | null };
+  /** How this order is referred to: #1001b for one part of a group. */
+  ref: string;
   batchLabel: string;
 }) {
   const link = whatsappLink(
     settings.whatsapp_number,
-    `Hi, about my Sudu order ${orderRef(order)} (${order.customer_name}, ${batchLabel}):`
+    `Hi, about my Sudu order ${ref} (${order.customer_name}, ${batchLabel}):`
   );
   if (!link) return null;
 

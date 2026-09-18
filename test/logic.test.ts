@@ -9,7 +9,7 @@ import { template, whatsappTo } from "../lib/messages";
 import { newPin } from "../lib/customer-auth";
 import { parseMenuText } from "../lib/menu-import";
 import { adminEmails } from "../lib/email";
-import { shareRef } from "../lib/money";
+import { refsIn, shareRef } from "../lib/money";
 import { externalUrl, EMPTY as SETTINGS_DEFAULTS, type Settings } from "../lib/settings";
 import { matchPhotos, tidy } from "../lib/match";
 import { groupNames, lineKey as cartLineKey, reclaim } from "../lib/cart";
@@ -712,4 +712,21 @@ test("email: the layout carries the same words, and nothing typed becomes markup
   assert.ok(text.includes("Open the order: https://sudu.example/admin/orders/1"));
   assert.ok(text.includes("Total: ₦7,100"));
   assert.ok(text.includes("2 × Zinger Burger"));
+});
+
+test("refsIn: a split group reads as one order with parts", () => {
+  const orders = [
+    { id: "a", order_no: 1001, group_id: "g1" },
+    { id: "b", order_no: 1002, group_id: "g1" },
+    { id: "c", order_no: 1003, group_id: null },
+  ];
+
+  const refs = refsIn(orders);
+  assert.equal(refs.get("a"), "#1001a", "the first part carries the group number");
+  assert.equal(refs.get("b"), "#1001b", "so does the second, with its own letter");
+  assert.equal(refs.get("c"), "#1003", "an order on its own keeps its number");
+
+  // The one-person group that never grew is still just an order.
+  const alone = refsIn([{ id: "d", order_no: 1004, group_id: "g2" }]);
+  assert.equal(alone.get("d"), "#1004");
 });

@@ -32,3 +32,28 @@ export function shareRef(
     ? `#${base}${String.fromCharCode(97 + index)}`
     : `#${base}-${index + 1}`;
 }
+
+/**
+ * How every order in a list should be referred to, keyed by id.
+ *
+ * A split group is several orders under the bonnet, and calling one of them
+ * #1001 and its sibling #1002 invites somebody to write the wrong number in a
+ * transfer. Given a batch's orders, or a group's, each one comes back as
+ * #1001a and #1001b, and an order with no group keeps its plain number.
+ */
+export function refsIn(
+  orders: { id: string; order_no: number | null; group_id?: string | null }[]
+): Map<string, string> {
+  const byGroup = new Map<string, { id: string; order_no: number | null }[]>();
+  for (const order of orders) {
+    if (!order.group_id) continue;
+    byGroup.set(order.group_id, [...(byGroup.get(order.group_id) ?? []), order]);
+  }
+
+  return new Map(
+    orders.map((order) => [
+      order.id,
+      order.group_id ? shareRef(order, byGroup.get(order.group_id) ?? []) : orderRef(order),
+    ])
+  );
+}

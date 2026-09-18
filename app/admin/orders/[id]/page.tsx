@@ -8,7 +8,7 @@ import { getOrder } from "@/lib/orders";
 import { getSettings } from "@/lib/settings";
 import { payableAccounts } from "@/lib/banks";
 import { siteUrl, toCard } from "@/lib/admin-templates";
-import { naira, orderRef } from "@/lib/money";
+import { naira, shareRef } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { markPaid, markDelivered, refundOrder, savePaymentLink, saveOrderNote } from "../../actions";
 
@@ -67,7 +67,9 @@ async function orderPage(id: string) {
   return (
     <div>
       <PageHeader
-        title={`Order ${orderRef(order)}`}
+        // The same wording as the card below it and the transfer narration:
+        // #1001a, not #1001 on one screen and #1001a on the next.
+        title={`Order ${shareRef(order, order.shares.length > 0 ? order.shares : [order])}`}
         detail={`${order.customer_name} · ${formatPhone(order.customer_phone)} · ${order.hostel}`}
         backHref="/admin/orders"
         backLabel="All orders"

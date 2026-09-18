@@ -14,7 +14,7 @@ import { payableAccounts } from "@/lib/banks";
 import { batchSheet } from "@/lib/admin";
 import { SLOT_LABEL } from "@/lib/config";
 import Link from "next/link";
-import { naira, orderRef } from "@/lib/money";
+import { naira, orderRef, refsIn } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { clockLabel, runDateLabel } from "@/lib/time";
 import { bandTable, parseBands } from "@/lib/fees";
@@ -47,6 +47,12 @@ export default async function BatchPage({
   if (!sheet) notFound();
 
   const { batch, counter, handout, unpaid, summary, refunds, pins } = sheet;
+
+  // One wording for a share, here and in the message the customer gets:
+  // #1001a and #1001b, never #1001 on this screen and #1001a on theirs.
+  const refs = refsIn([...handout.flatMap((bag) => bag.orders), ...unpaid]);
+  const refFor = (order: { id: string; order_no: number | null }) =>
+    refs.get(order.id) ?? orderRef(order);
   // A run nobody has ordered into is still just a plan: it can be moved to
   // another day, or dropped altogether.
   const empty = summary.paidCount + summary.unpaidCount === 0;
@@ -265,7 +271,7 @@ export default async function BatchPage({
                       phone: formatPhone(bag.phone),
                       orders: bag.orders.map((order) => ({
                         id: order.id,
-                        ref: orderRef(order),
+                        ref: refFor(order),
                         status: order.status,
                         total: naira(order.total),
                         message: messageFor(order),
@@ -314,7 +320,7 @@ export default async function BatchPage({
                             href={`/admin/orders/${order.id}`}
                             className="text-muted hover:text-brand"
                           >
-                            {orderRef(order)}
+                            {refFor(order)}
                           </Link>{" "}
                           {order.for_name ?? order.customer_name} · {naira(order.total)}
                           <span

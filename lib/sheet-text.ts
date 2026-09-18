@@ -1,4 +1,4 @@
-import { naira, orderRef } from "./money";
+import { naira, orderRef, refsIn } from "./money";
 import { formatPhone } from "./phone";
 import type { BatchSheet } from "./admin";
 
@@ -20,6 +20,10 @@ const lineText = (l: {
 
 export function sheetAsText(sheet: BatchSheet, batchLabel: string): string {
   const lines = [`SUDU RUN: ${batchLabel}`, ""];
+
+  // A share is #1001a wherever it is written: on the sheet, on the screen and
+  // in the narration somebody types into their banking app.
+  const refs = refsIn([...sheet.handout.flatMap((bag) => bag.orders), ...sheet.unpaid]);
 
   lines.push("AT THE COUNTER");
   for (const group of sheet.counter) {
@@ -46,7 +50,7 @@ export function sheetAsText(sheet: BatchSheet, batchLabel: string): string {
     lines.push("", "NOT PAID, DO NOT TAKE");
     for (const order of sheet.unpaid) {
       lines.push(
-        `  ${orderRef(order)} ${order.for_name ?? order.customer_name} ` +
+        `  ${refs.get(order.id) ?? orderRef(order)} ${order.for_name ?? order.customer_name} ` +
           `${naira(order.total)} (${order.payment_method === "card" ? "card link" : "transfer"})`
       );
     }
