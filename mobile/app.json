@@ -56,6 +56,12 @@
         "projectId": "a7ec1fff-4450-4588-8217-63b3c819849b"
       }
     },
-    "owner": "fateround"
+    "owner": "fateround",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/a7ec1fff-4450-4588-8217-63b3c819849b"
+    }
   }
 }
