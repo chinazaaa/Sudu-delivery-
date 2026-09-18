@@ -47,6 +47,9 @@ function label(path: string, names: Map<string, string>): string {
   if (path === "/checkout") return "Checkout";
   if (path === "/orders") return "My orders";
   if (path === "/reorder") return "Order again";
+  // Screens the app has and the website does not. The rest of its paths are
+  // the website's, on purpose, so the two do not read as two shops.
+  if (path === "/account") return "You, in the app";
   if (path.startsWith("/o/")) return "An order page";
 
   const id = path.split("/")[2] ?? "";

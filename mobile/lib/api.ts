@@ -34,6 +34,23 @@ async function post<T>(path: string, data: unknown, token?: string | null): Prom
   return body;
 }
 
+/**
+ * Something told to the server that nobody is waiting on: a screen was looked
+ * at, a cart was left. It never throws and never returns anything, because
+ * there is nothing a customer could do about it if it failed.
+ */
+async function beacon(path: string, data: unknown): Promise<void> {
+  try {
+    await fetch(`${BASE}/api/app${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  } catch {
+    /* No signal, or the shop is down. Neither is worth telling anybody. */
+  }
+}
+
 export type Item = {
   id: string;
   name: string;
@@ -183,6 +200,21 @@ export const api = {
   /** Wipes everything that says who they are. Both stores require this to be
    *  reachable from inside the app, not only on the website. */
   deleteMe: (token: string) => post<{ ok: boolean; orders: number }>("/delete", {}, token),
+  /** A cart left behind at checkout, so it can be followed up exactly as one
+   *  left behind on the website is. Written only once a number is typed. */
+  keepCart: (data: {
+    phone: string;
+    name: string;
+    hostel: string;
+    batchId: string;
+    items: number;
+    value: number;
+    summary: string;
+  }) => beacon("/cart", data),
+  /** One screen looked at. The server decides how the app is named in the
+   *  sources list, so this only says which kind of phone it is. */
+  track: (path: string, visitor: string, platform: string) =>
+    beacon("/track", { path, visitor, platform }),
   registerPush: (pushToken: string, platform: string, token?: string | null) =>
     post<{ ok: boolean }>("/push", { token: pushToken, platform }, token),
 };

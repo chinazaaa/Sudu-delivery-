@@ -60,8 +60,11 @@ export default async function PrivacyPage() {
             name and it is not a location.
           </li>
           <li>
-            Which pages were viewed and how many times, with no name attached,
-            so we know which restaurants people actually want.
+            Which pages and app screens were viewed and how many times, with no
+            name attached, so we know which restaurants people actually want.
+            These are counted against a random id your browser or your copy of
+            the app makes for itself. It is never kept beside your name or your
+            number, and it tells us how many people looked, never who.
           </li>
         </ul>
       </Section>

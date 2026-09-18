@@ -39,6 +39,7 @@ const CART = "sudu.cart";
 const PEOPLE = "sudu.people";
 const ME = "sudu.me";
 const MINE = "sudu.orders";
+const VISITOR = "sudu.visitor";
 
 async function read<T>(key: string, fallback: T): Promise<T> {
   try {
@@ -54,6 +55,33 @@ async function write(key: string, value: unknown): Promise<void> {
     await AsyncStorage.setItem(key, JSON.stringify(value));
   } catch {
     /* A phone with no room left still sells food. */
+  }
+}
+
+/**
+ * A random id for this install, so screens can be counted without anybody
+ * being identified. It is not a number, not a name, and never leaves with
+ * anything attached to it: it exists only so two views by the same person do
+ * not read as two people.
+ */
+let visitorHeld = "";
+
+export async function visitorId(): Promise<string> {
+  if (visitorHeld) return visitorHeld;
+  try {
+    const found = await AsyncStorage.getItem(VISITOR);
+    if (found) {
+      visitorHeld = found;
+      return found;
+    }
+    const made = String(Math.random()).slice(2) + Date.now().toString(36);
+    await AsyncStorage.setItem(VISITOR, made);
+    visitorHeld = made;
+    return made;
+  } catch {
+    // No storage. The visit still counts, it just counts as a new person.
+    visitorHeld = "anon-" + Math.random().toString(36).slice(2, 12);
+    return visitorHeld;
   }
 }
 

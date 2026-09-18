@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as Notifications from "expo-notifications";
+import Track from "@/components/Track";
 import { T } from "@/lib/theme";
 
 // A notification that lands while somebody is looking at the app should still
@@ -25,6 +26,9 @@ export default function Layout() {
   return (
     <>
       <StatusBar style="dark" />
+      {/* Above the stack, so it sees every screen rather than only the ones
+          somebody remembered to add it to. */}
+      <Track />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: T.paper },

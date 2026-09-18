@@ -53,7 +53,9 @@ That is 68 characters.
 ## Age rating
 
 4+ / Everyone. The app has no user-generated content, no ads, no gambling,
-no in-app purchases and no location tracking.
+no in-app purchases and no location tracking. Screens opened are counted
+against a random id the install makes for itself, which is how many people
+used the app rather than who they were.
 
 ## Data safety and privacy answers
 
@@ -65,8 +67,9 @@ Both stores ask the same questions. The honest answers:
 | Collects financial info | No. Payment happens in the bank app or on the provider's page |
 | Collects location | No |
 | Collects contacts, photos, files, messages | No |
-| Collects device identifiers | The push notification token only, and only if notifications are allowed |
-| Data linked to the user | Name, phone, block, order history |
+| Collects device identifiers | The push notification token, only if notifications are allowed, and a random id this install makes for itself so screen counts are not double counted |
+| Collects app activity | Yes: which screens are opened, counted against that random id and nothing else |
+| Data linked to the user | Name, phone, block, order history. Screen counts are not: the random id is never stored beside a name or a number |
 | Data used for tracking across apps | No |
 | Data shared with third parties | No, beyond the hosting, database and email providers acting for us |
 | Data encrypted in transit | Yes |
@@ -91,7 +94,7 @@ here so nothing is discovered at submission.
 | Login required to use the app (2.1) | It is not. Anyone can browse and order without signing in. Signing in only brings back past orders |
 | In-app purchase (3.1.1) | Not required. Food delivered to a person is a real-world good, which 3.1.3(e) exempts. Payment happens by bank transfer in their own bank app |
 | Push permission not required (4.5.4) | Permission is asked only after an order is placed, and the app works fully without it |
-| Tracking permission (ATT) | Not needed. Nothing is tracked across other apps, and there is no advertising identifier |
+| Tracking permission (ATT) | Not needed. The screen counter uses an id this install invents for itself, which never leaves the app with a name or number attached, is not an advertising identifier, and is not shared with anybody. Nothing is tracked across other apps |
 | Minimum functionality (4.2) | A real delivery service with a live menu, not a repackaged website |
 | Age rating | 4+ / Everyone. No user content, no ads, no gambling |
 
