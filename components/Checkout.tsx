@@ -226,6 +226,37 @@ export default function Checkout({
     );
   }
 
+  const offersSameDay = sameDaySlots.length > 0 && !adding && !share && !joining;
+
+  /** Which run, and what it says underneath. The same control wherever it is
+   *  shown, so the two ways of ordering read as one decision. */
+  function RunPicker() {
+    return (
+      <div className="space-y-2">
+        <select
+          className="field"
+          value={batchId}
+          onChange={(e) => setBatchId(e.target.value)}
+          disabled={adding !== null}
+          aria-label="Delivery run"
+        >
+          {openable.map((batch) => (
+            <option key={batch.id} value={batch.id}>
+              {batch.label}
+              {now !== null &&
+                ` · closes in ${countdown(new Date(batch.cutOffISO).getTime() - now)}`}
+            </option>
+          ))}
+        </select>
+        {selected && (
+          <p className="text-sm text-muted">
+            Orders close {selected.cutOffLabel}. {selected.deliveryWindow}.
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <form action={action} className="space-y-5 pb-36">
       <KeepCart
@@ -283,93 +314,73 @@ export default function Checkout({
         </p>
       )}
 
-      {/* Same day is a car going out for one order, so it is offered as a
-          choice against the runs rather than hidden inside them. The cheap
-          way stays selected until somebody actively wants otherwise. */}
-      {sameDaySlots.length > 0 && !adding && !share && !joining && (
-        <section className="card space-y-3">
-          <h2 className="font-bold">When do you want it?</h2>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => setDeliverAt("")}
-              className={`rounded-xl border p-3 text-left transition ${
-                !sameDay ? "border-brand bg-brand-tint" : "border-black/10"
-              }`}
-            >
-              <span className="block font-bold">On a run</span>
-              <span className="block text-sm text-muted">
-                Shared with everybody else going out, from {naira(bands[0]?.fee ?? 4000)}.
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setDeliverAt(sameDaySlots[0].at)}
-              className={`rounded-xl border p-3 text-left transition ${
-                sameDay ? "border-brand bg-brand-tint" : "border-black/10"
-              }`}
-            >
-              <span className="block font-bold">
-                {sameDaySlots[0]?.day === "today" ? "Today, at a time I pick" : "At a time I pick"}
-              </span>
-              <span className="block text-sm text-muted">
-                A car for your order alone, from {naira(sameDayBands[0]?.fee ?? 6500)}. Soonest{" "}
-                {sameDaySlots[0]?.label}.
-              </span>
-            </button>
-          </div>
+      {/* One question, then the answer to it. Which run it goes on and what
+          time it lands are the same decision, so they are the same card: pick
+          how you want it, then pick the when. Two cards with one of them
+          hidden read as two unrelated things. */}
+      <section className="card space-y-3">
+        <h2 className="font-bold">When do you want it?</h2>
 
-          {sameDay && (
-            <div className="space-y-2 border-t border-black/10 pt-3">
-              <label className="label" htmlFor="deliver_at">
-                What time?
-              </label>
-              <select
-                id="deliver_at"
-                className="field"
-                value={deliverAt}
-                onChange={(event) => setDeliverAt(event.target.value)}
-              >
-                {sameDaySlots.map((slot) => (
-                  <option key={slot.at} value={slot.at}>
-                    {slot.label}
-                    {slot.urgent ? " · urgent" : ""}
-                  </option>
-                ))}
-              </select>
-              <p className="text-sm text-muted">
-                {sameDay.urgent
-                  ? "Under five hours' notice, so this is urgent and costs more. Pick a later time and it drops."
-                  : "More than five hours away, so this is the ordinary price."}{" "}
-                It takes about three hours to fetch and deliver, and nothing goes out
-                after 6pm.
-              </p>
-            </div>
-          )}
-        </section>
-      )}
+        {offersSameDay ? (
+          <>
+            <select
+              className="field"
+              value={sameDay ? "today" : "run"}
+              onChange={(event) =>
+                setDeliverAt(event.target.value === "today" ? sameDaySlots[0].at : "")
+              }
+              aria-label="How you want it delivered"
+            >
+              {/* Short enough to survive a narrow phone. A native select
+                  truncates its option text with no warning, and a price cut
+                  off halfway is worse than no price. */}
+              <option value="today">
+                {sameDaySlots[0].day === "today" ? "Today" : "Tomorrow"} · from{" "}
+                {naira(sameDayBands[0]?.fee ?? 6500)}
+              </option>
+              <option value="run">
+                On a run · from {naira(bands[0]?.fee ?? 4000)}
+              </option>
+            </select>
 
-      <section className={`card space-y-2 ${sameDay ? "hidden" : ""}`}>
-        <h2 className="font-bold">Which run?</h2>
-        <select
-          className="field"
-          value={batchId}
-          onChange={(e) => setBatchId(e.target.value)}
-          disabled={adding !== null}
-          aria-label="Delivery run"
-        >
-          {openable.map((batch) => (
-            <option key={batch.id} value={batch.id}>
-              {batch.label}
-              {now !== null &&
-                ` · closes in ${countdown(new Date(batch.cutOffISO).getTime() - now)}`}
-            </option>
-          ))}
-        </select>
-        {selected && (
-          <p className="text-sm text-muted">
-            Orders close {selected.cutOffLabel}. {selected.deliveryWindow}.
-          </p>
+            {sameDay ? (
+              <div className="space-y-2">
+                <label className="label" htmlFor="deliver_at">
+                  What time?
+                </label>
+                <select
+                  id="deliver_at"
+                  className="field"
+                  value={deliverAt}
+                  onChange={(event) => setDeliverAt(event.target.value)}
+                >
+                  {sameDaySlots.map((slot) => (
+                    <option key={slot.at} value={slot.at}>
+                      {slot.label}
+                      {slot.urgent ? " · urgent" : ""}
+                      {` · ${naira(sameDayFee(itemCount, slot.urgent, sameDayBands, urgentExtra))}`}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-sm text-muted">
+                  Soonest is {sameDaySlots[0].label}: it takes about three hours to fetch
+                  the food and drive it over, and nothing goes out after 6pm.{" "}
+                  {sameDay.urgent
+                    ? "Under five hours away counts as urgent, so a later time is cheaper."
+                    : "More than five hours away, so this is the ordinary price."}
+                </p>
+              </div>
+            ) : (
+              <>
+                <RunPicker />
+                <p className="text-sm text-muted">
+                  A run is everybody&apos;s food in one car, which is why it is cheaper.
+                </p>
+              </>
+            )}
+          </>
+        ) : (
+          <RunPicker />
         )}
       </section>
 

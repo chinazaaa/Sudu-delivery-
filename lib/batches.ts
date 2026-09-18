@@ -76,10 +76,25 @@ export async function openRunsBetween(from: string, to: string): Promise<number>
     (existing.data ?? []).map((row) => `${row.run_date}|${row.slot}`)
   );
 
-  const { error } = await db().from("batches").upsert(rows, {
-    onConflict: "run_date,slot",
-    ignoreDuplicates: true,
-  });
+  const write = (withKind: boolean) =>
+    db()
+      .from("batches")
+      .upsert(
+        withKind
+          ? rows
+          : rows.map(({ kind, deliver_at, ...rest }) => {
+              void kind;
+              void deliver_at;
+              return rest;
+            }),
+        { onConflict: "run_date,slot", ignoreDuplicates: true }
+      );
+
+  // Written without the newer columns when the database has not got them yet,
+  // for the same reason the read above is: this runs on every page load of the
+  // shop, and a migration that has not been run must not close it.
+  let { error } = await write(true);
+  if (error) ({ error } = await write(false));
   // A blocked write here is why batches would otherwise just never appear.
   if (error) throw new Error(`Could not open batches: ${error.message}`);
 
@@ -137,18 +152,29 @@ export async function openBatches(): Promise<OpenBatch[]> {
   // on a Friday the only run anybody could see was that same night's.
   const until = `${addDays(lagosToday(), horizon)}T23:59:59+01:00`;
 
-  const { data, error } = await db()
-    .from("batches")
-    .select("*")
-    .eq("status", "open")
-    // A same day delivery is one person's car at a time they chose. It is a
-    // batch so the stages and the run sheet work, but it is nobody else's to
-    // join, so it never appears in the list a customer picks from.
-    .eq("kind", "run")
-    .gt("cut_off_at", new Date().toISOString())
-    .lt("cut_off_at", until)
-    .order("cut_off_at", { ascending: true })
-    .limit(8);
+  // A same day delivery is one person's car at a time they chose. It is a
+  // batch so the stages and the run sheet work, but it is nobody else's to
+  // join, so it never appears in the list a customer picks from.
+  //
+  // Asked for in a way that survives a database which has not had the
+  // migration run yet. This query is the home page and the checkout: it must
+  // never be the thing that takes the shop down, and before the column exists
+  // every batch is a run anyway.
+  const ask = (filterByKind: boolean) => {
+    let query = db()
+      .from("batches")
+      .select("*")
+      .eq("status", "open")
+      .gt("cut_off_at", new Date().toISOString())
+      .lt("cut_off_at", until)
+      .order("cut_off_at", { ascending: true })
+      .limit(8);
+    if (filterByKind) query = query.eq("kind", "run");
+    return query;
+  };
+
+  let { data, error } = await ask(true);
+  if (error) ({ data, error } = await ask(false));
   if (error) throw new Error(error.message);
 
   const batches = (data ?? []) as Batch[];
