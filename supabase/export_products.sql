@@ -12,6 +12,9 @@
 --                  cooked on the night, so there is no stock count to keep.
 --   sku            the restaurant in short, then a number, so every row has
 --                  one and two restaurants cannot collide.
+--   description    the menu description, or the item name and the restaurant
+--                  where nothing has been written yet, since an empty one is
+--                  refused on import.
 --   images         the photograph on the menu, empty where there is none.
 --   discount price, cost price, weight
 --                  left empty. Nothing here holds them.
@@ -21,7 +24,11 @@
 
 select
   m.name                                       as "name",
-  m.description                                as "description",
+  -- Never empty: some shops refuse a row without one. An item with nothing
+  -- written about it gets its own name and where it comes from, which is
+  -- true and reads properly on a product page.
+  coalesce(nullif(trim(m.description), ''), m.name || ' from ' || r.name || '.')
+                                               as "description",
   m.price_food                                 as "price",
   ''                                           as "discount price",
   ''                                           as "quantity",
