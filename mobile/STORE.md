@@ -76,6 +76,66 @@ iOS encryption declaration: the app uses only standard HTTPS, so
 `ITSAppUsesNonExemptEncryption` is `false` and no export compliance
 paperwork is needed. It is already set in `app.json`.
 
+## What the stores require, and where it is
+
+Apple rejects on these more often than on anything else. Each one is answered
+here so nothing is discovered at submission.
+
+| Requirement | Where it is |
+|---|---|
+| **Account deletion in the app** (Apple 5.1.1(v)) | Home screen, the **You** button, then Delete my data. Deletes from inside the app, no email, no web form |
+| Privacy policy at a public URL | https://sudu.store/privacy, and linked on that same screen |
+| Privacy questionnaire / nutrition labels | The data safety table above |
+| Support URL | https://sudu.store |
+| Sign in with Apple (4.8) | Not required. It applies only to apps offering a third-party login such as Google or Facebook. Ours is a phone number and our own PIN |
+| Login required to use the app (2.1) | It is not. Anyone can browse and order without signing in. Signing in only brings back past orders |
+| In-app purchase (3.1.1) | Not required. Food delivered to a person is a real-world good, which 3.1.3(e) exempts. Payment happens by bank transfer in their own bank app |
+| Push permission not required (4.5.4) | Permission is asked only after an order is placed, and the app works fully without it |
+| Tracking permission (ATT) | Not needed. Nothing is tracked across other apps, and there is no advertising identifier |
+| Minimum functionality (4.2) | A real delivery service with a live menu, not a repackaged website |
+| Age rating | 4+ / Everyone. No user content, no ads, no gambling |
+
+### Notes to put in App Review Information
+
+Paste this into the review notes field. It answers the two things a reviewer
+will otherwise write to you about:
+
+> Sudu delivers food to students at Pan-Atlantic University in Lagos. No
+> account is needed to browse or order: a phone number and delivery block are
+> taken at checkout, the same as any delivery service.
+>
+> There is no username or password. After a first order we send a four digit
+> PIN by WhatsApp, and entering the phone number and that PIN on the My orders
+> screen brings back past orders. To test this without ordering, use phone
+> NUMBER and PIN CODE.
+>
+> Account deletion is on the home screen, under the You button, as Delete my
+> data. It deletes the person's name, phone number, delivery address and PIN
+> immediately. It is refused only while an order is still out for delivery,
+> because the delivery is labelled with their name, and the message on screen
+> says so.
+>
+> Payment is by bank transfer in the customer's own banking app. The food is a
+> physical good delivered to the customer, so in-app purchase does not apply
+> under 3.1.3(e).
+
+Replace NUMBER and PIN CODE with a real number and PIN before submitting.
+Create one by placing a small test order, then read the PIN in Admin under
+that customer. Do not use a real customer's PIN.
+
+### Account deletion, exactly what it does
+
+| Deleted outright | Kept |
+|---|---|
+| The customer record: name, phone, block, PIN | The order rows, with the name replaced by Deleted and the number by an untraceable token |
+| Any phone registered for notifications | Totals, so past sales still add up |
+| Any cart left behind | |
+| Their name and number on group orders | |
+
+The order rows have to stay: they are the record of money that changed hands.
+Nothing on them says who the person was. This is what the privacy policy
+promises, in the same words.
+
 ## Artwork in this repo
 
 | File | Used for |

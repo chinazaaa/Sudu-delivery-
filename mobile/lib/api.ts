@@ -156,6 +156,9 @@ export const api = {
       }[];
       blocked: { name: string; reason: string }[];
     }>("/again", token),
+  /** Wipes everything that says who they are. Both stores require this to be
+   *  reachable from inside the app, not only on the website. */
+  deleteMe: (token: string) => post<{ ok: boolean; orders: number }>("/delete", {}, token),
   registerPush: (pushToken: string, platform: string, token?: string | null) =>
     post<{ ok: boolean }>("/push", { token: pushToken, platform }, token),
 };

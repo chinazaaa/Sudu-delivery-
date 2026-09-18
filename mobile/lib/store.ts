@@ -173,6 +173,11 @@ export const mine = {
     await write(MINE, [id, ...ids.filter((one) => one !== id)].slice(0, 20));
     changed();
   },
+  /** Signing out, or being deleted, should leave nothing behind on the phone. */
+  async clear(): Promise<void> {
+    await write(MINE, []);
+    changed();
+  },
 };
 
 /** Re-reads whenever anything here changes, so every screen agrees. */

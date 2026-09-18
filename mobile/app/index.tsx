@@ -136,6 +136,21 @@ export default function Home() {
               Cart{items > 0 ? ` · ${items}` : ""}
             </Text>
           </Pressable>
+          {/* On the home screen rather than behind a menu: deleting your own
+              record has to be somewhere a person can actually find it. */}
+          <Pressable
+            onPress={() => router.push("/account")}
+            accessibilityLabel="Your data and privacy"
+            style={{
+              backgroundColor: T.paper,
+              borderRadius: T.radius,
+              paddingVertical: 12,
+              paddingHorizontal: 16,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ fontWeight: "800", color: T.ink }}>You</Text>
+          </Pressable>
         </View>
 
         {run && (

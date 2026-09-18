@@ -31,6 +31,7 @@ export default function Layout() {
         <Stack.Screen name="cart" options={{ title: "Your cart" }} />
         <Stack.Screen name="checkout" options={{ title: "Checkout" }} />
         <Stack.Screen name="order/[id]" options={{ title: "Your order" }} />
+        <Stack.Screen name="account" options={{ title: "Your data" }} />
       </Stack>
     </>
   );
