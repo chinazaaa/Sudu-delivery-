@@ -83,10 +83,24 @@ async function orderPage(id: string) {
         }
       />
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div
+        className={`mb-4 grid grid-cols-2 gap-3 ${
+          order.discount > 0 ? "sm:grid-cols-5" : "sm:grid-cols-4"
+        }`}
+      >
         <Stat label="Total" value={order.total} money />
         <Stat label="Food" value={order.subtotal_food} money />
         <Stat label="Delivery" value={order.fee} money />
+        {/* Only when there is one, so an ordinary order is not four fifths
+            zeroes. The code is the hint, because the amount alone does not say
+            which offer it came from. */}
+        {order.discount > 0 && (
+          <Stat
+            label="Discount"
+            value={`−${naira(order.discount)}`}
+            hint={order.coupon_code ?? "No code, taken off by hand"}
+          />
+        )}
         <Stat
           label="Status"
           value={order.status === "pending" ? "Unpaid" : order.status}

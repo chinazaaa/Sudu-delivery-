@@ -30,6 +30,10 @@ export type OrderCardData = {
   total: number;
   fee: number;
   food: number;
+  /** Taken off the total by a code, if one was typed. */
+  discount: number;
+  /** The code that took it off, so the money can be explained. */
+  couponCode: string | null;
   createdAt: string;
   paymentMethod: string;
   pin: string | null;
@@ -249,6 +253,20 @@ export default function OrderCard({
               </dt>
               <dd>{naira(order.fee)}</dd>
             </div>
+            {/* Without this the food and the delivery do not add up to the
+                total, and somebody watching the bank is looking for the wrong
+                amount. */}
+            {order.discount > 0 && (
+              <div className="flex justify-between">
+                <dt>
+                  Discount
+                  {order.couponCode && (
+                    <span className="font-semibold text-ink"> · {order.couponCode}</span>
+                  )}
+                </dt>
+                <dd className="font-semibold text-ink">−{naira(order.discount)}</dd>
+              </div>
+            )}
             <div className="flex justify-between">
               <dt>Pays by</dt>
               <dd>{order.paymentMethod === "card" ? "Card link" : "Transfer"}</dd>

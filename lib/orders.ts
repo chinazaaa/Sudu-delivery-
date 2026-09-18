@@ -629,6 +629,18 @@ async function announceOrder(args: {
         kind: "rows",
         rows: [
           { label: "Total", value: `${naira(order?.total ?? 0)} · unpaid` },
+          // The total is what lands in the bank, so a discount has to be said
+          // out loud or the number looks short.
+          ...(order && order.discount > 0
+            ? [
+                {
+                  label: "Discount",
+                  value:
+                    `−${naira(order.discount)}` +
+                    (order.coupon_code ? ` · ${order.coupon_code}` : ""),
+                },
+              ]
+            : []),
           {
             label: "Paying by",
             value: byCard ? "Card, link not sent yet" : "Bank transfer",

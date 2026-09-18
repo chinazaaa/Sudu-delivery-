@@ -31,6 +31,7 @@ export async function GET(
       food: order.subtotal_food,
       fee: order.fee,
       discount: order.discount,
+      couponCode: order.coupon_code,
       paymentMethod: order.payment_method,
       paymentLink: order.payment_link,
       narration: narration(order, order.shares),

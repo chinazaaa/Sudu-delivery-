@@ -117,7 +117,12 @@ export default function Order() {
         <View style={{ height: 1, backgroundColor: T.line, marginVertical: 4 }} />
         <Row label="Food" value={naira(order.food)} />
         <Row label="Delivery" value={naira(order.fee)} />
-        {order.discount > 0 && <Row label="Discount" value={`−${naira(order.discount)}`} />}
+        {order.discount > 0 && (
+          <Row
+            label={order.couponCode ? `Code ${order.couponCode}` : "Discount"}
+            value={`−${naira(order.discount)}`}
+          />
+        )}
         <Row label="Total" value={naira(order.total)} strong />
       </View>
 

@@ -81,6 +81,8 @@ export type OrderView = {
   food: number;
   fee: number;
   discount: number;
+  /** The code that took the discount off, when one was typed. */
+  couponCode: string | null;
   paymentMethod: string;
   paymentLink: string | null;
   narration: string;
