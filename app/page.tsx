@@ -8,10 +8,8 @@ import {
   AUTO_HEADLINE,
   AUTO_LINES,
   safeSettings,
-  sameDayPricing,
   deliveryHours,
 } from "@/lib/settings";
-import { sameDayFee } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
 import { deliverySlots } from "@/lib/same-day";
 
@@ -26,7 +24,6 @@ export default async function HomePage() {
     popularItemIds(),
     activeBands(),
   ]);
-  const sameDay = await sameDayPricing();
   const slots = settings.same_day_on === "on" ? deliverySlots(new Date(), await deliveryHours()) : [];
 
   const lines = (settings.auto_lines || AUTO_LINES)
@@ -46,7 +43,6 @@ export default async function HomePage() {
       // The soonest time we can actually hit, from the shop's clock rather
       // than the phone's, and only when same day is switched on today.
       soonest={slots[0] ?? null}
-      soonestFrom={sameDayFee(1, slots[0]?.urgent ?? false, sameDay.bands, sameDay.urgentExtra)}
     />
   );
 }

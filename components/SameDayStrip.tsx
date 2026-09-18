@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { naira } from "@/lib/money";
 import type { Slot } from "@/lib/same-day";
 
 /**
@@ -13,14 +12,7 @@ import type { Slot } from "@/lib/same-day";
  * hours to fetch food and drive it over, so the soonest is three hours out,
  * and nothing goes out after six.
  */
-export default function SameDayStrip({
-  soonest,
-  from,
-}: {
-  soonest: Slot;
-  /** The cheapest it can be, as the admin has priced it. */
-  from: number;
-}) {
+export default function SameDayStrip({ soonest }: { soonest: Slot }) {
   const hours = Math.round((new Date(soonest.at).getTime() - Date.now()) / 3_600_000);
 
   return (
@@ -34,10 +26,14 @@ export default function SameDayStrip({
       <p className="mt-0.5 text-lg font-extrabold text-ink">
         Order now, get it by {soonest.label}
       </p>
-      <p className="mt-0.5 text-sm text-ink/75">
-        {soonest.day === "today" && `About ${hours} hour${hours === 1 ? "" : "s"} away. `}
-        From <span className="font-bold">{naira(from)}</span>.
-      </p>
+      {/* No price here. The number depends on how much somebody orders, and a
+          "from" beside a time reads as the price of the time. What it costs is
+          on the checkout, against the time they actually pick. */}
+      {soonest.day === "today" && (
+        <p className="mt-0.5 text-sm text-ink/75">
+          About {hours} hour{hours === 1 ? "" : "s"} away.
+        </p>
+      )}
     </Link>
   );
 }

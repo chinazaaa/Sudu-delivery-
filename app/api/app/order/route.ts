@@ -17,6 +17,8 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     const body = (await request.json()) as {
       batchId?: string;
+      /** An ISO time when they picked one, which makes its own trip. */
+      deliverAt?: string;
       name?: string;
       phone?: string;
       hostel?: string;
@@ -36,6 +38,9 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const result = await placeOrder({
       batchId: String(body.batchId ?? ""),
+      // Same day from a phone is the same trip as from the web: placeOrder
+      // checks the time against the real clock and makes the batch itself.
+      deliverAt: String(body.deliverAt ?? "").trim() || undefined,
       name: String(body.name ?? ""),
       phone: String(body.phone ?? ""),
       hostel: String(body.hostel ?? ""),

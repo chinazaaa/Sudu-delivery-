@@ -78,6 +78,9 @@ export default function Home() {
   }, [shop, query]);
 
   const run = shop?.runs[0] ?? null;
+  // The soonest time we can actually hit. Null means the shop has picking a
+  // time switched off, and the run strip is the answer instead.
+  const soonest = shop?.sameDay?.slots[0] ?? null;
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
@@ -108,14 +111,49 @@ export default function Home() {
           </Pressable>
         )}
 
-        {run && (
+        {/* A time beats a run when there is one to offer: "by 3pm" is an
+            answer, "the afternoon run" is a thing somebody has to learn. The
+            run strip is still what a page says when there is no time left. */}
+        {soonest ? (
+          <Pressable
+            onPress={() => router.push("/checkout")}
+            style={{
+              borderWidth: 2,
+              borderColor: "rgba(255,90,31,0.3)",
+              backgroundColor: T.tint,
+              borderRadius: T.radius,
+              padding: 14,
+            }}
+          >
+            <Text
+              style={{
+                color: T.brandDark,
+                fontWeight: "800",
+                fontSize: 12,
+                letterSpacing: 0.5,
+                textTransform: "uppercase",
+              }}
+            >
+              {soonest.day === "today" ? "Want it today?" : "Past our delivery time"}
+            </Text>
+            <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink, marginTop: 2 }}>
+              Order now, get it by {soonest.label}
+            </Text>
+            {/* No price here. What it costs depends on how much somebody
+                orders, and a "from" beside a time reads as the price of the
+                time. The checkout prices it against the time they pick. */}
+            {soonest.day === "today" && (
+              <Text style={{ color: T.muted, marginTop: 2 }}>{hoursAway(soonest.at)} away.</Text>
+            )}
+          </Pressable>
+        ) : run ? (
           <View style={card()}>
             <Text style={{ fontWeight: "800", fontSize: 16, color: T.ink }}>
               {run.label} closes {clock(run.cutOffISO)}
             </Text>
             <Text style={{ color: T.muted, marginTop: 2 }}>{run.deliveryWindow}</Text>
           </View>
-        )}
+        ) : null}
 
         {error !== "" && (
           <View style={[card(), { backgroundColor: "#fff4ed" }]}>
@@ -247,6 +285,12 @@ function statusLine(order: OrderView): string {
   if (order.stage === "collected") return "Food collected, heading over";
   if (order.stage === "ordering") return "Paid. Waiting for the run to close";
   return "Paid. We are at the restaurants";
+}
+
+/** "About 3 hours", for a time somebody is deciding whether to wait for. */
+function hoursAway(iso: string): string {
+  const hours = Math.round((new Date(iso).getTime() - Date.now()) / 3_600_000);
+  return `About ${hours} hour${hours === 1 ? "" : "s"}`;
 }
 
 function clock(iso: string): string {

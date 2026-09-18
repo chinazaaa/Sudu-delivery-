@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { api, naira, type Shop } from "@/lib/api";
+import { api, naira, sameDayFeeFor, type Shop, type Slot } from "@/lib/api";
 import { cart, cartTotal, countItems, me, mine, people, useStored } from "@/lib/store";
 import { registerForPush } from "@/lib/push";
 import { T } from "@/lib/theme";
@@ -23,6 +23,9 @@ export default function Checkout() {
 
   const [shop, setShop] = useState<Shop | null>(null);
   const [runId, setRunId] = useState("");
+  /** The time they picked. Empty means they are waiting for a run. */
+  const [deliverAt, setDeliverAt] = useState("");
+  const [timesOpen, setTimesOpen] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [hostel, setHostel] = useState("");
@@ -46,10 +49,14 @@ export default function Checkout() {
 
   useEffect(() => {
     void api
-      .shop()
+      .shop(true)
       .then((next) => {
         setShop(next);
         setRunId((was) => was || next.runs[0]?.id || "");
+        // A time is the offer: somebody who opened the app because they are
+        // hungry now should not have to find it behind a second tap. Runs are
+        // still there, and cheaper, for anybody who would rather wait.
+        setDeliverAt((was) => was || next.sameDay?.slots[0]?.at || "");
       })
       .catch((problem: unknown) =>
         setError(problem instanceof Error ? problem.message : "Could not reach the shop.")
@@ -115,10 +122,16 @@ export default function Checkout() {
   const items = countItems(lines);
   const food = cartTotal(lines);
   const run = shop?.runs.find((one) => one.id === runId) ?? null;
-  // Delivery is priced on everything travelling for this number on this run,
-  // less whatever the earlier order already paid for it.
-  const fee =
-    shop && run
+
+  const slots = shop?.sameDay?.slots ?? [];
+  const picked: Slot | null = slots.find((one) => one.at === deliverAt) ?? null;
+
+  // A picked time makes its own trip, so nothing is shared and there is no
+  // earlier order on it to take off. A run is priced on everything travelling
+  // for this number on it, less whatever the earlier order already paid.
+  const fee = picked
+    ? sameDayFeeFor(items, picked.urgent, shop?.sameDay?.bands ?? [], shop?.sameDay?.urgentExtra ?? 0)
+    : shop && run
       ? Math.max(0, feeFrom(items + adding.items, shop.bands, run.flashFee) - adding.feeCharged)
       : 0;
 
@@ -128,6 +141,7 @@ export default function Checkout() {
     try {
       const result = await api.place({
         batchId: runId,
+        deliverAt: deliverAt || undefined,
         name,
         phone,
         hostel,
@@ -168,26 +182,183 @@ export default function Checkout() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60, gap: 14 }}>
-      <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
-        <Text style={{ fontWeight: "800", color: T.ink }}>Which run?</Text>
-        {shop.runs.map((one) => (
-          <Pressable
-            key={one.id}
-            onPress={() => setRunId(one.id)}
-            style={{
-              borderWidth: 1,
-              borderColor: one.id === runId ? T.brand : T.line,
-              backgroundColor: one.id === runId ? T.tint : T.paper,
-              borderRadius: 12,
-              padding: 12,
-            }}
-          >
-            <Text style={{ fontWeight: "700", color: T.ink }}>{one.label}</Text>
-            <Text style={{ color: T.muted }}>{one.deliveryWindow}</Text>
-          </Pressable>
-        ))}
-        {shop.runs.length === 0 && (
-          <Text style={{ color: T.muted }}>No run is open right now. Try again later.</Text>
+      <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 10 }}>
+        <Text style={{ fontWeight: "800", color: T.ink }}>
+          {slots.length > 0 ? "When do you want it?" : "Which run?"}
+        </Text>
+
+        {slots.length > 0 && (
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {(
+              [
+                [
+                  "today",
+                  slots[0].day === "today" ? "Today" : "Tomorrow",
+                  `from ${naira(sameDayFeeFor(1, false, shop.sameDay?.bands ?? [], 0))}`,
+                ],
+                ["run", "On a run", `from ${naira(shop.bands[0]?.fee ?? 4000)}`],
+              ] as const
+            ).map(([value, label, note]) => {
+              const on = value === "today" ? picked !== null : picked === null;
+              return (
+                <Pressable
+                  key={value}
+                  onPress={() => setDeliverAt(value === "today" ? slots[0].at : "")}
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: on ? T.brand : T.line,
+                    backgroundColor: on ? T.tint : T.paper,
+                    borderRadius: 12,
+                    padding: 12,
+                  }}
+                >
+                  <Text style={{ fontWeight: "800", color: T.ink }}>{label}</Text>
+                  <Text style={{ color: T.muted, marginTop: 2 }}>{note}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
+        {picked ? (
+          <>
+            <Text style={{ color: T.muted, fontWeight: "700" }}>What time?</Text>
+            <Pressable
+              onPress={() => setTimesOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Delivery time, ${picked.label}`}
+              style={{
+                borderWidth: 1,
+                borderColor: T.line,
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                paddingVertical: 14,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <Text style={{ flex: 1, fontSize: 16, color: T.ink }}>
+                {picked.label}
+                {picked.urgent ? " · urgent" : ""}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color={T.muted} />
+            </Pressable>
+            {/* One line. The reasons behind the times are ours, not theirs:
+                they want to know when they can eat. */}
+            <Text style={{ color: T.muted }}>
+              {slots[0].day === "tomorrow"
+                ? `Past our delivery time. Soonest is ${slots[0].label}.`
+                : picked.urgent
+                  ? "Under five hours, so this one is urgent. A later time is cheaper."
+                  : `Soonest is ${slots[0].label}.`}
+            </Text>
+
+            <Modal
+              visible={timesOpen}
+              animationType="slide"
+              transparent
+              onRequestClose={() => setTimesOpen(false)}
+            >
+              <View
+                style={{ flex: 1, backgroundColor: "rgba(20,17,15,0.45)", justifyContent: "flex-end" }}
+              >
+                <Pressable
+                  style={{ flex: 1 }}
+                  onPress={() => setTimesOpen(false)}
+                  accessibilityLabel="Close"
+                />
+                <View
+                  style={{
+                    backgroundColor: T.shell,
+                    borderTopLeftRadius: 24,
+                    borderTopRightRadius: 24,
+                    maxHeight: "70%",
+                    overflow: "hidden",
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", padding: 14, gap: 8 }}>
+                    <Text style={{ flex: 1, fontWeight: "800", fontSize: 17, color: T.ink }}>
+                      What time?
+                    </Text>
+                    <Pressable onPress={() => setTimesOpen(false)} hitSlop={8} accessibilityLabel="Close">
+                      <Ionicons name="close" size={22} color={T.ink} />
+                    </Pressable>
+                  </View>
+                  <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
+                    {slots.map((slot) => (
+                      <Pressable
+                        key={slot.at}
+                        onPress={() => {
+                          setDeliverAt(slot.at);
+                          setTimesOpen(false);
+                        }}
+                        style={{
+                          paddingHorizontal: 16,
+                          paddingVertical: 14,
+                          borderTopWidth: 1,
+                          borderTopColor: T.line,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            flex: 1,
+                            fontSize: 16,
+                            color: slot.at === deliverAt ? T.brand : T.ink,
+                            fontWeight: slot.at === deliverAt ? "800" : "400",
+                          }}
+                        >
+                          {slot.label}
+                          {slot.urgent ? " · urgent" : ""}
+                        </Text>
+                        <Text style={{ color: T.muted }}>
+                          {naira(
+                            sameDayFeeFor(
+                              items,
+                              slot.urgent,
+                              shop.sameDay?.bands ?? [],
+                              shop.sameDay?.urgentExtra ?? 0
+                            )
+                          )}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+            </Modal>
+          </>
+        ) : (
+          <>
+            {shop.runs.map((one) => (
+              <Pressable
+                key={one.id}
+                onPress={() => setRunId(one.id)}
+                style={{
+                  borderWidth: 1,
+                  borderColor: one.id === runId ? T.brand : T.line,
+                  backgroundColor: one.id === runId ? T.tint : T.paper,
+                  borderRadius: 12,
+                  padding: 12,
+                }}
+              >
+                <Text style={{ fontWeight: "700", color: T.ink }}>{one.label}</Text>
+                <Text style={{ color: T.muted }}>{one.deliveryWindow}</Text>
+              </Pressable>
+            ))}
+            {shop.runs.length === 0 && (
+              <Text style={{ color: T.muted }}>No run is open right now. Try again later.</Text>
+            )}
+            {slots.length > 0 && (
+              <Text style={{ color: T.muted }}>
+                A run is everybody&apos;s food in one car, which is why it is cheaper.
+              </Text>
+            )}
+          </>
         )}
       </View>
 
@@ -339,7 +510,7 @@ export default function Checkout() {
         ))}
       </View>
 
-      {adding.items > 0 && (
+      {adding.items > 0 && picked === null && (
         <View style={{ backgroundColor: T.tint, borderRadius: T.radius, padding: 14 }}>
           <Text style={{ fontWeight: "800", color: T.brandDark }}>
             Adding to the order you already have on this run
@@ -449,7 +620,11 @@ export default function Checkout() {
       <Pressable
         onPress={place}
         disabled={
-          busy || runId === "" || lines.length === 0 || unresolved.length > 0 || splitNotReady
+          busy ||
+          (picked === null && runId === "") ||
+          lines.length === 0 ||
+          unresolved.length > 0 ||
+          splitNotReady
         }
         style={{
           backgroundColor: busy ? "rgba(20,17,15,0.2)" : T.brand,
