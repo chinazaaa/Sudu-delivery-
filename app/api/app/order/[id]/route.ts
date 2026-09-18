@@ -36,6 +36,9 @@ export async function GET(
       paymentLink: order.payment_link,
       narration: narration(order, order.shares),
       hostel: order.hostel,
+      // What they said last time, so the app can show it already answered.
+      rating: order.rating ?? null,
+      feedback: order.feedback ?? "",
       run: {
         label: `${runDateLabel(order.batch.run_date)} · ${SLOT_LABEL[order.batch.slot]}`,
         cutOffISO: order.batch.cut_off_at,

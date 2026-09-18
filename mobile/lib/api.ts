@@ -90,6 +90,9 @@ export type OrderView = {
   paymentLink: string | null;
   narration: string;
   hostel: string;
+  /** What they said about it last time, if they have answered. */
+  rating?: number | null;
+  feedback?: string;
   run: { label: string; cutOffISO: string; window: string };
   lines: { name: string; restaurant: string; qty: number; choices: string[]; unitPrice: number }[];
   accounts: { bank: string; name: string; number: string }[];
@@ -117,6 +120,10 @@ export const api = {
       pin,
     }),
   order: (id: string) => get<OrderView>(`/order/${id}`),
+  /** How a delivered order went. The id is the credential, as it is for
+   *  reading the order: the link is what somebody was given. */
+  rate: (orderId: string, rating: number, feedback: string) =>
+    post<{ ok: boolean }>("/rate", { orderId, rating, feedback }),
   /** What this number already has on a run, so adding to it tops up the
    *  delivery rather than paying it twice. */
   adding: (batchId: string, phone: string, token?: string | null) =>

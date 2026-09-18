@@ -48,7 +48,14 @@
       "expo-font"
     ],
     "extra": {
-      "api": "https://sudu.store"
-    }
+      "api": "https://sudu.store",
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "a7ec1fff-4450-4588-8217-63b3c819849b"
+      }
+    },
+    "owner": "fateround"
   }
 }

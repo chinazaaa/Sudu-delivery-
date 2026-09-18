@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { api, naira, type OrderView } from "@/lib/api";
@@ -187,7 +187,153 @@ export default function Order() {
           </Text>
         </Pressable>
       )}
+      {/* Asked only once the food has actually arrived, and never of a
+          refunded order, exactly as the website asks it. */}
+      {(order.status === "delivered" || order.stage === "handed_out") &&
+        order.status !== "refunded" && (
+          <Rate
+            orderId={order.id}
+            rating={order.rating ?? null}
+            feedback={order.feedback ?? ""}
+            onSaved={load}
+          />
+        )}
     </ScrollView>
+  );
+}
+
+const WORDS = ["", "Bad", "Not great", "Fine", "Good", "Perfect"];
+
+/**
+ * Five stars and a line, on a delivered order.
+ *
+ * The stars are the whole question. The box underneath only opens once a star
+ * is picked, because asking somebody to write something before they have said
+ * anything is how you get no answers at all.
+ */
+function Rate({
+  orderId,
+  rating,
+  feedback,
+  onSaved,
+}: {
+  orderId: string;
+  rating: number | null;
+  feedback: string;
+  onSaved: () => void;
+}) {
+  const [chosen, setChosen] = useState(rating ?? 0);
+  const [note, setNote] = useState(feedback);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState("");
+  const [sent, setSent] = useState(false);
+
+  const answered = (rating !== null && rating > 0) || sent;
+
+  const send = async () => {
+    setBusy(true);
+    setProblem("");
+    try {
+      await api.rate(orderId, chosen, note);
+      setSent(true);
+      onSaved();
+    } catch (trouble) {
+      setProblem(trouble instanceof Error ? trouble.message : "Could not save that just now.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 10 }}>
+      <View>
+        <Text style={{ fontWeight: "800", color: T.ink }}>
+          {answered ? "Thank you" : "How was it?"}
+        </Text>
+        <Text style={{ color: T.muted, marginTop: 2 }}>
+          {answered
+            ? "Change it any time. We read every one of these."
+            : "One tap. It tells us whether to keep using a restaurant."}
+        </Text>
+      </View>
+
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Pressable
+            key={star}
+            onPress={() => {
+              setChosen(star);
+              setSent(false);
+            }}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel={`${star} out of 5`}
+            accessibilityState={{ selected: star <= chosen }}
+          >
+            <Text
+              style={{
+                fontSize: 32,
+                lineHeight: 38,
+                color: star <= chosen ? T.brand : "rgba(20,17,15,0.15)",
+              }}
+            >
+              ★
+            </Text>
+          </Pressable>
+        ))}
+        {chosen > 0 && (
+          <Text style={{ marginLeft: 6, color: T.muted, fontWeight: "700" }}>{WORDS[chosen]}</Text>
+        )}
+      </View>
+
+      {chosen > 0 && (
+        <>
+          <Text style={{ color: T.muted, fontWeight: "700" }}>
+            Anything you want to tell us? Optional
+          </Text>
+          <TextInput
+            value={note}
+            onChangeText={setNote}
+            multiline
+            maxLength={500}
+            placeholder="Cold by the time it arrived, or the wrap was perfect."
+            placeholderTextColor={T.muted}
+            style={{
+              borderWidth: 1,
+              borderColor: T.line,
+              borderRadius: 12,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              minHeight: 64,
+              fontSize: 16,
+              color: T.ink,
+              textAlignVertical: "top",
+            }}
+          />
+          <Pressable
+            onPress={send}
+            disabled={busy}
+            style={{
+              backgroundColor: busy ? "rgba(20,17,15,0.15)" : T.brand,
+              borderRadius: 999,
+              paddingVertical: 14,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: T.paper, fontWeight: "800" }}>
+              {busy ? "Sending…" : answered ? "Change my answer" : "Send"}
+            </Text>
+          </Pressable>
+        </>
+      )}
+
+      {problem !== "" && (
+        <Text style={{ color: T.brandDark, fontWeight: "700" }}>{problem}</Text>
+      )}
+      {sent && problem === "" && (
+        <Text style={{ color: T.ink, fontWeight: "700" }}>Got it. Thank you.</Text>
+      )}
+    </View>
   );
 }
 
