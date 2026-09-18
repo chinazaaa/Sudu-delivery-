@@ -9,7 +9,8 @@ export default function JoinParty({ token }: { token: string }) {
   const router = useRouter();
 
   useEffect(() => {
-    joinParty(token);
+    // Arrived on somebody else's link, which is the one thing worth knowing.
+    joinParty(token, true);
     router.replace("/?joined=1");
   }, [token, router]);
 

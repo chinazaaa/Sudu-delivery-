@@ -19,7 +19,7 @@ import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
 import CouponBox from "@/components/CouponBox";
 import { clearJoin, readJoin } from "@/components/JoinDelivery";
-import GroupLink, { leaveParty, ownsParty, readParty } from "@/components/GroupLink";
+import GroupLink, { joinedViaLink, leaveParty, readParty } from "@/components/GroupLink";
 import type { Slot } from "@/lib/same-day";
 import FillDetails from "@/components/FillDetails";
 import KeepCart from "@/components/KeepCart";
@@ -162,14 +162,15 @@ export default function Checkout({
   const [partyStarted, setPartyStarted] = useState(false);
   const [partyWhen, setPartyWhen] = useState("");
   const [partyLeader, setPartyLeader] = useState("");
-  // Whether this browser is the one that made the link. The person who starts
-  // a group picks the car; everybody else rides in what they picked.
-  const [leads, setLeads] = useState(false);
+  // Whether this browser arrived on somebody else's link. Anybody else is
+  // free to set the group up, which is what stops a lost flag from locking
+  // everyone out of their own group.
+  const [joinedLink, setJoinedLink] = useState(false);
 
   useEffect(() => {
     const token = readParty();
     setParty(token);
-    setLeads(ownsParty());
+    setJoinedLink(joinedViaLink());
     if (!token) return;
 
     let alive = true;
@@ -257,12 +258,14 @@ export default function Checkout({
   // A group picks a time like anybody else. Only somebody joining a party
   // that has already ordered cannot, because the car is already chosen.
   const offersSameDay =
-    sameDaySlots.length > 0 && !adding && !joining && (party === "" || (leads && !partyStarted));
+    sameDaySlots.length > 0 &&
+    !adding &&
+    !joining &&
+    (party === "" || (!joinedLink && !partyStarted));
 
-  // Somebody who joined cannot order until the person who started it has,
-  // because until then there is no car to ride in and picking one themselves
-  // would quietly make them the leader.
-  const waitingOnLeader = party !== "" && !leads && !partyStarted;
+  // Only somebody who actually came in on a link waits. Anybody else can set
+  // the group up, so an unknown is never a locked door.
+  const waitingOnLeader = party !== "" && joinedLink && !partyStarted;
 
   // Adding to an order, joining a friend and being in a group are all a run by
   // definition, so a default of "today" would price them wrongly and silently.

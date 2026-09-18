@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 const KEY = "sudu_party_v1";
-const OWNER = "sudu_party_owner_v1";
+const JOINED = "sudu_party_joined_v1";
 
 /** The party this browser is ordering in, if any. */
 export function readParty(): string {
@@ -14,20 +14,30 @@ export function readParty(): string {
   }
 }
 
-export function joinParty(token: string): void {
+/**
+ * Take a party token. `viaLink` is set only when somebody arrived on
+ * another person's link, never when they made one themselves.
+ *
+ * Recorded as a positive fact rather than inferred from a missing one. An
+ * earlier version marked the person who made the link instead, so a browser
+ * that had somehow lost that mark was treated as a joiner, and the one person
+ * who could set the group up was the one locked out of setting it up.
+ */
+export function joinParty(token: string, viaLink = false): void {
   try {
     window.localStorage.setItem(KEY, token);
+    if (viaLink) window.localStorage.setItem(JOINED, token);
+    else window.localStorage.removeItem(JOINED);
   } catch {
     /* Without storage they simply order alone, which still works. */
   }
 }
 
-/** Whether this browser is the one that started the party, rather than one
- *  that opened somebody else's link. The two want different words. */
-export function ownsParty(): boolean {
+/** Whether this browser arrived on somebody else's link. */
+export function joinedViaLink(): boolean {
   try {
     const token = window.localStorage.getItem(KEY);
-    return Boolean(token) && window.localStorage.getItem(OWNER) === token;
+    return Boolean(token) && window.localStorage.getItem(JOINED) === token;
   } catch {
     return false;
   }
@@ -36,7 +46,7 @@ export function ownsParty(): boolean {
 export function leaveParty(): void {
   try {
     window.localStorage.removeItem(KEY);
-    window.localStorage.removeItem(OWNER);
+    window.localStorage.removeItem(JOINED);
   } catch {
     /* Nothing to do. */
   }
@@ -60,13 +70,13 @@ export default function GroupLink({
   hideWhenJoined?: boolean;
 }) {
   const [token, setToken] = useState("");
-  const [owner, setOwner] = useState(false);
+  const [joined, setJoined] = useState(false);
   const [copied, setCopied] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     setToken(readParty());
-    setOwner(ownsParty());
+    setJoined(joinedViaLink());
     setReady(true);
   }, []);
 
@@ -78,12 +88,7 @@ export default function GroupLink({
           ? crypto.randomUUID().replace(/-/g, "").slice(0, 16)
           : String(Date.now()) + Math.random().toString(36).slice(2, 10);
       joinParty(id);
-      try {
-        window.localStorage.setItem(OWNER, id);
-      } catch {
-        /* Not knowing who started it only costs a word of wording. */
-      }
-      setOwner(true);
+      setJoined(false);
       setToken(id);
     }
 
@@ -111,7 +116,7 @@ export default function GroupLink({
   if (!ready) return null;
   // Nothing to offer somebody who joined: it is not their link, and the bar at
   // the top already says they are in a group.
-  if (token && !owner) return null;
+  if (token && joined) return null;
   if (hideWhenJoined && token) return null;
 
   if (small) {
