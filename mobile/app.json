@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Sudu",
+    "slug": "sudu",
+    "scheme": "sudu",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ff5a1f"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "store.sudu.app"
+    },
+    "android": {
+      "package": "store.sudu.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#ff5a1f"
+      }
+    },
+    "plugins": ["expo-router", "expo-notifications"],
+    "extra": {
+      "api": "https://sudu.store"
+    }
+  }
+}

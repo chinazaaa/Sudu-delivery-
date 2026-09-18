@@ -602,6 +602,19 @@ create index if not exists page_views_created_idx on page_views (created_at desc
 create index if not exists page_views_visitor_idx on page_views (visitor, created_at desc);
 alter table page_views enable row level security;
 
+-- Phones that have said yes to notifications. A token is issued by Expo and
+-- belongs to one install of the app, so the same person on two phones is two
+-- rows, and a reinstall replaces the old one.
+create table if not exists push_devices (
+  token      text primary key,
+  phone      text not null default '',
+  platform   text not null default '',
+  created_at timestamptz not null default now(),
+  last_seen  timestamptz not null default now()
+);
+create index if not exists push_devices_phone_idx on push_devices (phone);
+alter table push_devices enable row level security;
+
 -- The account already in settings becomes the first one on the list, so
 -- nothing changes for anybody the day this runs. Only into an empty table.
 insert into bank_accounts (bank_name, account_name, account_number, sort_order)

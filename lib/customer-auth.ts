@@ -68,6 +68,28 @@ export async function checkPin(phone: string, pin: string): Promise<PinResult> {
   return { ok: true };
 }
 
+/**
+ * The same signed value the cookie carries, as a bearer token for the app.
+ *
+ * A phone app has no cookie jar worth the name, so it keeps this string and
+ * sends it on every request. It is signed with the same secret, so a token
+ * cannot be forged and changing the admin password signs every phone out,
+ * exactly as it does on the web.
+ */
+export function tokenFor(phone: string): string {
+  return `${phone}.${sign(phone)}`;
+}
+
+/** The phone inside a token, or null when it has been tampered with. */
+export function phoneFromToken(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const at = value.lastIndexOf(".");
+  if (at < 1) return null;
+
+  const phone = value.slice(0, at);
+  return sameString(value.slice(at + 1), sign(phone)) ? phone : null;
+}
+
 export async function signInCustomer(phone: string): Promise<void> {
   (await cookies()).set(COOKIE, `${phone}.${sign(phone)}`, {
     httpOnly: true,

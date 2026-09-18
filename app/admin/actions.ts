@@ -12,6 +12,7 @@ import { ensureUpcomingBatches, openRunsBetween } from "@/lib/batches";
 import { fileFrom, uploadImage } from "@/lib/uploads";
 import { parseMenuText } from "@/lib/menu-import";
 import { newPin } from "@/lib/customer-auth";
+import { pushToPhone } from "@/lib/push";
 
 async function assertAdmin(): Promise<void> {
   if (!(await isSignedIn())) throw new Error("Not signed in.");
@@ -52,6 +53,29 @@ export async function markPaid(form: FormData): Promise<void> {
       payment_ref: ref || null,
     })
     .eq("id", id);
+
+  // If they have the app, tell them. Not awaited by anything that matters,
+  // and a failure here leaves the order paid all the same.
+  void (async () => {
+    try {
+      const { data } = await db()
+        .from("orders")
+        .select("customer_phone, customer_name")
+        .eq("id", id)
+        .maybeSingle();
+      const row = data as { customer_phone: string; customer_name: string } | null;
+      if (!row) return;
+
+      await pushToPhone(row.customer_phone, {
+        title: "Payment confirmed",
+        body: `Thanks ${row.customer_name.split(" ")[0]}. Your food is on this run.`,
+        path: `/o/${id}`,
+      });
+    } catch {
+      /* Nothing said is better than an order that would not save. */
+    }
+  })();
+
   revalidatePath("/admin", "layout");
 }
 
