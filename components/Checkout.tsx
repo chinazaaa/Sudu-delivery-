@@ -14,6 +14,7 @@ import {
   usePeople,
 } from "@/lib/cart";
 import { feeFor, splitFee, type Band } from "@/lib/fees";
+import { normalisePhone } from "@/lib/phone";
 import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
 import CouponBox from "@/components/CouponBox";
@@ -141,7 +142,7 @@ export default function Checkout({
     if (!shares.some((share) => share.person === person.name)) return false;
     if (!person.goesTo) return true;
     if (person.goesTo === "theirs") {
-      return person.phone.replace(/\D/g, "").length < 10 || person.hostel.trim() === "";
+      return !normalisePhone(person.phone) || person.hostel.trim() === "";
     }
     return false;
   });
@@ -338,15 +339,30 @@ export default function Checkout({
 
                       {person.goesTo === "theirs" && (
                         <div className="flex flex-wrap gap-2">
-                          <input
-                            className="field grow py-1.5 text-sm"
-                            inputMode="tel"
-                            placeholder={`${person.name}'s phone`}
-                            value={person.phone}
-                            onChange={(event) =>
-                              updatePerson(person.name, { phone: event.target.value })
-                            }
-                          />
+                          <span className="grow">
+                            <input
+                              className={`field w-full py-1.5 text-sm ${
+                                person.phone.trim() && !normalisePhone(person.phone)
+                                  ? "border-brand"
+                                  : ""
+                              }`}
+                              inputMode="tel"
+                              placeholder={`${person.name}'s phone`}
+                              value={person.phone}
+                              onChange={(event) =>
+                                updatePerson(person.name, { phone: event.target.value })
+                              }
+                            />
+                            {/* Checked as it is typed, and by the same rule as
+                                the payer's own number. A friend's bag with a
+                                wrong number on it is a bag nobody can hand
+                                over. */}
+                            {person.phone.trim() && !normalisePhone(person.phone) && (
+                              <span className="mt-1 block text-xs font-semibold text-brand">
+                                That number does not look right. 0803 123 4567.
+                              </span>
+                            )}
+                          </span>
                           {hostels.length > 0 ? (
                             <select
                               className="field grow py-1.5 text-sm"
@@ -454,7 +470,11 @@ export default function Checkout({
 
       <section className="card space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-bold">Where it goes</h2>
+          {/* In a group, the friends' details are already above, so this
+              section has to say whose it is. */}
+          <h2 className="font-bold">
+            {groupOn ? "Where your own food goes" : "Where it goes"}
+          </h2>
           <FillDetails
             phone={phone}
             onFilled={(me) => {
@@ -602,8 +622,13 @@ export default function Checkout({
         <div className="mx-auto max-w-2xl space-y-2">
           {unresolved.length > 0 && (
             <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
-              Say where {unresolved[0].name}&apos;s food goes: to your block with
-              yours, or to them with their own number.
+              {/* Name the thing that is actually missing. "Say where it goes"
+                  is unhelpful when what is wrong is a mistyped number. */}
+              {unresolved[0].goesTo !== "theirs"
+                ? `Say where ${unresolved[0].name}'s food goes: to your block with yours, or to them with their own number.`
+                : !normalisePhone(unresolved[0].phone)
+                  ? `${unresolved[0].name}'s number does not look right. It goes to them, so it has to be one that works.`
+                  : `Pick the block ${unresolved[0].name}'s food goes to.`}
             </p>
           )}
           {state.error && (
