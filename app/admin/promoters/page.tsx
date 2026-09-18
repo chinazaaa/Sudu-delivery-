@@ -37,6 +37,19 @@ export default async function PromotersAdmin() {
         </div>
       )}
 
+      {/* Commission counts every paid order, which is right for one person
+          marketing the whole shop and wrong the moment there are two: both
+          would be credited for the same sale. Said here rather than found in
+          a payout. */}
+      {promoters.length > 1 && (
+        <div className="mb-4">
+          <Diagnostic
+            title={`There are ${promoters.length} promoters, and commission is built for one`}
+            detail="Every paid order counts towards whoever is shown here, so two promoters would each be credited for the same sale. Only the first is shown below. Ask for commission to be split by customer before paying anybody."
+          />
+        </div>
+      )}
+
       {promoter && (
         <>
           <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -98,6 +98,18 @@ export type PromoterEarnings = {
  * What a promoter has earned, run by run. Commission is per paid order at that
  * promoter's own rate: an order that never got paid for never travelled, so it
  * earns nothing.
+ *
+ * Every paid order counts, not only the customers who came through them. That
+ * is deliberate while there is one promoter: one person is out marketing the
+ * whole shop, so the whole shop is theirs. It is the arrangement, not an
+ * oversight, and the admin page is built the same way.
+ *
+ * It stops being right the moment there are two. Both would be credited for
+ * every order and the same sale would be paid for twice. The answer is already
+ * in the data: `customers.promoter_code` is written on a first order and never
+ * overwritten, so orders can be attributed by matching `customer_phone` back
+ * to that column. Admin warns when a second promoter appears, so nobody finds
+ * this out from a payout.
  */
 export async function promoterEarnings(code: string): Promise<PromoterEarnings | null> {
   const { data: promoter } = await db()
