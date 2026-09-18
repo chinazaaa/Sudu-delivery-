@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Mark from "@/components/Mark";
 import { useEffect, useState } from "react";
 
 const NAV = [
@@ -17,30 +18,6 @@ const NAV = [
   { href: "/admin/promoters", label: "Promoter", icon: "☺" },
   { href: "/admin/settings", label: "Settings", icon: "⚙" },
 ];
-
-/** The bag, small. One drawing, used in the drawer and in the rail. */
-function Mark() {
-  return (
-    <svg viewBox="0 0 512 512" className="size-full" aria-hidden>
-      <rect width="512" height="512" rx="116" fill="#ff5a1f" />
-      <path d="M116 180h280l-27 248a44 44 0 0 1-44 39H187a44 44 0 0 1-44-39z" fill="#fff1ea" />
-      <path
-        d="M196 180v-26a60 60 0 0 1 120 0v26"
-        fill="none"
-        stroke="#fff1ea"
-        strokeWidth="30"
-        strokeLinecap="round"
-      />
-      <path
-        d="M316 272C316 240 202 240 202 294C202 338 316 330 316 372C316 426 202 426 202 392"
-        fill="none"
-        stroke="#ff5a1f"
-        strokeWidth="36"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 /**
  * The frame every admin page sits in: a rail on a desktop, a drawer on a

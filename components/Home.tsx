@@ -238,19 +238,22 @@ export default function Home({
                   variant="banner"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-ink/95 via-ink/60 to-ink/20" />
-                <div className="absolute inset-0 flex flex-col justify-end gap-3 p-5 pb-12 text-white sm:p-8 sm:pb-14">
-                  <h2 className="text-2xl font-extrabold leading-tight sm:text-4xl">
+                {/* Every line is clamped and the block is allowed to overflow
+                    nowhere: a long restaurant name used to push the headline
+                    out through the top of the slide and lose half of it. */}
+                <div className="absolute inset-0 flex flex-col justify-end gap-2 overflow-hidden p-4 pb-11 text-white sm:gap-3 sm:p-8 sm:pb-14">
+                  <h2 className="line-clamp-2 text-xl font-extrabold leading-tight sm:text-3xl lg:text-4xl">
                     {slide.headline}
                   </h2>
                   {slide.body && (
-                    <p className="max-w-md text-sm text-white/80 sm:text-base">
+                    <p className="line-clamp-2 max-w-md text-sm text-white/80 sm:text-base">
                       {slide.body}
                     </p>
                   )}
                   {slide.href && (
                     <Link
                       href={slide.href}
-                      className="btn w-fit bg-paper px-6 py-3 text-ink"
+                      className="btn w-fit shrink-0 bg-paper px-5 py-2.5 text-sm text-ink sm:px-6 sm:py-3 sm:text-base"
                     >
                       {slide.linkText}
                     </Link>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Mark from "./Mark";
 import { login } from "@/app/admin/actions";
 
 /** The whole screen, not a card floating in the shop's chrome. */
@@ -14,8 +15,8 @@ export default function AdminLogin() {
     <div className="fixed inset-0 z-50 grid overflow-y-auto bg-ink lg:grid-cols-2">
       <aside className="hidden flex-col justify-between bg-gradient-to-br from-brand to-brand-dark p-10 text-white lg:flex">
         <span className="flex items-center gap-2 text-lg font-extrabold">
-          <span className="grid size-10 place-items-center rounded-xl bg-white/20 text-xl font-black">
-            S
+          <span className="block size-10 overflow-hidden rounded-xl">
+            <Mark tone="light" />
           </span>
           Sudu Delivery
         </span>

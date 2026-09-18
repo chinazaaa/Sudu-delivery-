@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Mark from "./Mark";
 import { countItems, useCart } from "@/lib/cart";
 
 /**
@@ -40,8 +41,8 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
             ←
           </button>
         ) : (
-          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand text-lg font-black text-white">
-            S
+          <span className="block size-9 shrink-0 overflow-hidden rounded-xl">
+            <Mark />
           </span>
         )}
 
