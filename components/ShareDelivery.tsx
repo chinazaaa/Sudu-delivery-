@@ -24,13 +24,16 @@ export default function ShareDelivery({
   const [copied, setCopied] = useState(false);
 
   const message =
-    `I am ordering food to campus with Sudu, closing ${closes}. ` +
-    `Add yours to mine and we split one delivery fee: ${url}`;
+    `${name} is ordering food to campus with Sudu, closing ${closes}. ` +
+    `Add yours and we split one delivery fee: ${url}`;
 
   const share = async () => {
     try {
+      // Only `text`, which already ends in the link. Passing `url` as well
+      // makes the share sheet append it a second time, so the message arrives
+      // with the link in it twice.
       if (navigator.share) {
-        await navigator.share({ title: `Join ${name}'s delivery`, text: message, url });
+        await navigator.share({ text: message });
         return;
       }
       await navigator.clipboard.writeText(message);

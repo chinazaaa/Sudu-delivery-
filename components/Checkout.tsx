@@ -19,7 +19,7 @@ import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
 import CouponBox from "@/components/CouponBox";
 import { clearJoin, readJoin } from "@/components/JoinDelivery";
-import { leaveParty, readParty } from "@/components/GroupLink";
+import GroupLink, { leaveParty, readParty } from "@/components/GroupLink";
 import type { Slot } from "@/lib/same-day";
 import FillDetails from "@/components/FillDetails";
 import KeepCart from "@/components/KeepCart";
@@ -154,7 +154,6 @@ export default function Checkout({
   // Sharing a delivery, either starting one or joining one. Neither has a
   // delivery fee yet: it is split evenly when the group closes, once it is
   // known how many are in the car.
-  const [share, setShare] = useState(false);
   // A group link this browser has taken. Read on mount, because localStorage
   // does not exist while the server renders.
   const [party, setParty] = useState("");
@@ -165,7 +164,7 @@ export default function Checkout({
   // for. Empty means a run, which is one tap away and still cheaper.
   const [deliverAt, setDeliverAt] = useState(sameDaySlots[0]?.at ?? "");
   const sameDay = sameDaySlots.find((one) => one.at === deliverAt) ?? null;
-  const shared = share || joining !== null || party !== "";
+  const shared = joining !== null || party !== "";
 
   const alreadyItems = adding?.items ?? 0;
   const alreadyCharged = adding?.feeCharged ?? 0;
@@ -233,7 +232,7 @@ export default function Checkout({
     );
   }
 
-  const offersSameDay = sameDaySlots.length > 0 && !adding && !share && !joining && !party;
+  const offersSameDay = sameDaySlots.length > 0 && !adding && !joining && !party;
 
   // Those three ways of ordering are all a run by definition, so a default of
   // "today" would otherwise price them wrongly and silently.
@@ -314,7 +313,6 @@ export default function Checkout({
       <input type="hidden" name="payment_method" value={method} />
       <input type="hidden" name="collect_mode" value={collect} />
       <input type="hidden" name="join_order_id" value={joining?.id ?? ""} />
-      <input type="hidden" name="share_delivery" value={share ? "on" : ""} />
       <input type="hidden" name="party_token" value={party} />
       <input type="hidden" name="deliver_at" value={deliverAt} />
       <input type="hidden" name="people" value={JSON.stringify(people)} />
@@ -449,34 +447,20 @@ export default function Checkout({
         </div>
       )}
 
+      {/* The same one tap as the cart and the item sheet. There used to be a
+          tick box here saying "put your food in and you get a link", which is
+          the wrong way round: nobody invites their friends after they have
+          finished ordering. */}
       {!groupOn && !joining && party === "" && (
-        <section className="card space-y-3">
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              checked={share}
-              onChange={(event) => setShare(event.target.checked)}
-              className="mt-1 size-5 shrink-0 accent-brand"
-            />
-            <span>
-              <span className="block font-bold">Ordering with friends?</span>
-              <span className="mt-0.5 block text-sm text-muted">
-                Put your food in and you get a link for the group chat. Whoever adds
-                theirs in the next 15 minutes shares one delivery fee with you, split
-                evenly. Everybody pays for their own food.
-              </span>
-            </span>
-          </label>
-
-          {!share && (
-            <p className="border-t border-black/10 pt-3 text-sm text-muted">
-              Ordering <em>for</em> friends instead, and paying yourself?{" "}
-              <Link href="/cart" className="font-semibold text-brand">
-                Add their names in your cart
-              </Link>{" "}
-              and tap a name on each item.
-            </p>
-          )}
+        <section className="space-y-3">
+          <GroupLink />
+          <p className="px-1 text-sm text-muted">
+            Ordering <em>for</em> friends instead, and paying yourself?{" "}
+            <Link href="/cart" className="font-semibold text-brand">
+              Add their names in your cart
+            </Link>{" "}
+            and tap a name on each item.
+          </p>
         </section>
       )}
 

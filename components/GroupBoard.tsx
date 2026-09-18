@@ -77,7 +77,10 @@ export default function GroupBoard({
       `Ordering food to campus with ${leaderName}. Add yours and we split one ` +
       `delivery fee: ${shareUrl}`;
     try {
-      if (navigator.share) await navigator.share({ text, url: shareUrl });
+      // Only `text`, which already ends in the link. Passing `url` as well
+      // makes the share sheet append it a second time, so the message arrives
+      // with the link in it twice.
+      if (navigator.share) await navigator.share({ text });
       else await navigator.clipboard.writeText(text);
     } catch {
       /* Share sheet closed. */

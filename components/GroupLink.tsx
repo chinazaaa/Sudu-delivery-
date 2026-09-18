@@ -60,8 +60,11 @@ export default function GroupLink({ small = false }: { small?: boolean }) {
     const text = `Ordering food to campus with Sudu. Add yours to mine and we split one delivery fee: ${url}`;
 
     try {
+      // Only `text`, which already ends in the link. Passing `url` as well
+      // makes the share sheet append it a second time, so the message arrives
+      // with the link in it twice.
       if (navigator.share) {
-        await navigator.share({ text, url });
+        await navigator.share({ text });
         return;
       }
       await navigator.clipboard.writeText(text);
