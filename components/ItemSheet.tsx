@@ -1,6 +1,6 @@
 "use client";
 
-import GroupLink from "./GroupLink";
+import GroupLink, { readParty } from "./GroupLink";
 
 import { useEffect, useState } from "react";
 import Thumb from "./Thumb";
@@ -21,6 +21,11 @@ export default function ItemSheet({
   restaurant: { id: string; name: string };
   onClose: () => void;
 }) {
+  // Somebody in a group is ordering their own food, so naming bags and
+  // offering a link they already have is two things they do not need.
+  const [inParty, setInParty] = useState(false);
+  useEffect(() => setInParty(readParty() !== ""), []);
+
   const { people, active } = usePeople();
   const [picked, setPicked] = useState<Record<string, string[]>>({});
   const [qty, setQty] = useState(1);
@@ -135,6 +140,7 @@ export default function ItemSheet({
             </fieldset>
           ))}
 
+          {!inParty && (
           <div className="card space-y-2">
             <p className="font-bold">Who is this for?</p>
             <div className="flex flex-wrap gap-2">
@@ -219,6 +225,7 @@ export default function ItemSheet({
               one delivery with you.
             </p>
           </div>
+          )}
         </div>
 
         <div className="flex items-center gap-3 border-t border-black/5 bg-paper p-4">

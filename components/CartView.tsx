@@ -1,10 +1,10 @@
 "use client";
 
-import GroupLink from "./GroupLink";
+import GroupLink, { readParty } from "./GroupLink";
 
 import Link from "next/link";
 import Empty from "@/components/Empty";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Thumb from "./Thumb";
 import {
   addPerson,
@@ -26,6 +26,12 @@ export default function CartView({
 }: {
   restaurants?: { id: string; name: string }[];
 }) {
+  // In somebody's group already, ordering for friends as well is two group
+  // ideas at once and nobody untangles them. The bar at the top says which
+  // one is happening.
+  const [inParty, setInParty] = useState(false);
+  useEffect(() => setInParty(readParty() !== ""), []);
+
   const cart = useCart();
   const { people } = usePeople();
   const [newPerson, setNewPerson] = useState("");
@@ -55,6 +61,7 @@ export default function CartView({
           bar at the top says so and this would only repeat it. */}
       <GroupLink />
 
+      {!inParty && (
       <section className="card space-y-3">
         <div className="flex items-start justify-between gap-3">
           <h2 className="font-bold">
@@ -119,6 +126,7 @@ export default function CartView({
           </span>
         </div>
       </section>
+      )}
 
 
       {groups.map((group) => (

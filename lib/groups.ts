@@ -1,6 +1,6 @@
 import { db } from "./supabase";
-import { evenShare, feeFor, splitFee } from "./fees";
-import { activeBands } from "./settings";
+import { evenShare, feeFor, isUrgent, sameDayFee, splitFee } from "./fees";
+import { activeBands, sameDayPricing } from "./settings";
 import type { Batch, Order, OrderGroup } from "./types";
 
 /**
@@ -114,6 +114,24 @@ export async function groupOrders(groupId: string): Promise<Order[]> {
   return (data ?? []) as Order[];
 }
 
+/**
+ * One car at a time somebody chose, split between the people in it.
+ *
+ * Rounded up to the nearest hundred for the same reason the run split is: a
+ * share of 2,166 is a number nobody wants to type into a banking app, and
+ * rounding down would leave the shop short of what the trip costs.
+ */
+async function evenSameDayShare(
+  items: number,
+  people: number,
+  deliverAt: string | null
+): Promise<number> {
+  const { bands, urgentExtra } = await sameDayPricing();
+  const urgent = deliverAt ? isUrgent(new Date(deliverAt)) : false;
+  const whole = sameDayFee(items, urgent, bands, urgentExtra);
+  return people < 1 ? whole : Math.ceil(whole / people / 100) * 100;
+}
+
 export type CloseResult =
   | { ok: true; share: number; people: number; items: number; alreadyClosed: boolean }
   | { ok: false; error: string };
@@ -157,16 +175,26 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
 
   const { data: batch } = await db()
     .from("batches")
-    .select("flash_fee")
+    .select("flash_fee, kind, deliver_at")
     .eq("id", group.batch_id)
     .maybeSingle();
 
-  const share = evenShare(
-    carried,
-    orders.length,
-    (batch?.flash_fee as number | null) ?? null,
-    await activeBands()
-  );
+  // A group that picked a time is a car to themselves at a time of their
+  // choosing, so it is priced off that ladder and not the run one. Split
+  // evenly either way, which is the deal they all agreed to.
+  const sameDay = batch?.kind === "same_day";
+  const share = sameDay
+    ? await evenSameDayShare(
+        carried,
+        orders.length,
+        (batch?.deliver_at as string | null) ?? null
+      )
+    : evenShare(
+        carried,
+        orders.length,
+        (batch?.flash_fee as number | null) ?? null,
+        await activeBands()
+      );
 
   // Claim the close first. Two callers arriving together, the leader and the
   // clock, must not both go on to write fees.
@@ -292,6 +320,19 @@ export async function openGroupFor(orderId: string): Promise<SharedGroup | null>
  * that safe when two friends check out in the same second: one insert wins,
  * the other comes back and reads what the winner made.
  */
+/** A party that already exists, without making one. */
+export async function existingParty(token: string): Promise<SharedGroup | null> {
+  const { data } = await db()
+    .from("order_groups")
+    .select("*")
+    .eq("party_token", token)
+    .maybeSingle();
+
+  const group = (data as SharedGroup) ?? null;
+  // A closed party has been priced and everybody told. Nobody else gets in.
+  return group && !group.closed_at ? group : null;
+}
+
 export async function groupForParty(args: {
   token: string;
   batch: Batch;

@@ -1,5 +1,5 @@
 import { db } from "./supabase";
-import { groupForParty, openGroupFor, startSharedGroup } from "./groups";
+import { existingParty, groupForParty, openGroupFor, startSharedGroup } from "./groups";
 import { feeFor, sameDayFee, splitFee, type Band } from "./fees";
 import { activeBands, deliveryHours, safeSettings, sameDayPricing } from "./settings";
 import {
@@ -128,12 +128,22 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   const sameDay = input.deliverAt ? await checkSameDay(input.deliverAt) : null;
   if (sameDay && "error" in sameDay) return { ok: false, error: sameDay.error };
 
-  const batch = sameDay
-    ? await createSameDayBatch({ deliverAt: sameDay.slot.at, label: `Today, ${sameDay.slot.label}` })
-    : await getBatch(input.batchId);
+  // A party that is already going has a car. Whoever ordered first chose it,
+  // for a time or for a run, and everybody after rides in that one: letting a
+  // joiner pick their own would be two cars, which is not sharing a delivery.
+  const party = input.partyToken ? await existingParty(input.partyToken) : null;
+
+  const batch = party
+    ? await getBatch(party.batch_id)
+    : sameDay
+      ? await createSameDayBatch({
+          deliverAt: sameDay.slot.at,
+          label: sameDay.slot.day === "today" ? `Today, ${sameDay.slot.label}` : sameDay.slot.label,
+        })
+      : await getBatch(input.batchId);
 
   if (!batch) return { ok: false, error: "That batch no longer exists." };
-  if (!sameDay && !isOrderable(batch)) {
+  if (!sameDay && !party && !isOrderable(batch)) {
     return { ok: false, error: "That batch has closed. Pick the next one." };
   }
 
@@ -178,10 +188,14 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // A shared delivery, either joined or started here. Everybody in one waits
   // for it to close before they have a delivery fee at all, because the fee
   // depends on who else turns up and what they order between them.
-  const sharedGroupId = sameDay
-    ? null
-    : input.partyToken
-      ? (await groupForParty({ token: input.partyToken, batch, phone, name, hostel }))?.id ?? null
+  // A group can pick a time like anybody else. The fee waits for the close
+  // either way, and is split evenly off whichever ladder its car belongs to.
+  const sharedGroupId = input.partyToken
+    ? party?.id ??
+      (await groupForParty({ token: input.partyToken, batch, phone, name, hostel }))?.id ??
+      null
+    : sameDay
+      ? null
       : joinRootId
         ? (await openGroupFor(joinRootId))?.id ?? null
         : input.shareDelivery && input.groupMode !== "split"
@@ -212,7 +226,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           coupon: coupon?.ok ? coupon : null,
           joinRootId: sameDay ? null : joinRootId,
           sharedGroupId,
-          sameDayFee: sameDay
+          sameDayFee: sameDay && !input.partyToken
             ? sameDayFee(
                 countItems(priced.lines),
                 sameDay.slot.urgent,

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 const KEY = "sudu_party_v1";
+const OWNER = "sudu_party_owner_v1";
 
 /** The party this browser is ordering in, if any. */
 export function readParty(): string {
@@ -21,9 +22,21 @@ export function joinParty(token: string): void {
   }
 }
 
+/** Whether this browser is the one that started the party, rather than one
+ *  that opened somebody else's link. The two want different words. */
+export function ownsParty(): boolean {
+  try {
+    const token = window.localStorage.getItem(KEY);
+    return Boolean(token) && window.localStorage.getItem(OWNER) === token;
+  } catch {
+    return false;
+  }
+}
+
 export function leaveParty(): void {
   try {
     window.localStorage.removeItem(KEY);
+    window.localStorage.removeItem(OWNER);
   } catch {
     /* Nothing to do. */
   }
@@ -47,11 +60,13 @@ export default function GroupLink({
   hideWhenJoined?: boolean;
 }) {
   const [token, setToken] = useState("");
+  const [owner, setOwner] = useState(false);
   const [copied, setCopied] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     setToken(readParty());
+    setOwner(ownsParty());
     setReady(true);
   }, []);
 
@@ -63,6 +78,12 @@ export default function GroupLink({
           ? crypto.randomUUID().replace(/-/g, "").slice(0, 16)
           : String(Date.now()) + Math.random().toString(36).slice(2, 10);
       joinParty(id);
+      try {
+        window.localStorage.setItem(OWNER, id);
+      } catch {
+        /* Not knowing who started it only costs a word of wording. */
+      }
+      setOwner(true);
       setToken(id);
     }
 
@@ -87,7 +108,11 @@ export default function GroupLink({
 
   // Rendered only once the browser has been read, so it cannot flash the
   // wrong wording on the way in.
-  if (!ready || (hideWhenJoined && token)) return null;
+  if (!ready) return null;
+  // Nothing to offer somebody who joined: it is not their link, and the bar at
+  // the top already says they are in a group.
+  if (token && !owner) return null;
+  if (hideWhenJoined && token) return null;
 
   if (small) {
     return (

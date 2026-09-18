@@ -19,7 +19,7 @@ import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
 import CouponBox from "@/components/CouponBox";
 import { clearJoin, readJoin } from "@/components/JoinDelivery";
-import GroupLink, { leaveParty, readParty } from "@/components/GroupLink";
+import GroupLink, { leaveParty, ownsParty, readParty } from "@/components/GroupLink";
 import type { Slot } from "@/lib/same-day";
 import FillDetails from "@/components/FillDetails";
 import KeepCart from "@/components/KeepCart";
@@ -157,7 +157,37 @@ export default function Checkout({
   // A group link this browser has taken. Read on mount, because localStorage
   // does not exist while the server renders.
   const [party, setParty] = useState("");
-  useEffect(() => setParty(readParty()), []);
+  // Once somebody in the party has ordered, the car is theirs and everybody
+  // else rides in it rather than choosing again.
+  const [partyStarted, setPartyStarted] = useState(false);
+  const [partyWhen, setPartyWhen] = useState("");
+  const [partyLeader, setPartyLeader] = useState("");
+  // Whether this browser is the one that made the link. The person who starts
+  // a group picks the car; everybody else rides in what they picked.
+  const [leads, setLeads] = useState(false);
+
+  useEffect(() => {
+    const token = readParty();
+    setParty(token);
+    setLeads(ownsParty());
+    if (!token) return;
+
+    let alive = true;
+    void fetch(`/api/party/${token}`)
+      .then((response) => response.json())
+      .then((data: { started?: boolean; when?: string; leader?: string }) => {
+        if (!alive) return;
+        setPartyStarted(Boolean(data.started));
+        setPartyWhen(data.when ?? "");
+        setPartyLeader(data.leader ?? "");
+      })
+      .catch(() => {
+        /* Not knowing only means they are offered the choice. */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
   // Same day instead of a run. Empty means they are on a run, which is the
   // cheap way and stays the default.
   // Picking a time is the default, because it is what most people are here
@@ -224,7 +254,15 @@ export default function Checkout({
     setApplied(null);
   }, [batchId, itemCount]);
 
-  const offersSameDay = sameDaySlots.length > 0 && !adding && !joining && !party;
+  // A group picks a time like anybody else. Only somebody joining a party
+  // that has already ordered cannot, because the car is already chosen.
+  const offersSameDay =
+    sameDaySlots.length > 0 && !adding && !joining && (party === "" || (leads && !partyStarted));
+
+  // Somebody who joined cannot order until the person who started it has,
+  // because until then there is no car to ride in and picking one themselves
+  // would quietly make them the leader.
+  const waitingOnLeader = party !== "" && !leads && !partyStarted;
 
   // Adding to an order, joining a friend and being in a group are all a run by
   // definition, so a default of "today" would price them wrongly and silently.
@@ -438,12 +476,18 @@ export default function Checkout({
             Your food goes in the same car as theirs. You pay for your own food, and
             the delivery is split evenly once everybody is done.
           </p>
-          {/* Said rather than silently done: the time picker is missing here on
-              purpose, because a group is one car and one car is a run. */}
-          <p className="mt-1 text-sm text-ink/80">
-            A group goes on a run, so everybody travels together. Picking your own
-            time is a car to yourself, which is the opposite of sharing one.
-          </p>
+          {partyStarted && partyWhen !== "" && (
+            <p className="mt-1 text-sm font-semibold text-brand-dark">
+              Arriving {partyWhen}
+              {partyLeader ? `, as ${partyLeader} chose` : ""}.
+            </p>
+          )}
+          {waitingOnLeader && (
+            <p className="mt-1 text-sm font-semibold text-brand-dark">
+              Waiting for whoever started this to pick the time. Your food is ready to
+              go in the moment they do.
+            </p>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -875,9 +919,13 @@ export default function Checkout({
           <button
             type="submit"
             className="btn-primary w-full py-4 text-base"
-            disabled={pending || !batchId || !splitReady || unresolved.length > 0}
+            disabled={
+              pending || !batchId || !splitReady || unresolved.length > 0 || waitingOnLeader
+            }
           >
-            {pending
+            {waitingOnLeader
+              ? "Waiting for the group to be set up"
+              : pending
               ? "Placing…"
               : shared
                 ? "Put my food in"

@@ -22,14 +22,22 @@ export async function GET(
   try {
     const { data } = await db()
       .from("order_groups")
-      .select("id, leader_name, closes_at, closed_at")
+      .select("id, leader_name, closes_at, closed_at, batch_id")
       .eq("party_token", (await params).token)
       .maybeSingle();
 
     if (!data) return NextResponse.json({ started: false });
 
     const orders = await groupOrders(data.id as string);
+    const { data: batch } = await db()
+      .from("batches")
+      .select("delivery_window_text, kind")
+      .eq("id", data.batch_id as string)
+      .maybeSingle();
+
     return NextResponse.json({
+      when: (batch?.delivery_window_text as string) ?? "",
+      sameDay: batch?.kind === "same_day",
       started: true,
       id: data.id,
       leader: String(data.leader_name ?? "").split(" ")[0],
