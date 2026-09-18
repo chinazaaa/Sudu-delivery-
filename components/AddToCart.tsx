@@ -140,7 +140,7 @@ export default function AddToCart({
           <span>
             {added} in your cart{active ? ` for ${active}` : ""}
           </span>
-          <Link href="/checkout" className="underline">
+          <Link href="/cart" className="underline">
             View cart
           </Link>
         </p>
