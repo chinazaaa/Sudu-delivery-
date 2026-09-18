@@ -612,6 +612,10 @@ create table if not exists push_devices (
   token      text primary key,
   phone      text not null default '',
   platform   text not null default '',
+  -- Deals, delivery offers and discount codes. On until somebody says
+  -- otherwise; news about an order already paid for is not covered by it,
+  -- because a phone that goes quiet about food on its way is a complaint.
+  deals      boolean not null default true,
   created_at timestamptz not null default now(),
   last_seen  timestamptz not null default now()
 );

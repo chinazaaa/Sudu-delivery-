@@ -1,6 +1,8 @@
-import { Stack } from "expo-router";
+import { useEffect } from "react";
+import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as Notifications from "expo-notifications";
+import { landingFor } from "@/lib/landing";
 import { T } from "@/lib/theme";
 
 // A notification that lands while somebody is looking at the app should still
@@ -22,6 +24,22 @@ Notifications.setNotificationHandler({
 export const unstable_settings = { initialRouteName: "(tabs)" };
 
 export default function Layout() {
+  const router = useRouter();
+
+  // A notification that goes nowhere is a notification nobody taps twice. The
+  // shop puts a path on the message; this is what follows it, both while the
+  // app is open and when tapping it is what opened the app.
+  useEffect(() => {
+    const go = (response: Notifications.NotificationResponse | null) => {
+      const path = landingFor(response?.notification.request.content.data?.path);
+      if (path) router.push(path as never);
+    };
+
+    void Notifications.getLastNotificationResponseAsync().then(go);
+    const listener = Notifications.addNotificationResponseReceivedListener(go);
+    return () => listener.remove();
+  }, [router]);
+
   return (
     <>
       <StatusBar style="dark" />

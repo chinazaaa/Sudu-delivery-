@@ -388,5 +388,9 @@ alter table order_groups add column if not exists party_token text;
 create unique index if not exists order_groups_party_idx
   on order_groups (party_token) where party_token is not null;
 
+-- Whether this phone wants to hear about deals. Order news is not optional:
+-- it is about food somebody has already paid for.
+alter table push_devices add column if not exists deals boolean not null default true;
+
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';

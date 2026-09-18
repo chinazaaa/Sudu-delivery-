@@ -9,6 +9,23 @@ import { api } from "./api";
  * Asked once, after somebody has actually ordered something, because a
  * permission box on the first screen is the fastest way to be told no.
  */
+/**
+ * This phone's Expo token, when it has already been allowed to notify.
+ *
+ * Asks for nothing: a permission box that opens because somebody looked at a
+ * settings screen is the same ambush as one on the first screen.
+ */
+export async function pushTokenIfAllowed(): Promise<string | null> {
+  try {
+    if (!Device.isDevice) return null;
+    const existing = await Notifications.getPermissionsAsync();
+    if (!existing.granted) return null;
+    return (await Notifications.getExpoPushTokenAsync()).data;
+  } catch {
+    return null;
+  }
+}
+
 export async function registerForPush(token: string | null): Promise<void> {
   try {
     if (!Device.isDevice) return;

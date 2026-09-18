@@ -202,6 +202,11 @@ export const api = {
   /** Wipes everything that says who they are. Both stores require this to be
    *  reachable from inside the app, not only on the website. */
   deleteMe: (token: string) => post<{ ok: boolean; orders: number }>("/delete", {}, token),
+  /** Whether this phone wants to hear about deals. Keyed on the push token,
+   *  so somebody who has never ordered still has a switch. */
+  prefs: (pushToken: string) => get<{ deals: boolean }>(`/prefs?token=${encodeURIComponent(pushToken)}`),
+  setPrefs: (pushToken: string, deals: boolean) =>
+    post<{ ok: boolean }>("/prefs", { token: pushToken, deals }),
   registerPush: (pushToken: string, platform: string, token?: string | null) =>
     post<{ ok: boolean }>("/push", { token: pushToken, platform }, token),
 };
