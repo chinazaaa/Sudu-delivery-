@@ -138,6 +138,8 @@ export type OrderGroup = {
   closed_at: string | null;
   /** Who pays for everybody, when the group decided one person does. */
   payer_phone: string | null;
+  /** The token from the link this party was started with. */
+  party_token: string | null;
   created_at: string;
 };
 

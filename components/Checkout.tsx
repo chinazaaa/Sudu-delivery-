@@ -19,6 +19,7 @@ import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
 import CouponBox from "@/components/CouponBox";
 import { clearJoin, readJoin } from "@/components/JoinDelivery";
+import { leaveParty, readParty } from "@/components/GroupLink";
 import type { Slot } from "@/lib/same-day";
 import FillDetails from "@/components/FillDetails";
 import KeepCart from "@/components/KeepCart";
@@ -154,13 +155,17 @@ export default function Checkout({
   // delivery fee yet: it is split evenly when the group closes, once it is
   // known how many are in the car.
   const [share, setShare] = useState(false);
+  // A group link this browser has taken. Read on mount, because localStorage
+  // does not exist while the server renders.
+  const [party, setParty] = useState("");
+  useEffect(() => setParty(readParty()), []);
   // Same day instead of a run. Empty means they are on a run, which is the
   // cheap way and stays the default.
   // Picking a time is the default, because it is what most people are here
   // for. Empty means a run, which is one tap away and still cheaper.
   const [deliverAt, setDeliverAt] = useState(sameDaySlots[0]?.at ?? "");
   const sameDay = sameDaySlots.find((one) => one.at === deliverAt) ?? null;
-  const shared = share || joining !== null;
+  const shared = share || joining !== null || party !== "";
 
   const alreadyItems = adding?.items ?? 0;
   const alreadyCharged = adding?.feeCharged ?? 0;
@@ -228,7 +233,7 @@ export default function Checkout({
     );
   }
 
-  const offersSameDay = sameDaySlots.length > 0 && !adding && !share && !joining;
+  const offersSameDay = sameDaySlots.length > 0 && !adding && !share && !joining && !party;
 
   // Those three ways of ordering are all a run by definition, so a default of
   // "today" would otherwise price them wrongly and silently.
@@ -310,6 +315,7 @@ export default function Checkout({
       <input type="hidden" name="collect_mode" value={collect} />
       <input type="hidden" name="join_order_id" value={joining?.id ?? ""} />
       <input type="hidden" name="share_delivery" value={share ? "on" : ""} />
+      <input type="hidden" name="party_token" value={party} />
       <input type="hidden" name="deliver_at" value={deliverAt} />
       <input type="hidden" name="people" value={JSON.stringify(people)} />
 
@@ -423,7 +429,27 @@ export default function Checkout({
       {/* Two different situations, and people get them mixed up if you only
           offer one. Ordering FOR friends is one cart you pay for. Ordering
           WITH friends is everybody buying their own food out of one car. */}
-      {!groupOn && !joining && (
+      {party !== "" && (
+        <div className="rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-3">
+          <p className="font-bold text-brand-dark">Ordering with your group</p>
+          <p className="mt-0.5 text-sm text-ink/80">
+            Your food goes in the same car as theirs. You pay for your own food, and
+            the delivery is split evenly once everybody is done.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              leaveParty();
+              setParty("");
+            }}
+            className="mt-2 text-xs font-semibold text-brand-dark underline"
+          >
+            Order on my own instead
+          </button>
+        </div>
+      )}
+
+      {!groupOn && !joining && party === "" && (
         <section className="card space-y-3">
           <label className="flex cursor-pointer items-start gap-3">
             <input

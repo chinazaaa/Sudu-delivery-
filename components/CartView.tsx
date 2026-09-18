@@ -1,5 +1,7 @@
 "use client";
 
+import GroupLink from "./GroupLink";
+
 import Link from "next/link";
 import Empty from "@/components/Empty";
 import { useState } from "react";
@@ -48,10 +50,14 @@ export default function CartView({
     <div className="space-y-5 pb-36">
       <h1 className="text-2xl font-extrabold">Your cart</h1>
 
+      {/* Before anything else, because it costs nothing to send and it is what
+          makes the delivery cheaper for all of them. */}
+      <GroupLink />
+
       <section className="card space-y-3">
         <div className="flex items-start justify-between gap-3">
           <h2 className="font-bold">
-            {people.length > 0 ? "People in this order" : "Ordering for friends?"}
+            {people.length > 0 ? "People in this order" : "Ordering for them, and paying?"}
           </h2>
           {people.length > 0 && (
             <button

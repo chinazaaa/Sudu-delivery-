@@ -1,5 +1,7 @@
 "use client";
 
+import GroupLink from "./GroupLink";
+
 import { useEffect, useState } from "react";
 import Thumb from "./Thumb";
 import { addLine, addPerson, setActivePerson, usePeople } from "@/lib/cart";
@@ -207,9 +209,14 @@ export default function ItemSheet({
                   + A friend
                 </button>
               )}
+              {/* The other kind of together: they order their own food on
+                  their own phone and it rides in the same car. One tap, no
+                  form, because the link is the whole point. */}
+              <GroupLink small />
             </div>
             <p className="text-xs text-muted">
-              Bags are labelled with these names on delivery.
+              Names label the bags. The link lets friends order their own and split
+              one delivery with you.
             </p>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { db } from "./supabase";
-import { openGroupFor, startSharedGroup } from "./groups";
+import { groupForParty, openGroupFor, startSharedGroup } from "./groups";
 import { feeFor, sameDayFee, splitFee, type Band } from "./fees";
 import { activeBands, deliveryHours, safeSettings, sameDayPricing } from "./settings";
 import {
@@ -58,6 +58,9 @@ export type PlaceOrderInput = {
   /** Start a shared delivery that friends can add to for the next fifteen
    *  minutes. Nobody in one has a delivery fee until it closes. */
   shareDelivery?: boolean;
+  /** The token from a group link. Whoever orders first under it makes the
+   *  group; everybody after joins it. */
+  partyToken?: string;
   /** Same day instead of a run: the instant they asked for it to land. A car
    *  goes out for this order alone, priced on the same day ladder. */
   deliverAt?: string;
@@ -177,11 +180,13 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // depends on who else turns up and what they order between them.
   const sharedGroupId = sameDay
     ? null
-    : joinRootId
-    ? (await openGroupFor(joinRootId))?.id ?? null
-    : input.shareDelivery && input.groupMode !== "split"
-      ? await startSharedGroup({ batch, phone, name, hostel })
-      : null;
+    : input.partyToken
+      ? (await groupForParty({ token: input.partyToken, batch, phone, name, hostel }))?.id ?? null
+      : joinRootId
+        ? (await openGroupFor(joinRootId))?.id ?? null
+        : input.shareDelivery && input.groupMode !== "split"
+          ? await startSharedGroup({ batch, phone, name, hostel })
+          : null;
 
   const result =
     input.groupMode === "split"

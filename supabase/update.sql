@@ -373,5 +373,20 @@ alter table settings add column if not exists same_day_urgent_extra text not nul
 alter table settings add column if not exists same_day_first_hour text not null default '';
 alter table settings add column if not exists same_day_last_hour  text not null default '';
 
+-- The token behind a group link.
+--
+-- A link has to exist the moment somebody thinks of sharing it, before they
+-- have typed a name or picked a run, so it cannot hang off an order. It is a
+-- random string made in the browser: the first person in the party to check
+-- out creates the group under it, and everybody else who checked out with the
+-- same token lands in that same group.
+--
+-- Unique, so two friends checking out in the same second cannot each make
+-- their own group and end up in separate cars. Only ever set on a group
+-- started from a link, which is why the index skips the nulls.
+alter table order_groups add column if not exists party_token text;
+create unique index if not exists order_groups_party_idx
+  on order_groups (party_token) where party_token is not null;
+
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';

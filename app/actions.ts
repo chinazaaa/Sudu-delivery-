@@ -55,6 +55,7 @@ export async function submitOrder(
     customerNote: String(form.get("customer_note") ?? "").trim().slice(0, 300),
     joinOrderId: String(form.get("join_order_id") ?? "") || undefined,
     shareDelivery: String(form.get("share_delivery") ?? "") === "on",
+    partyToken: String(form.get("party_token") ?? "") || undefined,
     deliverAt: String(form.get("deliver_at") ?? "") || undefined,
   });
 
