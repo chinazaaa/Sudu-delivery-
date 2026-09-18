@@ -1,5 +1,5 @@
 import { db } from "./supabase";
-import { feeFor, splitFee } from "./fees";
+import { evenShare, feeFor, splitFee } from "./fees";
 import { activeBands } from "./settings";
 import type { Batch, Order, OrderGroup } from "./types";
 
@@ -42,12 +42,16 @@ async function settleGroup(group: OrderGroup, batch: Batch): Promise<void> {
       .reduce((sum, row) => sum + (row.qty as number), 0);
 
   const counts = travelling.map((o) => countFor(o.id));
-  const settledFee = feeFor(
-    counts.reduce((sum, count) => sum + count, 0),
-    batch.flash_fee,
-    await activeBands()
-  );
-  const shares = splitFee(settledFee, counts);
+  const carried = counts.reduce((sum, count) => sum + count, 0);
+  const bands = await activeBands();
+
+  // A shared delivery splits evenly and has to keep splitting evenly when
+  // somebody drops out for not paying. Settling it by the proportional rule
+  // would quietly turn the deal everybody agreed to into a different one,
+  // after they had paid.
+  const shares = group.closes_at
+    ? travelling.map(() => evenShare(carried, travelling.length, batch.flash_fee, bands))
+    : splitFee(feeFor(carried, batch.flash_fee, bands), counts);
 
   for (const [index, order] of travelling.entries()) {
     const share = shares[index];
@@ -72,4 +76,152 @@ export async function refundsOwed(batchId: string): Promise<Order[]> {
     .eq("batch_id", batchId)
     .gt("refund_owed", 0);
   return (data ?? []) as Order[];
+}
+/** How long a shared delivery stays open for friends to pile into. */
+export const SHARE_MINUTES = 15;
+
+export type SharedGroup = {
+  id: string;
+  batch_id: string;
+  leader_phone: string;
+  leader_name: string;
+  mode: "one_payer" | "split";
+  payer_phone: string | null;
+  closes_at: string | null;
+  closed_at: string | null;
+};
+
+export async function getSharedGroup(id: string): Promise<SharedGroup | null> {
+  const { data } = await db().from("order_groups").select("*").eq("id", id).maybeSingle();
+  return (data as SharedGroup) ?? null;
+}
+
+/** Everybody's order in one shared delivery, newest last. */
+export async function groupOrders(groupId: string): Promise<Order[]> {
+  const { data } = await db()
+    .from("orders")
+    .select("*")
+    .eq("group_id", groupId)
+    .neq("status", "refunded")
+    .order("created_at");
+  return (data ?? []) as Order[];
+}
+
+export type CloseResult =
+  | { ok: true; share: number; people: number; items: number; alreadyClosed: boolean }
+  | { ok: false; error: string };
+
+/**
+ * Work out what everybody owes, and freeze it.
+ *
+ * Until this runs nobody in the group has a delivery fee, because it depends
+ * on how many end up in the car and how much they order between them. Closing
+ * bands the fee on the whole load, splits it evenly, and writes it onto every
+ * order at once.
+ *
+ * Safe to call twice, and it will be: the leader can close by hand at the same
+ * moment the clock runs out. A group that is already closed is left exactly as
+ * it was, because the second call must not re-price orders somebody has by
+ * then been told to pay.
+ */
+export async function closeGroup(groupId: string): Promise<CloseResult> {
+  const group = await getSharedGroup(groupId);
+  if (!group) return { ok: false, error: "That group could not be found." };
+
+  const orders = await groupOrders(groupId);
+  if (orders.length === 0) return { ok: false, error: "Nobody has ordered in that group." };
+
+  if (group.closed_at) {
+    return {
+      ok: true,
+      alreadyClosed: true,
+      share: orders[0].fee,
+      people: orders.length,
+      items: 0,
+    };
+  }
+
+  const { data: items } = await db()
+    .from("order_items")
+    .select("order_id, qty")
+    .in("order_id", orders.map((one) => one.id));
+
+  const carried = (items ?? []).reduce((sum, row) => sum + (row.qty as number), 0);
+
+  const { data: batch } = await db()
+    .from("batches")
+    .select("flash_fee")
+    .eq("id", group.batch_id)
+    .maybeSingle();
+
+  const share = evenShare(
+    carried,
+    orders.length,
+    (batch?.flash_fee as number | null) ?? null,
+    await activeBands()
+  );
+
+  // Claim the close first. Two callers arriving together, the leader and the
+  // clock, must not both go on to write fees.
+  const { data: claimed } = await db()
+    .from("order_groups")
+    .update({ closed_at: new Date().toISOString() })
+    .eq("id", groupId)
+    .is("closed_at", null)
+    .select("id");
+
+  if (!claimed || claimed.length === 0) {
+    return { ok: true, alreadyClosed: true, share: orders[0].fee, people: orders.length, items: carried };
+  }
+
+  for (const order of orders) {
+    await db()
+      .from("orders")
+      .update({
+        fee: share,
+        total: Math.max(0, order.subtotal_food + share - order.discount),
+      })
+      .eq("id", order.id)
+      // Never re-price something somebody has already paid for.
+      .eq("status", "pending");
+  }
+
+  return { ok: true, alreadyClosed: false, share, people: orders.length, items: carried };
+}
+
+/** Closes every shared delivery whose time is up. Run from a schedule. */
+export async function closeDueGroups(): Promise<number> {
+  const { data } = await db()
+    .from("order_groups")
+    .select("id")
+    .is("closed_at", null)
+    .not("closes_at", "is", null)
+    .lte("closes_at", new Date().toISOString());
+
+  let closed = 0;
+  for (const row of data ?? []) {
+    const result = await closeGroup(row.id as string);
+    if (result.ok && !result.alreadyClosed) closed += 1;
+  }
+  return closed;
+}
+
+/**
+ * One person has finished adding. When that is the last of them, the group
+ * closes there and then rather than making everybody wait out the clock.
+ */
+export async function markDone(orderId: string): Promise<CloseResult | null> {
+  const { data: order } = await db()
+    .from("orders")
+    .select("id, group_id")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (!order?.group_id) return null;
+
+  await db().from("orders").update({ done_at: new Date().toISOString() }).eq("id", orderId);
+
+  const orders = await groupOrders(order.group_id as string);
+  const everybody = orders.length > 0 && orders.every((one) => one.done_at !== null);
+  return everybody ? closeGroup(order.group_id as string) : null;
 }

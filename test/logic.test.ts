@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { groupForCounter } from "../lib/admin";
 import { normalisePhone, formatPhone } from "../lib/phone";
 import { countdown, lagosInstant, lagosToday } from "../lib/time";
-import { bandFor, feeFor, nextBand, splitFee, HEADLINE_FEE } from "../lib/fees";
+import { bandFor, evenShare, feeFor, nextBand, splitFee, HEADLINE_FEE } from "../lib/fees";
 import { sheetAsText } from "../lib/sheet-text";
 import { template, whatsappTo } from "../lib/messages";
 import { newPin } from "../lib/customer-auth";
@@ -768,4 +768,46 @@ test("whoever starts a delivery carries the most of its fee", () => {
   assert.equal(first, 4000);
   assert.equal(second, 2000);
   assert.equal(first + second, feeFor(4));
+});
+
+test("an even share is the band divided by the people, rounded to something payable", () => {
+  // Four items is a 6,000 band. Three people, so 2,000 each exactly.
+  assert.equal(evenShare(4, 3), 2000);
+  // One person in the car pays the whole band, as they would ordering alone.
+  assert.equal(evenShare(2, 1), feeFor(2));
+  // 4,000 across three is 1,333.33, which nobody wants to type. Rounded up.
+  assert.equal(evenShare(2, 3), 1400);
+});
+
+test("rounding an even share up never leaves the shop short of the band", () => {
+  for (let items = 1; items <= 40; items++) {
+    for (let people = 1; people <= 12; people++) {
+      const collected = evenShare(items, people) * people;
+      assert.ok(
+        collected >= feeFor(items),
+        `${people} people, ${items} items: collected ${collected}, band ${feeFor(items)}`
+      );
+    }
+  }
+});
+
+test("an even share is never so rounded up that it gouges anybody", () => {
+  // At most the rounding step over the true share, for everybody together.
+  for (let items = 1; items <= 40; items++) {
+    for (let people = 1; people <= 12; people++) {
+      const over = evenShare(items, people) * people - feeFor(items);
+      assert.ok(over < 100 * people, `${people} people, ${items} items: ${over} over`);
+    }
+  }
+});
+
+test("nobody in a shared delivery pays more than they would alone", () => {
+  for (let items = 2; items <= 40; items++) {
+    for (let people = 2; people <= 12; people++) {
+      assert.ok(
+        evenShare(items, people) <= feeFor(items),
+        `${people} people, ${items} items`
+      );
+    }
+  }
 });

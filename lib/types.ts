@@ -91,6 +91,8 @@ export type Order = {
   coupon_code: string | null;
   /** The order whose join link they opened, when they joined a delivery. */
   shared_with: string | null;
+  /** Set when this person said they had finished adding to a shared delivery. */
+  done_at: string | null;
   /** One to five, once the food has arrived and they have said. */
   rating: number | null;
   feedback: string;
@@ -126,6 +128,12 @@ export type OrderGroup = {
   hostel: string;
   mode: GroupMode;
   collect_mode: "leader" | "each";
+  /** Set only on a shared delivery: when it stops taking people, and when it
+   *  actually stopped. An ordinary group order has neither. */
+  closes_at: string | null;
+  closed_at: string | null;
+  /** Who pays for everybody, when the group decided one person does. */
+  payer_phone: string | null;
   created_at: string;
 };
 

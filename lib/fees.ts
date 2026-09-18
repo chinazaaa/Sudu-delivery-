@@ -130,3 +130,27 @@ export function splitFee(fee: number, counts: number[]): number[] {
   }
   return shares;
 }
+
+/**
+ * A shared delivery, split evenly and rounded to something payable.
+ *
+ * The band is set by everything in the car, then divided by however many
+ * people are in it. Rounding is up, to the nearest hundred naira, because a
+ * share of ₦3,333 is a number nobody wants to type into a banking app, and
+ * because rounding down would leave the shop short of the band it has to pay
+ * to run the car.
+ *
+ * Every share is the same. Somebody who ordered one thing pays what somebody
+ * who ordered five pays, which is the deal they agreed to when they got into
+ * the same car.
+ */
+export function evenShare(
+  items: number,
+  people: number,
+  flashFee: number | null = null,
+  bands?: Band[]
+): number {
+  if (people < 1) return 0;
+  const band = feeFor(items, flashFee, bands);
+  return Math.ceil(band / people / 100) * 100;
+}

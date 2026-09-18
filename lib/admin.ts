@@ -1,4 +1,6 @@
 import { db } from "./supabase";
+import { feeFor } from "./fees";
+import { activeBands } from "./settings";
 import { BATCH_MINIMUM } from "./config";
 import { getBatch } from "./batches";
 import { refundsOwed, settleGroupFees } from "./groups";
@@ -369,4 +371,94 @@ export async function typicalCosts(): Promise<number | null> {
 
   if (runs.length === 0) return null;
   return Math.round(runs.reduce((sum, cost) => sum + cost, 0) / runs.length);
+}
+
+export type Shortfall = {
+  groupId: string;
+  leader: string;
+  people: number;
+  paidPeople: number;
+  /** Delivery money actually in, from the ones who paid. */
+  collected: number;
+  /** What carrying only the paid food is worth at the bands. */
+  needed: number;
+  /** Positive when the money in does not cover the car. */
+  short: number;
+  unpaid: { id: string; name: string; phone: string; owed: number }[];
+};
+
+/**
+ * Shared deliveries where the money does not cover the car.
+ *
+ * Everybody in a shared delivery pays an even share of one fee. When some of
+ * them never pay, their food does not travel, but the fee for what is left
+ * does not fall as fast as the heads do, so what came in can be less than the
+ * car is worth. Nobody can be asked for more after the fact, so this is a
+ * judgement for whoever is driving: chase them, carry it and wear the
+ * difference, or refund the ones who paid and drop it.
+ *
+ * Saying the exact figure is the whole job here. A shortfall nobody sees is
+ * one that turns up later as a run that mysteriously made no money.
+ */
+export async function shortfalls(batchId: string): Promise<Shortfall[]> {
+  const { data: groups } = await db()
+    .from("order_groups")
+    .select("id, leader_name")
+    .eq("batch_id", batchId)
+    .not("closes_at", "is", null);
+
+  if (!groups || groups.length === 0) return [];
+
+  const bands = await activeBands();
+  const { data: batch } = await db()
+    .from("batches")
+    .select("flash_fee")
+    .eq("id", batchId)
+    .maybeSingle();
+
+  const out: Shortfall[] = [];
+
+  for (const group of groups) {
+    const { data: rows } = await db()
+      .from("orders")
+      .select("id, customer_name, for_name, customer_phone, fee, total, status")
+      .eq("group_id", group.id as string)
+      .neq("status", "refunded");
+
+    const orders = rows ?? [];
+    if (orders.length === 0) continue;
+
+    const paid = orders.filter((one) => one.status !== "pending");
+    const unpaid = orders.filter((one) => one.status === "pending");
+    if (unpaid.length === 0) continue;
+
+    const { data: items } = await db()
+      .from("order_items")
+      .select("order_id, qty")
+      .in("order_id", paid.map((one) => one.id as string));
+
+    const travelling = (items ?? []).reduce((sum, row) => sum + (row.qty as number), 0);
+    const collected = paid.reduce((sum, one) => sum + (one.fee as number), 0);
+    const needed = paid.length
+      ? feeFor(travelling, (batch?.flash_fee as number | null) ?? null, bands)
+      : 0;
+
+    out.push({
+      groupId: group.id as string,
+      leader: group.leader_name as string,
+      people: orders.length,
+      paidPeople: paid.length,
+      collected,
+      needed,
+      short: Math.max(0, needed - collected),
+      unpaid: unpaid.map((one) => ({
+        id: one.id as string,
+        name: (one.for_name as string) ?? (one.customer_name as string),
+        phone: one.customer_phone as string,
+        owed: one.total as number,
+      })),
+    });
+  }
+
+  return out.filter((one) => one.short > 0 || one.unpaid.length > 0);
 }

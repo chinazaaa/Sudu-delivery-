@@ -319,5 +319,30 @@ end $rating_bounds$;
 alter table orders add column if not exists shared_with uuid references orders(id) on delete set null;
 create index if not exists orders_shared_idx on orders (shared_with);
 
+-- A shared delivery that friends are still adding to.
+--
+-- `closes_at` is when it stops taking people: fifteen minutes from the moment
+-- it was started, and never past the run's own cut off. Until then nobody has
+-- a total, because the delivery fee depends on how many end up in the car and
+-- how much they order between them. `closed_at` is when it actually happened,
+-- by the leader tapping close or by the clock running out.
+--
+-- Nobody is quoted anything before the close, which is the whole point: a
+-- figure that has not been given out cannot change underneath somebody.
+alter table order_groups add column if not exists closes_at timestamptz;
+alter table order_groups add column if not exists closed_at timestamptz;
+-- Whose job it is to pay, when the group decided one person pays for all.
+alter table order_groups add column if not exists payer_phone text;
+create index if not exists order_groups_closing_idx on order_groups (closes_at)
+  where closed_at is null;
+
+-- "I have finished ordering", from one person in a shared delivery.
+--
+-- A group closes on whichever comes first: everybody in it has said they are
+-- done, the person who started it closes it by hand, or the fifteen minutes
+-- runs out. Waiting on a clock when everyone is already finished would be
+-- fifteen minutes of nobody being able to pay.
+alter table orders add column if not exists done_at timestamptz;
+
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';

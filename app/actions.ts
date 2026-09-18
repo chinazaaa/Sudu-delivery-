@@ -8,6 +8,7 @@ import { lastOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import { rememberCart } from "@/lib/carts";
 import { db } from "@/lib/supabase";
+import { closeGroup, markDone } from "@/lib/groups";
 import {
   checkPin,
   currentCustomer,
@@ -287,4 +288,24 @@ export async function rateOrder(
 
   revalidatePath(`/o/${id}`);
   return { error: null, saved: true };
+}
+
+/** "I have finished ordering." Closes the group when it was the last of them. */
+export async function finishOrdering(form: FormData): Promise<void> {
+  const id = String(form.get("order_id") ?? "");
+  if (!id) return;
+
+  const result = await markDone(id);
+  revalidatePath(`/o/${id}`);
+  if (result?.ok) revalidatePath("/g", "layout");
+}
+
+/** The leader closing it by hand, rather than waiting out the clock. */
+export async function closeSharedGroup(form: FormData): Promise<void> {
+  const id = String(form.get("group_id") ?? "");
+  if (!id) return;
+
+  await closeGroup(id);
+  revalidatePath(`/g/${id}`);
+  revalidatePath("/o", "layout");
 }
