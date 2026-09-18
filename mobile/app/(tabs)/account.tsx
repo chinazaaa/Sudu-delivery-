@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Alert, Linking, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { api } from "@/lib/api";
+import { pushTokenIfAllowed } from "@/lib/push";
 import { cart, me, mine, people, useStored } from "@/lib/store";
 import { T } from "@/lib/theme";
 
@@ -19,6 +20,40 @@ export default function Account() {
   const router = useRouter();
   const [saved] = useStored(me.read, { name: "", phone: "", hostel: "", token: null });
   const [busy, setBusy] = useState(false);
+
+  /** This phone's push token, once it has allowed notifications at all. Null
+   *  means there is nothing to offer a switch over yet. */
+  const [pushToken, setPushToken] = useState<string | null>(null);
+  const [deals, setDeals] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    void pushTokenIfAllowed().then(async (token) => {
+      if (!alive || !token) return;
+      setPushToken(token);
+      try {
+        const current = await api.prefs(token);
+        if (alive) setDeals(current.deals);
+      } catch {
+        /* Not knowing means on, which is what it already says. */
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const chooseDeals = async (next: boolean) => {
+    setDeals(next);
+    if (!pushToken) return;
+    try {
+      await api.setPrefs(pushToken, next);
+    } catch {
+      // Put the switch back rather than leave it lying about what we will send.
+      setDeals(!next);
+      Alert.alert("Could not save that", "Check your connection and try again.");
+    }
+  };
 
   const forget = async () => {
     if (!saved.token) return;
@@ -70,6 +105,39 @@ export default function Account() {
           the four digit PIN we sent on WhatsApp is how you see your own orders again.
         </Text>
       </View>
+
+      {/* Only once notifications have been allowed at all. A switch over
+          something nobody has agreed to is a box with nothing behind it. */}
+      {pushToken !== null && (
+        <View style={card}>
+          <Text style={heading}>Notifications</Text>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+              marginTop: 8,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: "700", color: T.ink }}>Deals and offers</Text>
+              <Text style={body}>
+                New deals at a restaurant, cheaper delivery, and discount codes.
+              </Text>
+            </View>
+            <Switch
+              value={deals}
+              onValueChange={chooseDeals}
+              trackColor={{ true: T.brand }}
+              accessibilityLabel="Deals and offers"
+            />
+          </View>
+          <Text style={[body, { marginTop: 10 }]}>
+            News about an order stays on either way: where your food is, and when it has
+            arrived, is not something to have to remember to switch back on.
+          </Text>
+        </View>
+      )}
 
       <View style={card}>
         <Text style={heading}>What we keep</Text>

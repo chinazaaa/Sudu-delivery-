@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { openBatches } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
 import { hostelNames } from "@/lib/hostels";
-import { activeBands, safeSettings } from "@/lib/settings";
+import { activeBands, deliveryHours, safeSettings, sameDayPricing } from "@/lib/settings";
+import { deliverySlots } from "@/lib/same-day";
+import { serialiseBands } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -27,9 +29,25 @@ export async function GET(): Promise<NextResponse> {
       hostelNames(),
     ]);
 
+    // The times somebody can actually ask for, worked out on the shop's clock
+    // rather than the phone's, exactly as the website works them out. Empty
+    // when same day is switched off, which is the app's signal to offer runs
+    // alone rather than a second way to say the same thing.
+    const pricing = await sameDayPricing();
+    const slots =
+      settings.same_day_on === "on" ? deliverySlots(new Date(), await deliveryHours()) : [];
+
     return NextResponse.json({
       menu,
       hostels,
+      sameDay: {
+        slots,
+        bands: JSON.parse(serialiseBands(pricing.bands)) as {
+          maxItems: number | null;
+          fee: number;
+        }[],
+        urgentExtra: pricing.urgentExtra,
+      },
       runs: batches.map(toBatchView),
       bands: bands.map((band) => ({
         maxItems: Number.isFinite(band.maxItems) ? band.maxItems : null,

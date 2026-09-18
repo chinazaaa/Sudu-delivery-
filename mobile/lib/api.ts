@@ -82,6 +82,16 @@ export type Run = {
   flashFee: number | null;
 };
 
+/** A time somebody can ask for, as the shop's own clock works it out. */
+export type Slot = {
+  at: string;
+  /** "12:30pm", or "12:30pm tomorrow", as it reads in the list. */
+  label: string;
+  day: "today" | "tomorrow";
+  /** Under five hours away, which costs more because the car cannot wait. */
+  urgent: boolean;
+};
+
 export type Shop = {
   menu: Place[];
   /** The blocks admin delivers to. Empty means the list is not set up, and
@@ -89,6 +99,13 @@ export type Shop = {
   hostels?: string[];
   runs: Run[];
   bands: { maxItems: number | null; fee: number }[];
+  /** Picking a time rather than waiting for a run. No slots means the shop
+   *  has it switched off, and runs are the only way. */
+  sameDay?: {
+    slots: Slot[];
+    bands: { maxItems: number | null; fee: number }[];
+    urgentExtra: number;
+  };
   shop: { tagline: string; ribbon: string; whatsapp: string };
 };
 
@@ -155,6 +172,8 @@ export const api = {
     ),
   place: (order: {
     batchId: string;
+    /** The time they picked, when they picked one instead of a run. */
+    deliverAt?: string;
     name: string;
     phone: string;
     hostel: string;
@@ -215,6 +234,11 @@ export const api = {
    *  sources list, so this only says which kind of phone it is. */
   track: (path: string, visitor: string, platform: string) =>
     beacon("/track", { path, visitor, platform }),
+  /** Whether this phone wants to hear about deals. Keyed on the push token,
+   *  so somebody who has never ordered still has a switch. */
+  prefs: (pushToken: string) => get<{ deals: boolean }>(`/prefs?token=${encodeURIComponent(pushToken)}`),
+  setPrefs: (pushToken: string, deals: boolean) =>
+    post<{ ok: boolean }>("/prefs", { token: pushToken, deals }),
   registerPush: (pushToken: string, platform: string, token?: string | null) =>
     post<{ ok: boolean }>("/push", { token: pushToken, platform }, token),
 };
@@ -227,6 +251,26 @@ export function feeFor(items: number, bands: Shop["bands"], flashFee: number | n
     ladder[ladder.length - 1];
   if (flashFee === null) return band.fee;
   return Math.max(0, flashFee + (band.fee - ladder[0].fee));
+}
+
+/**
+ * What a picked time costs: the same ladder as a run, on its own numbers, with
+ * a flat extra when it is too soon for the car to be doing anything else.
+ *
+ * The server prices the order again when it is placed, so this is only what
+ * the screen says beforehand; the two agree because the shape is the same.
+ */
+export function sameDayFeeFor(
+  items: number,
+  urgent: boolean,
+  bands: Shop["bands"],
+  urgentExtra: number
+): number {
+  const ladder = bands.length > 0 ? bands : [{ maxItems: null, fee: 6500 }];
+  const band =
+    ladder.find((step) => step.maxItems !== null && items <= step.maxItems) ??
+    ladder[ladder.length - 1];
+  return band.fee + (urgent ? urgentExtra : 0);
 }
 
 export const naira = (amount: number) => "₦" + Math.round(amount).toLocaleString("en-NG");

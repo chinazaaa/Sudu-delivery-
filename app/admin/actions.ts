@@ -12,7 +12,7 @@ import { ensureUpcomingBatches, openRunsBetween } from "@/lib/batches";
 import { fileFrom, uploadImage } from "@/lib/uploads";
 import { parseMenuText } from "@/lib/menu-import";
 import { newPin } from "@/lib/customer-auth";
-import { pushToPhone } from "@/lib/push";
+import { pushDeal, pushToPhone } from "@/lib/push";
 
 async function assertAdmin(): Promise<void> {
   if (!(await isSignedIn())) throw new Error("Not signed in.");
@@ -1482,4 +1482,43 @@ export async function deleteBankAccount(form: FormData): Promise<void> {
   if (error) throw new Error(`Could not remove that account: ${error.message}`);
   revalidatePath("/admin", "layout");
   revalidatePath("/", "layout");
+}
+
+export type DealPushState = { error: string | null; sent: number | null };
+
+/**
+ * A notification to everybody who has the app and still wants to hear from us.
+ *
+ * Where it lands matters as much as what it says: "new deal at Domino's" that
+ * opens the whole shop makes somebody do the finding themselves, which is the
+ * moment most of them stop. So the destination is picked here, and travels
+ * with the message.
+ */
+export async function sendDealPush(
+  _prev: DealPushState,
+  form: FormData
+): Promise<DealPushState> {
+  await assertAdmin();
+
+  const title = String(form.get("title") ?? "").trim().slice(0, 80);
+  const body = String(form.get("body") ?? "").trim().slice(0, 180);
+  if (title.length < 3) return { error: "Give it a title.", sent: null };
+  if (body.length < 3) return { error: "Give it a line of text.", sent: null };
+
+  const restaurant = String(form.get("restaurant") ?? "").trim();
+  const category = String(form.get("category") ?? "").trim();
+
+  // Only ever one of ours, built here rather than typed, so a stray paste
+  // cannot send everybody somewhere off the shop.
+  const path = restaurant
+    ? `/r/${restaurant}${category ? `?category=${category}` : ""}`
+    : "/";
+
+  const result = await pushDeal({ title, body, path });
+  if (result.of === 0) {
+    return { error: "No phone has the app with deals switched on yet.", sent: null };
+  }
+
+  revalidatePath("/admin/notifications");
+  return { error: null, sent: result.sent };
 }

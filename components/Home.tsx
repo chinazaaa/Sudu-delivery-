@@ -26,7 +26,6 @@ export default function Home({
   autoLines,
   bands,
   soonest,
-  soonestFrom,
 }: {
   menu: MenuView[];
   nextRun: BatchView | null;
@@ -34,8 +33,6 @@ export default function Home({
    *  the pick-a-time service is off. Worked out on the server, from the
    *  shop's clock rather than the phone's. */
   soonest: Slot | null;
-  /** What the cheapest pick-a-time delivery costs right now. */
-  soonestFrom: number;
   /** Written in admin. Empty falls back to a slide per restaurant. */
   slides: Slide[];
   /** Menu item ids, most bought first. Empty until people have ordered. */
@@ -134,7 +131,7 @@ export default function Home({
           because a page that says nothing about delivery is worse than one
           that says the wrong thing first. */}
       {soonest ? (
-        <SameDayStrip soonest={soonest} from={soonestFrom} />
+        <SameDayStrip soonest={soonest} />
       ) : nextRun ? (
         <RunStrip run={nextRun} note={feeLine} />
       ) : (

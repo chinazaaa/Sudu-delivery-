@@ -20,7 +20,13 @@ import { T } from "@/lib/theme";
 export default function Restaurant() {
   // `item` arrives when somebody tapped a search result, so the sheet for
   // that dish opens on top of its own menu rather than making them find it.
-  const { id, item: wanted } = useLocalSearchParams<{ id: string; item?: string }>();
+  // `category` arrives from a notification about a restaurant's deals, so
+  // tapping "new deal at Domino's" opens the deals rather than the whole menu.
+  const { id, item: wanted, category } = useLocalSearchParams<{
+    id: string;
+    item?: string;
+    category?: string;
+  }>();
   const navigation = useNavigation();
   const router = useRouter();
 
@@ -28,7 +34,7 @@ export default function Restaurant() {
   const [open, setOpen] = useState<Item | null>(null);
   const [query, setQuery] = useState("");
   /** Which category is being looked at. Empty means the whole menu. */
-  const [tab, setTab] = useState("");
+  const [tab, setTab] = useState(category ?? "");
   const [lines] = useStored(cart.read, []);
 
   useEffect(() => {
