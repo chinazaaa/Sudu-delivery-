@@ -101,20 +101,33 @@ export default async function AnalyticsPage({
       {views && views.perDay.length > 0 && (
         <section className="card space-y-3">
           <h2 className="font-bold">Day by day</h2>
-          <ul className="flex items-end gap-1.5">
+          {/* Bars are capped and the row is left aligned. Stretching one day
+              across the whole card drew a solid orange wall that said nothing.
+              The number sits above the bar because a hover title is no use on
+              the phone this is read on. */}
+          <ul className="flex items-end gap-2 overflow-x-auto pb-1">
             {views.perDay.map((day) => (
-              <li key={day.date} className="flex-1">
+              <li key={day.date} className="w-10 shrink-0">
+                <p className="text-center text-[11px] font-bold text-ink">{day.views}</p>
                 <div
                   title={`${day.date}: ${day.views} views, ${day.visitors} people`}
-                  className="mx-auto w-full rounded-t bg-brand"
+                  className="mx-auto mt-0.5 w-full rounded-t bg-brand"
                   style={{ height: `${Math.max(4, (day.views / busiest) * 120)}px` }}
                 />
                 <p className="mt-1 text-center text-[10px] text-muted">
-                  {day.date.slice(8)}
+                  {new Date(`${day.date}T00:00:00Z`).toLocaleDateString("en-NG", {
+                    day: "numeric",
+                    month: "short",
+                    timeZone: "UTC",
+                  })}
                 </p>
               </li>
             ))}
           </ul>
+          <p className="text-xs text-muted">
+            Views each day, busiest day at full height. One bar means one day of
+            figures so far.
+          </p>
         </section>
       )}
 
