@@ -1,3 +1,4 @@
+import { Image, Text, View } from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { cart, countItems, useStored } from "@/lib/store";
@@ -30,6 +31,18 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Sudu",
+          // The mark beside the name rather than instead of it: the bag is
+          // too small up here to be read on its own, and a shop nobody has
+          // heard of yet cannot afford to stop saying what it is called.
+          headerTitle: () => (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Image
+                source={require("@/assets/icon.png")}
+                style={{ width: 26, height: 26, borderRadius: 7 }}
+              />
+              <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink }}>Sudu</Text>
+            </View>
+          ),
           tabBarLabel: "Home",
           tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
         }}
