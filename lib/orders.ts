@@ -51,6 +51,8 @@ export type PlaceOrderInput = {
   customerNote?: string;
   /** A discount code typed at checkout. */
   coupon?: string;
+  /** The order whose join link they opened, so their food rides along with it. */
+  joinOrderId?: string;
 };
 
 export type PlaceOrderResult =
@@ -115,6 +117,15 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   const paymentMethod = input.paymentMethod ?? "transfer";
   const collectMode = input.collectMode ?? "leader";
 
+  // A join is honoured only when that order is really on this run and the run
+  // is still taking orders. A stale link from last Friday simply prices as an
+  // ordinary order rather than failing the checkout.
+  const joined = input.joinOrderId ? await rootOrder(input.joinOrderId) : null;
+  const joinRootId =
+    joined && joined.batch_id === batch.id && joined.status !== "refunded"
+      ? joined.id
+      : null;
+
   const result =
     input.groupMode === "split"
       ? await placeSplitGroup({
@@ -137,6 +148,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           hostel,
           lines: priced.lines,
           coupon: coupon?.ok ? coupon : null,
+          joinRootId,
           groupMode: input.groupMode ?? null,
           paymentMethod,
           collectMode,
@@ -240,11 +252,20 @@ async function placeSingleOrder(args: {
   people: { name: string; phone: string; hostel: string }[];
   bands: Band[];
   customerNote: string;
+  /** The delivery being joined, already resolved back to the order that
+   *  started it. */
+  joinRootId: string | null;
 }): Promise<PlaceOrderResult> {
   // Adding to an existing order is a second order to the same batch, not an
   // edit: the admin view merges by phone into one bag (addendum §3). Only the
   // difference in fee is charged, because it is one load either way.
-  const existing = await existingLoad(args.batch.id, args.phone);
+  // Joining a friend's delivery is priced off that whole delivery rather than
+  // off this phone's own orders: it is one load in the car either way. Nobody
+  // already in it is altered, so a reference somebody has already been told to
+  // type in their transfer cannot change underneath them.
+  const existing = args.joinRootId
+    ? await deliveryLoad(args.batch.id, args.joinRootId)
+    : await existingLoad(args.batch.id, args.phone);
   const combined = existing.items + countItems(args.lines);
   const fee = Math.max(
     0,
@@ -283,6 +304,7 @@ async function placeSingleOrder(args: {
     for_name: null,
     payment_method: args.paymentMethod,
     customer_note: args.customerNote,
+    shared_with: args.joinRootId,
     lines,
   });
 
@@ -492,6 +514,8 @@ async function insertOrder(args: {
   for_name: string | null;
   payment_method: "transfer" | "card";
   customer_note: string;
+  /** The order whose delivery this one is joining, if any. */
+  shared_with?: string | null;
   lines: PricedLine[];
 }): Promise<string | null> {
   const total = Math.max(0, args.subtotal_food + args.fee - args.discount);
@@ -512,6 +536,7 @@ async function insertOrder(args: {
       for_name: args.for_name,
       payment_method: args.payment_method,
       customer_note: args.customer_note,
+      shared_with: args.shared_with ?? null,
       status: "pending",
     })
     .select("id")
@@ -565,6 +590,57 @@ export async function existingLoad(
     .select("*")
     .eq("batch_id", batchId)
     .eq("customer_phone", phone)
+    .neq("status", "refunded");
+
+  const orders = (data ?? []) as Order[];
+  if (orders.length === 0) return { items: 0, feeCharged: 0, orders };
+
+  const { data: items } = await db()
+    .from("order_items")
+    .select("order_id, qty")
+    .in("order_id", orders.map((o) => o.id));
+
+  return {
+    items: (items ?? []).reduce((sum, row) => sum + (row.qty as number), 0),
+    feeCharged: orders.reduce((sum, o) => sum + o.fee, 0),
+    orders,
+  };
+}
+
+/**
+ * The order a shared delivery hangs off.
+ *
+ * Somebody joining a friend who had themselves joined somebody else belongs to
+ * the same delivery as both of them, so a join always resolves back to the one
+ * order that started it.
+ */
+export async function rootOrder(orderId: string): Promise<FullOrder | null> {
+  const first = await getOrder(orderId);
+  if (!first) return null;
+  if (!first.shared_with) return first;
+  const root = await getOrder(first.shared_with);
+  return root ?? first;
+}
+
+/**
+ * Everything travelling in one shared delivery: the order that started it and
+ * everyone who joined, with what they have been charged for carrying it.
+ *
+ * The same shape as `existingLoad`, and used the same way: a new arrival pays
+ * the difference between what the whole load costs to carry and what has
+ * already been paid towards it. Nobody who already ordered is touched, which
+ * is what makes this safe to do to an order somebody has already been given a
+ * narration for.
+ */
+export async function deliveryLoad(
+  batchId: string,
+  rootId: string
+): Promise<{ items: number; feeCharged: number; orders: Order[] }> {
+  const { data } = await db()
+    .from("orders")
+    .select("*")
+    .eq("batch_id", batchId)
+    .or(`id.eq.${rootId},shared_with.eq.${rootId}`)
     .neq("status", "refunded");
 
   const orders = (data ?? []) as Order[];

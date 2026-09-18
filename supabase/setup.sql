@@ -668,5 +668,16 @@ begin
   end if;
 end $rating_bounds$;
 
+-- Friends joining somebody's delivery.
+--
+-- Points at the order whose link they opened. It is deliberately NOT the group
+-- machinery: a group renumbers its orders (#1042 becomes #1042a), and the
+-- leader has already been told what to type in their transfer. Nobody's
+-- reference may change because somebody else joined. Every order keeps its own
+-- number, its own narration and its own payment; only the delivery is shared,
+-- which is the only thing being shared in real life too.
+alter table orders add column if not exists shared_with uuid references orders(id) on delete set null;
+create index if not exists orders_shared_idx on orders (shared_with);
+
 -- Supabase caches the schema; this makes the new tables visible immediately.
 notify pgrst, 'reload schema';

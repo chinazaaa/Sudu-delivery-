@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { clearCart, clearPeople } from "@/lib/cart";
+import { clearJoin } from "@/components/JoinDelivery";
 
 /**
  * The cart lives in the browser, so the server redirect after checkout cannot
@@ -12,6 +13,9 @@ export default function ClearCart() {
   useEffect(() => {
     clearCart();
     clearPeople();
+    // The friend's delivery has been joined now. Leaving it set would quietly
+    // attach their next order to the same one, days later.
+    clearJoin();
   }, []);
   return null;
 }

@@ -18,11 +18,20 @@ import { normalisePhone } from "@/lib/phone";
 import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
 import CouponBox from "@/components/CouponBox";
+import { clearJoin, readJoin } from "@/components/JoinDelivery";
 import FillDetails from "@/components/FillDetails";
 import KeepCart from "@/components/KeepCart";
 import { countdown } from "@/lib/time";
 import type { GroupMode } from "@/lib/types";
 import type { BatchView } from "@/lib/view";
+
+type JoinLoad = {
+  id: string;
+  name: string;
+  batchId: string;
+  items: number;
+  feeCharged: number;
+};
 
 export type AddingTo = {
   batchId: string;
@@ -100,8 +109,38 @@ export default function Checkout({
   const itemCount = countItems(cart);
   const subtotal = cartSubtotal(cart);
 
-  const alreadyItems = adding?.items ?? 0;
-  const alreadyCharged = adding?.feeCharged ?? 0;
+  // A friend's delivery this browser said it was joining. Checked against the
+  // server on the way in, so a link from a run that has since closed quietly
+  // stops applying rather than pricing an order wrongly.
+  const [joining, setJoining] = useState<JoinLoad | null>(null);
+
+  useEffect(() => {
+    const saved = readJoin();
+    if (!saved) return;
+    let alive = true;
+    void fetch(`/api/join/${saved.id}`)
+      .then((response) => response.json())
+      .then((data: JoinLoad & { ok: boolean }) => {
+        if (!alive) return;
+        if (data.ok) setJoining(data);
+        else clearJoin();
+      })
+      .catch(() => {
+        /* Unreachable means they order on their own, which still works. */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Their food has to be on the run the delivery is actually on, or it is not
+  // the same car.
+  useEffect(() => {
+    if (joining) setBatchId(joining.batchId);
+  }, [joining]);
+
+  const alreadyItems = joining ? joining.items : adding?.items ?? 0;
+  const alreadyCharged = joining ? joining.feeCharged : adding?.feeCharged ?? 0;
   const fee = Math.max(
     0,
     feeFor(itemCount + alreadyItems, selected?.flashFee ?? null, bands) - alreadyCharged
@@ -176,12 +215,36 @@ export default function Checkout({
           .join(", ")}
       />
 
+      {joining && (
+        <div className="rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-3">
+          <p className="font-bold text-brand-dark">
+            Riding along with {joining.name}&apos;s delivery
+          </p>
+          <p className="mt-0.5 text-sm text-ink/80">
+            Your food goes in the same car, so you only pay the difference in
+            delivery, never a second fee. You pay for your own food and your bag
+            is labelled with your name.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              clearJoin();
+              setJoining(null);
+            }}
+            className="mt-2 text-xs font-semibold text-brand-dark underline"
+          >
+            Order on my own instead
+          </button>
+        </div>
+      )}
+
       <input type="hidden" name="cart" value={JSON.stringify(toServerLines(cart))} />
       <input type="hidden" name="coupon" value={applied?.code ?? ""} />
       <input type="hidden" name="batch_id" value={batchId} />
       <input type="hidden" name="group_mode" value={groupOn ? mode : ""} />
       <input type="hidden" name="payment_method" value={method} />
       <input type="hidden" name="collect_mode" value={collect} />
+      <input type="hidden" name="join_order_id" value={joining?.id ?? ""} />
       <input type="hidden" name="people" value={JSON.stringify(people)} />
 
       <h1 className="text-2xl font-extrabold">Checkout</h1>

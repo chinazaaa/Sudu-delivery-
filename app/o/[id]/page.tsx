@@ -8,6 +8,7 @@ import LiveOrder from "@/components/LiveOrder";
 import ExpiryNote from "@/components/ExpiryNote";
 import RateOrder from "@/components/RateOrder";
 import StageTimeline from "@/components/StageTimeline";
+import ShareDelivery from "@/components/ShareDelivery";
 import ShareLink from "@/components/ShareLink";
 import SplitCollect from "@/components/SplitCollect";
 import CopyText from "@/components/CopyText";
@@ -310,6 +311,18 @@ export default async function OrderPage({
             />
           )}
         </section>
+      )}
+
+      {/* The car is the thing worth sharing: one delivery fee covers whatever
+          is in it, so every friend who joins makes it cheaper for all of them.
+          Only while the run is still taking orders, and never on a refunded
+          one. */}
+      {canStillMove && order.status !== "refunded" && (
+        <ShareDelivery
+          url={`${site}/join/${order.shared_with ?? order.id}`}
+          name={(order.for_name ?? order.customer_name).split(" ")[0]}
+          closes={clockLabel(order.batch.cut_off_at)}
+        />
       )}
 
       {/* Asked only once the food has actually arrived, and only of somebody

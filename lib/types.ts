@@ -89,6 +89,8 @@ export type Order = {
   paid_at: string | null;
   /** The discount code used, if one was. */
   coupon_code: string | null;
+  /** The order whose join link they opened, when they joined a delivery. */
+  shared_with: string | null;
   /** One to five, once the food has arrived and they have said. */
   rating: number | null;
   feedback: string;

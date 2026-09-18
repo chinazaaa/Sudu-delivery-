@@ -52,6 +52,7 @@ export async function submitOrder(
     collectMode: String(form.get("collect_mode") ?? "") === "each" ? "each" : "leader",
     people: parsePeople(form.get("people")),
     customerNote: String(form.get("customer_note") ?? "").trim().slice(0, 300),
+    joinOrderId: String(form.get("join_order_id") ?? "") || undefined,
   });
 
   if (!result.ok) return { error: result.error };
