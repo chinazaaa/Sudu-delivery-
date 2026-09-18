@@ -28,9 +28,16 @@ export default function ErrorPage({
         message below says why.
       </p>
 
-      {error.message && (
+      {(error.message || error.digest) && (
         <p className="mt-3 w-full break-words rounded-xl bg-black/[0.04] px-3 py-2 text-left text-xs text-ink/80">
           {error.message}
+          {/* The digest is what matches this screen to the line in the host's
+              log. Without it, "it broke once" is all anybody can report. */}
+          {error.digest && (
+            <span className="mt-1 block font-mono text-[11px] text-muted">
+              Reference {error.digest}
+            </span>
+          )}
         </p>
       )}
 
