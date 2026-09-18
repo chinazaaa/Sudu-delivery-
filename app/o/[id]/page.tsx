@@ -14,7 +14,7 @@ import RepeatOrder from "@/components/RepeatOrder";
 import MoveOrder from "@/components/MoveOrder";
 import { openBatches } from "@/lib/batches";
 import { SLOT_LABEL } from "@/lib/config";
-import { naira, orderRef, shareRef } from "@/lib/money";
+import { naira, shareRef } from "@/lib/money";
 import { bandFor, splitFee } from "@/lib/fees";
 import { fillNote, narration, PAID_NOTE_DEFAULT } from "@/lib/messages";
 import {
@@ -507,7 +507,7 @@ export default async function OrderPage({
       <HelpUs
         settings={settings}
         order={order}
-        ref={shareRef(order, order.shares)}
+        orderRef={shareRef(order, order.shares)}
         batchLabel={batchLabel}
       />
     </div>
@@ -589,18 +589,20 @@ function foodOf(lines: OrderLine[]): number {
 function HelpUs({
   settings,
   order,
-  ref,
+  orderRef,
   batchLabel,
 }: {
   settings: Awaited<ReturnType<typeof getSettings>>;
   order: { id: string; customer_name: string; order_no: number | null };
-  /** How this order is referred to: #1001b for one part of a group. */
-  ref: string;
+  /** How this order is referred to: #1001b for one part of a group. Not
+   *  called ref: React keeps that name for itself, and a server component
+   *  handing one to a child is an error with nobody's name on it. */
+  orderRef: string;
   batchLabel: string;
 }) {
   const link = whatsappLink(
     settings.whatsapp_number,
-    `Hi, about my Sudu order ${ref} (${order.customer_name}, ${batchLabel}):`
+    `Hi, about my Sudu order ${orderRef} (${order.customer_name}, ${batchLabel}):`
   );
   if (!link) return null;
 
