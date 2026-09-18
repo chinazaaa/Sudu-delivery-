@@ -208,9 +208,12 @@ export default async function OrderPage({
             <>
               <PayTo accounts={accounts} narration={narration(order, order.shares)} />
               <p className="text-sm text-ink/75">
-                Type {narration(order, order.shares)} in the narration. That is
-                how this transfer is matched to your part of the order.
-                Transfer only, no cash on delivery.
+                Type{" "}
+                <span className="font-extrabold text-brand-dark">
+                  {narration(order, order.shares)}
+                </span>{" "}
+                in the narration. That is how this transfer is matched to your
+                part of the order. Transfer only, no cash on delivery.
               </p>
             </>
           ) : (

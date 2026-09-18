@@ -183,7 +183,9 @@ export function template(args: {
   const bank =
     account.bank_name && account.account_number
       ? `${account.account_name} ${account.account_number} ` +
-        `(${account.bank_name}). Put ${narration(order)} as the narration.`
+        // Asterisks are how WhatsApp renders bold, so the one thing they must
+        // type stands out in a message they are reading on a phone.
+        `(${account.bank_name}). Put *${narration(order)}* as the narration.`
       : "Message me for the account details.";
 
   const values: Record<string, string> = {

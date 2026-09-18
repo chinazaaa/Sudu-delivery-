@@ -56,7 +56,48 @@ export default function Order() {
           <Row label="Bank" value={account.bank} />
           <Row label="Account name" value={account.name} />
           <Row label="Account number" value={account.number} strong />
-          <Row label="Narration" value={order.narration} strong />
+
+          {/* Out of the list and onto its own panel, exactly as on the website.
+              As one row among four it read the same as the bank name, and
+              transfers were arriving without it. */}
+          <View
+            style={{
+              borderWidth: 2,
+              borderColor: "rgba(255,90,31,0.4)",
+              backgroundColor: T.tint,
+              borderRadius: 14,
+              paddingVertical: 12,
+              paddingHorizontal: 12,
+              alignItems: "center",
+              marginTop: 4,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 11,
+                fontWeight: "800",
+                letterSpacing: 0.6,
+                color: T.brandDark,
+                textTransform: "uppercase",
+              }}
+            >
+              Type this in the narration
+            </Text>
+            <Text
+              style={{
+                fontSize: 34,
+                fontWeight: "800",
+                letterSpacing: 2,
+                color: T.brandDark,
+                marginTop: 2,
+              }}
+            >
+              {order.narration}
+            </Text>
+            <Text style={{ fontSize: 11, fontWeight: "600", color: T.muted, marginTop: 3 }}>
+              Without it we cannot match your transfer to your order.
+            </Text>
+          </View>
 
           <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
             <Tap onPress={() => copy(account.number, "account")} label={copied === "account" ? "Copied" : "Copy account"} />
@@ -86,8 +127,10 @@ export default function Order() {
           )}
 
           <Text style={{ color: T.muted, marginTop: 4 }}>
-            Put {order.narration} in the narration. That is how this transfer is matched to your
-            order. Transfer only, no cash on delivery.
+            Put{" "}
+            <Text style={{ fontWeight: "800", color: T.brandDark }}>{order.narration}</Text> in the
+            narration. That is how this transfer is matched to your order. Transfer only, no cash
+            on delivery.
           </Text>
         </View>
       )}

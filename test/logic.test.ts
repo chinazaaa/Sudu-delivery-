@@ -456,7 +456,9 @@ test("a message template fills in the order and falls back to the default wordin
   assert.match(asking, /0123456789/);
   // The narration is the order number, not the phone: four digits to type,
   // and it belongs to this one order rather than every order they place.
-  assert.match(asking, /Put 1042 as the narration/);
+  // Bold, because WhatsApp renders asterisks and this is the one thing they
+  // have to type for the transfer to be matched.
+  assert.match(asking, /Put \*1042\* as the narration/);
   assert.match(asking, /https:\/\/sudu\.ng\/o\/abc/);
 });
 

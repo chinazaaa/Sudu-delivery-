@@ -31,8 +31,22 @@ export default function PayTo({
         <Row label="Bank" value={account.bank_name} />
         <Row label="Account name" value={account.account_name || "Not set"} />
         <Row label="Account number" value={account.account_number} strong />
-        <Row label="Narration" value={narration} strong />
       </dl>
+
+      {/* Out of the list and onto its own panel. As one row among four it read
+          the same as the bank name, and people were sending transfers without
+          it, which leaves a payment nobody can match to an order. */}
+      <div className="rounded-2xl border-2 border-brand/40 bg-brand-tint px-3 py-3 text-center">
+        <p className="text-xs font-extrabold uppercase tracking-wide text-brand-dark">
+          Type this in the narration
+        </p>
+        <p className="mt-0.5 text-4xl font-extrabold tracking-wider text-brand-dark">
+          {narration}
+        </p>
+        <p className="mt-1 text-xs font-semibold text-ink/70">
+          Without it we cannot match your transfer to your order.
+        </p>
+      </div>
 
       <div className="grid grid-cols-2 gap-2">
         <CopyText

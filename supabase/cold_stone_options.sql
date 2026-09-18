@@ -174,7 +174,14 @@ begin
     and rr.id = m.restaurant_id
     and (rr.name ilike '%cold stone%' or rr.name ilike '%coldstone%')
     and c.name in ('Ice cream by the scoop', 'Signature creations', 'Ready to love flavours')
-    and gg.name in (select distinct grp from cs_opt);
+    and (
+      gg.name in (select distinct grp from cs_opt)
+      -- Names an earlier version of this file used. Without this the old
+      -- group survives its own rename and the item asks for a cup size
+      -- twice, which is exactly the sort of thing a customer notices and we
+      -- do not.
+      or gg.name in ('Cyo cup size', 'Rtl cup size', 'Signature cup size')
+    );
 
   insert into item_option_groups (menu_item_id, name, required, max_select, sort_order)
   select m.id, v.grp, v.required, v.maxsel, v.gsort
