@@ -732,3 +732,40 @@ test("refsIn: a split group reads as one order with parts", () => {
   const alone = refsIn([{ id: "d", order_no: 1004, group_id: "g2" }]);
   assert.equal(alone.get("d"), "#1004");
 });
+
+/** What each arrival pays when they join a delivery already on the road. */
+function joinedFees(arrivals: number[]): number[] {
+  let carried = 0;
+  let paid = 0;
+  return arrivals.map((items) => {
+    const due = Math.max(0, feeFor(carried + items) - paid);
+    carried += items;
+    paid += due;
+    return due;
+  });
+}
+
+test("however many friends join a delivery, the shop collects exactly one band", () => {
+  for (const arrivals of [[2, 2], [1, 1, 1, 1], [3, 1, 3, 4], [1, 10], [5, 5, 5], [2]]) {
+    const total = joinedFees(arrivals).reduce((a, b) => a + b, 0);
+    assert.equal(
+      total,
+      feeFor(arrivals.reduce((a, b) => a + b, 0)),
+      `arrivals ${arrivals} collected ${total}`
+    );
+  }
+});
+
+test("joining never changes what somebody who ordered earlier was charged", () => {
+  const two = joinedFees([2, 2]);
+  const five = joinedFees([2, 2, 1, 1, 1]);
+  assert.equal(two[0], five[0]);
+  assert.equal(two[1], five[1]);
+});
+
+test("whoever starts a delivery carries the most of its fee", () => {
+  const [first, second] = joinedFees([2, 2]);
+  assert.equal(first, 4000);
+  assert.equal(second, 2000);
+  assert.equal(first + second, feeFor(4));
+});

@@ -30,6 +30,8 @@ export type OrderCardData = {
   total: number;
   fee: number;
   food: number;
+  /** True when they came in on somebody else's delivery link. */
+  joinedDelivery: boolean;
   /** Taken off the total by a code, if one was typed. */
   discount: number;
   /** The code that took it off, so the money can be explained. */
@@ -245,11 +247,13 @@ export default function OrderCard({
             </div>
             <div className="flex justify-between">
               <dt>
-                {order.otherItems > 0
-                  ? `Delivery top-up (${order.otherItems} more item${
-                      order.otherItems === 1 ? "" : "s"
-                    } already in this run)`
-                  : "Delivery"}
+                {order.joinedDelivery
+                  ? "Delivery, sharing a car with a friend"
+                  : order.otherItems > 0
+                    ? `Delivery top-up (${order.otherItems} more item${
+                        order.otherItems === 1 ? "" : "s"
+                      } already in this run)`
+                    : "Delivery"}
               </dt>
               <dd>{naira(order.fee)}</dd>
             </div>

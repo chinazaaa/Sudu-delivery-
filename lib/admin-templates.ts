@@ -61,6 +61,7 @@ export function toCard(
     total: order.total,
     fee: order.fee,
     food: order.subtotal_food,
+    joinedDelivery: order.shared_with !== null,
     discount: order.discount,
     couponCode: order.coupon_code,
     createdAt: order.created_at,
