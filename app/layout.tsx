@@ -80,8 +80,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {showFooter && (
         <footer className="mx-auto max-w-5xl space-y-2 px-4 pb-44 pt-2 text-xs text-muted sm:pb-32">
           {settings.footer_line && <p>{settings.footer_line}</p>}
-          {(instagram || settings.whatsapp_group_link || showPromoterLink) && (
-            <p className="flex gap-4">
+          {/* Always rendered: the privacy link is in here and has to be
+              reachable whether or not anything else is set. */}
+          <p className="flex gap-4">
               {instagram && (
                 <a href={instagram} target="_blank" rel="noopener noreferrer" className="underline">
                   Instagram
@@ -92,6 +93,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   Promoters
                 </Link>
               )}
+              {/* The app stores require this at a public address, and it
+                  belongs where anybody can find it anyway. */}
+              <Link href="/privacy" className="underline">
+                Privacy
+              </Link>
               {settings.whatsapp_group_link && (
                 <a
                   href={settings.whatsapp_group_link}
@@ -102,8 +108,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   PAU WhatsApp group
                 </a>
               )}
-            </p>
-          )}
+          </p>
         </footer>
         )}
         {/* The footer carried the clearance for the tab bar and the sticky

@@ -7,23 +7,42 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "primaryColor": "#ff5a1f",
     "splash": {
-      "image": "./assets/icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ff5a1f"
     },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "store.sudu.app"
+      "bundleIdentifier": "store.sudu.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "store.sudu.app",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#ff5a1f"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#fff1ea"
       }
     },
-    "plugins": ["expo-router", "expo-notifications"],
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#ff5a1f"
+        }
+      ]
+    ],
     "extra": {
       "api": "https://sudu.store"
     }
