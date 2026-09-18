@@ -1,5 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="16" fill="#ff5a1f"/>
-  <text x="32" y="45" font-family="system-ui, -apple-system, Helvetica, Arial, sans-serif"
-        font-size="40" font-weight="800" fill="#ffffff" text-anchor="middle">S</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Reversed for the tab: a cream bag on cream would vanish at 16px. -->
+  <rect width="512" height="512" rx="116" fill="#ff5a1f"/>
+  <path d="M116 180h280l-27 248a44 44 0 0 1-44 39H187a44 44 0 0 1-44-39z" fill="#fff1ea"/>
+  <path d="M196 180v-26a60 60 0 0 1 120 0v26" fill="none" stroke="#fff1ea" stroke-width="30" stroke-linecap="round"/>
+  <path d="M316 272C316 240 202 240 202 294C202 338 316 330 316 372C316 426 202 426 202 392"
+        fill="none" stroke="#ff5a1f" stroke-width="36" stroke-linecap="round"/>
 </svg>

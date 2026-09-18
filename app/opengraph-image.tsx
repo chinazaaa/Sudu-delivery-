@@ -27,22 +27,29 @@ export default function OpengraphImage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <div
-            style={{
-              width: 84,
-              height: 84,
-              borderRadius: 24,
-              background: "#ff5a1f",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 54,
-              fontWeight: 800,
-              color: "#ffffff",
-            }}
-          >
-            S
-          </div>
+          {/* The bag, drawn rather than fetched: a share card cannot wait on
+              a file to download before it renders. */}
+          <svg width="88" height="88" viewBox="0 0 512 512">
+            <rect width="512" height="512" rx="116" fill="#ff5a1f" />
+            <path
+              d="M116 180h280l-27 248a44 44 0 0 1-44 39H187a44 44 0 0 1-44-39z"
+              fill="#fff1ea"
+            />
+            <path
+              d="M196 180v-26a60 60 0 0 1 120 0v26"
+              fill="none"
+              stroke="#fff1ea"
+              strokeWidth="30"
+              strokeLinecap="round"
+            />
+            <path
+              d="M316 272C316 240 202 240 202 294C202 338 316 330 316 372C316 426 202 426 202 392"
+              fill="none"
+              stroke="#ff5a1f"
+              strokeWidth="36"
+              strokeLinecap="round"
+            />
+          </svg>
           <div style={{ fontSize: 52, fontWeight: 800, color: "#ffffff" }}>Sudu</div>
         </div>
 

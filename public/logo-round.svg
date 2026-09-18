@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Sudu">
+  <circle cx="256" cy="256" r="256" fill="#fff1ea"/>
+  <!-- Pulled in from the edges, because a profile picture is cropped round. -->
+  <g transform="translate(256 256) scale(0.84) translate(-256 -256)">
+    <path d="M116 180h280l-27 248a44 44 0 0 1-44 39H187a44 44 0 0 1-44-39z" fill="#ff5a1f"/>
+    <path d="M196 180v-26a60 60 0 0 1 120 0v26" fill="none" stroke="#14110f" stroke-width="28" stroke-linecap="round"/>
+    <path d="M316 272C316 240 202 240 202 294C202 338 316 330 316 372C316 426 202 426 202 392"
+          fill="none" stroke="#fff1ea" stroke-width="34" stroke-linecap="round"/>
+  </g>
+</svg>
