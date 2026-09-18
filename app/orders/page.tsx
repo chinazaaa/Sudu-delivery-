@@ -2,6 +2,7 @@ import Link from "next/link";
 import Empty from "@/components/Empty";
 import PinForm from "@/components/PinForm";
 import { currentCustomer } from "@/lib/customer-auth";
+import { safeSettings } from "@/lib/settings";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
 import RepeatOrder from "@/components/RepeatOrder";
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 export default async function OrdersPage() {
   const phone = await currentCustomer();
+  const settings = await safeSettings();
 
   if (!phone) {
     return (
@@ -23,7 +25,7 @@ export default async function OrdersPage() {
           Your phone number and PIN bring back everything you have ordered. No account,
           no password.
         </p>
-        <PinForm />
+        <PinForm whatsapp={settings.whatsapp_number} />
       </div>
     );
   }

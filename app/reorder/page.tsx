@@ -4,7 +4,7 @@ import PinForm from "@/components/PinForm";
 import ReorderCard, { type PreviousOrder } from "@/components/ReorderCard";
 import { openBatches } from "@/lib/batches";
 import { feeFor } from "@/lib/fees";
-import { activeBands } from "@/lib/settings";
+import { activeBands, safeSettings } from "@/lib/settings";
 import { lastOrderForPhone, openOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import { currentCustomer } from "@/lib/customer-auth";
@@ -23,6 +23,7 @@ export default async function ReorderPage({
 }) {
   // Signing in on the orders page is enough: nobody should have to type the
   // number they have already proved is theirs.
+  const settings = await safeSettings();
   const typed = normalisePhone((await searchParams).phone ?? "");
   const phone = typed || (await currentCustomer());
   const signedIn = !typed && phone !== null;
@@ -53,7 +54,11 @@ export default async function ReorderPage({
               Your number and the four-digit PIN from your first order bring
               back everything you have ordered.
             </p>
-            <PinForm next="/reorder" label="Bring back my last order" />
+            <PinForm
+              next="/reorder"
+              label="Bring back my last order"
+              whatsapp={settings.whatsapp_number}
+            />
           </>
         )}
       </div>

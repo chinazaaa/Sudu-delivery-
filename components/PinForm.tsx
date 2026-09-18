@@ -1,19 +1,41 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { signInWithPin, type PinState } from "@/app/actions";
+import { whatsappLink } from "@/lib/settings";
+
+/** The message that opens, with their own number in it when they have typed
+ *  one. It is sent from their phone, so we know who is asking. */
+function lostPinLink(number: string, phone: string): string {
+  const typed = phone.trim();
+  return (
+    whatsappLink(
+      number,
+      "Hi, I cannot find my Sudu PIN." +
+        (typed ? ` My number is ${typed}.` : "") +
+        " Please send it to me."
+    ) ?? "#"
+  );
+}
 
 export default function PinForm({
   next,
   label = "See my orders",
+  whatsapp = null,
 }: {
   /** Where to land after signing in. Defaults to the order history. */
   next?: string;
   label?: string;
+  /** The shop's WhatsApp number, for somebody who has lost their PIN. */
+  whatsapp?: string | null;
 } = {}) {
   const [state, action, pending] = useActionState<PinState, FormData>(signInWithPin, {
     error: null,
   });
+
+  // Carried into the message, so nobody has to type their number twice and
+  // we can find them without a conversation about it.
+  const [phone, setPhone] = useState("");
 
   return (
     <form action={action} className="card space-y-3">
@@ -28,6 +50,8 @@ export default function PinForm({
           placeholder="0803 123 4567"
           className="field"
           autoComplete="tel"
+          value={phone}
+          onChange={(event) => setPhone(event.target.value)}
         />
       </div>
       <div>
@@ -42,8 +66,7 @@ export default function PinForm({
           className="field"
         />
         <p className="mt-1 text-xs text-muted">
-          We send your PIN on WhatsApp with your first order. Lost it? Message us and
-          we will send it again.
+          We send your PIN on WhatsApp with your first order.
         </p>
       </div>
       {state.error && (
@@ -52,6 +75,19 @@ export default function PinForm({
       <button type="submit" className="btn-primary w-full" disabled={pending}>
         {pending ? "Checking…" : label}
       </button>
+
+      {/* A PIN is only ever sent to the number it belongs to, so somebody who
+          has lost theirs asks for it themselves rather than through a friend. */}
+      {whatsapp && (
+        <a
+          href={lostPinLink(whatsapp, phone)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-center text-sm font-semibold text-brand"
+        >
+          Do not have your PIN? Message us
+        </a>
+      )}
     </form>
   );
 }
