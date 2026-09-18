@@ -45,6 +45,9 @@ alter table batches add column if not exists driver_cost int not null default 0;
 alter table batches add column if not exists other_cost  int not null default 0;
 alter table batches add column if not exists cost_note   text not null default '';
 
+-- Set when the closing reminder for a run has gone out, so it goes once.
+alter table batches add column if not exists closing_notified_at timestamptz;
+
 -- The delivery price list, so it can be changed without a deploy.
 alter table settings add column if not exists fee_bands text not null default '';
 

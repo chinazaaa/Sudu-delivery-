@@ -334,6 +334,8 @@ async function placeSplitGroup(args: {
   const group = await createGroup(args, "split", args.collectMode);
   if (!group) return { ok: false, error: "Could not start that group order." };
   await saveMembers(group.id, args.people);
+  // Each of them is about to own an order, so each of them needs a PIN.
+  await ensureCustomers(args.people);
 
   // The band is set by the whole load, then shared out by what each person got.
   const people = [...byPerson.entries()];
@@ -401,6 +403,56 @@ async function createGroup(
  * Keeps the name, number and block of everyone in a group. The bag labels come
  * from the order lines; this is how anyone can be phoned when the food lands.
  */
+/**
+ * A PIN for everybody who ends up holding an order of their own.
+ *
+ * In a split group each friend gets their own order under their own number,
+ * and without a customer row they have no PIN, so they cannot open the order
+ * they are being asked to pay for. Their name and block are written only when
+ * there is nothing there already: somebody who has ordered before keeps their
+ * own details, and their promoter stays theirs for life.
+ */
+async function ensureCustomers(
+  people: { name: string; phone: string; hostel: string }[]
+): Promise<void> {
+  const rows = people
+    .map((person) => ({
+      phone: normalisePhone(person.phone),
+      name: person.name.trim(),
+      hostel: person.hostel.trim(),
+    }))
+    .filter((person): person is { phone: string; name: string; hostel: string } =>
+      Boolean(person.phone)
+    );
+  if (rows.length === 0) return;
+
+  const seen = new Map<string, { phone: string; name: string; hostel: string }>();
+  for (const row of rows) if (!seen.has(row.phone)) seen.set(row.phone, row);
+
+  try {
+    const { data: known } = await db()
+      .from("customers")
+      .select("phone")
+      .in("phone", [...seen.keys()]);
+    for (const row of (known ?? []) as { phone: string }[]) seen.delete(row.phone);
+    if (seen.size === 0) return;
+
+    await db()
+      .from("customers")
+      .insert(
+        [...seen.values()].map((person) => ({
+          phone: person.phone,
+          name: person.name || "Friend",
+          hostel: person.hostel,
+          pin: newPin(),
+        }))
+      );
+  } catch {
+    // Their order exists either way. A missing PIN is a smaller problem than
+    // an order that would not save.
+  }
+}
+
 async function saveMembers(
   groupId: string,
   people: { name: string; phone: string; hostel: string }[]

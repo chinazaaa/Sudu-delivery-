@@ -92,6 +92,9 @@ alter table batches add column if not exists cost_note   text not null default '
 alter table batches add column if not exists stage            batch_stage not null default 'ordering';
 alter table batches add column if not exists stage_updated_at timestamptz not null default now();
 
+-- Set when the closing reminder for a run has gone out, so it goes once.
+alter table batches add column if not exists closing_notified_at timestamptz;
+
 create table if not exists promoters (
   code    text primary key,
   name    text not null,
