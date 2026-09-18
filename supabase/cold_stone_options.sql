@@ -1,9 +1,9 @@
 -- Cold Stone: the questions an ice cream actually asks.
 --
--- Two whole families of products went in as bare flavours. A scoop and a
--- signature creation are both made to order at the counter, and both are
--- priced by the cup you pick, so ordering one without a cup size is not an
--- order anybody can fill. The kitchen was being asked to guess.
+-- Three whole families of products went in as bare flavours. A plain scoop,
+-- a signature creation and a ready to love tub are all priced by the cup you
+-- pick, so ordering one without a cup size is not an order anybody can fill.
+-- The kitchen was being asked to guess.
 --
 -- Plain flavours are the ones in Ice cream by the scoop. They carry the
 -- create your own ladder. The creations in Signature creations carry the
@@ -105,6 +105,42 @@ insert into cs_opt (family, grp, required, maxsel, gsort, label, delta, osort) v
   ('signature', 'Waffles', false, 1, 4, 'Dipped Waffle',  1320, 2),
   ('signature', 'Waffles', false, 1, 4, 'Coated Waffle',  1560, 3);
 
+-- Ready to love flavours. The same seven cup sizes as a creation, but the
+-- counter asks about the waffle itself before asking how it is done, so the
+-- questions are in their order rather than ours.
+insert into cs_opt (family, grp, required, maxsel, gsort, label, delta, osort) values
+  ('rtl', 'Cup size', true, 1, 1, 'Kid''s Size',      0, 1),
+  ('rtl', 'Cup size', true, 1, 1, 'Like It',        960, 2),
+  ('rtl', 'Cup size', true, 1, 1, 'Love It',       1680, 3),
+  ('rtl', 'Cup size', true, 1, 1, 'Gotta Have It', 3720, 4),
+  ('rtl', 'Cup size', true, 1, 1, 'Mine',          5880, 5),
+  ('rtl', 'Cup size', true, 1, 1, 'Ours',         13680, 6),
+  ('rtl', 'Cup size', true, 1, 1, 'Everybody',    23520, 7),
+
+  ('rtl', 'Waffles', false, 1, 2, 'Plain Waffle',   1080, 1),
+  ('rtl', 'Waffles', false, 1, 2, 'Dipped Waffle',  1320, 2),
+  ('rtl', 'Waffles', false, 1, 2, 'Coated Waffle',  1560, 3),
+
+  ('rtl', 'How would you like your waffle?', false, 1, 3, 'Crushed-In Waffle', 0, 1),
+  ('rtl', 'How would you like your waffle?', false, 1, 3, 'Packed Waffle',     0, 2),
+  ('rtl', 'How would you like your waffle?', false, 1, 3, 'Served-In Waffle',  0, 3),
+
+  ('rtl', 'Toppings', false, 3, 4, 'Brown Coconut Shavings',  800,  1),
+  ('rtl', 'Toppings', false, 3, 4, 'Pie Crust',               800,  2),
+  ('rtl', 'Toppings', false, 3, 4, 'White Coconut Shavings',  800,  3),
+  ('rtl', 'Toppings', false, 3, 4, 'Cashew Nut',              960,  4),
+  ('rtl', 'Toppings', false, 3, 4, 'Oreo Cookies',           1100,  5),
+  ('rtl', 'Toppings', false, 3, 4, 'M&M',                    1320,  6),
+  ('rtl', 'Toppings', false, 3, 4, 'Snickers',               1320,  7),
+  ('rtl', 'Toppings', false, 3, 4, 'Rainbow Sprinkles',      1320,  8),
+  ('rtl', 'Toppings', false, 3, 4, 'Twix',                   1320,  9),
+  ('rtl', 'Toppings', false, 3, 4, 'Peanut Butter',          1320, 10),
+  ('rtl', 'Toppings', false, 3, 4, 'Strawberry',             1400, 11),
+  ('rtl', 'Toppings', false, 3, 4, 'White Chocolate Chips',  1680, 12),
+  ('rtl', 'Toppings', false, 3, 4, 'Dark Coconut Chips',     1680, 13),
+  ('rtl', 'Toppings', false, 3, 4, 'Almond',                 1920, 14),
+  ('rtl', 'Toppings', false, 3, 4, 'Gummy Bear',             1920, 15);
+
 do $coldstoneopts$
 declare
   places int;
@@ -121,11 +157,11 @@ begin
        join menu_categories c on c.id = m.category_id
        join restaurants rr on rr.id = m.restaurant_id
   where (rr.name ilike '%cold stone%' or rr.name ilike '%coldstone%')
-    and c.name in ('Ice cream by the scoop', 'Signature creations');
-  raise notice 'Flavours in those two sections: %', n;
+    and c.name in ('Ice cream by the scoop', 'Signature creations', 'Ready to love flavours');
+  raise notice 'Flavours in those three sections: %', n;
 
   if n = 0 then
-    raise notice 'Nothing to do. Check the two section names in Admin, Menu.';
+    raise notice 'Nothing to do. Check the three section names in Admin, Menu.';
     return;
   end if;
 
@@ -137,7 +173,7 @@ begin
     and c.id = m.category_id
     and rr.id = m.restaurant_id
     and (rr.name ilike '%cold stone%' or rr.name ilike '%coldstone%')
-    and c.name in ('Ice cream by the scoop', 'Signature creations')
+    and c.name in ('Ice cream by the scoop', 'Signature creations', 'Ready to love flavours')
     and gg.name in (select distinct grp from cs_opt);
 
   insert into item_option_groups (menu_item_id, name, required, max_select, sort_order)
@@ -148,6 +184,7 @@ begin
        join (select distinct family, grp, required, maxsel, gsort from cs_opt) v
          on (v.family = 'scoop'     and c.name = 'Ice cream by the scoop')
          or (v.family = 'signature' and c.name = 'Signature creations')
+         or (v.family = 'rtl'       and c.name = 'Ready to love flavours')
   where rr.name ilike '%cold stone%' or rr.name ilike '%coldstone%';
   get diagnostics g = row_count;
 
@@ -160,7 +197,8 @@ begin
        join cs_opt x
          on x.grp = gg.name
         and ((x.family = 'scoop'     and c.name = 'Ice cream by the scoop')
-          or (x.family = 'signature' and c.name = 'Signature creations'))
+          or (x.family = 'signature' and c.name = 'Signature creations')
+          or (x.family = 'rtl'       and c.name = 'Ready to love flavours'))
   where rr.name ilike '%cold stone%' or rr.name ilike '%coldstone%';
   get diagnostics o = row_count;
 

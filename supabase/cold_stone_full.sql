@@ -38,13 +38,13 @@ create table cs_sizes (
 
 insert into cs_import (category, name, price, available, description, sort) values ('Signature creations', 'THE PIE WHO LOVED ME®', 7200, true, 'Cheesecake Ice Cream with Fudge, Graham Cracker Pie Crust and OREO®', 1);
 insert into cs_import (category, name, price, available, description, sort) values ('Signature creations', 'STRAWBERRY BANANA RENDEZVOUS®', 7200, true, 'Strawberry Ice Cream with Strawberry, Graham Cracker Pie Crust, White Chocolate Chip and Banana', 2);
-insert into cs_import (category, name, price, available, description, sort) values ('Signature creations', 'Cookies and Cream', 7200, true, 'Cookies and Cream', 3);
-insert into cs_import (category, name, price, available, description, sort) values ('Signature creations', 'Sweet Cream Baileys', 7200, true, 'Sweet Cream Baileys', 4);
+insert into cs_import (category, name, price, available, description, sort) values ('Ready to love flavours', 'Cookies and Cream', 7200, true, 'Cookies and Cream', 2);
+insert into cs_import (category, name, price, available, description, sort) values ('Ready to love flavours', 'Sweet Cream Baileys', 7200, true, 'Sweet Cream Baileys', 1);
 insert into cs_import (category, name, price, available, description, sort) values ('Signature creations', 'MINT MINT CHOCOLATE CHOCOLATE CHIP', 7200, true, 'Mint Ice Cream with Fudge, Chocolate Chip and Brownie.', 5);
 insert into cs_import (category, name, price, available, description, sort) values ('Signature creations', 'COOKIE DOUGHN’T YOU WANT SOME', 7200, true, 'French Vanilla Ice Cream with Caramel, Fudge, Chocolate Chip and Cookie Dough.', 6);
-insert into cs_import (category, name, price, available, description, sort) values ('Signature creations', 'AMERICONE', 7200, true, 'AMERICONE', 7);
+insert into cs_import (category, name, price, available, description, sort) values ('Ready to love flavours', 'AMERICONE', 7200, true, 'AMERICONE', 4);
 insert into cs_import (category, name, price, available, description, sort) values ('Signature creations', 'BIRTHDAY CAKE REMIX', 7200, true, 'Cake Batter Ice Cream with Fudge, Rainbow Sprinkle and Brownie.', 8);
-insert into cs_import (category, name, price, available, description, sort) values ('Signature creations', 'CHOCO MUDPIE', 7200, true, 'CHOCO MUDPIE', 9);
+insert into cs_import (category, name, price, available, description, sort) values ('Ready to love flavours', 'CHOCO MUDPIE', 7200, true, 'CHOCO MUDPIE', 3);
 insert into cs_import (category, name, price, available, description, sort) values ('Signature creations', 'Coffee Lovers Only', 7200, true, 'Coffee Ice Cream with Caramel, Roasted Almond and Health® Bar.', 10);
 insert into cs_import (category, name, price, available, description, sort) values ('Signature creations', 'BANANA CARAMEL CRUNCH', 7200, true, 'French Vanilla Ice Cream with Caramel, Roasted Almond and Banana.', 11);
 insert into cs_import (category, name, price, available, description, sort) values ('Signature creations', 'ALL LOVIN’ NO OVEN', 7200, true, 'Cake Batter Ice Cream with Fudge, Cookie Dough and Whipped Topping', 12);
@@ -67,7 +67,7 @@ insert into cs_import (category, name, price, available, description, sort) valu
 insert into cs_import (category, name, price, available, description, sort) values ('Ice cream by the scoop', 'Cotton Candy Ice Cream', 4320, true, 'Cotton Candy Ice Cream', 6);
 insert into cs_import (category, name, price, available, description, sort) values ('Ice cream by the scoop', 'Mint Ice Cream', 4320, true, 'Mint Ice Cream', 7);
 insert into cs_import (category, name, price, available, description, sort) values ('Ice cream by the scoop', 'Chocolate Ice Cream', 4320, true, 'Chocolate Ice Cream', 8);
-insert into cs_import (category, name, price, available, description, sort) values ('Ice cream by the scoop', 'Sweet Banana Cream', 0, false, 'Sweet Banana Cream', 9);
+insert into cs_import (category, name, price, available, description, sort) values ('Ready to love flavours', 'Sweet Banana Cream', 7200, false, 'Sweet Banana Cream', 5);
 insert into cs_import (category, name, price, available, description, sort) values ('Shakes', 'Cake Batter N'' Shake', 7200, true, 'Milk, Cake Batter Ice Cream, Yellow Cake and Whipped Topping', 1);
 insert into cs_import (category, name, price, available, description, sort) values ('Shakes', 'Crème De Menthe', 7200, true, 'Milk, Mint Ice Cream, Chocolate Shavings, Whipped Topping', 2);
 insert into cs_import (category, name, price, available, description, sort) values ('Shakes', 'Oh Fudge', 7200, true, 'Milk, Chocolate, Chocolate Ice Cream and Fudge', 3);
@@ -88,7 +88,7 @@ insert into cs_import (category, name, price, available, description, sort) valu
 insert into cs_import (category, name, price, available, description, sort) values ('Mix-ins & toppings', 'Brownie', 1320, true, 'Brownie', 11);
 insert into cs_import (category, name, price, available, description, sort) values ('Mix-ins & toppings', 'Gummy Bear', 1920, true, 'Gummy Bear', 12);
 insert into cs_import (category, name, price, available, description, sort) values ('Mix-ins & toppings', 'Almond', 0, false, 'Almond', 13);
-insert into cs_import (category, name, price, available, description, sort) values ('Mix-ins & toppings', 'Hennessey', 0, false, 'Hennessey', 14);
+insert into cs_import (category, name, price, available, description, sort) values ('Ready to love flavours', 'Hennessey', 7200, false, 'Hennessey', 6);
 insert into cs_import (category, name, price, available, description, sort) values ('Drinks', '7up 500ml', 960, true, 'A crisp lemon-lime flavored soft drink, light and refreshing.', 1);
 insert into cs_import (category, name, price, available, description, sort) values ('Drinks', 'Super Komando', 840, true, 'An energy drink designed to boost energy and alertness.', 2);
 insert into cs_import (category, name, price, available, description, sort) values ('Drinks', 'Pepsi 500ML', 960, true, 'A classic cola soft drink with a bold, refreshing taste.', 3);
@@ -123,12 +123,13 @@ begin
   select r, v.name, v.sort
   from (values
     ('Signature creations', 1),
-    ('Ice cream by the scoop', 2),
-    ('Shakes', 3),
-    ('Waffles', 4),
-    ('Mix-ins & toppings', 5),
-    ('Drinks', 6),
-    ('Deals', 7)
+    ('Ready to love flavours', 2),
+    ('Ice cream by the scoop', 3),
+    ('Shakes', 4),
+    ('Waffles', 5),
+    ('Mix-ins & toppings', 6),
+    ('Drinks', 7),
+    ('Deals', 8)
   ) as v(name, sort)
   where not exists (
     select 1 from menu_categories where restaurant_id = r and name = v.name
@@ -137,12 +138,13 @@ begin
   update menu_categories c set sort_order = v.sort
   from (values
     ('Signature creations', 1),
-    ('Ice cream by the scoop', 2),
-    ('Shakes', 3),
-    ('Waffles', 4),
-    ('Mix-ins & toppings', 5),
-    ('Drinks', 6),
-    ('Deals', 7)
+    ('Ready to love flavours', 2),
+    ('Ice cream by the scoop', 3),
+    ('Shakes', 4),
+    ('Waffles', 5),
+    ('Mix-ins & toppings', 6),
+    ('Drinks', 7),
+    ('Deals', 8)
   ) as v(name, sort)
   where c.restaurant_id = r and c.name = v.name;
 
