@@ -103,10 +103,24 @@ export const api = {
     name: string;
     phone: string;
     hostel: string;
-    lines: { menu_item_id: string; qty: number; option_ids?: string[] }[];
+    lines: {
+      menu_item_id: string;
+      qty: number;
+      option_ids?: string[];
+      for_name?: string | null;
+    }[];
     coupon?: string;
     paymentMethod: "transfer" | "card";
     customerNote?: string;
+    /** A group order: one payer, or everybody pays their own share. */
+    groupMode?: "one_payer" | "split" | null;
+    collectMode?: "leader" | "each";
+    people?: {
+      name: string;
+      phone: string;
+      hostel: string;
+      pays?: "transfer" | "card";
+    }[];
   }) => post<{ orderId: string; token: string | null }>("/order", order),
   coupon: (data: {
     code: string;

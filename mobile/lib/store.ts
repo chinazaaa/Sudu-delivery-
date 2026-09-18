@@ -18,11 +18,25 @@ export type Line = {
   qty: number;
   optionIds: string[];
   choices: string[];
+  /** Whose food this is, in a group order. Empty means the person ordering. */
+  forName: string;
+};
+
+/** Somebody else with food in this cart. */
+export type Person = {
+  name: string;
+  phone: string;
+  hostel: string;
+  /** Where their food goes: with mine, or to them. */
+  goesTo: "mine" | "theirs" | null;
+  /** How they pay, when everybody pays their own share. */
+  pays: "transfer" | "card";
 };
 
 export type Me = { name: string; phone: string; hostel: string; token: string | null };
 
 const CART = "sudu.cart";
+const PEOPLE = "sudu.people";
 const ME = "sudu.me";
 const MINE = "sudu.orders";
 
@@ -48,15 +62,18 @@ const changed = () => listeners.forEach((fn) => fn());
 
 export const cart = {
   read: () => read<Line[]>(CART, []),
-  async add(line: Omit<Line, "key" | "qty">, qty = 1): Promise<void> {
+  async add(line: Omit<Line, "key" | "qty" | "forName"> & { forName?: string }, qty = 1): Promise<void> {
     const lines = await cart.read();
-    const key = [line.itemId, ...[...line.optionIds].sort()].join("|");
+    const forName = line.forName ?? "";
+    // Two people ordering the same thing are two lines, because the bags are
+    // labelled by name when they are handed out.
+    const key = [line.itemId, ...[...line.optionIds].sort(), `for:${forName}`].join("|");
     const found = lines.find((one) => one.key === key);
     await write(
       CART,
       found
         ? lines.map((one) => (one.key === key ? { ...one, qty: one.qty + qty } : one))
-        : [...lines, { ...line, key, qty }]
+        : [...lines, { ...line, forName, key, qty }]
     );
     changed();
   },
@@ -68,8 +85,75 @@ export const cart = {
     );
     changed();
   },
+  async setForName(key: string, forName: string): Promise<void> {
+    const lines = await cart.read();
+    await write(
+      CART,
+      lines.map((one) =>
+        one.key === key
+          ? {
+              ...one,
+              forName,
+              key: [one.itemId, ...[...one.optionIds].sort(), `for:${forName}`].join("|"),
+            }
+          : one
+      )
+    );
+    changed();
+  },
   async clear(): Promise<void> {
     await write(CART, []);
+    changed();
+  },
+};
+
+/**
+ * The friends in this cart.
+ *
+ * Kept beside the cart rather than on the server: until an order is placed
+ * they are nobody's business but the person holding the phone.
+ */
+export const people = {
+  read: () => read<Person[]>(PEOPLE, []),
+  async add(name: string): Promise<void> {
+    const trimmed = name.trim();
+    if (trimmed === "") return;
+    const all = await people.read();
+    if (all.some((one) => one.name === trimmed)) return;
+    await write(PEOPLE, [...all, { name: trimmed, phone: "", hostel: "", goesTo: null, pays: "transfer" }]);
+    changed();
+  },
+  async update(name: string, patch: Partial<Person>): Promise<void> {
+    const all = await people.read();
+    await write(PEOPLE, all.map((one) => (one.name === name ? { ...one, ...patch } : one)));
+    changed();
+  },
+  async remove(name: string): Promise<void> {
+    const all = await people.read();
+    await write(PEOPLE, all.filter((one) => one.name !== name));
+    // Their food comes back to whoever is ordering rather than vanishing.
+    const lines = await cart.read();
+    await write(
+      CART,
+      lines.map((one) =>
+        one.forName === name
+          ? { ...one, forName: "", key: [one.itemId, ...[...one.optionIds].sort(), "for:"].join("|") }
+          : one
+      )
+    );
+    changed();
+  },
+  async clear(): Promise<void> {
+    await write(PEOPLE, []);
+    const lines = await cart.read();
+    await write(
+      CART,
+      lines.map((one) => ({
+        ...one,
+        forName: "",
+        key: [one.itemId, ...[...one.optionIds].sort(), "for:"].join("|"),
+      }))
+    );
     changed();
   },
 };

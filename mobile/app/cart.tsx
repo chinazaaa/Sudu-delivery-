@@ -1,7 +1,8 @@
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { api, naira } from "@/lib/api";
-import { cart, cartTotal, countItems, useStored } from "@/lib/store";
+import { cart, cartTotal, countItems, people, useStored } from "@/lib/store";
 import { T } from "@/lib/theme";
 
 /** What is in the bag, and what it will cost to bring it. */
@@ -9,6 +10,8 @@ export default function Cart() {
   const router = useRouter();
   const [lines] = useStored(cart.read, []);
   const [shop] = useStored(() => api.shop().catch(() => null), null);
+  const [friends] = useStored(people.read, []);
+  const [adding, setAdding] = useState("");
 
   const items = countItems(lines);
   const food = cartTotal(lines);
@@ -36,6 +39,80 @@ export default function Cart() {
   return (
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 140, gap: 10 }}>
+        <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <Text style={{ fontWeight: "800", color: T.ink }}>
+              {friends.length > 0 ? "People in this order" : "Ordering for friends?"}
+            </Text>
+            {friends.length > 0 && (
+              <Pressable onPress={() => people.clear()}>
+                <Text style={{ color: T.muted, fontWeight: "700" }}>Turn off</Text>
+              </Pressable>
+            )}
+          </View>
+          <Text style={{ color: T.muted }}>
+            {friends.length > 0
+              ? "Tap a name under each item to say whose it is. Bags are labelled with these names."
+              : "Add their names, then tap a name under each item. The delivery fee does not change."}
+          </Text>
+
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+            {friends.map((friend) => (
+              <Pressable
+                key={friend.name}
+                onPress={() => people.remove(friend.name)}
+                style={{
+                  flexDirection: "row",
+                  gap: 6,
+                  borderWidth: 1,
+                  borderColor: T.line,
+                  borderRadius: 999,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                }}
+              >
+                <Text style={{ fontWeight: "700", color: T.ink }}>{friend.name}</Text>
+                <Text style={{ color: T.muted }}>✕</Text>
+              </Pressable>
+            ))}
+
+            <TextInput
+              value={adding}
+              onChangeText={setAdding}
+              placeholder="Add a name"
+              onSubmitEditing={() => {
+                void people.add(adding);
+                setAdding("");
+              }}
+              style={{
+                borderWidth: 1,
+                borderColor: T.line,
+                borderRadius: 999,
+                paddingHorizontal: 14,
+                paddingVertical: 6,
+                minWidth: 120,
+                color: T.ink,
+              }}
+            />
+            <Pressable
+              onPress={() => {
+                void people.add(adding);
+                setAdding("");
+              }}
+              style={{
+                borderRadius: 999,
+                paddingHorizontal: 14,
+                paddingVertical: 7,
+                backgroundColor: adding.trim() === "" ? "rgba(20,17,15,0.08)" : T.ink,
+              }}
+            >
+              <Text style={{ color: adding.trim() === "" ? T.muted : T.paper, fontWeight: "800" }}>
+                Add
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
         {lines.map((line) => (
           <View key={line.key} style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14 }}>
             <Text style={{ fontWeight: "800", color: T.ink }}>{line.name}</Text>
@@ -55,6 +132,33 @@ export default function Cart() {
                 <Text style={{ fontSize: 18 }}>+</Text>
               </Pressable>
             </View>
+
+            {friends.length > 0 && (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+                <Text style={{ color: T.muted, fontWeight: "700", alignSelf: "center" }}>
+                  Whose?
+                </Text>
+                {["", ...friends.map((friend) => friend.name)].map((name) => {
+                  const on = line.forName === name;
+                  return (
+                    <Pressable
+                      key={name === "" ? "me" : name}
+                      onPress={() => cart.setForName(line.key, name)}
+                      style={{
+                        borderRadius: 999,
+                        paddingHorizontal: 12,
+                        paddingVertical: 5,
+                        backgroundColor: on ? T.brand : "rgba(20,17,15,0.06)",
+                      }}
+                    >
+                      <Text style={{ color: on ? T.paper : T.ink, fontWeight: "700", fontSize: 13 }}>
+                        {name === "" ? "Me" : name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
           </View>
         ))}
 

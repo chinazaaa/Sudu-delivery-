@@ -24,6 +24,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       coupon?: string;
       paymentMethod?: string;
       customerNote?: string;
+      groupMode?: string;
+      collectMode?: string;
+      people?: { name?: string; phone?: string; hostel?: string; pays?: string }[];
     };
 
     const lines = Array.isArray(body.lines) ? body.lines : [];
@@ -38,10 +41,18 @@ export async function POST(request: Request): Promise<NextResponse> {
       hostel: String(body.hostel ?? ""),
       lines,
       coupon: String(body.coupon ?? "").trim(),
-      groupMode: null,
+      // A group from the app is the same group as one from the web: the same
+      // splitting, the same fee shared out, the same rules about who pays.
+      groupMode:
+        body.groupMode === "one_payer" || body.groupMode === "split" ? body.groupMode : null,
       paymentMethod: body.paymentMethod === "card" ? "card" : "transfer",
-      collectMode: "leader",
-      people: [],
+      collectMode: body.collectMode === "each" ? "each" : "leader",
+      people: (Array.isArray(body.people) ? body.people : []).map((person) => ({
+        name: String(person.name ?? "").trim(),
+        phone: String(person.phone ?? "").trim(),
+        hostel: String(person.hostel ?? "").trim(),
+        pays: person.pays === "card" ? ("card" as const) : ("transfer" as const),
+      })),
       customerNote: String(body.customerNote ?? "").trim().slice(0, 300),
     });
 

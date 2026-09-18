@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { api, naira, type Shop } from "@/lib/api";
-import { cart, cartTotal, countItems, me, mine, useStored } from "@/lib/store";
+import { cart, cartTotal, countItems, me, mine, people, useStored } from "@/lib/store";
 import { registerForPush } from "@/lib/push";
 import { T } from "@/lib/theme";
 
@@ -28,6 +28,8 @@ export default function Checkout() {
   const [code, setCode] = useState("");
   const [applied, setApplied] = useState<{ code: string; discount: number; label: string } | null>(null);
   const [codeError, setCodeError] = useState("");
+  const [friends] = useStored(people.read, []);
+  const [mode, setMode] = useState<"one_payer" | "split">("one_payer");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -55,6 +57,27 @@ export default function Checkout() {
     setApplied(null);
   }, [runId, lines.length]);
 
+  // Only the people with food in this cart matter to the order.
+  const sharing = friends.filter((friend) =>
+    lines.some((line) => line.forName === friend.name)
+  );
+
+  // Where the bags go is read off the answers already given, exactly as on
+  // the website: one bag going to its owner makes it an each-bag run.
+  const collect: "leader" | "each" = sharing.some((friend) => friend.goesTo === "theirs")
+    ? "each"
+    : "leader";
+
+  const unresolved = sharing.filter(
+    (friend) =>
+      friend.goesTo === null ||
+      (friend.goesTo === "theirs" && (friend.phone.trim() === "" || friend.hostel.trim() === ""))
+  );
+
+  const splitNotReady =
+    mode === "split" &&
+    sharing.length + (lines.some((line) => line.forName === "") ? 1 : 0) < 2;
+
   const items = countItems(lines);
   const food = cartTotal(lines);
   const run = shop?.runs.find((one) => one.id === runId) ?? null;
@@ -73,9 +96,18 @@ export default function Checkout() {
           menu_item_id: line.itemId,
           qty: line.qty,
           option_ids: line.optionIds,
+          for_name: line.forName || null,
         })),
         paymentMethod: method,
         coupon: applied?.code ?? "",
+        groupMode: sharing.length > 0 ? mode : null,
+        collectMode: collect,
+        people: sharing.map((friend) => ({
+          name: friend.name,
+          phone: friend.goesTo === "theirs" ? friend.phone : "",
+          hostel: friend.goesTo === "theirs" ? friend.hostel : "",
+          pays: friend.pays,
+        })),
       });
 
       await me.save({ name, phone, hostel, token: result.token });
@@ -120,8 +152,123 @@ export default function Checkout() {
         )}
       </View>
 
+      {sharing.length > 0 && (
+        <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 10 }}>
+          <Text style={{ fontWeight: "800", color: T.ink }}>
+            Group order · {sharing.length + 1} people
+          </Text>
+
+          {(
+            [
+              ["one_payer", "I pay for everything", "Friends pay you back however you like."],
+              ["split", "Everyone pays their own", "Each person gets their own order and their own number to pay with."],
+            ] as const
+          ).map(([value, title, detail]) => (
+            <Pressable
+              key={value}
+              onPress={() => setMode(value)}
+              style={{
+                borderWidth: 1,
+                borderColor: mode === value ? T.brand : T.line,
+                backgroundColor: mode === value ? T.tint : T.paper,
+                borderRadius: 12,
+                padding: 12,
+              }}
+            >
+              <Text style={{ fontWeight: "700", color: T.ink }}>{title}</Text>
+              <Text style={{ color: T.muted }}>{detail}</Text>
+            </Pressable>
+          ))}
+
+          {sharing.map((friend) => (
+            <View key={friend.name} style={{ gap: 8, borderTopWidth: 1, borderTopColor: T.line, paddingTop: 10 }}>
+              <Text style={{ fontWeight: "800", color: T.ink }}>{friend.name}&apos;s food goes</Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                {(
+                  [
+                    ["mine", "Where mine goes"],
+                    ["theirs", "To them"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <Pressable
+                    key={value}
+                    onPress={() =>
+                      people.update(friend.name, {
+                        goesTo: value,
+                        ...(value === "mine" ? { phone: "", hostel: "" } : {}),
+                      })
+                    }
+                    style={{
+                      borderRadius: 999,
+                      paddingHorizontal: 14,
+                      paddingVertical: 7,
+                      backgroundColor: friend.goesTo === value ? T.ink : "rgba(20,17,15,0.06)",
+                    }}
+                  >
+                    <Text style={{ color: friend.goesTo === value ? T.paper : T.ink, fontWeight: "700" }}>
+                      {label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              {friend.goesTo === "theirs" && (
+                <View style={{ gap: 8 }}>
+                  <Field
+                    label={`${friend.name}'s phone`}
+                    value={friend.phone}
+                    onChange={(next) => people.update(friend.name, { phone: next })}
+                    keyboard="phone-pad"
+                  />
+                  <Field
+                    label={`${friend.name}'s block`}
+                    value={friend.hostel}
+                    onChange={(next) => people.update(friend.name, { hostel: next })}
+                  />
+                </View>
+              )}
+
+              {mode === "split" && (
+                <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                  <Text style={{ color: T.muted, fontWeight: "700" }}>{friend.name} pays by</Text>
+                  {(
+                    [
+                      ["transfer", "Transfer"],
+                      ["card", "Card link"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <Pressable
+                      key={value}
+                      onPress={() => people.update(friend.name, { pays: value })}
+                      style={{
+                        borderRadius: 999,
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        backgroundColor: friend.pays === value ? T.ink : "rgba(20,17,15,0.06)",
+                      }}
+                    >
+                      <Text style={{ color: friend.pays === value ? T.paper : T.ink, fontWeight: "700", fontSize: 13 }}>
+                        {label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </View>
+          ))}
+
+          <Text style={{ color: T.muted, fontSize: 13 }}>
+            {collect === "leader"
+              ? "Every bag comes to your block, and you hand the rest out."
+              : "Each bag goes to the block under its own name. Yours comes to you."}
+          </Text>
+        </View>
+      )}
+
       <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 10 }}>
-        <Text style={{ fontWeight: "800", color: T.ink }}>Where it goes</Text>
+        <Text style={{ fontWeight: "800", color: T.ink }}>
+          {sharing.length > 0 ? "Where your own food goes" : "Where it goes"}
+        </Text>
         <Field label="Your name" value={name} onChange={setName} />
         <Field label="Phone number" value={phone} onChange={setPhone} keyboard="phone-pad" />
         <Field label="Hostel or block" value={hostel} onChange={setHostel} />
@@ -222,13 +369,29 @@ export default function Checkout() {
         )}
       </View>
 
+      {unresolved.length > 0 && (
+        <Text style={{ color: T.brandDark, fontWeight: "700" }}>
+          {unresolved[0].goesTo === null
+            ? `Say where ${unresolved[0].name}'s food goes.`
+            : `${unresolved[0].name} needs a phone number and a block, since the food goes to them.`}
+        </Text>
+      )}
+
+      {splitNotReady && (
+        <Text style={{ color: T.brandDark, fontWeight: "700" }}>
+          Splitting needs two people with food in the cart. Tap a name under each item.
+        </Text>
+      )}
+
       {error !== "" && (
         <Text style={{ color: T.brandDark, fontWeight: "700" }}>{error}</Text>
       )}
 
       <Pressable
         onPress={place}
-        disabled={busy || runId === "" || lines.length === 0}
+        disabled={
+          busy || runId === "" || lines.length === 0 || unresolved.length > 0 || splitNotReady
+        }
         style={{
           backgroundColor: busy ? "rgba(20,17,15,0.2)" : T.brand,
           borderRadius: 999,
