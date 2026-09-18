@@ -13,6 +13,14 @@ Notifications.setNotificationHandler({
   }),
 });
 
+/**
+ * A link that opens straight onto an order, from a notification or a message,
+ * would otherwise be the whole app: one screen, no tabs, nothing to go back
+ * to. Naming the tabs as the route underneath puts the shop behind every such
+ * screen, so there is always a way back into it.
+ */
+export const unstable_settings = { initialRouteName: "(tabs)" };
+
 export default function Layout() {
   return (
     <>
