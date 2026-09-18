@@ -52,7 +52,9 @@ export default function Checkout({
   const [batchId, setBatchId] = useState(adding?.batchId ?? openable[0]?.id ?? "");
   const [method, setMethod] = useState<"transfer" | "card">("transfer");
   const [mode, setMode] = useState<GroupMode>("one_payer");
-  const [collect, setCollect] = useState<"leader" | "each">("leader");
+  // Not asked: every friend has already said where their own food goes, and
+  // asking again in different words got a different answer half the time.
+  // One bag going to its owner is enough to make this an each-bag run.
   const [now, setNow] = useState<number | null>(null);
   // React resets an uncontrolled form once its action finishes, which wiped
   // the name, number and block every time the server rejected something. They
@@ -121,6 +123,14 @@ export default function Checkout({
     })
     .filter((share) => share.items > 0);
   const feeShares = splitFee(fee, shares.map((s) => s.items));
+
+  const collect: "leader" | "each" = people.some(
+    (person) =>
+      person.goesTo === "theirs" &&
+      shares.some((share) => share.person === person.name)
+  )
+    ? "each"
+    : "leader";
   // Two people with food in the cart is what a split needs, whatever they are
   // called: the leader's share is counted separately from a friend of the same
   // name.
@@ -407,31 +417,11 @@ export default function Checkout({
             </p>
           )}
 
-          <fieldset className="space-y-2 border-t border-black/5 pt-3">
-            <legend className="label">Who is it delivered to?</legend>
-            <label className="flex gap-2 text-sm">
-              <input
-                type="radio"
-                checked={collect === "leader"}
-                onChange={() => setCollect("leader")}
-              />
-              <span>
-                <span className="font-semibold">Everything comes to me.</span> It is
-                all delivered to my block and I hand the rest out myself.
-              </span>
-            </label>
-            <label className="flex gap-2 text-sm">
-              <input
-                type="radio"
-                checked={collect === "each"}
-                onChange={() => setCollect("each")}
-              />
-              <span>
-                <span className="font-semibold">Each bag goes to its own person.</span>{" "}
-                Delivered to the block under each name.
-              </span>
-            </label>
-          </fieldset>
+          <p className="border-t border-black/5 pt-3 text-sm text-muted">
+            {collect === "leader"
+              ? "Every bag comes to your block, and you hand the rest out."
+              : "Each bag goes to the block under its own name. Yours comes to you."}
+          </p>
 
           <fieldset className="space-y-2 border-t border-black/5 pt-3">
             <legend className="label">Who pays?</legend>
