@@ -110,6 +110,52 @@ export default async function PromoterPage() {
         </section>
       )}
 
+      {earnings.carts.length > 0 && (
+        <section className="card space-y-2">
+          <div>
+            <h2 className="font-bold">Filled a cart and stopped</h2>
+            <p className="text-sm text-muted">
+              These never became orders, so they are worth nothing to anybody
+              yet. A word from you is usually what turns one into a{" "}
+              {naira(earnings.rate)}.
+            </p>
+          </div>
+          <ul className="divide-y divide-black/5">
+            {earnings.carts.map((cart) => (
+              <li
+                key={cart.id}
+                className="flex flex-wrap items-center justify-between gap-2 py-2.5"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold">
+                    {cart.name || "Someone"}
+                  </span>
+                  <span className="block text-sm text-muted">
+                    {cart.items} item{cart.items === 1 ? "" : "s"} ·{" "}
+                    {naira(cart.value)}
+                    {cart.summary && ` · ${cart.summary}`}
+                  </span>
+                </span>
+                <a
+                  href={whatsappTo(
+                    cart.phone,
+                    `Hi ${cart.name || "there"}, you had ${cart.items} item${
+                      cart.items === 1 ? "" : "s"
+                    } in your Sudu cart, ${naira(cart.value)}, and did not finish. ` +
+                      "Want me to help you get it on the next run?"
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="chip shrink-0 border-black/10 bg-white hover:border-ink/30"
+                >
+                  Ask on WhatsApp
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {earnings.runs.length === 0 ? (
         <p className="card text-sm text-muted">
           Nothing yet. Every order a customer pays for counts for you, so this

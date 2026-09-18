@@ -2,6 +2,8 @@ import { db } from "./supabase";
 import { SLOT_LABEL, type BatchSlot } from "./config";
 import { runDateLabel } from "./time";
 import { NUDGE_DEFAULT } from "./messages";
+import { abandonedCarts } from "./carts";
+import { safeSettings } from "./settings";
 
 /** The one promoter, if there is one set up. */
 export async function thePromoter(): Promise<{
@@ -44,6 +46,16 @@ export type ChaseableOrder = {
   label: string;
 };
 
+/** A cart somebody filled in and left, from one of their own customers. */
+export type AbandonedCart = {
+  id: string;
+  name: string;
+  phone: string;
+  items: number;
+  value: number;
+  summary: string;
+};
+
 export type PromoterEarnings = {
   code: string;
   name: string;
@@ -62,6 +74,13 @@ export type PromoterEarnings = {
   waiting: number;
   /** Those orders, in runs still open, so a nudge can still land. */
   chase: ChaseableOrder[];
+  /**
+   * Carts their own customers filled in and never paid for. Only people
+   * already bound to this promoter: a cart from somebody who has never
+   * ordered belongs to nobody yet, and handing it out would be handing out a
+   * stranger's number.
+   */
+  carts: AbandonedCart[];
   payouts: {
     id: string;
     amount: number;
@@ -111,6 +130,21 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
     .select("id, amount, note, paid_at, confirmed_at, batch_id")
     .eq("promoter_code", promoter.code)
     .order("paid_at", { ascending: false });
+
+  // Carts filled in and never paid for. The same list admin calls Left
+  // behind: the promoter is the one who knows these people, so they are the
+  // one who can ask.
+  const settings = await safeSettings();
+  const carts: AbandonedCart[] = (
+    await abandonedCarts(settings.abandon_minutes || 45).catch(() => [])
+  ).map((cart) => ({
+    id: cart.id,
+    name: cart.name,
+    phone: cart.phone,
+    items: cart.items,
+    value: cart.value,
+    summary: cart.summary,
+  }));
 
   const paidPerRun = new Map<string, number>();
   for (const row of (payoutRows ?? []) as any[]) {
@@ -188,6 +222,7 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
     owed: Math.max(0, earned - paid),
     waiting: chase.length * rate,
     chase,
+    carts,
     payouts: payouts as PromoterEarnings["payouts"],
   };
 }
