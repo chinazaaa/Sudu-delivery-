@@ -588,6 +588,20 @@ create table if not exists bank_accounts (
 );
 alter table bank_accounts enable row level security;
 
+-- What the shop is being looked at with. Anonymous: a random id kept in the
+-- browser, the path, and where the visit came from. No name, no number, and
+-- nothing that ties a view to a customer.
+create table if not exists page_views (
+  id         bigserial primary key,
+  path       text not null,
+  visitor    text not null,
+  referrer   text not null default '',
+  created_at timestamptz not null default now()
+);
+create index if not exists page_views_created_idx on page_views (created_at desc);
+create index if not exists page_views_visitor_idx on page_views (visitor, created_at desc);
+alter table page_views enable row level security;
+
 -- The account already in settings becomes the first one on the list, so
 -- nothing changes for anybody the day this runs. Only into an empty table.
 insert into bank_accounts (bank_name, account_name, account_number, sort_order)

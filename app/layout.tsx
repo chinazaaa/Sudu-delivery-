@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
+import Track from "@/components/Track";
 import Ribbon from "@/components/Ribbon";
 import SiteHeader from "@/components/SiteHeader";
 import { publicOffer } from "@/lib/coupons";
@@ -109,6 +110,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             cart. With it hidden, that space still has to be there. */}
         {!showFooter && <div aria-hidden className="pb-44 sm:pb-32" />}
         <BottomNav />
+        {/* Counts a view after the page is up. Never in the way of anything. */}
+        <Track />
       </body>
     </html>
   );
