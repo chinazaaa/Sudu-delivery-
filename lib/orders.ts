@@ -1324,3 +1324,42 @@ export async function ordersForPhone(phone: string): Promise<FullOrder[]> {
   );
   return orders.filter((order): order is FullOrder => order !== null);
 }
+
+/**
+ * One order's rating, saved the same way whoever asked.
+ *
+ * The website asks through a form action and the app through its own endpoint,
+ * so the rules about what counts as an answer live here rather than in both.
+ * Knowing the order's id is the credential, exactly as it is for reading it:
+ * the link is the thing people are given.
+ */
+export async function saveRating(
+  id: string,
+  rating: number,
+  note: string
+): Promise<{ error: string | null }> {
+  if (!id) return { error: "Something went wrong." };
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return { error: "Pick between one and five stars." };
+  }
+
+  const order = await getOrder(id);
+  if (!order) return { error: "That order could not be found." };
+  if (order.batch.stage !== "handed_out" && order.status !== "delivered") {
+    return { error: "You can rate this once it has arrived." };
+  }
+  if (order.status === "refunded") {
+    return { error: "A refunded order cannot be rated." };
+  }
+
+  const { error } = await db()
+    .from("orders")
+    .update({
+      rating,
+      feedback: note.trim().slice(0, 500),
+      rated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  return { error: error ? "Could not save that just now." : null };
+}

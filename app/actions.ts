@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getOrder, moveOrder, placeOrder, previewCoupon } from "@/lib/orders";
+import { getOrder, moveOrder, placeOrder, previewCoupon, saveRating } from "@/lib/orders";
 import { lastOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import { rememberCart } from "@/lib/carts";
@@ -275,26 +275,15 @@ export async function rateOrder(
   form: FormData
 ): Promise<RatingState> {
   const id = String(form.get("order_id") ?? "");
-  const rating = Number(form.get("rating") ?? 0);
-  const feedback = String(form.get("feedback") ?? "").trim().slice(0, 500);
 
-  if (!id) return { error: "Something went wrong.", saved: false };
-  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-    return { error: "Pick between one and five stars.", saved: false };
-  }
-
-  const order = await getOrder(id);
-  if (!order) return { error: "That order could not be found.", saved: false };
-  if (order.batch.stage !== "handed_out" && order.status !== "delivered") {
-    return { error: "You can rate this once it has arrived.", saved: false };
-  }
-
-  const { error } = await db()
-    .from("orders")
-    .update({ rating, feedback, rated_at: new Date().toISOString() })
-    .eq("id", id);
-
-  if (error) return { error: "Could not save that just now.", saved: false };
+  // The rules live beside the order, because the app asks the same question
+  // through its own endpoint and the two must not drift apart.
+  const { error } = await saveRating(
+    id,
+    Number(form.get("rating") ?? 0),
+    String(form.get("feedback") ?? "")
+  );
+  if (error) return { error, saved: false };
 
   revalidatePath(`/o/${id}`);
   return { error: null, saved: true };
