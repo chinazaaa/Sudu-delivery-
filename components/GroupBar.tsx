@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { leaveParty, readParty } from "./GroupLink";
+import { leaveParty, PARTY_CHANGED, readParty } from "./GroupLink";
 
 type Party = {
   started: boolean;
@@ -11,6 +11,7 @@ type Party = {
   people?: number;
   names?: string[];
   closed?: boolean;
+  when?: string;
 };
 
 /**
@@ -26,9 +27,14 @@ export default function GroupBar() {
   const [party, setParty] = useState<Party | null>(null);
 
   useEffect(() => {
+    // Re-read whenever a party starts or ends, because somebody can make a
+    // link from the page they are already standing on.
+    const reread = () => setToken(readParty());
+    window.addEventListener(PARTY_CHANGED, reread);
+
     const found = readParty();
     setToken(found);
-    if (!found) return;
+    if (!found) return () => window.removeEventListener(PARTY_CHANGED, reread);
 
     let alive = true;
     const look = () =>
@@ -53,8 +59,9 @@ export default function GroupBar() {
     return () => {
       alive = false;
       clearInterval(timer);
+      window.removeEventListener(PARTY_CHANGED, reread);
     };
-  }, []);
+  }, [token]);
 
   if (!token) return null;
 
@@ -70,8 +77,14 @@ export default function GroupBar() {
               : "Ordering with your group"}
           </span>
           <span className="block truncate text-white/85">
-            {party?.started && party.names && party.names.length > 0
-              ? `${party.names.join(", ")}${others > 0 ? " · one delivery between you" : ""}`
+            {party?.started
+              ? [
+                  party.names?.join(", "),
+                  party.when ? `arriving ${party.when}` : "",
+                  others > 0 ? "one delivery between you" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
               : "Add your food. You pay for your own, and the delivery is split evenly."}
           </span>
         </span>

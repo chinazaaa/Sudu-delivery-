@@ -19,7 +19,7 @@ import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
 import CouponBox from "@/components/CouponBox";
 import { clearJoin, readJoin } from "@/components/JoinDelivery";
-import GroupLink, { joinedViaLink, leaveParty, readParty } from "@/components/GroupLink";
+import GroupLink, { joinedViaLink, PARTY_CHANGED, readParty } from "@/components/GroupLink";
 import type { Slot } from "@/lib/same-day";
 import FillDetails from "@/components/FillDetails";
 import KeepCart from "@/components/KeepCart";
@@ -168,10 +168,18 @@ export default function Checkout({
   const [joinedLink, setJoinedLink] = useState(false);
 
   useEffect(() => {
+    // A link can be made from this very page, so this listens rather than
+    // reading once and believing it for ever.
+    const reread = () => {
+      setParty(readParty());
+      setJoinedLink(joinedViaLink());
+    };
+    window.addEventListener(PARTY_CHANGED, reread);
+
     const token = readParty();
     setParty(token);
     setJoinedLink(joinedViaLink());
-    if (!token) return;
+    if (!token) return () => window.removeEventListener(PARTY_CHANGED, reread);
 
     let alive = true;
     void fetch(`/api/party/${token}`)
@@ -374,37 +382,6 @@ export default function Checkout({
       {/* Two different situations, and people get them mixed up if you only
           offer one. Ordering FOR friends is one cart you pay for. Ordering
           WITH friends is everybody buying their own food out of one car. */}
-      {party !== "" && (
-        <div className="rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-3">
-          <p className="font-bold text-brand-dark">Ordering with your group</p>
-          <p className="mt-0.5 text-sm text-ink/80">
-            Your food goes in the same car as theirs. You pay for your own food, and
-            the delivery is split evenly once everybody is done.
-          </p>
-          {partyStarted && partyWhen !== "" && (
-            <p className="mt-1 text-sm font-semibold text-brand-dark">
-              Arriving {partyWhen}
-              {partyLeader ? `, as ${partyLeader} chose` : ""}.
-            </p>
-          )}
-          {waitingOnLeader && (
-            <p className="mt-1 text-sm font-semibold text-brand-dark">
-              Waiting for whoever started this to pick the time. Your food is ready to
-              go in the moment they do.
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              leaveParty();
-              setParty("");
-            }}
-            className="mt-2 text-xs font-semibold text-brand-dark underline"
-          >
-            Order on my own instead
-          </button>
-        </div>
-      )}
 
       {/* One question, then the answer to it. Which run it goes on and what
           time it lands are the same decision, so they are the same card: pick
@@ -482,31 +459,6 @@ export default function Checkout({
       </section>
       )}
 
-      <section className="card space-y-3">
-        <h2 className="font-bold">How are you paying?</h2>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {(
-            [
-              ["transfer", "Bank transfer", "Account details on the next screen, with a four-digit number to put in the narration."],
-              // Nothing for them to do: the link comes to them. The old
-              // wording read as a chore before they had even ordered.
-              ["card", "Card", "We send the link to your WhatsApp after you order. Pay it there."],
-            ] as const
-          ).map(([value, title, detail]) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setMethod(value)}
-              className={`rounded-xl border p-3 text-left transition ${
-                method === value ? "border-brand bg-brand-tint" : "border-black/10"
-              }`}
-            >
-              <span className="block font-bold">{title}</span>
-              <span className="block text-sm text-muted">{detail}</span>
-            </button>
-          ))}
-        </div>
-      </section>
 
 
       {/* The same one tap as the cart and the item sheet. There used to be a
@@ -516,13 +468,6 @@ export default function Checkout({
       {!groupOn && !joining && party === "" && (
         <section className="space-y-3">
           <GroupLink />
-          <p className="px-1 text-sm text-muted">
-            Ordering <em>for</em> friends instead, and paying yourself?{" "}
-            <Link href="/cart" className="font-semibold text-brand">
-              Add their names in your cart
-            </Link>{" "}
-            and tap a name on each item.
-          </p>
         </section>
       )}
 
@@ -850,6 +795,32 @@ export default function Checkout({
         </div>
       </section>
 
+      <section className="card space-y-3">
+        <h2 className="font-bold">How are you paying?</h2>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {(
+            [
+              ["transfer", "Bank transfer", "Account details on the next screen, with a four-digit number to put in the narration."],
+              // Nothing for them to do: the link comes to them. The old
+              // wording read as a chore before they had even ordered.
+              ["card", "Card", "We send the link to your WhatsApp after you order. Pay it there."],
+            ] as const
+          ).map(([value, title, detail]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setMethod(value)}
+              className={`rounded-xl border p-3 text-left transition ${
+                method === value ? "border-brand bg-brand-tint" : "border-black/10"
+              }`}
+            >
+              <span className="block font-bold">{title}</span>
+              <span className="block text-sm text-muted">{detail}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
       <section className="card space-y-1 text-sm">
         <div className="flex justify-between text-muted">
           <span>Food</span>
@@ -871,7 +842,7 @@ export default function Checkout({
         </div>
         {/* Four items costing more than three looks arbitrary until the whole
             ladder is there, so it is one tap away. */}
-        {!shared && (
+        {!shared && !sameDay && (
           <FeeBands
             itemCount={itemCount + alreadyItems}
             flashFee={selected?.flashFee ?? null}

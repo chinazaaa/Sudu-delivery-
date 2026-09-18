@@ -31,6 +31,23 @@ export function joinParty(token: string, viaLink = false): void {
   } catch {
     /* Without storage they simply order alone, which still works. */
   }
+  announce();
+}
+
+/**
+ * Everything showing party state reads it once, when it mounts. Somebody who
+ * makes a link while already standing on the checkout page would otherwise
+ * have created a group the rest of that page never heard about: no banner, no
+ * bar, and the fee still worked out as if they were ordering alone.
+ */
+export const PARTY_CHANGED = "sudu:party";
+
+function announce(): void {
+  try {
+    window.dispatchEvent(new Event(PARTY_CHANGED));
+  } catch {
+    /* Older browsers simply see it on the next page they open. */
+  }
 }
 
 /** Whether this browser arrived on somebody else's link. */
@@ -50,6 +67,7 @@ export function leaveParty(): void {
   } catch {
     /* Nothing to do. */
   }
+  announce();
 }
 
 /**
