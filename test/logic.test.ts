@@ -924,3 +924,17 @@ test("earlier in the day, today comes first and tomorrow follows it", () => {
   assert.equal(one[0].day, "today");
   assert.ok(one.some((s) => s.day === "tomorrow"), "tomorrow is still offered");
 });
+
+test("the delivery window is whatever admin set, not a fixed noon to six", () => {
+  const nine = new Date("2026-09-21T09:00:00+01:00");
+
+  // A late evening, as a day somebody decided to run longer.
+  const late = deliverySlots(nine, { first: 12, last: 21 });
+  assert.equal(late.at(-1)!.label, "9pm tomorrow");
+  assert.ok(late.some((s) => s.label === "8:30pm"), "today reaches the later hour");
+
+  // And a short day, where six is no longer offered at all.
+  const short = deliverySlots(nine, { first: 12, last: 14 });
+  assert.equal(short.filter((s) => s.day === "today").at(-1)!.label, "2pm");
+  assert.equal(short.some((s) => s.label.startsWith("6pm")), false);
+});

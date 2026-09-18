@@ -1,4 +1,4 @@
-import { ItemRowSkeleton, Line, RunStripSkeleton, Shape } from "@/components/Skeleton";
+import { ItemRowSkeleton, Line, Shape } from "@/components/Skeleton";
 
 /** A restaurant: the banner with its name over it, the categories, the menu. */
 export default function LoadingRestaurant() {
@@ -15,7 +15,6 @@ export default function LoadingRestaurant() {
         </div>
       </div>
 
-      <RunStripSkeleton />
 
       <div className="flex gap-2 overflow-hidden">
         {["w-20", "w-28", "w-24", "w-32"].map((w) => (

@@ -29,17 +29,14 @@ export default function SameDayStrip({
       className="block rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-3 transition active:scale-[0.99]"
     >
       <p className="text-xs font-extrabold uppercase tracking-wide text-brand-dark">
-        {soonest.day === "today" ? "Want it today?" : "Everything today has gone"}
+        {soonest.day === "today" ? "Want it today?" : "Past our delivery time"}
       </p>
       <p className="mt-0.5 text-lg font-extrabold text-ink">
         Order now, get it by {soonest.label}
       </p>
       <p className="mt-0.5 text-sm text-ink/75">
-        {soonest.day === "today"
-          ? `About ${hours} hour${hours === 1 ? "" : "s"} from now, to your block.`
-          : "Nothing goes out after 6pm, so the soonest is tomorrow."}{" "}
-        From <span className="font-bold">{naira(from)}</span> for a
-        car to yourself, or wait for a run and share one.
+        {soonest.day === "today" && `About ${hours} hour${hours === 1 ? "" : "s"} away. `}
+        From <span className="font-bold">{naira(from)}</span>.
       </p>
     </Link>
   );

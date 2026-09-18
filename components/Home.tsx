@@ -126,15 +126,16 @@ export default function Home({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* What delivery costs rides inside the run strip rather than in a card
-          of its own. Four stacked bars is how the first restaurant ends up
-          off the bottom of a short phone. */}
-      {/* Today first, the timetable second. Somebody hungry now wants a time,
-          not a schedule, and the run is cheaper so it keeps its place right
-          underneath rather than being buried. */}
-      {soonest && <SameDayStrip soonest={soonest} from={soonestFrom} />}
-
-      {nextRun ? (
+      {/* A time, not a timetable. Somebody opening a food shop wants to know
+          when they can eat, and the run is a second answer to that which they
+          find at checkout. Two stacked bars is also how the first restaurant
+          ends up off the bottom of a short phone.
+          The run strip is still the answer when there is no time to offer,
+          because a page that says nothing about delivery is worse than one
+          that says the wrong thing first. */}
+      {soonest ? (
+        <SameDayStrip soonest={soonest} from={soonestFrom} />
+      ) : nextRun ? (
         <RunStrip run={nextRun} note={feeLine} />
       ) : (
         <div className="rounded-2xl bg-paper px-4 py-3 shadow-card">{feeLine}</div>

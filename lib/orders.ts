@@ -1,7 +1,7 @@
 import { db } from "./supabase";
 import { openGroupFor, startSharedGroup } from "./groups";
 import { feeFor, sameDayFee, splitFee, type Band } from "./fees";
-import { activeBands, safeSettings, sameDayPricing } from "./settings";
+import { activeBands, deliveryHours, safeSettings, sameDayPricing } from "./settings";
 import {
   checkCoupon,
   couponLabel,
@@ -90,12 +90,14 @@ async function checkSameDay(
     return { error: "Same day delivery is not running today. Pick a run instead." };
   }
 
-  const slot = deliverySlots().find((one) => one.at === wanted);
+  const slot = deliverySlots(new Date(), await deliveryHours()).find(
+    (one) => one.at === wanted
+  );
   if (!slot) {
     return {
-      error:
-        "That time has passed. Nothing goes out after 6pm, so pick another time " +
-        "or put it on the next run.",
+      // No hour named: the day can be extended in admin and this would then
+      // be arguing with the dropdown beside it.
+      error: "That time has gone. Pick another time, or put it on a run.",
     };
   }
   return { slot, pricing: await sameDayPricing() };

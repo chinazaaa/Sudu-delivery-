@@ -1,5 +1,12 @@
 import { db } from "./supabase";
-import { parseBands, SAME_DAY_BANDS, URGENT_EXTRA, type Band } from "./fees";
+import {
+  parseBands,
+  FIRST_DELIVERY_HOUR,
+  LAST_DELIVERY_HOUR,
+  SAME_DAY_BANDS,
+  URGENT_EXTRA,
+  type Band,
+} from "./fees";
 import { DELIVERY_WINDOWS, type BatchSlot } from "./config";
 
 /**
@@ -65,6 +72,10 @@ export type Settings = {
   same_day_bands: string;
   /** What being inside the five hours adds, on every step. */
   same_day_urgent_extra: string;
+  /** The first and last hour of the day a delivery can be asked for, in Lagos
+   *  time, as 24 hour numbers. Empty means noon and six. */
+  same_day_first_hour: string;
+  same_day_last_hour: string;
   /**
    * A discount code to announce beside it. The strip reads the code itself
    * for what it is worth and who it is for, and says nothing while the code
@@ -111,6 +122,8 @@ export const EMPTY: Settings = {
   same_day_on: "",
   same_day_bands: "",
   same_day_urgent_extra: "",
+  same_day_first_hour: "",
+  same_day_last_hour: "",
   offer_code: "",
   auto_headline: "",
   auto_lines: "",
@@ -178,6 +191,20 @@ export async function sameDayPricing(): Promise<{ bands: Band[]; urgentExtra: nu
     bands: settings.same_day_bands ? parseBands(settings.same_day_bands) : SAME_DAY_BANDS,
     urgentExtra: Number(settings.same_day_urgent_extra) || URGENT_EXTRA,
   };
+}
+
+/**
+ * The hours of the day a delivery can be asked for.
+ *
+ * Kept here rather than in the code so that deciding to run later one evening
+ * is a change of mind rather than a deploy, and so nothing anywhere has to
+ * say "after six" in words that would then be wrong.
+ */
+export async function deliveryHours(): Promise<{ first: number; last: number }> {
+  const settings = await safeSettings();
+  const first = Number(settings.same_day_first_hour) || FIRST_DELIVERY_HOUR;
+  const last = Number(settings.same_day_last_hour) || LAST_DELIVERY_HOUR;
+  return first < last ? { first, last } : { first: FIRST_DELIVERY_HOUR, last: LAST_DELIVERY_HOUR };
 }
 
 /** The delivery window for a slot: the admin's wording, else the shipped one. */

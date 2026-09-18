@@ -29,7 +29,13 @@ export type Slot = {
  * rolls into tomorrow rather than turning somebody away: five o'clock today
  * means noon tomorrow, which is a real answer and an empty list is not.
  */
-export function deliverySlots(now: Date = new Date()): Slot[] {
+export function deliverySlots(
+  now: Date = new Date(),
+  hours: { first: number; last: number } = {
+    first: FIRST_DELIVERY_HOUR,
+    last: LAST_DELIVERY_HOUR,
+  }
+): Slot[] {
   const earliest = now.getTime() + DELIVERY_LEAD_HOURS * 3_600_000;
   const today = lagosToday(now);
   const tomorrow = nextDay(today);
@@ -39,9 +45,9 @@ export function deliverySlots(now: Date = new Date()): Slot[] {
     [today, "today"],
     [tomorrow, "tomorrow"],
   ] as const) {
-    for (let hour = FIRST_DELIVERY_HOUR; hour <= LAST_DELIVERY_HOUR; hour++) {
+    for (let hour = hours.first; hour <= hours.last; hour++) {
       for (const minute of [0, 30]) {
-        if (hour === LAST_DELIVERY_HOUR && minute > 0) break;
+        if (hour === hours.last && minute > 0) break;
 
         const at = lagosInstant(date, hour, minute);
         if (new Date(at).getTime() < earliest) continue;
@@ -63,8 +69,11 @@ export function deliverySlots(now: Date = new Date()): Slot[] {
 }
 
 /** Only what is left today, for anything that should not promise tomorrow. */
-export function slotsToday(now: Date = new Date()): Slot[] {
-  return deliverySlots(now).filter((slot) => slot.day === "today");
+export function slotsToday(
+  now: Date = new Date(),
+  hours?: { first: number; last: number }
+): Slot[] {
+  return deliverySlots(now, hours).filter((slot) => slot.day === "today");
 }
 
 function nextDay(date: string): string {

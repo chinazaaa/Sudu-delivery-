@@ -156,7 +156,9 @@ export default function Checkout({
   const [share, setShare] = useState(false);
   // Same day instead of a run. Empty means they are on a run, which is the
   // cheap way and stays the default.
-  const [deliverAt, setDeliverAt] = useState("");
+  // Picking a time is the default, because it is what most people are here
+  // for. Empty means a run, which is one tap away and still cheaper.
+  const [deliverAt, setDeliverAt] = useState(sameDaySlots[0]?.at ?? "");
   const sameDay = sameDaySlots.find((one) => one.at === deliverAt) ?? null;
   const shared = share || joining !== null;
 
@@ -227,6 +229,12 @@ export default function Checkout({
   }
 
   const offersSameDay = sameDaySlots.length > 0 && !adding && !share && !joining;
+
+  // Those three ways of ordering are all a run by definition, so a default of
+  // "today" would otherwise price them wrongly and silently.
+  useEffect(() => {
+    if (!offersSameDay && deliverAt) setDeliverAt("");
+  }, [offersSameDay, deliverAt]);
 
   /** Which run, and what it says underneath. The same control wherever it is
    *  shown, so the two ways of ordering read as one decision. */
@@ -362,12 +370,14 @@ export default function Checkout({
                     </option>
                   ))}
                 </select>
+                {/* One line. The reasons behind the times are ours, not
+                    theirs: they want to know when they can eat. */}
                 <p className="text-sm text-muted">
-                  Soonest is {sameDaySlots[0].label}: it takes about three hours to fetch
-                  the food and drive it over, and nothing goes out after 6pm.{" "}
-                  {sameDay.urgent
-                    ? "Under five hours away counts as urgent, so a later time is cheaper."
-                    : "More than five hours away, so this is the ordinary price."}
+                  {sameDaySlots[0].day === "tomorrow"
+                    ? `Past our delivery time. Soonest is ${sameDaySlots[0].label}.`
+                    : sameDay.urgent
+                      ? "Under five hours, so this one is urgent. A later time is cheaper."
+                      : `Soonest is ${sameDaySlots[0].label}.`}
                 </p>
               </div>
             ) : (

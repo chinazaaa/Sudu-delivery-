@@ -1,11 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import RestaurantMenu from "@/components/RestaurantMenu";
-import RunStrip from "@/components/RunStrip";
 import Thumb from "@/components/Thumb";
-import { openBatches } from "@/lib/batches";
 import { menuViewFor } from "@/lib/menu";
-import { toBatchView } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
 
@@ -15,13 +12,10 @@ export default async function RestaurantPage({
   params: Promise<{ restaurantId: string }>;
 }) {
   const { restaurantId } = await params;
-  const [place, batches] = await Promise.all([
-    menuViewFor(restaurantId),
-    openBatches(),
-  ]);
+  // Only the menu now. The runs were fetched to draw a strip this page no
+  // longer has, and fetching them was the slowest thing it did.
+  const place = await menuViewFor(restaurantId);
   if (!place) notFound();
-
-  const nextRun = batches.length > 0 ? toBatchView(batches[0]) : null;
 
   return (
     <div className="space-y-5">
@@ -62,7 +56,9 @@ export default async function RestaurantPage({
         </div>
       </div>
 
-      {nextRun && <RunStrip run={nextRun} />}
+      {/* Nothing about when it arrives here. They came to this page to read a
+          menu, and the answer to "when" belongs at checkout where it is
+          actually chosen. */}
 
       <RestaurantMenu place={place} />
     </div>

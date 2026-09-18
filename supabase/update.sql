@@ -367,6 +367,11 @@ alter table settings add column if not exists same_day_bands text not null defau
 alter table settings add column if not exists same_day_on text not null default '';
 -- What being inside the five hours adds, on every step of the ladder.
 alter table settings add column if not exists same_day_urgent_extra text not null default '';
+-- The hours of the day a delivery can be asked for, so extending the day is a
+-- change of mind rather than a deploy, and so nothing in the wording has to
+-- name an hour that might later be wrong.
+alter table settings add column if not exists same_day_first_hour text not null default '';
+alter table settings add column if not exists same_day_last_hour  text not null default '';
 
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';

@@ -1,5 +1,10 @@
 import { cookies } from "next/headers";
-import { activeBands, safeSettings, sameDayPricing } from "@/lib/settings";
+import {
+  activeBands,
+  deliveryHours,
+  safeSettings,
+  sameDayPricing,
+} from "@/lib/settings";
 import { hostelNames } from "@/lib/hostels";
 import Checkout, { type AddingTo } from "@/components/Checkout";
 import { openBatches, recentlyClosedBatch } from "@/lib/batches";
@@ -56,7 +61,11 @@ export default async function CheckoutPage({
       // Worked out here so the clock is the shop's, not whatever the phone
       // says, and so a page left open all morning cannot offer a time that
       // has already gone.
-      sameDaySlots={(await safeSettings()).same_day_on === "on" ? deliverySlots() : []}
+      sameDaySlots={
+        (await safeSettings()).same_day_on === "on"
+          ? deliverySlots(new Date(), await deliveryHours())
+          : []
+      }
       sameDayBands={(await sameDayPricing()).bands}
       urgentExtra={(await sameDayPricing()).urgentExtra}
       bands={await activeBands()}

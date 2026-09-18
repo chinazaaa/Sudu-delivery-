@@ -823,6 +823,8 @@ const SETTING_FIELDS = [
   "same_day_bands",
   "same_day_urgent_extra",
   "same_day_on",
+  "same_day_first_hour",
+  "same_day_last_hour",
   "admin_emails",
   "abandon_minutes",
   "window_afternoon",

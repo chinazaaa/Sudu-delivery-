@@ -27,6 +27,14 @@ import {
 import { listHostels } from "@/lib/hostels";
 import { DELIVERY_WINDOWS } from "@/lib/config";
 
+/** Whole hours, named the way somebody says them. */
+const HOURS = Array.from({ length: 16 }, (_, index) => {
+  const hour = index + 7;
+  const suffix = hour >= 12 ? "pm" : "am";
+  const shown = hour > 12 ? hour - 12 : hour;
+  return { value: String(hour), label: `${shown}${suffix}` };
+});
+
 export const dynamic = "force-dynamic";
 
 export default async function SettingsAdmin() {
@@ -539,10 +547,9 @@ export default async function SettingsAdmin() {
           <h2 className="font-semibold">Pick a time, instead of a run</h2>
           <p className="text-sm text-muted">
             A car going out for one order at a time the customer chose, rather than
-            everybody sharing one. Times run noon to 6pm, nothing goes out after 6pm,
-            and nothing is offered sooner than three hours from now because that is
-            how long it takes to fetch and deliver. When today has run out it offers
-            tomorrow.
+            everybody sharing one. Nothing is offered sooner than three hours from
+            now, because that is how long it takes to fetch and deliver, and when
+            today has run out it offers tomorrow instead.
           </p>
         </div>
 
@@ -572,6 +579,47 @@ export default async function SettingsAdmin() {
             field="same_day_bands"
           />
         </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="label" htmlFor="same_day_first_hour">
+              Earliest delivery
+            </label>
+            <select
+              id="same_day_first_hour"
+              name="same_day_first_hour"
+              defaultValue={settings.same_day_first_hour || "12"}
+              className="field"
+            >
+              {HOURS.map((hour) => (
+                <option key={hour.value} value={hour.value}>
+                  {hour.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label" htmlFor="same_day_last_hour">
+              Latest delivery
+            </label>
+            <select
+              id="same_day_last_hour"
+              name="same_day_last_hour"
+              defaultValue={settings.same_day_last_hour || "18"}
+              className="field"
+            >
+              {HOURS.map((hour) => (
+                <option key={hour.value} value={hour.value}>
+                  {hour.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <p className="text-xs text-muted">
+          Nothing is offered outside these, and nothing anywhere says the hours out
+          loud, so changing them here changes what customers read too.
+        </p>
 
         <div>
           <label className="label" htmlFor="same_day_urgent_extra">
