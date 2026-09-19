@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { finishOrdering, closeSharedGroup } from "@/app/actions";
 import { enterGroup, joinedViaLink, readGroup } from "./GroupLink";
@@ -71,6 +71,8 @@ export default function GroupBoard({
 }) {
   const router = useRouter();
   const [left, setLeft] = useState("");
+  // So the group is asked to close once, not once a second.
+  const asked = useRef(false);
   const [busy, setBusy] = useState(false);
   const [mine, setMine] = useState<string | null>(fromAddress);
   const [leader, setLeader] = useState(leaderOnServer);
@@ -116,17 +118,41 @@ export default function GroupBoard({
     enterGroup(groupId, true);
   }, [groupId, leaderOnServer]);
 
+  // The whole phrase, not a number somebody else prefixes, because "closes in
+  // closing now" is what that costs.
   useEffect(() => {
     const tick = () => {
       const ms = new Date(closesAt).getTime() - Date.now();
+
       if (ms <= 0) {
         setLeft("closing now");
-        router.refresh();
+
+        // Whoever is looking closes it.
+        //
+        // The clock alone never did. Closing is a scheduled job, so a group
+        // whose time was up sat there saying "closing now" until that job ran,
+        // and if it had not been set up yet it said it for ever and nobody in
+        // it could be told what they owed. The job is still what catches a
+        // group nobody is watching; this catches the one somebody is staring
+        // at. Closing is idempotent and claims itself in one write, so the two
+        // arriving together is fine.
+        if (!asked.current) {
+          asked.current = true;
+          const form = new FormData();
+          form.set("group_id", groupId);
+          void closeSharedGroup(form)
+            .catch(() => {
+              // Let the next viewer, or the job, have a go.
+              asked.current = false;
+            })
+            .finally(() => router.refresh());
+        }
         return;
       }
+
       const mins = Math.floor(ms / 60000);
       const secs = Math.floor((ms % 60000) / 1000);
-      setLeft(`${mins}m ${String(secs).padStart(2, "0")}s`);
+      setLeft(`closes in ${mins}m ${String(secs).padStart(2, "0")}s`);
     };
     tick();
     const clock = setInterval(tick, 1000);
@@ -135,7 +161,7 @@ export default function GroupBoard({
       clearInterval(clock);
       clearInterval(poll);
     };
-  }, [closesAt, router]);
+  }, [closesAt, router, groupId]);
 
   const ready = members.filter((one) => one.done).length;
   const me = members.find((one) => one.orderId === mine) ?? null;
@@ -175,7 +201,7 @@ export default function GroupBoard({
               ? "Nobody has added food yet"
               : `${ready} of ${members.length} ready`}
           </h2>
-          <span className="text-sm font-semibold text-brand-dark">closes in {left}</span>
+          <span className="text-sm font-semibold text-brand-dark">{left}</span>
         </div>
 
         <p className="text-sm text-muted">
