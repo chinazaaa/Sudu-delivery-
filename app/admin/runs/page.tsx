@@ -7,7 +7,7 @@ import { openUntil } from "@/lib/batches";
 import { sameDayTrips } from "@/lib/admin";
 import { safeSettings } from "@/lib/settings";
 import { diagnoseEmpty, keyKind } from "@/lib/health";
-import { ensureUpcomingBatches, closeExpiredBatches } from "@/lib/batches";
+import { ensureUpcomingBatches, closeExpiredBatches, tidyEmptySameDay } from "@/lib/batches";
 import {
   createBatch,
   deleteScheduleRun,
@@ -52,6 +52,10 @@ export default async function RunsPage({
   try {
     await ensureUpcomingBatches();
     await closeExpiredBatches();
+    // Starting a group makes its car immediately, so every abandoned group
+    // left one behind, closed and empty and impossible to delete. They go
+    // here, the moment nobody is in them.
+    await tidyEmptySameDay();
     batches = await batchOverview(window);
     if (batches.length === 0) problem = await diagnoseEmpty();
   } catch (error) {

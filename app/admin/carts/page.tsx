@@ -7,7 +7,8 @@ import { getSettings } from "@/lib/settings";
 import { whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
-import { closeCart, reopenCart } from "../actions";
+import { closeCart, deleteCart, deleteClosedCarts, reopenCart } from "../actions";
+import ConfirmButton from "@/components/admin/ConfirmButton";
 import ActionButton from "@/components/admin/ActionButton";
 
 export const dynamic = "force-dynamic";
@@ -71,6 +72,18 @@ export default async function CartsPage({
         </Link>
       </div>
 
+      {closed && done.length > 0 && (
+        <form action={deleteClosedCarts} className="mb-3">
+          <ConfirmButton
+            tone="bare"
+            className="chip border-black/10 bg-white text-brand"
+            confirm={`Yes, delete all ${done.length}`}
+          >
+            Delete every closed one
+          </ConfirmButton>
+        </form>
+      )}
+
       {carts.length === 0 ? (
         <p className="card text-sm text-muted">
           {closed
@@ -115,6 +128,16 @@ export default async function CartsPage({
                       <ActionButton done="Back on the list ✓">
                         Put it back on the list
                       </ActionButton>
+                    </form>
+                    <form action={deleteCart}>
+                      <input type="hidden" name="cart_id" value={cart.id} />
+                      <ConfirmButton
+                        tone="bare"
+                        className="chip border-black/10 bg-white text-brand"
+                        confirm="Yes, delete it"
+                      >
+                        Delete
+                      </ConfirmButton>
                     </form>
                   </div>
                 ) : (
@@ -170,6 +193,18 @@ export default async function CartsPage({
                         >
                           Close
                         </ActionButton>
+                      </form>
+                      {/* A test of your own is not somebody who did not pay,
+                          so there is no outcome to record. It just goes. */}
+                      <form action={deleteCart}>
+                        <input type="hidden" name="cart_id" value={cart.id} />
+                        <ConfirmButton
+                          tone="bare"
+                          className="chip border-black/10 bg-white py-1.5 text-xs text-brand"
+                          confirm="Yes, delete it"
+                        >
+                          Delete
+                        </ConfirmButton>
                       </form>
                     </div>
                   </>

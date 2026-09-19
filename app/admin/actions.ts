@@ -11,7 +11,7 @@ import { deliveryHours, deliveryWindows, externalUrl } from "@/lib/settings";
 import { runSchedule } from "@/lib/schedule";
 import { deliverySlots } from "@/lib/same-day";
 import { lagosInstant, lagosToday } from "@/lib/time";
-import { ensureUpcomingBatches, openRunsBetween } from "@/lib/batches";
+import { clearDeadGroups, ensureUpcomingBatches, openRunsBetween } from "@/lib/batches";
 import { fileFrom, uploadImage } from "@/lib/uploads";
 import { parseMenuText } from "@/lib/menu-import";
 import { newPin } from "@/lib/customer-auth";
@@ -532,6 +532,10 @@ export async function deleteRun(form: FormData): Promise<void> {
 
   await db().from("carts").delete().eq("batch_id", id);
   await db().from("orders").delete().eq("batch_id", id);
+  // A group that never became an order still points at this car, and a car
+  // cannot be deleted while anything points at it. That is why deleting one
+  // of these looked like it had worked and changed nothing.
+  await clearDeadGroups(id);
 
   // A run the schedule still calls for comes straight back: opening admin
   // makes every run the week is supposed to have, and a deleted row is just a
@@ -553,7 +557,11 @@ export async function deleteRun(form: FormData): Promise<void> {
   if (scheduled) {
     await db().from("batches").update({ status: "cancelled" }).eq("id", id);
   } else {
-    await db().from("batches").delete().eq("id", id);
+    const { error } = await db().from("batches").delete().eq("id", id);
+    // Silence here is what made this a fight nobody could win: the page came
+    // back looking exactly as it did, with the run still on it and nothing
+    // anywhere saying why.
+    if (error) throw new Error(`Could not delete that run: ${error.message}`);
   }
 
   revalidatePath("/admin", "layout");
@@ -825,6 +833,35 @@ export async function closeCart(form: FormData): Promise<void> {
       handled_reason: String(form.get("reason") ?? "").trim().slice(0, 120),
     })
     .eq("id", String(form.get("cart_id")));
+
+  revalidatePath("/admin", "layout");
+}
+
+/**
+ * Gone for good, for the ones that were never a customer: a test, a tap on
+ * your own phone while checking something. Closing keeps a cart and says what
+ * came of it, which is right for a real person who did not pay. For a test
+ * there is nothing to keep and it only makes the list harder to read.
+ */
+export async function deleteCart(form: FormData): Promise<void> {
+  await assertAdmin();
+  const { error } = await db()
+    .from("carts")
+    .delete()
+    .eq("id", String(form.get("cart_id")));
+  if (error) throw new Error(`Could not delete that cart: ${error.message}`);
+
+  revalidatePath("/admin", "layout");
+}
+
+/** Every cart already closed, cleared out in one go. */
+export async function deleteClosedCarts(): Promise<void> {
+  await assertAdmin();
+  const { error } = await db()
+    .from("carts")
+    .delete()
+    .not("handled_at", "is", null);
+  if (error) throw new Error(`Could not clear those: ${error.message}`);
 
   revalidatePath("/admin", "layout");
 }

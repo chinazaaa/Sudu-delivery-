@@ -160,6 +160,89 @@ export async function closeExpiredBatches(): Promise<void> {
   }
 }
 
+/**
+ * The groups on a car that never became anything, cleared out of the way.
+ *
+ * Starting a group picks a time, and picking a time makes the car there and
+ * then, because the people joining have to be told when their food comes.
+ * Most of those groups are never finished: somebody tries it, or sends a link
+ * nobody opens. The group row stays, and because a car cannot be deleted
+ * while a group points at it, so does the car. That is what filled the runs
+ * list with empty closed cars that refused to delete.
+ *
+ * Only groups with no orders on them go: a group that closed into real orders
+ * is history, and history is not tidying.
+ */
+export async function clearDeadGroups(batchId: string): Promise<void> {
+  const { data: groups } = await db()
+    .from("order_groups")
+    .select("id")
+    .eq("batch_id", batchId);
+
+  const ids = (groups ?? []).map((row) => row.id as string);
+  if (ids.length === 0) return;
+
+  const { data: used } = await db()
+    .from("orders")
+    .select("group_id")
+    .in("group_id", ids);
+  const keep = new Set((used ?? []).map((row) => row.group_id as string));
+
+  const dead = ids.filter((id) => !keep.has(id));
+  // The seats inside them go with them: group_carts cascades on this delete.
+  if (dead.length > 0) await db().from("order_groups").delete().in("id", dead);
+}
+
+/**
+ * Empty same day cars nobody is in any more, removed.
+ *
+ * A car with an order on it is never touched, and neither is one whose group
+ * is still open, which is somebody's link out in a chat right now. What is
+ * left is the residue of a group that was abandoned, and there is nothing in
+ * it to lose.
+ */
+export async function tidyEmptySameDay(): Promise<number> {
+  try {
+    const { data: cars } = await db()
+      .from("batches")
+      .select("id")
+      .eq("kind", "same_day")
+      .limit(200);
+
+    const ids = (cars ?? []).map((row) => row.id as string);
+    if (ids.length === 0) return 0;
+
+    const { data: used } = await db().from("orders").select("batch_id").in("batch_id", ids);
+    const busy = new Set((used ?? []).map((row) => row.batch_id as string));
+
+    // A group still taking people is a car somebody is counting on. A group
+    // with no closing time on it counts as one too: the clock starts at the
+    // first order, so no time means nobody has ordered yet, not that nobody
+    // is there.
+    const now = Date.now();
+    const { data: live } = await db()
+      .from("order_groups")
+      .select("batch_id, closes_at")
+      .in("batch_id", ids)
+      .is("closed_at", null);
+    for (const row of live ?? []) {
+      const closes = row.closes_at as string | null;
+      if (!closes || new Date(closes).getTime() > now) busy.add(row.batch_id as string);
+    }
+
+    const dead = ids.filter((id) => !busy.has(id));
+    if (dead.length === 0) return 0;
+
+    for (const id of dead) await clearDeadGroups(id);
+    await db().from("carts").delete().in("batch_id", dead);
+    const { error } = await db().from("batches").delete().in("id", dead);
+    return error ? 0 : dead.length;
+  } catch {
+    // Tidying is never worth a page that will not load.
+    return 0;
+  }
+}
+
 export type OpenBatch = Batch & { order_count: number; full: boolean };
 
 /**
