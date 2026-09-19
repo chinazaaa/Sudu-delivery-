@@ -1,6 +1,7 @@
 import SaveButton from "@/components/SaveButton";
 import PageHeader from "@/components/admin/PageHeader";
 import BandEditor from "@/components/admin/BandEditor";
+import DayHours from "@/components/admin/DayHours";
 import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { parseBands, SAME_DAY_BANDS, URGENT_EXTRA } from "@/lib/fees";
@@ -620,6 +621,25 @@ export default async function SettingsAdmin() {
           Nothing is offered outside these, and nothing anywhere says the hours out
           loud, so changing them here changes what customers read too.
         </p>
+
+        <div>
+          <p className="label">Days that are different</p>
+          <DayHours
+            hours={HOURS}
+            base={{
+              first: Number(settings.same_day_first_hour) || 12,
+              last: Number(settings.same_day_last_hour) || 18,
+            }}
+            saved={(() => {
+              try {
+                const raw = (settings.same_day_day_hours ?? "").trim();
+                return raw.startsWith("{") ? JSON.parse(raw) : {};
+              } catch {
+                return {};
+              }
+            })()}
+          />
+        </div>
 
         <div>
           <label className="label" htmlFor="same_day_urgent_extra">

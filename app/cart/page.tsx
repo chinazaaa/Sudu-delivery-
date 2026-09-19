@@ -3,7 +3,7 @@ import { openRestaurants } from "@/lib/menu";
 import { hostelNames } from "@/lib/hostels";
 import { liveOffers } from "@/lib/coupons";
 import { openBatches } from "@/lib/batches";
-import { activeBands, deliveryHours, safeSettings, sameDayPricing } from "@/lib/settings";
+import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
 import { deliverySlots } from "@/lib/same-day";
 import { toBatchView } from "@/lib/view";
 
@@ -30,7 +30,7 @@ export default async function CartPage({
     // Worked out here so the clock is the shop's rather than the phone's, and
     // so a page left open all morning cannot offer a time that has gone.
     settings.same_day_on === "on"
-      ? deliveryHours().then((hours) => deliverySlots(new Date(), hours))
+      ? hoursByDay().then((hours) => deliverySlots(new Date(), hours))
       : Promise.resolve([]),
     sameDayPricing(),
     activeBands(),

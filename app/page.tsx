@@ -8,7 +8,7 @@ import {
   AUTO_HEADLINE,
   AUTO_LINES,
   safeSettings,
-  deliveryHours,
+  hoursByDay,
 } from "@/lib/settings";
 import { toBatchView } from "@/lib/view";
 import { deliverySlots } from "@/lib/same-day";
@@ -33,7 +33,7 @@ export default async function HomePage() {
     [...offers.entries()].map(([id, offer]) => [id, offerBadge(offer)])
   );
 
-  const slots = settings.same_day_on === "on" ? deliverySlots(new Date(), await deliveryHours()) : [];
+  const slots = settings.same_day_on === "on" ? deliverySlots(new Date(), await hoursByDay()) : [];
 
   const lines = (settings.auto_lines || AUTO_LINES)
     .split("\n")

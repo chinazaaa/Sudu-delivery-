@@ -1,7 +1,7 @@
 import { db } from "./supabase";
 import { claimLeader, joinableGroup, openGroupFor, startSharedGroup } from "./groups";
 import { feeFor, sameDayFee, splitFee, type Band } from "./fees";
-import { activeBands, deliveryHours, safeSettings, sameDayPricing } from "./settings";
+import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "./settings";
 import {
   activePromotion,
   checkCoupon,
@@ -101,7 +101,7 @@ async function checkSameDay(
     return { error: "Same day delivery is not running today. Pick a run instead." };
   }
 
-  const slot = deliverySlots(new Date(), await deliveryHours()).find(
+  const slot = deliverySlots(new Date(), await hoursByDay()).find(
     (one) => one.at === wanted
   );
   if (!slot) {

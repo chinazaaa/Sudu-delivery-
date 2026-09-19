@@ -48,11 +48,21 @@ const WINDOW_HOURS = 3;
  */
 export function deliverySlots(
   now: Date = new Date(),
-  hours: { first: number; last: number } = {
+  hours:
+    | { first: number; last: number }
+    | ((weekday: number) => { first: number; last: number; off?: boolean }) = {
     first: FIRST_DELIVERY_HOUR,
     last: LAST_DELIVERY_HOUR,
   }
 ): Slot[] {
+  // Either one pair for the whole week, or a pair per day. Saturday can open
+  // at noon while a Wednesday starts at three, and tomorrow is a different
+  // day from today, so this is asked per date rather than once.
+  const hoursOn = (date: string): { first: number; last: number; off?: boolean } =>
+    typeof hours === "function"
+      ? hours(new Date(`${date}T12:00:00Z`).getUTCDay())
+      : hours;
+
   const earliest = now.getTime() + DELIVERY_LEAD_HOURS * 3_600_000;
   const today = lagosToday(now);
   const tomorrow = nextDay(today);
@@ -67,18 +77,23 @@ export function deliverySlots(
     // throw away a perfectly deliverable afternoon: at one o'clock the noon
     // block has gone and the three o'clock block is too soon, so there would
     // be nothing today at all, when between four and six is an easy yes.
-    let opening = hours.first;
+    const open = hoursOn(date);
+    // A day the shop does not go out on offers nothing, rather than offering
+    // a window nobody will drive.
+    if (open.off) continue;
+
+    let opening = open.first;
     while (
-      opening < hours.last &&
+      opening < open.last &&
       new Date(lagosInstant(date, opening, 0)).getTime() < earliest
     ) {
       opening += 1;
     }
 
-    for (let from = opening; from < hours.last; from += WINDOW_HOURS) {
+    for (let from = opening; from < open.last; from += WINDOW_HOURS) {
       // The last block is whatever is left rather than running past closing:
       // a day ending at two is noon to two, not noon to three.
-      const to = Math.min(from + WINDOW_HOURS, hours.last);
+      const to = Math.min(from + WINDOW_HOURS, open.last);
 
       const at = lagosInstant(date, from, 0);
       if (new Date(at).getTime() < earliest) continue;

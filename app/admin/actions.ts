@@ -7,7 +7,7 @@ import { isSignedIn, passwordMatches, signIn, signOut } from "@/lib/admin-auth";
 import { db } from "@/lib/supabase";
 import { STAGES, type BatchStage } from "@/lib/stages";
 import { type BatchSlot } from "@/lib/config";
-import { deliveryHours, deliveryWindows, externalUrl } from "@/lib/settings";
+import { hoursByDay, deliveryWindows, externalUrl } from "@/lib/settings";
 import { runSchedule } from "@/lib/schedule";
 import { deliverySlots } from "@/lib/same-day";
 import { lagosInstant, lagosToday } from "@/lib/time";
@@ -277,7 +277,7 @@ export async function moveSameDayCar(form: FormData): Promise<void> {
   if (!batch || batch.kind !== "same_day") return;
   if (batch.stage !== "ordering") return;
 
-  const slot = (await deliverySlots(new Date(), await deliveryHours())).find(
+  const slot = (await deliverySlots(new Date(), await hoursByDay())).find(
     (one) => one.at === at
   );
   if (!slot) return;
@@ -1161,6 +1161,7 @@ const SETTING_FIELDS = [
   "same_day_on",
   "same_day_first_hour",
   "same_day_last_hour",
+  "same_day_day_hours",
   "admin_emails",
   "abandon_minutes",
   "window_afternoon",

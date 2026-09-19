@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import {
   activeBands,
-  deliveryHours,
+  hoursByDay,
   safeSettings,
   sameDayPricing,
 } from "@/lib/settings";
@@ -64,7 +64,7 @@ export default async function CheckoutPage({
       // has already gone.
       sameDaySlots={
         (await safeSettings()).same_day_on === "on"
-          ? deliverySlots(new Date(), await deliveryHours())
+          ? deliverySlots(new Date(), await hoursByDay())
           : []
       }
       sameDayBands={(await sameDayPricing()).bands}

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { openBatches } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
 import { hostelNames } from "@/lib/hostels";
-import { activeBands, deliveryHours, safeSettings, sameDayPricing } from "@/lib/settings";
+import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
 import { deliverySlots } from "@/lib/same-day";
 import { serialiseBands } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
@@ -35,7 +35,7 @@ export async function GET(): Promise<NextResponse> {
     // alone rather than a second way to say the same thing.
     const pricing = await sameDayPricing();
     const slots =
-      settings.same_day_on === "on" ? deliverySlots(new Date(), await deliveryHours()) : [];
+      settings.same_day_on === "on" ? deliverySlots(new Date(), await hoursByDay()) : [];
 
     return NextResponse.json({
       menu,

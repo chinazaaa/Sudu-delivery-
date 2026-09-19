@@ -75,6 +75,8 @@ export type Settings = {
   /** The first and last hour of the day a delivery can be asked for, in Lagos
    *  time, as 24 hour numbers. Empty means noon and six. */
   same_day_first_hour: string;
+  /** Per weekday hours as JSON, where a day differs from the pair above. */
+  same_day_day_hours: string;
   same_day_last_hour: string;
   /**
    * A discount code to announce beside it. The strip reads the code itself
@@ -123,6 +125,7 @@ export const EMPTY: Settings = {
   same_day_bands: "",
   same_day_urgent_extra: "",
   same_day_first_hour: "",
+  same_day_day_hours: "",
   same_day_last_hour: "",
   offer_code: "",
   auto_headline: "",
@@ -205,6 +208,56 @@ export async function deliveryHours(): Promise<{ first: number; last: number }> 
   const first = Number(settings.same_day_first_hour) || FIRST_DELIVERY_HOUR;
   const last = Number(settings.same_day_last_hour) || LAST_DELIVERY_HOUR;
   return first < last ? { first, last } : { first: FIRST_DELIVERY_HOUR, last: LAST_DELIVERY_HOUR };
+}
+
+export type DayHours = { first: number; last: number; off?: boolean };
+
+/**
+ * The hours for each weekday, where a day is not like the rest of the week.
+ *
+ * Saturday and Wednesday are not the same business. A day nobody has touched
+ * falls back to the single pair, so a shop that never opens this works
+ * exactly as it did, and a day marked off offers nothing at all.
+ */
+export async function hoursByDay(): Promise<(weekday: number) => DayHours> {
+  const base = await deliveryHours();
+  const settings = await safeSettings();
+
+  let byDay: Record<string, DayHours> = {};
+  try {
+    const raw = (settings.same_day_day_hours ?? "").trim();
+    if (raw.startsWith("{")) byDay = JSON.parse(raw) as Record<string, DayHours>;
+  } catch {
+    // A row nobody can read is a week on the ordinary hours, not a broken
+    // shop.
+  }
+
+  return (weekday: number) => {
+    const day = byDay[String(weekday)];
+    if (!day) return base;
+    if (day.off) return { first: 0, last: 0, off: true };
+
+    const first = Number(day.first);
+    const last = Number(day.last);
+    return Number.isFinite(first) && Number.isFinite(last) && first < last
+      ? { first, last }
+      : base;
+  };
+}
+
+/**
+ * The widest the week ever opens, for anything that lists the windows on
+ * offer rather than pricing one day.
+ */
+export async function hoursSpan(): Promise<{ first: number; last: number }> {
+  const forDay = await hoursByDay();
+  const week = [0, 1, 2, 3, 4, 5, 6].map(forDay).filter((day) => !day.off);
+  if (week.length === 0) return deliveryHours();
+
+  return {
+    first: Math.min(...week.map((day) => day.first)),
+    last: Math.max(...week.map((day) => day.last)),
+  };
 }
 
 /** The delivery window for a slot: the admin's wording, else the shipped one. */

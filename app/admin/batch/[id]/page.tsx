@@ -1,7 +1,7 @@
 import SaveButton from "@/components/SaveButton";
 import type { Batch } from "@/lib/types";
 import { deliverySlots } from "@/lib/same-day";
-import { deliveryHours } from "@/lib/settings";
+import { hoursByDay } from "@/lib/settings";
 import { moveSameDayCar, raiseMenuPrice, setCounterSpend } from "@/app/admin/actions";
 import ShortGroups from "@/components/admin/ShortGroups";
 import { headers } from "next/headers";
@@ -75,7 +75,7 @@ export default async function BatchPage({
   // bought for it yet.
   const windows =
     batch.kind === "same_day" && batch.stage === "ordering"
-      ? await deliverySlots(new Date(), await deliveryHours())
+      ? await deliverySlots(new Date(), await hoursByDay())
       : [];
   // Shared deliveries where somebody has not paid, and what that leaves the
   // car short by.

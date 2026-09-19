@@ -14,7 +14,7 @@ import { deleteCoupon, toggleCoupon } from "../actions";
 import { batchOverview } from "@/lib/admin";
 import { menuView } from "@/lib/menu";
 import { type ScopeShop } from "@/components/admin/MenuScope";
-import { deliveryHours } from "@/lib/settings";
+import { hoursSpan } from "@/lib/settings";
 import { clockOf } from "@/lib/same-day";
 
 export const dynamic = "force-dynamic";
@@ -116,7 +116,7 @@ export default async function CouponsAdmin({
     }
   }
 
-  const hours = await deliveryHours();
+  const hours = await hoursSpan();
   const windows: { from: number; label: string }[] = [];
   for (let from = hours.first; from < hours.last; from += 3) {
     const to = Math.min(from + 3, hours.last);
