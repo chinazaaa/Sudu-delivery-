@@ -209,7 +209,7 @@ export default function CouponForm({
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
               <label className="label" htmlFor={id("included_items")}>
-                Items it covers
+                How many items that covers
               </label>
               <input
                 id={id("included_items")}
@@ -219,10 +219,14 @@ export default function CouponForm({
                 placeholder="Any"
                 className="field"
               />
+              <p className="mt-1 text-xs text-muted">
+                Blank means any number, so one item and fifteen cost the same
+                to deliver.
+              </p>
             </div>
             <div>
               <label className="label" htmlFor={id("extra_per_item")}>
-                Each item after
+                What each extra item adds
               </label>
               <input
                 id={id("extra_per_item")}
@@ -232,10 +236,13 @@ export default function CouponForm({
                 placeholder="0"
                 className="field"
               />
+              <p className="mt-1 text-xs text-muted">
+                For every item past the box on the left. 0 keeps it flat.
+              </p>
             </div>
             <div>
               <label className="label" htmlFor={id("min_per_person")}>
-                Least each, in a group
+                Nobody pays less than
               </label>
               <input
                 id={id("min_per_person")}
@@ -245,11 +252,17 @@ export default function CouponForm({
                 placeholder="0"
                 className="field"
               />
+              <p className="mt-1 text-xs text-muted">
+                A group splits this price. This is the floor each of them
+                reaches and stops at.
+              </p>
             </div>
           </div>
-          <p className="-mt-2 text-xs text-muted">
-            {naira(2000)} covering 3 items, then {naira(500)} each, is{" "}
-            {naira(3000)} for five. A group splits it, never below the last box.
+          <p className="-mt-2 rounded-xl bg-shell px-3 py-2 text-xs text-ink/75">
+            <span className="font-bold">For example.</span> {naira(2000)}{" "}
+            covering 3 items, {naira(500)} each after, floor {naira(1000)}: one
+            person ordering five things pays {naira(3000)}. Five people sharing
+            pay {naira(1000)} each.
           </p>
         </>
       )}
