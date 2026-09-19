@@ -182,10 +182,7 @@ export default async function GroupPage({
                         href={`/o/${one.link}`}
                         className="text-xs font-semibold text-brand"
                       >
-                        {/* Every line here is somebody's bill, and any of
-                            them can be paid from this page: friends do pay
-                            for each other. "Open" said nothing about that. */}
-                        {one.orderId === mine || one.isMine ? "Pay yours" : "Pay"}
+                        {one.orderId === mine ? "Pay yours" : "Open"}
                       </Link>
                     )}
                   </span>
