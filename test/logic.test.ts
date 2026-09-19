@@ -15,6 +15,7 @@ import {
 } from "../lib/fees";
 import {
   everyLineChose,
+  nearMiss,
   inWindowHours,
   offerFee,
   offerShare,
@@ -1094,4 +1095,38 @@ test("choices are grouped by the question they answer", () => {
   assert.equal(everyLineChose(asks, [['Medium 12"', "Margherita"]]), false);
   // And the right flavour in the wrong size answers only the other.
   assert.equal(everyLineChose(asks, [['Large 14"', "BBQ Chicken"]]), false);
+});
+
+test("the cart says what is standing between it and an offer", () => {
+  const offer = {
+    code: "BBQFREE",
+    note: "Free delivery on the BBQ mediums",
+    fee: 0,
+    includedItems: null,
+    extraPerItem: 0,
+    places: [],
+    items: ["bbq-beef"],
+    choice: "",
+    runs: [],
+    windows: [],
+    firstOrderOnly: false,
+    minEach: 0,
+  };
+  const line = (itemId: string, name: string) => ({
+    itemId,
+    restaurantId: "dominos",
+    name,
+    choices: [] as string[],
+  });
+  const ask = (lines: ReturnType<typeof line>[]) =>
+    nearMiss([offer], lines, { batchId: "b1", returning: false });
+
+  // One qualifying dish and one in the way: that is the thing to say.
+  assert.deepEqual(ask([line("bbq-beef", "BBQ Beef"), line("coke", "Coke")])?.blocking, [
+    "Coke",
+  ]);
+  // Nothing in the way means the offer already applies, so there is no hint.
+  assert.equal(ask([line("bbq-beef", "BBQ Beef")]), null);
+  // And nothing qualifying is a different order, not a near miss.
+  assert.equal(ask([line("coke", "Coke")]), null);
 });

@@ -22,6 +22,7 @@ import {
   usePeople,
 } from "@/lib/cart";
 import { evenShare, feeFor, type Band } from "@/lib/fees";
+import { nearMiss, type LiveOffer } from "@/lib/offers";
 import { naira } from "@/lib/money";
 
 /** Review and fix the order. Nothing is asked for here except the food. */
@@ -33,6 +34,8 @@ export default function CartView({
   runFrom = 4000,
   hostels = [],
   bands = [],
+  offers = [],
+  nextRunId = "",
   startGroup = false,
 }: {
   restaurants?: { id: string; name: string; href: string }[];
@@ -46,6 +49,11 @@ export default function CartView({
   hostels?: string[];
   /** The delivery price list in force, so the saving shown is the real one. */
   bands?: Band[];
+  /** The offers on today, so the cart can say when it is one thing away from
+   *  one rather than leaving somebody to wonder why it is not free. */
+  offers?: LiveOffer[];
+  /** The run a cart prices against until they pick one at the checkout. */
+  nextRunId?: string;
   /** They came here to start a group, so the form is already open. */
   startGroup?: boolean;
 }) {
@@ -335,6 +343,20 @@ export default function CartView({
     finalisedAs !== "" &&
     JSON.stringify(toServerLines(cart)) !== finalisedAs;
 
+  // An offer this cart nearly has. From the inside, a qualifying dish with
+  // something else beside it looks like the offer simply not working, so it
+  // says which is which and leaves the choice to them.
+  const missed = nearMiss(
+    offers,
+    cart.map((line) => ({
+      itemId: line.itemId,
+      restaurantId: line.restaurantId,
+      name: line.name,
+      choices: line.choices,
+    })),
+    { batchId: nextRunId, deliverAt: null, returning: false }
+  );
+
   const names = people.map((p) => p.name);
   const groups = groupNames(cart, people)
     .map((person) => ({
@@ -353,6 +375,25 @@ export default function CartView({
           </Link>
         )}
       </div>
+
+      {missed && (
+        <div className="rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-3">
+          <p className="text-sm text-ink/85">
+            <span className="font-extrabold text-brand-dark">
+              {missed.fee === 0 ? "Free delivery" : `${naira(missed.fee)} delivery`}
+            </span>{" "}
+            is on for part of this cart, but {missed.blocking.slice(0, 3).join(", ")}
+            {missed.blocking.length > 3 && " and more"} {missed.blocking.length === 1 ? "is" : "are"}{" "}
+            not in the offer, so it does not apply.
+          </p>
+          <p className="mt-1 text-xs text-ink/70">
+            Take {missed.blocking.length === 1 ? "it" : "them"} out and delivery
+            becomes {missed.fee === 0 ? "free" : naira(missed.fee)}. Keep{" "}
+            {missed.blocking.length === 1 ? "it" : "them"} and the usual fee
+            applies, which is often the better deal anyway.
+          </p>
+        </div>
+      )}
 
       {/* What it would actually save them, on the food they have actually
           chosen. "Split one delivery" is an idea; two real numbers is an

@@ -1,6 +1,7 @@
 import CartView from "@/components/CartView";
 import { openRestaurants } from "@/lib/menu";
 import { hostelNames } from "@/lib/hostels";
+import { liveOffers } from "@/lib/coupons";
 import { openBatches } from "@/lib/batches";
 import { activeBands, deliveryHours, safeSettings, sameDayPricing } from "@/lib/settings";
 import { deliverySlots } from "@/lib/same-day";
@@ -47,6 +48,10 @@ export default async function CartPage({
       sameDayFrom={pricing.bands[0]?.fee ?? 6500}
       runFrom={bands[0]?.fee ?? 4000}
       hostels={await hostelNames()}
+      // What is on today, so the cart can say when it is one thing away from
+      // an offer rather than leaving somebody to wonder why it is not free.
+      offers={await liveOffers()}
+      nextRunId={batches[0]?.id ?? ""}
       bands={bands}
       startGroup={startGroup}
     />

@@ -46,9 +46,18 @@ export default async function CouponsAdmin({
   const shops: ScopeShop[] = menu.map((place) => {
     // Kept under the question the dish asks, so Size and Flavour are two rows
     // rather than one long list somebody has to sort in their head.
-    const choices = new Map<string, { group: string; name: string; categories: Set<string> }>();
+    const choices = new Map<
+      string,
+      { group: string; name: string; categories: Set<string>; items: Set<string> }
+    >();
+    // How many dishes ask each question. Domino's Half & Half asks for a
+    // flavour twice, and those two questions are on one pizza out of fifteen,
+    // which is worth knowing before an offer is narrowed to them.
+    const asks = new Map<string, Set<string>>();
+
     for (const item of place.items) {
       for (const group of item.groups) {
+        asks.set(group.name, (asks.get(group.name) ?? new Set<string>()).add(item.id));
         for (const option of group.options) {
           const name = option.name.trim();
           if (name === "") continue;
@@ -57,8 +66,10 @@ export default async function CouponsAdmin({
             group: group.name,
             name,
             categories: new Set<string>(),
+            items: new Set<string>(),
           };
           if (item.categoryId) entry.categories.add(item.categoryId);
+          entry.items.add(item.id);
           choices.set(key, entry);
         }
       }
@@ -76,7 +87,9 @@ export default async function CouponsAdmin({
         group: one.group,
         name: one.name,
         categories: [...one.categories],
+        items: one.items.size,
       })),
+      asks: [...asks.entries()].map(([group, items]) => ({ group, items: items.size })),
     };
   });
 

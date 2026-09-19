@@ -221,3 +221,71 @@ export function choiceSets(choice: string): string[][] {
   const single = clean(raw.split(","));
   return single.length > 0 ? [single] : [];
 }
+
+export type CartItem = {
+  itemId: string;
+  restaurantId: string;
+  name: string;
+  choices: string[];
+};
+
+export type NearMiss = {
+  offer: LiveOffer;
+  /** What delivery would cost if the rest went. */
+  fee: number;
+  /** What is in the way, by name, without repeats. */
+  blocking: string[];
+};
+
+/**
+ * An offer this cart nearly has.
+ *
+ * Something in the cart qualifies and something else stops it, which from the
+ * inside looks like the offer simply not working. Saying which is which turns
+ * that into a decision: take the drink out, or pay the fee and keep it. It
+ * only ever describes, and it never changes a price.
+ *
+ * Only offers whose other conditions are already met are considered, because
+ * an offer that is off today is not a thing anybody can fix by moving food
+ * around.
+ */
+export function nearMiss(
+  offers: LiveOffer[],
+  lines: CartItem[],
+  context: { batchId: string; deliverAt?: string | null; returning: boolean }
+): NearMiss | null {
+  if (lines.length === 0) return null;
+  const found: NearMiss[] = [];
+
+  for (const offer of offers) {
+    if (offer.firstOrderOnly && context.returning) continue;
+    if (offer.runs.length > 0 && !offer.runs.includes(context.batchId)) continue;
+    if (!inWindowHours(offer.windows, context.deliverAt ?? null)) continue;
+
+    const qualifies = (line: CartItem) =>
+      (offer.places.length === 0 || offer.places.includes(line.restaurantId)) &&
+      (offer.items.length === 0 || offer.items.includes(line.itemId)) &&
+      everyLineChose(offer.choice, [line.choices]);
+
+    const good = lines.filter(qualifies);
+    const bad = lines.filter((line) => !qualifies(line));
+
+    // Nothing qualifying is not a near miss, it is a different order. And
+    // nothing in the way means the offer already applies.
+    if (good.length === 0 || bad.length === 0) continue;
+
+    found.push({
+      offer,
+      fee: offerFee(offer, good.length),
+      blocking: [...new Set(bad.map((line) => line.name))],
+    });
+  }
+
+  if (found.length === 0) return null;
+
+  // The one worth mentioning is the one worth most, and the fewest things in
+  // the way settles a tie: a cart is nearer to that one.
+  return found.sort(
+    (one, two) => one.fee - two.fee || one.blocking.length - two.blocking.length
+  )[0];
+}
