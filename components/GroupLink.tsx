@@ -77,6 +77,8 @@ export default function GroupLink({
   slots,
   sameDayFrom,
   runFrom,
+  alone = 0,
+  withOne = 0,
 }: {
   /** Opened already, because they pressed something that said Start. */
   openNow?: boolean;
@@ -84,6 +86,11 @@ export default function GroupLink({
   slots: Slot[];
   sameDayFrom: number;
   runFrom: number;
+  /** What delivery costs on this cart alone, and roughly each with one
+   *  friend. Two real numbers beat the idea of splitting, and saying them
+   *  here means the page is not making the same point twice. */
+  alone?: number;
+  withOne?: number;
 }) {
   const [open, setOpen] = useState(openNow);
   const [name, setName] = useState("");
@@ -146,10 +153,13 @@ export default function GroupLink({
         className="flex w-full items-center justify-between gap-3 rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-3 text-left transition active:scale-[0.99]"
       >
         <span>
-          <span className="block font-bold text-brand-dark">Ordering with friends?</span>
+          <span className="block font-bold text-brand-dark">
+            {alone > 0 ? `Delivery on this is ${naira(alone)} on your own` : "Ordering with friends?"}
+          </span>
           <span className="block text-sm text-ink/75">
-            Start a group and send them a link. Everybody orders their own food and
-            you split one delivery.
+            {alone > 0 && withOne > 0
+              ? `With one friend it is about ${naira(withOne)} each. The delivery is split evenly between everybody in the car, and you each pay for your own food.`
+              : "Start a group and send them a link. Everybody orders their own food and you split one delivery."}
           </span>
         </span>
         <span className="shrink-0 text-sm font-extrabold text-brand-dark">Start</span>

@@ -395,34 +395,25 @@ export default function CartView({
         </div>
       )}
 
-      {/* What it would actually save them, on the food they have actually
-          chosen. "Split one delivery" is an idea; two real numbers is an
-          argument, and this is the moment it stops being abstract. */}
-      {group === "" && cart.length > 0 && bands.length > 0 && (
-        <div className="rounded-2xl border border-brand/25 bg-brand-tint px-4 py-3">
-          <p className="text-sm text-ink/80">
-            Delivery on this is{" "}
-            <span className="font-extrabold text-brand-dark">
-              {naira(feeFor(countItems(cart), null, bands))}
-            </span>{" "}
-            ordering alone. With one friend it is about{" "}
-            <span className="font-extrabold text-brand-dark">
-              {naira(evenShare(countItems(cart) * 2, 2, null, bands))}
-            </span>{" "}
-            each, and it keeps falling as more of you join.
-          </p>
-        </div>
-      )}
-
       {/* Before anything else, because it costs nothing to send and it is what
           makes the delivery cheaper for all of them. In a group already, the
           bar at the top says so and this would only repeat it. */}
+      {/* The figures live on the Start card rather than beside it: "split one
+          delivery" is an idea, two real numbers are an argument, and making
+          the point twice in a row made it weaker rather than louder. */}
       <GroupLink
         openNow={startGroup}
         runs={runs}
         slots={slots}
         sameDayFrom={sameDayFrom}
         runFrom={runFrom}
+        alone={bands.length > 0 ? feeFor(countItems(cart), null, bands) : 0}
+        // One friend adding one thing, which is what a first joiner usually
+        // does. Assuming they order as much as you pushed the car into the
+        // next band and quoted a saving smaller than the real one.
+        withOne={
+          bands.length > 0 ? evenShare(countItems(cart) + 1, 2, null, bands) : 0
+        }
       />
 
       {!inParty && (
