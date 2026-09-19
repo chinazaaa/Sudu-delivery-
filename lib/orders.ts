@@ -391,8 +391,19 @@ async function placeSingleOrder(args: {
             feeFor(combined, args.batch.flash_fee, args.bands) - existing.feeCharged
           );
 
+  // Two different meanings of "group", and only one of them can apply.
+  //
+  // A shared delivery is friends each buying their own food out of one car.
+  // Ordering for friends is one person carting and paying for several. Both
+  // write to order_groups, and this used to make the second one even when the
+  // order was already in the first: a fresh group with no closes_at, which
+  // the order then joined instead, leaving the link's group empty for ever.
+  // Nobody could see why, because both halves had worked.
+  //
+  // In a shared delivery the group already exists. It is the one from the
+  // link, and nothing here makes another.
   let group: OrderGroup | null = null;
-  if (args.groupMode === "one_payer") {
+  if (args.groupMode === "one_payer" && !args.sharedGroupId) {
     group = await createGroup(args, "one_payer", args.collectMode);
     if (!group) return { ok: false, error: "Could not start that group order." };
     await saveMembers(group.id, args.people);
@@ -419,7 +430,9 @@ async function placeSingleOrder(args: {
     fee,
     discount: args.coupon?.discount ?? 0,
     coupon_code: args.coupon?.coupon.code ?? null,
-    group_id: group?.id ?? args.sharedGroupId,
+    // The shared delivery first. It is the one somebody was sent a link to and
+    // is waiting to see this order appear in.
+    group_id: args.sharedGroupId ?? group?.id ?? null,
     for_name: args.sharedGroupId ? args.name : null,
     payment_method: args.paymentMethod,
     customer_note: args.customerNote,

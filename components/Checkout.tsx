@@ -243,7 +243,10 @@ export default function Checkout({
       );
   const total = Math.max(0, subtotal + fee - (applied?.discount ?? 0));
 
-  const groupOn = people.length > 0;
+  // Naming friends to carry food for is a different thing from being in a
+  // shared delivery, and doing both at once is two answers to one question.
+  // The shared delivery wins: it is the one with a link out in a chat.
+  const groupOn = people.length > 0 && party === "";
   const names = people.map((p) => p.name);
   // Anyone the cart still names, whether or not they are on the list, so no
   // line can be paid for without being ordered.
