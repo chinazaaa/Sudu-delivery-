@@ -62,13 +62,7 @@ export default function Cart() {
   // actually chosen. "Split one delivery" is an idea; two real numbers is an
   // argument, and this is the moment it stops being abstract.
   const alone = shop && items > 0 ? feeFrom(items, shop.bands, null) : 0;
-  // One friend adding one thing, which is what a first joiner usually does.
-  // Assuming they order as much as you pushed the car into the next band and
-  // quoted a saving smaller than the real one.
-  const withOne =
-    shop && items > 0
-      ? Math.ceil(feeFrom(items + 1, shop.bands, null) / 2 / 100) * 100
-      : 0;
+
 
   return (
     <View style={{ flex: 1 }}>
@@ -93,9 +87,8 @@ export default function Cart() {
               Ordering with friends?
             </Text>
             <Text style={{ color: T.ink }}>
-              Delivery on this is {naira(alone)} on your own. With one friend it is
-              about {naira(withOne)} each. It is split evenly between everybody
-              in the car.
+              Delivery on this is {naira(alone)} on your own. Start a group and
+              that splits evenly between everybody in the car.
             </Text>
             <Text style={{ fontWeight: "800", color: T.brand, marginTop: 2 }}>
               Start a group →

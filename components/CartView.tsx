@@ -21,7 +21,7 @@ import {
   useCart,
   usePeople,
 } from "@/lib/cart";
-import { evenShare, feeFor, type Band } from "@/lib/fees";
+import { feeFor, type Band } from "@/lib/fees";
 import { nearMiss, type LiveOffer } from "@/lib/offers";
 import { naira } from "@/lib/money";
 
@@ -408,12 +408,6 @@ export default function CartView({
         sameDayFrom={sameDayFrom}
         runFrom={runFrom}
         alone={bands.length > 0 ? feeFor(countItems(cart), null, bands) : 0}
-        // One friend adding one thing, which is what a first joiner usually
-        // does. Assuming they order as much as you pushed the car into the
-        // next band and quoted a saving smaller than the real one.
-        withOne={
-          bands.length > 0 ? evenShare(countItems(cart) + 1, 2, null, bands) : 0
-        }
       />
 
       {!inParty && (
