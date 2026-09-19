@@ -1159,3 +1159,20 @@ test("a saved choice goes back into the picker as it was ticked", () => {
   assert.equal(everyLineChose(saved, [["Medium", "BBQ Chicken"]]), true);
   assert.equal(everyLineChose(saved, [["Large", "BBQ Chicken"]]), false);
 });
+
+test("a link opens whether it carries the long id or the short code", async () => {
+  const { isLongId, lookupColumn, shortRef } = await import("../lib/links");
+
+  const long = "0b8f1a2c-3d4e-4f60-8a9b-1c2d3e4f5a6b";
+  assert.equal(isLongId(long), true);
+  assert.equal(lookupColumn(long), "id");
+
+  // Seven characters from the short alphabet is not an identifier.
+  assert.equal(isLongId("k3f9x2a"), false);
+  assert.equal(lookupColumn("k3f9x2a"), "short");
+
+  // New links use the short code; anything saved before it falls back.
+  assert.equal(shortRef({ id: long, short: "k3f9x2a" }), "k3f9x2a");
+  assert.equal(shortRef({ id: long, short: null }), long);
+  assert.equal(shortRef({ id: long, short: "  " }), long);
+});

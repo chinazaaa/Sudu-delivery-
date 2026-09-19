@@ -107,6 +107,8 @@ export type Order = {
   shared_with: string | null;
   /** Set when this person said they had finished adding to a shared delivery. */
   done_at: string | null;
+  /** The seven character code its link uses. */
+  short: string | null;
   /** One to five, once the food has arrived and they have said. */
   rating: number | null;
   feedback: string;

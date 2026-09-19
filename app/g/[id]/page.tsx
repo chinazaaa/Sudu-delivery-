@@ -2,6 +2,7 @@ import Link from "next/link";
 import { groupView } from "@/lib/group-view";
 import { cookies } from "next/headers";
 import { hostelNames } from "@/lib/hostels";
+import { shortRef } from "@/lib/links";
 import { safeSettings } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
 import { naira } from "@/lib/money";
@@ -70,7 +71,10 @@ export default async function GroupPage({
   const label = group.sameDay
     ? ""
     : `${runDateLabel(group.batch.run_date)} · ${SLOT_LABEL[group.batch.slot]}`;
-  const shareUrl = `${site}/g/${group.id}`;
+  // The short code, because this is the link that gets pasted into a chat.
+  // The long one still opens the same page, so every link already sent
+  // carries on working.
+  const shareUrl = `${site}/g/${shortRef(group)}`;
 
   return (
     <div className="mx-auto max-w-lg space-y-4">

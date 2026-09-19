@@ -27,6 +27,8 @@ export type Member = {
 
 export type GroupView = {
   id: string;
+  /** The seven character code the shareable link uses. */
+  short?: string | null;
   batch: Batch;
   leaderName: string;
   closesAt: string | null;
@@ -150,6 +152,7 @@ export async function groupView(
 
   return {
     id: group.id,
+    short: group.short ?? null,
     batch,
     leaderName: group.leader_name,
     closesAt: group.closes_at,

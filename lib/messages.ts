@@ -1,3 +1,4 @@
+import { shortRef } from "./links";
 import { naira, orderRef, shareRef } from "./money";
 import { externalUrl, type Settings } from "./settings";
 
@@ -14,7 +15,8 @@ export type TemplateKind =
   | "card"
   | "pin"
   | "ready"
-  | "late";
+  | "late"
+  | "review";
 
 export const TEMPLATE_LABEL: Record<TemplateKind, string> = {
   confirmed: "Payment confirmed",
@@ -23,6 +25,7 @@ export const TEMPLATE_LABEL: Record<TemplateKind, string> = {
   pin: "Send their PIN",
   ready: "Food is here",
   late: "Running late",
+  review: "Ask for a review",
 };
 
 /** Which settings field holds the admin's own wording for each template. */
@@ -33,6 +36,7 @@ export const TEMPLATE_FIELD: Record<TemplateKind, keyof Settings> = {
   pin: "msg_pin",
   ready: "msg_ready",
   late: "msg_late",
+  review: "msg_review",
 };
 
 /** The wording used until the admin writes their own. */
@@ -56,6 +60,9 @@ export const TEMPLATE_DEFAULT: Record<TemplateKind, string> = {
   late:
     "Hi {name}, the {batch} run is running a little behind.\n\n" +
     "Your food is coming. I will message again when it is with you.",
+  review:
+    "Hi {name}, hope the food was good. If you have a second, say how it was " +
+    "on your order page: {link}\n\nIt takes one tap and it helps a lot.",
 };
 
 /** Everything a template can say, so the admin can rearrange the wording. */
@@ -196,7 +203,7 @@ export function template(args: {
     "{total}": naira(order.total),
     "{hostel}": order.hostel,
     "{window}": args.deliveryWindow,
-    "{link}": `${siteUrl}/o/${order.id}`,
+    "{link}": `${siteUrl}/o/${shortRef(order)}`,
     "{site}": siteUrl,
     "{pin}": pin ?? "----",
     "{pin_line}": pin

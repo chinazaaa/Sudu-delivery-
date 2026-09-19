@@ -1236,6 +1236,7 @@ const SETTING_FIELDS = [
   "msg_pin",
   "msg_ready",
   "msg_late",
+  "msg_review",
   "paid_note",
   "fee_bands",
   "same_day_bands",

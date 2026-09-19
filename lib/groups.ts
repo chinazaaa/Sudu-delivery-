@@ -11,6 +11,7 @@ import {
 } from "./group-carts";
 import { activePromotion } from "./coupons";
 import { offerShare } from "./offers";
+import { lookupColumn } from "./links";
 import { announceGroup } from "./announce-group";
 import type { Batch, Order, OrderGroup } from "./types";
 
@@ -214,6 +215,8 @@ export const SHARE_MINUTES = 15;
 
 export type SharedGroup = {
   id: string;
+  /** The seven character code its link uses. */
+  short?: string | null;
   batch_id: string;
   leader_phone: string;
   leader_name: string;
@@ -227,7 +230,7 @@ export async function getSharedGroup(id: string): Promise<SharedGroup | null> {
   const { data, error } = await db()
     .from("order_groups")
     .select("*")
-    .eq("id", id)
+    .eq(lookupColumn(id), id)
     .maybeSingle();
   if (error) return null;
   return (data as SharedGroup) ?? null;

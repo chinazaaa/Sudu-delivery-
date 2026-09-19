@@ -26,6 +26,11 @@ function kindsFor(order: FeedOrder): TemplateKind[] {
   // answer should not be to go and edit the order first.
   if (order.status === "pending") return ["payment", "card", "pin"];
   if (order.status === "refunded") return ["pin"];
+  // Delivered is a different conversation from paid. Confirming a payment,
+  // saying the food is here and warning that a run is late are all about
+  // food on its way, and offering them on a bag somebody ate an hour ago is
+  // four buttons nobody will press hiding the one they want.
+  if (order.status === "delivered") return ["review", "pin"];
   return ["confirmed", "ready", "late", "pin"];
 }
 

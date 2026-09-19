@@ -10,6 +10,7 @@ import {
   type CouponCheck,
 } from "./coupons";
 import { offerShare, type LiveOffer } from "./offers";
+import { lookupColumn } from "./links";
 import { cartConverted } from "./carts";
 import { emailAdmins } from "./email";
 import { renderEmail, renderText, type Block } from "./email-html";
@@ -1347,7 +1348,13 @@ export type FullOrder = Order & {
 };
 
 export async function getOrder(id: string): Promise<FullOrder | null> {
-  const { data: order } = await db().from("orders").select("*").eq("id", id).maybeSingle();
+  // Either the long identifier or the short code: every link ever sent has
+  // to go on working, and the short one is what new links use.
+  const { data: order } = await db()
+    .from("orders")
+    .select("*")
+    .eq(lookupColumn(id), id)
+    .maybeSingle();
   if (!order) return null;
 
   const batch = await getBatch(order.batch_id);
@@ -1356,7 +1363,7 @@ export async function getOrder(id: string): Promise<FullOrder | null> {
   return {
     ...(order as Order),
     batch,
-    lines: await linesFor([id]),
+    lines: await linesFor([(order as Order).id]),
     group: await getGroup(order.group_id),
     shares: await sharesFor(order.group_id),
     members: await membersOf(order.group_id),
