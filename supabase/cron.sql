@@ -59,16 +59,22 @@ select cron.schedule(
   $$
 );
 
--- Shared deliveries whose fifteen minutes are up. Checked every minute,
--- because until a group closes nobody in it has a delivery fee and so nobody
--- can pay, and fifteen minutes is short enough that an hourly check would
--- leave people waiting three quarters of an hour for a total.
+-- Shared deliveries whose fifteen minutes are up. Until a group closes nobody
+-- in it has a delivery fee, so nobody can pay and none of it travels.
+--
+-- Every five minutes rather than every minute, because this is the third net
+-- and not the first. A group closes the moment everybody has finalised, and
+-- whoever is looking at the board closes it when the clock hits zero, and any
+-- page load on the site sweeps up what is due. This is for the case where the
+-- time ran out and nobody is anywhere near the site, which is also the case
+-- where nobody is waiting on it. Worst case somebody waits five minutes past
+-- the deadline; every minute was 1,440 calls a day to find nothing.
 select cron.unschedule('sudu-close-shared-deliveries')
 where exists (select 1 from cron.job where jobname = 'sudu-close-shared-deliveries');
 
 select cron.schedule(
   'sudu-close-shared-deliveries',
-  '* * * * *',
+  '*/5 * * * *',
   $$
   select net.http_get(
     url := 'https://sudu.store/api/groups/close?key=REPLACE_WITH_CRON_SECRET',
