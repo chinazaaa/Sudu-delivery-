@@ -1268,10 +1268,31 @@ export async function saveSettings(form: FormData): Promise<void> {
   }
   if (Object.keys(patch).length === 0) return;
 
-  const { error } = await db()
-    .from("settings")
-    .update({ ...patch, updated_at: new Date().toISOString() })
-    .eq("id", true);
+  const write = (fields: Record<string, string>) =>
+    db()
+      .from("settings")
+      .update({ ...fields, updated_at: new Date().toISOString() })
+      .eq("id", true);
+
+  let { error } = await write(patch);
+
+  // One column the database has not been given yet rejects the whole update,
+  // so a newly added setting took every other setting on the form down with
+  // it: changing the delivery hours did nothing, silently, and came back
+  // showing the old ones. The unknown column is dropped and the rest saved,
+  // and what did not save is said out loud rather than guessed at.
+  const missing: string[] = [];
+  while (error && missing.length < SETTING_FIELDS.length) {
+    const named = SETTING_FIELDS.find(
+      (field) => field in patch && error!.message.includes(field)
+    );
+    if (!named) break;
+
+    missing.push(named);
+    delete patch[named];
+    if (Object.keys(patch).length === 0) break;
+    ({ error } = await write(patch));
+  }
 
   // A setting that saves to nowhere looks exactly like one that will not
   // stick, and you would have no way to tell which.
@@ -1279,6 +1300,12 @@ export async function saveSettings(form: FormData): Promise<void> {
     throw new Error(
       `Could not save that: ${error.message}. ` +
         "If it mentions a column, run supabase/update.sql in Supabase."
+    );
+  }
+  if (missing.length > 0) {
+    throw new Error(
+      `Saved everything except ${missing.join(", ")}: the database has not got ` +
+        "that column yet. Run supabase/update.sql in Supabase and save again."
     );
   }
 
