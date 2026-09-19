@@ -329,10 +329,21 @@ export default function CartView({
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-4 sm:items-center">
           <div className="w-full max-w-sm space-y-3 rounded-3xl bg-paper p-5 shadow-bar">
             <div>
-              <h2 className="text-lg font-extrabold">Where does your food go?</h2>
+              <h2 className="text-lg font-extrabold">Put this food in the group?</h2>
               <p className="mt-1 text-sm text-muted">
-                Last thing. Your share of delivery is worked out when the group
-                closes, so nothing is charged yet.
+                Your share of delivery is worked out when the group closes, so
+                nothing is charged yet.
+              </p>
+            </div>
+
+            {/* What they are actually agreeing to, rather than a bare yes. */}
+            <div className="rounded-2xl bg-black/[0.04] px-3 py-2 text-sm">
+              <p className="font-bold">
+                {countItems(cart)} item{countItems(cart) === 1 ? "" : "s"} ·{" "}
+                {naira(cartSubtotal(cart))}
+              </p>
+              <p className="mt-0.5 truncate text-xs text-muted">
+                {cart.map((line) => `${line.qty}× ${line.name}`).join(", ")}
               </p>
             </div>
 
@@ -387,14 +398,14 @@ export default function CartView({
               disabled={sending}
               className="btn-primary w-full"
             >
-              {sending ? "Saving…" : "Done, put me in"}
+              {sending ? "Saving…" : "Yes, put my food in"}
             </button>
             <button
               type="button"
               onClick={() => setAsking(false)}
               className="w-full text-sm font-semibold text-muted"
             >
-              Not yet, I am still choosing
+              No, I am still choosing
             </button>
           </div>
         </div>

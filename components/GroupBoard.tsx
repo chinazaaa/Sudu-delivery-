@@ -75,6 +75,9 @@ export default function GroupBoard({
   const waiting = countItems(cart);
   const [left, setLeft] = useState("");
   const [busy, setBusy] = useState(false);
+  // Closing cannot be undone and leaves behind anybody still choosing, so it
+  // is asked rather than done, from wherever it is pressed.
+  const [confirming, setConfirming] = useState(false);
   const [leader, setLeader] = useState(leaderOnServer);
   const asked = useRef(false);
 
@@ -346,6 +349,33 @@ export default function GroupBoard({
         </p>
       )}
 
+      {confirming && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-4 sm:items-center">
+          <div className="w-full max-w-sm space-y-3 rounded-3xl bg-paper p-5 shadow-bar">
+            <h2 className="text-lg font-extrabold">Close the cart?</h2>
+            <p className="text-sm text-muted">
+              {ready} of {members.length} {members.length === 1 ? "person is" : "people are"}{" "}
+              ready. Delivery is worked out and split evenly, and everybody gets
+              their total. Nobody can add after this, and anybody who has not
+              finalised is left out.
+            </p>
+            <form action={closeSharedGroup} onSubmit={() => setBusy(true)}>
+              <input type="hidden" name="group_id" value={groupId} />
+              <button type="submit" className="btn-primary w-full" disabled={busy}>
+                {busy ? "Closing…" : "Yes, close it"}
+              </button>
+            </form>
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="w-full text-sm font-semibold text-muted"
+            >
+              Not yet
+            </button>
+          </div>
+        </div>
+      )}
+
       <section className="card space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-bold">
@@ -428,21 +458,20 @@ export default function GroupBoard({
           label={members.length === 0 ? "Send the link on WhatsApp" : "Add somebody on WhatsApp"}
         />
 
-        {leader && members.length > 0 && (
-          <form
-            action={closeSharedGroup}
-            onSubmit={() => setBusy(true)}
-            className="border-t border-black/10 pt-3"
-          >
-            <input type="hidden" name="group_id" value={groupId} />
-            <button type="submit" className="btn-primary w-full" disabled={busy}>
-              {busy ? "Closing…" : "Close the cart and work out what we owe"}
+        {leader && anyFood && (
+          <div className="border-t border-black/10 pt-3">
+            <button
+              type="button"
+              onClick={() => setConfirming(true)}
+              className="btn-primary w-full"
+            >
+              Close the cart and work out what we owe
             </button>
             <p className="mt-1 text-center text-xs text-muted">
-              Nobody can add after this. Anybody who has not given their details yet
-              is left out, so give them a nudge first.
+              Nobody can add after this. Anybody who has not finalised their food
+              yet is left out, so give them a nudge first.
             </p>
-          </form>
+          </div>
         )}
       </section>
     </div>
