@@ -304,13 +304,18 @@ export async function setRunCosts(form: FormData): Promise<void> {
     return Number.isFinite(value) && value > 0 ? value : 0;
   };
 
+  // The food is priced at the counter now, item by item, so this form no
+  // longer carries a figure for the whole shop. Runs reconciled the old way
+  // keep theirs: absent means leave it alone, not set it to nothing.
+  const whole = form.has("food_spend") ? { food_spend: money("food_spend") } : {};
+
   await db()
     .from("batches")
     .update({
       fuel_cost: money("fuel_cost"),
       driver_cost: money("driver_cost"),
       other_cost: money("other_cost"),
-      food_spend: money("food_spend"),
+      ...whole,
       cost_note: String(form.get("cost_note") ?? "").trim(),
     })
     .eq("id", String(form.get("batch_id")));

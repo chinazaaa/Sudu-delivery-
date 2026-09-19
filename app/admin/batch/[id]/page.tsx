@@ -814,9 +814,40 @@ export default async function BatchPage({
                     <h2 className="font-bold">What this run cost you</h2>
                     <p className="text-sm text-muted">
                       Fill these in on the night. They come straight off the profit
-                      above, and off this run in the dashboard.
+                      above, and off this run in the dashboard. What the food
+                      cost is not here: it is priced at the counter, item by
+                      item, under At the counter.
                     </p>
                   </div>
+
+                  {/* A run reconciled the old way, with one figure for the
+                      whole shop. It still counts, and this is the way out of
+                      it and onto the counter prices. */}
+                  {batch.food_spend > 0 && summary.reconciled.lines === 0 && (
+                    <form
+                      action={setRunCosts}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-black/[0.03] px-3 py-2"
+                    >
+                      <input type="hidden" name="batch_id" value={batch.id} />
+                      <input type="hidden" name="fuel_cost" value={batch.fuel_cost || ""} />
+                      <input type="hidden" name="driver_cost" value={batch.driver_cost || ""} />
+                      <input type="hidden" name="other_cost" value={batch.other_cost || ""} />
+                      <input type="hidden" name="cost_note" value={batch.cost_note || ""} />
+                      <input type="hidden" name="food_spend" value="" />
+                      <span className="text-sm">
+                        The food on this run was put in as one figure,{" "}
+                        <span className="font-bold">{naira(batch.food_spend)}</span>
+                        {" "}for the whole shop.
+                      </span>
+                      <ConfirmButton
+                        tone="bare"
+                        className="chip border-black/10 bg-white text-brand"
+                        confirm="Yes, back to menu prices"
+                      >
+                        Clear it
+                      </ConfirmButton>
+                    </form>
+                  )}
                   <form action={setRunCosts} className="space-y-3">
                     <input type="hidden" name="batch_id" value={batch.id} />
                     <div className="grid gap-3 sm:grid-cols-3">
@@ -841,39 +872,6 @@ export default async function BatchPage({
                           placeholder="0"
                           className="field"
                         />
-                      </div>
-                      <div>
-                        <label className="label" htmlFor="food_spend">
-                          Food actually paid
-                        </label>
-                        <input
-                          id="food_spend"
-                          name="food_spend"
-                          inputMode="numeric"
-                          defaultValue={batch.food_spend || ""}
-                          placeholder={String(summary.menuCost)}
-                          className="field"
-                        />
-                        <p className="mt-1 text-xs text-muted">
-                          {summary.reconciled.lines > 0 ? (
-                            <>
-                              Not being used: {summary.reconciled.lines} line
-                              {summary.reconciled.lines === 1 ? " has" : "s have"}{" "}
-                              been priced one by one under What it actually cost,
-                              and those win. Clear them there to use one figure
-                              for the whole shop instead.
-                            </>
-                          ) : (
-                            <>
-                              The whole shop in one figure, whichever way it went:
-                              less than the menu and the profit goes up, more and it
-                              goes down. Blank means the menu prices stand. For the
-                              usual case, two or three items out of thirty, use What
-                              it actually cost below instead, which also takes money
-                              a customer handed back.
-                            </>
-                          )}
-                        </p>
                       </div>
                       <div>
                         <label className="label" htmlFor="other_cost">Anything else</label>
