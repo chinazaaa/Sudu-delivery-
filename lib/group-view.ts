@@ -1,6 +1,6 @@
 import { db } from "./supabase";
 import { getSharedGroup, groupOrders, shareNow } from "./groups";
-import { cartValues, groupCarts, isReady } from "./group-carts";
+import { cartValues, groupCarts, isReady, type GroupCart } from "./group-carts";
 import { getBatch } from "./batches";
 import { shortRef } from "./links";
 import type { Batch } from "./types";
@@ -64,6 +64,21 @@ export type GroupView = {
   /** The promotion pricing the car, when one is. */
   offer: string;
 };
+
+/**
+ * Where a seat has got to, read from what it actually holds.
+ *
+ * This used to say "details" for anything finalised that could not travel,
+ * which meant a seat with a number and a block but no food asked for the
+ * number and the block again, with both already filled in. What is missing
+ * is what to ask for: no food is shopping, no address is details, and
+ * everything is ready.
+ */
+function stageOf(cart: GroupCart): Stage {
+  if (isReady(cart)) return "ready";
+  if (cart.lines.length === 0) return "shopping";
+  return "details";
+}
 
 /**
  * One shared delivery, as everybody in it sees it.
@@ -134,11 +149,7 @@ export async function groupView(
     : waiting.map((cart) => ({
         orderId: cart.id,
         link: cart.id,
-        stage: (isReady(cart)
-          ? "ready"
-          : cart.finalised_at
-            ? "details"
-            : "shopping") as Stage,
+        stage: stageOf(cart),
         isMine: seat !== "" && cart.member_token === seat,
         name: cart.name,
         items: cart.lines.reduce((sum, line) => sum + (line.qty ?? 0), 0),
@@ -173,11 +184,7 @@ export async function groupView(
       const seated = waiting.find((cart) => seat !== "" && cart.member_token === seat);
       if (!seated) return null;
       return {
-        stage: (isReady(seated)
-          ? "ready"
-          : seated.finalised_at
-            ? "details"
-            : "shopping") as Stage,
+        stage: stageOf(seated),
         // The leader took the first seat when they made the link.
         isLeader: waiting[0]?.member_token === seated.member_token,
         hasFood: seated.lines.length > 0,

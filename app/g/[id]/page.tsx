@@ -79,7 +79,12 @@ export default async function GroupPage({
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      {query.placed === "1" && <ClearCartKeepGroup />}
+      {/* The cart empties when the food has actually become an order, not
+          when it was put in the group: until this closes they can still add
+          to it, and that is done from the cart. */}
+      {(query.placed === "1" || (group.closedAt !== null && me !== null)) && (
+        <ClearCartKeepGroup />
+      )}
       <section className="card space-y-1">
         <div className="flex items-start justify-between gap-3">
           <p className="text-sm font-bold uppercase tracking-wide text-brand-dark">

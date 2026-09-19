@@ -217,10 +217,12 @@ export default function CartView({
       } catch {
         /* Not worth failing on. */
       }
-      // placed=1 is what empties this browser's cart on the way in: the food
-      // is in the group now, and leaving it in the cart had people carrying
-      // the same pizza around with a badge on the bag icon.
-      router.push(`/g/${group}?placed=1`);
+      // The cart stays. Putting food in a group is not the end of ordering:
+      // the group is open for another quarter of an hour and adding a drink
+      // means opening this cart again and finalising again, which cannot be
+      // done from an empty one. It empties when the group closes and the
+      // order is real.
+      router.push(`/g/${group}`);
     } catch {
       setProblem("Could not save that.");
     } finally {
