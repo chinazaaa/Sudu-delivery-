@@ -76,29 +76,56 @@ export async function openRunsBetween(from: string, to: string): Promise<number>
     (existing.data ?? []).map((row) => `${row.run_date}|${row.slot}`)
   );
 
-  const write = (withKind: boolean) =>
-    db()
-      .from("batches")
-      .upsert(
-        withKind
-          ? rows
-          : rows.map(({ kind, deliver_at, ...rest }) => {
-              void kind;
-              void deliver_at;
-              return rest;
-            }),
-        { onConflict: "run_date,slot", ignoreDuplicates: true }
-      );
+  // Only the ones that are not there yet, chosen here rather than left to
+  // ON CONFLICT.
+  //
+  // This used to upsert on (run_date, slot) and let the database sort it out,
+  // which tied every page load of the shop to that pair being unique across
+  // every batch. It cannot be: a same day car is a batch too, and it borrows a
+  // run's date and slot because the enum only knows the two. Asking the
+  // database to infer a conflict it can no longer infer took the shop down, so
+  // the decision is made here, where it can be read.
+  const missing = rows.filter((row) => !already.has(`${row.run_date}|${row.slot}`));
+  if (missing.length === 0) return 0;
+
+  const strip = (list: typeof rows) =>
+    list.map(({ kind, deliver_at, ...rest }) => {
+      void kind;
+      void deliver_at;
+      return rest;
+    });
 
   // Written without the newer columns when the database has not got them yet,
   // for the same reason the read above is: this runs on every page load of the
   // shop, and a migration that has not been run must not close it.
-  let { error } = await write(true);
-  if (error) ({ error } = await write(false));
+  const write = async (list: typeof rows) => {
+    let { error } = await db().from("batches").insert(list);
+    if (error) ({ error } = await db().from("batches").insert(strip(list)));
+    return error;
+  };
+
+  // Two page loads landing together both see the same run missing and both
+  // try to make it. One wins; the other is told it is a duplicate, which is
+  // the right answer and not a failure. A whole insert fails on one duplicate
+  // row though, so that case is retried one at a time rather than losing the
+  // rest of the week.
+  const duplicate = (error: { code?: string } | null) => error?.code === "23505";
+
+  const error = await write(missing);
+  if (error && duplicate(error)) {
+    for (const row of missing) {
+      const one = await write([row]);
+      if (one && !duplicate(one)) {
+        throw new Error(`Could not open batches: ${one.message}`);
+      }
+    }
+    return missing.length;
+  }
+
   // A blocked write here is why batches would otherwise just never appear.
   if (error) throw new Error(`Could not open batches: ${error.message}`);
 
-  return rows.filter((row) => !already.has(`${row.run_date}|${row.slot}`)).length;
+  return missing.length;
 }
 
 /** The last day anything is open for, so admin can see how far ahead it runs. */

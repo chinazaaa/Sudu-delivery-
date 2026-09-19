@@ -1123,21 +1123,41 @@ export async function createBatch(form: FormData): Promise<void> {
   const [hour, minute] = time.split(":").map(Number);
   if (!Number.isFinite(hour) || !Number.isFinite(minute)) return;
 
-  await db()
-    .from("batches")
-    .upsert(
-      {
-        run_date: runDate,
-        slot,
-        cut_off_at: lagosInstant(runDate, hour, minute),
-        delivery_window_text:
-          String(form.get("delivery_window_text") ?? "").trim() ||
-          (await deliveryWindows())[slot as BatchSlot],
-        status: "open",
-        stage: "ordering",
-      },
-      { onConflict: "run_date,slot" }
-    );
+  const fields = {
+    run_date: runDate,
+    slot,
+    cut_off_at: lagosInstant(runDate, hour, minute),
+    delivery_window_text:
+      String(form.get("delivery_window_text") ?? "").trim() ||
+      (await deliveryWindows())[slot as BatchSlot],
+    status: "open",
+    stage: "ordering",
+  };
+
+  // Found by hand rather than by ON CONFLICT, because (run_date, slot) is no
+  // longer unique across every batch: a same day car borrows a run's date and
+  // slot. Only a run is looked for, so editing Friday night never reaches
+  // somebody's three o'clock car.
+  const findRun = (byKind: boolean) => {
+    const query = db()
+      .from("batches")
+      .select("id")
+      .eq("run_date", runDate)
+      .eq("slot", slot);
+    return byKind ? query.neq("kind", "same_day").maybeSingle() : query.maybeSingle();
+  };
+
+  // Falls back when the database has not got `kind` yet, for the same reason
+  // every other read of it does: a column that is not there must not stop
+  // somebody editing a run.
+  let { data: existingRun, error: findError } = await findRun(true);
+  if (findError) ({ data: existingRun } = await findRun(false));
+
+  if (existingRun) {
+    await db().from("batches").update(fields).eq("id", existingRun.id as string);
+  } else {
+    await db().from("batches").insert(fields);
+  }
 
   revalidatePath("/admin", "layout");
   updateTag("menu");
