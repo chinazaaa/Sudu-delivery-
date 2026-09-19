@@ -866,51 +866,46 @@ test("picking a time always costs more than the same order on a run", () => {
   }
 });
 
-test("same day never offers a time sooner than it takes to get there", () => {
+test("same day offers windows, and never one sooner than it takes to get there", () => {
   const at = (lagos: string) => slotsToday(new Date(`2026-09-21T${lagos}+01:00`));
 
-  // Nine in the morning: three hours from now is noon, so the whole day.
-  assert.deepEqual(at("09:00:00")[0].label, "12pm");
-  assert.equal(at("09:00:00").at(-1)!.label, "6pm");
-
-  // One o'clock: nothing before four, whatever anybody would like.
-  assert.deepEqual(at("13:00:00").map((s) => s.label), [
-    "4pm",
-    "4:30pm",
-    "5pm",
-    "5:30pm",
-    "6pm",
+  // Nine in the morning: three hours from now is noon, so the whole day, in
+  // blocks rather than a wall of half hours.
+  assert.deepEqual(at("09:00:00").map((s) => s.label), [
+    "Between 12pm and 3pm",
+    "Between 3pm and 6pm",
   ]);
 
-  // Three o'clock is the last moment anything can be ordered at all, and six
-  // is the only time left.
-  assert.deepEqual(at("15:00:00").map((s) => s.label), ["6pm"]);
+  // One o'clock: noon has gone and three is too soon, but four to six is an
+  // easy yes, so the window shifts rather than the afternoon being lost.
+  assert.deepEqual(at("13:00:00").map((s) => s.label), ["Between 4pm and 6pm"]);
 
-  // Past three, six is already out of reach, so same day is simply not on.
-  assert.deepEqual(at("15:30:00"), []);
+  // Three o'clock: the earliest is six, which is closing, so a window has
+  // nowhere left to run and today is finished.
+  assert.deepEqual(at("15:00:00"), []);
   assert.deepEqual(at("18:00:00"), []);
 });
 
-test("a slot knows whether it is urgent, so its price is the real one", () => {
+test("a window knows whether it is urgent, so its price is the real one", () => {
   const nine = new Date("2026-09-21T08:00:00Z"); // 9am Lagos
   const slots = slotsToday(nine);
 
-  const noon = slots.find((s) => s.label === "12pm")!;
-  const three = slots.find((s) => s.label === "3pm")!;
+  const early = slots.find((s) => s.label === "Between 12pm and 3pm")!;
+  const later = slots.find((s) => s.label === "Between 3pm and 6pm")!;
 
-  assert.equal(noon.urgent, true, "9am for noon is three hours");
-  assert.equal(three.urgent, false, "9am for three is six hours");
+  // Worked out from the start of the window, which is the earliest somebody
+  // could be standing at their block waiting for it.
+  assert.equal(early.urgent, true, "9am for noon is three hours");
+  assert.equal(later.urgent, false, "9am for three is six hours");
 
-  assert.equal(slotFee(noon, 2), 8500);
-  assert.equal(slotFee(three, 2), 6500);
+  assert.equal(slotFee(early, 2), 8500);
+  assert.equal(slotFee(later, 2), 6500);
 });
 
-test("when today has run out, the soonest time is tomorrow rather than nothing", () => {
-  // Five o'clock: three hours from now is eight, and nothing goes out after
-  // six, so today is finished.
+test("when today has run out, the soonest window is tomorrow rather than nothing", () => {
   const late = deliverySlots(new Date("2026-09-21T17:00:00+01:00"));
   assert.ok(late.length > 0, "there is always something to offer");
-  assert.equal(late[0].label, "12pm tomorrow");
+  assert.equal(late[0].label, "Between 12pm and 3pm tomorrow");
   assert.equal(late[0].day, "tomorrow");
   assert.equal(late.every((s) => s.day === "tomorrow"), true);
 
@@ -920,7 +915,7 @@ test("when today has run out, the soonest time is tomorrow rather than nothing",
 
 test("earlier in the day, today comes first and tomorrow follows it", () => {
   const one = deliverySlots(new Date("2026-09-21T13:00:00+01:00"));
-  assert.equal(one[0].label, "4pm");
+  assert.equal(one[0].label, "Between 4pm and 6pm");
   assert.equal(one[0].day, "today");
   assert.ok(one.some((s) => s.day === "tomorrow"), "tomorrow is still offered");
 });
@@ -930,11 +925,19 @@ test("the delivery window is whatever admin set, not a fixed noon to six", () =>
 
   // A late evening, as a day somebody decided to run longer.
   const late = deliverySlots(nine, { first: 12, last: 21 });
-  assert.equal(late.at(-1)!.label, "9pm tomorrow");
-  assert.ok(late.some((s) => s.label === "8:30pm"), "today reaches the later hour");
+  assert.equal(late.at(-1)!.label, "Between 6pm and 9pm tomorrow");
+  assert.ok(
+    late.some((s) => s.label === "Between 6pm and 9pm"),
+    "today reaches the later hour"
+  );
 
-  // And a short day, where six is no longer offered at all.
+  // And a short day, where the last block is whatever is left rather than
+  // running past closing.
   const short = deliverySlots(nine, { first: 12, last: 14 });
-  assert.equal(short.filter((s) => s.day === "today").at(-1)!.label, "2pm");
-  assert.equal(short.some((s) => s.label.startsWith("6pm")), false);
+  assert.equal(
+    short.filter((s) => s.day === "today").at(-1)!.label,
+    "Between 12pm and 2pm"
+  );
+  assert.equal(short.some((s) => s.label.includes("6pm")), false);
 });
+

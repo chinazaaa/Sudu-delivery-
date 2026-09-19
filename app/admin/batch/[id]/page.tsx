@@ -1,5 +1,7 @@
 import SaveButton from "@/components/SaveButton";
-import { raiseMenuPrice, setCounterSpend } from "@/app/admin/actions";
+import { deliverySlots } from "@/lib/same-day";
+import { deliveryHours } from "@/lib/settings";
+import { moveSameDayCar, raiseMenuPrice, setCounterSpend } from "@/app/admin/actions";
 import ShortGroups from "@/components/admin/ShortGroups";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -68,6 +70,12 @@ export default async function BatchPage({
   // reads high at exactly the moment the decision to drive is made. What past
   // runs actually cost is a far better guess than nothing.
   const usual = summary.costs === 0 ? await typicalCosts() : null;
+  // Windows a car could be moved into, when it is a car and nothing has been
+  // bought for it yet.
+  const windows =
+    batch.kind === "same_day" && batch.stage === "ordering"
+      ? await deliverySlots(new Date(), await deliveryHours())
+      : [];
   // Shared deliveries where somebody has not paid, and what that leaves the
   // car short by.
   const short = await shortfalls(batch.id);
@@ -285,6 +293,43 @@ export default async function BatchPage({
                     </li>
                   </ul>
                 </section>
+
+                {batch.kind === "same_day" && batch.stage === "ordering" && (
+                  <section className="card space-y-3">
+                    <div>
+                      <h2 className="font-bold">Move this car</h2>
+                      <p className="text-sm text-muted">
+                        Ring them, ask whether another window suits, and put it
+                        here. A car moved into a window somebody else already
+                        asked for becomes one trip with theirs, which is one
+                        walk to the counter instead of two. Nobody is told by
+                        this: the agreement happened on the phone.
+                      </p>
+                    </div>
+                    <form action={moveSameDayCar} className="flex flex-wrap items-end gap-2">
+                      <input type="hidden" name="batch_id" value={batch.id} />
+                      <div className="min-w-0 flex-1">
+                        <label className="label" htmlFor="deliver_at">
+                          Which window instead?
+                        </label>
+                        <select id="deliver_at" name="deliver_at" className="field">
+                          {windows.map((slot) => (
+                            <option key={slot.at} value={slot.at}>
+                              {slot.label}
+                              {slot.at === batch.deliver_at && " · where it is now"}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <SaveButton quiet>Move it</SaveButton>
+                    </form>
+                    {windows.length === 0 && (
+                      <p className="text-sm text-muted">
+                        Nothing else can be reached today.
+                      </p>
+                    )}
+                  </section>
+                )}
 
                 {counter.length > 0 && (
                   <section className="card space-y-3">

@@ -502,10 +502,10 @@ export default function Checkout({
                     theirs: they want to know when they can eat. */}
                 <p className="text-sm text-muted">
                   {sameDaySlots[0].day === "tomorrow"
-                    ? `Past our delivery time. Soonest is ${sameDaySlots[0].label}.`
+                    ? `Past our delivery time. The soonest is ${sameDaySlots[0].phrase}.`
                     : sameDay.urgent
                       ? "Under five hours, so this one is urgent. A later time is cheaper."
-                      : `Soonest is ${sameDaySlots[0].label}.`}
+                      : `The soonest is ${sameDaySlots[0].phrase}.`}
                 </p>
               </div>
             ) : (

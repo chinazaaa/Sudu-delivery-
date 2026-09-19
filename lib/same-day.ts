@@ -9,25 +9,42 @@ import {
 import { lagosInstant, lagosToday } from "./time";
 
 export type Slot = {
-  /** The instant it lands, as an ISO string. */
+  /** The start of the window, as an ISO string. It is what the trip has to
+   *  be ready for and what the price is worked out from. */
   at: string;
-  /** "12:30pm", or "12:30pm tomorrow", as it reads in the dropdown. */
+  /** "Between 12pm and 3pm", as it reads in the dropdown. */
   label: string;
+  /** The same thing inside a sentence: "get it between 12pm and 3pm". A
+   *  capital B mid sentence is the tell that a label has been dropped into
+   *  prose without being read. */
+  phrase: string;
   /** Which day it lands on, for grouping and for the wording. */
   day: "today" | "tomorrow";
   urgent: boolean;
 };
 
 /**
- * Every time somebody can ask for, soonest first.
+ * How long a delivery window is.
  *
- * Between noon and six, on the half hour, and never sooner than it actually
+ * A list of half hours asks somebody to pick a minute for food arriving from
+ * a restaurant in Lagos traffic, which is a promise nobody can keep and a
+ * decision nobody wants to make. A window is the honest version of the same
+ * answer, and it is the one people already use when they say "this
+ * afternoon".
+ */
+const WINDOW_HOURS = 3;
+
+/**
+ * Every window somebody can ask for, soonest first.
+ *
+ * Between the hours admin set, in blocks, and never sooner than it actually
  * takes: to the restaurant, wait for the food, drive it over. Three hours.
- * Offering half past one at one o'clock would be promising the impossible.
+ * A window is offered only when its start is that far off, because the start
+ * is the earliest the food might turn up.
  *
- * Nothing goes out after six, so ordering at five has nothing left today. It
- * rolls into tomorrow rather than turning somebody away: five o'clock today
- * means noon tomorrow, which is a real answer and an empty list is not.
+ * Nothing goes out after closing, so ordering late has nothing left today. It
+ * rolls into tomorrow rather than turning somebody away, which is a real
+ * answer where an empty list is not.
  */
 export function deliverySlots(
   now: Date = new Date(),
@@ -45,23 +62,38 @@ export function deliverySlots(
     [today, "today"],
     [tomorrow, "tomorrow"],
   ] as const) {
-    for (let hour = hours.first; hour <= hours.last; hour++) {
-      for (const minute of [0, 30]) {
-        if (hour === hours.last && minute > 0) break;
+    // The first window starts at opening, or at the first hour that is far
+    // enough away, whichever is later. Walking a fixed grid instead would
+    // throw away a perfectly deliverable afternoon: at one o'clock the noon
+    // block has gone and the three o'clock block is too soon, so there would
+    // be nothing today at all, when between four and six is an easy yes.
+    let opening = hours.first;
+    while (
+      opening < hours.last &&
+      new Date(lagosInstant(date, opening, 0)).getTime() < earliest
+    ) {
+      opening += 1;
+    }
 
-        const at = lagosInstant(date, hour, minute);
-        if (new Date(at).getTime() < earliest) continue;
+    for (let from = opening; from < hours.last; from += WINDOW_HOURS) {
+      // The last block is whatever is left rather than running past closing:
+      // a day ending at two is noon to two, not noon to three.
+      const to = Math.min(from + WINDOW_HOURS, hours.last);
 
-        const clock = clockOf(hour, minute);
-        slots.push({
-          at,
-          label: day === "today" ? clock : `${clock} tomorrow`,
-          day,
-          // Tomorrow is always more than five hours off, so it can never be
-          // urgent. That falls out of the clock rather than being a rule.
-          urgent: isUrgent(new Date(at), now),
-        });
-      }
+      const at = lagosInstant(date, from, 0);
+      if (new Date(at).getTime() < earliest) continue;
+
+      const window = `between ${clockOf(from, 0)} and ${clockOf(to, 0)}`;
+      const said = day === "today" ? window : `${window} tomorrow`;
+      slots.push({
+        at,
+        label: said.charAt(0).toUpperCase() + said.slice(1),
+        phrase: said,
+        day,
+        // Worked out from the start, because that is the earliest somebody
+        // could be standing at their block waiting for it.
+        urgent: isUrgent(new Date(at), now),
+      });
     }
   }
 

@@ -24,7 +24,7 @@ export default function SameDayStrip({ soonest }: { soonest: Slot }) {
         {soonest.day === "today" ? "Want it today?" : "Past our delivery time"}
       </p>
       <p className="mt-0.5 text-lg font-extrabold text-ink">
-        Order now, get it by {soonest.label}
+        Order now, get it {soonest.phrase}
       </p>
       {/* No price here. The number depends on how much somebody orders, and a
           "from" beside a time reads as the price of the time. What it costs is

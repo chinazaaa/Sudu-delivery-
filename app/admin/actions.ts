@@ -7,8 +7,9 @@ import { isSignedIn, passwordMatches, signIn, signOut } from "@/lib/admin-auth";
 import { db } from "@/lib/supabase";
 import { STAGES, type BatchStage } from "@/lib/stages";
 import { type BatchSlot } from "@/lib/config";
-import { deliveryWindows, externalUrl } from "@/lib/settings";
+import { deliveryHours, deliveryWindows, externalUrl } from "@/lib/settings";
 import { runSchedule } from "@/lib/schedule";
+import { deliverySlots } from "@/lib/same-day";
 import { lagosInstant, lagosToday } from "@/lib/time";
 import { ensureUpcomingBatches, openRunsBetween } from "@/lib/batches";
 import { fileFrom, uploadImage } from "@/lib/uploads";
@@ -243,6 +244,57 @@ export async function raiseMenuPrice(form: FormData): Promise<void> {
   updateTag("menu");
   revalidatePath("/admin", "layout");
   revalidatePath("/", "layout");
+}
+
+/**
+ * Move a same day car into another window.
+ *
+ * Somebody asks for three to six, you ring them, and they are happy to have
+ * it at lunchtime instead. That turns two shopping trips into one, and the
+ * only way to say so was to have no way to say so.
+ *
+ * Moving it is all that is needed: trips are clustered by the time asked for,
+ * so a car moved into another window joins that trip on its own.
+ *
+ * The customer is not told by this. It comes from a phone call, so the
+ * agreement already happened; changing it here is writing down what was said.
+ */
+export async function moveSameDayCar(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const id = String(form.get("batch_id") ?? "");
+  const at = String(form.get("deliver_at") ?? "");
+  if (!id || !at) return;
+
+  const { data: batch } = await db()
+    .from("batches")
+    .select("kind, stage")
+    .eq("id", id)
+    .maybeSingle();
+
+  // Only a car, and only one that has not been bought for yet: moving a
+  // delivery after the food is in the boot moves nothing but the record.
+  if (!batch || batch.kind !== "same_day") return;
+  if (batch.stage !== "ordering") return;
+
+  const slot = (await deliverySlots(new Date(), await deliveryHours())).find(
+    (one) => one.at === at
+  );
+  if (!slot) return;
+
+  await db()
+    .from("batches")
+    .update({
+      deliver_at: slot.at,
+      delivery_window_text: slot.label,
+      run_date: lagosToday(new Date(slot.at)),
+      // The enum only knows the two, and nothing reads it on a same day car.
+      slot: new Date(slot.at).getUTCHours() >= 16 ? "night" : "afternoon",
+    })
+    .eq("id", id);
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/");
 }
 
 export async function setRunCosts(form: FormData): Promise<void> {
