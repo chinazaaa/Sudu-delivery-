@@ -1,4 +1,5 @@
 import SaveButton from "@/components/SaveButton";
+import type { Batch } from "@/lib/types";
 import { deliverySlots } from "@/lib/same-day";
 import { deliveryHours } from "@/lib/settings";
 import { moveSameDayCar, raiseMenuPrice, setCounterSpend } from "@/app/admin/actions";
@@ -158,8 +159,8 @@ export default async function BatchPage({
           tone={summary.profit >= 0 ? "good" : "warn"}
           hint={
             summary.costs > 0
-              ? `after ${naira(summary.costs)} fuel and driver`
-              : "fuel and driver not entered yet"
+              ? `after ${naira(summary.costs)} ${spentOn(batch)}`
+              : "fuel, transport and driver not entered yet"
           }
         />
       </div>
@@ -179,7 +180,8 @@ export default async function BatchPage({
               : `This run loses about ${naira(Math.abs(likely))}.`}
           </span>{" "}
           {naira(summary.gross)} paid in, {naira(summary.foodCost)} to the counters,
-          and roughly {naira(usual!)} of fuel and driver going by the last few runs.
+          and roughly {naira(usual!)} of fuel, transport and driver going by the
+          last few runs.
           Put this run&apos;s real costs in under Profit and this becomes exact.
         </p>
       )}
@@ -1200,6 +1202,26 @@ function clockValue(iso: string): string {
     minute: "2-digit",
     timeZone: "Africa/Lagos",
   });
+}
+
+/**
+ * What the money on a run actually went on, named rather than assumed.
+ *
+ * "After fuel and driver" was written when those were the only two boxes, and
+ * it went on saying it for a run where the whole figure was a keke. A number
+ * is only as useful as knowing what it is.
+ */
+function spentOn(batch: Batch): string {
+  const named = [
+    batch.fuel_cost > 0 && "fuel",
+    batch.transport_cost > 0 && "transport",
+    batch.driver_cost > 0 && "driver",
+    batch.other_cost > 0 && (batch.cost_note.trim().toLowerCase() || "other costs"),
+  ].filter((one): one is string => typeof one === "string");
+
+  if (named.length === 0) return "costs";
+  if (named.length === 1) return named[0];
+  return `${named.slice(0, -1).join(", ")} and ${named[named.length - 1]}`;
 }
 
 function Row({
