@@ -943,7 +943,11 @@ export default function Checkout({
                 : `Delivery (${itemCount} item${itemCount === 1 ? "" : "s"})`}
           </span>
           <span>
-            {shared && !sameDay ? "worked out when the group closes" : naira(charged)}
+            {shared && !sameDay
+              ? "worked out when the group closes"
+              : charged === 0
+                ? "Free"
+                : naira(charged)}
           </span>
         </div>
         {/* Four items costing more than three looks arbitrary until the whole

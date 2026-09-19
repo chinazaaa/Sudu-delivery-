@@ -949,6 +949,24 @@ export async function deleteSlide(form: FormData): Promise<void> {
 }
 
 /** A discount code: what it takes off, and how long it lasts. */
+/**
+ * Ticked choices, as one set per question the dish asks.
+ *
+ * They arrive as "Size::Medium 12\"", because the question is what decides
+ * whether two of them are alternatives or conditions. Within a question any
+ * will do; across questions all must hold.
+ */
+function choiceJson(values: string[]): string {
+  const sets = new Map<string, string[]>();
+  for (const value of values) {
+    const [group, name] = value.includes("::") ? value.split("::") : ["", value];
+    const clean = name.trim();
+    if (clean === "") continue;
+    sets.set(group, [...(sets.get(group) ?? []), clean]);
+  }
+  return sets.size === 0 ? "" : JSON.stringify([...sets.values()]);
+}
+
 export async function saveCoupon(form: FormData): Promise<void> {
   await assertAdmin();
   const code = String(form.get("code") ?? "").trim().toUpperCase();
@@ -957,6 +975,9 @@ export async function saveCoupon(form: FormData): Promise<void> {
   // only allowed where the offer sets the fee, so a code cannot be saved as
   // taking nothing off.
   const sets = form.get("applies_to") === "fee";
+  // The whole offer was on screen, so a box left empty is an answer rather
+  // than a question that was never asked.
+  const whole = form.get("editing") === "1" || form.has("applies_to");
   if (!code || !Number.isFinite(amount) || amount < 0) return;
   if (amount === 0 && !sets) return;
 
@@ -982,14 +1003,10 @@ export async function saveCoupon(form: FormData): Promise<void> {
     })(),
     // Same day windows it is good for, as the hours they open.
     windows: form.getAll("window").map(String).filter(Boolean).join(","),
-    // A size, by the name of the option on the dish. Several are allowed:
-    // one menu says Large where another says Standard.
-    required_choice: form
-      .getAll("required_choice")
-      .map(String)
-      .map((one) => one.trim())
-      .filter(Boolean)
-      .join(","),
+    // A size, by the name of the option on the dish, grouped by the question
+    // it answers: Medium and two BBQ flavours is a medium and one of those
+    // two, not any of three.
+    required_choice: choiceJson(form.getAll("required_choice").map(String)),
     note: String(form.get("note") ?? "").trim(),
     active: form.get("active") === "on",
     // Blank means no limit, which is the normal case for a code in a group.
@@ -998,94 +1015,38 @@ export async function saveCoupon(form: FormData): Promise<void> {
     first_order_only: form.get("first_order_only") === "on",
   });
 
-  // Runs ticked while creating it, so a code made for Wednesday is kept to
-  // Wednesday without a second save.
+  // Everything the offer covers, written on the same save as the offer
+  // itself. It used to be four forms with four buttons, so filling in three
+  // things and pressing one of them threw the other two away.
+  //
+  // Empty clears, which is how "any run" and "anywhere" are said. That only
+  // holds when the whole form was on screen: creating one leaves alone what
+  // it never showed.
   const runs = form.getAll("batch_id").map(String).filter(Boolean);
-  if (runs.length > 0) {
+  if (whole || runs.length > 0) {
     await db().from("coupon_runs").delete().eq("coupon_code", code);
-    await db()
-      .from("coupon_runs")
-      .insert(runs.map((batch_id) => ({ coupon_code: code, batch_id })));
+    if (runs.length > 0) {
+      await db()
+        .from("coupon_runs")
+        .insert(runs.map((batch_id) => ({ coupon_code: code, batch_id })));
+    }
   }
 
-  // The same for a code that belongs to one kitchen rather than to the shop.
   const places = form.getAll("restaurant_id").map(String).filter(Boolean);
-  if (places.length > 0) await writeCouponPlaces(code, places);
+  if (whole || places.length > 0) await writeCouponPlaces(code, places);
 
-  // And for one that belongs to particular dishes, or to whole sections.
   const dishes = form.getAll("menu_item_id").map(String).filter(Boolean);
-  if (dishes.length > 0) await writeCouponItems(code, dishes);
+  if (whole || dishes.length > 0) await writeCouponItems(code, dishes);
 
   const sections = form.getAll("category_id").map(String).filter(Boolean);
-  if (sections.length > 0) await writeCouponCategories(code, sections);
+  if (whole || sections.length > 0) await writeCouponCategories(code, sections);
 
   revalidatePath("/admin", "layout");
 }
 
-/**
- * Which restaurants a code is kept to. None picked means anywhere.
- *
- * A code for one kitchen only comes off a cart entirely from that kitchen:
- * the deal is with them, so it cannot end up paying for the shawarma bought
- * alongside it.
- */
-export async function setCouponPlaces(form: FormData): Promise<void> {
-  await assertAdmin();
-  const code = String(form.get("code"));
-  await writeCouponPlaces(code, form.getAll("restaurant_id").map(String).filter(Boolean));
-  revalidatePath("/admin", "layout");
-}
 
-/** Which same day windows a promotion is good for. None means any time. */
-export async function setCouponWindows(form: FormData): Promise<void> {
-  await assertAdmin();
-  await db()
-    .from("coupons")
-    .update({ windows: form.getAll("window").map(String).filter(Boolean).join(",") })
-    .eq("code", String(form.get("code")));
-  revalidatePath("/admin", "layout");
-}
 
-/**
- * Which dishes an offer is for. None means it is not about dishes.
- *
- * Free delivery on the BBQ beef medium is this: the offer is a fee of
- * nothing, and these are what earn it.
- */
-export async function setCouponItems(form: FormData): Promise<void> {
-  await assertAdmin();
-  const code = String(form.get("code"));
-  await writeCouponItems(code, form.getAll("menu_item_id").map(String).filter(Boolean));
-  revalidatePath("/admin", "layout");
-}
 
-/**
- * Which sections of a menu an offer covers, and the choice every line has to
- * have made. "Any large pizza" is both: the pizza section, and Large.
- */
-export async function setCouponMenu(form: FormData): Promise<void> {
-  await assertAdmin();
-  const code = String(form.get("code"));
-
-  // The three steps of the one control, written together: the restaurant, its
-  // sections, and the choice. Empty clears, which is how "any" is said.
-  await writeCouponPlaces(code, form.getAll("restaurant_id").map(String).filter(Boolean));
-  await writeCouponItems(code, form.getAll("menu_item_id").map(String).filter(Boolean));
-  await writeCouponCategories(code, form.getAll("category_id").map(String).filter(Boolean));
-  await db()
-    .from("coupons")
-    .update({
-      required_choice: form
-        .getAll("required_choice")
-        .map(String)
-        .map((one) => one.trim())
-        .filter(Boolean)
-        .join(","),
-    })
-    .eq("code", code);
-
-  revalidatePath("/admin", "layout");
-}
 
 async function writeCouponCategories(code: string, sections: string[]): Promise<void> {
   await db().from("coupon_categories").delete().eq("coupon_code", code);
@@ -1114,21 +1075,6 @@ async function writeCouponPlaces(code: string, places: string[]): Promise<void> 
   }
 }
 
-/** Which runs a code works on. No runs picked means every run. */
-export async function setCouponRuns(form: FormData): Promise<void> {
-  await assertAdmin();
-  const code = String(form.get("code"));
-  const runs = form.getAll("batch_id").map(String).filter(Boolean);
-
-  await db().from("coupon_runs").delete().eq("coupon_code", code);
-  if (runs.length > 0) {
-    await db()
-      .from("coupon_runs")
-      .insert(runs.map((batch_id) => ({ coupon_code: code, batch_id })));
-  }
-
-  revalidatePath("/admin", "layout");
-}
 
 export async function toggleCoupon(form: FormData): Promise<void> {
   await assertAdmin();

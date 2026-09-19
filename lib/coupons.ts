@@ -1,4 +1,4 @@
-import { pickOffer, type LiveOffer, type OfferContext } from "./offers";
+import { choiceSets, pickOffer, type LiveOffer, type OfferContext } from "./offers";
 import { db } from "./supabase";
 import { naira } from "./money";
 import { SLOT_LABEL, type BatchSlot } from "./config";
@@ -594,6 +594,33 @@ export async function dealsAt(
     /* No table yet. */
   }
 
+  // The sections an offer covers, by name, so the sentence can say them.
+  let sectionTies: { coupon_code: string; category_id: string }[] = [];
+  const sectionNames = new Map<string, string>();
+  try {
+    const { data } = await db().from("coupon_categories").select("coupon_code, category_id");
+    sectionTies = (data ?? []) as typeof sectionTies;
+    const ids = [...new Set(sectionTies.map((row) => row.category_id))];
+    if (ids.length > 0) {
+      const { data: cats } = await db()
+        .from("menu_categories")
+        .select("id, name, restaurant_id")
+        .in("id", ids);
+      for (const cat of (cats ?? []) as any[]) {
+        if ((cat.restaurant_id as string) === restaurantId) {
+          sectionNames.set(cat.id as string, String(cat.name).toLowerCase());
+        }
+      }
+    }
+  } catch {
+    /* No table yet. */
+  }
+  const sectionsOf = (code: string) =>
+    sectionTies
+      .filter((row) => row.coupon_code === code)
+      .map((row) => sectionNames.get(row.category_id))
+      .filter((name): name is string => Boolean(name));
+
   const out: Deal[] = [];
 
   for (const coupon of live) {
@@ -609,7 +636,8 @@ export async function dealsAt(
     // this restaurant, so it stays off the list.
     const mineByPlace = tiedTo.includes(restaurantId);
     const mineByDish = named.some((id) => dishShop.get(id) === restaurantId);
-    if (!mineByPlace && !mineByDish) continue;
+    const mineBySection = sectionsOf(coupon.code).length > 0;
+    if (!mineByPlace && !mineByDish && !mineBySection) continue;
 
     const only =
       named.length > 0
@@ -618,10 +646,24 @@ export async function dealsAt(
             .map((id) => dishNames.get(id) ?? "a dish")
         : [];
 
-    const where =
+    // What actually qualifies, said in full. "Order from Domino's" on an
+    // offer that is really about medium pizzas is the kind of half sentence
+    // somebody builds a cart on and then feels cheated by.
+    const parts = sectionsOf(coupon.code);
+    const sizes = choiceSets(coupon.required_choice ?? "")
+      .map((set) => set.join(" or "))
+      .join(" ");
+
+    const what =
       only.length > 0
-        ? `Order ${only.join(" or ")}, and nothing else, and `
-        : `Order from ${restaurantName}, and nothing else, and `;
+        ? only.join(" or ")
+        : parts.length > 0
+          ? `any ${sizes ? `${sizes} ` : ""}${parts.join(" or ")}`
+          : sizes
+            ? `anything ${sizes} from ${restaurantName}`
+            : `anything from ${restaurantName}`;
+
+    const where = `Order ${what}, and nothing else, and `;
 
     if (coupon.applies_to === "fee") {
       const taper =
@@ -668,8 +710,8 @@ export async function choiceReach(
   itemIds: string[],
   choice: string
 ): Promise<{ of: number; matched: number; missing: string[] }> {
-  const wanted = choice.trim().toLowerCase();
-  if (wanted === "" || itemIds.length === 0) {
+  const wanted = choiceSets(choice);
+  if (wanted.length === 0 || itemIds.length === 0) {
     return { of: itemIds.length, matched: itemIds.length, missing: [] };
   }
 
@@ -687,14 +729,21 @@ export async function choiceReach(
     const itemOfGroup = new Map(
       ((groups ?? []) as any[]).map((one) => [one.id as string, one.menu_item_id as string])
     );
-    const has = new Set<string>();
+    // A dish offers the choice when it can answer every question the offer
+    // asks: a medium BBQ Chicken needs both a Medium and a BBQ Chicken.
+    const offeredBy = new Map<string, Set<string>>();
     for (const option of (options ?? []) as any[]) {
-      if (String(option.name).trim().toLowerCase() !== wanted) continue;
       const item = itemOfGroup.get(option.group_id as string);
-      if (item) has.add(item);
+      if (!item) continue;
+      const names = offeredBy.get(item) ?? new Set<string>();
+      names.add(String(option.name).trim().toLowerCase());
+      offeredBy.set(item, names);
     }
 
-    const shortIds = itemIds.filter((id) => !has.has(id));
+    const shortIds = itemIds.filter((id) => {
+      const names = offeredBy.get(id) ?? new Set<string>();
+      return !wanted.every((set) => set.some((one) => names.has(one)));
+    });
     const { data: named } = shortIds.length
       ? await db().from("menu_items").select("id, name").in("id", shortIds)
       : { data: [] };

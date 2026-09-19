@@ -28,9 +28,11 @@ export type LiveOffer = {
   /** Particular dishes this is for, with any categories already resolved to
    *  their dishes. Empty means it is not about dishes at all. */
   items: string[];
-  /** Choices, any one of which satisfies a line: "Large,Standard". One menu
-   *  calls it Large and another calls it Standard, and it is the same offer.
-   *  Empty means the offer does not care what was chosen. */
+  /** The choices a line has to have made, as the menu groups them: one set
+   *  per question the dish asks. Within a set any of them will do, and every
+   *  set has to be answered, so a medium BBQ Chicken or a medium BBQ Meatball
+   *  both qualify and a large one does not. Empty means the offer does not
+   *  care what was chosen. */
   choice: string;
   /** Empty means any run. */
   runs: string[];
@@ -177,20 +179,45 @@ export function offerShare(offer: LiveOffer, items: number, people: number): num
  *
  * By name, because each dish carries its own copy of its options and there is
  * no one Large to point at. Compared without case or surrounding space, since
- * "large" and "Large " are the same answer to anybody reading a menu. Several
- * names can be given: Domino's calls it Large, Panarottis calls it Standard.
+ * "large" and "Large " are the same answer to anybody reading a menu.
  */
 export function everyLineChose(choice: string, lines: string[][] | undefined): boolean {
-  const wanted = choice
-    .split(",")
-    .map((one) => one.trim().toLowerCase())
-    .filter(Boolean);
+  const wanted = choiceSets(choice);
   if (wanted.length === 0) return true;
   if (!lines || lines.length === 0) return false;
 
-  // Any one of them satisfies a line, because one menu says Large where
-  // another says Standard and it is the same offer either way.
-  return lines.every((chosen) =>
-    chosen.some((one) => wanted.includes(one.trim().toLowerCase()))
-  );
+  // Every set has to be answered by the line, and any one within a set will
+  // do. Ticking Medium and then two BBQ flavours is two questions, not one
+  // list of three: it means a medium, and one of those two, which is what
+  // anybody ticking them meant.
+  return lines.every((chosen) => {
+    const made = chosen.map((one) => one.trim().toLowerCase());
+    return wanted.every((set) => set.some((one) => made.includes(one)));
+  });
+}
+
+/**
+ * The choices an offer asks for, as sets.
+ *
+ * Stored as JSON, one array per question the dish asks. An older offer that
+ * saved a plain comma list is read as a single set, which is what it meant.
+ */
+export function choiceSets(choice: string): string[][] {
+  const clean = (names: string[]) =>
+    names.map((one) => one.trim().toLowerCase()).filter(Boolean);
+
+  const raw = choice.trim();
+  if (raw === "") return [];
+
+  if (raw.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(raw) as string[][];
+      return parsed.map(clean).filter((set) => set.length > 0);
+    } catch {
+      return [];
+    }
+  }
+
+  const single = clean(raw.split(","));
+  return single.length > 0 ? [single] : [];
 }

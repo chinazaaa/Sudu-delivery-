@@ -1083,3 +1083,15 @@ test("any large pizza means every line chose large", () => {
   // No choice asked for is no condition at all.
   assert.equal(everyLineChose("", [["Medium"]]), true);
 });
+
+test("choices are grouped by the question they answer", () => {
+  // Medium, and one of two flavours: two questions, not a list of three.
+  const asks = JSON.stringify([["Medium 12\""], ["BBQ Chicken", "BBQ Meatball"]]);
+
+  assert.equal(everyLineChose(asks, [['Medium 12"', "BBQ Chicken"]]), true);
+  assert.equal(everyLineChose(asks, [['Medium 12"', "BBQ Meatball"]]), true);
+  // A medium of something else answers only one of the two questions.
+  assert.equal(everyLineChose(asks, [['Medium 12"', "Margherita"]]), false);
+  // And the right flavour in the wrong size answers only the other.
+  assert.equal(everyLineChose(asks, [['Large 14"', "BBQ Chicken"]]), false);
+});

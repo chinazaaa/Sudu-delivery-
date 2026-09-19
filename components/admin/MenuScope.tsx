@@ -6,8 +6,9 @@ export type ScopeShop = {
   id: string;
   name: string;
   categories: { id: string; name: string; items: number }[];
-  /** Every choice offered anywhere in this menu, by category. */
-  choices: { name: string; categories: string[] }[];
+  /** Every choice offered anywhere in this menu, kept under the question the
+   *  dish asks: Size, Crust, Flavour. */
+  choices: { group: string; name: string; categories: string[] }[];
 };
 
 /**
@@ -39,12 +40,17 @@ export default function MenuScope({
 
   const shop = shops.find((one) => one.id === shopId) ?? null;
 
-  // Only the choices the picked sections actually offer. With no section
-  // picked it is the whole menu's, because the offer is then the whole menu.
+  // Only the choices the picked sections actually offer, under the question
+  // they answer. With no section picked it is the whole menu's, because the
+  // offer is then the whole menu.
   const offered = (shop?.choices ?? []).filter(
     (one) =>
       sections.length === 0 || one.categories.some((id) => sections.includes(id))
   );
+  const questions = [...new Set(offered.map((one) => one.group))].map((group) => ({
+    group,
+    options: offered.filter((one) => one.group === group),
+  }));
 
   const toggle = (
     value: string,
@@ -59,8 +65,8 @@ export default function MenuScope({
       {sections.map((id) => (
         <input key={id} type="hidden" name="category_id" value={id} />
       ))}
-      {chosen.map((name) => (
-        <input key={name} type="hidden" name="required_choice" value={name} />
+      {chosen.map((value) => (
+        <input key={value} type="hidden" name="required_choice" value={value} />
       ))}
 
       <div>
@@ -129,28 +135,42 @@ export default function MenuScope({
         </div>
       )}
 
-      {shop && offered.length > 0 && (
-        <div>
+      {shop && questions.length > 0 && (
+        <div className="space-y-2">
           <p className="label mb-0">And only this choice</p>
-          <div className="flex flex-wrap gap-2">
-            {offered.map((one) => (
-              <button
-                key={one.name}
-                type="button"
-                onClick={() => toggle(one.name, chosen, setChosen)}
-                className={`chip ${
-                  chosen.includes(one.name)
-                    ? "border-brand bg-brand text-white"
-                    : "border-black/10 bg-white"
-                }`}
-              >
-                {one.name}
-              </button>
-            ))}
-          </div>
-          <p className="mt-1 text-xs text-muted">
-            These are {shop.name}&apos;s own words for it. None picked means any
-            size, which is usually what you want unless the offer is about one.
+          {/* One row per question a dish asks, because Medium and BBQ Chicken
+              are two answers and not two items on one list. Ticking both means
+              a medium, and that flavour. */}
+          {questions.map((question) => (
+            <div key={question.group}>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted">
+                {question.group}
+              </p>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {question.options.map((one) => {
+                  const value = `${question.group}::${one.name}`;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => toggle(value, chosen, setChosen)}
+                      className={`chip ${
+                        chosen.includes(value)
+                          ? "border-brand bg-brand text-white"
+                          : "border-black/10 bg-white"
+                      }`}
+                    >
+                      {one.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          <p className="text-xs text-muted">
+            These are {shop.name}&apos;s own words. Nothing picked means any of
+            them, which is usually what you want. Picking two in one row means
+            either will do; picking from two rows means both must be true.
           </p>
         </div>
       )}
