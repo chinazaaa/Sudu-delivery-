@@ -107,6 +107,7 @@ export default function Checkout({
       if (saved?.name) setName((current) => current || saved.name);
       if (saved?.phone) setPhone((current) => current || saved.phone);
       if (saved?.hostel) setHostel((current) => current || saved.hostel);
+      if (saved?.method === "card" || saved?.method === "transfer") setMethod(saved.method);
     } catch {
       /* Nothing saved, or storage is blocked. The fields simply start empty. */
     }
@@ -114,11 +115,17 @@ export default function Checkout({
 
   useEffect(() => {
     try {
-      localStorage.setItem("sudu_me_v1", JSON.stringify({ name, phone, hostel }));
+      // Merged rather than replaced: this used to write the three fields
+      // whole, which threw away anything else kept beside them.
+      const saved = JSON.parse(localStorage.getItem("sudu_me_v1") ?? "{}");
+      localStorage.setItem(
+        "sudu_me_v1",
+        JSON.stringify({ ...saved, name, phone, hostel, method })
+      );
     } catch {
       /* Not worth failing checkout over. */
     }
-  }, [name, phone, hostel]);
+  }, [name, phone, hostel, method]);
 
   useEffect(() => {
     setNow(Date.now());

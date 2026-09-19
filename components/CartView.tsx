@@ -134,6 +134,9 @@ export default function CartView({
       const saved = JSON.parse(localStorage.getItem("sudu_me_v1") ?? "null");
       if (saved?.phone) setPhone((current) => current || saved.phone);
       if (saved?.hostel) setHostel((current) => current || saved.hostel);
+      // How they paid last time, so updating their food does not quietly put
+      // somebody who asked for a card link back on a bank transfer.
+      if (saved?.method === "card" || saved?.method === "transfer") setMethod(saved.method);
     } catch {
       /* Nothing saved, or storage is blocked. They type it. */
     }
@@ -211,7 +214,7 @@ export default function CartView({
         const saved = JSON.parse(localStorage.getItem("sudu_me_v1") ?? "{}");
         localStorage.setItem(
           "sudu_me_v1",
-          JSON.stringify({ ...saved, phone, hostel })
+          JSON.stringify({ ...saved, phone, hostel, method })
         );
       } catch {
         /* Not worth failing on. */
