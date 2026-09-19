@@ -57,6 +57,89 @@ no in-app purchases and no location tracking. Screens opened are counted
 against a random id the install makes for itself, which is how many people
 used the app rather than who they were.
 
+## App Store Connect, filled in
+
+Character limits are Apple's. Counts are what these actually use.
+
+**Name** (30): `Sudu Store`
+**Subtitle** (30): `Food delivery to PAU campus` (27)
+
+**Promotional Text** (170, changeable any time with no new build, so keep it
+pointed at whatever is newest):
+
+```
+Same day delivery is here. Pick a time between 12pm and 6pm and we bring it. Or start a group, send friends the link, and everybody splits one delivery fee.
+```
+(156)
+
+**Keywords** (100, comma separated, no spaces after the commas because a space
+costs a character. Nothing here repeats the name or subtitle, which Apple
+already indexes, and no other company's name appears, which is a rejection):
+
+```
+lagos,sangotedo,novare,student,university,hostel,restaurant,takeaway,lunch,dinner,order,group,split
+```
+(99)
+
+**Support URL**: `https://sudu.store/support`
+**Marketing URL** (optional): `https://sudu.store`
+**Version**: must match `mobile/app.json`, which says `1.0.0`
+**Copyright** (200): `2026 Sudu`
+
+**Description** (4000, uses 2191). Restaurant names are deliberately absent:
+listing somebody else's trademark in a store listing is a content rights
+question nobody needs during a first review.
+
+```
+Real restaurant food from Novare and Sangotedo, brought to your block at Pan-Atlantic University.
+
+No account, no password. Pick your food, say where it goes, and pay by transfer.
+
+TWO WAYS TO GET IT
+
+On a run. Everybody's food travels in one car at a set time, which is why a run is the cheap way to eat. Pick the next one and your delivery is a share of the trip, not the whole thing.
+
+Same day. Pick a time instead and a car goes out for you. Choose any slot in the afternoon or evening, with a few hours' notice, and it arrives when you said.
+
+ORDER WITH YOUR FRIENDS
+
+Start a group and send the link. Everybody adds their own food from their own phone and pays for their own food. The delivery is one fee for the whole car, split evenly between all of you.
+
+The more of you there are, the less each of you pays. Nobody is quoted a share until the group closes, so the number you are told is the number you pay.
+
+You can also order for friends on one bill, with each bag labelled by name so the right food reaches the right person.
+
+WHAT YOU GET
+
+Full menus with the sizes, flavours and extras, priced as you choose them, so the total on screen is the total you pay.
+
+A delivery fee that is worked out from how much travels, shown before you commit. No surprise at the end.
+
+Your order followed all the way: paid, being collected, on the road, at your block.
+
+A notification when it moves, if you want one.
+
+Discount codes when we run them.
+
+PAYING
+
+Pay by bank transfer to the account shown on your order, using the short code given to you as the narration so your payment is matched to you straight away. If you would rather pay by card, message us and we will send you a link.
+
+Nothing is charged inside the app.
+
+YOUR ORDERS
+
+Your orders are kept against your phone number. Enter it with your PIN to see everything you have ordered, reorder in one tap, and rate the food once it has arrived.
+
+You can delete everything we hold about you from inside the app, whenever you like.
+
+WHERE WE DELIVER
+
+Pan-Atlantic University, Lagos. If you are somewhere else, the app will tell you rather than take your money.
+
+Questions, or something not right? Message us on WhatsApp. A person answers.
+```
+
 ## Data safety and privacy answers
 
 Both stores ask the same questions. The honest answers:
