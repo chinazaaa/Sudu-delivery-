@@ -544,5 +544,14 @@ create table if not exists counter_spend (
 create index if not exists counter_spend_batch_idx on counter_spend (batch_id);
 alter table counter_spend enable row level security;
 
+-- What the customer handed back when the counter charged well over the menu.
+--
+-- Asking somebody for the difference on a plate that went up two hundred
+-- naira is not worth the conversation, but on a big gap it is, and when they
+-- pay it the shop is not out of pocket. Without somewhere to put it, that
+-- money never reached the books and the run read as a loss it had not made.
+alter table counter_spend add column if not exists recovered int not null default 0
+  check (recovered >= 0);
+
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';

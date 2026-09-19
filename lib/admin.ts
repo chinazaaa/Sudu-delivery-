@@ -19,6 +19,8 @@ export type CounterLine = {
   paid: number | null;
   /** So a price that has really gone up can be put right on the menu. */
   itemId: string;
+  /** What the customer handed back, when they were asked to cover a gap. */
+  recovered: number;
 };
 export type CounterGroup = {
   restaurant: string;
@@ -108,14 +110,16 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   // What each thing really cost, where somebody has said.
   const { data: spendRows } = await db()
     .from("counter_spend")
-    .select("line_key, paid")
+    .select("line_key, paid, recovered")
     .eq("batch_id", batchId);
-  const spentOn = new Map(
-    ((spendRows ?? []) as { line_key: string; paid: number }[]).map((row) => [
-      row.line_key,
-      row.paid,
-    ])
-  );
+  const rows = (spendRows ?? []) as {
+    line_key: string;
+    paid: number;
+    recovered?: number;
+  }[];
+  const spentOn = new Map(rows.map((row) => [row.line_key, row.paid]));
+  // Money the customer handed back, which the shop is therefore not out.
+  const gotBack = new Map(rows.map((row) => [row.line_key, row.recovered ?? 0]));
 
   const commission = await commissionFor(paid);
   const costs = batch.fuel_cost + batch.driver_cost + batch.other_cost;
@@ -138,7 +142,7 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
           (total, line) =>
             total +
             (spentOn.has(line.key)
-              ? (spentOn.get(line.key) as number)
+              ? (spentOn.get(line.key) as number) - (gotBack.get(line.key) ?? 0)
               : line.qty * line.unitPrice),
           0
         )
@@ -155,6 +159,7 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
         lines: place.lines.map((line) => ({
           ...line,
           paid: spentOn.has(line.key) ? (spentOn.get(line.key) as number) : null,
+          recovered: gotBack.get(line.key) ?? 0,
         })),
       })
     ),
@@ -258,6 +263,7 @@ export function groupForCounter(lines: OrderLine[]): CounterGroup[] {
         key: `${line.restaurant}|${key}`,
         paid: null,
         itemId: line.menu_item_id,
+        recovered: 0,
       });
     byRestaurant.set(line.restaurant, items);
   }

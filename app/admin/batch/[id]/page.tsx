@@ -328,6 +328,23 @@ export default async function BatchPage({
                                 aria-label={`What you paid for ${line.name}`}
                                 className="field w-24 py-1.5 text-sm"
                               />
+                              {/* Only where the gap is big enough to have been
+                                  worth asking about. Nobody chases two hundred
+                                  naira, and offering the box invites a figure
+                                  that was never collected. */}
+                              {(line.paid ?? 0) > line.qty * line.unitPrice && (
+                                <input
+                                  name="recovered"
+                                  inputMode="numeric"
+                                  defaultValue={line.recovered || ""}
+                                  placeholder="they paid back"
+                                  aria-label={`What the customer gave back for ${line.name}`}
+                                  className="field w-32 py-1.5 text-sm"
+                                />
+                              )}
+                              {(line.paid ?? 0) <= line.qty * line.unitPrice && (
+                                <input type="hidden" name="recovered" value={line.recovered || ""} />
+                              )}
                               {line.paid !== line.qty * line.unitPrice && (
                                 <span
                                   className={`text-xs font-bold ${
@@ -338,7 +355,10 @@ export default async function BatchPage({
                                 >
                                   {(line.paid ?? 0) < line.qty * line.unitPrice ? "+" : "−"}
                                   {naira(
-                                    Math.abs(line.qty * line.unitPrice - (line.paid ?? 0))
+                                    Math.abs(
+                                      line.qty * line.unitPrice -
+                                        ((line.paid ?? 0) - line.recovered)
+                                    )
                                   )}
                                 </span>
                               )}
@@ -420,6 +440,7 @@ export default async function BatchPage({
                           placeholder="0"
                           className="field w-32"
                         />
+                        <input type="hidden" name="recovered" value="" />
                       </div>
                       <SaveButton quiet>Add</SaveButton>
                     </form>

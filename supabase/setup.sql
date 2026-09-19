@@ -901,6 +901,8 @@ create table if not exists counter_spend (
 );
 create index if not exists counter_spend_batch_idx on counter_spend (batch_id);
 alter table counter_spend enable row level security;
+alter table counter_spend add column if not exists recovered int not null default 0
+  check (recovered >= 0);
 
 -- Supabase caches the schema; this makes the new tables visible immediately.
 notify pgrst, 'reload schema';

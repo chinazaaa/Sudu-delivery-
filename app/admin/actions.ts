@@ -185,6 +185,12 @@ export async function setCounterSpend(form: FormData): Promise<void> {
       continue;
     }
 
+    // What the customer handed back, when they were asked to cover a gap.
+    // Blank is none, which is the usual answer.
+    const backRaw = String(form.getAll("recovered")[index] ?? "").trim();
+    const back = Math.round(Number(backRaw));
+    const recovered = backRaw !== "" && Number.isFinite(back) && back > 0 ? back : 0;
+
     await db()
       .from("counter_spend")
       .upsert(
@@ -192,6 +198,7 @@ export async function setCounterSpend(form: FormData): Promise<void> {
           batch_id: batchId,
           line_key: key,
           paid: value,
+          recovered,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "batch_id,line_key" }
