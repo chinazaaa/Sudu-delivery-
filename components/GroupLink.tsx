@@ -72,17 +72,20 @@ function announce(): void {
  * a group that is real and complete the moment the link exists.
  */
 export default function GroupLink({
+  openNow = false,
   runs,
   slots,
   sameDayFrom,
   runFrom,
 }: {
+  /** Opened already, because they pressed something that said Start. */
+  openNow?: boolean;
   runs: { id: string; label: string }[];
   slots: Slot[];
   sameDayFrom: number;
   runFrom: number;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(openNow);
   const [name, setName] = useState("");
   // One control, two kinds of answer. A time is the instant itself; a run is
   // its id behind a marker, because the two cannot share a value space.

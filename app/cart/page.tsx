@@ -8,7 +8,15 @@ import { toBatchView } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
 
-export default async function CartPage() {
+export default async function CartPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ start?: string }>;
+}) {
+  // Arriving from "Ordering with friends?" on the home page. They have already
+  // said what they want; asking again on this page was the same button twice.
+  const startGroup = (await searchParams).start === "1";
+
   const [restaurants, batches, settings] = await Promise.all([
     // The cart is where someone realises they forgot the drinks, so the
     // restaurants are right there rather than back through the home page.
@@ -40,6 +48,7 @@ export default async function CartPage() {
       runFrom={bands[0]?.fee ?? 4000}
       hostels={await hostelNames()}
       bands={bands}
+      startGroup={startGroup}
     />
   );
 }

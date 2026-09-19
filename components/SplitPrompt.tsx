@@ -28,7 +28,7 @@ export default function SplitPrompt() {
 
   return (
     <Link
-      href="/cart"
+      href="/cart?start=1"
       className="flex items-center justify-between gap-3 rounded-2xl border border-brand/25 bg-brand-tint px-4 py-2.5"
     >
       <span className="min-w-0 text-sm">

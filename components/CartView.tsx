@@ -33,6 +33,7 @@ export default function CartView({
   runFrom = 4000,
   hostels = [],
   bands = [],
+  startGroup = false,
 }: {
   restaurants?: { id: string; name: string; href: string }[];
   /** What a group could be put on, worked out on the server so the clock and
@@ -45,6 +46,8 @@ export default function CartView({
   hostels?: string[];
   /** The delivery price list in force, so the saving shown is the real one. */
   bands?: Band[];
+  /** They came here to start a group, so the form is already open. */
+  startGroup?: boolean;
 }) {
   // In somebody's group already, ordering for friends as well is two group
   // ideas at once and nobody untangles them. The bar at the top says which
@@ -374,6 +377,7 @@ export default function CartView({
           makes the delivery cheaper for all of them. In a group already, the
           bar at the top says so and this would only repeat it. */}
       <GroupLink
+        openNow={startGroup}
         runs={runs}
         slots={slots}
         sameDayFrom={sameDayFrom}
