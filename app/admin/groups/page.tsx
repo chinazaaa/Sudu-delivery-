@@ -2,6 +2,8 @@ import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import { db } from "@/lib/supabase";
 import { cartValues, groupCarts, countCartItems } from "@/lib/group-carts";
+import { shortGroupsNow } from "@/lib/groups";
+import ShortGroups from "@/components/admin/ShortGroups";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 
@@ -51,6 +53,9 @@ export default async function GroupsPage() {
   );
 
   const filling = groups.filter((one) => one.carts.length > 0);
+  // Read here while a run is still filling, which is early enough to ask
+  // somebody for the difference rather than absorb it on the way out.
+  const short = await shortGroupsNow();
 
   return (
     <div>
@@ -58,6 +63,12 @@ export default async function GroupsPage() {
         title="Groups filling up"
         detail="Food on its way into a shared delivery. Not orders yet: nobody in one has a delivery fee until the group closes."
       />
+
+      {short.length > 0 && (
+        <div className="mb-4">
+          <ShortGroups groups={short} />
+        </div>
+      )}
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Stat label="Groups with food in" value={filling.length} />

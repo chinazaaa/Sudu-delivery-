@@ -169,6 +169,28 @@ export async function groupShortfalls(batchId: string): Promise<GroupShortfall[]
   return out;
 }
 
+/**
+ * Every group leaving the shop short, across every run still in play.
+ *
+ * The run sheet is read on the way to the counter, which is late: by then the
+ * decision is whether to drive. Seeing it earlier is the difference between
+ * asking somebody for five hundred naira and absorbing it.
+ */
+export async function shortGroupsNow(): Promise<GroupShortfall[]> {
+  const { data: batches } = await db()
+    .from("batches")
+    .select("id")
+    .in("status", ["open", "closed"])
+    .order("run_date", { ascending: false })
+    .limit(20);
+
+  const out: GroupShortfall[] = [];
+  for (const batch of batches ?? []) {
+    out.push(...(await groupShortfalls(batch.id as string)));
+  }
+  return out;
+}
+
 /** Refunds created by a group shrinking, so the admin can pay them out. */
 export async function refundsOwed(batchId: string): Promise<Order[]> {
   const { data } = await db()
