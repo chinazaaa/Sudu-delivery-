@@ -20,7 +20,12 @@ import { T } from "@/lib/theme";
 export default function Checkout() {
   const router = useRouter();
   const [lines] = useStored(cart.read, []);
-  const [saved] = useStored(me.read, { name: "", phone: "", hostel: "", token: null });
+  const [saved] = useStored(me.read, {
+    name: "",
+    phone: "",
+    hostel: "",
+    token: null,
+  });
 
   const [shop, setShop] = useState<Shop | null>(null);
   const [runId, setRunId] = useState("");
@@ -68,6 +73,9 @@ export default function Checkout() {
   // account as anybody needs.
   useEffect(() => {
     setName((was) => was || saved.name);
+    // How they pay is a fact about them like the block, so it comes back with
+    // it rather than starting on the default every time.
+    if (saved.paymentMethod) setMethod(saved.paymentMethod);
     setPhone((was) => was || saved.phone);
     setHostel((was) => was || saved.hostel);
   }, [saved]);
@@ -196,7 +204,7 @@ export default function Checkout() {
         })),
       });
 
-      await me.save({ name, phone, hostel, token: result.token });
+      await me.save({ name, phone, hostel, token: result.token, paymentMethod: method });
       await mine.add(result.orderId);
       await cart.clear();
 

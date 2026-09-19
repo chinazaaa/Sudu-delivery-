@@ -49,6 +49,7 @@ export default function SignIn({ onDone }: { onDone?: () => void }) {
         phone: result.phone,
         ...(result.name ? { name: result.name } : {}),
         ...(result.hostel ? { hostel: result.hostel } : {}),
+        ...(result.paymentMethod ? { paymentMethod: result.paymentMethod } : {}),
       });
       onDone?.();
     } catch (problem) {

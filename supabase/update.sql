@@ -778,3 +778,18 @@ alter table coupons add column if not exists same_day boolean not null default f
 
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';
+
+
+-- How somebody pays, kept with their name and their block.
+--
+-- It lived in one browser, so a regular who always pays by card was put back
+-- on a bank transfer by a new phone, a cleared browser, or simply opening the
+-- app instead of the site. It is a fact about the person, like where they
+-- live, and it belongs where those are.
+--
+-- Written on every order, so it follows whatever they actually did last, and
+-- read back when checkout fills itself in.
+alter table customers add column if not exists payment_method text not null default 'transfer';
+
+-- Supabase caches the schema; this makes the new column visible immediately.
+notify pgrst, 'reload schema';

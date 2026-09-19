@@ -25,6 +25,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       phone,
       name: details?.name ?? "",
       hostel: details?.hostel ?? "",
+      // How they pay, kept on their record, so the app opens on it rather
+      // than on the default every time they order.
+      paymentMethod: details?.paymentMethod ?? "transfer",
     });
   } catch {
     return NextResponse.json({ error: "Could not sign you in." }, { status: 500 });

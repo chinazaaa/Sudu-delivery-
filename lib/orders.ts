@@ -340,7 +340,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // order, the group only knows their first name; now it knows their number,
   // so every other page can tell who the leader is without being told.
   if (party && input.partyLeader) await claimLeader(party.id, phone);
-  await bindCustomer({ phone, name, hostel, returning });
+  await bindCustomer({ phone, name, hostel, returning, paymentMethod });
   // The cart behind this order is no longer abandoned, and the admins are told
   // rather than having to keep refreshing. Neither can fail the order.
   await cartConverted(phone, batch.id).catch(() => {});
@@ -1332,20 +1332,39 @@ async function bindCustomer(args: {
   name: string;
   hostel: string;
   returning: boolean;
+  /** How they paid this time, kept the way the name and the block are, so
+   *  somebody who always pays by card is not put back on a transfer by a new
+   *  phone or a cleared browser. */
+  paymentMethod?: "transfer" | "card";
 }): Promise<void> {
+  const way = args.paymentMethod ?? "transfer";
+
   if (args.returning) {
-    await db()
+    const { error } = await db()
       .from("customers")
-      .update({ name: args.name, hostel: args.hostel })
+      .update({ name: args.name, hostel: args.hostel, payment_method: way })
       .eq("phone", args.phone);
+    // The column is not there yet, so the rest of the update is worth saving
+    // on its own rather than losing the lot to a migration nobody has run.
+    if (error) {
+      await db()
+        .from("customers")
+        .update({ name: args.name, hostel: args.hostel })
+        .eq("phone", args.phone);
+    }
     return;
   }
-  await db().from("customers").insert({
+
+  const row = {
     phone: args.phone,
     name: args.name,
     hostel: args.hostel,
     pin: newPin(),
-  });
+  };
+  const { error } = await db()
+    .from("customers")
+    .insert({ ...row, payment_method: way });
+  if (error) await db().from("customers").insert(row);
 }
 
 export type OrderLine = OrderItem & {

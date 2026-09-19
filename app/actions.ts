@@ -177,7 +177,7 @@ export async function moveOrderToRun(
 
 export type FillState = {
   error: string | null;
-  me: { name: string; hostel: string } | null;
+  me: { name: string; hostel: string; paymentMethod?: "transfer" | "card" } | null;
 };
 
 /**

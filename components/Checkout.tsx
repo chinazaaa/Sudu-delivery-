@@ -830,6 +830,10 @@ export default function Checkout({
               setFilled(true);
               if (me.phone) setPhone(me.phone);
               if (me.hostel) setHostel(me.hostel);
+              // How they paid last time, kept on their record rather than in
+              // this browser, so a new phone does not put somebody who always
+              // pays by card back on a transfer.
+              if (me.paymentMethod) setMethod(me.paymentMethod);
             }}
           />
         </div>

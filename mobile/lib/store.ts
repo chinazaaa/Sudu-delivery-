@@ -33,7 +33,15 @@ export type Person = {
   pays: "transfer" | "card";
 };
 
-export type Me = { name: string; phone: string; hostel: string; token: string | null };
+export type Me = {
+  name: string;
+  phone: string;
+  hostel: string;
+  token: string | null;
+  /** How they pay, kept with the number and the block because it is the same
+   *  kind of fact about them and changes about as often. */
+  paymentMethod?: "transfer" | "card";
+};
 
 const CART = "sudu.cart";
 const PEOPLE = "sudu.people";

@@ -119,11 +119,25 @@ export async function currentCustomer(): Promise<string | null> {
 /** Name and block last used by a number, for filling checkout back in. */
 export async function customerDetails(
   phone: string
-): Promise<{ name: string; hostel: string } | null> {
-  const { data } = await db()
+): Promise<{ name: string; hostel: string; paymentMethod: "transfer" | "card" } | null> {
+  // Asked for by name rather than with *, and retried without the newest
+  // column, because a database that has not had the migration run on it yet
+  // would otherwise fail the whole query and take checkout's fill-in with it.
+  const full = await db()
     .from("customers")
-    .select("name, hostel")
+    .select("name, hostel, payment_method")
     .eq("phone", phone)
     .maybeSingle();
-  return data ? { name: data.name as string, hostel: (data.hostel as string) ?? "" } : null;
+
+  const { data } = full.error
+    ? await db().from("customers").select("name, hostel").eq("phone", phone).maybeSingle()
+    : full;
+
+  if (!data) return null;
+  const way = (data as { payment_method?: string }).payment_method;
+  return {
+    name: data.name as string,
+    hostel: (data.hostel as string) ?? "",
+    paymentMethod: way === "card" ? "card" : "transfer",
+  };
 }

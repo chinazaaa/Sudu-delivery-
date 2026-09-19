@@ -165,7 +165,13 @@ export const api = {
     return shop;
   },
   signIn: (phone: string, pin: string) =>
-    post<{ token: string; phone: string; name: string; hostel: string }>("/signin", {
+    post<{
+      token: string;
+      phone: string;
+      name: string;
+      hostel: string;
+      paymentMethod?: "transfer" | "card";
+    }>("/signin", {
       phone,
       pin,
     }),

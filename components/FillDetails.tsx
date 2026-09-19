@@ -16,7 +16,12 @@ export default function FillDetails({
   onFilled,
 }: {
   phone: string;
-  onFilled: (me: { name: string; hostel: string; phone: string }) => void;
+  onFilled: (me: {
+    name: string;
+    hostel: string;
+    phone: string;
+    paymentMethod?: "transfer" | "card";
+  }) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [number, setNumber] = useState(phone);
