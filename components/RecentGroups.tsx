@@ -17,12 +17,13 @@ type Party = {
 type Seen = Party & { key: string };
 
 /**
- * The groups this browser has been in lately.
+ * The cars this browser has actually ordered in.
  *
- * Leaving a group, or it closing, forgets which one you are in, and that note
- * was the only way back: after that the group existed only in whatever chat
- * the link arrived in. This is the way back, and it is also how somebody sees
- * that the car they were in has closed and what they owe.
+ * Closed ones only, because an open group is either the one you are in, and
+ * the bar says so, or one you left, and there is nothing of yours in it. What
+ * this is for is the split: the group closed, your order came out of it, and
+ * this is how you find what everybody owed after the bar has forgotten the
+ * group entirely.
  */
 export default function RecentGroups() {
   const [groups, setGroups] = useState<Seen[]>([]);
@@ -41,7 +42,8 @@ export default function RecentGroups() {
           .catch(() => ({ key: id }) as Seen)
       )
     ).then((all) => {
-      if (alive) setGroups(all.filter((one) => one.started));
+      // Closed only: the rest are not somewhere anybody needs to go back to.
+      if (alive) setGroups(all.filter((one) => one.started && one.closed));
     });
 
     return () => {
@@ -53,7 +55,7 @@ export default function RecentGroups() {
 
   return (
     <section className="card space-y-2">
-      <h2 className="font-bold">Groups you have been in</h2>
+      <h2 className="font-bold">Groups you ordered in</h2>
       <ul className="divide-y divide-black/5 text-sm">
         {groups.map((group) => (
           <li key={group.key}>
@@ -64,17 +66,14 @@ export default function RecentGroups() {
               <span className="min-w-0">
                 <span className="font-semibold">{group.leader ?? "A group"}</span>
                 <span className="block text-xs text-muted">
-                  {group.closed
-                    ? `Closed · ${group.people ?? 0} ${
-                        (group.people ?? 0) === 1 ? "order" : "orders"
-                      }`
-                    : `${group.ready ?? 0} of ${group.people ?? 0} ready${
-                        group.when ? ` · ${group.when}` : ""
-                      }`}
+                  {`Closed · ${group.people ?? 0} ${
+                    (group.people ?? 0) === 1 ? "order" : "orders"
+                  }`}
+                  {group.when ? ` · ${group.when}` : ""}
                 </span>
               </span>
               <span className="shrink-0 text-xs font-bold text-brand">
-                {group.closed ? "See the split" : "Open"}
+                See the split
               </span>
             </Link>
           </li>

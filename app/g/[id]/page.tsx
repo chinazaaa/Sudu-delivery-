@@ -83,7 +83,9 @@ export default async function GroupPage({
           when it was put in the group: until this closes they can still add
           to it, and that is done from the cart. */}
       {(query.placed === "1" || (group.closedAt !== null && me !== null)) && (
-        <ClearCartKeepGroup />
+        <ClearCartKeepGroup
+          remember={group.closedAt !== null && me !== null ? group.id : ""}
+        />
       )}
       <section className="card space-y-1">
         <div className="flex items-start justify-between gap-3">

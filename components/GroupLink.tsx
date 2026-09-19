@@ -22,12 +22,13 @@ export function readGroup(): string {
 }
 
 /**
- * Every group this browser has been in, newest first.
+ * The groups this browser actually ordered in, newest first.
  *
- * Leaving one, or it closing, forgets which group you are in, and that was
- * the only note anywhere: the way back to a group you were in ten minutes
- * ago was the link somebody sent you, and if that was in a chat you had
- * scrolled past, there was no way back at all.
+ * Only those. Somebody who opened a link and left, or sat in a car that was
+ * never closed, has nothing to come back to, and listing it as a group they
+ * have been in is offering them a door into nothing. This fills at the one
+ * moment there is something behind the door: the group closed and an order
+ * came out of it with their name on it.
  */
 export function seenGroups(): string[] {
   try {
@@ -39,7 +40,7 @@ export function seenGroups(): string[] {
   }
 }
 
-function remember(id: string): void {
+export function rememberGroup(id: string): void {
   try {
     const list = [id, ...seenGroups().filter((one) => one !== id)].slice(0, KEEP);
     window.localStorage.setItem(SEEN, JSON.stringify(list));
@@ -49,7 +50,6 @@ function remember(id: string): void {
 }
 
 export function enterGroup(id: string, viaLink = false): void {
-  remember(id);
   try {
     window.localStorage.setItem(KEY, id);
     if (viaLink) window.localStorage.setItem(JOINED, id);
