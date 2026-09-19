@@ -106,38 +106,47 @@ export default function Account() {
         </Text>
       </View>
 
-      {/* Only once notifications have been allowed at all. A switch over
-          something nobody has agreed to is a box with nothing behind it. */}
-      {pushToken !== null && (
-        <View style={card}>
-          <Text style={heading}>Notifications</Text>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 12,
-              marginTop: 8,
-            }}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: "700", color: T.ink }}>Deals and offers</Text>
-              <Text style={body}>
-                New deals at a restaurant, cheaper delivery, and discount codes.
-              </Text>
-            </View>
-            <Switch
-              value={deals}
-              onValueChange={chooseDeals}
-              trackColor={{ true: T.brand }}
-              accessibilityLabel="Deals and offers"
-            />
+      {/* Always here, even before this phone can be notified at all. A
+          setting that only appears once it is already relevant is a setting
+          nobody finds, and somebody looking for it and seeing nothing decides
+          the app has none. */}
+      <View style={card}>
+        <Text style={heading}>Notifications</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 8 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontWeight: "700", color: T.ink }}>Deals and offers</Text>
+            <Text style={body}>
+              New deals at a restaurant, cheaper delivery, and discount codes.
+            </Text>
           </View>
+          <Switch
+            value={deals && pushToken !== null}
+            onValueChange={chooseDeals}
+            disabled={pushToken === null}
+            trackColor={{ true: T.brand }}
+            accessibilityLabel="Deals and offers"
+          />
+        </View>
+
+        {pushToken === null ? (
+          <>
+            <Text style={[body, { marginTop: 10 }]}>
+              This phone is not set up to be notified yet. We ask after your first order,
+              rather than before anybody has one to hear about.
+            </Text>
+            <Pressable onPress={() => void Linking.openSettings()} style={{ marginTop: 10 }}>
+              <Text style={{ color: T.brand, fontWeight: "800" }}>
+                Turn notifications on in Settings
+              </Text>
+            </Pressable>
+          </>
+        ) : (
           <Text style={[body, { marginTop: 10 }]}>
             News about an order stays on either way: where your food is, and when it has
             arrived, is not something to have to remember to switch back on.
           </Text>
-        </View>
-      )}
+        )}
+      </View>
 
       <View style={card}>
         <Text style={heading}>What we keep</Text>
