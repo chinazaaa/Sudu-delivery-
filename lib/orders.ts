@@ -1,5 +1,11 @@
 import { db } from "./supabase";
-import { claimLeader, joinableGroup, openGroupFor, startSharedGroup } from "./groups";
+import {
+  claimLeader,
+  getSharedGroup,
+  joinableGroup,
+  openGroupFor,
+  startSharedGroup,
+} from "./groups";
 import { feeFor, sameDayFee, splitFee, type Band } from "./fees";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "./settings";
 import {
@@ -73,6 +79,12 @@ export type PlaceOrderInput = {
   /** A share worked out by a shared delivery when it closed. The order cannot
    *  work this out for itself: it depends on who else ended up in the car. */
   fixedFee?: number;
+  /** Set only by the close of a group, making the orders it exists to make.
+   *  By then the group is closed, so the ordinary "can I still join this?"
+   *  lookup says no and the order fell back to being a lone one on a run
+   *  whose cut off had passed, which then refused it. The close is the shop
+   *  finishing what the group started, so it rides that run either way. */
+  closingGroup?: boolean;
 };
 
 export type PlaceOrderResult =
@@ -140,7 +152,10 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // A party that is already going has a car. Whoever ordered first chose it,
   // for a time or for a run, and everybody after rides in that one: letting a
   // joiner pick their own would be two cars, which is not sharing a delivery.
-  const party = input.partyId ? await joinableGroup(input.partyId) : null;
+  const party = input.partyId
+    ? ((await joinableGroup(input.partyId)) ??
+      (input.closingGroup ? await getSharedGroup(input.partyId) : null))
+    : null;
   if (input.partyId && !party) {
     // Closed, gone, or never there. The order still goes through, alone and
     // at the full fee, which is right: refusing it would be worse. But it is
@@ -161,6 +176,15 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   if (!batch) return { ok: false, error: "That batch no longer exists." };
   if (!sameDay && !party && !isOrderable(batch)) {
     return { ok: false, error: "That batch has closed. Pick the next one." };
+  }
+  // The close can run a little past a cut off, and should: these people were
+  // in the car before it. A run that has actually moved on is another matter,
+  // because the shopping has been done and their food is not in it.
+  if (input.closingGroup && batch.status !== "open") {
+    return {
+      ok: false,
+      error: "That run has already gone out, so this food could not be ordered onto it.",
+    };
   }
 
   const capacityError = await checkCapacity(batch);

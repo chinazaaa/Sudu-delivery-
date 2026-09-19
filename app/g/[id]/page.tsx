@@ -1,4 +1,5 @@
 import Link from "next/link";
+import HelpLine from "@/components/HelpLine";
 import { groupView } from "@/lib/group-view";
 import { cookies } from "next/headers";
 import { hostelNames } from "@/lib/hostels";
@@ -213,11 +214,7 @@ export default async function GroupPage({
         />
       )}
 
-      {settings.whatsapp_number && (
-        <p className="text-center text-xs text-muted">
-          Something not right? Message us on {settings.whatsapp_number}.
-        </p>
-      )}
+      <HelpLine number={settings.whatsapp_number} about="my group order" />
     </div>
   );
 }

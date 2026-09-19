@@ -1,4 +1,5 @@
 import Link from "next/link";
+import HelpLine from "@/components/HelpLine";
 import type { Metadata } from "next";
 import { rootOrder, deliveryLoad } from "@/lib/orders";
 import { activeBands, safeSettings } from "@/lib/settings";
@@ -108,11 +109,7 @@ export default async function JoinPage({ params }: { params: Promise<{ id: strin
         .
       </p>
 
-      {settings.whatsapp_number && (
-        <p className="text-center text-xs text-muted">
-          Something not right? Message us on {settings.whatsapp_number}.
-        </p>
-      )}
+      <HelpLine number={settings.whatsapp_number} about="joining this order" />
     </div>
   );
 }

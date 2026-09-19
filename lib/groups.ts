@@ -517,6 +517,10 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
   const { placeOrder } = await import("./orders");
 
   let made = 0;
+  // Why any of them could not be ordered, so a close that achieves nothing
+  // can say so instead of shutting the group and leaving everybody to work
+  // it out from an empty page.
+  let refused = "";
   for (const cart of waiting) {
     const result = await placeOrder({
       batchId: group.batch_id,
@@ -529,6 +533,7 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
       customerNote: cart.customer_note,
       partyId: group.id,
       fixedFee: share,
+      closingGroup: true,
     });
 
     if (result.ok) {
@@ -541,7 +546,22 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
       // group filled, a coupon that ran out. The row stays, so it is visible
       // rather than silently dropped, and nobody is charged for it.
       console.error("group order failed for", cart.phone, result.error);
+      if (refused === "") refused = result.error;
     }
+  }
+
+  // Not one of them could be ordered. Nothing happened, so the group goes
+  // back to how it was rather than sitting closed and empty with everybody's
+  // food stuck in it: fix whatever refused them and close it again.
+  if (made === 0) {
+    await db()
+      .from("order_groups")
+      .update({ closed_at: null })
+      .eq("id", group.id);
+    return {
+      ok: false,
+      error: refused || "Nobody's food could be ordered, so this group is still open.",
+    };
   }
 
   // One mail for the whole car, now that there is something to act on.
