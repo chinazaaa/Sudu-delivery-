@@ -8,6 +8,7 @@ import { db } from "@/lib/supabase";
 import { STAGES, type BatchStage } from "@/lib/stages";
 import { type BatchSlot } from "@/lib/config";
 import { deliveryWindows, externalUrl } from "@/lib/settings";
+import { runSchedule } from "@/lib/schedule";
 import { lagosInstant, lagosToday } from "@/lib/time";
 import { ensureUpcomingBatches, openRunsBetween } from "@/lib/batches";
 import { fileFrom, uploadImage } from "@/lib/uploads";
@@ -471,9 +472,37 @@ export async function deleteRun(form: FormData): Promise<void> {
   const id = String(form.get("batch_id"));
   if ((await orderCount(id)) > 0) return;
 
+  const { data: batch } = await db()
+    .from("batches")
+    .select("run_date, slot, kind")
+    .eq("id", id)
+    .maybeSingle();
+
   await db().from("carts").delete().eq("batch_id", id);
   await db().from("orders").delete().eq("batch_id", id);
-  await db().from("batches").delete().eq("id", id);
+
+  // A run the schedule still calls for comes straight back: opening admin
+  // makes every run the week is supposed to have, and a deleted row is just a
+  // missing one. Deleting it again, and again, is the same fight every time.
+  //
+  // So a scheduled run is cancelled instead. Cancelled it still exists, which
+  // is what stops it being made again, and it takes no orders. To stop the day
+  // itself, turn the weekday off in the schedule.
+  const scheduled =
+    batch && batch.kind !== "same_day"
+      ? (await runSchedule(true)).some(
+          (entry) =>
+            entry.active &&
+            entry.slot === batch.slot &&
+            entry.weekday === new Date(`${batch.run_date}T12:00:00Z`).getUTCDay()
+        )
+      : false;
+
+  if (scheduled) {
+    await db().from("batches").update({ status: "cancelled" }).eq("id", id);
+  } else {
+    await db().from("batches").delete().eq("id", id);
+  }
 
   revalidatePath("/admin", "layout");
   revalidatePath("/");

@@ -290,6 +290,11 @@ export default async function RunsPage({
                       : `Closes ${clockLabel(batch.cut_off_at)} · ${batch.delivery_window_text}`}
                   </p>
                   <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    {batch.status === "cancelled" && (
+                      <span className="rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold text-muted">
+                        Not running
+                      </span>
+                    )}
                     {batch.kind === "same_day" && (
                       <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-bold text-brand-dark">
                         Same day
