@@ -28,6 +28,7 @@ export type CouponFormValues = {
   min_per_person: number;
   required_choice: string;
   windows: string;
+  sameDay: boolean;
   runs: string[];
   places: string[];
   sections: string[];
@@ -83,6 +84,15 @@ export default function CouponForm({
           ? "free"
           : "flat"
   );
+
+  const [pickedRuns, setPickedRuns] = useState<string[]>(values?.runs ?? []);
+  const [onSameDay, setOnSameDay] = useState(values?.sameDay ?? false);
+  const [pickedWindows, setPickedWindows] = useState<string[]>(
+    (values?.windows ?? "").split(",").map((one) => one.trim()).filter(Boolean)
+  );
+
+  const toggle = (value: string, list: string[], set: (next: string[]) => void) =>
+    set(list.includes(value) ? list.filter((one) => one !== value) : [...list, value]);
 
   const id = (field: string) => `${field}-${values?.code ?? "new"}`;
   const money = (value: number | null) => (value ? String(value) : "");
@@ -325,52 +335,85 @@ export default function CouponForm({
         <div>
           <p className="label">Which runs</p>
           <div className="flex flex-wrap gap-2">
+            {pickedRuns.map((id) => (
+              <input key={id} type="hidden" name="batch_id" value={id} />
+            ))}
             {runs.map((run) => (
-              <label
+              <button
                 key={run.id}
-                className="chip cursor-pointer border-black/10 bg-white font-medium"
+                type="button"
+                onClick={() => toggle(run.id, pickedRuns, setPickedRuns)}
+                className={`chip ${
+                  pickedRuns.includes(run.id)
+                    ? "border-brand bg-brand text-white"
+                    : "border-black/10 bg-white"
+                }`}
               >
-                <input
-                  type="checkbox"
-                  name="batch_id"
-                  value={run.id}
-                  defaultChecked={values?.runs.includes(run.id)}
-                />
                 {run.label}
-              </label>
+              </button>
             ))}
           </div>
-          <p className="mt-1 text-xs text-muted">Tick none and it is every run.</p>
+          <p className="mt-1 text-xs text-muted">Pick none and it is every run.</p>
         </div>
       )}
 
-      {windows.length > 0 && (
-        <div>
-          <p className="label">Which same day windows</p>
-          <div className="flex flex-wrap gap-2">
+      {/* A car somebody has to themselves costs what it costs. An offer built
+          for a shared run does not cover one, so it only reaches same day
+          when it is asked to. */}
+      <div>
+        <p className="label">Same day cars</p>
+        <input type="hidden" name="same_day" value={onSameDay ? "on" : ""} />
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setOnSameDay(false)}
+            className={`chip ${
+              !onSameDay ? "border-ink bg-ink text-white" : "border-black/10 bg-white"
+            }`}
+          >
+            Runs only
+          </button>
+          <button
+            type="button"
+            onClick={() => setOnSameDay(true)}
+            className={`chip ${
+              onSameDay ? "border-ink bg-ink text-white" : "border-black/10 bg-white"
+            }`}
+          >
+            Also on same day
+          </button>
+        </div>
+
+        {onSameDay && windows.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {pickedWindows.map((from) => (
+              <input key={from} type="hidden" name="window" value={from} />
+            ))}
             {windows.map((window) => (
-              <label
+              <button
                 key={window.from}
-                className="chip cursor-pointer border-black/10 bg-white font-medium"
+                type="button"
+                onClick={() =>
+                  toggle(String(window.from), pickedWindows, setPickedWindows)
+                }
+                className={`chip ${
+                  pickedWindows.includes(String(window.from))
+                    ? "border-brand bg-brand text-white"
+                    : "border-black/10 bg-white"
+                }`}
               >
-                <input
-                  type="checkbox"
-                  name="window"
-                  value={window.from}
-                  defaultChecked={(values?.windows ?? "")
-                    .split(",")
-                    .map((one) => one.trim())
-                    .includes(String(window.from))}
-                />
                 {window.label}
-              </label>
+              </button>
             ))}
           </div>
-          <p className="mt-1 text-xs text-muted">
-            Tick none and it is good at any time. Runs are the row above.
-          </p>
-        </div>
-      )}
+        )}
+
+        <p className="mt-1 text-xs text-muted">
+          {onSameDay
+            ? "Pick the windows it is good for, or none for any of them. A same day car is one trip for one person, so a flat price can cost you more than it brings."
+            : "It applies on runs and never on a car somebody has to themselves."}
+        </p>
+      </div>
 
       <div className="flex flex-wrap gap-4 text-sm font-semibold">
         <label className="flex items-center gap-2">

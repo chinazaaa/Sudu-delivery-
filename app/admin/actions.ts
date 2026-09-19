@@ -1088,6 +1088,10 @@ export async function saveCoupon(form: FormData): Promise<void> {
     })(),
     // Same day windows it is good for, as the hours they open.
     windows: form.getAll("window").map(String).filter(Boolean).join(","),
+    // Whether it reaches a car somebody has to themselves at all. Off by
+    // default: a flat price built for a shared run does not cover one trip
+    // for one person.
+    same_day: form.get("same_day") === "on",
     // A size, by the name of the option on the dish, grouped by the question
     // it answers: Medium and two BBQ flavours is a medium and one of those
     // two, not any of three.

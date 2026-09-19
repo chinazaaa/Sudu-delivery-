@@ -252,6 +252,21 @@ export default function Checkout({
     returning: false,
   });
 
+  // What an offer would charge for this cart at a given time, or nothing
+  // when none applies there. A run is asked for with no time at all.
+  const priceFor = (at: string | null) => {
+    const found = pickOffer(offers, {
+      restaurantIds: [...new Set(cart.map((line) => line.restaurantId))],
+      itemIds: cart.map((line) => line.itemId),
+      lineChoices: cart.map((line) => line.choices),
+      items: itemCount,
+      batchId,
+      deliverAt: at,
+      returning: false,
+    });
+    return found ? (found.fee === 0 ? "free delivery" : naira(found.fee)) : null;
+  };
+
   const fee = promotion
     ? promotion.fee
     : sameDay
@@ -503,12 +518,17 @@ export default function Checkout({
               {/* Short enough to survive a narrow phone. A native select
                   truncates its option text with no warning, and a price cut
                   off halfway is worse than no price. */}
+              {/* An offer prices the delivery outright, so quoting the
+                  ladder beside it would be quoting a number nobody is going
+                  to be charged. Each option says what it would actually
+                  cost, and only falls back to "from" when nothing applies. */}
               <option value="today">
-                {sameDaySlots[0].day === "today" ? "Today" : "Tomorrow"} · from{" "}
-                {naira(sameDayBands[0]?.fee ?? 6500)}
+                {sameDaySlots[0].day === "today" ? "Today" : "Tomorrow"} ·{" "}
+                {priceFor(sameDaySlots[0].at) ??
+                  `from ${naira(sameDayBands[0]?.fee ?? 6500)}`}
               </option>
               <option value="run">
-                On a run · from {naira(bands[0]?.fee ?? 4000)}
+                On a run · {priceFor(null) ?? `from ${naira(bands[0]?.fee ?? 4000)}`}
               </option>
             </select>
 
@@ -527,7 +547,10 @@ export default function Checkout({
                     <option key={slot.at} value={slot.at}>
                       {slot.label}
                       {slot.urgent ? " · urgent" : ""}
-                      {` · ${naira(sameDayFee(itemCount, slot.urgent, sameDayBands, urgentExtra))}`}
+                      {` · ${
+                        priceFor(slot.at) ??
+                        naira(sameDayFee(itemCount, slot.urgent, sameDayBands, urgentExtra))
+                      }`}
                     </option>
                   ))}
                 </select>

@@ -962,6 +962,7 @@ test("a promotion is flat until the taper, then it charges by the item", () => {
     places: ["dominos"],
     items: [],
     choice: "",
+    sameDay: false,
     runs: [],
     windows: [],
     firstOrderOnly: false,
@@ -985,6 +986,7 @@ test("an offer for one kitchen stands down on a cart with anything else in it", 
     places: ["dominos"],
     items: [],
     choice: "",
+    sameDay: false,
     runs: [],
     windows: [],
     firstOrderOnly: false,
@@ -1032,6 +1034,7 @@ test("a promotion splits in a group, but never below the floor", () => {
     places: ["dominos"],
     items: [],
     choice: "",
+    sameDay: false,
     runs: [],
     windows: [],
     firstOrderOnly: false,
@@ -1058,6 +1061,7 @@ test("free delivery is earned by the dishes that carry it, and nothing else", ()
     places: [],
     items: ["bbq-beef", "bbq-chicken"],
     choice: "",
+    sameDay: false,
     runs: [],
     windows: [],
     firstOrderOnly: false,
@@ -1077,14 +1081,18 @@ test("free delivery is earned by the dishes that carry it, and nothing else", ()
 test("any large pizza means every line chose large", () => {
   // A size is a choice on a dish, so the cart qualifies only if each line
   // made it: one small among them and the offer is not this one.
-  assert.equal(everyLineChose("Large", [["Large"], ["Large", "Extra cheese"]]), true);
-  assert.equal(everyLineChose("Large", [["Large"], ["Medium"]]), false);
-  assert.equal(everyLineChose("Large", [[]]), false);
-  assert.equal(everyLineChose("Large", []), false);
-  // Spelling it differently in the box is the same answer to anybody reading.
-  assert.equal(everyLineChose(" large ", [["Large"]]), true);
-  // No choice asked for is no condition at all.
+  const large = JSON.stringify([["Size::Large"]]);
+
+  assert.equal(everyLineChose(large, [["Large"], ["Large", "Extra cheese"]]), true);
+  assert.equal(everyLineChose(large, [["Large"], ["Medium"]]), false);
+  assert.equal(everyLineChose(large, [[]]), false);
+  assert.equal(everyLineChose(large, []), false);
+  // Case and stray spaces are the same answer to anybody reading a menu.
+  assert.equal(everyLineChose(JSON.stringify([[" large "]]), [["Large"]]), true);
+  // No choice asked for is no condition at all, and so is a value written by
+  // an older version that nothing can make sense of.
   assert.equal(everyLineChose("", [["Medium"]]), true);
+  assert.equal(everyLineChose('"BBQ" or Medium 12", and Medium', [["Medium"]]), true);
 });
 
 test("choices are grouped by the question they answer", () => {
@@ -1109,6 +1117,7 @@ test("the cart says what is standing between it and an offer", () => {
     places: [],
     items: ["bbq-beef"],
     choice: "",
+    sameDay: false,
     runs: [],
     windows: [],
     firstOrderOnly: false,

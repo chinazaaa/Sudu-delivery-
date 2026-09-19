@@ -268,6 +268,7 @@ function valuesOf(coupon: Awaited<ReturnType<typeof listCoupons>>[number]): Coup
     min_per_person: coupon.min_per_person ?? 0,
     required_choice: coupon.required_choice ?? "",
     windows: coupon.windows ?? "",
+    sameDay: coupon.same_day ?? false,
     runs: coupon.runs.map((run) => run.batchId),
     places: coupon.places.map((place) => place.id),
     sections: coupon.sections.map((one) => one.id),

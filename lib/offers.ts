@@ -36,8 +36,12 @@ export type LiveOffer = {
   choice: string;
   /** Empty means any run. */
   runs: string[];
-  /** Same day window opening hours. Empty means any time. */
+  /** Same day window opening hours. Empty means the offer is for runs only,
+   *  which is the safe answer: a flat price that replaces a car somebody has
+   *  to themselves is driving at a loss rather than discounting. */
   windows: number[];
+  /** Whether it reaches a same day car at all. */
+  sameDay: boolean;
   firstOrderOnly: boolean;
   /** In a group the fee splits, but never below this each. */
   minEach: number;
@@ -87,6 +91,10 @@ export function pickOffer(
     // on large ones.
     if (offer.choice !== "" && !everyLineChose(offer.choice, context.lineChoices)) continue;
     if (offer.runs.length > 0 && !offer.runs.includes(context.batchId)) continue;
+    // A same day car is a trip for one person. An offer only reaches one
+    // when it says so, because the flat price that makes sense shared across
+    // a run does not cover a car going out for one order.
+    if (context.deliverAt && !offer.sameDay) continue;
     if (!inWindowHours(offer.windows, context.deliverAt ?? null)) continue;
 
     earned.push({ offer, fee: offerFee(offer, context.items) });
@@ -128,8 +136,9 @@ export function offerFee(offer: LiveOffer, items: number): number {
  * an order on a run is never held back by this.
  */
 export function inWindowHours(hours: number[], deliverAt: string | null): boolean {
-  if (hours.length === 0) return true;
+  // A run has no time of its own, so nothing here can hold it back.
   if (!deliverAt) return true;
+  if (hours.length === 0) return true;
 
   // Lagos is UTC+1 all year, so the hour there is the hour here plus one.
   const hour = (new Date(deliverAt).getUTCHours() + 1) % 24;
@@ -226,22 +235,23 @@ function readChoice(choice: string): string[][] {
   const sane = (one: unknown): one is string =>
     typeof one === "string" && one.trim() !== "" && !/[[\]{}]/.test(one);
 
-  if (raw.startsWith("[")) {
-    try {
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return [];
-      return parsed
-        .filter((set): set is unknown[] => Array.isArray(set))
-        .map((set) => set.filter(sane).map((one) => one.trim()))
-        .filter((set) => set.length > 0);
-    } catch {
-      return [];
-    }
-  }
+  // Only the proper shape is trusted. A version that lived for about an hour
+  // wrote a plain comma list, and one of those went wrong badly enough to
+  // print a sentence of brackets and quotation marks into what a customer
+  // read. Anything that is not a list of lists is no choice at all, which
+  // prices the offer a little wider and says nothing strange to anybody.
+  if (!raw.startsWith("[")) return [];
 
-  // An older offer saved a plain comma list, which meant one question.
-  const single = raw.split(",").filter(sane).map((one) => one.trim());
-  return single.length > 0 ? [single] : [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((set): set is unknown[] => Array.isArray(set))
+      .map((set) => set.filter(sane).map((one) => one.trim()))
+      .filter((set) => set.length > 0);
+  } catch {
+    return [];
+  }
 }
 
 export type CartItem = {
@@ -282,6 +292,7 @@ export function nearMiss(
   for (const offer of offers) {
     if (offer.firstOrderOnly && context.returning) continue;
     if (offer.runs.length > 0 && !offer.runs.includes(context.batchId)) continue;
+    if (context.deliverAt && !offer.sameDay) continue;
     if (!inWindowHours(offer.windows, context.deliverAt ?? null)) continue;
 
     const qualifies = (line: CartItem) =>
