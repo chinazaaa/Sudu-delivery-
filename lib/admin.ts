@@ -310,9 +310,11 @@ export type BatchRow = Batch & {
 };
 
 export type SameDayTrip = {
-  /** The instant they all asked for, which is what makes it one trip. */
+  /** The earliest time in the cluster, which is when you have to leave. */
   at: string;
   label: string;
+  /** Every time asked for in this trip, earliest first. */
+  times: string[];
   batchIds: string[];
   orders: number;
   paid: number;
@@ -322,14 +324,19 @@ export type SameDayTrip = {
 };
 
 /**
- * Same day cars going to the same place at the same time.
+ * How far apart two same day cars can be and still be one walk to the counter.
  *
- * Every one of these is its own batch, because each was one person asking for
- * a car. Ten people asking for two o'clock is ten batches and, to whoever is
- * buying the food, one trip. Reading it as ten was going to mean ten counter
- * sheets and no list of what to actually buy.
+ * Two o'clock and half past two is one trip to whoever is buying, and
+ * splitting them into two shopping lists is two walks to Chicken Republic for
+ * the same chicken. Five hours is the span a single afternoon of buying
+ * covers, which is how the shop actually works.
  */
-export async function sameDayTrips(): Promise<SameDayTrip[]> {
+const ONE_TRIP_MINUTES = 5 * 60;
+
+/** The cars going out, clustered into the trips somebody actually makes. */
+async function sameDayClusters(): Promise<
+  { at: string; label: string; times: string[]; batchIds: string[] }[]
+> {
   const from = new Date(Date.now() - 12 * 3600_000).toISOString();
 
   const { data, error } = await db()
@@ -348,12 +355,51 @@ export async function sameDayTrips(): Promise<SameDayTrip[]> {
     deliver_at: string;
     delivery_window_text: string;
   }[];
-  if (rows.length === 0) return [];
 
+  const clusters: { at: string; label: string; times: string[]; batchIds: string[] }[] = [];
+
+  for (const row of rows) {
+    const open = clusters[clusters.length - 1];
+    const within =
+      open !== undefined &&
+      new Date(row.deliver_at).getTime() - new Date(open.at).getTime() <=
+        ONE_TRIP_MINUTES * 60_000;
+
+    if (within) {
+      open.batchIds.push(row.id);
+      if (!open.times.includes(row.delivery_window_text)) {
+        open.times.push(row.delivery_window_text);
+      }
+    } else {
+      clusters.push({
+        // The earliest, because that is the one you cannot be late for.
+        at: row.deliver_at,
+        label: row.delivery_window_text,
+        times: [row.delivery_window_text],
+        batchIds: [row.id],
+      });
+    }
+  }
+
+  return clusters;
+}
+
+/**
+ * Same day cars going out close enough together to be one trip.
+ *
+ * Every one of these is its own batch, because each was one person asking for
+ * a car, and each keeps its own fuel and its own profit. Ten people asking for
+ * two o'clock is ten batches and, to whoever is buying the food, one trip.
+ */
+export async function sameDayTrips(): Promise<SameDayTrip[]> {
+  const clusters = await sameDayClusters();
+  if (clusters.length === 0) return [];
+
+  const everyId = clusters.flatMap((one) => one.batchIds);
   const { data: orders } = await db()
     .from("orders")
     .select("id, batch_id, status, total")
-    .in("batch_id", rows.map((one) => one.id))
+    .in("batch_id", everyId)
     .neq("status", "refunded");
 
   const live = (orders ?? []) as {
@@ -370,38 +416,27 @@ export async function sameDayTrips(): Promise<SameDayTrip[]> {
         .in("order_id", live.map((one) => one.id))
     : { data: [] as { order_id: string; qty: number }[] };
 
-  const byTime = new Map<string, SameDayTrip>();
+  const trips = clusters.map((cluster) => {
+    const mine = live.filter((one) => cluster.batchIds.includes(one.batch_id));
+    const paid = mine.filter((one) => one.status !== "pending");
 
-  for (const row of rows) {
-    const trip = byTime.get(row.deliver_at) ?? {
-      at: row.deliver_at,
-      label: row.delivery_window_text,
-      batchIds: [],
-      orders: 0,
-      paid: 0,
-      unpaid: 0,
-      items: 0,
-      gross: 0,
+    return {
+      at: cluster.at,
+      label: cluster.label,
+      times: cluster.times,
+      batchIds: cluster.batchIds,
+      orders: mine.length,
+      paid: paid.length,
+      unpaid: mine.length - paid.length,
+      items: (items ?? [])
+        .filter((line) => mine.some((one) => one.id === line.order_id))
+        .reduce((sum, line) => sum + (line.qty as number), 0),
+      gross: paid.reduce((sum, one) => sum + one.total, 0),
     };
-
-    trip.batchIds.push(row.id);
-    for (const order of live.filter((one) => one.batch_id === row.id)) {
-      trip.orders += 1;
-      if (order.status === "pending") trip.unpaid += 1;
-      else {
-        trip.paid += 1;
-        trip.gross += order.total;
-      }
-      trip.items += (items ?? [])
-        .filter((line) => line.order_id === order.id)
-        .reduce((sum, line) => sum + (line.qty as number), 0);
-    }
-
-    byTime.set(row.deliver_at, trip);
-  }
+  });
 
   // Only trips somebody is actually going on.
-  return [...byTime.values()].filter((trip) => trip.orders > 0);
+  return trips.filter((trip) => trip.orders > 0);
 }
 
 export type TripSheet = {
@@ -415,25 +450,22 @@ export type TripSheet = {
 };
 
 /**
- * Everything going out at one time, as one shopping trip.
+ * Everything going out on one trip, as one shopping list.
  *
  * The counter list is the point: what to buy, by restaurant, across every car
- * asked for at this time. Ten separate sheets is ten chances to miss a drink.
+ * in the cluster. Separate sheets per car is a separate chance to miss a
+ * drink on each of them.
  */
 export async function tripSheet(at: string): Promise<TripSheet | null> {
-  const { data: batches } = await db()
-    .from("batches")
-    .select("id, delivery_window_text")
-    .eq("kind", "same_day")
-    .eq("deliver_at", at);
-
-  const cars = (batches ?? []) as { id: string; delivery_window_text: string }[];
-  if (cars.length === 0) return null;
+  // Clustered the same way the list clusters, or opening a trip would show a
+  // different set of cars from the one that was listed.
+  const cluster = (await sameDayClusters()).find((one) => one.at === at);
+  if (!cluster) return null;
 
   const { data } = await db()
     .from("orders")
     .select("*")
-    .in("batch_id", cars.map((one) => one.id))
+    .in("batch_id", cluster.batchIds)
     .neq("status", "refunded")
     .order("customer_name");
 
@@ -451,7 +483,7 @@ export async function tripSheet(at: string): Promise<TripSheet | null> {
 
   return {
     at,
-    label: cars[0].delivery_window_text,
+    label: cluster.times.join(" and "),
     counter: groupForCounter(lines.filter((line) => paidIds.has(line.order_id))),
     handout: paid.map(withLines),
     unpaid: orders.filter((o) => o.status === "pending").map(withLines),

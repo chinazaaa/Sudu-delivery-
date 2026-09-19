@@ -106,15 +106,19 @@ export default async function RunsPage({
             <h2 className="font-bold">Same day, by the time asked for</h2>
             <p className="text-sm text-muted">
               Each of these is one person asking for a car, so each is its own
-              run below. Everybody who asked for the same time is one trip for
-              whoever is buying, which is what this is.
+              run below. Times within five hours of each other are one walk to
+              the counter, which is what these are.
             </p>
           </div>
           <ul className="divide-y divide-black/5">
             {trips.map((trip) => (
               <li key={trip.at} className="flex flex-wrap items-center justify-between gap-2 py-2">
                 <span className="min-w-0">
-                  <span className="font-bold">{trip.label}</span>
+                  <span className="font-bold">
+                    {trip.times.length > 1
+                      ? `${trip.times[0]} to ${trip.times[trip.times.length - 1]}`
+                      : trip.label}
+                  </span>
                   <span className="block text-xs text-muted">
                     {trip.orders} {trip.orders === 1 ? "order" : "orders"} ·{" "}
                     {trip.items} item{trip.items === 1 ? "" : "s"} ·{" "}
