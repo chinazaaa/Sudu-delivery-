@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 
 import * as Clipboard from "expo-clipboard";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { api, naira, type OrderView } from "@/lib/api";
+import { me, useStored } from "@/lib/store";
 import { T } from "@/lib/theme";
 
 /** One order: where to pay, what was ordered, and where it has got to. */
@@ -12,6 +13,11 @@ export default function Order() {
   const [order, setOrder] = useState<OrderView | null>(null);
   const [chosen, setChosen] = useState(0);
   const [copied, setCopied] = useState("");
+  // Moving an order needs the runs and the token that proves it is theirs.
+  const [shop] = useStored(() => api.shop().catch(() => null), null);
+  const [saved] = useStored(me.read, { name: "", phone: "", hostel: "", token: null });
+  const [busy, setBusy] = useState(false);
+  const [moving, setMoving] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -27,6 +33,23 @@ export default function Order() {
     const timer = setInterval(load, 30000);
     return () => clearInterval(timer);
   }, [load]);
+
+  const move = async (batchId: string) => {
+    if (!saved.token) {
+      setMoving("Sign in on the Account tab first, so we know it is your order.");
+      return;
+    }
+    setMoving("");
+    setBusy(true);
+    try {
+      const result = await api.move(String(id), batchId, saved.token);
+      router.replace(`/order/${result.orderId}`);
+    } catch (problem) {
+      setMoving(problem instanceof Error ? problem.message : "Could not move that.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   if (!order) return <ActivityIndicator color={T.brand} style={{ marginTop: 40 }} />;
 
@@ -61,12 +84,41 @@ export default function Order() {
           now is a refund waiting to happen, so the details come off and the
           screen says so. */}
       {order.status === "pending" && !order.payable && (
-        <View style={{ backgroundColor: T.tint, borderRadius: T.radius, padding: 14 }}>
+        <View style={{ backgroundColor: T.tint, borderRadius: T.radius, padding: 14, gap: 8 }}>
           <Text style={{ fontWeight: "800", color: T.ink }}>Do not pay this one</Text>
-          <Text style={{ color: T.muted, marginTop: 4 }}>
-            Nothing was charged. This run has been bought for already, so message
-            us and we will put your food on the next one.
+          <Text style={{ color: T.muted }}>
+            Nothing was charged. This run has been bought for already, so put your
+            food on another one and it is yours again, priced on today's menu.
           </Text>
+
+          {moving !== "" && <Text style={{ color: T.brandDark, fontWeight: "700" }}>{moving}</Text>}
+
+          {(shop?.runs ?? [])
+            .filter((one) => !one.closed && !one.full && one.id !== order.runId)
+            .map((one) => (
+              <Pressable
+                key={one.id}
+                onPress={() => void move(one.id)}
+                disabled={busy}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  backgroundColor: T.paper,
+                  borderRadius: 14,
+                  padding: 12,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: "800", color: T.ink }}>{one.label}</Text>
+                  <Text style={{ color: T.muted, fontSize: 13 }}>{one.deliveryWindow}</Text>
+                </View>
+                <Text style={{ color: T.brand, fontWeight: "800" }}>
+                  {busy ? "…" : "Move"}
+                </Text>
+              </Pressable>
+            ))}
         </View>
       )}
 

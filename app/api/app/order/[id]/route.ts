@@ -44,6 +44,9 @@ export async function GET(
       // What they said last time, so the app can show it already answered.
       rating: order.rating ?? null,
       feedback: order.feedback ?? "",
+      // Which car it is on, so the app can leave it out of the list of runs
+      // it offers to move onto.
+      runId: order.batch.id,
       run: {
         // A car of its own rather than a shared run, so the app can say when
         // it goes out instead of naming a run and a slot nobody chose.

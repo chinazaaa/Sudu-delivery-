@@ -80,6 +80,10 @@ export type Run = {
   cutOffISO: string;
   deliveryWindow: string;
   flashFee: number | null;
+  /** Shut, or has as many orders as it can carry. Older servers leave both
+   *  out, and then a run is offered and the order itself refuses it. */
+  closed?: boolean;
+  full?: boolean;
 };
 
 /** A time somebody can ask for, as the shop's own clock works it out. */
@@ -127,6 +131,8 @@ export type OrderView = {
   ref: string;
   status: string;
   stage: string;
+  /** The run it is on, so it can be left out of the ones offered instead. */
+  runId?: string;
   /** Whether this run can still take money. False once the shopping has
    *  started, and then asking for a transfer is asking for a refund. */
   payable: boolean;
@@ -176,6 +182,9 @@ export const api = {
       pin,
     }),
   order: (id: string) => get<OrderView>(`/order/${id}`),
+  /** Put an order on another run. Only your own, which the token proves. */
+  move: (id: string, batchId: string, token: string) =>
+    post<{ ok: boolean; orderId: string }>(`/order/${id}/move`, { batchId }, token),
   /**
    * What a promotion does to this cart: the fee it sets, or the one the cart
    * nearly has and what is in the way. Asked of the shop rather than worked
