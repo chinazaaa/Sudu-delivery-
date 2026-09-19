@@ -25,12 +25,16 @@ export default function MenuScope({
   restaurant,
   categories,
   choice,
+  sizes = true,
 }: {
   shops: ScopeShop[];
   /** What is already saved, when an offer is being changed. */
   restaurant: string;
   categories: string[];
   choice: string;
+  /** Whether a size can be asked for. A typed code is a deal with a kitchen,
+   *  and nobody types a code to get a discount on the medium one. */
+  sizes?: boolean;
 }) {
   const [shopId, setShopId] = useState(restaurant);
   const [sections, setSections] = useState<string[]>(categories);
@@ -135,7 +139,7 @@ export default function MenuScope({
         </div>
       )}
 
-      {shop && questions.length > 0 && (
+      {sizes && shop && questions.length > 0 && (
         <div className="space-y-2">
           <p className="label mb-0">And only this choice</p>
           {/* One row per question a dish asks, because Medium and BBQ Chicken

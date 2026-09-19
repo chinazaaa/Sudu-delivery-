@@ -1,7 +1,12 @@
 import PageHeader from "@/components/admin/PageHeader";
 import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
-import CouponForm, { type CouponFormData } from "@/components/admin/CouponForm";
+import CouponForm, {
+  type CouponFormData,
+  type CouponFormValues,
+} from "@/components/admin/CouponForm";
+import { SLOT_LABEL } from "@/lib/config";
+import { runDateLabel } from "@/lib/time";
 import { choiceReach, couponLabel, listCoupons } from "@/lib/coupons";
 import { deleteCoupon, toggleCoupon } from "../actions";
 import { batchOverview } from "@/lib/admin";
@@ -97,7 +102,10 @@ export default async function CouponsAdmin() {
   const formData: CouponFormData = {
     shops,
     dishes,
-    runs: runs.map((run) => ({ id: run.id, run_date: run.run_date, slot: run.slot })),
+    runs: runs.map((run) => ({
+      id: run.id,
+      label: `${runDateLabel(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
+    })),
     windows,
   };
 
@@ -159,7 +167,7 @@ export default async function CouponsAdmin() {
                 Change this offer
               </summary>
               <div className="mt-3">
-                <CouponForm coupon={coupon} data={formData} />
+                <CouponForm values={valuesOf(coupon)} data={formData} />
               </div>
             </details>
 
@@ -199,8 +207,31 @@ export default async function CouponsAdmin() {
             to put in a group chat. Everything here saves together.
           </p>
         </div>
-        <CouponForm coupon={null} data={formData} />
+        <CouponForm values={null} data={formData} />
       </section>
     </div>
   );
+}
+
+/** An offer as the form wants it: flat, and without the shapes it never uses. */
+function valuesOf(coupon: Awaited<ReturnType<typeof listCoupons>>[number]): CouponFormValues {
+  return {
+    code: coupon.code,
+    applies_to: coupon.applies_to,
+    amount: coupon.amount,
+    note: coupon.note,
+    active: coupon.active,
+    first_order_only: coupon.first_order_only,
+    expires_at: coupon.expires_at,
+    max_uses: coupon.max_uses,
+    included_items: coupon.included_items,
+    extra_per_item: coupon.extra_per_item ?? 0,
+    min_per_person: coupon.min_per_person ?? 0,
+    required_choice: coupon.required_choice ?? "",
+    windows: coupon.windows ?? "",
+    runs: coupon.runs.map((run) => run.batchId),
+    places: coupon.places.map((place) => place.id),
+    sections: coupon.sections.map((one) => one.id),
+    dishes: coupon.dishes.map((one) => one.id),
+  };
 }
