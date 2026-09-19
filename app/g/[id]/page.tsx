@@ -79,8 +79,13 @@ export default async function GroupPage({
         </p>
         <h1 className="text-2xl font-bold tracking-tight">
           {group.members.length === 0
-            ? "Waiting for the first order"
-            : `${group.members.length} ${group.members.length === 1 ? "person" : "people"}, ${group.items} item${group.items === 1 ? "" : "s"}`}
+            ? "Waiting for the first person"
+            : group.items === 0
+              ? // Nothing has been finalised, so there is no count to give.
+                // Printing "0 items" beside somebody's full cart reads as the
+                // page having lost their food.
+                `${group.members.length} ${group.members.length === 1 ? "person" : "people"} in so far`
+              : `${group.members.length} ${group.members.length === 1 ? "person" : "people"}, ${group.items} item${group.items === 1 ? "" : "s"} in`}
         </h1>
         <p className="text-ink/75">
           {label && `${label}, `}arriving {group.batch.delivery_window_text}.
