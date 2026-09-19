@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { naira } from "@/lib/money";
+import PayChoice from "./PayChoice";
 
 /**
  * Their food, still waiting, after the group has closed.
@@ -30,6 +31,7 @@ export default function GroupLate({
   const [hostel, setHostel] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [method, setMethod] = useState<"transfer" | "card">("transfer");
   const [problem, setProblem] = useState("");
 
   const finish = async () => {
@@ -39,7 +41,7 @@ export default function GroupLate({
       const response = await fetch(`/api/party/${groupId}/late`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, hostel, note }),
+        body: JSON.stringify({ phone, hostel, note, paymentMethod: method }),
       });
       const data = (await response.json()) as { error?: string; orderId?: string };
       if (!response.ok || !data.orderId) {
@@ -116,6 +118,8 @@ export default function GroupLate({
         aria-label="Anything we should know"
         className="field"
       />
+
+      <PayChoice value={method} onChange={setMethod} />
 
       {problem !== "" && <p className="text-sm font-semibold text-brand-dark">{problem}</p>}
 

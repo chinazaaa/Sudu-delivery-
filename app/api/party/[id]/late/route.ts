@@ -40,6 +40,7 @@ export async function POST(
     phone?: string;
     hostel?: string;
     note?: string;
+    paymentMethod?: string;
   };
 
   const phone = normalisePhone(String(body.phone ?? ""));
@@ -71,7 +72,13 @@ export async function POST(
     hostel,
     lines: seat.lines,
     coupon: seat.coupon || undefined,
-    paymentMethod: seat.payment_method === "card" ? "card" : "transfer",
+    // What they have just said, falling back to whatever the seat carried.
+    paymentMethod:
+      body.paymentMethod === "card" || body.paymentMethod === "transfer"
+        ? body.paymentMethod
+        : seat.payment_method === "card"
+          ? "card"
+          : "transfer",
     customerNote: String(body.note ?? "").trim().slice(0, 300),
     fixedFee: share ?? undefined,
   });

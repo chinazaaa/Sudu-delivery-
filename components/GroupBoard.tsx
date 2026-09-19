@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { closeSharedGroup } from "@/app/actions";
 import { enterGroup, readGroup } from "./GroupLink";
+import PayChoice from "./PayChoice";
 import SendLink from "./SendLink";
 import { countItems, useCart } from "@/lib/cart";
 import { naira } from "@/lib/money";
@@ -82,6 +83,9 @@ export default function GroupBoard({
   const waiting = countItems(cart);
   const [left, setLeft] = useState("");
   const [busy, setBusy] = useState(false);
+  // Asked here rather than assumed, because a group order never went past a
+  // checkout screen and everybody was being written down as a transfer.
+  const [method, setMethod] = useState<"transfer" | "card">("transfer");
   // Closing cannot be undone and leaves behind anybody still choosing, so it
   // is asked rather than done, from wherever it is pressed.
   const [confirming, setConfirming] = useState(false);
@@ -188,7 +192,7 @@ export default function GroupBoard({
       const response = await fetch(`/api/party/${groupId}/details`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, hostel, note }),
+        body: JSON.stringify({ phone, hostel, note, paymentMethod: method }),
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -339,6 +343,8 @@ export default function GroupBoard({
             aria-label="Anything we should know"
             className="field"
           />
+
+          <PayChoice value={method} onChange={setMethod} />
 
           {problem !== "" && (
             <p className="text-sm font-semibold text-brand-dark">{problem}</p>
