@@ -3,6 +3,7 @@ import { getSharedGroup, groupOrders, shareNow } from "./groups";
 import { cartValues, groupCarts, isReady, type GroupCart } from "./group-carts";
 import { getBatch } from "./batches";
 import { shortRef } from "./links";
+import { currentCustomer } from "./customer-auth";
 import type { Batch } from "./types";
 
 /** Where somebody has got to, which is the whole point of the board. */
@@ -133,12 +134,18 @@ export async function groupView(
       .filter((row) => row.order_id === id)
       .reduce((sum, row) => sum + (row.qty as number), 0);
 
+  // Once a group closes the seats are gone, so the board cannot tell whose
+  // order is whose from the seat cookie any more. A signed in customer can
+  // still be matched on their own number, which is what puts "Pay yours" on
+  // their line instead of leaving every line looking like somebody else's.
+  const knownPhone = group.closed_at ? await currentCustomer() : null;
+
   const members: Member[] = group.closed_at
     ? orders.map((order) => ({
         orderId: order.id,
         link: shortRef(order),
         stage: (order.status !== "pending" ? "paid" : "unpaid") as Stage,
-        isMine: false,
+        isMine: knownPhone !== null && order.customer_phone === knownPhone,
         name: order.for_name ?? order.customer_name,
         items: countFor(order.id),
         food: order.subtotal_food,
