@@ -14,6 +14,7 @@ import {
   HEADLINE_FEE,
 } from "../lib/fees";
 import {
+  choiceCombinations,
   everyLineChose,
   nearMiss,
   inWindowHours,
@@ -1129,4 +1130,20 @@ test("the cart says what is standing between it and an offer", () => {
   assert.equal(ask([line("bbq-beef", "BBQ Beef")]), null);
   // And nothing qualifying is a different order, not a near miss.
   assert.equal(ask([line("coke", "Coke")]), null);
+});
+
+test("an offer is spelt out when there are few enough combinations", () => {
+  const asks = JSON.stringify([["Medium"], ["BBQ Chicken", "BBQ Meatball"]]);
+  assert.deepEqual(choiceCombinations(asks), [
+    "Medium BBQ Chicken",
+    "Medium BBQ Meatball",
+  ]);
+
+  // Past a handful the list would be longer than the menu, so it gives up
+  // and the conditions get listed instead.
+  const many = JSON.stringify([
+    ["Medium", "Large"],
+    ["BBQ Chicken", "BBQ Meatball", "Pepperoni"],
+  ]);
+  assert.deepEqual(choiceCombinations(many), []);
 });

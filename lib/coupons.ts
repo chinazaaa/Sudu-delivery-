@@ -1,4 +1,11 @@
-import { choiceSets, pickOffer, type LiveOffer, type OfferContext } from "./offers";
+import {
+  choiceCombinations,
+  choiceLabels,
+  choiceSets,
+  pickOffer,
+  type LiveOffer,
+  type OfferContext,
+} from "./offers";
 import { db } from "./supabase";
 import { naira } from "./money";
 import { SLOT_LABEL, type BatchSlot } from "./config";
@@ -650,20 +657,29 @@ export async function dealsAt(
     // offer that is really about medium pizzas is the kind of half sentence
     // somebody builds a cart on and then feels cheated by.
     const parts = sectionsOf(coupon.code);
-    const sizes = choiceSets(coupon.required_choice ?? "")
-      .map((set) => set.join(" or "))
-      .join(" ");
+
+    // Spelt out where it can be: a medium BBQ Chicken or a medium BBQ
+    // Meatball is two things somebody can picture. Past a handful the list
+    // would be longer than the menu, and the conditions are listed instead.
+    const combinations = choiceCombinations(coupon.required_choice ?? "");
+    const section = parts.length > 0 ? ` ${parts.join(" or ")}` : "";
 
     const what =
       only.length > 0
         ? only.join(" or ")
-        : parts.length > 0
-          ? `any ${sizes ? `${sizes} ` : ""}${parts.join(" or ")}`
-          : sizes
-            ? `anything ${sizes} from ${restaurantName}`
+        : combinations.length > 0
+          ? `any ${combinations.join(`${section} or `)}${section} from ${restaurantName}`
+          : parts.length > 0
+            ? `any ${parts.join(" or ")} from ${restaurantName}`
             : `anything from ${restaurantName}`;
 
-    const where = `Order ${what}, and nothing else, and `;
+    const asked =
+      combinations.length > 0
+        ? []
+        : choiceLabels(coupon.required_choice ?? "").map((set) => set.join(" or "));
+    const must = asked.length === 0 ? "" : ` It has to be ${asked.join(", and ")}.`;
+
+    const where = `Order ${what}, and nothing else.${must} Then `;
 
     if (coupon.applies_to === "fee") {
       const taper =
@@ -682,7 +698,7 @@ export async function dealsAt(
         detail:
           `${where}delivery is ${
             coupon.amount === 0 ? "free" : naira(coupon.amount)
-          }${taper}. It comes off by itself, with no code to type.${split}`,
+          }${taper}, and it comes off by itself with no code to type.${split}`,
       });
       continue;
     }

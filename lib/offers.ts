@@ -289,3 +289,52 @@ export function nearMiss(
     (one, two) => one.fee - two.fee || one.blocking.length - two.blocking.length
   )[0];
 }
+
+/**
+ * The choices an offer asks for, as they are spelt, for saying out loud.
+ *
+ * choiceSets lowercases so it can compare; this keeps the menu's own capitals
+ * because a sentence reading "bbq chicken" looks like a mistake.
+ */
+export function choiceLabels(choice: string): string[][] {
+  const raw = choice.trim();
+  if (raw === "") return [];
+
+  if (raw.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(raw) as string[][];
+      return parsed
+        .map((set) => set.map((one) => one.trim()).filter(Boolean))
+        .filter((set) => set.length > 0);
+    } catch {
+      return [];
+    }
+  }
+
+  const single = raw.split(",").map((one) => one.trim()).filter(Boolean);
+  return single.length > 0 ? [single] : [];
+}
+
+/**
+ * The combinations an offer covers, spelt out, when there are few enough.
+ *
+ * A medium, and one of two flavours, is two real things somebody can picture:
+ * a medium BBQ Chicken or a medium BBQ Meatball. Said as separate conditions
+ * it is accurate and nobody reads it. Past a handful the list would be longer
+ * than the menu, so it gives up and lets the conditions be listed instead.
+ */
+export function choiceCombinations(choice: string, most = 4): string[] {
+  const sets = choiceLabels(choice);
+  if (sets.length === 0) return [];
+
+  const total = sets.reduce((count, set) => count * set.length, 1);
+  if (total > most) return [];
+
+  return sets.reduce<string[]>(
+    (phrases, set) =>
+      phrases.flatMap((phrase) =>
+        set.map((one) => (phrase === "" ? one : `${phrase} ${one}`))
+      ),
+    [""]
+  );
+}
