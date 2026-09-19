@@ -2,8 +2,16 @@ import SaveButton from "@/components/SaveButton";
 import type { Batch } from "@/lib/types";
 import { deliverySlots } from "@/lib/same-day";
 import { hoursByDay } from "@/lib/settings";
-import { moveSameDayCar, raiseMenuPrice, setCounterSpend } from "@/app/admin/actions";
+import {
+  moveSameDayCar,
+  raiseMenuPrice,
+  reopenRun,
+  setCounterSpend,
+  settleRun,
+} from "@/app/admin/actions";
 import ShortGroups from "@/components/admin/ShortGroups";
+import SettleRun from "@/components/admin/SettleRun";
+import SheetBody from "@/components/admin/SheetBody";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import HandoutList from "@/components/HandoutList";
@@ -16,7 +24,7 @@ import ActionButton from "@/components/admin/ActionButton";
 import StagePicker from "@/components/admin/StagePicker";
 import SendSheet from "@/components/admin/SendSheet";
 import { payableAccounts } from "@/lib/banks";
-import { batchSheet, typicalCosts, shortfalls } from "@/lib/admin";
+import { batchSheet, notPriced, stillOpen, typicalCosts, shortfalls } from "@/lib/admin";
 import { SLOT_LABEL } from "@/lib/config";
 import Link from "next/link";
 import { naira, orderRef, refsIn } from "@/lib/money";
@@ -138,6 +146,40 @@ export default async function BatchPage({
         }
       />
 
+      {batch.settled_at ? (
+        <section className="card mb-4 border-mint/30 bg-mint/[0.06]">
+          <h2 className="font-bold text-mint">
+            Closed on {runDateLabel(batch.settled_at.slice(0, 10))}
+          </h2>
+          <p className="mt-0.5 text-sm text-ink/80">
+            {summary.paidCount} order{summary.paidCount === 1 ? "" : "s"},{" "}
+            {naira(summary.gross)} in, {naira(summary.foodCost)} to the counters
+            and {naira(summary.costs)} of costs. {naira(summary.profit)} left.
+          </p>
+          <form action={reopenRun} className="mt-3">
+            <input type="hidden" name="batch_id" value={batch.id} />
+            <ConfirmButton
+              tone="bare"
+              className="chip border-black/10 bg-white"
+              confirm="Yes, open it again"
+            >
+              Something was wrong, open it again
+            </ConfirmButton>
+          </form>
+        </section>
+      ) : (
+        stageIndex(batch.stage) >= stageIndex("on_the_road") && (
+          <div className="mb-4">
+            <SettleRun
+              open={stillOpen(sheet)}
+              unpriced={notPriced(sheet)}
+              action={settleRun}
+              batchId={batch.id}
+            />
+          </div>
+        )
+      )}
+
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat
           label="Paid orders"
@@ -254,6 +296,7 @@ export default async function BatchPage({
         </p>
       )}
 
+      <SheetBody settled={batch.settled_at !== null}>
       <Tabs
         sections={[
           {
@@ -1202,6 +1245,7 @@ export default async function BatchPage({
           },
         ]}
       />
+      </SheetBody>
     </div>
   );
 }

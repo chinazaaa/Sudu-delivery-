@@ -16,7 +16,12 @@ export type Traffic = {
 
 export type Funnel = {
   visitors: number;
-  carts: number;
+  /** People who got as far as opening their cart. */
+  openedCart: number;
+  /** Carts with a phone number on them, which is the last step before an
+   *  order and the only one the carts table knows about: a row is written
+   *  when a number is typed, because before that there is nobody to chase. */
+  gaveNumber: number;
   orders: number;
   paid: number;
 };
@@ -174,9 +179,21 @@ export async function funnel(days = 7): Promise<Funnel> {
   }
 
   const rows = await readViews(days);
+  const seen = rows ?? [];
+
+  // Reaching the cart is a real step and the views know it. Counting the
+  // carts table for this called somebody who typed their number a cart, which
+  // put the second step of the funnel below the last one and made the whole
+  // shape a lie.
+  const reached = (prefix: string) =>
+    new Set(
+      seen.filter((row) => row.path.startsWith(prefix)).map((row) => row.visitor)
+    ).size;
+
   return {
-    visitors: rows === null ? 0 : new Set(rows.map((row) => row.visitor)).size,
-    carts,
+    visitors: new Set(seen.map((row) => row.visitor)).size,
+    openedCart: reached("/cart"),
+    gaveNumber: carts,
     orders,
     paid,
   };

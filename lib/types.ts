@@ -81,6 +81,8 @@ export type Batch = {
   transport_cost: number;
   other_cost: number;
   cost_note: string;
+  /** When the books were closed on it. Null while there is still work. */
+  settled_at: string | null;
 };
 
 export type OrderStatus = "pending" | "paid" | "refunded" | "delivered";

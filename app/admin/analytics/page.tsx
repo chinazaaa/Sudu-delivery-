@@ -79,7 +79,8 @@ export default async function AnalyticsPage({
         <ul className="space-y-2">
           {[
             { label: "Looked at the shop", value: steps.visitors },
-            { label: "Filled a cart", value: steps.carts },
+            { label: "Opened their cart", value: steps.openedCart },
+            { label: "Left a number at checkout", value: steps.gaveNumber },
             { label: "Placed an order", value: steps.orders },
             { label: "Paid for it", value: steps.paid },
           ].map((step, index, all) => {

@@ -4,6 +4,7 @@ import { normalisePhone } from "@/lib/phone";
 import { redirect } from "next/navigation";
 import { revalidatePath, updateTag } from "next/cache";
 import { isSignedIn, passwordMatches, signIn, signOut } from "@/lib/admin-auth";
+import { batchSheet, stillOpen } from "@/lib/admin";
 import { db } from "@/lib/supabase";
 import { STAGES, type BatchStage } from "@/lib/stages";
 import { type BatchSlot } from "@/lib/config";
@@ -582,6 +583,44 @@ export async function deleteRun(form: FormData): Promise<void> {
 }
 
 /** A real capacity cap. Only set this when the car genuinely fills up. */
+/**
+ * Close the books on a run.
+ *
+ * Checked again here rather than trusted from the page: the page can be old,
+ * and a run settled with money still outstanding is a run nobody will think
+ * to look at again.
+ */
+export async function settleRun(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("batch_id"));
+
+  const sheet = await batchSheet(id);
+  if (!sheet) return;
+
+  const open = stillOpen(sheet);
+  if (open.length > 0) {
+    throw new Error(`That run is not finished: ${open.join(" ")}`);
+  }
+
+  await db()
+    .from("batches")
+    .update({ settled_at: new Date().toISOString() })
+    .eq("id", id);
+
+  revalidatePath("/admin", "layout");
+}
+
+/** Something was wrong after all, so it goes back to being work. */
+export async function reopenRun(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db()
+    .from("batches")
+    .update({ settled_at: null })
+    .eq("id", String(form.get("batch_id")));
+
+  revalidatePath("/admin", "layout");
+}
+
 export async function setBatchCapacity(form: FormData): Promise<void> {
   await assertAdmin();
   const raw = String(form.get("capacity") ?? "").trim();

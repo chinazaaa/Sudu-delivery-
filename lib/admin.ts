@@ -851,3 +851,52 @@ export async function shortfalls(batchId: string): Promise<Shortfall[]> {
 
   return out.filter((one) => one.short > 0 || one.unpaid.length > 0);
 }
+
+/**
+ * What is still open on a run, in the words somebody would use about it.
+ *
+ * Delivered is about the food. This is about the money, and the two are days
+ * apart: a run lands, and then there is a counter sheet to price, fuel to put
+ * in and the odd person who never paid. Until all of that is done the run is
+ * not finished, however long ago the bags went out.
+ *
+ * Only the things that can be checked are checked. Whether every price on the
+ * counter sheet is right is not one of them, which is what the confirmation
+ * is for: somebody saying they have been through it.
+ */
+export function stillOpen(sheet: BatchSheet): string[] {
+  const open: string[] = [];
+
+  if (sheet.batch.stage !== "handed_out") {
+    open.push("The food has not been marked delivered yet.");
+  }
+  if (sheet.summary.unpaidCount > 0) {
+    open.push(
+      `${sheet.summary.unpaidCount} order${
+        sheet.summary.unpaidCount === 1 ? "" : "s"
+      } never paid. Chase them, or refund and cancel.`
+    );
+  }
+  if (sheet.refunds.length > 0) {
+    open.push(
+      `${sheet.refunds.length} refund${
+        sheet.refunds.length === 1 ? " is" : "s are"
+      } still owed.`
+    );
+  }
+  if (sheet.summary.costs === 0) {
+    open.push("No fuel, transport or driver has been put in.");
+  }
+  if (sheet.groupsShort.length > 0) {
+    open.push(
+      `${sheet.groupsShort.length} shared delivery is short. Chase it, carry it, or refund.`
+    );
+  }
+
+  return open;
+}
+
+/** Lines nobody priced at the counter. Worth saying, not worth blocking. */
+export function notPriced(sheet: BatchSheet): number {
+  return sheet.summary.reconciled.of - sheet.summary.reconciled.lines;
+}
