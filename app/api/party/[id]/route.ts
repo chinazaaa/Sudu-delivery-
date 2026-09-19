@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { db } from "@/lib/supabase";
 import { groupOrders } from "@/lib/groups";
 import { cartValues, groupCarts, isReady } from "@/lib/group-carts";
@@ -56,7 +57,10 @@ export async function GET(
         ? []
         : await (async () => {
             const worth = await cartValues(seats);
+            const token = (await cookies()).get("sudu_seat")?.value ?? "";
             return seats.map((seat) => ({
+              // So a page can leave the reader out of a list of other people.
+              isMine: token !== "" && seat.member_token === token,
               name: seat.name.split(" ")[0],
               items: seat.lines.reduce((sum, line) => sum + (line.qty ?? 0), 0),
               food: worth.get(seat.id)?.value ?? 0,

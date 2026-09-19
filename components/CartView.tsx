@@ -72,7 +72,14 @@ export default function CartView({
   // Everybody else's food, so this page shows the whole car rather than only
   // the part of it this person is holding.
   const [others, setOthers] = useState<
-    { name: string; items: number; food: number; summary: string; ready: boolean }[]
+    {
+      isMine?: boolean;
+      name: string;
+      items: number;
+      food: number;
+      summary: string;
+      ready: boolean;
+    }[]
   >([]);
 
   useEffect(() => {
@@ -102,7 +109,10 @@ export default function CartView({
       fetch(`/api/party/${group}`)
         .then((response) => response.json())
         .then((data: { members?: typeof others }) => {
-          if (alive) setOthers(data.members ?? []);
+          // Everybody but the reader. Their own food is the section above,
+          // where they can change it; listing it twice, once unchangeable,
+          // reads as somebody else having ordered the same thing.
+          if (alive) setOthers((data.members ?? []).filter((one) => !one.isMine));
         })
         .catch(() => {
           /* Offline. Their own cart still works, which is the point of it. */
