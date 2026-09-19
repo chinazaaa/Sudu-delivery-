@@ -1,11 +1,5 @@
 import { db } from "./supabase";
-import {
-  claimLeader,
-  joinableGroup,
-  openGroupFor,
-  startGroupClock,
-  startSharedGroup,
-} from "./groups";
+import { claimLeader, joinableGroup, openGroupFor, startSharedGroup } from "./groups";
 import { feeFor, sameDayFee, splitFee, type Band } from "./fees";
 import { activeBands, deliveryHours, safeSettings, sameDayPricing } from "./settings";
 import {
@@ -73,6 +67,9 @@ export type PlaceOrderInput = {
   /** Same day instead of a run: the instant they asked for it to land. A car
    *  goes out for this order alone, priced on the same day ladder. */
   deliverAt?: string;
+  /** A share worked out by a shared delivery when it closed. The order cannot
+   *  work this out for itself: it depends on who else ended up in the car. */
+  fixedFee?: number;
 };
 
 export type PlaceOrderResult =
@@ -242,6 +239,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           coupon: coupon?.ok ? coupon : null,
           joinRootId: sameDay ? null : joinRootId,
           sharedGroupId,
+          fixedFee: input.fixedFee,
           sameDayFee: sameDay && !party
             ? sameDayFee(
                 countItems(priced.lines),
@@ -265,8 +263,6 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // order, the group only knows their first name; now it knows their number,
   // so every other page can tell who the leader is without being told.
   if (party && input.partyLeader) await claimLeader(party.id, phone);
-  // The first order in a group is what starts the fifteen minutes.
-  if (party) await startGroupClock(party.id);
   await bindCustomer({ phone, name, hostel, returning });
   // The cart behind this order is no longer abandoned, and the admins are told
   // rather than having to keep refreshing. Neither can fail the order.
@@ -375,6 +371,8 @@ async function placeSingleOrder(args: {
   /** Already worked out for a same day trip, which is priced on its own
    *  ladder rather than by the banding the runs use. */
   sameDayFee: number | null;
+  /** A share handed down by a shared delivery that has just closed. */
+  fixedFee?: number;
 }): Promise<PlaceOrderResult> {
   // Adding to an existing order is a second order to the same batch, not an
   // edit: the admin view merges by phone into one bag (addendum §3). Only the
@@ -390,7 +388,12 @@ async function placeSingleOrder(args: {
   // evenly then, once it is known how many are in the car. Writing a figure
   // now would be quoting a number that is about to change.
   const fee =
-    args.sameDayFee !== null
+    // A share the group worked out when it closed. It is the only figure that
+    // can be right: what delivery costs each of them depends on who else
+    // ended up in the car, which this order cannot know about itself.
+    args.fixedFee !== undefined
+      ? args.fixedFee
+      : args.sameDayFee !== null
       ? args.sameDayFee
       : args.sharedGroupId
         ? 0

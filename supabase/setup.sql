@@ -753,5 +753,43 @@ create unique index if not exists order_groups_party_idx
 
 
 
+
+-- Food put into a shared delivery, before there is an order for it.
+--
+-- In a group nobody has a delivery fee until the group closes, because it
+-- depends on who else turns up. An order was still made at checkout, which
+-- meant a real order, with a real number, sitting at a fee of nothing, for a
+-- car nobody could buy for yet. If the group was then abandoned that number
+-- was spent on nothing.
+--
+-- So the food waits here instead. One row per person while the group fills,
+-- carrying exactly what checkout was told. When the group closes each row
+-- becomes a real order, priced then, once and for all.
+--
+-- Nothing about price is kept here. The lines are item ids and quantities,
+-- exactly as the cart posts them, and everything is priced from the menu at
+-- the moment the order is made, as it always has been.
+create table if not exists group_carts (
+  id             uuid primary key default gen_random_uuid(),
+  group_id       uuid not null references order_groups(id) on delete cascade,
+  phone          text not null,
+  name           text not null,
+  hostel         text not null default '',
+  /** What they chose: menu_item_id, qty and any option ids. */
+  lines          jsonb not null,
+  payment_method text not null default 'transfer',
+  customer_note  text not null default '',
+  coupon         text not null default '',
+  /** Set when they say they have finished adding. */
+  done_at        timestamptz,
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now(),
+  -- One person, one place in the car. Checking out again replaces what they
+  -- had rather than putting them in twice.
+  unique (group_id, phone)
+);
+create index if not exists group_carts_group_idx on group_carts (group_id);
+alter table group_carts enable row level security;
+
 -- Supabase caches the schema; this makes the new tables visible immediately.
 notify pgrst, 'reload schema';

@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { holdForGroup } from "@/lib/group-hold";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getOrder, moveOrder, placeOrder, previewCoupon, saveRating } from "@/lib/orders";
@@ -41,6 +42,40 @@ export async function submitOrder(
 
   const mode = String(form.get("group_mode") ?? "");
 
+  // In a shared delivery, no order yet.
+  //
+  // Nobody in a group has a delivery fee until it closes, because the fee
+  // depends on how many end up in the car and what they order between them.
+  // Making an order here meant a real order, with a real number, sitting at a
+  // fee of nothing, for a car nobody could buy for; and if the group was then
+  // abandoned, that number had been spent on nothing. The food waits instead,
+  // and becomes an order the moment there is a figure to put on it.
+  const partyId =
+    String(form.get("party_id") ?? "") ||
+    (await cookies()).get("sudu_group")?.value ||
+    "";
+
+  if (partyId) {
+    const held = await holdForGroup({
+      groupId: partyId,
+      name: String(form.get("name") ?? ""),
+      phone: String(form.get("phone") ?? ""),
+      hostel: String(form.get("hostel") ?? ""),
+      lines,
+      paymentMethod:
+        String(form.get("payment_method") ?? "") === "card" ? "card" : "transfer",
+      customerNote: String(form.get("customer_note") ?? "").trim().slice(0, 300),
+      coupon: String(form.get("coupon") ?? "").trim(),
+      leader: String(form.get("party_leader") ?? "") === "1",
+    });
+
+    if (held.ok) redirect(`/g/${partyId}?me=${held.cartId}&placed=1`);
+    // The group has closed or gone while they were choosing. Rather than
+    // refuse the food, it goes out as an ordinary order, which is what it now
+    // is, and the message below says so.
+    if (held.error) return { error: held.error };
+  }
+
   const result = await placeOrder({
     batchId: String(form.get("batch_id") ?? ""),
     name: String(form.get("name") ?? ""),
@@ -55,13 +90,6 @@ export async function submitOrder(
     customerNote: String(form.get("customer_note") ?? "").trim().slice(0, 300),
     joinOrderId: String(form.get("join_order_id") ?? "") || undefined,
     shareDelivery: String(form.get("share_delivery") ?? "") === "on",
-    // The hidden field first, because it is what this page believes right
-    // now. The cookie behind it, because the browser losing its note is not a
-    // reason to send somebody's food out alone at the full fee.
-    partyId:
-      String(form.get("party_id") ?? "") ||
-      (await cookies()).get("sudu_group")?.value ||
-      undefined,
     partyLeader: String(form.get("party_leader") ?? "") === "1",
     deliverAt: String(form.get("deliver_at") ?? "") || undefined,
   });
@@ -298,12 +326,14 @@ export async function rateOrder(
 
 /** "I have finished ordering." Closes the group when it was the last of them. */
 export async function finishOrdering(form: FormData): Promise<void> {
+  // The id of their food waiting in the group, not of an order: in a shared
+  // delivery there is no order until the group closes.
   const id = String(form.get("order_id") ?? "");
   if (!id) return;
 
-  const result = await markDone(id);
-  revalidatePath(`/o/${id}`);
-  if (result?.ok) revalidatePath("/g", "layout");
+  await markDone(id);
+  revalidatePath("/g", "layout");
+  revalidatePath("/o", "layout");
 }
 
 /** The leader closing it by hand, rather than waiting out the clock. */

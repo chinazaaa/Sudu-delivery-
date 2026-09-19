@@ -6,6 +6,7 @@ import { naira } from "@/lib/money";
 import { SLOT_LABEL } from "@/lib/config";
 import { runDateLabel } from "@/lib/time";
 import GroupBoard from "@/components/GroupBoard";
+import ClearCartKeepGroup from "@/components/ClearCartKeepGroup";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +27,9 @@ export default async function GroupPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ me?: string }>;
+  searchParams: Promise<{ me?: string; placed?: string }>;
 }) {
+  const query = await searchParams;
   const group = await groupView((await params).id);
   const settings = await safeSettings();
   const site = await siteUrl();
@@ -48,7 +50,7 @@ export default async function GroupPage({
 
   // Which of them is reading. Their own order sets this when it sends them
   // here; the board remembers it after that.
-  const asked = (await searchParams).me ?? "";
+  const asked = query.me ?? "";
   const mine = group.members.find((one) => one.orderId === asked)?.orderId ?? null;
   const me = group.members.find((one) => one.orderId === mine) ?? null;
 
@@ -61,6 +63,7 @@ export default async function GroupPage({
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
+      {query.placed === "1" && <ClearCartKeepGroup />}
       <section className="card space-y-1">
         <p className="text-sm font-bold uppercase tracking-wide text-brand-dark">
           {group.leaderName}&apos;s delivery

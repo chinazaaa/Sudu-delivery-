@@ -1,5 +1,6 @@
 import { db } from "./supabase";
 import { getSharedGroup, groupOrders } from "./groups";
+import { cartValues, groupCarts } from "./group-carts";
 import { getBatch } from "./batches";
 import type { Batch } from "./types";
 
@@ -50,6 +51,12 @@ export async function groupView(groupId: string): Promise<GroupView | null> {
   ]);
   if (!batch) return null;
 
+  // Before it closes there are no orders: the food waits in the group, because
+  // nobody has a delivery fee to put on an order yet. After it closes there
+  // are, and they are the bill.
+  const waiting = group.closed_at ? [] : await groupCarts(groupId);
+  const worth = await cartValues(waiting);
+
   const { data: rows } =
     orders.length === 0
       ? { data: [] as { order_id: string; qty: number }[] }
@@ -63,16 +70,29 @@ export async function groupView(groupId: string): Promise<GroupView | null> {
       .filter((row) => row.order_id === id)
       .reduce((sum, row) => sum + (row.qty as number), 0);
 
-  const members: Member[] = orders.map((order) => ({
-    orderId: order.id,
-    name: order.for_name ?? order.customer_name,
-    items: countFor(order.id),
-    food: order.subtotal_food,
-    done: order.done_at !== null,
-    paid: order.status !== "pending",
-    isLeader: group.leader_phone !== "" && order.customer_phone === group.leader_phone,
-    phone: group.closed_at || order.done_at ? "" : order.customer_phone,
-  }));
+  const members: Member[] = group.closed_at
+    ? orders.map((order) => ({
+        orderId: order.id,
+        name: order.for_name ?? order.customer_name,
+        items: countFor(order.id),
+        food: order.subtotal_food,
+        done: true,
+        paid: order.status !== "pending",
+        isLeader: group.leader_phone !== "" && order.customer_phone === group.leader_phone,
+        phone: "",
+      }))
+    : waiting.map((cart) => ({
+        orderId: cart.id,
+        name: cart.name,
+        items: cart.lines.reduce((sum, line) => sum + (line.qty ?? 0), 0),
+        food: worth.get(cart.id) ?? 0,
+        done: cart.done_at !== null,
+        paid: false,
+        isLeader: group.leader_phone !== "" && cart.phone === group.leader_phone,
+        // Only for somebody being waited on, and only while it is open. There
+        // is no other reason for anybody to have their number.
+        phone: cart.done_at ? "" : cart.phone,
+      }));
 
   return {
     id: group.id,

@@ -1,6 +1,7 @@
 import { db } from "./supabase";
 import { evenShare, feeFor, isUrgent, sameDayFee, splitFee } from "./fees";
 import { activeBands, sameDayPricing } from "./settings";
+import { countCartItems, groupCarts, markCartDone } from "./group-carts";
 import { announceGroup } from "./announce-group";
 import type { Batch, Order, OrderGroup } from "./types";
 
@@ -148,43 +149,65 @@ export type CloseResult =
  * it was, because the second call must not re-price orders somebody has by
  * then been told to pay.
  */
+/**
+ * Start the quarter of an hour, on the first food to land in a group.
+ *
+ * Until somebody has put food in there is nothing for anybody to join, so the
+ * clock has nothing to measure. It begins with the first cart and never runs
+ * past the car's own last call, which is what closes_at already holds. Only
+ * ever brings the time forward, so the second person cannot push the door
+ * open again.
+ */
+export async function startGroupClock(groupId: string): Promise<void> {
+  const group = await getSharedGroup(groupId);
+  if (!group || group.closed_at) return;
+
+  const waiting = await groupCarts(groupId);
+  if (waiting.length !== 1) return; // Not the first. The clock is already going.
+
+  const wanted = Date.now() + SHARE_MINUTES * 60_000;
+  const current = group.closes_at ? new Date(group.closes_at).getTime() : wanted;
+  if (wanted >= current) return; // The car leaves before the quarter of an hour.
+
+  await db()
+    .from("order_groups")
+    .update({ closes_at: new Date(wanted).toISOString() })
+    .eq("id", groupId)
+    .is("closed_at", null);
+}
+
 export async function closeGroup(groupId: string): Promise<CloseResult> {
   const group = await getSharedGroup(groupId);
   if (!group) return { ok: false, error: "That group could not be found." };
 
-  const orders = await groupOrders(groupId);
-
-  // A link somebody made and never used, whose car has now gone. Shut it so
-  // the clock stops coming back to it every minute. This is only ever reached
-  // once closes_at has passed, and for a group nobody ordered in that is the
-  // car's own last call, not a quarter of an hour after the link was made.
-  if (orders.length === 0) {
-    if (!group.closed_at) {
-      await db()
-        .from("order_groups")
-        .update({ closed_at: new Date().toISOString() })
-        .eq("id", groupId)
-        .is("closed_at", null);
-    }
-    return { ok: false, error: "Nobody has ordered in that group." };
-  }
-
+  // Already closed. The orders exist and everybody has been told what they
+  // owe, so this must change nothing: a second caller arriving late must not
+  // re-price something somebody is in the middle of paying.
   if (group.closed_at) {
+    const made = await groupOrders(groupId);
     return {
       ok: true,
       alreadyClosed: true,
-      share: orders[0].fee,
-      people: orders.length,
+      share: made[0]?.fee ?? 0,
+      people: made.length,
       items: 0,
     };
   }
 
-  const { data: items } = await db()
-    .from("order_items")
-    .select("order_id, qty")
-    .in("order_id", orders.map((one) => one.id));
+  const waiting = await groupCarts(groupId);
 
-  const carried = (items ?? []).reduce((sum, row) => sum + (row.qty as number), 0);
+  // A link somebody made and never used, whose car has now gone. Shut it so
+  // the clock stops coming back to it every minute.
+  if (waiting.length === 0) {
+    await db()
+      .from("order_groups")
+      .update({ closed_at: new Date().toISOString() })
+      .eq("id", groupId)
+      .is("closed_at", null);
+    return { ok: false, error: "Nobody has ordered in that group." };
+  }
+
+  const carried = countCartItems(waiting);
 
   const { data: batch } = await db()
     .from("batches")
@@ -199,18 +222,19 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
   const share = sameDay
     ? await evenSameDayShare(
         carried,
-        orders.length,
+        waiting.length,
         (batch?.deliver_at as string | null) ?? null
       )
     : evenShare(
         carried,
-        orders.length,
+        waiting.length,
         (batch?.flash_fee as number | null) ?? null,
         await activeBands()
       );
 
   // Claim the close first. Two callers arriving together, the leader and the
-  // clock, must not both go on to write fees.
+  // clock, must not both go on to make the orders: that would be everybody's
+  // food ordered twice.
   const { data: claimed } = await db()
     .from("order_groups")
     .update({ closed_at: new Date().toISOString() })
@@ -219,54 +243,62 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
     .select("id");
 
   if (!claimed || claimed.length === 0) {
-    return { ok: true, alreadyClosed: true, share: orders[0].fee, people: orders.length, items: carried };
+    const made = await groupOrders(groupId);
+    return {
+      ok: true,
+      alreadyClosed: true,
+      share: made[0]?.fee ?? 0,
+      people: made.length,
+      items: carried,
+    };
   }
 
-  for (const order of orders) {
-    await db()
-      .from("orders")
-      .update({
-        fee: share,
-        total: Math.max(0, order.subtotal_food + share - order.discount),
-      })
-      .eq("id", order.id)
-      // Never re-price something somebody has already paid for.
-      .eq("status", "pending");
+  // Now, and only now, the orders.
+  //
+  // This is the first moment a fee exists, so it is the first moment an
+  // honest order can be written. Each goes through the ordinary path, so the
+  // food is priced from the menu here rather than from anything the browser
+  // said fifteen minutes ago, coupons are checked, and every customer is
+  // bound and given their PIN exactly as a lone order does. The share is the
+  // one thing handed down, because it is the one thing an order cannot work
+  // out for itself.
+  // Asked for here rather than at the top: orders reaches back into this file
+  // for the group it is joining, and two modules each holding the other at
+  // load time is a cycle nobody should have to reason about.
+  const { placeOrder } = await import("./orders");
+
+  let made = 0;
+  for (const cart of waiting) {
+    const result = await placeOrder({
+      batchId: group.batch_id,
+      name: cart.name,
+      phone: cart.phone,
+      hostel: cart.hostel,
+      lines: cart.lines,
+      coupon: cart.coupon || undefined,
+      paymentMethod: cart.payment_method === "card" ? "card" : "transfer",
+      customerNote: cart.customer_note,
+      partyId: group.id,
+      fixedFee: share,
+    });
+
+    if (result.ok) {
+      made += 1;
+      // Gone from the waiting room, because it is an order now. Anything left
+      // here would be ordered again by a later close.
+      await db().from("group_carts").delete().eq("id", cart.id);
+    } else {
+      // Their food could not be ordered: a menu item withdrawn while the
+      // group filled, a coupon that ran out. The row stays, so it is visible
+      // rather than silently dropped, and nobody is charged for it.
+      console.error("group order failed for", cart.phone, result.error);
+    }
   }
 
-  // One mail for the whole car, now that there is something to act on. Never
-  // before: until this moment nobody in the group had a fee and nobody could
-  // pay, so an email would only have been a total about to change.
+  // One mail for the whole car, now that there is something to act on.
   void announceGroup(groupId);
 
-  return { ok: true, alreadyClosed: false, share, people: orders.length, items: carried };
-}
-
-/**
- * Start the quarter of an hour, on the first order to land in a group.
- *
- * Until somebody has ordered there is nothing for anybody to join, so the
- * clock has nothing to measure. It begins when the first order arrives and
- * never runs past the car's own last call, which is what closes_at already
- * holds. Only ever brings the time forward, so the second order in a group
- * cannot push the door open again.
- */
-export async function startGroupClock(groupId: string): Promise<void> {
-  const group = await getSharedGroup(groupId);
-  if (!group || group.closed_at) return;
-
-  const orders = await groupOrders(groupId);
-  if (orders.length !== 1) return; // Not the first. The clock is already going.
-
-  const wanted = Date.now() + SHARE_MINUTES * 60_000;
-  const current = group.closes_at ? new Date(group.closes_at).getTime() : wanted;
-  if (wanted >= current) return; // The car leaves before the quarter of an hour.
-
-  await db()
-    .from("order_groups")
-    .update({ closes_at: new Date(wanted).toISOString() })
-    .eq("id", groupId)
-    .is("closed_at", null);
+  return { ok: true, alreadyClosed: false, share, people: made, items: carried };
 }
 
 /** Closes every shared delivery whose time is up. Run from a schedule. */
@@ -292,21 +324,19 @@ export async function closeDueGroups(): Promise<number> {
  * One person has finished adding. When that is the last of them, the group
  * closes there and then rather than making everybody wait out the clock.
  */
-export async function markDone(orderId: string): Promise<CloseResult | null> {
-  const { data: order } = await db()
-    .from("orders")
-    .select("id, group_id")
-    .eq("id", orderId)
-    .maybeSingle();
+export async function markDone(cartId: string): Promise<CloseResult | null> {
+  const groupId = await markCartDone(cartId);
+  if (!groupId) return null;
 
-  if (!order?.group_id) return null;
-
-  await db().from("orders").update({ done_at: new Date().toISOString() }).eq("id", orderId);
-
-  const orders = await groupOrders(order.group_id as string);
-  const everybody = orders.length > 0 && orders.every((one) => one.done_at !== null);
-  return everybody ? closeGroup(order.group_id as string) : null;
+  // When that was the last of them, the group closes there and then rather
+  // than making everybody sit out the rest of the clock: waiting fifteen
+  // minutes when everyone is finished is fifteen minutes of nobody being able
+  // to pay.
+  const waiting = await groupCarts(groupId);
+  const everybody = waiting.length > 0 && waiting.every((one) => one.done_at !== null);
+  return everybody ? closeGroup(groupId) : null;
 }
+
 
 /**
  * Start a shared delivery.
