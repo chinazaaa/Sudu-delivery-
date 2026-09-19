@@ -104,6 +104,25 @@ export default function Checkout() {
     lines.some((line) => line.forName === friend.name)
   );
 
+  /**
+   * What this section is actually asking for.
+   *
+   * Ordering only for friends is a real thing people do, and "where your own
+   * food goes" over a cart holding none of it reads as a question nobody can
+   * answer. It is their own food, a bag a friend asked to be left with them,
+   * or nothing coming to them at all and we still need to reach them.
+   */
+  const ownFood = lines.some((line) => line.forName === "");
+  const bagsToMe = sharing.some((friend) => friend.goesTo === "mine");
+  const whereHeading =
+    sharing.length === 0
+      ? "Where it goes"
+      : ownFood
+        ? "Where your own food goes"
+        : bagsToMe
+          ? "Where the bags come to"
+          : "How to reach you";
+
   // Where the bags go is read off the answers already given, exactly as on
   // the website: one bag going to its owner makes it an each-bag run.
   const collect: "leader" | "each" = sharing.some((friend) => friend.goesTo === "theirs")
@@ -116,9 +135,10 @@ export default function Checkout() {
       (friend.goesTo === "theirs" && (friend.phone.trim() === "" || friend.hostel.trim() === ""))
   );
 
-  const splitNotReady =
-    mode === "split" &&
-    sharing.length + (lines.some((line) => line.forName === "") ? 1 : 0) < 2;
+  // Somebody other than the person ordering has to be paying for a split to
+  // mean anything. One friend paying for her own food is a split of one, which
+  // is a thing people actually want; ordering only for yourself is not.
+  const splitNotReady = mode === "split" && sharing.length === 0;
 
   const items = countItems(lines);
   const food = cartTotal(lines);
@@ -487,9 +507,13 @@ export default function Checkout() {
       )}
 
       <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 10 }}>
-        <Text style={{ fontWeight: "800", color: T.ink }}>
-          {sharing.length > 0 ? "Where your own food goes" : "Where it goes"}
-        </Text>
+        <Text style={{ fontWeight: "800", color: T.ink }}>{whereHeading}</Text>
+        {sharing.length > 0 && !ownFood && !bagsToMe && (
+          <Text style={{ color: T.muted }}>
+            Nothing in this cart is coming to you, but we still need somebody to call if a
+            bag cannot be handed over.
+          </Text>
+        )}
         <Field label="Your name" value={name} onChange={setName} />
         <Field label="Phone number" value={phone} onChange={setPhone} keyboard="phone-pad" />
         <Blocks label="Hostel or block" value={hostel} onChange={setHostel} all={hostels} />
@@ -619,7 +643,7 @@ export default function Checkout() {
 
       {splitNotReady && (
         <Text style={{ color: T.brandDark, fontWeight: "700" }}>
-          Splitting needs two people with food in the cart. Tap a name under each item.
+          Splitting needs somebody other than you to have food in the cart. Tap a name under each item.
         </Text>
       )}
 
