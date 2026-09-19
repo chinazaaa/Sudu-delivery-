@@ -1,6 +1,7 @@
 "use client";
 
 import GroupLink, { PARTY_CHANGED, readGroup } from "./GroupLink";
+import Sheet from "./Sheet";
 import { useRouter } from "next/navigation";
 import type { Slot } from "@/lib/same-day";
 
@@ -658,15 +659,12 @@ export default function CartView({
       </section>
 
       {asking && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-4 sm:items-center">
-          {/* Tall enough now to run off a small phone, so it scrolls rather
-              than hiding the button at the bottom of it. */}
-          <div className="max-h-[85vh] w-full max-w-sm space-y-3 overflow-y-auto rounded-3xl bg-paper p-5 shadow-bar">
+        <Sheet
+          title={mine?.finalised ? "Update your food?" : "Put this food in the group?"}
+          onClose={() => setAsking(false)}
+        >
             <div>
-              <h2 className="text-lg font-extrabold">
-                {mine?.finalised ? "Update your food?" : "Put this food in the group?"}
-              </h2>
-              <p className="mt-1 text-sm text-muted">
+              <p className="text-sm text-muted">
                 {mine?.finalised
                   ? "This replaces what you put in before. Your share of delivery is worked out when the group closes, so nothing is charged yet."
                   : "Your share of delivery is worked out when the group closes, so nothing is charged yet."}
@@ -750,8 +748,7 @@ export default function CartView({
             >
               No, I am still choosing
             </button>
-          </div>
-        </div>
+        </Sheet>
       )}
 
       <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t border-black/5 bg-paper p-3 shadow-bar sm:bottom-0">

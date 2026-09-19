@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { closeSharedGroup } from "@/app/actions";
 import { enterGroup, readGroup } from "./GroupLink";
 import PayChoice from "./PayChoice";
+import Sheet from "./Sheet";
 import SendLink from "./SendLink";
 import { countItems, useCart } from "@/lib/cart";
 import { naira } from "@/lib/money";
@@ -409,9 +410,7 @@ export default function GroupBoard({
       )}
 
       {confirming && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-4 sm:items-center">
-          <div className="w-full max-w-sm space-y-3 rounded-3xl bg-paper p-5 shadow-bar">
-            <h2 className="text-lg font-extrabold">Close the cart?</h2>
+        <Sheet title="Close the cart?" onClose={() => setConfirming(false)}>
             <p className="text-sm text-muted">
               {ready} of {members.length} {members.length === 1 ? "person is" : "people are"}{" "}
               ready. Delivery is worked out and split evenly, and everybody gets
@@ -436,8 +435,7 @@ export default function GroupBoard({
             >
               Not yet
             </button>
-          </div>
-        </div>
+        </Sheet>
       )}
 
       <section className="card space-y-3">

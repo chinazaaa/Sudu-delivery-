@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { joinedViaLink, leaveGroup, PARTY_CHANGED, readGroup } from "./GroupLink";
+import Sheet from "./Sheet";
 
 type Party = {
   started: boolean;
@@ -88,9 +89,7 @@ export default function GroupBar() {
   return (
     <>
       {asking && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-4 sm:items-center">
-          <div className="w-full max-w-sm space-y-3 rounded-3xl bg-paper p-5 shadow-bar text-ink">
-            <h2 className="text-lg font-extrabold">Leave this group?</h2>
+        <Sheet title="Leave this group?" onClose={() => setAsking(false)}>
             <p className="text-sm text-muted">
               Your food comes out of the car and the others stop paying a share for
               you. Your cart stays on this phone, so you can order on your own or
@@ -118,8 +117,7 @@ export default function GroupBar() {
             >
               Stay in
             </button>
-          </div>
-        </div>
+        </Sheet>
       )}
 
     <div className="bg-brand text-white">
