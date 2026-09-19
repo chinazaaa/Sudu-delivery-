@@ -53,6 +53,9 @@ export default async function OrdersPage({
   const unpaidTotal = orders
     .filter((order) => order.status === "pending")
     .reduce((total, order) => total + order.total, 0);
+  // Paid, delivered and refunded all mean the money is settled one way or
+  // another, so nothing in those views can be waiting on payment.
+  const canBeUnpaid = tab === "pending" || tab === "card" || tab === "all";
 
   const link = (next: Record<string, string | undefined>) => {
     const params = new URLSearchParams();
@@ -73,13 +76,17 @@ export default async function OrdersPage({
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Stat label="Showing" value={orders.length} />
-        <Stat
-          label="Money on the table"
-          value={unpaidTotal}
-          money
-          tone={unpaidTotal > 0 ? "warn" : undefined}
-          hint="Unpaid in this view"
-        />
+        {/* Only where the view can hold an unpaid order. Filtered to paid, it
+            was a card reporting zero every time, which is not news. */}
+        {canBeUnpaid && (
+          <Stat
+            label="Money on the table"
+            value={unpaidTotal}
+            money
+            tone={unpaidTotal > 0 ? "warn" : undefined}
+            hint="Unpaid in this view"
+          />
+        )}
         <Stat
           label="Value"
           value={orders.reduce((total, order) => total + order.total, 0)}
