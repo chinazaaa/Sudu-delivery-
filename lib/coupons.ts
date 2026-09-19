@@ -22,6 +22,8 @@ export type Coupon = {
   extra_per_item: number;
   /** Same day windows it is good for, as start hours: "12,15". */
   windows: string;
+  /** In a group, the least any one person pays once it is split. */
+  min_per_person: number;
 };
 
 export type CouponWithRuns = Coupon & {
@@ -106,15 +108,22 @@ export async function liveOffers(): Promise<LiveOffer[]> {
       .map((one) => Number(one.trim()))
       .filter((one) => Number.isFinite(one)),
     firstOrderOnly: coupon.first_order_only,
+    minEach: coupon.min_per_person ?? 0,
   }));
 }
 
 /** The promotion on an order, read and judged in one go, for the server. */
 export async function activePromotion(
   context: OfferContext
-): Promise<{ coupon: { code: string; note: string }; fee: number } | null> {
+): Promise<{ offer: LiveOffer; coupon: { code: string; note: string }; fee: number } | null> {
   const found = pickOffer(await liveOffers(), context);
-  return found ? { coupon: { code: found.offer.code, note: found.offer.note }, fee: found.fee } : null;
+  return found
+    ? {
+        offer: found.offer,
+        coupon: { code: found.offer.code, note: found.offer.note },
+        fee: found.fee,
+      }
+    : null;
 }
 
 export type CouponCheck =

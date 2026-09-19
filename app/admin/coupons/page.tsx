@@ -275,6 +275,23 @@ export default async function CouponsAdmin() {
             </p>
           </div>
           <div>
+            <label className="label" htmlFor="min_per_person">
+              Least each, in a group
+            </label>
+            <input
+              id="min_per_person"
+              name="min_per_person"
+              inputMode="numeric"
+              placeholder="0"
+              className="field"
+            />
+            <p className="mt-1 text-xs text-muted">
+              A group splits the offer, so {naira(2000)} is {naira(1000)} each
+              for two. This stops it falling further: five of them still pay
+              {" "}{naira(1000)} each.
+            </p>
+          </div>
+          <div>
             <label className="label" htmlFor="extra_per_item">
               And each item after
             </label>

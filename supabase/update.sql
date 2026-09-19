@@ -613,6 +613,18 @@ alter table coupons add column if not exists extra_per_item int not null default
 -- o'clock. An order belongs to a window if its delivery hour falls inside it.
 alter table coupons add column if not exists windows text not null default '';
 
+-- A promotion in a group: split, but never below this each.
+--
+-- Two thousand each was more than most of them pay today, so the group would
+-- simply not use it. Split with a floor keeps the reason to bring somebody:
+-- on your own it is the whole two thousand, with a friend it is a thousand
+-- each, and it stops falling there rather than running to nothing at twenty.
+--
+-- Zero is a plain split, and setting it to the fee itself is a flat price
+-- per head.
+alter table coupons add column if not exists min_per_person int not null default 0
+  check (min_per_person >= 0);
+
 -- "fee" is the promotion: the delivery becomes this amount, rather than this
 -- amount coming off it.
 do $$

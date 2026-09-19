@@ -971,6 +971,10 @@ export async function saveCoupon(form: FormData): Promise<void> {
     automatic: effect === "fee",
     included_items: Number.isFinite(included) && included > 0 ? included : null,
     extra_per_item: Number.isFinite(perItem) && perItem > 0 ? perItem : 0,
+    min_per_person: (() => {
+      const floor = Math.round(Number(form.get("min_per_person") ?? 0));
+      return Number.isFinite(floor) && floor > 0 ? floor : 0;
+    })(),
     // Same day windows it is good for, as the hours they open.
     windows: form.getAll("window").map(String).filter(Boolean).join(","),
     note: String(form.get("note") ?? "").trim(),

@@ -9,6 +9,7 @@ import {
   useCoupon,
   type CouponCheck,
 } from "./coupons";
+import { offerShare, type LiveOffer } from "./offers";
 import { cartConverted } from "./carts";
 import { emailAdmins } from "./email";
 import { renderEmail, renderText, type Block } from "./email-html";
@@ -254,7 +255,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           people: input.people ?? [],
           bands,
           customerNote,
-          promotion: promotion ? { code: promotion.coupon.code, fee: promotion.fee } : null,
+          promotion: promotion ? { code: promotion.coupon.code, offer: promotion.offer } : null,
         })
       : await placeSingleOrder({
           batch,
@@ -525,8 +526,8 @@ async function placeSplitGroup(args: {
   }[];
   bands: Band[];
   customerNote: string;
-  /** A promotion pricing the delivery, which every person pays. */
-  promotion: { code: string; fee: number } | null;
+  /** A promotion pricing the delivery, split between them with a floor. */
+  promotion: { code: string; offer: LiveOffer } | null;
 }): Promise<PlaceOrderResult> {
   // The leader's own items are keyed by an empty name, not by what they typed
   // in "Your name". Keying by the name collapsed the whole group into one payer
@@ -561,11 +562,14 @@ async function placeSplitGroup(args: {
   // A promotion is a price per person, not a load to share out: it is what
   // the offer says on the front of the shop, and it does not fall because
   // somebody brought a friend.
+  const promoShare = args.promotion
+    ? offerShare(args.promotion.offer, countItems(args.lines), people.length)
+    : 0;
   const groupFee = args.promotion
-    ? args.promotion.fee * people.length
+    ? promoShare * people.length
     : feeFor(countItems(args.lines), args.batch.flash_fee, args.bands);
   const shares = args.promotion
-    ? people.map(() => args.promotion!.fee)
+    ? people.map(() => promoShare)
     : splitFee(groupFee, people.map(([, lines]) => countItems(lines)));
 
   let leaderOrderId: string | null = null;

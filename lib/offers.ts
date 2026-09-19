@@ -30,6 +30,8 @@ export type LiveOffer = {
   /** Same day window opening hours. Empty means any time. */
   windows: number[];
   firstOrderOnly: boolean;
+  /** In a group the fee splits, but never below this each. */
+  minEach: number;
 };
 
 export type OfferContext = {
@@ -52,6 +54,7 @@ export function pickOffer(
   context: OfferContext
 ): { offer: LiveOffer; fee: number } | null {
   const cart = [...new Set(context.restaurantIds)];
+  const earned: { offer: LiveOffer; fee: number }[] = [];
 
   for (const offer of offers) {
     if (offer.firstOrderOnly && context.returning) continue;
@@ -61,10 +64,18 @@ export function pickOffer(
     if (offer.runs.length > 0 && !offer.runs.includes(context.batchId)) continue;
     if (!inWindowHours(offer.windows, context.deliverAt ?? null)) continue;
 
-    return { offer, fee: offerFee(offer, context.items) };
+    earned.push({ offer, fee: offerFee(offer, context.items) });
   }
 
-  return null;
+  if (earned.length === 0) return null;
+
+  // Two offers can be on at once, and a cart can qualify for both. The
+  // cheaper one wins rather than whichever the database happened to return
+  // first, because the alternative is a price that changes for no reason
+  // anybody can see.
+  return earned.sort(
+    (one, two) => one.fee - two.fee || one.offer.code.localeCompare(two.offer.code)
+  )[0];
 }
 
 /**
@@ -118,4 +129,21 @@ export function offerLine(offer: LiveOffer): string {
       ? ` for up to ${offer.includedItems} item${offer.includedItems === 1 ? "" : "s"}, then ${naira(offer.extraPerItem)} each`
       : ", however much you order";
   return `Delivery is ${naira(offer.fee)}${taper}.`;
+}
+
+/**
+ * What each person in a car pays under a promotion.
+ *
+ * The offer is for the trip, so it splits: one person pays all of it, two pay
+ * half each. The floor is what stops it running to nothing as a group grows,
+ * because the counter and the drive cost the same whether five people or
+ * twenty are waiting for the bags.
+ *
+ * Rounded up to the hundred like every other share, so the shop is never left
+ * short of the fee it has to cover.
+ */
+export function offerShare(offer: LiveOffer, items: number, people: number): number {
+  if (people < 1) return 0;
+  const whole = offerFee(offer, items);
+  return Math.max(Math.ceil(whole / people / 100) * 100, offer.minEach);
 }

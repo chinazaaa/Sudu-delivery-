@@ -467,11 +467,11 @@ export default function GroupBoard({
         {eachNow > 0 && (
           <div className="rounded-2xl bg-brand-tint px-4 py-3">
             <p className="text-sm font-semibold text-brand-dark">
-              {offer ? `${naira(eachNow)} each` : `About ${naira(eachNow)} each right now`}
+              About {naira(eachNow)} each right now
             </p>
             <p className="mt-0.5 text-xs text-ink/70">
               {offer
-                ? `${offer}: everybody pays the same for delivery, so it does not fall as more of you join.`
+                ? `${offer}. It is split between you, down to a floor, so it falls as people join and then holds there.`
                 : "It moves as people add food and as more of you join. Nothing is fixed until this closes."}
             </p>
           </div>

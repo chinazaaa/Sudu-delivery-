@@ -14,7 +14,7 @@ import {
   usePeople,
 } from "@/lib/cart";
 import { feeFor, sameDayFee, splitFee, type Band } from "@/lib/fees";
-import { pickOffer, type LiveOffer } from "@/lib/offers";
+import { offerShare, pickOffer, type LiveOffer } from "@/lib/offers";
 import { normalisePhone } from "@/lib/phone";
 import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
@@ -260,7 +260,6 @@ export default function Checkout({
         0,
         feeFor(itemCount + alreadyItems, selected?.flashFee ?? null, bands) - alreadyCharged
       );
-  const total = Math.max(0, subtotal + fee - (applied?.discount ?? 0));
 
   // Naming friends to carry food for is a different thing from being in a
   // shared delivery, and doing both at once is two answers to one question.
@@ -280,7 +279,20 @@ export default function Checkout({
       };
     })
     .filter((share) => share.items > 0);
-  const feeShares = splitFee(fee, shares.map((s) => s.items));
+  // Under a promotion everybody pays the same share of it, with the floor
+  // the offer sets, rather than a slice worked out from what they each got.
+  const feeShares = promotion
+    ? shares.map(() => offerShare(promotion.offer, itemCount, Math.max(1, shares.length)))
+    : splitFee(fee, shares.map((s) => s.items));
+
+  // Under a promotion with a floor, what the car pays between them is the
+  // sum of those shares rather than the offer's own figure: five people at a
+  // thousand each is five thousand, not two.
+  const charged =
+    promotion && shares.length > 1
+      ? feeShares.reduce((sum, one) => sum + one, 0)
+      : fee;
+  const total = Math.max(0, subtotal + charged - (applied?.discount ?? 0));
 
   const collect: "leader" | "each" = people.some(
     (person) =>
@@ -929,7 +941,7 @@ export default function Checkout({
                 : `Delivery (${itemCount} item${itemCount === 1 ? "" : "s"})`}
           </span>
           <span>
-            {shared && !sameDay ? "worked out when the group closes" : naira(fee)}
+            {shared && !sameDay ? "worked out when the group closes" : naira(charged)}
           </span>
         </div>
         {/* Four items costing more than three looks arbitrary until the whole

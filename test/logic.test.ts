@@ -13,7 +13,7 @@ import {
   splitFee,
   HEADLINE_FEE,
 } from "../lib/fees";
-import { inWindowHours, offerFee, pickOffer } from "../lib/offers";
+import { inWindowHours, offerFee, offerShare, pickOffer } from "../lib/offers";
 import { sheetAsText } from "../lib/sheet-text";
 import { template, whatsappTo } from "../lib/messages";
 import { newPin } from "../lib/customer-auth";
@@ -954,6 +954,7 @@ test("a promotion is flat until the taper, then it charges by the item", () => {
     runs: [],
     windows: [],
     firstOrderOnly: false,
+    minEach: 1000,
   };
 
   assert.equal(offerFee(offer, 1), 2000);
@@ -974,6 +975,7 @@ test("an offer for one kitchen stands down on a cart with anything else in it", 
     runs: [],
     windows: [],
     firstOrderOnly: false,
+    minEach: 1000,
   };
   const ask = (restaurantIds: string[]) =>
     pickOffer([offer], { restaurantIds, items: 2, batchId: "b1", returning: false });
@@ -1005,4 +1007,28 @@ test("the top band can charge by the item instead of one price for any load", ()
   assert.equal(feeFor(14, null, bands), 10000);
   // Without a price per item the top band stays one flat price.
   assert.equal(feeFor(30, null, bands.map((b) => ({ ...b, perItem: undefined }))), 10000);
+});
+
+test("a promotion splits in a group, but never below the floor", () => {
+  const offer = {
+    code: "DOM2K",
+    note: "Domino's",
+    fee: 2000,
+    includedItems: null,
+    extraPerItem: 0,
+    places: ["dominos"],
+    runs: [],
+    windows: [],
+    firstOrderOnly: false,
+    minEach: 1000,
+  };
+
+  // On your own it is the whole thing; with a friend it is half each.
+  assert.equal(offerShare(offer, 2, 1), 2000);
+  assert.equal(offerShare(offer, 4, 2), 1000);
+  // And it stops there rather than running to nothing as the car fills.
+  assert.equal(offerShare(offer, 10, 5), 1000);
+  assert.equal(offerShare(offer, 20, 20), 1000);
+  // No floor is a plain split.
+  assert.equal(offerShare({ ...offer, minEach: 0 }, 10, 5), 400);
 });

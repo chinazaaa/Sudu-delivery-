@@ -9,6 +9,7 @@ import {
   placesInCarts,
 } from "./group-carts";
 import { activePromotion } from "./coupons";
+import { offerShare } from "./offers";
 import { announceGroup } from "./announce-group";
 import type { Batch, Order, OrderGroup } from "./types";
 
@@ -299,7 +300,10 @@ export async function shareNow(
     returning: true,
   });
   if (promotion) {
-    return { whole: promotion.fee * people, each: promotion.fee, people, offer: promotion.coupon.note.trim() };
+    // Split like any other car, with a floor: the counter and the drive cost
+    // the same whether two of them are waiting or twenty.
+    const each = offerShare(promotion.offer, carried, people);
+    return { whole: each * people, each, people, offer: promotion.offer.note.trim() };
   }
 
   if (batch?.kind === "same_day") {
@@ -445,7 +449,7 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
   });
 
   const share = promotion
-    ? promotion.fee
+    ? offerShare(promotion.offer, carried, waiting.length)
     : sameDay
     ? await evenSameDayShare(
         carried,
