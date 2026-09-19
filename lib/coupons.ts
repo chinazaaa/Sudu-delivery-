@@ -672,19 +672,26 @@ export async function dealsAt(
     const combinations = choiceCombinations(coupon.required_choice ?? "");
     const section = parts.length > 0 ? ` ${parts.join(" or ")}` : "";
 
+    // The combinations are only spelt into the noun when the offer is about a
+    // section: "any Medium BBQ Chicken pizza" reads, where the same trick on
+    // named dishes would give "any Medium BBQ Chicken BBQ Chicken".
+    const spelt = only.length === 0 && combinations.length > 0;
+
     const what =
       only.length > 0
         ? only.join(" or ")
-        : combinations.length > 0
+        : spelt
           ? `any ${combinations.join(`${section} or `)}${section} from ${restaurantName}`
           : parts.length > 0
             ? `any ${parts.join(" or ")} from ${restaurantName}`
             : `anything from ${restaurantName}`;
 
-    const asked =
-      combinations.length > 0
-        ? []
-        : choiceLabels(coupon.required_choice ?? "").map((set) => set.join(" or "));
+    // Every condition the offer has, said somewhere. Naming the dishes used
+    // to drop the size out of the sentence entirely, so an offer good only
+    // on the medium read as good on any of them.
+    const asked = spelt
+      ? []
+      : choiceLabels(coupon.required_choice ?? "").map((set) => set.join(" or "));
     const must = asked.length === 0 ? "" : ` It has to be ${asked.join(", and ")}.`;
 
     const where = `Order ${what}, and nothing else.${must} Then `;
