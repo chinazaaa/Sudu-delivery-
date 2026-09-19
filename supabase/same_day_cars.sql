@@ -22,23 +22,35 @@
 -- code works with the old constraint still in place, which is why deploying
 -- first is not a gap. This SQL is safe only after it.
 --
+-- Nothing here deletes a single row. An earlier version tried to tidy away
+-- stray same day cars and was refused, rightly: order_groups points at a batch
+-- with ON DELETE RESTRICT, so a car somebody's group is sitting in cannot be
+-- removed from under them. It never needed removing. The index below covers
+-- runs only, so a same day car sharing a date and slot with one is not a
+-- clash, and two same day cars on the same afternoon are exactly what this is
+-- for.
+--
 -- Safe to run more than once.
 
--- 1. A car made while the constraint was briefly off may be sitting on a
---    run's (date, slot). Only ones with nothing in them are cleared: a car
---    with an order in it is somebody's dinner and is never deleted here.
-delete from batches b
-where b.kind = 'same_day'
-  and not exists (select 1 from orders o where o.batch_id = b.id)
-  and exists (
-    select 1 from batches other
-    where other.run_date = b.run_date
-      and other.slot = b.slot
-      and other.id <> b.id
-      and other.kind <> 'same_day'
-  );
+-- Say plainly if two runs really do share a day and slot, rather than failing
+-- on an index error nobody can read. This should never be true, but a script
+-- that runs against a live shop should say what it found.
+do $runs_are_unique$
+declare clashes int;
+begin
+  select count(*) into clashes from (
+    select run_date, slot from batches
+    where coalesce(kind, 'run') = 'run'
+    group by run_date, slot having count(*) > 1
+  ) dupes;
 
--- 2. The guarantee, saying what it always meant: one RUN per slot per day.
+  if clashes > 0 then
+    raise exception
+      'Stopping: % day and slot pairs have more than one RUN in them. Nothing has been changed. Send this message on.', clashes;
+  end if;
+end $runs_are_unique$;
+
+-- The guarantee, saying what it always meant: one RUN per slot per day.
 do $one_run_per_slot$
 begin
   if exists (
