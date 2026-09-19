@@ -431,6 +431,27 @@ export default function CartView({
         </h2>
       )}
 
+      {/* Names carried in from before they joined. In a group everybody
+          orders their own food on their own phone, so the names do nothing
+          here, and a list you cannot get out of is worse than one that was
+          never offered. */}
+      {inParty && people.length > 0 && (
+        <div className="rounded-2xl border border-black/10 bg-paper px-4 py-3">
+          <p className="text-sm text-ink/80">
+            You had {people.map((person) => person.name).join(", ")} on this order
+            from before. In a group everybody orders their own food, so{" "}
+            {people.length === 1 ? "that name is" : "those names are"} not used.
+          </p>
+          <button
+            type="button"
+            onClick={clearPeople}
+            className="mt-2 text-sm font-bold text-brand"
+          >
+            {people.length === 1 ? "Remove them" : "Remove them all"}
+          </button>
+        </div>
+      )}
+
       {groups.map((section) => (
         <section key={section.person || "me"} className="space-y-3">
           {people.length > 0 && (
@@ -468,7 +489,7 @@ export default function CartView({
                     {line.restaurantName}
                   </Link>
                   {line.choices.length > 0 && ` · ${line.choices.join(", ")}`}
-                  {people.length > 0 && ` · for ${line.forName || "you"}`}
+                  {people.length > 0 && !inParty && ` · for ${line.forName || "you"}`}
                 </p>
 
                 <div className="mt-2 flex items-center justify-between gap-2">
@@ -494,7 +515,7 @@ export default function CartView({
                   </span>
                 </div>
 
-                {people.length > 0 && (
+                {people.length > 0 && !inParty && (
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     <span className="text-xs font-semibold text-muted">Whose?</span>
                     {["", ...names].map((person) => (
