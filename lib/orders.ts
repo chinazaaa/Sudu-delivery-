@@ -271,15 +271,23 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // The cart behind this order is no longer abandoned, and the admins are told
   // rather than having to keep refreshing. Neither can fail the order.
   await cartConverted(phone, batch.id).catch(() => {});
-  void announceOrder({
-    orderId: result.orderId,
-    name,
-    phone,
-    hostel,
-    batch,
-    items: countItems(priced.lines),
-    note: customerNote,
-  });
+  // Not in a shared delivery. An order in one is half an order: it has no
+  // delivery fee yet, nobody can pay it, and there may be three more coming
+  // in the next ten minutes. Telling the admins now means a mail each, every
+  // one of them showing a total that is about to change, for a car nobody can
+  // start buying for yet. The group sends one mail when it closes, which is
+  // the moment there is something to act on.
+  if (!party) {
+    void announceOrder({
+      orderId: result.orderId,
+      name,
+      phone,
+      hostel,
+      batch,
+      items: countItems(priced.lines),
+      note: customerNote,
+    });
+  }
   return result;
 }
 

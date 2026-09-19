@@ -1,6 +1,7 @@
 import { db } from "./supabase";
 import { evenShare, feeFor, isUrgent, sameDayFee, splitFee } from "./fees";
 import { activeBands, sameDayPricing } from "./settings";
+import { announceGroup } from "./announce-group";
 import type { Batch, Order, OrderGroup } from "./types";
 
 /**
@@ -232,6 +233,11 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
       // Never re-price something somebody has already paid for.
       .eq("status", "pending");
   }
+
+  // One mail for the whole car, now that there is something to act on. Never
+  // before: until this moment nobody in the group had a fee and nobody could
+  // pay, so an email would only have been a total about to change.
+  void announceGroup(groupId);
 
   return { ok: true, alreadyClosed: false, share, people: orders.length, items: carried };
 }
