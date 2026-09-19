@@ -12,7 +12,11 @@ Notifications.setNotificationHandler({
   // "Show it" is two answers now: the banner across the top, and the entry in
   // the notification list behind it. We want both, which is what the single
   // shouldShowAlert used to mean.
+  // shouldShowAlert is the old name for the same thing and the installed
+  // types still require it, so both are given: the new pair for the runtime
+  // that reads them, the old one so this compiles.
   handleNotification: async () => ({
+    shouldShowAlert: true,
     shouldShowBanner: true,
     shouldShowList: true,
     shouldPlaySound: true,
