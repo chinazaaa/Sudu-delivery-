@@ -3,21 +3,28 @@
 import { useEffect } from "react";
 import { clearCart, clearPeople } from "@/lib/cart";
 import { clearJoin } from "@/components/JoinDelivery";
-import { leaveGroup } from "@/components/GroupLink";
+import { leaveGroup, rememberGroup } from "@/components/GroupLink";
 
 /**
  * The cart lives in the browser, so the server redirect after checkout cannot
  * empty it. This does, once, on the confirmation page: the order is saved by
  * the time this page renders, so there is nothing left to lose.
  */
-export default function ClearCart() {
+export default function ClearCart({
+  /** The group this order came out of, kept so the split can be found again
+   *  after leaveGroup below forgets which car they were in. */
+  remember = "",
+}: {
+  remember?: string;
+}) {
   useEffect(() => {
     clearCart();
     clearPeople();
+    if (remember !== "") rememberGroup(remember);
     // The friend's delivery has been joined now. Leaving it set would quietly
     // attach their next order to the same one, days later.
     clearJoin();
     leaveGroup();
-  }, []);
+  }, [remember]);
   return null;
 }

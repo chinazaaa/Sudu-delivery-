@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import ClearCart from "@/components/ClearCart";
 import { openGroupFor } from "@/lib/groups";
@@ -82,6 +82,13 @@ export default async function OrderPage({
   // somebody else's number, and printing it here would hand them that
   // person's history. It goes out once, in the message sent after payment.
   const justPlaced = (await searchParams).placed === "1";
+  // Their group closed and this is what came out of it. Checking out sends
+  // somebody here with placed=1 and the cart empties; a group order arrives
+  // without it, because nobody placed it, the close did, and the cart sat
+  // there full of food that had already been bought.
+  const fromMyGroup =
+    order.group_id !== null &&
+    (await cookies()).get("sudu_group")?.value === order.group_id;
 
   const requestHeaders = await headers();
   const host = requestHeaders.get("host") ?? "";
@@ -142,7 +149,9 @@ export default async function OrderPage({
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 pb-10">
-      {justPlaced && <ClearCart />}
+      {(justPlaced || fromMyGroup) && (
+        <ClearCart remember={fromMyGroup ? (order.group_id ?? "") : ""} />
+      )}
 
       {waitingOnGroup && (
         <section className="rounded-2xl border-2 border-brand/30 bg-brand-tint p-4">
