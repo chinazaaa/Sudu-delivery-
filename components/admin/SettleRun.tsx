@@ -19,6 +19,7 @@ import { useFormStatus } from "react-dom";
 export default function SettleRun({
   open,
   unpriced,
+  untouched,
   action,
   batchId,
 }: {
@@ -26,11 +27,16 @@ export default function SettleRun({
   open: string[];
   /** Counter lines nobody priced. Worth saying, not worth refusing over. */
   unpriced: number;
+  /** Nothing at all was typed at the counter, which is either a run that
+   *  cost exactly the menu price or a run nobody checked. Only one person
+   *  knows which. */
+  untouched: boolean;
   action: (form: FormData) => Promise<void>;
   batchId: string;
 }) {
   const [asking, setAsking] = useState(false);
   const [showing, setShowing] = useState(false);
+  const [checked, setChecked] = useState(false);
 
   if (open.length > 0) {
     return (
@@ -82,8 +88,28 @@ export default function SettleRun({
             Have you been through the counter sheet and the costs? This turns
             the run into a record of what it came to. You can open it again.
           </p>
+
+          {/* Nothing typed at the counter means one of two things, and only
+              one person knows which. Asked rather than assumed, because the
+              assumption is worth money and the tick costs a second. */}
+          {untouched && (
+            <label className="flex items-start gap-2 rounded-xl bg-shell px-3 py-2 text-sm">
+              <input
+                type="checkbox"
+                name="counter_checked"
+                checked={checked}
+                onChange={(event) => setChecked(event.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                Nothing was typed at the counter on this run. Tick to say every
+                price really was the menu price.
+              </span>
+            </label>
+          )}
+
           <div className="flex flex-wrap gap-2">
-            <Confirm />
+            <Confirm ready={!untouched || checked} />
             <button
               type="button"
               onClick={() => setAsking(false)}
@@ -113,10 +139,13 @@ export default function SettleRun({
   );
 }
 
-function Confirm() {
+function Confirm({ ready }: { ready: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <button className="btn-primary px-4 py-2.5 text-sm" disabled={pending}>
+    <button
+      className="btn-primary px-4 py-2.5 text-sm disabled:opacity-50"
+      disabled={pending || !ready}
+    >
       {pending ? "Closing…" : "Yes, the books are closed"}
     </button>
   );

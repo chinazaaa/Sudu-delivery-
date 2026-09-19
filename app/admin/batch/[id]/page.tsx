@@ -173,6 +173,9 @@ export default async function BatchPage({
             <SettleRun
               open={stillOpen(sheet)}
               unpriced={notPriced(sheet)}
+              untouched={
+                summary.reconciled.lines === 0 && summary.reconciled.of > 0
+              }
               action={settleRun}
               batchId={batch.id}
             />

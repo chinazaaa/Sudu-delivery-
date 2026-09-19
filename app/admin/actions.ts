@@ -602,6 +602,19 @@ export async function settleRun(form: FormData): Promise<void> {
     throw new Error(`That run is not finished: ${open.join(" ")}`);
   }
 
+  // A run where nothing was typed at the counter is either a run that cost
+  // exactly the menu price or one nobody checked, and the difference is
+  // money. Somebody has to say which.
+  if (
+    sheet.summary.reconciled.lines === 0 &&
+    sheet.summary.reconciled.of > 0 &&
+    form.get("counter_checked") !== "on"
+  ) {
+    throw new Error(
+      "Nothing was typed at the counter on that run. Say the prices were the menu prices first."
+    );
+  }
+
   await db()
     .from("batches")
     .update({ settled_at: new Date().toISOString() })
