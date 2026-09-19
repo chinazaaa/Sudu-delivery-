@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { groupOrders } from "@/lib/groups";
-import { groupCarts, isReady } from "@/lib/group-carts";
+import { cartValues, groupCarts, isReady } from "@/lib/group-carts";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +46,24 @@ export async function GET(
         ? orders.map((one) => (one.for_name ?? one.customer_name).split(" ")[0])
         : seats.map((one) => one.name.split(" ")[0]),
       ready: closed ? orders.length : seats.filter(isReady).length,
+      // What everybody has put in, so the cart page can show the whole car
+      // rather than only the part of it this person is holding.
+      //
+      // First names and food only. A group link gets pasted into a chat, so
+      // anybody with it can read this, and it must not hand out numbers,
+      // addresses or what anybody is paying.
+      members: closed
+        ? []
+        : await (async () => {
+            const worth = await cartValues(seats);
+            return seats.map((seat) => ({
+              name: seat.name.split(" ")[0],
+              items: seat.lines.reduce((sum, line) => sum + (line.qty ?? 0), 0),
+              food: worth.get(seat.id)?.value ?? 0,
+              summary: worth.get(seat.id)?.summary ?? "",
+              ready: isReady(seat),
+            }));
+          })(),
       closesAt: data.closes_at,
       closed: data.closed_at !== null,
     });

@@ -69,6 +69,11 @@ export default function CartView({
   const [phone, setPhone] = useState("");
   const [hostel, setHostel] = useState("");
   const [note, setNote] = useState("");
+  // Everybody else's food, so this page shows the whole car rather than only
+  // the part of it this person is holding.
+  const [others, setOthers] = useState<
+    { name: string; items: number; food: number; summary: string; ready: boolean }[]
+  >([]);
 
   useEffect(() => {
     try {
@@ -86,6 +91,29 @@ export default function CartView({
     window.addEventListener(PARTY_CHANGED, read);
     return () => window.removeEventListener(PARTY_CHANGED, read);
   }, []);
+
+  useEffect(() => {
+    if (group === "") {
+      setOthers([]);
+      return;
+    }
+    let alive = true;
+    const look = () =>
+      fetch(`/api/party/${group}`)
+        .then((response) => response.json())
+        .then((data: { members?: typeof others }) => {
+          if (alive) setOthers(data.members ?? []);
+        })
+        .catch(() => {
+          /* Offline. Their own cart still works, which is the point of it. */
+        });
+    look();
+    const timer = setInterval(look, 15000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [group]);
 
   // In a group there is no checkout. The food is settled here and priced when
   // the group closes, because until then nobody knows what delivery costs.
@@ -246,15 +274,21 @@ export default function CartView({
       )}
 
 
-      {groups.map((group) => (
-        <section key={group.person || "me"} className="space-y-3">
+      {group !== "" && (
+        <h2 className="text-sm font-extrabold uppercase tracking-wide text-muted">
+          Yours
+        </h2>
+      )}
+
+      {groups.map((section) => (
+        <section key={section.person || "me"} className="space-y-3">
           {people.length > 0 && (
             <h2 className="text-sm font-extrabold uppercase tracking-wide text-muted">
-              {group.person || "You"}
+              {section.person || "You"}
             </h2>
           )}
 
-          {group.lines.map((line) => (
+          {section.lines.map((line) => (
             <div key={line.key} className="card flex gap-3">
               {/* The picture and the name go back to the product, which is
                   where you go to check what is in it or change the choices. */}
@@ -333,6 +367,40 @@ export default function CartView({
           ))}
         </section>
       ))}
+
+      {group !== "" && others.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-extrabold uppercase tracking-wide text-muted">
+            Also in this car
+          </h2>
+          {others.map((one) => (
+            <div key={one.name} className="card flex items-center justify-between gap-3 py-3">
+              <span className="min-w-0">
+                <span className="font-bold">{one.name}</span>
+                <span className="block truncate text-sm text-muted">
+                  {one.items === 0 ? "still choosing" : one.summary}
+                </span>
+              </span>
+              <span className="shrink-0 text-right">
+                {one.items > 0 && (
+                  <span className="block font-extrabold">{naira(one.food)}</span>
+                )}
+                <span
+                  className={`block text-xs font-semibold ${
+                    one.ready ? "text-mint" : "text-muted"
+                  }`}
+                >
+                  {one.ready ? "Ready" : "Not ready"}
+                </span>
+              </span>
+            </div>
+          ))}
+          <p className="text-xs text-muted">
+            Everybody pays for their own food. The delivery is one fee for the whole
+            car, split evenly when the group closes.
+          </p>
+        </section>
+      )}
 
       <section className="card space-y-2">
         <h2 className="font-bold">Add something else</h2>
