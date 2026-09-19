@@ -158,15 +158,37 @@ export default function CartView({
     const look = () =>
       fetch(`/api/party/${group}`)
         .then((response) => response.json())
-        .then((data: { members?: typeof others; eachNow?: number }) => {
+        .then(
+          (data: {
+            members?: typeof others;
+            eachNow?: number;
+            mine?: {
+              phone?: string;
+              hostel?: string;
+              note?: string;
+              paymentMethod?: string;
+            } | null;
+          }) => {
           if (alive) setEachNow(data.eachNow ?? 0);
+          // What the seat already holds wins over what this browser
+          // remembers, because it is what the others are waiting on and what
+          // the close will use. Reopening the sheet then shows the answers
+          // they gave rather than asking again.
+          if (alive && data.mine) {
+            if (data.mine.phone) setPhone(data.mine.phone);
+            if (data.mine.hostel) setHostel(data.mine.hostel);
+            if (data.mine.note) setNote(data.mine.note);
+            if (data.mine.paymentMethod === "card" || data.mine.paymentMethod === "transfer")
+              setMethod(data.mine.paymentMethod);
+          }
           const me = (data.members ?? []).find((one) => one.isMine);
           if (alive) setMine(me ? { finalised: !!me.finalised, changed: !!me.changed } : null);
           // Everybody but the reader. Their own food is the section above,
           // where they can change it; listing it twice, once unchangeable,
           // reads as somebody else having ordered the same thing.
           if (alive) setOthers((data.members ?? []).filter((one) => !one.isMine));
-        })
+          }
+        )
         .catch(() => {
           /* Offline. Their own cart still works, which is the point of it. */
         });

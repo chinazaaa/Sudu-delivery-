@@ -30,6 +30,9 @@ type Mine = {
   phone: string;
   hostel: string;
   note: string;
+  /** How they said they would pay, so this form opens on it rather than on
+   *  the default, which quietly moved people off a card link. */
+  paymentMethod?: "transfer" | "card";
 } | null;
 
 const WORDS: Record<Stage, string> = {
@@ -85,7 +88,9 @@ export default function GroupBoard({
   const [busy, setBusy] = useState(false);
   // Asked here rather than assumed, because a group order never went past a
   // checkout screen and everybody was being written down as a transfer.
-  const [method, setMethod] = useState<"transfer" | "card">("transfer");
+  const [method, setMethod] = useState<"transfer" | "card">(
+    mine?.paymentMethod ?? "transfer"
+  );
   // Closing cannot be undone and leaves behind anybody still choosing, so it
   // is asked rather than done, from wherever it is pressed.
   const [confirming, setConfirming] = useState(false);

@@ -87,6 +87,23 @@ export async function GET(
               changed: changedSinceFinalised(seat),
             }));
           })(),
+      // What this browser's own seat holds, so a form that asks for it can
+      // open on what they already said rather than on nothing. Only their
+      // own, matched on the seat cookie: everything above is readable by
+      // anybody holding the link, and this is not.
+      mine: await (async () => {
+        if (closed) return null;
+        const token = (await cookies()).get("sudu_seat")?.value ?? "";
+        const seat = token ? seats.find((one) => one.member_token === token) : undefined;
+        return seat
+          ? {
+              phone: seat.phone ?? "",
+              hostel: seat.hostel ?? "",
+              note: seat.customer_note ?? "",
+              paymentMethod: seat.payment_method === "card" ? "card" : "transfer",
+            }
+          : null;
+      })(),
       closesAt: data.closes_at,
       closed: data.closed_at !== null,
     });

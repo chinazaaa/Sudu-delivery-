@@ -52,6 +52,8 @@ export type GroupView = {
     phone: string;
     hostel: string;
     note: string;
+    /** How they said they would pay, so a form asking again opens on it. */
+    paymentMethod: "transfer" | "card";
   } | null;
   /** Whether this car is one they picked a time for, rather than a run. */
   sameDay: boolean;
@@ -191,6 +193,9 @@ export async function groupView(
         phone: seated.phone ?? "",
         hostel: seated.hostel ?? "",
         note: seated.customer_note ?? "",
+        paymentMethod: (seated.payment_method === "card" ? "card" : "transfer") as
+          | "transfer"
+          | "card",
       };
     })(),
     sameDay: batch.kind === "same_day",
