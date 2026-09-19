@@ -155,6 +155,52 @@ export async function setBatchStatus(form: FormData): Promise<void> {
  * What the run cost to make. Typed in on the night, so the money tab can show
  * profit rather than "left before fuel and driver".
  */
+/**
+ * What things actually cost at the counter, line by line.
+ *
+ * Only the lines somebody typed something into. Most of the time one or two
+ * prices moved and the rest were exactly the menu, so a blank means "the menu
+ * was right" rather than "this was free", and clearing a figure puts that
+ * line back to the menu price.
+ */
+export async function setCounterSpend(form: FormData): Promise<void> {
+  await assertAdmin();
+  const batchId = String(form.get("batch_id") ?? "");
+  if (!batchId) return;
+
+  const keys = form.getAll("line_key").map(String);
+  const typed = form.getAll("paid").map(String);
+
+  for (const [index, key] of keys.entries()) {
+    const raw = (typed[index] ?? "").trim();
+    const value = Math.round(Number(raw));
+
+    if (raw === "" || !Number.isFinite(value) || value < 0) {
+      // Back to the menu price for that one thing.
+      await db()
+        .from("counter_spend")
+        .delete()
+        .eq("batch_id", batchId)
+        .eq("line_key", key);
+      continue;
+    }
+
+    await db()
+      .from("counter_spend")
+      .upsert(
+        {
+          batch_id: batchId,
+          line_key: key,
+          paid: value,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "batch_id,line_key" }
+      );
+  }
+
+  revalidatePath("/admin", "layout");
+}
+
 export async function setRunCosts(form: FormData): Promise<void> {
   await assertAdmin();
   const money = (field: string) => {

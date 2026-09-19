@@ -12,6 +12,11 @@ export type CounterLine = {
   choices: string[];
   qty: number;
   unitPrice: number;
+  /** Stable enough to hang a typed-in figure off: the same food ordered by
+   *  two people is one line here and one thing to buy. */
+  key: string;
+  /** What was actually handed over for this line, once somebody has said. */
+  paid: number | null;
 };
 export type CounterGroup = {
   restaurant: string;
@@ -98,6 +103,18 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   const unpaid = orders.filter((o) => o.status === "pending");
   const paidIds = new Set(paid.map((o) => o.id));
 
+  // What each thing really cost, where somebody has said.
+  const { data: spendRows } = await db()
+    .from("counter_spend")
+    .select("line_key, paid")
+    .eq("batch_id", batchId);
+  const spentOn = new Map(
+    ((spendRows ?? []) as { line_key: string; paid: number }[]).map((row) => [
+      row.line_key,
+      row.paid,
+    ])
+  );
+
   const commission = await commissionFor(paid);
   const costs = batch.fuel_cost + batch.driver_cost + batch.other_cost;
 
@@ -105,12 +122,40 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   // enough from one counter and they give it to you for less, and that
   // difference is margin the sheet was throwing away.
   const menuCost = sum(paid, (o) => o.subtotal_food);
-  const foodCost = batch.food_spend > 0 ? batch.food_spend : menuCost;
+
+  // Typed-in figures first, and only for the lines somebody has actually
+  // typed: the rest stay at the menu price, so a half-finished reconcile
+  // still leaves an honest number rather than a wrong one.
+  const counterLines = groupForCounter(lines.filter((l) => paidIds.has(l.order_id)));
+  const everyLine = counterLines.flatMap((place) => place.lines);
+  const reconciled = everyLine.filter((line) => spentOn.has(line.key));
+
+  const foodCost =
+    reconciled.length > 0
+      ? everyLine.reduce(
+          (total, line) =>
+            total +
+            (spentOn.has(line.key)
+              ? (spentOn.get(line.key) as number)
+              : line.qty * line.unitPrice),
+          0
+        )
+      : batch.food_spend > 0
+        ? batch.food_spend
+        : menuCost;
   const margin = sum(paid, (o) => o.total) - foodCost;
 
   return {
     batch,
-    counter: groupForCounter(lines.filter((l) => paidIds.has(l.order_id))),
+    counter: groupForCounter(lines.filter((l) => paidIds.has(l.order_id))).map(
+      (place) => ({
+        ...place,
+        lines: place.lines.map((line) => ({
+          ...line,
+          paid: spentOn.has(line.key) ? (spentOn.get(line.key) as number) : null,
+        })),
+      })
+    ),
     handout: bagsFor(paid.map(withLines), await collectingSeparately(batchId)),
     unpaid: unpaid.map(withLines),
     refunds: await refundsOwed(batchId),
@@ -208,6 +253,8 @@ export function groupForCounter(lines: OrderLine[]): CounterGroup[] {
         choices,
         qty: line.qty,
         unitPrice: line.unit_price_at_order,
+        key: `${line.restaurant}|${key}`,
+        paid: null,
       });
     byRestaurant.set(line.restaurant, items);
   }

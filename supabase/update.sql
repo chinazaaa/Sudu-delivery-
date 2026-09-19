@@ -520,5 +520,29 @@ create unique index if not exists restaurants_slug_idx
 -- changes for any run where this is left alone.
 alter table batches add column if not exists food_spend int not null default 0;
 
+
+-- What each thing actually cost at the counter.
+--
+-- The menu price is what the customer paid, not what the shop paid. Turn up
+-- in person and a counter often charges less, sometimes more, and profit was
+-- being worked out as though it were always exactly the same. This is where
+-- the real figure goes, one row per thing bought on one run.
+--
+-- Kept per line rather than as a single total so it can be corrected later
+-- without retyping the lot, and so the run sheet can show what moved.
+create table if not exists counter_spend (
+  id         uuid primary key default gen_random_uuid(),
+  batch_id   uuid not null references batches(id) on delete cascade,
+  /** Restaurant, item and choices, as the counter list groups them. */
+  line_key   text not null,
+  /** What was handed over for that line in total, not per unit. */
+  paid       int not null default 0 check (paid >= 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (batch_id, line_key)
+);
+create index if not exists counter_spend_batch_idx on counter_spend (batch_id);
+alter table counter_spend enable row level security;
+
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';

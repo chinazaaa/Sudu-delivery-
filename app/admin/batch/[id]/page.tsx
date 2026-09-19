@@ -1,4 +1,5 @@
 import SaveButton from "@/components/SaveButton";
+import { setCounterSpend } from "@/app/admin/actions";
 import ShortGroups from "@/components/admin/ShortGroups";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -284,6 +285,116 @@ export default async function BatchPage({
                     </li>
                   </ul>
                 </section>
+
+                {counter.length > 0 && (
+                  <section className="card space-y-3">
+                    <div>
+                      <h2 className="font-bold">What it actually cost</h2>
+                      <p className="text-sm text-muted">
+                        Only the ones that were different. Most of a run is
+                        exactly the menu price, so nothing is listed until you
+                        say otherwise: pick the thing whose price moved and type
+                        what you really handed over.
+                      </p>
+                    </div>
+
+                    {/* What has already been said, so it can be corrected or
+                        put back without hunting for it. */}
+                    {counter.flatMap((group) =>
+                      group.lines
+                        .filter((line) => line.paid !== null)
+                        .map((line) => (
+                          <form
+                            key={`fixed-${line.key}`}
+                            action={setCounterSpend}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-black/10 px-3 py-2"
+                          >
+                            <input type="hidden" name="batch_id" value={batch.id} />
+                            <input type="hidden" name="line_key" value={line.key} />
+                            <span className="min-w-0 text-sm">
+                              <span className="font-semibold">
+                                {line.qty}× {line.name}
+                              </span>
+                              <span className="block text-xs text-muted">
+                                {group.restaurant} · menu says{" "}
+                                {naira(line.qty * line.unitPrice)}
+                              </span>
+                            </span>
+                            <span className="flex shrink-0 items-center gap-2">
+                              <input
+                                name="paid"
+                                inputMode="numeric"
+                                defaultValue={line.paid ?? ""}
+                                aria-label={`What you paid for ${line.name}`}
+                                className="field w-24 py-1.5 text-sm"
+                              />
+                              {line.paid !== line.qty * line.unitPrice && (
+                                <span
+                                  className={`text-xs font-bold ${
+                                    (line.paid ?? 0) < line.qty * line.unitPrice
+                                      ? "text-mint"
+                                      : "text-brand-dark"
+                                  }`}
+                                >
+                                  {(line.paid ?? 0) < line.qty * line.unitPrice ? "+" : "−"}
+                                  {naira(
+                                    Math.abs(line.qty * line.unitPrice - (line.paid ?? 0))
+                                  )}
+                                </span>
+                              )}
+                              <SaveButton quiet>Save</SaveButton>
+                            </span>
+                          </form>
+                        ))
+                    )}
+
+                    {/* One at a time, because one is what usually changed. */}
+                    <form
+                      action={setCounterSpend}
+                      className="flex flex-wrap items-end gap-2 border-t border-black/10 pt-3"
+                    >
+                      <input type="hidden" name="batch_id" value={batch.id} />
+                      <div className="min-w-0 flex-1">
+                        <label className="label" htmlFor="line_key">
+                          Which one was different?
+                        </label>
+                        <select id="line_key" name="line_key" className="field">
+                          {counter.map((group) => (
+                            <optgroup key={group.restaurant} label={group.restaurant}>
+                              {group.lines.map((line) => (
+                                <option key={line.key} value={line.key}>
+                                  {line.qty}× {line.name}
+                                  {line.choices.length > 0 && ` (${line.choices.join(", ")})`}
+                                  {" · menu "}
+                                  {naira(line.qty * line.unitPrice)}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="label" htmlFor="paid">
+                          What you paid
+                        </label>
+                        <input
+                          id="paid"
+                          name="paid"
+                          inputMode="numeric"
+                          placeholder="0"
+                          className="field w-32"
+                        />
+                      </div>
+                      <SaveButton quiet>Add</SaveButton>
+                    </form>
+
+                    <p className="text-xs text-muted">
+                      This only moves the profit on this run. Nothing a customer
+                      sees changes, and nobody is charged anything different.
+                      Clearing a figure puts that line back to the menu price.
+                    </p>
+                  </section>
+                )}
 
                 {counter.map((group, index) => (
                   <section key={group.restaurant} className="card">
