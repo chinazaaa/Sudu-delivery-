@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { joinedViaLink, leaveGroup, PARTY_CHANGED, readGroup } from "./GroupLink";
 
@@ -23,6 +24,10 @@ type Party = {
  * rather than inside a page somebody may never open.
  */
 export default function GroupBar() {
+  // Standing on the group page already, "See group" points at where you are.
+  // The bar still earns its place there: it is what says you are in one, and
+  // Leave is the way out.
+  const pathname = usePathname();
   const [token, setToken] = useState("");
   const [party, setParty] = useState<Party | null>(null);
   // Whose group it is reads differently depending on which of them is looking,
@@ -95,14 +100,14 @@ export default function GroupBar() {
           </span>
         </span>
 
-        {token ? (
+        {pathname !== `/g/${token}` && (
           <Link
             href={`/g/${token}`}
             className="shrink-0 rounded-full bg-white/20 px-3 py-1 text-xs font-bold"
           >
             See group
           </Link>
-        ) : null}
+        )}
 
         <button
           type="button"
