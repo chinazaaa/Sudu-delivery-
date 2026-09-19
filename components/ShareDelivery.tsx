@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import SendLink from "./SendLink";
+
 
 /**
  * "Add yours to mine", for the hall group chat.
@@ -21,28 +22,9 @@ export default function ShareDelivery({
   /** When the run stops taking orders, so nobody shares a closed one. */
   closes: string;
 }) {
-  const [copied, setCopied] = useState(false);
-
   const message =
     `${name} is ordering food to campus with Sudu, closing ${closes}. ` +
     `Add yours and we split one delivery fee: ${url}`;
-
-  const share = async () => {
-    try {
-      // Only `text`, which already ends in the link. Passing `url` as well
-      // makes the share sheet append it a second time, so the message arrives
-      // with the link in it twice.
-      if (navigator.share) {
-        await navigator.share({ text: message });
-        return;
-      }
-      await navigator.clipboard.writeText(message);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch {
-      /* They closed the share sheet. Nothing to report. */
-    }
-  };
 
   return (
     <div className="rounded-2xl border-2 border-brand/30 bg-brand-tint p-4">
@@ -52,9 +34,9 @@ export default function ShareDelivery({
         you there is one delivery fee instead of one each. They pay for their own
         food, on their own number.
       </p>
-      <button type="button" onClick={share} className="btn-primary mt-3 w-full">
-        {copied ? "Copied, now paste it in the group" : "Send my friends the link"}
-      </button>
+      <div className="mt-3">
+        <SendLink message={message} label="Send my friends the link on WhatsApp" />
+      </div>
     </div>
   );
 }

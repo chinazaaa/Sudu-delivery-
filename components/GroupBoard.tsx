@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { finishOrdering, closeSharedGroup } from "@/app/actions";
 import { enterGroup, joinedViaLink, readGroup } from "./GroupLink";
+import SendLink from "./SendLink";
 import { naira } from "@/lib/money";
 
 type Member = {
@@ -139,19 +140,9 @@ export default function GroupBoard({
     router.push("/");
   };
 
-  const share = async () => {
-    const text =
-      `${leaderName} is ordering food to campus with Sudu. Add yours and we ` +
-      `split one delivery fee: ${shareUrl}`;
-    try {
-      // Only `text`, which already ends in the link. Passing `url` as well
-      // makes the share sheet append it a second time.
-      if (navigator.share) await navigator.share({ text });
-      else await navigator.clipboard.writeText(text);
-    } catch {
-      /* Share sheet closed. */
-    }
-  };
+  const invite =
+    `${leaderName} is ordering food to campus with Sudu. Add yours and we ` +
+    `split one delivery fee: ${shareUrl}`;
 
   return (
     <div className="space-y-4">
@@ -255,9 +246,11 @@ export default function GroupBoard({
           </p>
         )}
 
-        <button type="button" onClick={share} className="btn-quiet w-full">
-          {members.length === 0 ? "Send the link" : "Add somebody else"}
-        </button>
+        <SendLink
+          message={invite}
+          tone="quiet"
+          label={members.length === 0 ? "Send the link on WhatsApp" : "Add somebody else"}
+        />
 
         {leader && members.length > 0 && (
           <form

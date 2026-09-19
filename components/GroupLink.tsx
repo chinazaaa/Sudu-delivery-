@@ -114,17 +114,10 @@ export default function GroupLink({
       }
 
       enterGroup(data.id);
-      const url = `${window.location.origin}/g/${data.id}`;
-      const text = `${name} is ordering food to campus with Sudu. Add yours and we split one delivery fee: ${url}`;
-
-      try {
-        // Only `text`, which already ends in the link. Passing `url` as well
-        // makes the share sheet append it a second time.
-        if (navigator.share) await navigator.share({ text });
-        else await navigator.clipboard.writeText(text);
-      } catch {
-        /* They closed the share sheet. The group is made either way. */
-      }
+      // Straight to the group, which is where the sending lives. Firing a
+      // share sheet from here meant the one moment that decides whether
+      // anybody else turns up happened on a page they were leaving, and if
+      // they dismissed it there was nothing to try again with.
       window.location.href = `/g/${data.id}`;
     } catch {
       setError("Could not start that group.");
@@ -216,7 +209,7 @@ export default function GroupLink({
         disabled={busy || name.trim().length < 2 || choice === ""}
         className="btn-primary w-full"
       >
-        {busy ? "Starting…" : "Start it and send the link"}
+        {busy ? "Starting…" : "Start the group"}
       </button>
     </div>
   );

@@ -1,32 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import SendLink from "./SendLink";
 
 /**
  * Pay-by-link: the student sends this to whoever is paying. The page it points
  * at shows the name, items and total, so nobody is asked to pay a bare link.
+ *
+ * Named buttons rather than a share sheet, for the same reason as everywhere
+ * else: whoever is paying is in WhatsApp, and on a laptop the sheet does not
+ * exist at all.
  */
 export default function ShareLink({ label }: { label: string }) {
-  const [copied, setCopied] = useState(false);
+  // The address is only knowable in the browser, and only after mount, so the
+  // server and the first render agree on nothing being there yet.
+  const [url, setUrl] = useState("");
+  useEffect(() => setUrl(window.location.href), []);
 
-  async function copy() {
-    const url = window.location.href;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: "Sudu Delivery order", url });
-        return;
-      }
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch {
-      /* The student closed the share sheet. Nothing to report. */
-    }
+  if (!url) {
+    return (
+      <button type="button" disabled className="btn-quiet w-full opacity-60">
+        {label}
+      </button>
+    );
   }
 
   return (
-    <button type="button" onClick={copy} className="btn-quiet w-full">
-      {copied ? "Link copied" : label}
-    </button>
+    <SendLink
+      message={`Please help me pay for this Sudu order: ${url}`}
+      label={label}
+      tone="quiet"
+    />
   );
 }
