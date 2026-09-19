@@ -8,7 +8,9 @@ import { lastOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import { rememberCart } from "@/lib/carts";
 import { db } from "@/lib/supabase";
-import { closeGroup, leaderSeat, markDone } from "@/lib/groups";
+import { closeGroup, getSharedGroup, groupOrders, leaderSeat, markDone } from "@/lib/groups";
+import { groupCarts } from "@/lib/group-carts";
+import { shortRef } from "@/lib/links";
 import {
   checkPin,
   currentCustomer,
@@ -316,7 +318,7 @@ export async function finishOrdering(form: FormData): Promise<void> {
  */
 export async function closeSharedGroup(
   form: FormData
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; orderId?: string }> {
   const id = String(form.get("group_id") ?? "");
   if (!id) return { ok: false, error: "That group could not be found." };
 
@@ -334,8 +336,26 @@ export async function closeSharedGroup(
     };
   }
 
+  // Whose number this seat gave, read before the close, because closing
+  // turns the seats into orders and deletes them. It is how the order that
+  // came out of this person's food is found again a moment later.
+  const group = await getSharedGroup(id);
+  const mine = group
+    ? (await groupCarts(group.id)).find((cart) => cart.member_token === seat)
+    : undefined;
+  const phone = mine?.phone ?? "";
+
   const result = await closeGroup(id);
   revalidatePath(`/g/${id}`);
   revalidatePath("/o", "layout");
-  return result.ok ? { ok: true } : { ok: false, error: result.error };
+  if (!result.ok) return { ok: false, error: result.error };
+
+  // Their own order, so closing can put them on the page that asks them to
+  // pay rather than on a board they have finished with.
+  const theirs =
+    group && phone
+      ? (await groupOrders(group.id)).find((order) => order.customer_phone === phone)
+      : undefined;
+
+  return { ok: true, orderId: theirs ? shortRef(theirs) : undefined };
 }

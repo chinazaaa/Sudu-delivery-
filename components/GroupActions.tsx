@@ -45,7 +45,11 @@ export default function GroupActions({
         return;
       }
       setAsking(false);
-      router.refresh();
+      // Onto their own order, where the cart empties and the total is
+      // waiting. The board has done its job by now and asking them to find
+      // their own line on it is a step nobody needs.
+      if (result.orderId) router.push(`/o/${result.orderId}`);
+      else router.refresh();
     } catch {
       setProblem("Could not close that. Try again in a moment.");
     } finally {
