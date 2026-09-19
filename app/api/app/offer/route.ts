@@ -58,6 +58,7 @@ export async function POST(request: Request): Promise<NextResponse> {
             fee: nearly.fee,
             note: nearly.offer.note.trim(),
             blocking: nearly.blocking,
+            qualifying: nearly.qualifying,
           }
         : null,
     });

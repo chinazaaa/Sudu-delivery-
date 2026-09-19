@@ -266,6 +266,10 @@ export type NearMiss = {
   fee: number;
   /** What is in the way, by name, without repeats. */
   blocking: string[];
+  /** What the offer does cover, by name, without repeats. With a full cart
+   *  it reads better to name the two things that qualify than the six that
+   *  do not. */
+  qualifying: string[];
 };
 
 /**
@@ -309,6 +313,7 @@ export function nearMiss(
       offer,
       fee: offerFee(offer, good.length),
       blocking: [...new Set(bad.map((line) => line.name))],
+      qualifying: [...new Set(good.map((line) => line.name))],
     });
   }
 

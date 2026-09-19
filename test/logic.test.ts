@@ -1163,6 +1163,17 @@ test("the cart says what is standing between it and an offer", () => {
   assert.equal(ask([line("bbq-beef", "BBQ Beef")]), null);
   // And nothing qualifying is a different order, not a near miss.
   assert.equal(ask([line("coke", "Coke")]), null);
+
+  // What it does cover, said as well, because with six things in the way the
+  // shorter truth is which two the offer is for.
+  const many = ask([
+    line("bbq-beef", "BBQ Beef"),
+    line("coke", "Coke"),
+    line("fries", "Fries"),
+    line("pie", "Meat pie"),
+  ]);
+  assert.deepEqual(many?.qualifying, ["BBQ Beef"]);
+  assert.deepEqual(many?.blocking, ["Coke", "Fries", "Meat pie"]);
 });
 
 test("an offer is spelt out when there are few enough combinations", () => {

@@ -169,7 +169,12 @@ export default function Checkout() {
   // ladder and over the same day figure alike.
   const [priced, setPriced] = useState<{
     offer: { fee: number; note: string } | null;
-    nearly: { fee: number; note: string; blocking: string[] } | null;
+    nearly: {
+      fee: number;
+      note: string;
+      blocking: string[];
+      qualifying: string[];
+    } | null;
   } | null>(null);
 
   useEffect(() => {
@@ -633,7 +638,13 @@ export default function Checkout() {
             {nearly.fee === 0
               ? "Delivery would be free"
               : `Delivery would be ${naira(nearly.fee)}`}{" "}
-            without the {nearly.blocking.join(", ")}.
+            {nearly.blocking.length <= 2
+              ? `without the ${nearly.blocking.join(" and ")}.`
+              : `on the ${
+                  nearly.qualifying.length <= 2
+                    ? nearly.qualifying.join(" and ")
+                    : `${nearly.qualifying.length} items it covers`
+                } on their own.`}
           </Text>
         )}
 

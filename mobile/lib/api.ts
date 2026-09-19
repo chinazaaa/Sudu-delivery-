@@ -199,7 +199,12 @@ export const api = {
   }) =>
     post<{
       offer: { fee: number; note: string } | null;
-      nearly: { fee: number; note: string; blocking: string[] } | null;
+      nearly: {
+        fee: number;
+        note: string;
+        blocking: string[];
+        qualifying: string[];
+      } | null;
     }>("/offer", body),
   /** How a delivered order went. The id is the credential, as it is for
    *  reading the order: the link is what somebody was given. */

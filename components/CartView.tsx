@@ -423,15 +423,25 @@ export default function CartView({
             <span className="font-extrabold text-brand-dark">
               {missed.fee === 0 ? "Free delivery" : `${naira(missed.fee)} delivery`}
             </span>{" "}
-            is on for part of this cart, but {missed.blocking.slice(0, 3).join(", ")}
-            {missed.blocking.length > 3 && " and more"} {missed.blocking.length === 1 ? "is" : "are"}{" "}
-            not in the offer, so it does not apply.
+            is on for part of this cart.{" "}
+            {/* Naming the two things in the way beats naming them when there
+                are six: past that it is a list nobody reads, and the shorter
+                truth is which food the offer is actually for. */}
+            {missed.blocking.length <= 2
+              ? `${missed.blocking.join(" and ")} ${
+                  missed.blocking.length === 1 ? "is" : "are"
+                } not in it, so it does not apply.`
+              : missed.qualifying.length <= 2
+                ? `Only the ${missed.qualifying.join(" and ")} ${
+                    missed.qualifying.length === 1 ? "is" : "are"
+                  } in it, so everything else would have to come out.`
+                : `Only ${missed.qualifying.length} of your items are in it, and the other ${
+                    missed.blocking.length
+                  } would have to come out.`}
           </p>
           <p className="mt-1 text-xs text-ink/70">
-            Take {missed.blocking.length === 1 ? "it" : "them"} out and delivery
-            becomes {missed.fee === 0 ? "free" : naira(missed.fee)}. Keep{" "}
-            {missed.blocking.length === 1 ? "it" : "them"} and the usual fee
-            applies, which is often the better deal anyway.
+            Keeping them is often the better deal anyway: the usual fee covers
+            the lot, and this only pays off if the rest was going another time.
           </p>
         </div>
       )}

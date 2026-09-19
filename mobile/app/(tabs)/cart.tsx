@@ -45,7 +45,12 @@ export default function Cart() {
   // touches, and then the ladder is the right figure.
   const [priced, setPriced] = useState<{
     offer: { fee: number; note: string } | null;
-    nearly: { fee: number; note: string; blocking: string[] } | null;
+    nearly: {
+      fee: number;
+      note: string;
+      blocking: string[];
+      qualifying: string[];
+    } | null;
   } | null>(null);
 
   useEffect(() => {
@@ -138,11 +143,16 @@ export default function Cart() {
                 : `Delivery would be ${naira(nearly.fee)}`}
             </Text>
             <Text style={{ color: T.ink }}>
-              {nearly.note || "An offer"} covers most of this cart. It is the{" "}
-              {nearly.blocking.join(", ")} keeping it off, so taking{" "}
-              {nearly.blocking.length === 1 ? "that" : "those"} out or ordering{" "}
-              {nearly.blocking.length === 1 ? "it" : "them"} another time puts this
-              on the offer.
+              {nearly.note || "An offer"} is on for part of this cart.{" "}
+              {nearly.blocking.length <= 2
+                ? `${nearly.blocking.join(" and ")} ${
+                    nearly.blocking.length === 1 ? "is" : "are"
+                  } not in it, so it does not apply.`
+                : nearly.qualifying.length <= 2
+                  ? `Only the ${nearly.qualifying.join(" and ")} ${
+                      nearly.qualifying.length === 1 ? "is" : "are"
+                    } in it, so everything else would have to come out.`
+                  : `Only ${nearly.qualifying.length} of your items are in it, and the other ${nearly.blocking.length} would have to come out.`}
             </Text>
           </View>
         )}
