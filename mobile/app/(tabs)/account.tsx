@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { api } from "@/lib/api";
-import { pushTokenIfAllowed } from "@/lib/push";
+import { enablePush, pushPermission, pushTokenIfAllowed } from "@/lib/push";
 import { cart, me, mine, people, useStored } from "@/lib/store";
 import { T } from "@/lib/theme";
 
@@ -24,30 +24,64 @@ export default function Account() {
   /** This phone's push token, once it has allowed notifications at all. Null
    *  means there is nothing to offer a switch over yet. */
   const [pushToken, setPushToken] = useState<string | null>(null);
-  const [deals, setDeals] = useState(true);
+  const [permission, setPermission] = useState<"granted" | "ask" | "denied">("ask");
+  const [deals, setDeals] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    void pushTokenIfAllowed().then(async (token) => {
+    void (async () => {
+      const state = await pushPermission();
+      if (!alive) return;
+      setPermission(state);
+
+      const token = await pushTokenIfAllowed();
       if (!alive || !token) return;
       setPushToken(token);
       try {
         const current = await api.prefs(token);
         if (alive) setDeals(current.deals);
       } catch {
-        /* Not knowing means on, which is what it already says. */
+        /* Not knowing means on, which is what the server would say. */
+        if (alive) setDeals(true);
       }
-    });
+    })();
     return () => {
       alive = false;
     };
   }, []);
 
+  /**
+   * Turning it on is permission to ask, and asking is what happens.
+   *
+   * Sending somebody to Settings to do what they just asked for is a detour
+   * around a box iOS will show for us, and it only becomes the right answer
+   * once they have said no, because then the box never appears again.
+   */
   const chooseDeals = async (next: boolean) => {
+    if (next && !pushToken) {
+      if (permission === "denied") {
+        void Linking.openSettings();
+        return;
+      }
+
+      const token = await enablePush(saved.token);
+      if (!token) {
+        setPermission(await pushPermission());
+        Alert.alert(
+          "Not switched on",
+          "This phone did not allow notifications. You can turn them on in Settings."
+        );
+        return;
+      }
+      setPushToken(token);
+      setPermission("granted");
+    }
+
     setDeals(next);
-    if (!pushToken) return;
+    const token = pushToken ?? (await pushTokenIfAllowed());
+    if (!token) return;
     try {
-      await api.setPrefs(pushToken, next);
+      await api.setPrefs(token, next);
     } catch {
       // Put the switch back rather than leave it lying about what we will send.
       setDeals(!next);
@@ -119,27 +153,34 @@ export default function Account() {
               New deals at a restaurant, cheaper delivery, and discount codes.
             </Text>
           </View>
+          {/* Live whatever the phone has agreed to so far: turning it on is
+              what asks. Only a flat no leaves nothing for a tap to do here. */}
           <Switch
             value={deals && pushToken !== null}
             onValueChange={chooseDeals}
-            disabled={pushToken === null}
+            disabled={permission === "denied" && pushToken === null}
             trackColor={{ true: T.brand }}
             accessibilityLabel="Deals and offers"
           />
         </View>
 
-        {pushToken === null ? (
+        {pushToken === null && permission === "denied" ? (
           <>
             <Text style={[body, { marginTop: 10 }]}>
-              This phone is not set up to be notified yet. We ask after your first order,
-              rather than before anybody has one to hear about.
+              This phone has notifications switched off for Sudu, and iOS only asks once.
             </Text>
             <Pressable onPress={() => void Linking.openSettings()} style={{ marginTop: 10 }}>
               <Text style={{ color: T.brand, fontWeight: "800" }}>
-                Turn notifications on in Settings
+                Turn them on in Settings
               </Text>
             </Pressable>
           </>
+        ) : pushToken === null ? (
+          <Text style={[body, { marginTop: 10 }]}>
+            Turn this on and we will ask this phone for permission. You do not have to
+            have ordered anything: a deal is worth hearing about before a first order,
+            not after it.
+          </Text>
         ) : (
           <Text style={[body, { marginTop: 10 }]}>
             News about an order stays on either way: where your food is, and when it has
