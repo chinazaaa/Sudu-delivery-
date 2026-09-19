@@ -1,0 +1,83 @@
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { db } from "@/lib/supabase";
+import { getSharedGroup, groupOrders } from "@/lib/groups";
+import { seatFor } from "@/lib/group-carts";
+import { placeOrder } from "@/lib/orders";
+import { normalisePhone } from "@/lib/phone";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * Finishing after the group has closed.
+ *
+ * The clock runs out on people. Somebody who had chosen their food but never
+ * gave a number has a seat, a cart and nowhere for any of it to go, and the
+ * close cannot make an order out of that. Their food is left where it is
+ * rather than thrown away, and this is how they finish.
+ *
+ * They pay what everybody else was told to pay. The share was worked out when
+ * the group closed and is not recalculated here: the others have already been
+ * given a figure, and a late arrival must not move it.
+ */
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<NextResponse> {
+  const id = (await params).id;
+  const group = await getSharedGroup(id);
+  if (!group?.closed_at) {
+    return NextResponse.json({ error: "That group is still open." }, { status: 400 });
+  }
+
+  const token = (await cookies()).get("sudu_seat")?.value ?? "";
+  const seat = token ? await seatFor(id, token) : null;
+  if (!seat || seat.lines.length === 0) {
+    return NextResponse.json({ error: "There is no food waiting for you." }, { status: 404 });
+  }
+
+  const body = (await request.json().catch(() => ({}))) as {
+    phone?: string;
+    hostel?: string;
+    note?: string;
+  };
+
+  const phone = normalisePhone(String(body.phone ?? ""));
+  if (!phone) {
+    return NextResponse.json(
+      { error: "That phone number doesn't look right." },
+      { status: 400 }
+    );
+  }
+  const hostel = String(body.hostel ?? "").trim();
+  if (hostel === "") {
+    return NextResponse.json({ error: "Which block does it go to?" }, { status: 400 });
+  }
+
+  // What everybody else in this car was charged. Read from an order rather
+  // than worked out again, so one number covers the whole car however late
+  // this arrives.
+  const made = await groupOrders(id);
+  const share = made[0]?.fee ?? 0;
+
+  const result = await placeOrder({
+    batchId: group.batch_id,
+    name: seat.name,
+    phone,
+    hostel,
+    lines: seat.lines,
+    coupon: seat.coupon || undefined,
+    paymentMethod: seat.payment_method === "card" ? "card" : "transfer",
+    customerNote: String(body.note ?? "").trim().slice(0, 300),
+    fixedFee: share,
+  });
+
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+
+  // It is an order now, so the seat goes. Leaving it would put them back in
+  // this same state on the next page load.
+  await db().from("group_carts").delete().eq("id", seat.id);
+  await db().from("orders").update({ group_id: id }).eq("id", result.orderId);
+
+  return NextResponse.json({ ok: true, orderId: result.orderId });
+}

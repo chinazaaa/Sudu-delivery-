@@ -49,6 +49,9 @@ export type GroupView = {
   } | null;
   /** Whether this car is one they picked a time for, rather than a run. */
   sameDay: boolean;
+  /** Their food is still waiting after the close, because they never gave a
+   *  number for it to be delivered to. */
+  strandedItems: number;
   /** What delivery would cost each of them if it closed now. Moves as people
    *  add food and as people join, which is the whole point of sharing one. */
   eachNow: number;
@@ -80,7 +83,14 @@ export async function groupView(
   // Before it closes there are no orders: the food waits in the group, because
   // nobody has a delivery fee to put on an order yet. After it closes there
   // are, and they are the bill.
-  const waiting = group.closed_at ? [] : await groupCarts(groupId);
+  const everySeat = await groupCarts(groupId);
+  const waiting = group.closed_at ? [] : everySeat;
+  // A seat left behind by the close: food chosen, no number given, so there
+  // was no order to make out of it.
+  const strandedSeat =
+    group.closed_at && seat !== ""
+      ? everySeat.find((cart) => cart.member_token === seat && cart.lines.length > 0)
+      : undefined;
   const worth = await cartValues(waiting);
 
   const { data: rows } =
@@ -159,5 +169,8 @@ export async function groupView(
     })(),
     sameDay: batch.kind === "same_day",
     eachNow: group.closed_at ? 0 : (await shareNow(groupId)).each,
+    strandedItems: strandedSeat
+      ? strandedSeat.lines.reduce((sum, line) => sum + (line.qty ?? 0), 0)
+      : 0,
   };
 }

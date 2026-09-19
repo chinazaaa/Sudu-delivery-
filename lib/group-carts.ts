@@ -40,11 +40,22 @@ export function changedSinceFinalised(cart: GroupCart): boolean {
 
 /** Ready to travel: their food is settled and we know how to deliver it. */
 export function isReady(cart: GroupCart): boolean {
+  return cart.finalised_at !== null && canTravel(cart);
+}
+
+/**
+ * Everything an order needs: food, a number and a block.
+ *
+ * Not the same as having said "I am done". When the clock runs out, somebody
+ * who chose food and gave their details but never pressed finalise has
+ * everything needed, and throwing their lunch away over a button they did not
+ * press is not a rule worth having.
+ */
+export function canTravel(cart: GroupCart): boolean {
   return (
-    cart.finalised_at !== null &&
-    cart.phone.trim() !== "" &&
-    cart.hostel.trim() !== "" &&
-    cart.lines.length > 0
+    cart.lines.length > 0 &&
+    (cart.phone ?? "").trim() !== "" &&
+    (cart.hostel ?? "").trim() !== ""
   );
 }
 

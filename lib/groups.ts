@@ -1,7 +1,7 @@
 import { db } from "./supabase";
 import { evenShare, feeFor, isUrgent, sameDayFee, splitFee } from "./fees";
 import { activeBands, sameDayPricing } from "./settings";
-import { countCartItems, groupCarts, isReady, markCartDone } from "./group-carts";
+import { canTravel, countCartItems, groupCarts, markCartDone } from "./group-carts";
 import { announceGroup } from "./announce-group";
 import type { Batch, Order, OrderGroup } from "./types";
 
@@ -250,10 +250,18 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
   // never said where their food goes, has nowhere for it to be delivered, so
   // there is nothing to order and nothing to charge them. They are left where
   // they are rather than turned into an order that cannot be fulfilled.
-  const waiting = everybody.filter(isReady);
-  const notReady = everybody.length - waiting.length;
-  if (notReady > 0) {
-    console.error(`closing group ${groupId} without ${notReady} who were not ready`);
+  // Everybody who can actually travel, which is not the same as everybody who
+  // pressed finalise. Somebody who chose food and gave their details but never
+  // pressed the button has everything an order needs, and the clock running
+  // out is not a reason to throw their lunch away.
+  //
+  // Somebody with no number still cannot travel: there is nowhere to deliver
+  // it and nobody to call. Their seat is left where it is rather than deleted,
+  // so they can still finish and join the car.
+  const waiting = everybody.filter(canTravel);
+  const stranded = everybody.length - waiting.length;
+  if (stranded > 0) {
+    console.error(`closing group ${groupId}, ${stranded} still owe their details`);
   }
 
   // A link somebody made and never used, whose car has now gone. Shut it so

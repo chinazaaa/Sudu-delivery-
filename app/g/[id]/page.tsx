@@ -9,6 +9,7 @@ import { SLOT_LABEL } from "@/lib/config";
 import { runDateLabel } from "@/lib/time";
 import GroupBoard from "@/components/GroupBoard";
 import GroupActions from "@/components/GroupActions";
+import GroupLate from "@/components/GroupLate";
 import ClearCartKeepGroup from "@/components/ClearCartKeepGroup";
 
 export const dynamic = "force-dynamic";
@@ -92,7 +93,9 @@ export default async function GroupPage({
           )}
         </div>
         <h1 className="text-2xl font-bold tracking-tight">
-          {group.members.length === 0
+          {group.closedAt && group.members.length === 0
+            ? "This one closed with nobody in it"
+            : group.members.length === 0
             ? "Waiting for the first person"
             : group.items === 0
               ? // Nothing has been finalised, so there is no count to give.
@@ -110,6 +113,19 @@ export default async function GroupPage({
 
       {group.closedAt ? (
         <>
+          {group.members.length === 0 ? (
+            <section className="card space-y-2">
+              <h2 className="font-bold">Nobody ordered in time</h2>
+              <p className="text-sm text-muted">
+                The fifteen minutes ran out before anybody finished, so no food was
+                ordered and nobody has been charged anything. Start another group
+                and send the link again.
+              </p>
+              <Link href="/" className="btn-primary mt-1 block w-full text-center">
+                Back to the menu
+              </Link>
+            </section>
+          ) : (
           <section className="card space-y-3">
             <div>
               <h2 className="font-bold">Closed. Here is the split</h2>
@@ -147,6 +163,15 @@ export default async function GroupPage({
               ))}
             </ul>
           </section>
+          )}
+
+          {group.strandedItems > 0 && (
+            <GroupLate
+              groupId={group.id}
+              share={group.share}
+              hostels={await hostelNames()}
+            />
+          )}
 
           {me && !me.paid && (
             <Link href={`/o/${me.orderId}`} className="btn-primary block w-full text-center">
