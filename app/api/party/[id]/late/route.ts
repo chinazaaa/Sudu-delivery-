@@ -58,7 +58,11 @@ export async function POST(
   // than worked out again, so one number covers the whole car however late
   // this arrives.
   const made = await groupOrders(group.id);
-  const share = made[0]?.fee ?? 0;
+  // Nobody in the car got as far as an order, so there is no share to match.
+  // Falling back to nought made the first person to come back the only one
+  // who ever got free delivery, which is not a gift anybody meant to give:
+  // with no share to copy, their food is priced like any other order.
+  const share = made[0]?.fee ?? null;
 
   const result = await placeOrder({
     batchId: group.batch_id,
@@ -69,7 +73,7 @@ export async function POST(
     coupon: seat.coupon || undefined,
     paymentMethod: seat.payment_method === "card" ? "card" : "transfer",
     customerNote: String(body.note ?? "").trim().slice(0, 300),
-    fixedFee: share,
+    fixedFee: share ?? undefined,
   });
 
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });

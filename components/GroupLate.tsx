@@ -19,7 +19,9 @@ export default function GroupLate({
   hostels,
 }: {
   groupId: string;
-  /** What everybody else was charged, which is what they pay too. */
+  /** What everybody else was charged, which is what they pay too. Nought
+   *  when the group closed without a single order in it, and then there is
+   *  no share to promise: their food is priced on its own. */
   share: number;
   hostels: string[];
 }) {
@@ -57,9 +59,20 @@ export default function GroupLate({
       <div>
         <h2 className="font-bold text-brand-dark">Your food is still here</h2>
         <p className="text-sm text-ink/75">
-          The group closed before you gave your details, so nothing was ordered for
-          you. Give them now and your food goes in the same car, at the same{" "}
-          {naira(share)} for delivery as everybody else.
+          {share > 0 ? (
+            <>
+              The group closed before you gave your details, so nothing was ordered
+              for you. Give them now and your food goes in the same car, at the same{" "}
+              {naira(share)} for delivery as everybody else.
+            </>
+          ) : (
+            <>
+              The group closed before anybody gave their details, so nothing was
+              ordered. Give yours now and your food goes on the same run, at the
+              usual delivery fee for what you have chosen. You will see the total
+              before you pay anything.
+            </>
+          )}
         </p>
       </div>
 

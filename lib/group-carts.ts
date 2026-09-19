@@ -71,17 +71,32 @@ export async function takeSeat(args: {
   token: string;
   name: string;
 }): Promise<string | null> {
+  // Somebody already sitting here keeps everything they have given. This used
+  // to be one upsert carrying phone: "", so arriving on the link a second
+  // time wiped the number and the block off a seat that had them, and the
+  // close then found nothing it could deliver. A name is all this moment has
+  // to say about a person, so a name is all it writes.
+  const sitting = await seatFor(args.groupId, args.token);
+  if (sitting) {
+    const { error } = await db()
+      .from("group_carts")
+      .update({ name: args.name, updated_at: new Date().toISOString() })
+      .eq("id", sitting.id);
+    if (error) {
+      console.error("takeSeat failed:", error.message);
+      return null;
+    }
+    return sitting.id;
+  }
+
   const { data, error } = await db()
     .from("group_carts")
-    .upsert(
-      {
-        group_id: args.groupId,
-        member_token: args.token,
-        name: args.name,
-        phone: "",
-      },
-      { onConflict: "group_id,member_token", ignoreDuplicates: false }
-    )
+    .insert({
+      group_id: args.groupId,
+      member_token: args.token,
+      name: args.name,
+      phone: "",
+    })
     .select("id")
     .single();
 

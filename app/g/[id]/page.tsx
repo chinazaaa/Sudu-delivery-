@@ -118,6 +118,20 @@ export default async function GroupPage({
       {group.closedAt ? (
         <>
           {group.members.length === 0 ? (
+            // Their own food may still be sitting in the closed group, and the
+            // card below this one offers it back to them. Telling somebody
+            // nothing came of it and then asking for their block in the next
+            // breath is two answers to the same question.
+            group.strandedItems > 0 ? (
+              <section className="card space-y-2">
+                <h2 className="font-bold">This closed before anybody gave details</h2>
+                <p className="text-sm text-muted">
+                  No food was ordered and nobody has been charged. Yours is still
+                  here though, and the run has not gone: give your details below and
+                  it travels on the same one.
+                </p>
+              </section>
+            ) : (
             <section className="card space-y-2">
               <h2 className="font-bold">Nobody ordered in time</h2>
               <p className="text-sm text-muted">
@@ -129,6 +143,7 @@ export default async function GroupPage({
                 Back to the menu
               </Link>
             </section>
+            )
           ) : (
           <section className="card space-y-3">
             <div>

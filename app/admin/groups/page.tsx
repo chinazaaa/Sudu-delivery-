@@ -1,7 +1,7 @@
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import { db } from "@/lib/supabase";
-import { cartValues, groupCarts, countCartItems } from "@/lib/group-carts";
+import { canTravel, cartValues, groupCarts, countCartItems } from "@/lib/group-carts";
 import { shortGroupsNow } from "@/lib/groups";
 import ShortGroups from "@/components/admin/ShortGroups";
 import { naira } from "@/lib/money";
@@ -48,6 +48,9 @@ export default async function GroupsPage() {
         when: (batch?.delivery_window_text as string) ?? "",
         carts,
         items: countCartItems(carts),
+        // Seats with food, a number and a block: the ones a close can
+        // actually make an order out of.
+        travelling: carts.filter(canTravel).length,
         food: [...worth.values()].reduce((sum, one) => sum + one.value, 0),
         worth,
       };
@@ -126,10 +129,12 @@ export default async function GroupsPage() {
                         {cart.lines.reduce((n, line) => n + (line.qty ?? 0), 0)} items
                       </span>
                       <span className="font-bold">{naira(group.worth.get(cart.id)?.value ?? 0)}</span>
-                      {cart.done_at ? (
+                      {canTravel(cart) ? (
                         <span className="text-xs font-bold text-mint">Ready</span>
                       ) : (
-                        <span className="text-xs text-muted">Still adding</span>
+                        <span className="text-xs text-muted">
+                          {cart.lines.length === 0 ? "Still choosing" : "No details yet"}
+                        </span>
                       )}
                     </span>
                   </li>
@@ -158,8 +163,13 @@ export default async function GroupsPage() {
                   </ConfirmButton>
                 </form>
                 <span className="text-xs text-muted">
-                  Closing prices it and makes everybody&apos;s order. Cancelling bins
-                  the food and charges nobody.
+                  {group.travelling === 0
+                    ? "Nobody has given a number and a block yet, so closing it now would order nothing."
+                    : `Closing makes ${group.travelling} order${
+                        group.travelling === 1 ? "" : "s"
+                      } out of ${group.carts.length} ${
+                        group.carts.length === 1 ? "seat" : "seats"
+                      }. Anybody without details can still give them afterwards. Cancelling bins the food and charges nobody.`}
                 </span>
               </div>
             </article>

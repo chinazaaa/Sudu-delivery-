@@ -14,6 +14,7 @@ import { deliverySlots } from "@/lib/same-day";
 import { lagosInstant, lagosToday } from "@/lib/time";
 import { clearDeadGroups, ensureUpcomingBatches, openRunsBetween } from "@/lib/batches";
 import { closeGroup } from "@/lib/groups";
+import { canTravel, groupCarts } from "@/lib/group-carts";
 import { fileFrom, uploadImage } from "@/lib/uploads";
 import { parseMenuText } from "@/lib/menu-import";
 import { newPin } from "@/lib/customer-auth";
@@ -971,7 +972,21 @@ export async function deleteClosedCarts(): Promise<void> {
  */
 export async function closeGroupNow(form: FormData): Promise<void> {
   await assertAdmin();
-  const result = await closeGroup(String(form.get("group_id")));
+  const id = String(form.get("group_id"));
+
+  // Finalising food and giving a number are two steps, and closing between
+  // them orders nothing: the seats cannot travel, so the group shuts with
+  // nobody in it and everybody has to come back and fill their details in.
+  // Better to say so than to do it.
+  const seats = await groupCarts(id);
+  if (seats.length > 0 && !seats.some(canTravel)) {
+    throw new Error(
+      "Nobody in that group has given a number and a block yet, so closing it " +
+        "would order nothing. Leave it to the clock, or ask them to finish."
+    );
+  }
+
+  const result = await closeGroup(id);
   if (!result.ok) throw new Error(result.error);
 
   revalidatePath("/admin", "layout");
