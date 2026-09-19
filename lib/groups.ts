@@ -132,6 +132,52 @@ async function evenSameDayShare(
   return people < 1 ? whole : Math.ceil(whole / people / 100) * 100;
 }
 
+/**
+ * What delivery would cost each of them if the group closed right now.
+ *
+ * Not a quote and never written anywhere: it moves every time somebody adds a
+ * pizza or another person joins, which is exactly why it is worth showing.
+ * The whole point of a shared delivery is that it gets cheaper as the car
+ * fills, and that was happening invisibly.
+ *
+ * Worked out the same way the close works it out, so the number people watch
+ * is the number they end up paying.
+ */
+export async function shareNow(
+  groupId: string
+): Promise<{ whole: number; each: number; people: number }> {
+  const group = await getSharedGroup(groupId);
+  const carts = await groupCarts(groupId);
+  const people = carts.length;
+  if (!group || people === 0) return { whole: 0, each: 0, people: 0 };
+
+  const carried = countCartItems(carts);
+  if (carried === 0) return { whole: 0, each: 0, people };
+
+  const { data: batch } = await db()
+    .from("batches")
+    .select("flash_fee, kind, deliver_at")
+    .eq("id", group.batch_id)
+    .maybeSingle();
+
+  if (batch?.kind === "same_day") {
+    const { bands, urgentExtra } = await sameDayPricing();
+    const urgent = batch.deliver_at
+      ? isUrgent(new Date(batch.deliver_at as string))
+      : false;
+    const whole = sameDayFee(carried, urgent, bands, urgentExtra);
+    return { whole, each: Math.ceil(whole / people / 100) * 100, people };
+  }
+
+  const bands = await activeBands();
+  const flash = (batch?.flash_fee as number | null) ?? null;
+  return {
+    whole: feeFor(carried, flash, bands),
+    each: evenShare(carried, people, flash, bands),
+    people,
+  };
+}
+
 export type CloseResult =
   | { ok: true; share: number; people: number; items: number; alreadyClosed: boolean }
   | { ok: false; error: string };

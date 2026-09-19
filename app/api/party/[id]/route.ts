@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { db } from "@/lib/supabase";
 import { groupOrders } from "@/lib/groups";
 import { cartValues, groupCarts, isReady } from "@/lib/group-carts";
+import { shareNow } from "@/lib/groups";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,7 @@ export async function GET(
         ? orders.map((one) => (one.for_name ?? one.customer_name).split(" ")[0])
         : seats.map((one) => one.name.split(" ")[0]),
       ready: closed ? orders.length : seats.filter(isReady).length,
+      eachNow: closed ? 0 : (await shareNow(data.id as string)).each,
       // What everybody has put in, so the cart page can show the whole car
       // rather than only the part of it this person is holding.
       //

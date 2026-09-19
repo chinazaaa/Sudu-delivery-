@@ -99,7 +99,9 @@ export default async function GroupPage({
                 // Printing "0 items" beside somebody's full cart reads as the
                 // page having lost their food.
                 `${group.members.length} ${group.members.length === 1 ? "person" : "people"} in so far`
-              : `${group.members.length} ${group.members.length === 1 ? "person" : "people"}, ${group.items} item${group.items === 1 ? "" : "s"} in`}
+              : // "in" read as finalised, and it is not: it is everything in
+                // the car, including food somebody is still choosing.
+                `${group.members.length} ${group.members.length === 1 ? "person" : "people"}, ${group.items} item${group.items === 1 ? "" : "s"} so far`}
         </h1>
         <p className="text-ink/75">
           {label && `${label}, `}arriving {group.batch.delivery_window_text}.
@@ -162,6 +164,7 @@ export default async function GroupPage({
           leaderOnServer={group.mine?.isLeader ?? false}
           shareUrl={shareUrl}
           leaderName={group.leaderName}
+          eachNow={group.eachNow}
         />
       )}
 

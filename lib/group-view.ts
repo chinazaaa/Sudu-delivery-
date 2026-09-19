@@ -1,5 +1,5 @@
 import { db } from "./supabase";
-import { getSharedGroup, groupOrders } from "./groups";
+import { getSharedGroup, groupOrders, shareNow } from "./groups";
 import { cartValues, groupCarts, isReady } from "./group-carts";
 import { getBatch } from "./batches";
 import type { Batch } from "./types";
@@ -49,6 +49,9 @@ export type GroupView = {
   } | null;
   /** Whether this car is one they picked a time for, rather than a run. */
   sameDay: boolean;
+  /** What delivery would cost each of them if it closed now. Moves as people
+   *  add food and as people join, which is the whole point of sharing one. */
+  eachNow: number;
 };
 
 /**
@@ -155,5 +158,6 @@ export async function groupView(
       };
     })(),
     sameDay: batch.kind === "same_day",
+    eachNow: group.closed_at ? 0 : (await shareNow(groupId)).each,
   };
 }

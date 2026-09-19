@@ -56,6 +56,7 @@ export default function GroupBoard({
   leaderOnServer,
   shareUrl,
   leaderName,
+  eachNow,
   hostels,
 }: {
   groupId: string;
@@ -65,6 +66,8 @@ export default function GroupBoard({
   leaderOnServer: boolean;
   shareUrl: string;
   leaderName: string;
+  /** What delivery would cost each of them if it closed now. */
+  eachNow: number;
   hostels: string[];
 }) {
   const router = useRouter();
@@ -455,6 +458,20 @@ export default function GroupBoard({
             share until the last person is done.
           </p>
         </div>
+
+        {/* Where it stands, so the thing that makes sharing worth it is
+            visible while it is happening rather than only at the end. */}
+        {eachNow > 0 && (
+          <div className="rounded-2xl bg-brand-tint px-4 py-3">
+            <p className="text-sm font-semibold text-brand-dark">
+              About {naira(eachNow)} each right now
+            </p>
+            <p className="mt-0.5 text-xs text-ink/70">
+              It moves as people add food and as more of you join. Nothing is fixed
+              until this closes.
+            </p>
+          </div>
+        )}
 
         <SendLink
           message={invite}

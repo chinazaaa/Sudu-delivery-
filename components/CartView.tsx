@@ -71,6 +71,7 @@ export default function CartView({
   const [note, setNote] = useState("");
   // Everybody else's food, so this page shows the whole car rather than only
   // the part of it this person is holding.
+  const [eachNow, setEachNow] = useState(0);
   const [others, setOthers] = useState<
     {
       isMine?: boolean;
@@ -116,7 +117,8 @@ export default function CartView({
     const look = () =>
       fetch(`/api/party/${group}`)
         .then((response) => response.json())
-        .then((data: { members?: typeof others }) => {
+        .then((data: { members?: typeof others; eachNow?: number }) => {
+          if (alive) setEachNow(data.eachNow ?? 0);
           // Everybody but the reader. Their own food is the section above,
           // where they can change it; listing it twice, once unchangeable,
           // reads as somebody else having ordered the same thing.
@@ -451,10 +453,18 @@ export default function CartView({
         ))}
 
       {group !== "" && others.length > 0 && (
-        <p className="px-1 text-xs text-muted">
-          Everybody pays for their own food. The delivery is one fee for the whole
-          car, split evenly when the group closes.
-        </p>
+        <div className="rounded-2xl bg-brand-tint px-4 py-3">
+          {eachNow > 0 && (
+            <p className="text-sm font-extrabold text-brand-dark">
+              Delivery right now: about {naira(eachNow)} each
+            </p>
+          )}
+          <p className="mt-0.5 text-xs text-ink/70">
+            Everybody pays for their own food. The delivery is one fee for the whole
+            car, split evenly when the group closes, so it moves as people add food
+            and as more of you join.
+          </p>
+        </div>
       )}
 
       <section className="card space-y-2">
