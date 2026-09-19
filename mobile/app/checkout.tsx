@@ -158,23 +158,59 @@ export default function Checkout() {
   // A picked time makes its own trip, so nothing is shared and there is no
   // earlier order on it to take off. A run is priced on everything travelling
   // for this number on it, less whatever the earlier order already paid.
-  const fee = picked
+  const ladder = picked
     ? sameDayFeeFor(items, picked.urgent, shop?.sameDay?.bands ?? [], shop?.sameDay?.urgentExtra ?? 0)
     : shop && run
       ? Math.max(0, feeFrom(items + adding.items, shop.bands, run.flashFee) - adding.feeCharged)
       : 0;
 
-  // A promotion prices delivery outright, and the shop works out whether one
-  // applies. The app cannot, so where the cart is all from a kitchen with an
-  // offer on it, the ladder figure here is not the figure anybody is charged
-  // and saying so beats printing it.
-  const mayBeOffered =
-    !picked &&
-    lines.length > 0 &&
-    lines.every((line) => {
-      const place = shop?.menu.find((one) => one.items.some((item) => item.id === line.itemId));
-      return place ? Boolean(shop?.offers?.[place.restaurant.id]?.badge) : false;
-    });
+  // What a promotion does to this cart, worked out by the shop because that
+  // is where the rules are. It prices delivery outright, so it wins over the
+  // ladder and over the same day figure alike.
+  const [priced, setPriced] = useState<{
+    offer: { fee: number; note: string } | null;
+    nearly: { fee: number; note: string; blocking: string[] } | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (lines.length === 0 || (!run && !picked)) {
+      setPriced(null);
+      return;
+    }
+    let alive = true;
+    void api
+      .offerOn({
+        batchId: run?.id ?? "",
+        deliverAt: picked?.at ?? null,
+        phone,
+        lines: lines.map((line) => {
+          const place = shop?.menu.find((one) =>
+            one.items.some((item) => item.id === line.itemId)
+          );
+          return {
+            itemId: line.itemId,
+            restaurantId: place?.restaurant.id ?? "",
+            name: line.name,
+            choices: line.choices,
+          };
+        }),
+      })
+      .then((answer) => {
+        if (alive) setPriced(answer);
+      })
+      .catch(() => {
+        if (alive) setPriced(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [lines, run?.id, picked?.at, phone, shop]);
+
+  const offered = priced?.offer ?? null;
+  const nearly = priced?.nearly ?? null;
+  // A promotion is the price, so it wins over the ladder and over the same
+  // day figure alike, exactly as the order itself settles it.
+  const fee = offered ? offered.fee : ladder;
 
   const place = async () => {
     setError("");
@@ -580,22 +616,25 @@ export default function Checkout() {
         <Row label="Food" value={naira(food)} />
         <Row
           label={
-            adding.items > 0
-              ? `Delivery top-up (${items + adding.items} items)`
-              : `Delivery (${items} item${items === 1 ? "" : "s"})`
+            offered
+              ? offered.note || "Delivery, on offer"
+              : adding.items > 0
+                ? `Delivery top-up (${items + adding.items} items)`
+                : `Delivery (${items} item${items === 1 ? "" : "s"})`
           }
-          value={mayBeOffered ? "worked out on the order" : naira(fee)}
+          value={naira(fee)}
         />
-        {mayBeOffered && (
-          <Text style={{ color: T.muted, fontSize: 12 }}>
-            There is an offer on this kitchen, so delivery is priced when the
-            order is placed. You will see it on your order before you pay.
-          </Text>
-        )}
         {applied && <Row label={`Code ${applied.code}`} value={`−${naira(applied.discount)}`} />}
         <View style={{ height: 1, backgroundColor: T.line, marginVertical: 4 }} />
-        {!mayBeOffered && (
-          <Row label="Total" value={naira(Math.max(0, food + fee - (applied?.discount ?? 0)))} strong />
+        <Row label="Total" value={naira(Math.max(0, food + fee - (applied?.discount ?? 0)))} strong />
+
+        {nearly && (
+          <Text style={{ color: T.brandDark, fontSize: 13, fontWeight: "700" }}>
+            {nearly.fee === 0
+              ? "Delivery would be free"
+              : `Delivery would be ${naira(nearly.fee)}`}{" "}
+            without the {nearly.blocking.join(", ")}.
+          </Text>
         )}
 
         {/* A code is something somebody was given in a group chat, so it is
@@ -698,9 +737,7 @@ export default function Checkout() {
         <Text style={{ color: T.paper, fontWeight: "800", fontSize: 16 }}>
           {busy
             ? "Placing…"
-            : mayBeOffered
-              ? "Place order"
-              : `Place order · ${naira(Math.max(0, food + fee - (applied?.discount ?? 0)))}`}
+            : `Place order · ${naira(Math.max(0, food + fee - (applied?.discount ?? 0)))}`}
         </Text>
       </Pressable>
     </ScrollView>

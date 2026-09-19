@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Linking } from "react-native";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -40,12 +40,48 @@ export default function Cart() {
    *  the restaurant, so renaming one in admin does not break the link. */
   const placeOf = (line: Line) =>
     shop?.menu.find((place) => place.items.some((one) => one.id === line.itemId)) ?? null;
-  // Every line from a kitchen with an offer on it means the ladder is not
-  // what prices this, and the shop settles it when the order is placed.
-  const offered =
-    lines.length > 0 &&
-    lines.every((line) => Boolean(shop?.offers?.[placeOf(line)?.restaurant.id ?? ""]?.badge));
-  const fee = offered ? null : shop && run ? feeFrom(items, shop.bands, run.flashFee) : null;
+  // What an offer does to this cart, asked of the shop because that is where
+  // the rules live. Null until it answers, and null for a cart no offer
+  // touches, and then the ladder is the right figure.
+  const [priced, setPriced] = useState<{
+    offer: { fee: number; note: string } | null;
+    nearly: { fee: number; note: string; blocking: string[] } | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (lines.length === 0 || !run) {
+      setPriced(null);
+      return;
+    }
+    let alive = true;
+    void api
+      .offerOn({
+        batchId: run.id,
+        lines: lines.map((line) => ({
+          itemId: line.itemId,
+          restaurantId: placeOf(line)?.restaurant.id ?? "",
+          name: line.name,
+          choices: line.choices,
+        })),
+      })
+      .then((answer) => {
+        if (alive) setPriced(answer);
+      })
+      .catch(() => {
+        // The order prices the offer either way, so there is nothing to say.
+        if (alive) setPriced(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [lines, run?.id, shop]);
+
+  const offered = priced?.offer ?? null;
+  const fee = offered
+    ? offered.fee
+    : shop && run
+      ? feeFrom(items, shop.bands, run.flashFee)
+      : null;
 
   if (lines.length === 0) {
     return (
@@ -72,6 +108,11 @@ export default function Cart() {
   // the two figures are real.
   const alone = shop && items > 0 && !offered ? feeFrom(items, shop.bands, null) : 0;
 
+  // An offer this cart nearly has. From the inside, a qualifying dish with
+  // something else beside it looks like the offer simply not working, so it
+  // says which is which and leaves the choice to them.
+  const nearly = priced?.nearly ?? null;
+
 
   return (
     <View style={{ flex: 1 }}>
@@ -80,6 +121,32 @@ export default function Cart() {
             address, and everybody in a car has to see the same page. Rather
             than pretend the app can do it, this hands over to the thing that
             can, with the food already in their cart waiting for them. */}
+        {nearly && (
+          <View
+            style={{
+              backgroundColor: T.tint,
+              borderRadius: T.radius,
+              borderWidth: 1,
+              borderColor: T.brand + "40",
+              padding: 14,
+              gap: 4,
+            }}
+          >
+            <Text style={{ fontWeight: "800", color: T.brandDark }}>
+              {nearly.fee === 0
+                ? "Delivery would be free"
+                : `Delivery would be ${naira(nearly.fee)}`}
+            </Text>
+            <Text style={{ color: T.ink }}>
+              {nearly.note || "An offer"} covers most of this cart. It is the{" "}
+              {nearly.blocking.join(", ")} keeping it off, so taking{" "}
+              {nearly.blocking.length === 1 ? "that" : "those"} out or ordering{" "}
+              {nearly.blocking.length === 1 ? "it" : "them"} another time puts this
+              on the offer.
+            </Text>
+          </View>
+        )}
+
         {alone > 0 && (
           <Pressable
             onPress={() => void Linking.openURL(`${SITE}/group`)}
@@ -274,8 +341,12 @@ export default function Cart() {
         <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 6 }}>
           <Row label="Food" value={naira(food)} />
           <Row
-            label={`Delivery (${items} item${items === 1 ? "" : "s"})`}
-            value={offered ? "an offer prices this" : fee === null ? "at checkout" : naira(fee)}
+            label={
+              offered
+                ? offered.note || "Delivery, on offer"
+                : `Delivery (${items} item${items === 1 ? "" : "s"})`
+            }
+            value={fee === null ? "at checkout" : naira(fee)}
           />
           <View style={{ height: 1, backgroundColor: T.line, marginVertical: 4 }} />
           <Row label="Total" value={naira(food + (fee ?? 0))} strong />

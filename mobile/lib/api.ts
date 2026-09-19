@@ -176,6 +176,22 @@ export const api = {
       pin,
     }),
   order: (id: string) => get<OrderView>(`/order/${id}`),
+  /**
+   * What a promotion does to this cart: the fee it sets, or the one the cart
+   * nearly has and what is in the way. Asked of the shop rather than worked
+   * out here, because the rules change in admin and the app ships when it
+   * ships.
+   */
+  offerOn: (body: {
+    batchId: string;
+    deliverAt?: string | null;
+    phone?: string;
+    lines: { itemId: string; restaurantId: string; name: string; choices: string[] }[];
+  }) =>
+    post<{
+      offer: { fee: number; note: string } | null;
+      nearly: { fee: number; note: string; blocking: string[] } | null;
+    }>("/offer", body),
   /** How a delivered order went. The id is the credential, as it is for
    *  reading the order: the link is what somebody was given. */
   rate: (orderId: string, rating: number, feedback: string) =>

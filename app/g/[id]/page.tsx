@@ -221,7 +221,6 @@ export default async function GroupPage({
           groupId={group.id}
           members={group.members}
           mine={group.mine}
-          hostels={await hostelNames()}
           closesAt={group.closesAt!}
           leaderOnServer={group.mine?.isLeader ?? false}
           shareUrl={shareUrl}

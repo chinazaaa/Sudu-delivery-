@@ -141,7 +141,8 @@ export default async function CustomersPage({
                   <div className="min-w-0">
                     <h3 className="truncate font-bold">{row.name}</h3>
                     <p className="text-sm text-muted">
-                      {formatPhone(row.phone)} · {row.hostel || "No block saved"}
+                      {formatPhone(row.phone)} · {row.hostel || "No block saved"} ·{" "}
+                      {row.pays === "card" ? "Pays by card" : "Pays by transfer"}
                     </p>
                   </div>
                   <div className="text-right">

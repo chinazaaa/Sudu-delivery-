@@ -1,10 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { closeSharedGroup } from "@/app/actions";
 import { enterGroup, readGroup } from "./GroupLink";
-import PayChoice from "./PayChoice";
 import Sheet from "./Sheet";
 import SendLink from "./SendLink";
 import { countItems, useCart } from "@/lib/cart";
@@ -63,7 +63,6 @@ export default function GroupBoard({
   leaderName,
   eachNow,
   offer,
-  hostels,
 }: {
   groupId: string;
   members: Member[];
@@ -76,7 +75,6 @@ export default function GroupBoard({
   eachNow: number;
   /** The promotion pricing this car, if one is. */
   offer?: string;
-  hostels: string[];
 }) {
   const router = useRouter();
   // What is sitting in this browser's cart, which is not the same thing as
@@ -89,9 +87,6 @@ export default function GroupBoard({
   const [busy, setBusy] = useState(false);
   // Asked here rather than assumed, because a group order never went past a
   // checkout screen and everybody was being written down as a transfer.
-  const [method, setMethod] = useState<"transfer" | "card">(
-    mine?.paymentMethod ?? "transfer"
-  );
   // Closing cannot be undone and leaves behind anybody still choosing, so it
   // is asked rather than done, from wherever it is pressed.
   const [confirming, setConfirming] = useState(false);
@@ -138,12 +133,6 @@ export default function GroupBoard({
   const [joining, setJoining] = useState(false);
   const [joinProblem, setJoinProblem] = useState("");
 
-  // Their details, filled in while they wait.
-  const [phone, setPhone] = useState(mine?.phone ?? "");
-  const [hostel, setHostel] = useState(mine?.hostel ?? "");
-  const [note, setNote] = useState(mine?.note ?? "");
-  const [saving, setSaving] = useState(false);
-  const [problem, setProblem] = useState("");
 
   // Whose group it is comes from the server, which can prove it. Every
   // member's browser holds the group id, so asking the browser meant every
@@ -228,28 +217,6 @@ export default function GroupBoard({
       setJoinProblem("Could not reach the shop. Check your connection.");
     } finally {
       setJoining(false);
-    }
-  };
-
-  const saveDetails = async () => {
-    setProblem("");
-    setSaving(true);
-    try {
-      const response = await fetch(`/api/party/${groupId}/details`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, hostel, note, paymentMethod: method }),
-      });
-      const data = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        setProblem(data.error ?? "Could not save that.");
-        return;
-      }
-      router.refresh();
-    } catch {
-      setProblem("Could not save that.");
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -338,72 +305,20 @@ export default function GroupBoard({
         </section>
       )}
 
-      {/* Food settled, nowhere to send it. The dead time is for this. */}
+      {/* Food in, nothing to deliver it to. Finalising asks for all of this
+          in one sheet, so asking again here is the same questions twice: this
+          points at the one place that can answer them and moves on. */}
       {mine?.stage === "details" && (
-        <section className="card space-y-3 border-2 border-brand/30 bg-brand-tint">
-          <div>
-            <h2 className="font-bold text-brand-dark">Where does your food go?</h2>
-            <p className="text-sm text-ink/75">
-              Fill this in while the others finish. Your number is how you get called
-              when it lands, and it is what opens your order afterwards.
-            </p>
-          </div>
-
-          <input
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            placeholder="Your phone number"
-            aria-label="Your phone number"
-            inputMode="tel"
-            className="field"
-          />
-
-          {hostels.length > 0 ? (
-            <select
-              value={hostel}
-              onChange={(event) => setHostel(event.target.value)}
-              aria-label="Your block"
-              className="field"
-            >
-              <option value="">Which block?</option>
-              {hostels.map((one) => (
-                <option key={one} value={one}>
-                  {one}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              value={hostel}
-              onChange={(event) => setHostel(event.target.value)}
-              placeholder="Your hostel or block"
-              aria-label="Your hostel or block"
-              className="field"
-            />
-          )}
-
-          <input
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder="Anything we should know? (optional)"
-            aria-label="Anything we should know"
-            className="field"
-          />
-
-          <PayChoice value={method} onChange={setMethod} />
-
-          {problem !== "" && (
-            <p className="text-sm font-semibold text-brand-dark">{problem}</p>
-          )}
-
-          <button
-            type="button"
-            onClick={saveDetails}
-            disabled={saving}
-            className="btn-primary w-full"
-          >
-            {saving ? "Saving…" : "That is me, I am ready"}
-          </button>
+        <section className="card space-y-2 border-2 border-brand/30 bg-brand-tint">
+          <h2 className="font-bold text-brand-dark">One more step</h2>
+          <p className="text-sm text-ink/75">
+            Your food is in the car. Finalise it from your cart and it asks for
+            your number and your block at the same time, so the others are not
+            waiting on you.
+          </p>
+          <Link href="/cart" className="btn-primary block w-full text-center">
+            Finalise my food
+          </Link>
         </section>
       )}
 

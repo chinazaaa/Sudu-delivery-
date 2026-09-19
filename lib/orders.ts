@@ -1312,7 +1312,7 @@ async function checkCapacity(batch: Batch): Promise<string | null> {
 }
 
 /** First-order detection is simply "does this phone exist in customers". */
-async function isReturningCustomer(phone: string): Promise<boolean> {
+export async function isReturningCustomer(phone: string): Promise<boolean> {
   const { data } = await db()
     .from("customers")
     .select("phone")
