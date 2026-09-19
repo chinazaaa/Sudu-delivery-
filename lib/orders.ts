@@ -25,6 +25,7 @@ import { naira, orderRef } from "./money";
 import { SLOT_LABEL } from "./config";
 import { runDateLabel, weekdayLabel } from "./time";
 import { createSameDayBatch, getBatch, isOrderable, orderCounts } from "./batches";
+import { stageIndex } from "./stages";
 import { deliverySlots, type Slot } from "./same-day";
 import { normalisePhone } from "./phone";
 import { newPin } from "./customer-auth";
@@ -177,13 +178,21 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   if (!sameDay && !party && !isOrderable(batch)) {
     return { ok: false, error: "That batch has closed. Pick the next one." };
   }
-  // The close can run a little past a cut off, and should: these people were
-  // in the car before it. A run that has actually moved on is another matter,
-  // because the shopping has been done and their food is not in it.
-  if (input.closingGroup && batch.status !== "open") {
+  // The close can run past a cut off, and has to: a group's clock is allowed
+  // to end on the cut off itself, and the run is marked closed the moment it
+  // passes. Closed is not gone. What matters is whether the food can still be
+  // bought, so this rides until the bags are in the car.
+  if (
+    input.closingGroup &&
+    (batch.status === "delivered" ||
+      batch.status === "cancelled" ||
+      stageIndex(batch.stage) >= stageIndex("on_the_road"))
+  ) {
     return {
       ok: false,
-      error: "That run has already gone out, so this food could not be ordered onto it.",
+      error:
+        "That run has already left, so this food could not be ordered onto it. " +
+        "Put it on the next one.",
     };
   }
 
