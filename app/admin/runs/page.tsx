@@ -271,18 +271,33 @@ export default async function RunsPage({
                 className="card flex items-center justify-between gap-3 transition hover:border-brand/40 hover:shadow-lift"
               >
                 <div className="min-w-0">
+                  {/* A same day car borrows a run's date and slot, so titled
+                      like one it was indistinguishable from a run: "Friday ·
+                      Afternoon" for something somebody asked to arrive at two
+                      o'clock. It says what it is. */}
                   <p className="font-bold">
-                    {runDateLabel(batch.run_date)} · {SLOT_LABEL[batch.slot]}
+                    {batch.kind === "same_day"
+                      ? batch.delivery_window_text || "Same day car"
+                      : `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`}
                   </p>
                   <p className="text-sm text-muted">
-                    Closes {clockLabel(batch.cut_off_at)} · {batch.delivery_window_text}
+                    {batch.kind === "same_day"
+                      ? `One car, asked for on ${runDateLabel(batch.run_date)}`
+                      : `Closes ${clockLabel(batch.cut_off_at)} · ${batch.delivery_window_text}`}
                   </p>
-                  <span
-                    className={`mt-1.5 inline-block rounded-full px-2.5 py-1 text-xs font-bold ${
-                      open ? "bg-mint/10 text-mint" : "bg-black/5 text-muted"
-                    }`}
-                  >
-                    {batch.status}
+                  <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    {batch.kind === "same_day" && (
+                      <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-bold text-brand-dark">
+                        Same day
+                      </span>
+                    )}
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                        open ? "bg-mint/10 text-mint" : "bg-black/5 text-muted"
+                      }`}
+                    >
+                      {batch.status}
+                    </span>
                   </span>
                 </div>
                 <div className="shrink-0 text-right">
