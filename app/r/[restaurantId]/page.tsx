@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import RestaurantMenu from "@/components/RestaurantMenu";
 import Thumb from "@/components/Thumb";
 import { menuViewFor } from "@/lib/menu";
+import { offersByRestaurant } from "@/lib/coupons";
+import { offerLine } from "@/lib/offers";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,11 @@ export default async function RestaurantPage({
   // longer has, and fetching them was the slowest thing it did.
   const place = await menuViewFor(restaurantId);
   if (!place) notFound();
+
+  // An offer belongs on the page of the food it is for, where somebody is
+  // already deciding. The front page only carries the badge that brings them
+  // here.
+  const offer = (await offersByRestaurant()).get(place.restaurant.id) ?? null;
 
   return (
     <div className="space-y-5">
@@ -55,6 +62,24 @@ export default async function RestaurantPage({
           </div>
         </div>
       </div>
+
+      {offer && (
+        <div className="rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-3">
+          <p className="font-extrabold text-brand-dark">
+            {offer.note.trim() || `${place.restaurant.name} delivery offer`}
+          </p>
+          <p className="mt-0.5 text-sm text-ink/80">
+            {offerLine(offer)} It comes off by itself at checkout, with no code
+            to type.
+          </p>
+          {/* The one condition, said before they build a cart rather than
+              after: a second counter is a second stop, and the offer is for
+              this one. */}
+          <p className="mt-1 text-xs text-ink/70">
+            Only while everything in your cart is from {place.restaurant.name}.
+          </p>
+        </div>
+      )}
 
       {/* Nothing about when it arrives here. They came to this page to read a
           menu, and the answer to "when" belongs at checkout where it is

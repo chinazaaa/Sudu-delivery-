@@ -12,6 +12,8 @@ import {
 } from "@/lib/settings";
 import { toBatchView } from "@/lib/view";
 import { deliverySlots } from "@/lib/same-day";
+import { offersByRestaurant } from "@/lib/coupons";
+import { offerBadge } from "@/lib/offers";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +26,13 @@ export default async function HomePage() {
     popularItemIds(),
     activeBands(),
   ]);
+  // An offer says itself on the card of the restaurant it belongs to. The
+  // home page has enough on it without a strip for every deal.
+  const offers = await offersByRestaurant();
+  const promos = Object.fromEntries(
+    [...offers.entries()].map(([id, offer]) => [id, offerBadge(offer)])
+  );
+
   const slots = settings.same_day_on === "on" ? deliverySlots(new Date(), await deliveryHours()) : [];
 
   const lines = (settings.auto_lines || AUTO_LINES)
@@ -43,6 +52,7 @@ export default async function HomePage() {
       // The soonest time we can actually hit, from the shop's clock rather
       // than the phone's, and only when same day is switched on today.
       soonest={slots[0] ?? null}
+      promos={promos}
     />
   );
 }

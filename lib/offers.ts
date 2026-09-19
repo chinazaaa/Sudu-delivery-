@@ -1,3 +1,5 @@
+import { naira } from "./money";
+
 /**
  * Promotions, judged against a cart.
  *
@@ -96,4 +98,24 @@ export function inWindowHours(hours: number[], deliverAt: string | null): boolea
   // Lagos is UTC+1 all year, so the hour there is the hour here plus one.
   const hour = (new Date(deliverAt).getUTCHours() + 1) % 24;
   return hours.some((from) => hour >= from && hour < from + 3);
+}
+
+/**
+ * The offer in a few words, for a badge on a card.
+ *
+ * It says the price rather than teasing one. "Promo inside" makes somebody
+ * tap to find out whether it is worth anything; the number is the reason to
+ * tap, so it goes on the outside.
+ */
+export function offerBadge(offer: LiveOffer): string {
+  return `${naira(offer.fee)} delivery`;
+}
+
+/** The same offer said properly, for the banner on a restaurant's page. */
+export function offerLine(offer: LiveOffer): string {
+  const taper =
+    offer.includedItems !== null && offer.extraPerItem > 0
+      ? ` for up to ${offer.includedItems} item${offer.includedItems === 1 ? "" : "s"}, then ${naira(offer.extraPerItem)} each`
+      : ", however much you order";
+  return `Delivery is ${naira(offer.fee)}${taper}.`;
 }

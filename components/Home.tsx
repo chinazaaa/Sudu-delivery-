@@ -27,6 +27,7 @@ export default function Home({
   autoLines,
   bands,
   soonest,
+  promos,
 }: {
   menu: MenuView[];
   nextRun: BatchView | null;
@@ -43,6 +44,10 @@ export default function Home({
   autoLines: string[];
   /** What delivery costs, so the page can say where it starts. */
   bands: Band[];
+  /** A promotion on a restaurant, in a few words, keyed by its id. An offer
+   *  announces itself on the card of the food it is for, because the front
+   *  page has quite enough on it already. */
+  promos: Record<string, string>;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<{ item: ItemView; place: MenuView } | null>(null);
@@ -216,10 +221,19 @@ export default function Home({
                       <span className="block truncate text-lg font-extrabold">
                         {place.restaurant.name}
                       </span>
-                      <span className="block text-sm text-muted">
-                        {place.items.length} item{place.items.length === 1 ? "" : "s"} on
-                        the menu
-                      </span>
+                      {/* The price rather than a tease. "Promo inside" makes
+                          somebody tap to find out whether it is worth
+                          anything, and the number is the reason to tap. */}
+                      {promos[place.restaurant.id] ? (
+                        <span className="mt-0.5 inline-flex items-center rounded-full bg-brand px-2.5 py-0.5 text-xs font-extrabold text-white">
+                          {promos[place.restaurant.id]}
+                        </span>
+                      ) : (
+                        <span className="block text-sm text-muted">
+                          {place.items.length} item{place.items.length === 1 ? "" : "s"} on
+                          the menu
+                        </span>
+                      )}
                     </span>
                   </span>
                 </Link>

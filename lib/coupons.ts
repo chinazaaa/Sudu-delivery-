@@ -372,3 +372,21 @@ export async function publicOffer(code: string): Promise<PublicOffer | null> {
     return null;
   }
 }
+
+/**
+ * The promotion on each restaurant today, keyed by restaurant.
+ *
+ * The home page is already a busy place, so an offer announces itself where
+ * the food is: a badge on that restaurant's card and a line at the top of its
+ * own page. An offer tied to no restaurant is not here, because there is no
+ * one page it belongs on.
+ */
+export async function offersByRestaurant(): Promise<Map<string, LiveOffer>> {
+  const out = new Map<string, LiveOffer>();
+  for (const offer of await liveOffers()) {
+    for (const place of offer.places) {
+      if (!out.has(place)) out.set(place, offer);
+    }
+  }
+  return out;
+}
