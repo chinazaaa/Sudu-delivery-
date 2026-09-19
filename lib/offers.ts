@@ -124,6 +124,27 @@ export function offerFee(offer: LiveOffer, items: number): number {
 
 
 /**
+ * The offer as it is actually being charged, for the car that is under it.
+ *
+ * The note on its own says the headline, and when the taper has bitten the
+ * headline is not the number on the screen: "Domino's 2k" next to ₦1,500 each
+ * with four items in the bag looks like the sum is wrong. Naming the extra
+ * makes the figure add up in front of them.
+ */
+export function offerNote(offer: LiveOffer, items: number): string {
+  const note = offer.note.trim();
+  if (offer.includedItems === null || offer.extraPerItem <= 0) return note;
+
+  const over = Math.max(0, items - offer.includedItems);
+  if (over === 0) return note;
+
+  const extra = over * offer.extraPerItem;
+  return `${note} plus ${naira(extra)} for the ${over} item${
+    over === 1 ? "" : "s"
+  } over ${offer.includedItems}`;
+}
+
+/**
  * The offer in a few words, for a badge on a card.
  *
  * It says the price rather than teasing one. "Promo inside" makes somebody

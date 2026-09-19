@@ -20,6 +20,7 @@ import {
   nearMiss,
   offerFee,
   offerShare,
+  offerNote,
   pickOffer,
 } from "../lib/offers";
 import { sheetAsText } from "../lib/sheet-text";
@@ -1042,6 +1043,33 @@ test("a promotion splits in a group, but never below the floor", () => {
   assert.equal(offerShare(offer, 20, 20), 1000);
   // No floor is a plain split.
   assert.equal(offerShare({ ...offer, minEach: 0 }, 10, 5), 400);
+});
+
+test("an offer says the extra it is charging, so the share adds up", () => {
+  const offer = {
+    code: "DOM2K",
+    note: "Domino's 2k",
+    fee: 2000,
+    includedItems: 3,
+    extraPerItem: 1000,
+    places: ["dominos"],
+    items: [],
+    choice: "",
+    sameDay: false,
+    fromHour: null,
+    toHour: null,
+    runs: [],
+    firstOrderOnly: false,
+    minEach: 1000,
+  };
+
+  // Inside what it covers, the headline is the whole story.
+  assert.equal(offerNote(offer, 3), "Domino's 2k");
+  // Past it, the extra is named rather than left to be guessed at.
+  assert.equal(offerNote(offer, 4), "Domino's 2k plus ₦1,000 for the 1 item over 3");
+  assert.equal(offerNote(offer, 6), "Domino's 2k plus ₦3,000 for the 3 items over 3");
+  // A flat offer has no extra to name.
+  assert.equal(offerNote({ ...offer, includedItems: null }, 9), "Domino's 2k");
 });
 
 test("free delivery is earned by the dishes that carry it, and nothing else", () => {

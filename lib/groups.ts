@@ -10,7 +10,7 @@ import {
   placesInCarts,
 } from "./group-carts";
 import { activePromotion } from "./coupons";
-import { offerShare } from "./offers";
+import { offerNote, offerShare } from "./offers";
 import { lookupColumn } from "./links";
 import { announceGroup } from "./announce-group";
 import type { Batch, Order, OrderGroup } from "./types";
@@ -312,7 +312,14 @@ export async function shareNow(
     // Split like any other car, with a floor: the counter and the drive cost
     // the same whether two of them are waiting or twenty.
     const each = offerShare(promotion.offer, carried, people);
-    return { whole: each * people, each, people, offer: promotion.offer.note.trim() };
+    return {
+      whole: each * people,
+      each,
+      people,
+      // Named as it is being charged, taper and all, so the share on the
+      // board adds up from what it says above it.
+      offer: offerNote(promotion.offer, carried),
+    };
   }
 
   if (batch?.kind === "same_day") {
