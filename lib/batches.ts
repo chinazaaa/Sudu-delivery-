@@ -59,6 +59,7 @@ export async function openRunsBetween(from: string, to: string): Promise<number>
         kind: "run",
         deliver_at: null,
         fuel_cost: 0,
+        food_spend: 0,
         driver_cost: 0,
         other_cost: 0,
         cost_note: "",

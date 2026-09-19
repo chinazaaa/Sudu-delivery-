@@ -168,6 +168,7 @@ export async function setRunCosts(form: FormData): Promise<void> {
       fuel_cost: money("fuel_cost"),
       driver_cost: money("driver_cost"),
       other_cost: money("other_cost"),
+      food_spend: money("food_spend"),
       cost_note: String(form.get("cost_note") ?? "").trim(),
     })
     .eq("id", String(form.get("batch_id")));

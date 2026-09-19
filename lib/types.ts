@@ -73,6 +73,9 @@ export type Batch = {
   deliver_at: string | null;
   /** What the run cost to make, typed in once it is done. */
   fuel_cost: number;
+  /** What the food actually cost at the counters, when that is not the menu
+   *  price. Zero means the menu prices stand. */
+  food_spend: number;
   driver_cost: number;
   other_cost: number;
   cost_note: string;

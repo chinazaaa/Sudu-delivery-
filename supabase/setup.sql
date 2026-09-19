@@ -866,5 +866,17 @@ where restaurants.id = base.id
 create unique index if not exists restaurants_slug_idx
   on restaurants (slug) where slug is not null and slug <> '';
 
+
+-- What the food actually cost at the counter.
+--
+-- Profit was worked out as what customers paid for food minus what customers
+-- paid for food, which assumes every plate cost exactly the menu price. It
+-- often does not: turn up in person often enough and a counter gives it to
+-- you for less, and that discount is the shop's margin, sitting invisible.
+--
+-- Zero means nothing was typed in and the menu prices stand, so nothing
+-- changes for any run where this is left alone.
+alter table batches add column if not exists food_spend int not null default 0;
+
 -- Supabase caches the schema; this makes the new tables visible immediately.
 notify pgrst, 'reload schema';

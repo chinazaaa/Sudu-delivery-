@@ -52,6 +52,8 @@ export type BatchSheet = {
     minimum: number;
     gross: number;
     foodCost: number;
+    /** What the menu prices came to, for comparison with what was paid. */
+    menuCost: number;
     commission: number;
     net: number;
     /** Fuel, driver and anything else bought on the night. */
@@ -99,6 +101,13 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   const commission = await commissionFor(paid);
   const costs = batch.fuel_cost + batch.driver_cost + batch.other_cost;
 
+  // What the food actually cost. The menu price is only a guess at it: buy
+  // enough from one counter and they give it to you for less, and that
+  // difference is margin the sheet was throwing away.
+  const menuCost = sum(paid, (o) => o.subtotal_food);
+  const foodCost = batch.food_spend > 0 ? batch.food_spend : menuCost;
+  const margin = sum(paid, (o) => o.total) - foodCost;
+
   return {
     batch,
     counter: groupForCounter(lines.filter((l) => paidIds.has(l.order_id))),
@@ -112,11 +121,13 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
       unpaidCount: unpaid.length,
       minimum: BATCH_MINIMUM,
       gross: sum(paid, (o) => o.total),
-      foodCost: sum(paid, (o) => o.subtotal_food),
+      foodCost,
+      /** What the menu said it would cost, so the saving can be shown. */
+      menuCost,
       commission,
-      net: sum(paid, (o) => o.total - o.subtotal_food) - commission,
+      net: margin - commission,
       costs,
-      profit: sum(paid, (o) => o.total - o.subtotal_food) - commission - costs,
+      profit: margin - commission - costs,
     },
   };
 }

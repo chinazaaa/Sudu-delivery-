@@ -499,6 +499,12 @@ export default async function BatchPage({
                       }
                       value={`−${naira(summary.commission)}`}
                     />
+                    {batch.food_spend > 0 && batch.food_spend < summary.menuCost && (
+                      <Row
+                        label="Bought under the menu price"
+                        value={`+${naira(summary.menuCost - batch.food_spend)}`}
+                      />
+                    )}
                     {batch.fuel_cost > 0 && (
                       <Row label="Fuel" value={`−${naira(batch.fuel_cost)}`} />
                     )}
@@ -558,6 +564,23 @@ export default async function BatchPage({
                           placeholder="0"
                           className="field"
                         />
+                      </div>
+                      <div>
+                        <label className="label" htmlFor="food_spend">
+                          Food actually paid
+                        </label>
+                        <input
+                          id="food_spend"
+                          name="food_spend"
+                          inputMode="numeric"
+                          defaultValue={batch.food_spend || ""}
+                          placeholder={String(summary.menuCost)}
+                          className="field"
+                        />
+                        <p className="mt-1 text-xs text-muted">
+                          Only if the counters charged you less than the menu.
+                          Blank means the menu prices stand.
+                        </p>
                       </div>
                       <div>
                         <label className="label" htmlFor="other_cost">Anything else</label>
