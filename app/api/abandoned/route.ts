@@ -66,7 +66,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   const emailed = await emailAdmins(
     title,
     renderText(title, blocks),
-    renderEmail(title, blocks)
+    renderEmail(title, blocks, settings.tagline || undefined)
   );
 
   // Marked whether or not the email went out, so a missing key does not leave

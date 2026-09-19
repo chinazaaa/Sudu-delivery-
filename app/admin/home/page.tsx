@@ -33,7 +33,7 @@ export default async function HomeAdmin() {
         </div>
         <input
           name="tagline"
-          defaultValue={settings.tagline || "Sangotedo to PAU"}
+          defaultValue={settings.tagline || "Your Fav Foods to PAU"}
           className="field"
         />
         <SaveButton>Save</SaveButton>

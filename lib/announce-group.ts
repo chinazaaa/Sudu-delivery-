@@ -3,6 +3,7 @@ import { emailAdmins } from "./email";
 import { renderEmail, renderText, type Block } from "./email-html";
 import { siteUrl } from "./admin-templates";
 import { naira } from "./money";
+import { safeSettings } from "./settings";
 
 /**
  * One email for a shared delivery, sent when it closes.
@@ -82,7 +83,8 @@ export async function announceGroup(groupId: string): Promise<void> {
       },
     ];
 
-    await emailAdmins(title, renderText(title, blocks), renderEmail(title, blocks));
+    const tagline = (await safeSettings()).tagline || undefined;
+    await emailAdmins(title, renderText(title, blocks), renderEmail(title, blocks, tagline));
   } catch {
     /* A group that closed correctly must not be undone by a failed email. */
   }

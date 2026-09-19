@@ -90,7 +90,14 @@ function block(item: Block): string {
  * One message. The title is the same words as the subject, so the mail reads
  * the same whether it is opened or only glanced at in a list.
  */
-export function renderEmail(title: string, blocks: Block[]): string {
+export function renderEmail(
+  title: string,
+  blocks: Block[],
+  /** The words beside the name, the same ones the site header carries. It was
+   *  written into the template, so changing it in admin changed the site and
+   *  left the mail saying something else. */
+  tagline = "Your Fav Foods to PAU"
+): string {
   const preview = blocks.find((item) => item.kind === "text");
 
   return `<!doctype html>
@@ -106,7 +113,7 @@ export function renderEmail(title: string, blocks: Block[]): string {
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560" style="width:100%;max-width:560px;background:#ffffff;border-radius:18px;overflow:hidden;border:1px solid ${LINE}">
   <tr><td style="padding:18px 24px;background:${INK}">
     <span style="font-size:18px;font-weight:800;color:#ffffff;letter-spacing:-0.02em">Sudu</span>
-    <span style="font-size:13px;color:rgba(255,255,255,0.65)">&nbsp;&nbsp;Sangotedo to PAU</span>
+    <span style="font-size:13px;color:rgba(255,255,255,0.65)">&nbsp;&nbsp;${escape(tagline)}</span>
   </td></tr>
   <tr><td style="padding:24px">
     <h1 style="margin:0 0 14px;font-size:20px;line-height:1.3;font-weight:800;color:${INK};letter-spacing:-0.02em">${escape(

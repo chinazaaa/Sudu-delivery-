@@ -990,7 +990,8 @@ async function announceOrder(args: {
       ...(args.note ? [{ kind: "note" as const, text: `They asked: ${args.note}` }] : []),
     ];
 
-    await emailAdmins(title, renderText(title, blocks), renderEmail(title, blocks));
+    const tagline = (await safeSettings()).tagline || undefined;
+    await emailAdmins(title, renderText(title, blocks), renderEmail(title, blocks, tagline));
   } catch {
     /* Never let a notification break an order that is already saved. */
   }

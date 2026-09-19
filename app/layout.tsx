@@ -75,7 +75,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Each line of the footer is there because something is set. Empty
             it in admin and it goes. */}
         <Ribbon text={settings.ribbon_text} offer={offer} />
-        <SiteHeader tagline={settings.tagline || "Sangotedo to PAU"} />
+        <SiteHeader tagline={settings.tagline || "Your Fav Foods to PAU"} />
         {/* Directly under the header, so being in a group is the first thing
             read on every page rather than something found at checkout. */}
         <GroupBar />
