@@ -28,8 +28,8 @@ import {
   type OrderLine,
 } from "@/lib/orders";
 import { formatPhone } from "@/lib/phone";
-import { STAGE_LABEL } from "@/lib/stages";
-import { clockLabel, runDateLabel, weekdayLabel } from "@/lib/time";
+import { STAGE_LABEL, stageIndex } from "@/lib/stages";
+import { clockLabel, lagosToday, runDateLabel, weekdayLabel } from "@/lib/time";
 import {
   activeBands,
   externalUrl,
@@ -91,13 +91,23 @@ export default async function OrderPage({
   const batchLabel = `${weekdayLabel(order.batch.run_date)} ${SLOT_LABEL[order.batch.slot]}`;
   // Two runs can be open at once, so a weekday on its own does not say which.
   const runLabel = `${runDateLabel(order.batch.run_date)} · ${SLOT_LABEL[order.batch.slot]}`;
-  // A run stops taking money when its cut-off passes, when it is closed by
-  // hand, and the moment it moves past ordering. Otherwise somebody pays for
-  // food that is already being cooked, and that money has to go back.
+  // A run stops taking money once the shopping has started, because after
+  // that somebody would be paying for food already being cooked and the money
+  // has to go back.
+  //
+  // Not at the cut off, which is what this used to say. A group's clock is
+  // allowed to end on the cut off, so every order a group makes is written
+  // moments after it, and every one of them opened on "This run has gone. Do
+  // not pay it." while the food was still waiting to be bought. Between the
+  // cut off and the counter the run is closed to new orders and perfectly
+  // able to take the money for the ones it already has.
   const expired =
-    new Date(order.batch.cut_off_at).getTime() <= Date.now() ||
-    order.batch.status !== "open" ||
-    order.batch.stage !== "ordering";
+    order.batch.status === "cancelled" ||
+    order.batch.status === "delivered" ||
+    stageIndex(order.batch.stage) >= stageIndex("at_counter") ||
+    // A run nobody ever moved on. Its day has been and gone, so whatever the
+    // stage says, it is not taking money.
+    order.batch.run_date < lagosToday();
   const paid = order.status === "paid" || order.status === "delivered";
   const drops = dropsFor(order);
   const split = order.group?.mode === "split" && order.shares.length > 1;
@@ -113,6 +123,14 @@ export default async function OrderPage({
   const bandLabel = Number.isFinite(band.maxItems)
     ? `up to ${band.maxItems} items`
     : "a full load";
+  // Whether the ladder is what priced this. A promotion sets the fee outright
+  // and a closed group hands down a share, and in both cases the ladder is
+  // not the answer to "why this much": printing it said 1 to 4 is ₦4,000
+  // over a line reading ₦2,000, which reads as the page contradicting
+  // itself.
+  const byLadder =
+    order.fee === (fees.otherItems > 0 ? band.fee - fees.otherFee : band.fee);
+  const shared = order.group_id !== null;
 
   const status =
     order.status === "delivered"
@@ -500,27 +518,45 @@ export default async function OrderPage({
         </dl>
 
         {/* The whole ladder, for anyone wondering why four items cost more
-            than three. */}
-        <FeeBands
-          itemCount={allItems}
-          flashFee={order.batch.flash_fee}
-          bands={bands}
-        />
+            than three. Only when the ladder is what they were charged. */}
+        {byLadder && (
+          <FeeBands
+            itemCount={allItems}
+            flashFee={order.batch.flash_fee}
+            bands={bands}
+          />
+        )}
 
         {/* The arithmetic, in a line. Delivery is the thing people query. */}
         <p className="text-xs text-muted">
-          {order.batch.flash_fee !== null && (
+          {byLadder ? (
             <>
-              Delivery is down tonight.{" "}
-              {order.batch.flash_fee_reason || "Enjoy it."}{" "}
+              {order.batch.flash_fee !== null && (
+                <>
+                  Delivery is down tonight.{" "}
+                  {order.batch.flash_fee_reason || "Enjoy it."}{" "}
+                </>
+              )}
+              {allItems} item{allItems === 1 ? "" : "s"} travel together, which is the{" "}
+              {naira(band.fee)} band ({bandLabel}).
+              {drops.length > 1 &&
+                ` That is shared out by what each person ordered, not split down the middle.`}
+              {fees.otherItems > 0 &&
+                ` ${naira(fees.otherFee)} of it was charged on your earlier order, so this one carries the rest.`}
+            </>
+          ) : shared ? (
+            <>
+              One delivery for the whole group, split evenly between everybody in
+              it. That is why this is not the usual {naira(band.fee)} for{" "}
+              {allItems} item{allItems === 1 ? "" : "s"}.
+            </>
+          ) : (
+            <>
+              {order.coupon_code
+                ? `${order.coupon_code} priced this delivery, so the usual ladder does not apply.`
+                : "An offer priced this delivery, so the usual ladder does not apply."}
             </>
           )}
-          {allItems} item{allItems === 1 ? "" : "s"} travel together, which is the{" "}
-          {naira(band.fee)} band ({bandLabel}).
-          {drops.length > 1 &&
-            ` That is shared out by what each person ordered, not split down the middle.`}
-          {fees.otherItems > 0 &&
-            ` ${naira(fees.otherFee)} of it was charged on your earlier order, so this one carries the rest.`}
         </p>
       </section>
 
