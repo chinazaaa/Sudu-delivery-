@@ -135,6 +135,13 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // for a time or for a run, and everybody after rides in that one: letting a
   // joiner pick their own would be two cars, which is not sharing a delivery.
   const party = input.partyId ? await joinableGroup(input.partyId) : null;
+  if (input.partyId && !party) {
+    // Closed, gone, or never there. The order still goes through, alone and
+    // at the full fee, which is right: refusing it would be worse. But it is
+    // the exact moment somebody's food quietly leaves their friends behind,
+    // so it is never silent again.
+    console.error("group not joinable, ordering alone:", input.partyId);
+  }
 
   const batch = party
     ? await getBatch(party.batch_id)

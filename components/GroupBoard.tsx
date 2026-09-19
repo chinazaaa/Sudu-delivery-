@@ -90,6 +90,11 @@ export default function GroupBoard({
   useEffect(() => {
     const here = readGroup() === groupId;
 
+    // Told every time this page is opened, by everybody, leader included.
+    // It is cheap, it is idempotent, and it is the half the checkout actually
+    // reads, so it must not depend on a branch being taken.
+    void fetch(`/api/party/${groupId}/enter`, { method: "POST" }).catch(() => {});
+
     if (here) {
       // Before the leader has ordered there is nothing on the server that says
       // whose group it is, so the browser that made the link is the only thing

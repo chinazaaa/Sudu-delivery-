@@ -24,8 +24,12 @@ export function enterGroup(id: string, viaLink = false): void {
     if (viaLink) window.localStorage.setItem(JOINED, id);
     else window.localStorage.removeItem(JOINED);
   } catch {
-    /* Without storage they simply order alone, which still works. */
+    /* Without storage the cookie below still carries the group. */
   }
+  // The server keeps its own note, which is what the checkout actually goes
+  // on. Without this the group lived in one place and any loss of it sent the
+  // order out alone at the full fee.
+  void fetch(`/api/party/${id}/enter`, { method: "POST" }).catch(() => {});
   announce();
 }
 
@@ -46,6 +50,8 @@ export function leaveGroup(): void {
   } catch {
     /* Nothing to do. */
   }
+  // Both halves forget, or the next order quietly joins the last group.
+  void fetch("/api/party/leave", { method: "POST" }).catch(() => {});
   announce();
 }
 

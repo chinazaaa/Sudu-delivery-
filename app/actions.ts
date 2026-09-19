@@ -55,7 +55,13 @@ export async function submitOrder(
     customerNote: String(form.get("customer_note") ?? "").trim().slice(0, 300),
     joinOrderId: String(form.get("join_order_id") ?? "") || undefined,
     shareDelivery: String(form.get("share_delivery") ?? "") === "on",
-    partyId: String(form.get("party_id") ?? "") || undefined,
+    // The hidden field first, because it is what this page believes right
+    // now. The cookie behind it, because the browser losing its note is not a
+    // reason to send somebody's food out alone at the full fee.
+    partyId:
+      String(form.get("party_id") ?? "") ||
+      (await cookies()).get("sudu_group")?.value ||
+      undefined,
     partyLeader: String(form.get("party_leader") ?? "") === "1",
     deliverAt: String(form.get("deliver_at") ?? "") || undefined,
   });
