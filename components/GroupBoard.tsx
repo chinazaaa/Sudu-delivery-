@@ -72,8 +72,12 @@ export default function GroupBoard({
   const asked = useRef(false);
 
   // Joining, for somebody who has just opened the link.
-  const [name, setName] = useState("");
+  // The person who made the link already said who they are. Asking again is
+  // asking a question that has been answered, so it is filled in for them and
+  // one tap gets them in.
+  const [name, setName] = useState(leaderOnServer ? leaderName : "");
   const [joining, setJoining] = useState(false);
+  const [joinProblem, setJoinProblem] = useState("");
 
   // Their details, filled in while they wait.
   const [phone, setPhone] = useState(mine?.phone ?? "");
@@ -85,9 +89,13 @@ export default function GroupBoard({
   useEffect(() => {
     // The browser that made the link is the only thing that knows it is the
     // leader until they have put food in, so it says so positively.
-    if (readGroup() === groupId) setLeader(true);
-    else enterGroup(groupId, true);
-  }, [groupId]);
+    if (readGroup() === groupId) {
+      setLeader(true);
+      setName((current) => current || leaderName);
+    } else {
+      enterGroup(groupId, true);
+    }
+  }, [groupId, leaderName]);
 
   useEffect(() => {
     const tick = () => {
@@ -122,14 +130,30 @@ export default function GroupBoard({
   }, [closesAt, router, groupId, members.length]);
 
   const join = async () => {
+    setJoinProblem("");
     setJoining(true);
     try {
-      await fetch(`/api/party/${groupId}/enter`, {
+      const response = await fetch(`/api/party/${groupId}/enter`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       });
+      const data = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        named?: boolean;
+      };
+
+      // Saying nothing and showing the same box again reads as the button not
+      // working, and there is no way to tell that from the box being right.
+      if (!response.ok || !data.named) {
+        setJoinProblem(
+          "Could not put you in that group just now. Give it a moment and try again."
+        );
+        return;
+      }
       router.refresh();
+    } catch {
+      setJoinProblem("Could not reach the shop. Check your connection.");
     } finally {
       setJoining(false);
     }
@@ -191,6 +215,9 @@ export default function GroupBoard({
             <p className="text-xs text-muted">
               So the others know who is in. Nothing else is asked for yet.
             </p>
+            {joinProblem !== "" && (
+              <p className="text-sm font-semibold text-brand-dark">{joinProblem}</p>
+            )}
             <button
               type="button"
               onClick={join}

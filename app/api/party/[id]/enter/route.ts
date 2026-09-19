@@ -52,7 +52,17 @@ export async function POST(
   // one. Somebody arriving on the link before they have said who they are is
   // in the group as far as the cookies go, and appears to everybody else the
   // moment they say.
-  if (name.length >= 2) await takeSeat({ groupId: group.id, token, name });
+  if (name.length < 2) return NextResponse.json({ ok: true, named: false });
 
-  return NextResponse.json({ ok: true, named: name.length >= 2 });
+  const seat = await takeSeat({ groupId: group.id, token, name });
+  if (!seat) {
+    // Almost always a database that has not had the migration run on it yet.
+    // Saying so beats answering 200 to something that did not happen.
+    return NextResponse.json(
+      { ok: false, named: false, error: "Could not take a seat in that group." },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true, named: true });
 }
