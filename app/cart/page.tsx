@@ -39,6 +39,7 @@ export default async function CartPage() {
       sameDayFrom={pricing.bands[0]?.fee ?? 6500}
       runFrom={bands[0]?.fee ?? 4000}
       hostels={await hostelNames()}
+      bands={bands}
     />
   );
 }

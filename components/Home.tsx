@@ -12,6 +12,7 @@ import type { Slot } from "@/lib/same-day";
 import Thumb from "./Thumb";
 import { countItems, useCart } from "@/lib/cart";
 import FeeBands from "./FeeBands";
+import SplitPrompt from "./SplitPrompt";
 import { feeFor, type Band } from "@/lib/fees";
 import { naira } from "@/lib/money";
 import type { ItemView, MenuView, BatchView } from "@/lib/view";
@@ -130,6 +131,10 @@ export default function Home({
           The run strip is still the answer when there is no time to offer,
           because a page that says nothing about delivery is worse than one
           that says the wrong thing first. */}
+      {/* Above the restaurants, because by the time somebody is reading a
+          menu they have already decided how they are ordering. */}
+      <SplitPrompt />
+
       {soonest ? (
         <SameDayStrip soonest={soonest} />
       ) : nextRun ? (

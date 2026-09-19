@@ -21,6 +21,7 @@ import {
   useCart,
   usePeople,
 } from "@/lib/cart";
+import { evenShare, feeFor, type Band } from "@/lib/fees";
 import { naira } from "@/lib/money";
 
 /** Review and fix the order. Nothing is asked for here except the food. */
@@ -31,6 +32,7 @@ export default function CartView({
   sameDayFrom = 6500,
   runFrom = 4000,
   hostels = [],
+  bands = [],
 }: {
   restaurants?: { id: string; name: string; href: string }[];
   /** What a group could be put on, worked out on the server so the clock and
@@ -41,6 +43,8 @@ export default function CartView({
   runFrom?: number;
   /** The blocks admin delivers to. Empty means anything typed is allowed. */
   hostels?: string[];
+  /** The delivery price list in force, so the saving shown is the real one. */
+  bands?: Band[];
 }) {
   // In somebody's group already, ordering for friends as well is two group
   // ideas at once and nobody untangles them. The bar at the top says which
@@ -346,6 +350,25 @@ export default function CartView({
           </Link>
         )}
       </div>
+
+      {/* What it would actually save them, on the food they have actually
+          chosen. "Split one delivery" is an idea; two real numbers is an
+          argument, and this is the moment it stops being abstract. */}
+      {group === "" && cart.length > 0 && bands.length > 0 && (
+        <div className="rounded-2xl border border-brand/25 bg-brand-tint px-4 py-3">
+          <p className="text-sm text-ink/80">
+            Delivery on this is{" "}
+            <span className="font-extrabold text-brand-dark">
+              {naira(feeFor(countItems(cart), null, bands))}
+            </span>{" "}
+            ordering alone. With one friend it is about{" "}
+            <span className="font-extrabold text-brand-dark">
+              {naira(evenShare(countItems(cart) * 2, 2, null, bands))}
+            </span>{" "}
+            each, and it keeps falling as more of you join.
+          </p>
+        </div>
+      )}
 
       {/* Before anything else, because it costs nothing to send and it is what
           makes the delivery cheaper for all of them. In a group already, the
