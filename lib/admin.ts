@@ -3,7 +3,7 @@ import { feeFor } from "./fees";
 import { activeBands } from "./settings";
 import { BATCH_MINIMUM } from "./config";
 import { getBatch } from "./batches";
-import { refundsOwed, settleGroupFees } from "./groups";
+import { groupShortfalls, refundsOwed, settleGroupFees, type GroupShortfall } from "./groups";
 import { linesFor, type OrderLine } from "./orders";
 import type { Batch, Order, Promoter } from "./types";
 
@@ -41,6 +41,9 @@ export type BatchSheet = {
   handout: HandoutBag[];
   unpaid: HandoutOrder[];
   refunds: Order[];
+  /** Groups the shop is covering the difference on, because somebody in
+   *  them did not pay. A report, not a charge. */
+  groupsShort: GroupShortfall[];
   /** Phone to PIN, for the confirmation message. */
   pins: Record<string, string>;
   summary: {
@@ -102,6 +105,7 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
     handout: bagsFor(paid.map(withLines), await collectingSeparately(batchId)),
     unpaid: unpaid.map(withLines),
     refunds: await refundsOwed(batchId),
+    groupsShort: await groupShortfalls(batchId),
     pins: await pinsFor(orders.map((o) => o.customer_phone)),
     summary: {
       paidCount: paid.length,

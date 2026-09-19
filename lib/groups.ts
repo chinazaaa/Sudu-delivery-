@@ -70,6 +70,105 @@ async function settleGroup(group: OrderGroup, batch: Batch): Promise<void> {
   }
 }
 
+export type GroupShortfall = {
+  groupId: string;
+  leaderName: string;
+  /** What the trip actually costs for what is travelling. */
+  owed: number;
+  /** What the people who paid have actually handed over between them. */
+  collected: number;
+  short: number;
+  /** Rounded up to something somebody can transfer without thinking. */
+  eachToCover: number;
+  paid: { name: string; phone: string; fee: number }[];
+  missing: { name: string; phone: string; items: number }[];
+};
+
+/**
+ * Where a group is short, and who is missing.
+ *
+ * Nobody in a group is ever asked for a top up: they were told a figure and
+ * that figure stands. But when somebody drops out the car gets smaller, the
+ * band can fall by less than their share was worth, and the shop quietly
+ * covers the difference. Quietly is the problem. This makes it a number on a
+ * page, with the names beside it, so it can be dealt with the same day by
+ * somebody who knows them.
+ *
+ * Only ever a report. It changes nothing and charges nobody.
+ */
+export async function groupShortfalls(batchId: string): Promise<GroupShortfall[]> {
+  const { data: groups } = await db()
+    .from("order_groups")
+    .select("id, leader_name")
+    .eq("batch_id", batchId)
+    .not("closes_at", "is", null);
+
+  const out: GroupShortfall[] = [];
+  const bands = await activeBands();
+
+  const { data: batch } = await db()
+    .from("batches")
+    .select("flash_fee, kind, deliver_at")
+    .eq("id", batchId)
+    .maybeSingle();
+
+  for (const row of groups ?? []) {
+    const orders = await groupOrders(row.id as string);
+    const paid = orders.filter((one) => one.status !== "pending");
+    const missing = orders.filter((one) => one.status === "pending");
+    if (paid.length === 0 || missing.length === 0) continue;
+
+    const { data: items } = await db()
+      .from("order_items")
+      .select("order_id, qty")
+      .in("order_id", orders.map((one) => one.id));
+
+    const countFor = (id: string) =>
+      (items ?? [])
+        .filter((line) => line.order_id === id)
+        .reduce((sum, line) => sum + (line.qty as number), 0);
+
+    // What the trip costs for what is actually going, which is the only load
+    // the shop is buying and driving.
+    const travelling = paid.reduce((sum, one) => sum + countFor(one.id), 0);
+    const owed =
+      batch?.kind === "same_day"
+        ? await (async () => {
+            const { bands: ladder, urgentExtra } = await sameDayPricing();
+            const urgent = batch.deliver_at
+              ? isUrgent(new Date(batch.deliver_at as string))
+              : false;
+            return sameDayFee(travelling, urgent, ladder, urgentExtra);
+          })()
+        : feeFor(travelling, (batch?.flash_fee as number | null) ?? null, bands);
+
+    const collected = paid.reduce((sum, one) => sum + one.fee, 0);
+    const short = owed - collected;
+    if (short <= 0) continue;
+
+    out.push({
+      groupId: row.id as string,
+      leaderName: String(row.leader_name ?? ""),
+      owed,
+      collected,
+      short,
+      eachToCover: Math.ceil(short / paid.length / 100) * 100,
+      paid: paid.map((one) => ({
+        name: one.for_name ?? one.customer_name,
+        phone: one.customer_phone,
+        fee: one.fee,
+      })),
+      missing: missing.map((one) => ({
+        name: one.for_name ?? one.customer_name,
+        phone: one.customer_phone,
+        items: countFor(one.id),
+      })),
+    });
+  }
+
+  return out;
+}
+
 /** Refunds created by a group shrinking, so the admin can pay them out. */
 export async function refundsOwed(batchId: string): Promise<Order[]> {
   const { data } = await db()
