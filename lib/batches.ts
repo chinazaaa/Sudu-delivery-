@@ -3,6 +3,7 @@ import { deliveryWindows, safeSettings } from "./settings";
 import { runSchedule } from "./schedule";
 import { RUN_HORIZON_DAYS, TZ } from "./config";
 import { lagosInstant, lagosToday } from "./time";
+import { stageIndex } from "./stages";
 import type { Batch } from "./types";
 
 /** Weekday number (0 = Sunday) of a YYYY-MM-DD date, read in Lagos. */
@@ -343,6 +344,23 @@ export async function getBatch(id: string): Promise<Batch | null> {
 }
 
 /** A batch takes orders only while it is open, uncancelled and pre-cut-off. */
+/**
+ * Whether an order on this run can still be paid for.
+ *
+ * Not the same as being orderable. A run stops taking new orders at its cut
+ * off, and a group's clock is allowed to end on that cut off, so every order
+ * a group makes is written moments after the run stopped taking new ones.
+ * Those orders are real and have to be paid for. What ends payment is the
+ * shopping: once the food is being bought, money arriving late has to go
+ * back.
+ */
+export function takesMoney(batch: Batch): boolean {
+  if (batch.status === "cancelled" || batch.status === "delivered") return false;
+  if (stageIndex(batch.stage) >= stageIndex("at_counter")) return false;
+  // A run nobody ever moved on. Its day has been and gone.
+  return batch.run_date >= lagosToday();
+}
+
 export function isOrderable(batch: Batch): boolean {
   return batch.status === "open" && new Date(batch.cut_off_at).getTime() > Date.now();
 }

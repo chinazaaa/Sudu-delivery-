@@ -15,7 +15,7 @@ import SplitCollect from "@/components/SplitCollect";
 import CopyText from "@/components/CopyText";
 import RepeatOrder from "@/components/RepeatOrder";
 import MoveOrder from "@/components/MoveOrder";
-import { openBatches } from "@/lib/batches";
+import { openBatches, takesMoney } from "@/lib/batches";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira, shareRef } from "@/lib/money";
 import { shortRef } from "@/lib/links";
@@ -29,8 +29,8 @@ import {
   type OrderLine,
 } from "@/lib/orders";
 import { formatPhone } from "@/lib/phone";
-import { STAGE_LABEL, stageIndex } from "@/lib/stages";
-import { clockLabel, dayLabel, lagosToday, runDateLabel, weekdayLabel } from "@/lib/time";
+import { STAGE_LABEL } from "@/lib/stages";
+import { clockLabel, dayLabel, runDateLabel, weekdayLabel } from "@/lib/time";
 import {
   activeBands,
   externalUrl,
@@ -102,13 +102,7 @@ export default async function OrderPage({
   // not pay it." while the food was still waiting to be bought. Between the
   // cut off and the counter the run is closed to new orders and perfectly
   // able to take the money for the ones it already has.
-  const expired =
-    order.batch.status === "cancelled" ||
-    order.batch.status === "delivered" ||
-    stageIndex(order.batch.stage) >= stageIndex("at_counter") ||
-    // A run nobody ever moved on. Its day has been and gone, so whatever the
-    // stage says, it is not taking money.
-    order.batch.run_date < lagosToday();
+  const expired = !takesMoney(order.batch);
   const paid = order.status === "paid" || order.status === "delivered";
   const drops = dropsFor(order);
   const split = order.group?.mode === "split" && order.shares.length > 1;

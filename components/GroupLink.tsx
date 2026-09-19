@@ -6,6 +6,9 @@ import type { Slot } from "@/lib/same-day";
 
 const KEY = "sudu_group_v2";
 const JOINED = "sudu_group_joined_v2";
+/** The handful this browser has been in, newest first. */
+const SEEN = "sudu_groups_seen_v1";
+const KEEP = 5;
 
 export const PARTY_CHANGED = "sudu:party";
 
@@ -18,7 +21,35 @@ export function readGroup(): string {
   }
 }
 
+/**
+ * Every group this browser has been in, newest first.
+ *
+ * Leaving one, or it closing, forgets which group you are in, and that was
+ * the only note anywhere: the way back to a group you were in ten minutes
+ * ago was the link somebody sent you, and if that was in a chat you had
+ * scrolled past, there was no way back at all.
+ */
+export function seenGroups(): string[] {
+  try {
+    const raw = window.localStorage.getItem(SEEN);
+    const list = raw ? (JSON.parse(raw) as unknown) : [];
+    return Array.isArray(list) ? list.filter((one) => typeof one === "string").slice(0, KEEP) : [];
+  } catch {
+    return [];
+  }
+}
+
+function remember(id: string): void {
+  try {
+    const list = [id, ...seenGroups().filter((one) => one !== id)].slice(0, KEEP);
+    window.localStorage.setItem(SEEN, JSON.stringify(list));
+  } catch {
+    /* Nothing to do: it is a convenience, not the group itself. */
+  }
+}
+
 export function enterGroup(id: string, viaLink = false): void {
+  remember(id);
   try {
     window.localStorage.setItem(KEY, id);
     if (viaLink) window.localStorage.setItem(JOINED, id);

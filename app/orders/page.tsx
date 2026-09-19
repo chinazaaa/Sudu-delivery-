@@ -9,6 +9,7 @@ import { naira } from "@/lib/money";
 import RepeatOrder from "@/components/RepeatOrder";
 import { ordersForPhone, repeatLines } from "@/lib/orders";
 import { STAGE_LABEL } from "@/lib/stages";
+import { takesMoney } from "@/lib/batches";
 import { runDateLabel } from "@/lib/time";
 import { forgetMe } from "@/app/actions";
 
@@ -119,14 +120,16 @@ export default async function OrdersPage() {
   );
 }
 
-/** An order whose run has closed: nothing more can happen to it where it is. */
+/**
+ * An order whose run has gone: nothing more can happen to it where it is.
+ *
+ * The same rule the order page uses, from one place, because this said "run
+ * closed, move it to pay" about orders that page was happily taking money
+ * for. Every group order landed in that gap, since a group closes on the cut
+ * off and writes its orders just after it.
+ */
 function gone(order: Awaited<ReturnType<typeof ordersForPhone>>[number]): boolean {
-  return (
-    order.status === "pending" &&
-    (order.batch.status !== "open" ||
-      order.batch.stage !== "ordering" ||
-      new Date(order.batch.cut_off_at).getTime() <= Date.now())
-  );
+  return order.status === "pending" && !takesMoney(order.batch);
 }
 
 function StatusLine({

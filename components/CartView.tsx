@@ -1,6 +1,7 @@
 "use client";
 
 import GroupLink, { PARTY_CHANGED, readGroup } from "./GroupLink";
+import RecentGroups from "./RecentGroups";
 import { useRouter } from "next/navigation";
 import type { Slot } from "@/lib/same-day";
 
@@ -216,7 +217,10 @@ export default function CartView({
       } catch {
         /* Not worth failing on. */
       }
-      router.push(`/g/${group}`);
+      // placed=1 is what empties this browser's cart on the way in: the food
+      // is in the group now, and leaving it in the cart had people carrying
+      // the same pizza around with a badge on the bag icon.
+      router.push(`/g/${group}?placed=1`);
     } catch {
       setProblem("Could not save that.");
     } finally {
@@ -419,6 +423,10 @@ export default function CartView({
         runFrom={runFrom}
         alone={bands.length > 0 ? feeFor(countItems(cart), null, bands) : 0}
       />
+
+      {/* The way back to a car they were in, which until now existed only in
+          whatever chat the link arrived in. */}
+      <RecentGroups />
 
       {!inParty && (
       <section className="card space-y-3">
