@@ -501,7 +501,11 @@ export default async function BatchPage({
                         })
                     )}
 
-                    {/* One at a time, because one is what usually changed. */}
+                    {/* One at a time, because one is what usually changed, and
+                        only the ones still at the menu price: a line already
+                        priced is edited in its own row above, so offering it
+                        here again was offering to do what was done. */}
+                    {counter.some((group) => group.lines.some((line) => line.paid === null)) && (
                     <form
                       action={setCounterSpend}
                       className="flex flex-wrap items-end gap-2 border-t border-black/10 pt-3"
@@ -512,7 +516,13 @@ export default async function BatchPage({
                           Which one was different?
                         </label>
                         <select id="line_key" name="line_key" className="field">
-                          {counter.map((group) => (
+                          {counter
+                            .map((group) => ({
+                              ...group,
+                              lines: group.lines.filter((line) => line.paid === null),
+                            }))
+                            .filter((group) => group.lines.length > 0)
+                            .map((group) => (
                             <optgroup key={group.restaurant} label={group.restaurant}>
                               {group.lines.map((line) => (
                                 <option key={line.key} value={line.key}>
@@ -541,6 +551,7 @@ export default async function BatchPage({
                       </div>
                       <SaveButton quiet>Add</SaveButton>
                     </form>
+                    )}
 
                     <p className="text-xs text-muted">
                       This only moves the profit on this run. Nothing a customer
