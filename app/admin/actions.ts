@@ -953,7 +953,12 @@ export async function saveCoupon(form: FormData): Promise<void> {
   await assertAdmin();
   const code = String(form.get("code") ?? "").trim().toUpperCase();
   const amount = Math.round(Number(form.get("amount") ?? 0));
-  if (!code || !Number.isFinite(amount) || amount <= 0) return;
+  // Nothing is a real answer now: free delivery is a fee of nothing. It is
+  // only allowed where the offer sets the fee, so a code cannot be saved as
+  // taking nothing off.
+  const sets = form.get("applies_to") === "fee";
+  if (!code || !Number.isFinite(amount) || amount < 0) return;
+  if (amount === 0 && !sets) return;
 
   const expires = String(form.get("expires_at") ?? "").trim();
   const maxUses = Math.round(Number(form.get("max_uses") ?? 0));
@@ -999,6 +1004,10 @@ export async function saveCoupon(form: FormData): Promise<void> {
   const places = form.getAll("restaurant_id").map(String).filter(Boolean);
   if (places.length > 0) await writeCouponPlaces(code, places);
 
+  // And for one that belongs to particular dishes.
+  const dishes = form.getAll("menu_item_id").map(String).filter(Boolean);
+  if (dishes.length > 0) await writeCouponItems(code, dishes);
+
   revalidatePath("/admin", "layout");
 }
 
@@ -1024,6 +1033,28 @@ export async function setCouponWindows(form: FormData): Promise<void> {
     .update({ windows: form.getAll("window").map(String).filter(Boolean).join(",") })
     .eq("code", String(form.get("code")));
   revalidatePath("/admin", "layout");
+}
+
+/**
+ * Which dishes an offer is for. None means it is not about dishes.
+ *
+ * Free delivery on the BBQ beef medium is this: the offer is a fee of
+ * nothing, and these are what earn it.
+ */
+export async function setCouponItems(form: FormData): Promise<void> {
+  await assertAdmin();
+  const code = String(form.get("code"));
+  await writeCouponItems(code, form.getAll("menu_item_id").map(String).filter(Boolean));
+  revalidatePath("/admin", "layout");
+}
+
+async function writeCouponItems(code: string, dishes: string[]): Promise<void> {
+  await db().from("coupon_items").delete().eq("coupon_code", code);
+  if (dishes.length > 0) {
+    await db()
+      .from("coupon_items")
+      .insert(dishes.map((menu_item_id) => ({ coupon_code: code, menu_item_id })));
+  }
 }
 
 async function writeCouponPlaces(code: string, places: string[]): Promise<void> {

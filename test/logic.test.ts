@@ -951,6 +951,7 @@ test("a promotion is flat until the taper, then it charges by the item", () => {
     includedItems: 3,
     extraPerItem: 500,
     places: ["dominos"],
+    items: [],
     runs: [],
     windows: [],
     firstOrderOnly: false,
@@ -972,6 +973,7 @@ test("an offer for one kitchen stands down on a cart with anything else in it", 
     includedItems: null,
     extraPerItem: 0,
     places: ["dominos"],
+    items: [],
     runs: [],
     windows: [],
     firstOrderOnly: false,
@@ -1017,6 +1019,7 @@ test("a promotion splits in a group, but never below the floor", () => {
     includedItems: null,
     extraPerItem: 0,
     places: ["dominos"],
+    items: [],
     runs: [],
     windows: [],
     firstOrderOnly: false,
@@ -1031,4 +1034,29 @@ test("a promotion splits in a group, but never below the floor", () => {
   assert.equal(offerShare(offer, 20, 20), 1000);
   // No floor is a plain split.
   assert.equal(offerShare({ ...offer, minEach: 0 }, 10, 5), 400);
+});
+
+test("free delivery is earned by the dishes that carry it, and nothing else", () => {
+  const offer = {
+    code: "BBQFREE",
+    note: "Free delivery on the BBQ mediums",
+    fee: 0,
+    includedItems: null,
+    extraPerItem: 0,
+    places: [],
+    items: ["bbq-beef", "bbq-chicken"],
+    runs: [],
+    windows: [],
+    firstOrderOnly: false,
+    minEach: 0,
+  };
+  const ask = (itemIds: string[]) =>
+    pickOffer([offer], { restaurantIds: ["dominos"], itemIds, items: itemIds.length, batchId: "b1", returning: false });
+
+  assert.equal(ask(["bbq-beef"])?.fee, 0);
+  // Two of them together still qualify: each was worth the trip on its own.
+  assert.equal(ask(["bbq-beef", "bbq-chicken"])?.fee, 0);
+  // Anything else riding along did not earn it.
+  assert.equal(ask(["bbq-beef", "chips"]), null);
+  assert.equal(ask([]), null);
 });

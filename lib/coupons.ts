@@ -27,6 +27,8 @@ export type Coupon = {
 };
 
 export type CouponWithRuns = Coupon & {
+  /** The dishes it is for. Empty means it is not about dishes. */
+  dishes: { id: string; name: string; restaurant: string }[];
   /** The runs it works on. Empty means every run. */
   runs: { batchId: string; label: string }[];
   /** The restaurants it works on. Empty means anywhere. */
@@ -86,9 +88,22 @@ export async function liveOffers(): Promise<LiveOffer[]> {
   if (live.length === 0) return [];
 
   const codes = live.map((coupon) => coupon.code);
-  const [{ data: places }, { data: runs }] = await Promise.all([
+  const [{ data: places }, { data: runs }, dishes] = await Promise.all([
     db().from("coupon_restaurants").select("coupon_code, restaurant_id").in("coupon_code", codes),
     db().from("coupon_runs").select("coupon_code, batch_id").in("coupon_code", codes),
+    // Newest of the three, so read forgivingly: without the table no offer is
+    // about particular dishes, which is what they all were yesterday.
+    (async () => {
+      try {
+        const { data, error } = await db()
+          .from("coupon_items")
+          .select("coupon_code, menu_item_id")
+          .in("coupon_code", codes);
+        return error ? [] : ((data ?? []) as { coupon_code: string; menu_item_id: string }[]);
+      } catch {
+        return [] as { coupon_code: string; menu_item_id: string }[];
+      }
+    })(),
   ]);
 
   return live.map((coupon) => ({
@@ -100,6 +115,9 @@ export async function liveOffers(): Promise<LiveOffer[]> {
     places: (places ?? [])
       .filter((row) => row.coupon_code === coupon.code)
       .map((row) => row.restaurant_id as string),
+    items: dishes
+      .filter((row) => row.coupon_code === coupon.code)
+      .map((row) => row.menu_item_id),
     runs: (runs ?? [])
       .filter((row) => row.coupon_code === coupon.code)
       .map((row) => row.batch_id as string),
@@ -314,6 +332,34 @@ export async function listCoupons(): Promise<CouponWithRuns[]> {
     /* No table yet, so no code is tied to anywhere. */
   }
 
+  // The dishes an offer names, with something readable to show for them.
+  let dishTies: { coupon_code: string; menu_item_id: string }[] = [];
+  const dishNamed = new Map<string, { name: string; restaurant: string }>();
+  try {
+    const { data: rows } = await db().from("coupon_items").select("coupon_code, menu_item_id");
+    dishTies = (rows ?? []) as typeof dishTies;
+    const ids = [...new Set(dishTies.map((row) => row.menu_item_id))];
+    if (ids.length > 0) {
+      const { data: items } = await db()
+        .from("menu_items")
+        .select("id, name, restaurant_id")
+        .in("id", ids);
+      const placeIds = [...new Set(((items ?? []) as any[]).map((one) => one.restaurant_id))];
+      const { data: shops } = placeIds.length
+        ? await db().from("restaurants").select("id, name").in("id", placeIds)
+        : { data: [] };
+      const shopNamed = new Map(((shops ?? []) as any[]).map((one) => [one.id, one.name as string]));
+      for (const item of (items ?? []) as any[]) {
+        dishNamed.set(item.id as string, {
+          name: item.name as string,
+          restaurant: shopNamed.get(item.restaurant_id) ?? "",
+        });
+      }
+    }
+  } catch {
+    /* No table yet, so no offer is about a dish. */
+  }
+
   return coupons.map((coupon) => ({
     ...coupon,
     runs: (links ?? [])
@@ -321,6 +367,13 @@ export async function listCoupons(): Promise<CouponWithRuns[]> {
       .map((row) => ({
         batchId: row.batch_id as string,
         label: labels.get(row.batch_id as string) ?? "A past run",
+      })),
+    dishes: dishTies
+      .filter((row) => row.coupon_code === coupon.code)
+      .map((row) => ({
+        id: row.menu_item_id,
+        name: dishNamed.get(row.menu_item_id)?.name ?? "A dish",
+        restaurant: dishNamed.get(row.menu_item_id)?.restaurant ?? "",
       })),
     places: ties
       .filter((row) => row.coupon_code === coupon.code)
@@ -397,5 +450,132 @@ export async function offersByRestaurant(): Promise<Map<string, LiveOffer>> {
       if (!out.has(place)) out.set(place, offer);
     }
   }
+  return out;
+}
+
+/** One deal, said the way somebody standing in a menu would want it said. */
+export type Deal = {
+  title: string;
+  detail: string;
+  /** Present when there is something to type. */
+  code?: string;
+};
+
+/**
+ * Everything on offer at one restaurant, in one list.
+ *
+ * Scattered across a badge, a banner and a strip, an offer is something
+ * people find by accident. This is the place to look: the free delivery, the
+ * price on the whole kitchen, the code somebody was sent in a group chat, and
+ * what each of them actually asks of you.
+ */
+export async function dealsAt(
+  restaurantId: string,
+  restaurantName: string
+): Promise<Deal[]> {
+  let coupons: Coupon[] = [];
+  try {
+    const { data, error } = await db().from("coupons").select("*").eq("active", true);
+    if (error) return [];
+    coupons = (data ?? []) as Coupon[];
+  } catch {
+    return [];
+  }
+
+  const now = new Date();
+  const live = coupons.filter(
+    (coupon) =>
+      !(coupon.expires_at && new Date(coupon.expires_at) <= now) &&
+      !(coupon.max_uses !== null && coupon.used >= coupon.max_uses)
+  );
+  if (live.length === 0) return [];
+
+  const codes = live.map((coupon) => coupon.code);
+  const { data: places } = await db()
+    .from("coupon_restaurants")
+    .select("coupon_code, restaurant_id")
+    .in("coupon_code", codes);
+
+  let dishes: { coupon_code: string; menu_item_id: string }[] = [];
+  const dishNames = new Map<string, string>();
+  const dishShop = new Map<string, string>();
+  try {
+    const { data } = await db().from("coupon_items").select("coupon_code, menu_item_id");
+    dishes = (data ?? []) as typeof dishes;
+    const ids = [...new Set(dishes.map((row) => row.menu_item_id))];
+    if (ids.length > 0) {
+      const { data: items } = await db()
+        .from("menu_items")
+        .select("id, name, restaurant_id")
+        .in("id", ids);
+      for (const item of (items ?? []) as any[]) {
+        dishNames.set(item.id as string, item.name as string);
+        dishShop.set(item.id as string, item.restaurant_id as string);
+      }
+    }
+  } catch {
+    /* No table yet. */
+  }
+
+  const out: Deal[] = [];
+
+  for (const coupon of live) {
+    const tiedTo = (places ?? [])
+      .filter((row) => row.coupon_code === coupon.code)
+      .map((row) => row.restaurant_id as string);
+    const named = dishes
+      .filter((row) => row.coupon_code === coupon.code)
+      .map((row) => row.menu_item_id);
+
+    // Theirs if it names this kitchen, or names a dish on this menu. An offer
+    // that names neither belongs to the whole shop and is not a deal about
+    // this restaurant, so it stays off the list.
+    const mineByPlace = tiedTo.includes(restaurantId);
+    const mineByDish = named.some((id) => dishShop.get(id) === restaurantId);
+    if (!mineByPlace && !mineByDish) continue;
+
+    const only =
+      named.length > 0
+        ? named
+            .filter((id) => dishShop.get(id) === restaurantId)
+            .map((id) => dishNames.get(id) ?? "a dish")
+        : [];
+
+    const where =
+      only.length > 0
+        ? `Order ${only.join(" or ")}, and nothing else, and `
+        : `Order from ${restaurantName}, and nothing else, and `;
+
+    if (coupon.applies_to === "fee") {
+      const taper =
+        coupon.amount > 0 && coupon.included_items !== null && coupon.extra_per_item > 0
+          ? ` for up to ${coupon.included_items} item${
+              coupon.included_items === 1 ? "" : "s"
+            }, then ${naira(coupon.extra_per_item)} each`
+          : "";
+      const split =
+        coupon.amount > 0 && coupon.min_per_person > 0
+          ? ` In a group it splits, down to ${naira(coupon.min_per_person)} each.`
+          : "";
+
+      out.push({
+        title: coupon.amount === 0 ? "Free delivery" : `${naira(coupon.amount)} delivery`,
+        detail:
+          `${where}delivery is ${
+            coupon.amount === 0 ? "free" : naira(coupon.amount)
+          }${taper}. It comes off by itself, with no code to type.${split}`,
+      });
+      continue;
+    }
+
+    out.push({
+      title: couponLabel(coupon),
+      detail: `${where}type this at checkout.${
+        coupon.first_order_only ? " First order only." : ""
+      }`,
+      code: coupon.code,
+    });
+  }
+
   return out;
 }

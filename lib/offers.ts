@@ -25,6 +25,8 @@ export type LiveOffer = {
   extraPerItem: number;
   /** Empty means anywhere. */
   places: string[];
+  /** Particular dishes this is for. Empty means it is not about dishes. */
+  items: string[];
   /** Empty means any run. */
   runs: string[];
   /** Same day window opening hours. Empty means any time. */
@@ -36,6 +38,8 @@ export type LiveOffer = {
 
 export type OfferContext = {
   restaurantIds: string[];
+  /** Every dish in the cart, for an offer that is about particular ones. */
+  itemIds?: string[];
   items: number;
   batchId: string;
   deliverAt?: string | null;
@@ -60,6 +64,13 @@ export function pickOffer(
     if (offer.firstOrderOnly && context.returning) continue;
     if (offer.places.length > 0) {
       if (cart.length === 0 || cart.some((id) => !offer.places.includes(id))) continue;
+    }
+    // An offer for particular dishes is earned by those dishes. Two of them
+    // together still earn it; anything else in the cart does not, because it
+    // was the dish that was worth the trip and not whatever rode along.
+    if (offer.items.length > 0) {
+      const dishes = context.itemIds ?? [];
+      if (dishes.length === 0 || dishes.some((id) => !offer.items.includes(id))) continue;
     }
     if (offer.runs.length > 0 && !offer.runs.includes(context.batchId)) continue;
     if (!inWindowHours(offer.windows, context.deliverAt ?? null)) continue;
@@ -119,11 +130,12 @@ export function inWindowHours(hours: number[], deliverAt: string | null): boolea
  * tap, so it goes on the outside.
  */
 export function offerBadge(offer: LiveOffer): string {
-  return `${naira(offer.fee)} delivery`;
+  return offer.fee === 0 ? "Free delivery" : `${naira(offer.fee)} delivery`;
 }
 
 /** The same offer said properly, for the banner on a restaurant's page. */
 export function offerLine(offer: LiveOffer): string {
+  if (offer.fee === 0) return "Delivery is free.";
   const taper =
     offer.includedItems !== null && offer.extraPerItem > 0
       ? ` for up to ${offer.includedItems} item${offer.includedItems === 1 ? "" : "s"}, then ${naira(offer.extraPerItem)} each`

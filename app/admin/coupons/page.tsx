@@ -10,12 +10,14 @@ import {
   deleteCoupon,
   saveCoupon,
   setCouponPlaces,
+  setCouponItems,
   setCouponRuns,
   setCouponWindows,
   toggleCoupon,
 } from "../actions";
 import { batchOverview } from "@/lib/admin";
-import { openRestaurants } from "@/lib/menu";
+import { openRestaurants, menuView } from "@/lib/menu";
+import DishPicker from "@/components/admin/DishPicker";
 import { deliveryHours } from "@/lib/settings";
 import { clockOf } from "@/lib/same-day";
 
@@ -32,6 +34,16 @@ export default async function CouponsAdmin() {
   const places = await openRestaurants();
   // The same day windows, as the hours they open. A promotion can be good for
   // the early car and not the late one.
+  // Every dish, flat, for the picker: free delivery is usually one or two
+  // things and finding them is a search, not a scroll.
+  const dishes = (await menuView()).flatMap((place) =>
+    place.items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      restaurant: place.restaurant.name,
+    }))
+  );
+
   const hours = await deliveryHours();
   const windows: { from: number; label: string }[] = [];
   for (let from = hours.first; from < hours.last; from += 3) {
@@ -84,6 +96,8 @@ export default async function CouponsAdmin() {
               {coupon.places.length === 0
                 ? "any restaurant"
                 : `${coupon.places.map((place) => place.name).join(", ")} only`}
+              {coupon.dishes.length > 0 &&
+                ` · ${coupon.dishes.map((dish) => dish.name).join(", ")} only`}
             </p>
 
             {coupon.places.length > 0 && (
@@ -155,6 +169,24 @@ export default async function CouponsAdmin() {
                   <span className="text-xs text-muted">
                     Tick none and it works anywhere. Tick one and the whole
                     cart has to come from there.
+                  </span>
+                </div>
+              </form>
+            )}
+
+            {/* Free delivery on a dish, or a price that only these earn. */}
+            {coupon.applies_to === "fee" && dishes.length > 0 && (
+              <form action={setCouponItems} className="mt-3 space-y-2">
+                <input type="hidden" name="code" value={coupon.code} />
+                <p className="label mb-0">Only on these dishes</p>
+                <DishPicker menu={dishes} chosen={coupon.dishes.map((one) => one.id)} />
+                <div className="flex flex-wrap items-center gap-2">
+                  <SaveButton quiet className="px-4 py-2 text-sm">
+                    Save which dishes
+                  </SaveButton>
+                  <span className="text-xs text-muted">
+                    Pick none and it is the whole menu. Pick two and either of
+                    them earns it, together or on their own.
                   </span>
                 </div>
               </form>
@@ -353,6 +385,18 @@ export default async function CouponsAdmin() {
             </div>
             <p className="mt-1 text-xs text-muted">
               Tick none and it works on every run, this term and next.
+            </p>
+          </div>
+        )}
+
+        {dishes.length > 0 && (
+          <div>
+            <p className="label">Only on these dishes</p>
+            <DishPicker menu={dishes} chosen={[]} />
+            <p className="mt-1 text-xs text-muted">
+              For free delivery on one thing worth the trip. Set the delivery
+              to 0 above, pick the dish here, and ordering it brings the car.
+              Pick two and either earns it, together or alone.
             </p>
           </div>
         )}

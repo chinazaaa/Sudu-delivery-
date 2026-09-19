@@ -244,6 +244,7 @@ export default function Checkout({
   // quoted on this screen and charged on the next has to be one number.
   const promotion = pickOffer(offers, {
     restaurantIds: [...new Set(cart.map((line) => line.restaurantId))],
+    itemIds: cart.map((line) => line.itemId),
     items: itemCount,
     batchId,
     deliverAt: sameDay ? sameDay.at : null,

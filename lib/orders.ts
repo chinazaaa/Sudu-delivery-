@@ -179,6 +179,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // price, not a discount, and five items or one it is the same price.
   const promotion = await activePromotion({
     restaurantIds: placesIn(priced.lines),
+    itemIds: priced.lines.map((line) => line.menu_item_id),
     items: countItems(priced.lines),
     batchId: batch.id,
     deliverAt: batch.kind === "same_day" ? batch.deliver_at : null,
@@ -983,6 +984,7 @@ export async function previewCoupon(args: {
   // One offer to a checkout, and an automatic one has already taken it.
   const holding = await activePromotion({
     restaurantIds: placesIn(priced.lines),
+    itemIds: priced.lines.map((line) => line.menu_item_id),
     items: countItems(priced.lines),
     batchId: batch.id,
     deliverAt: batch.kind === "same_day" ? batch.deliver_at : null,

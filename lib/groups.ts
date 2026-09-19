@@ -294,6 +294,7 @@ export async function shareNow(
   // fall as people join and the board should not pretend it will.
   const promotion = await activePromotion({
     restaurantIds: await placesInCarts(carts),
+    itemIds: carts.flatMap((cart) => cart.lines.map((line) => line.menu_item_id)),
     items: carried,
     batchId: group.batch_id,
     deliverAt: batch?.kind === "same_day" ? ((batch.deliver_at as string | null) ?? null) : null,
@@ -440,6 +441,7 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
   // put the rest of them on a different deal.
   const promotion = await activePromotion({
     restaurantIds: await placesInCarts(waiting),
+    itemIds: waiting.flatMap((cart) => cart.lines.map((line) => line.menu_item_id)),
     items: carried,
     batchId: group.batch_id,
     deliverAt: sameDay ? ((batch?.deliver_at as string | null) ?? null) : null,
