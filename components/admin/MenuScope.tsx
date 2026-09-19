@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { choiceValues } from "@/lib/offers";
 
 export type ScopeShop = {
   id: string;
@@ -41,9 +42,9 @@ export default function MenuScope({
 }) {
   const [shopId, setShopId] = useState(restaurant);
   const [sections, setSections] = useState<string[]>(categories);
-  const [chosen, setChosen] = useState<string[]>(
-    choice.split(",").map((one) => one.trim()).filter(Boolean)
-  );
+  // Read back as the picker wrote them, question and all, or a refresh would
+  // find nothing it recognised and quietly clear every tick.
+  const [chosen, setChosen] = useState<string[]>(choiceValues(choice));
 
   const shop = shops.find((one) => one.id === shopId) ?? null;
 

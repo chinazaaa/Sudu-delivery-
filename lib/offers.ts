@@ -204,7 +204,7 @@ export function everyLineChose(choice: string, lines: string[][] | undefined): b
  */
 export function choiceSets(choice: string): string[][] {
   const clean = (names: string[]) =>
-    names.map((one) => one.trim().toLowerCase()).filter(Boolean);
+    names.map((one) => optionName(one).toLowerCase()).filter(Boolean);
 
   const raw = choice.trim();
   if (raw === "") return [];
@@ -304,15 +304,41 @@ export function choiceLabels(choice: string): string[][] {
     try {
       const parsed = JSON.parse(raw) as string[][];
       return parsed
-        .map((set) => set.map((one) => one.trim()).filter(Boolean))
+        .map((set) => set.map(optionName).filter(Boolean))
         .filter((set) => set.length > 0);
     } catch {
       return [];
     }
   }
 
-  const single = raw.split(",").map((one) => one.trim()).filter(Boolean);
+  const single = raw.split(",").map(optionName).filter(Boolean);
   return single.length > 0 ? [single] : [];
+}
+
+/**
+ * The option's own name, out of the "Question::Option" a picker sends.
+ *
+ * The question travels with the answer because it is what says whether two
+ * ticks are alternatives or conditions, and because BBQ Chicken means one
+ * thing under First half and another under Second half. Everything that
+ * compares or prints a choice wants only the answer.
+ */
+export function optionName(value: string): string {
+  const raw = value.trim();
+  const mark = raw.indexOf("::");
+  return mark === -1 ? raw : raw.slice(mark + 2).trim();
+}
+
+/** Every "Question::Option" an offer holds, flat, for putting a picker back
+ *  the way it was left. */
+export function choiceValues(choice: string): string[] {
+  const raw = choice.trim();
+  if (raw === "" || !raw.startsWith("[")) return [];
+  try {
+    return (JSON.parse(raw) as string[][]).flat().map((one) => one.trim()).filter(Boolean);
+  } catch {
+    return [];
+  }
 }
 
 /**

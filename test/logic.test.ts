@@ -15,6 +15,7 @@ import {
 } from "../lib/fees";
 import {
   choiceCombinations,
+  choiceValues,
   everyLineChose,
   nearMiss,
   inWindowHours,
@@ -1146,4 +1147,15 @@ test("an offer is spelt out when there are few enough combinations", () => {
     ["BBQ Chicken", "BBQ Meatball", "Pepperoni"],
   ]);
   assert.deepEqual(choiceCombinations(many), []);
+});
+
+test("a saved choice goes back into the picker as it was ticked", () => {
+  // The question travels with the answer, so the picker can find its own
+  // ticks again and the comparing still sees only the answer.
+  const saved = JSON.stringify([["Size::Medium"], ["Flavour::BBQ Chicken"]]);
+
+  assert.deepEqual(choiceValues(saved), ["Size::Medium", "Flavour::BBQ Chicken"]);
+  assert.deepEqual(choiceCombinations(saved), ["Medium BBQ Chicken"]);
+  assert.equal(everyLineChose(saved, [["Medium", "BBQ Chicken"]]), true);
+  assert.equal(everyLineChose(saved, [["Large", "BBQ Chicken"]]), false);
 });

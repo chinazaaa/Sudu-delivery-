@@ -957,12 +957,15 @@ export async function deleteSlide(form: FormData): Promise<void> {
  * will do; across questions all must hold.
  */
 function choiceJson(values: string[]): string {
+  // The question is kept alongside the answer, not thrown away: without it
+  // the picker cannot put its own ticks back, and BBQ Chicken means one thing
+  // under First half and another under Second half.
   const sets = new Map<string, string[]>();
   for (const value of values) {
-    const [group, name] = value.includes("::") ? value.split("::") : ["", value];
-    const clean = name.trim();
-    if (clean === "") continue;
-    sets.set(group, [...(sets.get(group) ?? []), clean]);
+    const raw = value.trim();
+    if (raw === "" || raw.endsWith("::")) continue;
+    const group = raw.includes("::") ? raw.slice(0, raw.indexOf("::")) : "";
+    sets.set(group, [...(sets.get(group) ?? []), raw]);
   }
   return sets.size === 0 ? "" : JSON.stringify([...sets.values()]);
 }
