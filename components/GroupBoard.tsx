@@ -72,7 +72,6 @@ export default function GroupBoard({
   const [left, setLeft] = useState("");
   const [busy, setBusy] = useState(false);
   const [mine, setMine] = useState<string | null>(fromAddress);
-  const [inGroup, setInGroup] = useState(false);
   const [leader, setLeader] = useState(leaderOnServer);
 
   // Everything below runs on every render, never under a return, because a
@@ -89,11 +88,26 @@ export default function GroupBoard({
 
   useEffect(() => {
     const here = readGroup() === groupId;
-    setInGroup(here);
-    // Before the leader has ordered there is nothing on the server that says
-    // whose group it is, so the browser that made the link is the only thing
-    // that knows. It never guesses: making a link records it positively.
-    if (here && !joinedViaLink()) setLeader(true);
+
+    if (here) {
+      // Before the leader has ordered there is nothing on the server that says
+      // whose group it is, so the browser that made the link is the only thing
+      // that knows. It never guesses: making a link records it positively.
+      if (!joinedViaLink()) setLeader(true);
+      return;
+    }
+
+    // Opening the link is joining.
+    //
+    // This used to wait for "Add my food" to be tapped, which meant somebody
+    // who reached the menu any other way, the logo, the bar, the back button,
+    // was quietly ordering alone. Their food went in a car of its own and the
+    // group sat there saying nobody had added anything, which is exactly what
+    // it looked like from the inside.
+    //
+    // Only ever from this branch, so the person who made the link cannot be
+    // demoted to a guest in their own group by reopening their own page.
+    enterGroup(groupId, true);
   }, [groupId, leaderOnServer]);
 
   useEffect(() => {
@@ -121,9 +135,7 @@ export default function GroupBoard({
   const me = members.find((one) => one.orderId === mine) ?? null;
 
   const addMine = () => {
-    // Taking the link is what puts their food in this car. Doing it here,
-    // rather than on a page in between, is the whole point of the group page.
-    enterGroup(groupId, !leader);
+    // Joining happened on arrival. This is only the way to the menu.
     router.push("/");
   };
 
@@ -147,11 +159,12 @@ export default function GroupBoard({
       {!me && (
         <section className="card space-y-2 border-2 border-brand/30 bg-brand-tint">
           <h2 className="font-bold text-brand-dark">
-            {inGroup ? "You have not added anything yet" : `Join ${leaderName}'s delivery`}
+            {leader ? "You have not added anything yet" : `You are in ${leaderName}'s delivery`}
           </h2>
           <p className="text-sm text-ink/75">
-            Pick your own food and pay for your own food. The delivery is one fee for
-            the whole car, split evenly between everybody in it.
+            Anything you order from now rides in this car. You pay for your own food,
+            and the delivery is one fee for the whole car, split evenly between
+            everybody in it.
           </p>
           <button type="button" onClick={addMine} className="btn-primary w-full">
             Add my food
