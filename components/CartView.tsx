@@ -75,6 +75,20 @@ export default function CartView({
   // Where this person stands: not finished, finished, or finished and then
   // changed their mind. The button has to say which.
   const [mine, setMine] = useState<{ finalised: boolean; changed: boolean } | null>(null);
+  // What the cart looked like when they finalised, kept here so a change is
+  // visible the instant they make it. The server learns a second or two
+  // later and polls a while after that, which is far too slow for a button
+  // sitting under somebody's thumb.
+  const [finalisedAs, setFinalisedAs] = useState("");
+
+  useEffect(() => {
+    if (group === "") return;
+    try {
+      setFinalisedAs(localStorage.getItem(`sudu_final_${group}`) ?? "");
+    } catch {
+      /* Without storage the server's answer still arrives, just later. */
+    }
+  }, [group]);
   const [others, setOthers] = useState<
     {
       isMine?: boolean;
@@ -158,6 +172,15 @@ export default function CartView({
         setProblem(data.error ?? "Could not save that.");
         return;
       }
+      // What was agreed to, so a later change shows up at once.
+      try {
+        localStorage.setItem(`sudu_final_${group}`, JSON.stringify(toServerLines(cart)));
+        setFinalisedAs(JSON.stringify(toServerLines(cart)));
+      } catch {
+        /* The server still works it out from the timestamps. */
+      }
+      setMine({ finalised: true, changed: false });
+
       // Worth remembering: the same number and block are wanted next time.
       try {
         const saved = JSON.parse(localStorage.getItem("sudu_me_v1") ?? "{}");
@@ -203,6 +226,13 @@ export default function CartView({
       </Empty>
     );
   }
+
+  // Changed since they said they were done, as this browser can see it now
+  // rather than as the server will see it shortly.
+  const movedSinceFinalising =
+    (mine?.finalised ?? false) &&
+    finalisedAs !== "" &&
+    JSON.stringify(toServerLines(cart)) !== finalisedAs;
 
   const names = people.map((p) => p.name);
   const groups = groupNames(cart, people)
@@ -600,7 +630,7 @@ export default function CartView({
             <p className="truncate text-lg font-extrabold">{naira(cartSubtotal(cart))}</p>
           </div>
           {group !== "" ? (
-            mine?.finalised && !mine.changed ? (
+            mine?.finalised && !mine.changed && !movedSinceFinalising ? (
               // Nothing has moved since they finished, so there is nothing to
               // do here. Saying "Finalise" again invites them to wonder
               // whether the first one took.

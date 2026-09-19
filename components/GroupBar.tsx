@@ -34,6 +34,9 @@ export default function GroupBar() {
   // Whose group it is reads differently depending on which of them is looking,
   // and getting that wrong is what made the leader think they were a guest.
   const [joined, setJoined] = useState(false);
+  // Leaving takes their food out of the car, so it is asked rather than done
+  // by a mistap on a bar that sits on every page.
+  const [asking, setAsking] = useState(false);
 
   useEffect(() => {
     // Re-read whenever a party starts or ends, because somebody can make a
@@ -82,6 +85,38 @@ export default function GroupBar() {
   const others = (party?.people ?? 0) - 1;
 
   return (
+    <>
+      {asking && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-4 sm:items-center">
+          <div className="w-full max-w-sm space-y-3 rounded-3xl bg-paper p-5 shadow-bar text-ink">
+            <h2 className="text-lg font-extrabold">Leave this group?</h2>
+            <p className="text-sm text-muted">
+              Your food comes out of the car and the others stop paying a share for
+              you. Your cart stays on this phone, so you can order on your own or
+              open the link again.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                leaveGroup();
+                setToken("");
+                setAsking(false);
+              }}
+              className="btn-primary w-full"
+            >
+              Yes, leave
+            </button>
+            <button
+              type="button"
+              onClick={() => setAsking(false)}
+              className="w-full text-sm font-semibold text-muted"
+            >
+              Stay in
+            </button>
+          </div>
+        </div>
+      )}
+
     <div className="bg-brand text-white">
       <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2">
         <span className="min-w-0 flex-1 text-sm">
@@ -114,15 +149,13 @@ export default function GroupBar() {
 
         <button
           type="button"
-          onClick={() => {
-            leaveGroup();
-            setToken("");
-          }}
+          onClick={() => setAsking(true)}
           className="shrink-0 text-xs font-semibold text-white/80 underline"
         >
           Leave
         </button>
       </div>
     </div>
+    </>
   );
 }
