@@ -203,22 +203,44 @@ export function everyLineChose(choice: string, lines: string[][] | undefined): b
  * saved a plain comma list is read as a single set, which is what it meant.
  */
 export function choiceSets(choice: string): string[][] {
-  const clean = (names: string[]) =>
-    names.map((one) => optionName(one).toLowerCase()).filter(Boolean);
+  return readChoice(choice).map((set) =>
+    set.map((one) => optionName(one).toLowerCase())
+  );
+}
 
+/**
+ * The stored choice, parsed, or nothing at all if it does not make sense.
+ *
+ * A value written by an older version, or by a bug, has to end here rather
+ * than halfway into a sentence a customer reads. Anything that is not plainly
+ * a list of names is treated as no choice at all, which prices the offer a
+ * little wider than intended and says nothing strange to anybody.
+ */
+function readChoice(choice: string): string[][] {
   const raw = choice.trim();
   if (raw === "") return [];
 
+  // Brackets and braces are the shape of a value that has been written by a
+  // bug rather than by a menu. A quotation mark is not: a size on this menu
+  // is called Medium 12", and refusing that would refuse the real thing.
+  const sane = (one: unknown): one is string =>
+    typeof one === "string" && one.trim() !== "" && !/[[\]{}]/.test(one);
+
   if (raw.startsWith("[")) {
     try {
-      const parsed = JSON.parse(raw) as string[][];
-      return parsed.map(clean).filter((set) => set.length > 0);
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter((set): set is unknown[] => Array.isArray(set))
+        .map((set) => set.filter(sane).map((one) => one.trim()))
+        .filter((set) => set.length > 0);
     } catch {
       return [];
     }
   }
 
-  const single = clean(raw.split(","));
+  // An older offer saved a plain comma list, which meant one question.
+  const single = raw.split(",").filter(sane).map((one) => one.trim());
   return single.length > 0 ? [single] : [];
 }
 
@@ -297,22 +319,9 @@ export function nearMiss(
  * because a sentence reading "bbq chicken" looks like a mistake.
  */
 export function choiceLabels(choice: string): string[][] {
-  const raw = choice.trim();
-  if (raw === "") return [];
-
-  if (raw.startsWith("[")) {
-    try {
-      const parsed = JSON.parse(raw) as string[][];
-      return parsed
-        .map((set) => set.map(optionName).filter(Boolean))
-        .filter((set) => set.length > 0);
-    } catch {
-      return [];
-    }
-  }
-
-  const single = raw.split(",").map(optionName).filter(Boolean);
-  return single.length > 0 ? [single] : [];
+  return readChoice(choice)
+    .map((set) => set.map(optionName).filter(Boolean))
+    .filter((set) => set.length > 0);
 }
 
 /**
@@ -332,13 +341,7 @@ export function optionName(value: string): string {
 /** Every "Question::Option" an offer holds, flat, for putting a picker back
  *  the way it was left. */
 export function choiceValues(choice: string): string[] {
-  const raw = choice.trim();
-  if (raw === "" || !raw.startsWith("[")) return [];
-  try {
-    return (JSON.parse(raw) as string[][]).flat().map((one) => one.trim()).filter(Boolean);
-  } catch {
-    return [];
-  }
+  return choice.trim().startsWith("[") ? readChoice(choice).flat() : [];
 }
 
 /**

@@ -79,9 +79,13 @@ export default function MenuScope({
   //
   // Most rather than all, because one exception is normal: the sixteen inch
   // comes thin crust only, and that should not hide crust from the list.
+  //
+  // The rest are not offered at all. Domino's Half and Half asks for a
+  // flavour on each side, and those two rows of fourteen flavours each were
+  // most of what was on screen while being about one pizza nobody is running
+  // a deal on.
   const common = (asked: number) => covered === 0 || asked * 2 >= covered;
   const plain = questions.filter((one) => common(one.items));
-  const odd = questions.filter((one) => !common(one.items));
 
   const toggle = (
     value: string,
@@ -166,7 +170,7 @@ export default function MenuScope({
         </div>
       )}
 
-      {sizes && shop && (plain.length > 0 || odd.length > 0) && (
+      {sizes && shop && plain.length > 0 && (
         <div className="space-y-2">
           <p className="label mb-0">And only this choice</p>
           {/* One row per question a dish asks, because Medium and BBQ Chicken
@@ -203,55 +207,11 @@ export default function MenuScope({
               </div>
             </div>
           ))}
-          {odd.length > 0 && (
-            <details>
-              <summary className="cursor-pointer text-xs font-bold text-brand">
-                Questions only some dishes ask
-              </summary>
-              <div className="mt-2 space-y-2">
-                {odd.map((question) => (
-                  <div key={question.group}>
-                    <p className="text-xs font-bold uppercase tracking-wide text-muted">
-                      {question.group}
-                      <span className="ml-1 font-semibold normal-case tracking-normal">
-                        · {question.items} of {covered} dishes
-                      </span>
-                    </p>
-                    <div className="mt-1 flex flex-wrap gap-2">
-                      {question.options.map((one) => {
-                        const value = `${question.group}::${one.name}`;
-                        return (
-                          <button
-                            key={value}
-                            type="button"
-                            onClick={() => toggle(value, chosen, setChosen)}
-                            className={`chip ${
-                              chosen.includes(value)
-                                ? "border-brand bg-brand text-white"
-                                : "border-black/10 bg-white"
-                            }`}
-                          >
-                            {one.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-2 text-xs text-muted">
-                Picking one of these narrows the offer to the dishes that ask
-                it, which is usually not what a size offer wants.
-              </p>
-            </details>
-          )}
-
           <p className="text-xs text-muted">
-            These are {shop.name}&apos;s own words, one row per question a dish
-            asks. Nothing picked means any answer, which is usually what you
-            want. Two in one row means either will do. Picking from two rows
-            means both must be true, so an offer only applies to dishes that
-            ask both questions.
+            These are {shop.name}&apos;s own words, one row per question most
+            of these dishes ask. Nothing picked means any answer, which is
+            usually what you want. Two in one row means either will do; from
+            two rows means both must be true.
           </p>
         </div>
       )}

@@ -154,16 +154,23 @@ export async function liveOffers(): Promise<LiveOffer[]> {
     places: (places ?? [])
       .filter((row) => row.coupon_code === coupon.code)
       .map((row) => row.restaurant_id as string),
-    items: [
-      ...new Set([
-        ...dishes
-          .filter((row) => row.coupon_code === coupon.code)
-          .map((row) => row.menu_item_id),
-        ...sections
-          .filter((row) => row.coupon_code === coupon.code)
-          .flatMap((row) => inSection.get(row.category_id) ?? []),
-      ]),
-    ],
+    // Named dishes win over a section. They are the narrower answer and the
+    // one somebody went to the trouble of picking, and adding them to a
+    // section quietly widened the offer to the whole section instead.
+    items: (() => {
+      const named = dishes
+        .filter((row) => row.coupon_code === coupon.code)
+        .map((row) => row.menu_item_id);
+      if (named.length > 0) return [...new Set(named)];
+
+      return [
+        ...new Set(
+          sections
+            .filter((row) => row.coupon_code === coupon.code)
+            .flatMap((row) => inSection.get(row.category_id) ?? [])
+        ),
+      ];
+    })(),
     choice: coupon.required_choice ?? "",
     runs: (runs ?? [])
       .filter((row) => row.coupon_code === coupon.code)
@@ -322,6 +329,7 @@ export async function useCoupon(code: string): Promise<void> {
 /** What a code is worth, in words, for the box the customer types it into. */
 export function couponLabel(coupon: Coupon): string {
   if (coupon.applies_to === "fee") {
+    if (coupon.amount === 0) return "Free delivery";
     const taper =
       coupon.included_items !== null && coupon.extra_per_item > 0
         ? `, ${naira(coupon.extra_per_item)} an item after ${coupon.included_items}`

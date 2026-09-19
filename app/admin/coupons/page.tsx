@@ -9,6 +9,7 @@ import CouponForm, {
 import { SLOT_LABEL } from "@/lib/config";
 import { runDateLabel } from "@/lib/time";
 import { choiceReach, couponLabel, listCoupons } from "@/lib/coupons";
+import { choiceLabels, choiceSets } from "@/lib/offers";
 import { deleteCoupon, toggleCoupon } from "../actions";
 import { batchOverview } from "@/lib/admin";
 import { menuView } from "@/lib/menu";
@@ -97,17 +98,20 @@ export default async function CouponsAdmin({
   // Friday rather than after one.
   const reach = new Map<string, Awaited<ReturnType<typeof choiceReach>>>();
   for (const coupon of coupons) {
-    if (coupon.required_choice?.trim()) {
-      const covered = [
-        ...coupon.dishes.map((dish) => dish.id),
-        ...menu.flatMap((place) =>
-          place.items
-            .filter((item) =>
-              coupon.sections.some((section) => section.id === item.categoryId)
-            )
-            .map((item) => item.id)
-        ),
-      ];
+    // Only where a choice has actually been ticked. Saying every dish offers
+    // it when none was asked for is an answer to a question nobody put.
+    if (choiceSets(coupon.required_choice ?? "").length > 0) {
+      // The same rule the pricing uses: named dishes win over a section.
+      const covered =
+        coupon.dishes.length > 0
+          ? coupon.dishes.map((dish) => dish.id)
+          : menu.flatMap((place) =>
+              place.items
+                .filter((item) =>
+                  coupon.sections.some((section) => section.id === item.categoryId)
+                )
+                .map((item) => item.id)
+            );
       reach.set(coupon.code, await choiceReach([...new Set(covered)], coupon.required_choice));
     }
   }
@@ -184,14 +188,17 @@ export default async function CouponsAdmin({
                       reach.get(coupon.code)!.missing.length > 0 ? "text-brand" : "text-mint"
                     }`}
                   >
-                    {reach.get(coupon.code)!.missing.length === 0
-                      ? `All ${reach.get(coupon.code)!.of} dishes offer that choice.`
-                      : `${reach.get(coupon.code)!.matched} of ${
-                          reach.get(coupon.code)!.of
-                        } dishes offer it. Not on: ${reach
-                          .get(coupon.code)!
-                          .missing.slice(0, 4)
-                          .join(", ")}.`}
+                    {(() => {
+                      const asked = choiceLabels(coupon.required_choice ?? "")
+                        .map((set) => set.join(" or "))
+                        .join(", and ");
+                      const found = reach.get(coupon.code)!;
+                      return found.missing.length === 0
+                        ? `${asked}: all ${found.of} of the dishes it covers offer it.`
+                        : `${asked}: ${found.matched} of ${found.of} dishes offer it. Not on: ${found.missing
+                            .slice(0, 4)
+                            .join(", ")}.`;
+                    })()}
                   </p>
                 )}
               </div>

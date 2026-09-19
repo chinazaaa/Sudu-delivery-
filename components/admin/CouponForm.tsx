@@ -285,8 +285,9 @@ export default function CouponForm({
           <p className="label">Or particular dishes</p>
           <DishPicker menu={dishes} chosen={values?.dishes ?? []} />
           <p className="mt-1 text-xs text-muted">
-            Instead of a section: these dishes and nothing else in the cart.
-            Two of them together still counts.
+            Instead of a section, not as well as one: pick any dishes here and
+            they are the whole offer, whatever is ticked above. Two of them
+            together still counts.
           </p>
         </div>
       )}
