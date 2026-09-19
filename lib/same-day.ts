@@ -115,7 +115,7 @@ function nextDay(date: string): string {
 }
 
 /** "12:30pm", the way a time is said rather than the way a clock prints it. */
-function clockOf(hour: number, minute: number): string {
+export function clockOf(hour: number, minute: number): string {
   const suffix = hour >= 12 ? "pm" : "am";
   const shown = hour > 12 ? hour - 12 : hour;
   return minute === 0 ? `${shown}${suffix}` : `${shown}:${String(minute).padStart(2, "0")}${suffix}`;

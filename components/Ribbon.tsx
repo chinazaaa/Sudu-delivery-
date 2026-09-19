@@ -17,7 +17,7 @@ export default function Ribbon({
   offer,
 }: {
   text: string;
-  offer: { code: string; line: string } | null;
+  offer: { code: string; line: string; automatic?: boolean } | null;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -35,7 +35,19 @@ export default function Ribbon({
           </span>
         )}
 
-        {offer && (
+        {/* A promotion has no code to type, so there is nothing to copy and
+            saying "with" would send people looking for a box. It is simply
+            true of the cart, and saying so is the whole announcement. */}
+        {offer?.automatic && (
+          <span className="flex items-center gap-1.5">
+            <span className="text-white/80">{offer.line}</span>
+            <span className="rounded-full bg-brand px-2.5 py-0.5 text-xs font-extrabold tracking-wide">
+              No code needed
+            </span>
+          </span>
+        )}
+
+        {offer && !offer.automatic && (
           <span className="flex items-center gap-1.5">
             <span className="text-white/80">{offer.line} with</span>
             <button

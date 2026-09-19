@@ -37,6 +37,10 @@ export async function GET(
       .eq("id", data.batch_id as string)
       .maybeSingle();
 
+    const running = closed
+      ? { each: 0, offer: "" }
+      : await shareNow(data.id as string);
+
     return NextResponse.json({
       when: (batch?.delivery_window_text as string) ?? "",
       sameDay: batch?.kind === "same_day",
@@ -48,7 +52,11 @@ export async function GET(
         ? orders.map((one) => (one.for_name ?? one.customer_name).split(" ")[0])
         : seats.map((one) => one.name.split(" ")[0]),
       ready: closed ? orders.length : seats.filter(isReady).length,
-      eachNow: closed ? 0 : (await shareNow(data.id as string)).each,
+      eachNow: running.each,
+      // Named when a promotion is pricing the car, because then the figure
+      // does not fall as people join and a board that implies it will is
+      // setting up a surprise at the close.
+      offer: running.offer ?? "",
       // What everybody has put in, so the cart page can show the whole car
       // rather than only the part of it this person is holding.
       //

@@ -3,6 +3,7 @@ import { claimLeader, joinableGroup, openGroupFor, startSharedGroup } from "./gr
 import { feeFor, sameDayFee, splitFee, type Band } from "./fees";
 import { activeBands, deliveryHours, safeSettings, sameDayPricing } from "./settings";
 import {
+  activePromotion,
   checkCoupon,
   couponLabel,
   useCoupon,
@@ -172,6 +173,29 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   const customerNote = (input.customerNote ?? "").trim();
   const returning = await isReturningCustomer(phone);
 
+  // A promotion prices the delivery itself rather than taking money off it,
+  // so it is settled before anything else: "Domino's delivery is 2,000" is a
+  // price, not a discount, and five items or one it is the same price.
+  const promotion = await activePromotion({
+    restaurantIds: placesIn(priced.lines),
+    items: countItems(priced.lines),
+    batchId: batch.id,
+    deliverAt: batch.kind === "same_day" ? batch.deliver_at : null,
+    returning,
+  });
+
+  // One offer to a checkout. An automatic one has already claimed the slot,
+  // so a typed code is refused rather than stacked, and told why: "that code
+  // is not in use" would read as the code being broken.
+  if (promotion && input.coupon?.trim()) {
+    return {
+      ok: false,
+      error:
+        `${promotion.coupon.note.trim() || "An offer"} is already on this order, ` +
+        "and only one offer applies at a time.",
+    };
+  }
+
   // A discount code is checked against this order's own delivery, so "free
   // delivery" is worth what delivery actually costs here and no more. The
   // check happens against the fee the order is about to be charged.
@@ -230,6 +254,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           people: input.people ?? [],
           bands,
           customerNote,
+          promotion: promotion ? { code: promotion.coupon.code, fee: promotion.fee } : null,
         })
       : await placeSingleOrder({
           batch,
@@ -240,7 +265,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           coupon: coupon?.ok ? coupon : null,
           joinRootId: sameDay ? null : joinRootId,
           sharedGroupId,
-          fixedFee: input.fixedFee,
+          // A promotion is the price, so it wins over the ladder and over the
+          // same day pricing alike. A share worked out by a group that has
+          // closed still wins over it: by then the money is decided.
+          fixedFee: input.fixedFee ?? (promotion && !sharedGroupId ? promotion.fee : undefined),
+          promotionCode: promotion?.coupon.code ?? null,
           sameDayFee: sameDay && !party
             ? sameDayFee(
                 countItems(priced.lines),
@@ -260,6 +289,16 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   if (!result.ok) return result;
 
   if (coupon?.ok) await useCoupon(coupon.coupon.code);
+  // A promotion counts its uses too, because the cap on how many orders it is
+  // good for is the cap on how much you can carry. In a split group it is one
+  // use per person, since each of them paid the offer price.
+  if (promotion && !sharedGroupId) {
+    const heads =
+      input.groupMode === "split" ? Math.max(1, (input.people ?? []).length + 1) : 1;
+    for (let taken = 0; taken < heads; taken += 1) {
+      await useCoupon(promotion.coupon.code);
+    }
+  }
   // The person who made the link is the one who can close it. Until they
   // order, the group only knows their first name; now it knows their number,
   // so every other page can tell who the leader is without being told.
@@ -377,6 +416,8 @@ async function placeSingleOrder(args: {
   /** Already worked out for a same day trip, which is priced on its own
    *  ladder rather than by the banding the runs use. */
   sameDayFee: number | null;
+  /** The promotion that priced this delivery, for counting its use. */
+  promotionCode?: string | null;
   /** A share handed down by a shared delivery that has just closed. */
   fixedFee?: number;
 }): Promise<PlaceOrderResult> {
@@ -446,7 +487,7 @@ async function placeSingleOrder(args: {
     subtotal_food: countFood(lines),
     fee,
     discount: args.coupon?.discount ?? 0,
-    coupon_code: args.coupon?.coupon.code ?? null,
+    coupon_code: args.coupon?.coupon.code ?? args.promotionCode ?? null,
     // The shared delivery first. It is the one somebody was sent a link to and
     // is waiting to see this order appear in.
     group_id: args.sharedGroupId ?? group?.id ?? null,
@@ -484,6 +525,8 @@ async function placeSplitGroup(args: {
   }[];
   bands: Band[];
   customerNote: string;
+  /** A promotion pricing the delivery, which every person pays. */
+  promotion: { code: string; fee: number } | null;
 }): Promise<PlaceOrderResult> {
   // The leader's own items are keyed by an empty name, not by what they typed
   // in "Your name". Keying by the name collapsed the whole group into one payer
@@ -515,8 +558,15 @@ async function placeSplitGroup(args: {
 
   // The band is set by the whole load, then shared out by what each person got.
   const people = [...byPerson.entries()];
-  const groupFee = feeFor(countItems(args.lines), args.batch.flash_fee, args.bands);
-  const shares = splitFee(groupFee, people.map(([, lines]) => countItems(lines)));
+  // A promotion is a price per person, not a load to share out: it is what
+  // the offer says on the front of the shop, and it does not fall because
+  // somebody brought a friend.
+  const groupFee = args.promotion
+    ? args.promotion.fee * people.length
+    : feeFor(countItems(args.lines), args.batch.flash_fee, args.bands);
+  const shares = args.promotion
+    ? people.map(() => args.promotion!.fee)
+    : splitFee(groupFee, people.map(([, lines]) => countItems(lines)));
 
   let leaderOrderId: string | null = null;
 
@@ -537,7 +587,9 @@ async function placeSplitGroup(args: {
       // A discount lands once, on the share the person who typed the code is
       // paying for.
       discount: isLeader ? args.coupon?.discount ?? 0 : 0,
-      coupon_code: isLeader ? args.coupon?.coupon.code ?? null : null,
+      coupon_code: isLeader
+        ? args.coupon?.coupon.code ?? args.promotion?.code ?? null
+        : args.promotion?.code ?? null,
       group_id: group.id,
       // The leader's share carries their own name on the bag label.
       for_name: isLeader ? args.name : who,
@@ -923,6 +975,24 @@ export async function previewCoupon(args: {
   if ("error" in priced) return { ok: false, error: priced.error };
 
   const phone = normalisePhone(args.phone);
+
+  // One offer to a checkout, and an automatic one has already taken it.
+  const holding = await activePromotion({
+    restaurantIds: placesIn(priced.lines),
+    items: countItems(priced.lines),
+    batchId: batch.id,
+    deliverAt: batch.kind === "same_day" ? batch.deliver_at : null,
+    returning: phone ? await isReturningCustomer(phone) : false,
+  });
+  if (holding) {
+    return {
+      ok: false,
+      error:
+        `${holding.coupon.note.trim() || "An offer"} is already on this order, ` +
+        "and only one offer applies at a time.",
+    };
+  }
+
   const result = await checkCoupon({
     code: args.code,
     fee: feeFor(countItems(priced.lines), batch.flash_fee, await activeBands()),

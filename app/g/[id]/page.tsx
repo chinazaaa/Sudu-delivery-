@@ -190,6 +190,7 @@ export default async function GroupPage({
           shareUrl={shareUrl}
           leaderName={group.leaderName}
           eachNow={group.eachNow}
+          offer={group.offer}
         />
       )}
 

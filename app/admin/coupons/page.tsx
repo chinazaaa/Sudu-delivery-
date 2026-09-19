@@ -11,10 +11,13 @@ import {
   saveCoupon,
   setCouponPlaces,
   setCouponRuns,
+  setCouponWindows,
   toggleCoupon,
 } from "../actions";
 import { batchOverview } from "@/lib/admin";
 import { openRestaurants } from "@/lib/menu";
+import { deliveryHours } from "@/lib/settings";
+import { clockOf } from "@/lib/same-day";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +30,14 @@ export default async function CouponsAdmin() {
   // A code can belong to one kitchen rather than to the shop, which is what a
   // deal with that kitchen actually is.
   const places = await openRestaurants();
+  // The same day windows, as the hours they open. A promotion can be good for
+  // the early car and not the late one.
+  const hours = await deliveryHours();
+  const windows: { from: number; label: string }[] = [];
+  for (let from = hours.first; from < hours.last; from += 3) {
+    const to = Math.min(from + 3, hours.last);
+    windows.push({ from, label: `${clockOf(from, 0)} to ${clockOf(to, 0)}` });
+  }
 
   return (
     <div>
@@ -43,6 +54,7 @@ export default async function CouponsAdmin() {
                 <h2 className="font-extrabold tracking-wide">{coupon.code}</h2>
                 <p className="text-sm text-muted">
                   {couponLabel(coupon)}
+                  {coupon.automatic && " · applies by itself"}
                   {coupon.first_order_only && " · first order only"}
                   {coupon.note && ` · ${coupon.note}`}
                 </p>
@@ -148,6 +160,42 @@ export default async function CouponsAdmin() {
               </form>
             )}
 
+            {/* Only a promotion cares about windows: a typed code is used at
+                a checkout, and a window is when a car goes out. */}
+            {coupon.applies_to === "fee" && windows.length > 0 && (
+              <form action={setCouponWindows} className="mt-3 space-y-2">
+                <input type="hidden" name="code" value={coupon.code} />
+                <p className="label mb-0">Same day windows</p>
+                <div className="flex flex-wrap gap-2">
+                  {windows.map((window) => (
+                    <label
+                      key={window.from}
+                      className="chip cursor-pointer border-black/10 bg-white font-medium"
+                    >
+                      <input
+                        type="checkbox"
+                        name="window"
+                        value={window.from}
+                        defaultChecked={coupon.windows
+                          .split(",")
+                          .map((one) => one.trim())
+                          .includes(String(window.from))}
+                      />
+                      {window.label}
+                    </label>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <SaveButton quiet className="px-4 py-2 text-sm">
+                    Save which windows
+                  </SaveButton>
+                  <span className="text-xs text-muted">
+                    Tick none and it is good at any time.
+                  </span>
+                </div>
+              </form>
+            )}
+
             <div className="mt-3 flex flex-wrap gap-2">
               <form action={toggleCoupon}>
                 <input type="hidden" name="code" value={coupon.code} />
@@ -200,11 +248,47 @@ export default async function CouponsAdmin() {
             />
           </div>
           <div>
-            <label className="label" htmlFor="applies_to">Comes off</label>
+            <label className="label" htmlFor="applies_to">What it does</label>
             <select id="applies_to" name="applies_to" className="field" defaultValue="delivery">
-              <option value="delivery">Delivery</option>
-              <option value="order">The whole order</option>
+              <option value="delivery">Comes off delivery</option>
+              <option value="order">Comes off the whole order</option>
+              <option value="fee">Delivery becomes this, no code typed</option>
             </select>
+            <p className="mt-1 text-xs text-muted">
+              The last one is a promotion: it applies by itself when the cart
+              qualifies, and nobody types anything.
+            </p>
+          </div>
+          <div>
+            <label className="label" htmlFor="included_items">
+              Items that price covers
+            </label>
+            <input
+              id="included_items"
+              name="included_items"
+              inputMode="numeric"
+              placeholder="Any"
+              className="field"
+            />
+            <p className="mt-1 text-xs text-muted">
+              For a promotion. Blank is flat however much they order.
+            </p>
+          </div>
+          <div>
+            <label className="label" htmlFor="extra_per_item">
+              And each item after
+            </label>
+            <input
+              id="extra_per_item"
+              name="extra_per_item"
+              inputMode="numeric"
+              placeholder="0"
+              className="field"
+            />
+            <p className="mt-1 text-xs text-muted">
+              {naira(2000)} for three and {naira(500)} an item after is three
+              and a half thousand for five.
+            </p>
           </div>
           <div>
             <label className="label" htmlFor="note">Note to yourself</label>
@@ -252,6 +336,27 @@ export default async function CouponsAdmin() {
             </div>
             <p className="mt-1 text-xs text-muted">
               Tick none and it works on every run, this term and next.
+            </p>
+          </div>
+        )}
+
+        {windows.length > 0 && (
+          <div>
+            <p className="label">Which same day windows</p>
+            <div className="flex flex-wrap gap-2">
+              {windows.map((window) => (
+                <label
+                  key={window.from}
+                  className="chip cursor-pointer border-black/10 bg-white font-medium"
+                >
+                  <input type="checkbox" name="window" value={window.from} />
+                  {window.label}
+                </label>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-muted">
+              Tick none and it is good at any time. A run is not a window, so
+              runs are decided by the ticks above and never by these.
             </p>
           </div>
         )}

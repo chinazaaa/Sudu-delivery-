@@ -1,3 +1,4 @@
+import { pickOffer, type LiveOffer, type OfferContext } from "./offers";
 import { db } from "./supabase";
 import { naira } from "./money";
 import { SLOT_LABEL, type BatchSlot } from "./config";
@@ -5,7 +6,7 @@ import { runDateLabel } from "./time";
 
 export type Coupon = {
   code: string;
-  applies_to: "delivery" | "order";
+  applies_to: "delivery" | "order" | "fee";
   amount: number;
   note: string;
   active: boolean;
@@ -13,6 +14,14 @@ export type Coupon = {
   max_uses: number | null;
   used: number;
   first_order_only: boolean;
+  /** Applies itself, with nothing to type. A promotion rather than a code. */
+  automatic: boolean;
+  /** How many items the headline price covers. Null is flat, for ever. */
+  included_items: number | null;
+  /** What each item beyond that adds. */
+  extra_per_item: number;
+  /** Same day windows it is good for, as start hours: "12,15". */
+  windows: string;
 };
 
 export type CouponWithRuns = Coupon & {
@@ -41,6 +50,71 @@ export async function couponPlaces(code: string): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+
+/**
+ * Every promotion that is on today, with its rules.
+ *
+ * Expiry, the cap and the on switch are settled here because they are facts
+ * about the offer rather than about the cart. What is left is judged against
+ * the cart, on whichever side is asking.
+ */
+export async function liveOffers(): Promise<LiveOffer[]> {
+  let offers: Coupon[] = [];
+  try {
+    const { data, error } = await db()
+      .from("coupons")
+      .select("*")
+      .eq("automatic", true)
+      .eq("active", true);
+    if (error) return [];
+    offers = (data ?? []) as Coupon[];
+  } catch {
+    return [];
+  }
+
+  const now = new Date();
+  const live = offers.filter(
+    (coupon) =>
+      coupon.applies_to === "fee" &&
+      !(coupon.expires_at && new Date(coupon.expires_at) <= now) &&
+      !(coupon.max_uses !== null && coupon.used >= coupon.max_uses)
+  );
+  if (live.length === 0) return [];
+
+  const codes = live.map((coupon) => coupon.code);
+  const [{ data: places }, { data: runs }] = await Promise.all([
+    db().from("coupon_restaurants").select("coupon_code, restaurant_id").in("coupon_code", codes),
+    db().from("coupon_runs").select("coupon_code, batch_id").in("coupon_code", codes),
+  ]);
+
+  return live.map((coupon) => ({
+    code: coupon.code,
+    note: coupon.note,
+    fee: coupon.amount,
+    includedItems: coupon.included_items,
+    extraPerItem: coupon.extra_per_item ?? 0,
+    places: (places ?? [])
+      .filter((row) => row.coupon_code === coupon.code)
+      .map((row) => row.restaurant_id as string),
+    runs: (runs ?? [])
+      .filter((row) => row.coupon_code === coupon.code)
+      .map((row) => row.batch_id as string),
+    windows: (coupon.windows ?? "")
+      .split(",")
+      .map((one) => Number(one.trim()))
+      .filter((one) => Number.isFinite(one)),
+    firstOrderOnly: coupon.first_order_only,
+  }));
+}
+
+/** The promotion on an order, read and judged in one go, for the server. */
+export async function activePromotion(
+  context: OfferContext
+): Promise<{ coupon: { code: string; note: string }; fee: number } | null> {
+  const found = pickOffer(await liveOffers(), context);
+  return found ? { coupon: { code: found.offer.code, note: found.offer.note }, fee: found.fee } : null;
 }
 
 export type CouponCheck =
@@ -85,6 +159,11 @@ export async function checkCoupon(args: {
   const coupon = data as Coupon | null;
   if (!coupon || !coupon.active) {
     return { ok: false, error: "That code is not in use." };
+  }
+  // A promotion applies itself. Typing its name is not how it is claimed, and
+  // letting somebody type it would be the offer landing twice.
+  if (coupon.automatic || coupon.applies_to === "fee") {
+    return { ok: false, error: "That one applies by itself, with nothing to type." };
   }
   if (coupon.expires_at && new Date(coupon.expires_at) <= new Date()) {
     return { ok: false, error: "That code has expired." };
@@ -168,6 +247,13 @@ export async function useCoupon(code: string): Promise<void> {
 
 /** What a code is worth, in words, for the box the customer types it into. */
 export function couponLabel(coupon: Coupon): string {
+  if (coupon.applies_to === "fee") {
+    const taper =
+      coupon.included_items !== null && coupon.extra_per_item > 0
+        ? `, ${naira(coupon.extra_per_item)} an item after ${coupon.included_items}`
+        : "";
+    return `delivery is ${naira(coupon.amount)}${taper}`;
+  }
   return coupon.applies_to === "delivery"
     ? `${naira(coupon.amount)} off delivery`
     : `${naira(coupon.amount)} off the order`;
@@ -237,7 +323,7 @@ export async function listCoupons(): Promise<CouponWithRuns[]> {
 }
 
 /** A code announced on the site, as the strip along the top states it. */
-export type PublicOffer = { code: string; line: string };
+export type PublicOffer = { code: string; line: string; automatic?: boolean };
 
 /**
  * The offer worth announcing, if there is one.
@@ -264,9 +350,11 @@ export async function publicOffer(code: string): Promise<PublicOffer | null> {
     if (coupon.max_uses !== null && coupon.used >= coupon.max_uses) return null;
 
     const what =
-      coupon.applies_to === "delivery"
-        ? `${naira(coupon.amount)} off delivery`
-        : `${naira(coupon.amount)} off`;
+      coupon.applies_to === "fee"
+        ? `${naira(coupon.amount)} delivery`
+        : coupon.applies_to === "delivery"
+          ? `${naira(coupon.amount)} off delivery`
+          : `${naira(coupon.amount)} off`;
 
     // A code kept to one kitchen says so in the strip. Announcing "₦500 off"
     // to the whole site and then refusing it at the counter is the sort of
@@ -277,6 +365,7 @@ export async function publicOffer(code: string): Promise<PublicOffer | null> {
     return {
       code: coupon.code,
       line: coupon.first_order_only ? `${what} your first order${where}` : `${what}${where}`,
+      automatic: coupon.automatic,
     };
   } catch {
     // A code nobody can read is a code nobody is offered. The site is fine.

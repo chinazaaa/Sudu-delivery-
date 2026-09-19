@@ -5,7 +5,14 @@
  *
  * Thresholds are provisional. Set them from what the boot actually holds.
  */
-export type Band = { maxItems: number; fee: number };
+export type Band = {
+  maxItems: number;
+  fee: number;
+  /** On the open top band only: what each item past the band below costs.
+   *  Without it the top band is one flat price however much is ordered, so
+   *  eleven containers and thirty cost the same to carry. */
+  perItem?: number;
+};
 
 /** The bands until the admin sets their own in settings. */
 export const FEE_BANDS: Band[] = [
@@ -36,7 +43,11 @@ export function headlineFee(bands: Band[] = FEE_BANDS): number {
 export function parseBands(json: string | null | undefined): Band[] {
   if (!json || !json.trim()) return FEE_BANDS;
   try {
-    const raw = JSON.parse(json) as { maxItems: number | null; fee: number }[];
+    const raw = JSON.parse(json) as {
+      maxItems: number | null;
+      fee: number;
+      perItem?: number;
+    }[];
     const bands = raw
       .filter((band) => Number.isFinite(band.fee) && band.fee >= 0)
       .map((band) => ({
@@ -45,6 +56,10 @@ export function parseBands(json: string | null | undefined): Band[] {
             ? Infinity
             : Math.max(1, Math.round(band.maxItems)),
         fee: Math.round(band.fee),
+        perItem:
+          Number.isFinite(band.perItem) && (band.perItem as number) > 0
+            ? Math.round(band.perItem as number)
+            : undefined,
       }))
       .sort((a, b) => a.maxItems - b.maxItems);
 
@@ -63,6 +78,7 @@ export function serialiseBands(bands: Band[]): string {
     bands.map((band) => ({
       maxItems: Number.isFinite(band.maxItems) ? band.maxItems : null,
       fee: band.fee,
+      ...(band.perItem && band.perItem > 0 ? { perItem: band.perItem } : {}),
     }))
   );
 }
@@ -73,12 +89,38 @@ export function serialiseBands(bands: Band[]): string {
  * delivery tonight" is true, and twelve containers still pay for twelve
  * containers (addendum §4).
  */
+/**
+ * The ladder price before any flash drop.
+ *
+ * The top band catches everything above it, which for a flat price means
+ * eleven containers and thirty cost the same to carry. Where a price per item
+ * is set on it, the top band stops being flat: the last real band is the
+ * base, and each item past it adds that much. Eleven items is ten items and
+ * five hundred, which is what anybody would guess it should be.
+ */
+function baseFee(itemCount: number, bands: Band[]): number {
+  const top = bands[bands.length - 1];
+  const below = bands[bands.length - 2];
+
+  if (
+    top?.perItem &&
+    top.perItem > 0 &&
+    below &&
+    Number.isFinite(below.maxItems) &&
+    itemCount > below.maxItems
+  ) {
+    return below.fee + (itemCount - below.maxItems) * top.perItem;
+  }
+
+  return bandFor(itemCount, bands).fee;
+}
+
 export function feeFor(
   itemCount: number,
   flashFee?: number | null,
   bands: Band[] = FEE_BANDS
 ): number {
-  const banded = bandFor(Math.max(itemCount, 1), bands).fee;
+  const banded = baseFee(Math.max(itemCount, 1), bands);
   if (flashFee === null || flashFee === undefined) return banded;
   return Math.max(0, flashFee + (banded - headlineFee(bands)));
 }

@@ -275,3 +275,20 @@ export async function cartValues(
   }
   return out;
 }
+
+/**
+ * Every kitchen a car is drawing on, across all its seats.
+ *
+ * An offer for one counter is an offer for one trip, so it is the whole car
+ * that has to qualify, not one person's half of it.
+ */
+export async function placesInCarts(carts: GroupCart[]): Promise<string[]> {
+  const itemIds = [...new Set(carts.flatMap((cart) => cart.lines.map((l) => l.menu_item_id)))];
+  if (itemIds.length === 0) return [];
+
+  const { data } = await db()
+    .from("menu_items")
+    .select("restaurant_id")
+    .in("id", itemIds);
+  return [...new Set((data ?? []).map((row) => row.restaurant_id as string).filter(Boolean))];
+}

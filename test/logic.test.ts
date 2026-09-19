@@ -13,6 +13,7 @@ import {
   splitFee,
   HEADLINE_FEE,
 } from "../lib/fees";
+import { inWindowHours, offerFee, pickOffer } from "../lib/offers";
 import { sheetAsText } from "../lib/sheet-text";
 import { template, whatsappTo } from "../lib/messages";
 import { newPin } from "../lib/customer-auth";
@@ -941,3 +942,67 @@ test("the delivery window is whatever admin set, not a fixed noon to six", () =>
   assert.equal(short.some((s) => s.label.includes("6pm")), false);
 });
 
+
+test("a promotion is flat until the taper, then it charges by the item", () => {
+  const offer = {
+    code: "DOM2K",
+    note: "Domino's 2k delivery",
+    fee: 2000,
+    includedItems: 3,
+    extraPerItem: 500,
+    places: ["dominos"],
+    runs: [],
+    windows: [],
+    firstOrderOnly: false,
+  };
+
+  assert.equal(offerFee(offer, 1), 2000);
+  assert.equal(offerFee(offer, 3), 2000);
+  assert.equal(offerFee(offer, 5), 3000);
+  // Blank included items is flat however much they order.
+  assert.equal(offerFee({ ...offer, includedItems: null }, 20), 2000);
+});
+
+test("an offer for one kitchen stands down on a cart with anything else in it", () => {
+  const offer = {
+    code: "DOM2K",
+    note: "Domino's",
+    fee: 2000,
+    includedItems: null,
+    extraPerItem: 0,
+    places: ["dominos"],
+    runs: [],
+    windows: [],
+    firstOrderOnly: false,
+  };
+  const ask = (restaurantIds: string[]) =>
+    pickOffer([offer], { restaurantIds, items: 2, batchId: "b1", returning: false });
+
+  assert.equal(ask(["dominos"])?.fee, 2000);
+  assert.equal(ask(["dominos", "kfc"]), null);
+  assert.equal(ask([]), null);
+});
+
+test("a promotion good for one window ignores a car outside it", () => {
+  // Noon and three o'clock Lagos, which is eleven and two in UTC.
+  assert.equal(inWindowHours([12], "2026-09-19T11:00:00Z"), true);
+  assert.equal(inWindowHours([12], "2026-09-19T13:59:00Z"), true);
+  assert.equal(inWindowHours([12], "2026-09-19T14:00:00Z"), false);
+  // No windows named is every window, and a run has no time at all.
+  assert.equal(inWindowHours([], "2026-09-19T14:00:00Z"), true);
+  assert.equal(inWindowHours([12], null), true);
+});
+
+test("the top band can charge by the item instead of one price for any load", () => {
+  const bands = [
+    { maxItems: 3, fee: 4000 },
+    { maxItems: 10, fee: 8000 },
+    { maxItems: Infinity, fee: 10000, perItem: 500 },
+  ];
+
+  assert.equal(feeFor(10, null, bands), 8000);
+  assert.equal(feeFor(11, null, bands), 8500);
+  assert.equal(feeFor(14, null, bands), 10000);
+  // Without a price per item the top band stays one flat price.
+  assert.equal(feeFor(30, null, bands.map((b) => ({ ...b, perItem: undefined }))), 10000);
+});

@@ -55,6 +55,8 @@ export type GroupView = {
   /** What delivery would cost each of them if it closed now. Moves as people
    *  add food and as people join, which is the whole point of sharing one. */
   eachNow: number;
+  /** The promotion pricing the car, when one is. */
+  offer: string;
 };
 
 /**
@@ -140,6 +142,12 @@ export async function groupView(
         phone: cart.done_at ? "" : cart.phone,
       }));
 
+  // Once: it reads every seat and prices the car, which is not work to do
+  // twice for two fields of the same answer.
+  const running = group.closed_at
+    ? { each: 0, offer: "" }
+    : await shareNow(groupId);
+
   return {
     id: group.id,
     batch,
@@ -168,7 +176,8 @@ export async function groupView(
       };
     })(),
     sameDay: batch.kind === "same_day",
-    eachNow: group.closed_at ? 0 : (await shareNow(groupId)).each,
+    eachNow: running.each,
+    offer: running.offer ?? "",
     strandedItems: strandedSeat
       ? strandedSeat.lines.reduce((sum, line) => sum + (line.qty ?? 0), 0)
       : 0,

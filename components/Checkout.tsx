@@ -14,6 +14,7 @@ import {
   usePeople,
 } from "@/lib/cart";
 import { feeFor, sameDayFee, splitFee, type Band } from "@/lib/fees";
+import { pickOffer, type LiveOffer } from "@/lib/offers";
 import { normalisePhone } from "@/lib/phone";
 import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
@@ -57,6 +58,7 @@ export default function Checkout({
   sameDayBands,
   urgentExtra,
   bands,
+  offers,
   hostels,
 }: {
   batches: BatchView[];
@@ -70,6 +72,9 @@ export default function Checkout({
   urgentExtra: number;
   /** The delivery price list in force, read from settings on the server. */
   bands: Band[];
+  /** Promotions on today. The same rule that prices the order judges them
+   *  here, so what is quoted is what is charged. */
+  offers: LiveOffer[];
   /** The blocks the admin delivers to. Empty means anything typed is allowed. */
   hostels: string[];
 }) {
@@ -233,7 +238,21 @@ export default function Checkout({
 
   const alreadyItems = adding?.items ?? 0;
   const alreadyCharged = adding?.feeCharged ?? 0;
-  const fee = sameDay
+
+  // A promotion is the price rather than money off it, so it is settled
+  // first. The same function decides it here and on the server, because a fee
+  // quoted on this screen and charged on the next has to be one number.
+  const promotion = pickOffer(offers, {
+    restaurantIds: [...new Set(cart.map((line) => line.restaurantId))],
+    items: itemCount,
+    batchId,
+    deliverAt: sameDay ? sameDay.at : null,
+    returning: false,
+  });
+
+  const fee = promotion
+    ? promotion.fee
+    : sameDay
     ? sameDayFee(itemCount, sameDay.urgent, sameDayBands, urgentExtra)
     : shared
     ? 0

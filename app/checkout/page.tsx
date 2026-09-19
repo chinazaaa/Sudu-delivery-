@@ -5,6 +5,7 @@ import {
   safeSettings,
   sameDayPricing,
 } from "@/lib/settings";
+import { liveOffers } from "@/lib/coupons";
 import { hostelNames } from "@/lib/hostels";
 import Checkout, { type AddingTo } from "@/components/Checkout";
 import { openBatches, recentlyClosedBatch } from "@/lib/batches";
@@ -69,6 +70,9 @@ export default async function CheckoutPage({
       sameDayBands={(await sameDayPricing()).bands}
       urgentExtra={(await sameDayPricing()).urgentExtra}
       bands={await activeBands()}
+      // The promotions on today, with their rules, so the checkout quotes the
+      // price it is about to charge rather than the ladder it is replacing.
+      offers={await liveOffers()}
       hostels={await hostelNames()}
     />
   );

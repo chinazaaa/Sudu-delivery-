@@ -1,7 +1,14 @@
 import { db } from "./supabase";
 import { evenShare, feeFor, isUrgent, sameDayFee, splitFee } from "./fees";
 import { activeBands, sameDayPricing } from "./settings";
-import { canTravel, countCartItems, groupCarts, markCartDone } from "./group-carts";
+import {
+  canTravel,
+  countCartItems,
+  groupCarts,
+  markCartDone,
+  placesInCarts,
+} from "./group-carts";
+import { activePromotion } from "./coupons";
 import { announceGroup } from "./announce-group";
 import type { Batch, Order, OrderGroup } from "./types";
 
@@ -266,7 +273,7 @@ async function evenSameDayShare(
  */
 export async function shareNow(
   groupId: string
-): Promise<{ whole: number; each: number; people: number }> {
+): Promise<{ whole: number; each: number; people: number; offer?: string }> {
   const group = await getSharedGroup(groupId);
   const carts = await groupCarts(groupId);
   const people = carts.length;
@@ -280,6 +287,20 @@ export async function shareNow(
     .select("flash_fee, kind, deliver_at")
     .eq("id", group.batch_id)
     .maybeSingle();
+
+  // The running figure has to be the figure they will be charged, or the
+  // close is a surprise. A promotion prices the car per head, so it does not
+  // fall as people join and the board should not pretend it will.
+  const promotion = await activePromotion({
+    restaurantIds: await placesInCarts(carts),
+    items: carried,
+    batchId: group.batch_id,
+    deliverAt: batch?.kind === "same_day" ? ((batch.deliver_at as string | null) ?? null) : null,
+    returning: true,
+  });
+  if (promotion) {
+    return { whole: promotion.fee * people, each: promotion.fee, people, offer: promotion.coupon.note.trim() };
+  }
 
   if (batch?.kind === "same_day") {
     const { bands, urgentExtra } = await sameDayPricing();
@@ -408,7 +429,24 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
   // choosing, so it is priced off that ladder and not the run one. Split
   // evenly either way, which is the deal they all agreed to.
   const sameDay = batch?.kind === "same_day";
-  const share = sameDay
+
+  // A promotion prices the car per head rather than splitting one fee, so it
+  // is read against the whole car: the offer is for one counter, and a car
+  // with somebody's KFC in it is not that trip. One person's Domino's cannot
+  // put the rest of them on a different deal.
+  const promotion = await activePromotion({
+    restaurantIds: await placesInCarts(waiting),
+    items: carried,
+    batchId: group.batch_id,
+    deliverAt: sameDay ? ((batch?.deliver_at as string | null) ?? null) : null,
+    // A group is many people, and whose first order it is cannot be one
+    // answer, so an offer for first orders only stays out of groups.
+    returning: true,
+  });
+
+  const share = promotion
+    ? promotion.fee
+    : sameDay
     ? await evenSameDayShare(
         carried,
         waiting.length,

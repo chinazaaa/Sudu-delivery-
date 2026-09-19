@@ -57,6 +57,7 @@ export default function GroupBoard({
   shareUrl,
   leaderName,
   eachNow,
+  offer,
   hostels,
 }: {
   groupId: string;
@@ -68,6 +69,8 @@ export default function GroupBoard({
   leaderName: string;
   /** What delivery would cost each of them if it closed now. */
   eachNow: number;
+  /** The promotion pricing this car, if one is. */
+  offer?: string;
   hostels: string[];
 }) {
   const router = useRouter();
@@ -464,11 +467,12 @@ export default function GroupBoard({
         {eachNow > 0 && (
           <div className="rounded-2xl bg-brand-tint px-4 py-3">
             <p className="text-sm font-semibold text-brand-dark">
-              About {naira(eachNow)} each right now
+              {offer ? `${naira(eachNow)} each` : `About ${naira(eachNow)} each right now`}
             </p>
             <p className="mt-0.5 text-xs text-ink/70">
-              It moves as people add food and as more of you join. Nothing is fixed
-              until this closes.
+              {offer
+                ? `${offer}: everybody pays the same for delivery, so it does not fall as more of you join.`
+                : "It moves as people add food and as more of you join. Nothing is fixed until this closes."}
             </p>
           </div>
         )}

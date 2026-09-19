@@ -958,10 +958,21 @@ export async function saveCoupon(form: FormData): Promise<void> {
   const expires = String(form.get("expires_at") ?? "").trim();
   const maxUses = Math.round(Number(form.get("max_uses") ?? 0));
 
+  const effect = String(form.get("applies_to") ?? "delivery");
+  const included = Math.round(Number(form.get("included_items") ?? 0));
+  const perItem = Math.round(Number(form.get("extra_per_item") ?? 0));
+
   await db().from("coupons").upsert({
     code,
-    applies_to: form.get("applies_to") === "order" ? "order" : "delivery",
+    applies_to: effect === "order" || effect === "fee" ? effect : "delivery",
     amount,
+    // A promotion applies itself; a code is typed. Nothing else about them
+    // differs, which is why they live in one table.
+    automatic: effect === "fee",
+    included_items: Number.isFinite(included) && included > 0 ? included : null,
+    extra_per_item: Number.isFinite(perItem) && perItem > 0 ? perItem : 0,
+    // Same day windows it is good for, as the hours they open.
+    windows: form.getAll("window").map(String).filter(Boolean).join(","),
     note: String(form.get("note") ?? "").trim(),
     active: form.get("active") === "on",
     // Blank means no limit, which is the normal case for a code in a group.
@@ -998,6 +1009,16 @@ export async function setCouponPlaces(form: FormData): Promise<void> {
   await assertAdmin();
   const code = String(form.get("code"));
   await writeCouponPlaces(code, form.getAll("restaurant_id").map(String).filter(Boolean));
+  revalidatePath("/admin", "layout");
+}
+
+/** Which same day windows a promotion is good for. None means any time. */
+export async function setCouponWindows(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db()
+    .from("coupons")
+    .update({ windows: form.getAll("window").map(String).filter(Boolean).join(",") })
+    .eq("code", String(form.get("code")));
   revalidatePath("/admin", "layout");
 }
 
