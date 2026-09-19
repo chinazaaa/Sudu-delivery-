@@ -16,7 +16,7 @@ export default function PayChoice({
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-bold text-ink">How are you paying?</p>
+      <p className="text-sm font-bold text-ink">How are you paying? Transfer or card</p>
       <div className="grid gap-2 sm:grid-cols-2">
         {(
           [
@@ -36,7 +36,17 @@ export default function PayChoice({
               value === way ? "border-brand bg-brand-tint" : "border-black/10"
             }`}
           >
-            <span className="block font-bold">{title}</span>
+            <span className="flex items-center gap-2 font-bold">
+              {title}
+              {/* Transfer is how nearly everybody pays, and the one that
+                  needs nothing from us afterwards. Saying so beats two
+                  options that look equally likely. */}
+              {way === "transfer" && (
+                <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-brand-dark">
+                  Usual
+                </span>
+              )}
+            </span>
             <span className="block text-sm text-muted">{detail}</span>
           </button>
         ))}
