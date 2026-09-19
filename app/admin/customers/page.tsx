@@ -9,6 +9,7 @@ import { formatPhone } from "@/lib/phone";
 import SaveButton from "@/components/SaveButton";
 import { addCustomer, deleteCustomer, saveCustomerNote } from "../actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
+import { hostelNames } from "@/lib/hostels";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +19,11 @@ export default async function CustomersPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const query = await searchParams;
-  const [rows, settings, url] = await Promise.all([
+  const [rows, settings, url, hostels] = await Promise.all([
     customerRows(query.q),
     getSettings(),
     siteUrl(),
+    hostelNames(),
   ]);
 
   const spend = rows.reduce((total, row) => total + row.spend, 0);
@@ -81,7 +83,21 @@ export default async function CustomersPage({
               <label className="label" htmlFor="new_hostel">
                 Block (optional)
               </label>
-              <input id="new_hostel" name="hostel" className="field" />
+              {/* The blocks admin has set, the same list the checkout uses.
+                  Typed by hand a block is misspelt every other time, and the
+                  handout list cannot be sorted by it. */}
+              {hostels.length > 0 ? (
+                <select id="new_hostel" name="hostel" defaultValue="" className="field">
+                  <option value="">Not saying</option>
+                  {hostels.map((hostel) => (
+                    <option key={hostel} value={hostel}>
+                      {hostel}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input id="new_hostel" name="hostel" className="field" />
+              )}
             </div>
             <div>
               <label className="label" htmlFor="new_pin">
