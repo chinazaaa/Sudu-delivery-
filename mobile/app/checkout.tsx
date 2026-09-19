@@ -279,10 +279,10 @@ export default function Checkout() {
                 they want to know when they can eat. */}
             <Text style={{ color: T.muted }}>
               {slots[0].day === "tomorrow"
-                ? `Past our delivery time. Soonest is ${slots[0].label}.`
+                ? `Past our delivery time. The soonest is ${slots[0].phrase ?? slots[0].label}.`
                 : picked.urgent
                   ? "Under five hours, so this one is urgent. A later time is cheaper."
-                  : `Soonest is ${slots[0].label}.`}
+                  : `The soonest is ${slots[0].phrase ?? slots[0].label}.`}
             </Text>
 
             <Modal

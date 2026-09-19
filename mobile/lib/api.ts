@@ -85,8 +85,11 @@ export type Run = {
 /** A time somebody can ask for, as the shop's own clock works it out. */
 export type Slot = {
   at: string;
-  /** "12:30pm", or "12:30pm tomorrow", as it reads in the list. */
+  /** "Between 12pm and 3pm", as it reads at the top of the list. */
   label: string;
+  /** The same thing inside a sentence: "get it between 12pm and 3pm". Older
+   *  servers do not send it, so anything reading it falls back to the label. */
+  phrase?: string;
   day: "today" | "tomorrow";
   /** Under five hours away, which costs more because the car cannot wait. */
   urgent: boolean;
