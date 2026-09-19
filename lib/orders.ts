@@ -448,11 +448,16 @@ async function placeSplitGroup(args: {
     const who = (line.for_name ?? "").trim();
     byPerson.set(who, [...(byPerson.get(who) ?? []), line]);
   }
-  if (byPerson.size < 2) {
+  // What a split needs is somebody other than the leader to pay, not two of
+  // them. Ordering for one friend who pays for it herself is a real thing
+  // people do, and refusing it made the leader front the money and chase it.
+  // A "split" where the leader is the only one with food is still nothing to
+  // split, and is still refused.
+  if (![...byPerson.keys()].some((who) => who !== "")) {
     return {
       ok: false,
       error:
-        "Splitting payment needs two people with food in the cart. " +
+        "Splitting payment needs somebody other than you to have food in the cart. " +
         "Go back to the cart and tap a name under each item.",
     };
   }

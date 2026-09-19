@@ -267,10 +267,35 @@ export default function Checkout({
   )
     ? "each"
     : "leader";
+  /**
+   * What this section is actually asking for.
+   *
+   * Ordering only for friends is a real thing people do, and "where your own
+   * food goes" over a cart holding none of it reads as a question nobody can
+   * answer. It is their own food, a bag a friend asked to be left with them,
+   * or nothing coming to them at all and we still need to reach them.
+   */
+  const ownFood = cart.some((line) => line.forName === "");
+  const bagsToMe = people.some(
+    (person) =>
+      person.goesTo === "mine" && shares.some((share) => share.person === person.name)
+  );
+  const whereHeading = !groupOn
+    ? "Where it goes"
+    : ownFood
+      ? "Where your own food goes"
+      : bagsToMe
+        ? "Where the bags come to"
+        : "How to reach you";
+
   // Two people with food in the cart is what a split needs, whatever they are
   // called: the leader's share is counted separately from a friend of the same
   // name.
-  const splitReady = !groupOn || mode === "one_payer" || shares.length >= 2;
+  // Somebody other than the leader has to be paying for a split to mean
+  // anything. One friend paying for her own food is a split of one, which is
+  // a thing people actually want; the leader alone is not.
+  const splitReady =
+    !groupOn || mode === "one_payer" || shares.some((share) => share.person !== "");
 
   // Everyone in the cart has to be resolved before the order can be placed.
   const unresolved = people.filter((person) => {
@@ -731,9 +756,7 @@ export default function Checkout({
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           {/* In a group, the friends' details are already above, so this
               section has to say whose it is. */}
-          <h2 className="font-bold">
-            {groupOn ? "Where your own food goes" : "Where it goes"}
-          </h2>
+          <h2 className="font-bold">{whereHeading}</h2>
           <FillDetails
             phone={phone}
             onFilled={(me) => {
@@ -744,6 +767,12 @@ export default function Checkout({
             }}
           />
         </div>
+        {groupOn && !ownFood && !bagsToMe && (
+          <p className="text-sm text-muted">
+            Nothing in this cart is coming to you, but we still need somebody to call if a
+            bag cannot be handed over.
+          </p>
+        )}
         {filled && (
           <p className="rounded-xl bg-mint/10 px-3 py-2 text-sm font-semibold text-mint">
             Filled in from your last order. Change anything that has moved.
