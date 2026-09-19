@@ -127,22 +127,28 @@ export default async function BatchPage({
         backHref="/admin/runs"
         backLabel="All runs"
         actions={
-          <>
-            <StagePicker
-              batchId={batch.id}
-              stage={batch.stage}
-              action={setBatchStage}
-            />
-            <SendSheet
-              batchId={batch.id}
-              open={batch.status === "open" && batch.stage === "ordering"}
-              closeRun={setBatchStage}
-              href={whatsappTo(
-                settings.whatsapp_number || "0",
-                sheetAsText(sheet, batchLabel)
-              )}
-            />
-          </>
+          // A closed run is a record. Moving its stage or sending its counter
+          // sheet to WhatsApp are things to do to a run that is still
+          // happening, and leaving them there is what made a finished run go
+          // on looking like work.
+          batch.settled_at ? null : (
+            <>
+              <StagePicker
+                batchId={batch.id}
+                stage={batch.stage}
+                action={setBatchStage}
+              />
+              <SendSheet
+                batchId={batch.id}
+                open={batch.status === "open" && batch.stage === "ordering"}
+                closeRun={setBatchStage}
+                href={whatsappTo(
+                  settings.whatsapp_number || "0",
+                  sheetAsText(sheet, batchLabel)
+                )}
+              />
+            </>
+          )
         }
       />
 
