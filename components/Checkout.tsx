@@ -245,6 +245,7 @@ export default function Checkout({
   const promotion = pickOffer(offers, {
     restaurantIds: [...new Set(cart.map((line) => line.restaurantId))],
     itemIds: cart.map((line) => line.itemId),
+    lineChoices: cart.map((line) => line.choices),
     items: itemCount,
     batchId,
     deliverAt: sameDay ? sameDay.at : null,

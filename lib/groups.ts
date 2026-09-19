@@ -6,6 +6,7 @@ import {
   countCartItems,
   groupCarts,
   markCartDone,
+  choicesInCarts,
   placesInCarts,
 } from "./group-carts";
 import { activePromotion } from "./coupons";
@@ -295,6 +296,7 @@ export async function shareNow(
   const promotion = await activePromotion({
     restaurantIds: await placesInCarts(carts),
     itemIds: carts.flatMap((cart) => cart.lines.map((line) => line.menu_item_id)),
+    lineChoices: await choicesInCarts(carts),
     items: carried,
     batchId: group.batch_id,
     deliverAt: batch?.kind === "same_day" ? ((batch.deliver_at as string | null) ?? null) : null,
@@ -442,6 +444,7 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
   const promotion = await activePromotion({
     restaurantIds: await placesInCarts(waiting),
     itemIds: waiting.flatMap((cart) => cart.lines.map((line) => line.menu_item_id)),
+        lineChoices: await choicesInCarts(waiting),
     items: carried,
     batchId: group.batch_id,
     deliverAt: sameDay ? ((batch?.deliver_at as string | null) ?? null) : null,

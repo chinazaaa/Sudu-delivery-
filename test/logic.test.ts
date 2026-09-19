@@ -13,7 +13,13 @@ import {
   splitFee,
   HEADLINE_FEE,
 } from "../lib/fees";
-import { inWindowHours, offerFee, offerShare, pickOffer } from "../lib/offers";
+import {
+  everyLineChose,
+  inWindowHours,
+  offerFee,
+  offerShare,
+  pickOffer,
+} from "../lib/offers";
 import { sheetAsText } from "../lib/sheet-text";
 import { template, whatsappTo } from "../lib/messages";
 import { newPin } from "../lib/customer-auth";
@@ -952,6 +958,7 @@ test("a promotion is flat until the taper, then it charges by the item", () => {
     extraPerItem: 500,
     places: ["dominos"],
     items: [],
+    choice: "",
     runs: [],
     windows: [],
     firstOrderOnly: false,
@@ -974,6 +981,7 @@ test("an offer for one kitchen stands down on a cart with anything else in it", 
     extraPerItem: 0,
     places: ["dominos"],
     items: [],
+    choice: "",
     runs: [],
     windows: [],
     firstOrderOnly: false,
@@ -1020,6 +1028,7 @@ test("a promotion splits in a group, but never below the floor", () => {
     extraPerItem: 0,
     places: ["dominos"],
     items: [],
+    choice: "",
     runs: [],
     windows: [],
     firstOrderOnly: false,
@@ -1045,6 +1054,7 @@ test("free delivery is earned by the dishes that carry it, and nothing else", ()
     extraPerItem: 0,
     places: [],
     items: ["bbq-beef", "bbq-chicken"],
+    choice: "",
     runs: [],
     windows: [],
     firstOrderOnly: false,
@@ -1059,4 +1069,17 @@ test("free delivery is earned by the dishes that carry it, and nothing else", ()
   // Anything else riding along did not earn it.
   assert.equal(ask(["bbq-beef", "chips"]), null);
   assert.equal(ask([]), null);
+});
+
+test("any large pizza means every line chose large", () => {
+  // A size is a choice on a dish, so the cart qualifies only if each line
+  // made it: one small among them and the offer is not this one.
+  assert.equal(everyLineChose("Large", [["Large"], ["Large", "Extra cheese"]]), true);
+  assert.equal(everyLineChose("Large", [["Large"], ["Medium"]]), false);
+  assert.equal(everyLineChose("Large", [[]]), false);
+  assert.equal(everyLineChose("Large", []), false);
+  // Spelling it differently in the box is the same answer to anybody reading.
+  assert.equal(everyLineChose(" large ", [["Large"]]), true);
+  // No choice asked for is no condition at all.
+  assert.equal(everyLineChose("", [["Medium"]]), true);
 });

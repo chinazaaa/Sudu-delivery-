@@ -10,13 +10,14 @@ import {
   deleteCoupon,
   saveCoupon,
   setCouponPlaces,
-  setCouponItems,
+  setCouponMenu,
   setCouponRuns,
   setCouponWindows,
   toggleCoupon,
 } from "../actions";
 import { batchOverview } from "@/lib/admin";
 import { openRestaurants, menuView } from "@/lib/menu";
+import { choiceReach } from "@/lib/coupons";
 import DishPicker from "@/components/admin/DishPicker";
 import { deliveryHours } from "@/lib/settings";
 import { clockOf } from "@/lib/same-day";
@@ -36,13 +37,43 @@ export default async function CouponsAdmin() {
   // the early car and not the late one.
   // Every dish, flat, for the picker: free delivery is usually one or two
   // things and finding them is a search, not a scroll.
-  const dishes = (await menuView()).flatMap((place) =>
+  const menu = await menuView();
+  const dishes = menu.flatMap((place) =>
     place.items.map((item) => ({
       id: item.id,
       name: item.name,
       restaurant: place.restaurant.name,
     }))
   );
+  // Whole sections of a menu: any pizza is one tick rather than forty, and it
+  // keeps up with the menu on its own.
+  const sections = menu.flatMap((place) =>
+    place.categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      restaurant: place.restaurant.name,
+      items: place.items.filter((item) => item.categoryId === category.id).length,
+    }))
+  );
+
+  // Whether a size actually catches every dish it is meant to, said before a
+  // Friday rather than after one.
+  const reach = new Map<string, Awaited<ReturnType<typeof choiceReach>>>();
+  for (const coupon of coupons) {
+    if (coupon.required_choice?.trim()) {
+      const covered = [
+        ...coupon.dishes.map((dish) => dish.id),
+        ...menu.flatMap((place) =>
+          place.items
+            .filter((item) =>
+              coupon.sections.some((section) => section.id === item.categoryId)
+            )
+            .map((item) => item.id)
+        ),
+      ];
+      reach.set(coupon.code, await choiceReach([...new Set(covered)], coupon.required_choice));
+    }
+  }
 
   const hours = await deliveryHours();
   const windows: { from: number; label: string }[] = [];
@@ -98,6 +129,9 @@ export default async function CouponsAdmin() {
                 : `${coupon.places.map((place) => place.name).join(", ")} only`}
               {coupon.dishes.length > 0 &&
                 ` · ${coupon.dishes.map((dish) => dish.name).join(", ")} only`}
+              {coupon.sections.length > 0 &&
+                ` · any ${coupon.sections.map((one) => one.name.toLowerCase()).join(" or ")}`}
+              {coupon.required_choice?.trim() && ` · ${coupon.required_choice} only`}
             </p>
 
             {coupon.places.length > 0 && (
@@ -174,19 +208,77 @@ export default async function CouponsAdmin() {
               </form>
             )}
 
-            {/* Free delivery on a dish, or a price that only these earn. */}
+            {/* Free delivery on a dish, a section, or a size. */}
             {coupon.applies_to === "fee" && dishes.length > 0 && (
-              <form action={setCouponItems} className="mt-3 space-y-2">
+              <form action={setCouponMenu} className="mt-3 space-y-2">
                 <input type="hidden" name="code" value={coupon.code} />
+
                 <p className="label mb-0">Only on these dishes</p>
                 <DishPicker menu={dishes} chosen={coupon.dishes.map((one) => one.id)} />
+
+                {sections.length > 0 && (
+                  <>
+                    <p className="label mb-0 mt-2">Or whole sections</p>
+                    <div className="flex flex-wrap gap-2">
+                      {sections.map((section) => (
+                        <label
+                          key={section.id}
+                          className="chip cursor-pointer border-black/10 bg-white font-medium"
+                        >
+                          <input
+                            type="checkbox"
+                            name="category_id"
+                            value={section.id}
+                            defaultChecked={coupon.sections.some((one) => one.id === section.id)}
+                          />
+                          {section.restaurant} · {section.name}
+                          <span className="text-xs text-muted">{section.items}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                <div>
+                  <label className="label mb-0" htmlFor={`choice-${coupon.code}`}>
+                    And only with this choice
+                  </label>
+                  <input
+                    id={`choice-${coupon.code}`}
+                    name="required_choice"
+                    defaultValue={coupon.required_choice ?? ""}
+                    placeholder="Large"
+                    className="field py-2 text-sm"
+                  />
+                  <p className="mt-1 text-xs text-muted">
+                    A size is a choice on a dish, not a dish of its own, so any
+                    large pizza is the pizza section plus this. Blank means any
+                    size.
+                  </p>
+                  {reach.get(coupon.code) && (
+                    <p
+                      className={`mt-1 text-xs font-semibold ${
+                        reach.get(coupon.code)!.missing.length > 0 ? "text-brand" : "text-mint"
+                      }`}
+                    >
+                      {reach.get(coupon.code)!.missing.length === 0
+                        ? `Every one of the ${reach.get(coupon.code)!.of} dishes offers it.`
+                        : `${reach.get(coupon.code)!.matched} of ${
+                            reach.get(coupon.code)!.of
+                          } dishes offer it. Not on: ${reach
+                            .get(coupon.code)!
+                            .missing.slice(0, 4)
+                            .join(", ")}.`}
+                    </p>
+                  )}
+                </div>
+
                 <div className="flex flex-wrap items-center gap-2">
                   <SaveButton quiet className="px-4 py-2 text-sm">
-                    Save which dishes
+                    Save what it covers
                   </SaveButton>
                   <span className="text-xs text-muted">
-                    Pick none and it is the whole menu. Pick two and either of
-                    them earns it, together or on their own.
+                    Pick nothing and it is the whole menu.
                   </span>
                 </div>
               </form>
@@ -398,6 +490,41 @@ export default async function CouponsAdmin() {
               to 0 above, pick the dish here, and ordering it brings the car.
               Pick two and either earns it, together or alone.
             </p>
+
+            {sections.length > 0 && (
+              <>
+                <p className="label mt-3">Or whole sections</p>
+                <div className="flex flex-wrap gap-2">
+                  {sections.map((section) => (
+                    <label
+                      key={section.id}
+                      className="chip cursor-pointer border-black/10 bg-white font-medium"
+                    >
+                      <input type="checkbox" name="category_id" value={section.id} />
+                      {section.restaurant} · {section.name}
+                      <span className="text-xs text-muted">{section.items}</span>
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <div className="mt-3">
+              <label className="label" htmlFor="required_choice">
+                And only with this choice
+              </label>
+              <input
+                id="required_choice"
+                name="required_choice"
+                placeholder="Large"
+                className="field"
+              />
+              <p className="mt-1 text-xs text-muted">
+                Any large pizza is the pizza section plus Large. It has to be
+                spelt the way the option is spelt on the dish; once saved, this
+                page says how many of them actually offer it.
+              </p>
+            </div>
           </div>
         )}
 

@@ -25,8 +25,12 @@ export type LiveOffer = {
   extraPerItem: number;
   /** Empty means anywhere. */
   places: string[];
-  /** Particular dishes this is for. Empty means it is not about dishes. */
+  /** Particular dishes this is for, with any categories already resolved to
+   *  their dishes. Empty means it is not about dishes at all. */
   items: string[];
+  /** A choice every line must have made, by name: "Large". Empty means the
+   *  offer does not care what was chosen. */
+  choice: string;
   /** Empty means any run. */
   runs: string[];
   /** Same day window opening hours. Empty means any time. */
@@ -40,6 +44,9 @@ export type OfferContext = {
   restaurantIds: string[];
   /** Every dish in the cart, for an offer that is about particular ones. */
   itemIds?: string[];
+  /** The choices made on each line, by name, for an offer about a size. One
+   *  entry per line, so a cart with a large and a small is two entries. */
+  lineChoices?: string[][];
   items: number;
   batchId: string;
   deliverAt?: string | null;
@@ -72,6 +79,10 @@ export function pickOffer(
       const dishes = context.itemIds ?? [];
       if (dishes.length === 0 || dishes.some((id) => !offer.items.includes(id))) continue;
     }
+    // A size, which is a choice on a dish rather than a dish of its own. Every
+    // line has to have made it: a large and a small together is not an offer
+    // on large ones.
+    if (offer.choice !== "" && !everyLineChose(offer.choice, context.lineChoices)) continue;
     if (offer.runs.length > 0 && !offer.runs.includes(context.batchId)) continue;
     if (!inWindowHours(offer.windows, context.deliverAt ?? null)) continue;
 
@@ -158,4 +169,20 @@ export function offerShare(offer: LiveOffer, items: number, people: number): num
   if (people < 1) return 0;
   const whole = offerFee(offer, items);
   return Math.max(Math.ceil(whole / people / 100) * 100, offer.minEach);
+}
+
+/**
+ * Whether every line in the cart made this choice.
+ *
+ * By name, because each dish carries its own copy of its options and there is
+ * no one Large to point at. Compared without case or surrounding space, since
+ * "large" and "Large " are the same answer to anybody reading a menu.
+ */
+export function everyLineChose(choice: string, lines: string[][] | undefined): boolean {
+  const wanted = choice.trim().toLowerCase();
+  if (wanted === "") return true;
+  if (!lines || lines.length === 0) return false;
+  return lines.every((chosen) =>
+    chosen.some((one) => one.trim().toLowerCase() === wanted)
+  );
 }

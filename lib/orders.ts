@@ -180,6 +180,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   const promotion = await activePromotion({
     restaurantIds: placesIn(priced.lines),
     itemIds: priced.lines.map((line) => line.menu_item_id),
+    lineChoices: priced.lines.map((line) => line.options.map((one) => one.name)),
     items: countItems(priced.lines),
     batchId: batch.id,
     deliverAt: batch.kind === "same_day" ? batch.deliver_at : null,
@@ -985,6 +986,7 @@ export async function previewCoupon(args: {
   const holding = await activePromotion({
     restaurantIds: placesIn(priced.lines),
     itemIds: priced.lines.map((line) => line.menu_item_id),
+    lineChoices: priced.lines.map((line) => line.options.map((one) => one.name)),
     items: countItems(priced.lines),
     batchId: batch.id,
     deliverAt: batch.kind === "same_day" ? batch.deliver_at : null,

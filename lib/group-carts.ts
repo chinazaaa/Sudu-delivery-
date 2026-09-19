@@ -292,3 +292,23 @@ export async function placesInCarts(carts: GroupCart[]): Promise<string[]> {
     .in("id", itemIds);
   return [...new Set((data ?? []).map((row) => row.restaurant_id as string).filter(Boolean))];
 }
+
+/**
+ * What everybody in a car chose, one entry per line.
+ *
+ * For an offer about a size rather than a dish: a car of large pizzas earns
+ * it and a car with one small in it does not, the same rule a single cart
+ * gets.
+ */
+export async function choicesInCarts(carts: GroupCart[]): Promise<string[][]> {
+  const lines = carts.flatMap((cart) => cart.lines);
+  const optionIds = [...new Set(lines.flatMap((line) => line.option_ids ?? []))];
+  if (optionIds.length === 0) return lines.map(() => []);
+
+  const { data } = await db().from("item_options").select("id, name").in("id", optionIds);
+  const named = new Map(((data ?? []) as any[]).map((one) => [one.id as string, one.name as string]));
+
+  return lines.map((line) =>
+    (line.option_ids ?? []).map((id) => named.get(id) ?? "").filter(Boolean)
+  );
+}

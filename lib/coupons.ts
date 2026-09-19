@@ -22,6 +22,8 @@ export type Coupon = {
   extra_per_item: number;
   /** Same day windows it is good for, as start hours: "12,15". */
   windows: string;
+  /** A choice every line must have made, by name: "Large". */
+  required_choice: string;
   /** In a group, the least any one person pays once it is split. */
   min_per_person: number;
 };
@@ -29,6 +31,8 @@ export type Coupon = {
 export type CouponWithRuns = Coupon & {
   /** The dishes it is for. Empty means it is not about dishes. */
   dishes: { id: string; name: string; restaurant: string }[];
+  /** The menu sections it covers, which resolve to dishes when it is read. */
+  sections: { id: string; name: string; restaurant: string }[];
   /** The runs it works on. Empty means every run. */
   runs: { batchId: string; label: string }[];
   /** The restaurants it works on. Empty means anywhere. */
@@ -88,7 +92,7 @@ export async function liveOffers(): Promise<LiveOffer[]> {
   if (live.length === 0) return [];
 
   const codes = live.map((coupon) => coupon.code);
-  const [{ data: places }, { data: runs }, dishes] = await Promise.all([
+  const [{ data: places }, { data: runs }, dishes, sections] = await Promise.all([
     db().from("coupon_restaurants").select("coupon_code, restaurant_id").in("coupon_code", codes),
     db().from("coupon_runs").select("coupon_code, batch_id").in("coupon_code", codes),
     // Newest of the three, so read forgivingly: without the table no offer is
@@ -104,7 +108,35 @@ export async function liveOffers(): Promise<LiveOffer[]> {
         return [] as { coupon_code: string; menu_item_id: string }[];
       }
     })(),
+    // A whole section of a menu, resolved to its dishes here rather than
+    // stored as a list: a pizza added next week is in the offer without
+    // anybody remembering to add it.
+    (async () => {
+      try {
+        const { data, error } = await db()
+          .from("coupon_categories")
+          .select("coupon_code, category_id")
+          .in("coupon_code", codes);
+        return error ? [] : ((data ?? []) as { coupon_code: string; category_id: string }[]);
+      } catch {
+        return [] as { coupon_code: string; category_id: string }[];
+      }
+    })(),
   ]);
+
+  // Every dish in the sections those offers name.
+  const inSection = new Map<string, string[]>();
+  if (sections.length > 0) {
+    const categoryIds = [...new Set(sections.map((row) => row.category_id))];
+    const { data: items } = await db()
+      .from("menu_items")
+      .select("id, category_id")
+      .in("category_id", categoryIds);
+    for (const item of (items ?? []) as any[]) {
+      const key = item.category_id as string;
+      inSection.set(key, [...(inSection.get(key) ?? []), item.id as string]);
+    }
+  }
 
   return live.map((coupon) => ({
     code: coupon.code,
@@ -115,9 +147,17 @@ export async function liveOffers(): Promise<LiveOffer[]> {
     places: (places ?? [])
       .filter((row) => row.coupon_code === coupon.code)
       .map((row) => row.restaurant_id as string),
-    items: dishes
-      .filter((row) => row.coupon_code === coupon.code)
-      .map((row) => row.menu_item_id),
+    items: [
+      ...new Set([
+        ...dishes
+          .filter((row) => row.coupon_code === coupon.code)
+          .map((row) => row.menu_item_id),
+        ...sections
+          .filter((row) => row.coupon_code === coupon.code)
+          .flatMap((row) => inSection.get(row.category_id) ?? []),
+      ]),
+    ],
+    choice: coupon.required_choice ?? "",
     runs: (runs ?? [])
       .filter((row) => row.coupon_code === coupon.code)
       .map((row) => row.batch_id as string),
@@ -360,6 +400,36 @@ export async function listCoupons(): Promise<CouponWithRuns[]> {
     /* No table yet, so no offer is about a dish. */
   }
 
+  // The sections an offer covers, for the same reason.
+  let sectionTies: { coupon_code: string; category_id: string }[] = [];
+  const sectionNamed = new Map<string, { name: string; restaurant: string }>();
+  try {
+    const { data: rows } = await db()
+      .from("coupon_categories")
+      .select("coupon_code, category_id");
+    sectionTies = (rows ?? []) as typeof sectionTies;
+    const ids = [...new Set(sectionTies.map((row) => row.category_id))];
+    if (ids.length > 0) {
+      const { data: cats } = await db()
+        .from("menu_categories")
+        .select("id, name, restaurant_id")
+        .in("id", ids);
+      const placeIds = [...new Set(((cats ?? []) as any[]).map((one) => one.restaurant_id))];
+      const { data: shops } = placeIds.length
+        ? await db().from("restaurants").select("id, name").in("id", placeIds)
+        : { data: [] };
+      const shopNamed = new Map(((shops ?? []) as any[]).map((one) => [one.id, one.name as string]));
+      for (const cat of (cats ?? []) as any[]) {
+        sectionNamed.set(cat.id as string, {
+          name: cat.name as string,
+          restaurant: shopNamed.get(cat.restaurant_id) ?? "",
+        });
+      }
+    }
+  } catch {
+    /* No table yet, so no offer covers a section. */
+  }
+
   return coupons.map((coupon) => ({
     ...coupon,
     runs: (links ?? [])
@@ -367,6 +437,13 @@ export async function listCoupons(): Promise<CouponWithRuns[]> {
       .map((row) => ({
         batchId: row.batch_id as string,
         label: labels.get(row.batch_id as string) ?? "A past run",
+      })),
+    sections: sectionTies
+      .filter((row) => row.coupon_code === coupon.code)
+      .map((row) => ({
+        id: row.category_id,
+        name: sectionNamed.get(row.category_id)?.name ?? "A section",
+        restaurant: sectionNamed.get(row.category_id)?.restaurant ?? "",
       })),
     dishes: dishTies
       .filter((row) => row.coupon_code === coupon.code)
@@ -578,4 +655,56 @@ export async function dealsAt(
   }
 
   return out;
+}
+
+/**
+ * How many of an offer's dishes actually have the choice it asks for.
+ *
+ * The choice is matched by name, so an offer for Large quietly skips a pizza
+ * whose size is called L or 14 inch. Rather than leave that to be discovered
+ * on a Friday, admin is told: eleven of twelve, and which one is missing it.
+ */
+export async function choiceReach(
+  itemIds: string[],
+  choice: string
+): Promise<{ of: number; matched: number; missing: string[] }> {
+  const wanted = choice.trim().toLowerCase();
+  if (wanted === "" || itemIds.length === 0) {
+    return { of: itemIds.length, matched: itemIds.length, missing: [] };
+  }
+
+  try {
+    const { data: groups } = await db()
+      .from("item_option_groups")
+      .select("id, menu_item_id")
+      .in("menu_item_id", itemIds);
+
+    const groupIds = ((groups ?? []) as any[]).map((one) => one.id as string);
+    const { data: options } = groupIds.length
+      ? await db().from("item_options").select("name, group_id").in("group_id", groupIds)
+      : { data: [] };
+
+    const itemOfGroup = new Map(
+      ((groups ?? []) as any[]).map((one) => [one.id as string, one.menu_item_id as string])
+    );
+    const has = new Set<string>();
+    for (const option of (options ?? []) as any[]) {
+      if (String(option.name).trim().toLowerCase() !== wanted) continue;
+      const item = itemOfGroup.get(option.group_id as string);
+      if (item) has.add(item);
+    }
+
+    const shortIds = itemIds.filter((id) => !has.has(id));
+    const { data: named } = shortIds.length
+      ? await db().from("menu_items").select("id, name").in("id", shortIds)
+      : { data: [] };
+
+    return {
+      of: itemIds.length,
+      matched: itemIds.length - shortIds.length,
+      missing: ((named ?? []) as any[]).map((one) => one.name as string),
+    };
+  } catch {
+    return { of: itemIds.length, matched: itemIds.length, missing: [] };
+  }
 }

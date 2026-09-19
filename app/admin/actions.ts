@@ -982,6 +982,8 @@ export async function saveCoupon(form: FormData): Promise<void> {
     })(),
     // Same day windows it is good for, as the hours they open.
     windows: form.getAll("window").map(String).filter(Boolean).join(","),
+    // A size, by the name of the option on the dish.
+    required_choice: String(form.get("required_choice") ?? "").trim().slice(0, 40),
     note: String(form.get("note") ?? "").trim(),
     active: form.get("active") === "on",
     // Blank means no limit, which is the normal case for a code in a group.
@@ -1004,9 +1006,12 @@ export async function saveCoupon(form: FormData): Promise<void> {
   const places = form.getAll("restaurant_id").map(String).filter(Boolean);
   if (places.length > 0) await writeCouponPlaces(code, places);
 
-  // And for one that belongs to particular dishes.
+  // And for one that belongs to particular dishes, or to whole sections.
   const dishes = form.getAll("menu_item_id").map(String).filter(Boolean);
   if (dishes.length > 0) await writeCouponItems(code, dishes);
+
+  const sections = form.getAll("category_id").map(String).filter(Boolean);
+  if (sections.length > 0) await writeCouponCategories(code, sections);
 
   revalidatePath("/admin", "layout");
 }
@@ -1046,6 +1051,35 @@ export async function setCouponItems(form: FormData): Promise<void> {
   const code = String(form.get("code"));
   await writeCouponItems(code, form.getAll("menu_item_id").map(String).filter(Boolean));
   revalidatePath("/admin", "layout");
+}
+
+/**
+ * Which sections of a menu an offer covers, and the choice every line has to
+ * have made. "Any large pizza" is both: the pizza section, and Large.
+ */
+export async function setCouponMenu(form: FormData): Promise<void> {
+  await assertAdmin();
+  const code = String(form.get("code"));
+
+  await writeCouponItems(code, form.getAll("menu_item_id").map(String).filter(Boolean));
+  await writeCouponCategories(code, form.getAll("category_id").map(String).filter(Boolean));
+  await db()
+    .from("coupons")
+    .update({
+      required_choice: String(form.get("required_choice") ?? "").trim().slice(0, 40),
+    })
+    .eq("code", code);
+
+  revalidatePath("/admin", "layout");
+}
+
+async function writeCouponCategories(code: string, sections: string[]): Promise<void> {
+  await db().from("coupon_categories").delete().eq("coupon_code", code);
+  if (sections.length > 0) {
+    await db()
+      .from("coupon_categories")
+      .insert(sections.map((category_id) => ({ coupon_code: code, category_id })));
+  }
 }
 
 async function writeCouponItems(code: string, dishes: string[]): Promise<void> {
