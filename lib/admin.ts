@@ -69,6 +69,19 @@ export type BatchSheet = {
     costs: number;
     /** What is actually left: gross, less food, commission and those costs. */
     profit: number;
+    /** The books for this run: what the menu said, what was handed over at
+     *  the counters, and what a customer gave back on the gap. */
+    reconciled: {
+      /** How many lines have been typed in, of how many on the run. */
+      lines: number;
+      of: number;
+      /** The menu price of only the lines typed in. */
+      menu: number;
+      /** What was actually handed over for those same lines. */
+      paid: number;
+      /** What customers handed back on them. */
+      recovered: number;
+    };
   };
 };
 
@@ -180,6 +193,19 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
       net: margin - commission,
       costs,
       profit: margin - commission - costs,
+      reconciled: {
+        lines: reconciled.length,
+        of: everyLine.length,
+        menu: reconciled.reduce((total, line) => total + line.qty * line.unitPrice, 0),
+        paid: reconciled.reduce(
+          (total, line) => total + ((spentOn.get(line.key) as number) ?? 0),
+          0
+        ),
+        recovered: reconciled.reduce(
+          (total, line) => total + (gotBack.get(line.key) ?? 0),
+          0
+        ),
+      },
     },
   };
 }

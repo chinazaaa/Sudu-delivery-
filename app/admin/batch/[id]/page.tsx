@@ -343,6 +343,56 @@ export default async function BatchPage({
                       </p>
                     </div>
 
+                    {/* The books for the run, once anything has been typed:
+                        what the menu said against what the counters took, so
+                        the end of the day is one line rather than a scroll
+                        back through every item. */}
+                    {summary.reconciled.lines > 0 && (
+                      <div className="rounded-xl bg-black/[0.03] p-3">
+                        <p className="text-sm">
+                          <span className="font-bold">
+                            {summary.reconciled.lines} of {summary.reconciled.of}
+                          </span>{" "}
+                          {summary.reconciled.lines === 1 ? "line" : "lines"} put
+                          in. The menu said{" "}
+                          <span className="font-bold">{naira(summary.reconciled.menu)}</span>{" "}
+                          for them and you handed over{" "}
+                          <span className="font-bold">{naira(summary.reconciled.paid)}</span>
+                          {summary.reconciled.recovered > 0 && (
+                            <>
+                              , with {naira(summary.reconciled.recovered)} back from
+                              customers
+                            </>
+                          )}
+                          .
+                        </p>
+                        {(() => {
+                          const out =
+                            summary.reconciled.paid -
+                            summary.reconciled.recovered -
+                            summary.reconciled.menu;
+                          return (
+                            <p
+                              className={`mt-1 text-sm font-bold ${
+                                out <= 0 ? "text-mint" : "text-brand"
+                              }`}
+                            >
+                              {out === 0
+                                ? "Level with the menu so far."
+                                : out < 0
+                                  ? `${naira(Math.abs(out))} better than the menu, straight onto the profit.`
+                                  : `${naira(out)} worse than the menu, straight off the profit.`}
+                            </p>
+                          );
+                        })()}
+                        <p className="mt-1 text-xs text-muted">
+                          Everything not listed here stays at the menu price, so
+                          this is honest even half done. The run&apos;s profit
+                          above already counts it.
+                        </p>
+                      </div>
+                    )}
+
                     {/* What has already been said, so it can be corrected or
                         put back without hunting for it. */}
                     {counter.flatMap((group) =>
