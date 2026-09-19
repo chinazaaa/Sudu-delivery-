@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 /**
  * Sending somebody a link.
  *
- * Three ways, because there are three real cases and one button cannot be all
- * of them. Most of this goes into a WhatsApp chat, so that one is named and
- * first: one tap instead of three, and it works on a laptop, where a share
- * sheet does not exist at all. But a friend on Snapchat or Instagram is not a
- * rare case, so the phone's own sheet stays, one line down, for everywhere
- * else. And copying is the answer when both fail, or when somebody just wants
- * the text.
+ * Two buttons, because there are two answers and a third only looked like
+ * choice. Nearly every link Sudu sends goes into a WhatsApp chat, so that one
+ * is named: one tap instead of three, and it works on a laptop, where the
+ * phone's share sheet does not exist at all. Everywhere else, Snapchat,
+ * Instagram, a text message, is copy and paste, which people already do
+ * without being taught.
+ *
+ * The sheet used to sit between them. It was a button whose label had to list
+ * apps to explain itself, which is the tell that it was not a choice anybody
+ * was making.
  *
  * wa.me with no number opens WhatsApp with the message written and lets them
  * pick the chat, which is the bit only they can do.
@@ -27,20 +30,6 @@ export default function SendLink({
   tone?: "primary" | "quiet";
 }) {
   const [copied, setCopied] = useState<"no" | "yes" | "failed">("no");
-  // Only a phone has one, and only the browser knows. Asked after mount so
-  // the server and the first render agree.
-  const [hasSheet, setHasSheet] = useState(false);
-  useEffect(() => setHasSheet(typeof navigator !== "undefined" && "share" in navigator), []);
-
-  const elsewhere = async () => {
-    try {
-      // Only `text`, which already ends in the link. Passing `url` as well
-      // makes the sheet append it a second time.
-      await navigator.share({ text: message });
-    } catch {
-      /* They closed the sheet. Nothing to report. */
-    }
-  };
 
   const copy = async () => {
     try {
@@ -67,16 +56,9 @@ export default function SendLink({
         {label}
       </a>
 
-      <div className="flex gap-2">
-        {hasSheet && (
-          <button type="button" onClick={elsewhere} className="btn-quiet flex-1">
-            Snapchat, Instagram, anywhere else
-          </button>
-        )}
-        <button type="button" onClick={copy} className="btn-quiet flex-1">
-          {copied === "yes" ? "Copied" : "Copy"}
-        </button>
-      </div>
+      <button type="button" onClick={copy} className="btn-quiet w-full">
+        {copied === "yes" ? "Copied" : "Copy link"}
+      </button>
 
       {copied === "failed" && (
         <textarea

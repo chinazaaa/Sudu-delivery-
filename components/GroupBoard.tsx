@@ -282,7 +282,9 @@ export default function GroupBoard({
         <SendLink
           message={invite}
           tone="quiet"
-          label={members.length === 0 ? "Send the link on WhatsApp" : "Add somebody else"}
+          label={
+            members.length === 0 ? "Send the link on WhatsApp" : "Add somebody on WhatsApp"
+          }
         />
 
         {leader && members.length > 0 && (
