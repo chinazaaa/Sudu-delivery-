@@ -12,6 +12,7 @@ type Party = {
   people?: number;
   names?: string[];
   closed?: boolean;
+  ready?: number;
   when?: string;
 };
 
@@ -91,9 +92,11 @@ export default function GroupBar() {
             {[
               party?.names && party.names.length > 0
                 ? party.names.join(", ")
-                : "Nobody has added food yet",
+                : "Nobody has joined yet",
+              party && (party.people ?? 0) > 0
+                ? `${party.ready ?? 0} of ${party.people} ready`
+                : "",
               party?.when ? `arriving ${party.when}` : "",
-              others > 0 ? "one delivery between you" : "",
             ]
               .filter(Boolean)
               .join(" · ")}

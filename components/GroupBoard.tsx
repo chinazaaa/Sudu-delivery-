@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { closeSharedGroup } from "@/app/actions";
 import { enterGroup, readGroup } from "./GroupLink";
 import SendLink from "./SendLink";
+import { countItems, useCart } from "@/lib/cart";
 import { naira } from "@/lib/money";
 import type { Stage } from "@/lib/group-view";
 
@@ -66,6 +67,12 @@ export default function GroupBoard({
   hostels: string[];
 }) {
   const router = useRouter();
+  // What is sitting in this browser's cart, which is not the same thing as
+  // what they have put into the group. Somebody who filled a cart and then
+  // opened the link has food, and being told to go and pick some is the page
+  // not looking at what is in front of it.
+  const cart = useCart();
+  const waiting = countItems(cart);
   const [left, setLeft] = useState("");
   const [busy, setBusy] = useState(false);
   const [leader, setLeader] = useState(leaderOnServer);
@@ -104,7 +111,7 @@ export default function GroupBoard({
         setLeft("closing now");
         // Whoever is looking closes it, so a group does not sit at "closing
         // now" waiting for a scheduled job that may not be running.
-        if (!asked.current && members.length > 0) {
+        if (!asked.current && members.some((one) => one.items > 0)) {
           asked.current = true;
           const form = new FormData();
           form.set("group_id", groupId);
@@ -182,6 +189,9 @@ export default function GroupBoard({
   };
 
   const ready = members.filter((one) => one.stage === "ready").length;
+  // Nobody has put food in yet, so the clock has nothing to count down to:
+  // it does not start until the first person finalises.
+  const anyFood = members.some((one) => one.items > 0);
   const invite =
     `${leaderName} is ordering food to campus with Sudu. Add yours and we ` +
     `split one delivery fee: ${shareUrl}`;
@@ -230,23 +240,36 @@ export default function GroupBoard({
         </div>
       )}
 
-      {/* In, but has not chosen anything yet. */}
+      {/* In, and still choosing. What they are told depends on whether there
+          is already food in their cart. */}
       {mine?.stage === "shopping" && (
         <section className="card space-y-2 border-2 border-brand/30 bg-brand-tint">
           <h2 className="font-bold text-brand-dark">
-            {mine.hasFood ? "Finish choosing your food" : "Now pick your food"}
+            {waiting > 0
+              ? `You have ${waiting} item${waiting === 1 ? "" : "s"} in your cart`
+              : "Now pick your food"}
           </h2>
           <p className="text-sm text-ink/75">
-            Add what you want, then press Finalise in the cart. Nothing is charged
-            yet: your share of delivery is worked out when this closes.
+            {waiting > 0
+              ? "It is not in the group until you finalise it. Nothing is charged yet: your share of delivery is worked out when this closes."
+              : "Add what you want, then press Finalise in the cart. Nothing is charged yet: your share of delivery is worked out when this closes."}
           </p>
           <button
             type="button"
-            onClick={() => router.push("/")}
+            onClick={() => router.push(waiting > 0 ? "/cart" : "/")}
             className="btn-primary w-full"
           >
-            {mine.hasFood ? "Back to the menu" : "Open the menu"}
+            {waiting > 0 ? "Review and finalise my food" : "Open the menu"}
           </button>
+          {waiting > 0 && (
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="w-full text-sm font-semibold text-brand-dark"
+            >
+              Add something else first
+            </button>
+          )}
         </section>
       )}
 
@@ -328,16 +351,18 @@ export default function GroupBoard({
           <h2 className="font-bold">
             {members.length === 0
               ? "Nobody has joined yet"
-              : `${ready} of ${members.length} ready`}
+              : !anyFood
+                ? `${members.length} in, nobody has finalised yet`
+                : `${ready} of ${members.length} ready`}
           </h2>
           <span className="text-sm font-semibold text-brand-dark">
-            {members.length === 0 ? "15 minutes from the first order" : left}
+            {anyFood ? left : "15 minutes from the first order"}
           </span>
         </div>
 
         <p className="text-sm text-muted">
-          {members.length === 0
-            ? "Send the link round. The clock only starts once somebody has ordered, so take your time."
+          {!anyFood
+            ? "Send the link round. The clock only starts once somebody finalises their food, so take your time."
             : ready === members.length
               ? "Everybody is done, so this is closing now."
               : leader

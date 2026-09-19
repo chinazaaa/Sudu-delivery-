@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { groupOrders } from "@/lib/groups";
+import { groupCarts, isReady } from "@/lib/group-carts";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,11 @@ export async function GET(
 
     if (!data) return NextResponse.json({ started: false });
 
-    const orders = await groupOrders(data.id as string);
+    // Before it closes the people are seats, not orders: there are no orders
+    // until there is a delivery fee to put on one.
+    const closed = data.closed_at !== null;
+    const seats = closed ? [] : await groupCarts(data.id as string);
+    const orders = closed ? await groupOrders(data.id as string) : [];
     const { data: batch } = await db()
       .from("batches")
       .select("delivery_window_text, kind")
@@ -36,8 +41,11 @@ export async function GET(
       started: true,
       id: data.id,
       leader: String(data.leader_name ?? "").split(" ")[0],
-      people: orders.length,
-      names: orders.map((one) => (one.for_name ?? one.customer_name).split(" ")[0]),
+      people: closed ? orders.length : seats.length,
+      names: closed
+        ? orders.map((one) => (one.for_name ?? one.customer_name).split(" ")[0])
+        : seats.map((one) => one.name.split(" ")[0]),
+      ready: closed ? orders.length : seats.filter(isReady).length,
       closesAt: data.closes_at,
       closed: data.closed_at !== null,
     });
