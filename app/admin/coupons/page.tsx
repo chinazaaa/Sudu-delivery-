@@ -18,6 +18,7 @@ import {
 import { batchOverview } from "@/lib/admin";
 import { openRestaurants, menuView } from "@/lib/menu";
 import { choiceReach } from "@/lib/coupons";
+import MenuScope, { type ScopeShop } from "@/components/admin/MenuScope";
 import DishPicker from "@/components/admin/DishPicker";
 import { deliveryHours } from "@/lib/settings";
 import { clockOf } from "@/lib/same-day";
@@ -55,6 +56,40 @@ export default async function CouponsAdmin() {
       items: place.items.filter((item) => item.categoryId === category.id).length,
     }))
   );
+
+  // Each menu as a tree: its sections, and the choices those sections offer
+  // in that kitchen's own words. Picked one step at a time rather than spelt.
+  const shops: ScopeShop[] = menu.map((place) => {
+    const choices = new Map<string, { name: string; categories: Set<string> }>();
+    for (const item of place.items) {
+      for (const group of item.groups) {
+        for (const option of group.options) {
+          const name = option.name.trim();
+          if (name === "") continue;
+          const entry = choices.get(name.toLowerCase()) ?? {
+            name,
+            categories: new Set<string>(),
+          };
+          if (item.categoryId) entry.categories.add(item.categoryId);
+          choices.set(name.toLowerCase(), entry);
+        }
+      }
+    }
+
+    return {
+      id: place.restaurant.id,
+      name: place.restaurant.name,
+      categories: place.categories.map((category) => ({
+        id: category.id,
+        name: category.name,
+        items: place.items.filter((item) => item.categoryId === category.id).length,
+      })),
+      choices: [...choices.values()].map((one) => ({
+        name: one.name,
+        categories: [...one.categories],
+      })),
+    };
+  });
 
   // Whether a size actually catches every dish it is meant to, said before a
   // Friday rather than after one.
@@ -175,8 +210,9 @@ export default async function CouponsAdmin() {
 
             {/* A deal struck with one kitchen holds to that kitchen. Ticking
                 one here means the code only comes off a cart made entirely of
-                their food. */}
-            {places.length > 0 && (
+                their food. A promotion says the same thing in its own control
+                below, where it is one step of three. */}
+            {coupon.applies_to !== "fee" && places.length > 0 && (
               <form action={setCouponPlaces} className="mt-3 space-y-2">
                 <input type="hidden" name="code" value={coupon.code} />
                 <p className="label mb-0">Only at</p>
@@ -216,62 +252,29 @@ export default async function CouponsAdmin() {
                 <p className="label mb-0">Only on these dishes</p>
                 <DishPicker menu={dishes} chosen={coupon.dishes.map((one) => one.id)} />
 
-                {sections.length > 0 && (
-                  <>
-                    <p className="label mb-0 mt-2">Or whole sections</p>
-                    <div className="flex flex-wrap gap-2">
-                      {sections.map((section) => (
-                        <label
-                          key={section.id}
-                          className="chip cursor-pointer border-black/10 bg-white font-medium"
-                        >
-                          <input
-                            type="checkbox"
-                            name="category_id"
-                            value={section.id}
-                            defaultChecked={coupon.sections.some((one) => one.id === section.id)}
-                          />
-                          {section.restaurant} · {section.name}
-                          <span className="text-xs text-muted">{section.items}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </>
-                )}
+                <MenuScope
+                  shops={shops}
+                  restaurant={coupon.places[0]?.id ?? ""}
+                  categories={coupon.sections.map((one) => one.id)}
+                  choice={coupon.required_choice ?? ""}
+                />
 
-                <div>
-                  <label className="label mb-0" htmlFor={`choice-${coupon.code}`}>
-                    And only with this choice
-                  </label>
-                  <input
-                    id={`choice-${coupon.code}`}
-                    name="required_choice"
-                    defaultValue={coupon.required_choice ?? ""}
-                    placeholder="Large"
-                    className="field py-2 text-sm"
-                  />
-                  <p className="mt-1 text-xs text-muted">
-                    A size is a choice on a dish, not a dish of its own, so any
-                    large pizza is the pizza section plus this. Blank means any
-                    size.
+                {reach.get(coupon.code) && (
+                  <p
+                    className={`text-xs font-semibold ${
+                      reach.get(coupon.code)!.missing.length > 0 ? "text-brand" : "text-mint"
+                    }`}
+                  >
+                    {reach.get(coupon.code)!.missing.length === 0
+                      ? `Every one of the ${reach.get(coupon.code)!.of} dishes offers it.`
+                      : `${reach.get(coupon.code)!.matched} of ${
+                          reach.get(coupon.code)!.of
+                        } dishes offer it. Not on: ${reach
+                          .get(coupon.code)!
+                          .missing.slice(0, 4)
+                          .join(", ")}.`}
                   </p>
-                  {reach.get(coupon.code) && (
-                    <p
-                      className={`mt-1 text-xs font-semibold ${
-                        reach.get(coupon.code)!.missing.length > 0 ? "text-brand" : "text-mint"
-                      }`}
-                    >
-                      {reach.get(coupon.code)!.missing.length === 0
-                        ? `Every one of the ${reach.get(coupon.code)!.of} dishes offers it.`
-                        : `${reach.get(coupon.code)!.matched} of ${
-                            reach.get(coupon.code)!.of
-                          } dishes offer it. Not on: ${reach
-                            .get(coupon.code)!
-                            .missing.slice(0, 4)
-                            .join(", ")}.`}
-                    </p>
-                  )}
-                </div>
+                )}
 
                 <div className="flex flex-wrap items-center gap-2">
                   <SaveButton quiet className="px-4 py-2 text-sm">
@@ -481,50 +484,43 @@ export default async function CouponsAdmin() {
           </div>
         )}
 
+        {shops.length > 0 && (
+          <div>
+            <p className="label">What it covers</p>
+            <MenuScope shops={shops} restaurant="" categories={[]} choice="" />
+          </div>
+        )}
+
         {dishes.length > 0 && (
           <div>
-            <p className="label">Only on these dishes</p>
+            <p className="label">Or particular dishes</p>
             <DishPicker menu={dishes} chosen={[]} />
             <p className="mt-1 text-xs text-muted">
               For free delivery on one thing worth the trip. Set the delivery
               to 0 above, pick the dish here, and ordering it brings the car.
               Pick two and either earns it, together or alone.
             </p>
+          </div>
+        )}
 
-            {sections.length > 0 && (
-              <>
-                <p className="label mt-3">Or whole sections</p>
-                <div className="flex flex-wrap gap-2">
-                  {sections.map((section) => (
-                    <label
-                      key={section.id}
-                      className="chip cursor-pointer border-black/10 bg-white font-medium"
-                    >
-                      <input type="checkbox" name="category_id" value={section.id} />
-                      {section.restaurant} · {section.name}
-                      <span className="text-xs text-muted">{section.items}</span>
-                    </label>
-                  ))}
-                </div>
-              </>
-            )}
-
-            <div className="mt-3">
-              <label className="label" htmlFor="required_choice">
-                And only with this choice
-              </label>
-              <input
-                id="required_choice"
-                name="required_choice"
-                placeholder="Large"
-                className="field"
-              />
-              <p className="mt-1 text-xs text-muted">
-                Any large pizza is the pizza section plus Large. It has to be
-                spelt the way the option is spelt on the dish; once saved, this
-                page says how many of them actually offer it.
-              </p>
+        {windows.length > 0 && (
+          <div>
+            <p className="label">Which same day windows</p>
+            <div className="flex flex-wrap gap-2">
+              {windows.map((window) => (
+                <label
+                  key={window.from}
+                  className="chip cursor-pointer border-black/10 bg-white font-medium"
+                >
+                  <input type="checkbox" name="window" value={window.from} />
+                  {window.label}
+                </label>
+              ))}
             </div>
+            <p className="mt-1 text-xs text-muted">
+              Tick none and it is good at any time. A run is not a window, so
+              runs are decided by the ticks above and never by these.
+            </p>
           </div>
         )}
 

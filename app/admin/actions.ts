@@ -982,8 +982,14 @@ export async function saveCoupon(form: FormData): Promise<void> {
     })(),
     // Same day windows it is good for, as the hours they open.
     windows: form.getAll("window").map(String).filter(Boolean).join(","),
-    // A size, by the name of the option on the dish.
-    required_choice: String(form.get("required_choice") ?? "").trim().slice(0, 40),
+    // A size, by the name of the option on the dish. Several are allowed:
+    // one menu says Large where another says Standard.
+    required_choice: form
+      .getAll("required_choice")
+      .map(String)
+      .map((one) => one.trim())
+      .filter(Boolean)
+      .join(","),
     note: String(form.get("note") ?? "").trim(),
     active: form.get("active") === "on",
     // Blank means no limit, which is the normal case for a code in a group.
@@ -1061,12 +1067,20 @@ export async function setCouponMenu(form: FormData): Promise<void> {
   await assertAdmin();
   const code = String(form.get("code"));
 
+  // The three steps of the one control, written together: the restaurant, its
+  // sections, and the choice. Empty clears, which is how "any" is said.
+  await writeCouponPlaces(code, form.getAll("restaurant_id").map(String).filter(Boolean));
   await writeCouponItems(code, form.getAll("menu_item_id").map(String).filter(Boolean));
   await writeCouponCategories(code, form.getAll("category_id").map(String).filter(Boolean));
   await db()
     .from("coupons")
     .update({
-      required_choice: String(form.get("required_choice") ?? "").trim().slice(0, 40),
+      required_choice: form
+        .getAll("required_choice")
+        .map(String)
+        .map((one) => one.trim())
+        .filter(Boolean)
+        .join(","),
     })
     .eq("code", code);
 

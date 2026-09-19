@@ -28,8 +28,9 @@ export type LiveOffer = {
   /** Particular dishes this is for, with any categories already resolved to
    *  their dishes. Empty means it is not about dishes at all. */
   items: string[];
-  /** A choice every line must have made, by name: "Large". Empty means the
-   *  offer does not care what was chosen. */
+  /** Choices, any one of which satisfies a line: "Large,Standard". One menu
+   *  calls it Large and another calls it Standard, and it is the same offer.
+   *  Empty means the offer does not care what was chosen. */
   choice: string;
   /** Empty means any run. */
   runs: string[];
@@ -176,13 +177,20 @@ export function offerShare(offer: LiveOffer, items: number, people: number): num
  *
  * By name, because each dish carries its own copy of its options and there is
  * no one Large to point at. Compared without case or surrounding space, since
- * "large" and "Large " are the same answer to anybody reading a menu.
+ * "large" and "Large " are the same answer to anybody reading a menu. Several
+ * names can be given: Domino's calls it Large, Panarottis calls it Standard.
  */
 export function everyLineChose(choice: string, lines: string[][] | undefined): boolean {
-  const wanted = choice.trim().toLowerCase();
-  if (wanted === "") return true;
+  const wanted = choice
+    .split(",")
+    .map((one) => one.trim().toLowerCase())
+    .filter(Boolean);
+  if (wanted.length === 0) return true;
   if (!lines || lines.length === 0) return false;
+
+  // Any one of them satisfies a line, because one menu says Large where
+  // another says Standard and it is the same offer either way.
   return lines.every((chosen) =>
-    chosen.some((one) => one.trim().toLowerCase() === wanted)
+    chosen.some((one) => wanted.includes(one.trim().toLowerCase()))
   );
 }

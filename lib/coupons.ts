@@ -708,3 +708,66 @@ export async function choiceReach(
     return { of: itemIds.length, matched: itemIds.length, missing: [] };
   }
 }
+
+/**
+ * Every choice a menu actually offers, with how many dishes carry it.
+ *
+ * So a size is picked rather than typed: Domino's calls it Large, Panarottis
+ * calls it Standard, and spelling either of them wrong is an offer that
+ * quietly never applies. The count is there because Large on twelve dishes
+ * and Large on one are different decisions.
+ */
+export async function menuChoices(): Promise<
+  { name: string; items: number; restaurants: string[] }[]
+> {
+  try {
+    const { data: options } = await db().from("item_options").select("name, group_id");
+    if (!options || options.length === 0) return [];
+
+    const groupIds = [...new Set((options as any[]).map((one) => one.group_id as string))];
+    const { data: groups } = await db()
+      .from("item_option_groups")
+      .select("id, menu_item_id")
+      .in("id", groupIds);
+
+    const itemOfGroup = new Map(
+      ((groups ?? []) as any[]).map((one) => [one.id as string, one.menu_item_id as string])
+    );
+    const { data: items } = await db()
+      .from("menu_items")
+      .select("id, restaurant_id")
+      .in("id", [...new Set([...itemOfGroup.values()])]);
+    const shopOfItem = new Map(
+      ((items ?? []) as any[]).map((one) => [one.id as string, one.restaurant_id as string])
+    );
+    const { data: shops } = await db().from("restaurants").select("id, name");
+    const shopNamed = new Map(((shops ?? []) as any[]).map((one) => [one.id as string, one.name as string]));
+
+    // Grouped by how the name reads rather than how it is typed, so one stray
+    // capital does not split Large into two entries to choose between.
+    const byName = new Map<string, { name: string; items: Set<string>; shops: Set<string> }>();
+    for (const option of options as any[]) {
+      const name = String(option.name).trim();
+      if (name === "") continue;
+      const key = name.toLowerCase();
+      const item = itemOfGroup.get(option.group_id as string);
+      if (!item) continue;
+
+      const entry = byName.get(key) ?? { name, items: new Set<string>(), shops: new Set<string>() };
+      entry.items.add(item);
+      const shop = shopNamed.get(shopOfItem.get(item) ?? "");
+      if (shop) entry.shops.add(shop);
+      byName.set(key, entry);
+    }
+
+    return [...byName.values()]
+      .map((entry) => ({
+        name: entry.name,
+        items: entry.items.size,
+        restaurants: [...entry.shops],
+      }))
+      .sort((one, two) => two.items - one.items || one.name.localeCompare(two.name));
+  } catch {
+    return [];
+  }
+}
