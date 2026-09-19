@@ -422,9 +422,27 @@ export default function CartView({
                       {line.restaurant}
                       {line.choices.length > 0 && ` · ${line.choices.join(", ")}`}
                     </p>
-                    <p className="mt-2 font-extrabold">
-                      {naira(line.unitPrice * line.qty)}
-                    </p>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <span className="font-extrabold">
+                        {naira(line.unitPrice * line.qty)}
+                      </span>
+                      {/* The same control, switched off. Leaving it out made
+                          the two sections read as different kinds of thing;
+                          greyed, it says plainly that this is somebody else's
+                          to change and yours is above. */}
+                      <span
+                        aria-hidden="true"
+                        className="flex items-center gap-1 rounded-full border border-black/10 p-1 opacity-40"
+                      >
+                        <span className="grid size-8 place-items-center rounded-full text-lg leading-none">
+                          −
+                        </span>
+                        <span className="w-5 text-center font-bold">{line.qty}</span>
+                        <span className="grid size-8 place-items-center rounded-full text-lg leading-none">
+                          +
+                        </span>
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))
