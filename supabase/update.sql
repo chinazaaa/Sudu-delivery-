@@ -392,5 +392,30 @@ create unique index if not exists order_groups_party_idx
 -- it is about food somebody has already paid for.
 alter table push_devices add column if not exists deals boolean not null default true;
 
+
+-- A same day car is not a run, and must not collide with one.
+--
+-- `unique (run_date, slot)` was right when every batch was a run: one
+-- afternoon run per day, one night run per day. A same day car borrows those
+-- same two columns, because the enum only knows the two slots and the real
+-- time lives on deliver_at. So the first same day trip on an afternoon that
+-- already had a run blocked itself against the run, and the second same day
+-- trip of any afternoon blocked itself against the first. Both came back as
+-- "that batch no longer exists", which is not what happened.
+--
+-- The guarantee is still wanted. It is just a guarantee about runs, so it now
+-- says so, and same day cars are free to be as many as people ask for.
+do $one_run_per_slot$
+begin
+  if exists (
+    select 1 from pg_constraint where conname = 'batches_run_date_slot_key'
+  ) then
+    alter table batches drop constraint batches_run_date_slot_key;
+  end if;
+end $one_run_per_slot$;
+
+create unique index if not exists batches_one_run_per_slot_idx
+  on batches (run_date, slot) where kind = 'run';
+
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';

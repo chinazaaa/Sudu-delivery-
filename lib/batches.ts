@@ -250,7 +250,7 @@ export async function createSameDayBatch(args: {
 }): Promise<Batch | null> {
   const at = new Date(args.deliverAt);
 
-  const { data } = await db()
+  const { data, error } = await db()
     .from("batches")
     .insert({
       run_date: lagosToday(at),
@@ -271,6 +271,14 @@ export async function createSameDayBatch(args: {
     })
     .select("*")
     .single();
+
+  // Swallowing this is how a unique constraint on (run_date, slot) spent a day
+  // telling customers "that batch no longer exists", which was not what had
+  // happened and left nothing anywhere to say what had.
+  if (error) {
+    console.error("createSameDayBatch failed:", error.message);
+    return null;
+  }
 
   return (data as Batch) ?? null;
 }

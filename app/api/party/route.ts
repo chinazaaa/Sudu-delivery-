@@ -55,7 +55,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     if (!batch) {
-      return NextResponse.json({ error: "Could not start that group." }, { status: 500 });
+      return NextResponse.json(
+        { error: "Could not get a car for that time. Try another time, or a run." },
+        { status: 500 }
+      );
     }
 
     // Open for a quarter of an hour, and on a run never past that run's own
@@ -87,6 +90,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       .single();
 
     if (error || !data) {
+      console.error("party insert failed:", error?.message);
       return NextResponse.json({ error: "Could not start that group." }, { status: 500 });
     }
 
