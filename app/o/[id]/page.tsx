@@ -573,6 +573,18 @@ export default async function OrderPage({
             </>
           )}
         </p>
+
+        {/* The way back to the car. Closing sends everybody to their own
+            total, which is what they came for, but the split is still worth
+            being able to look at. */}
+        {shared && order.group_id && (
+          <Link
+            href={`/g/${order.group_id}?split=1`}
+            className="text-sm font-semibold text-brand"
+          >
+            See the whole car and what each of you owes
+          </Link>
+        )}
       </section>
 
       {order.refund_owed > 0 && (

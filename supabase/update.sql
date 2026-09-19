@@ -793,3 +793,19 @@ alter table customers add column if not exists payment_method text not null defa
 
 -- Supabase caches the schema; this makes the new column visible immediately.
 notify pgrst, 'reload schema';
+
+
+-- Which seat in a shared delivery an order came out of.
+--
+-- Closing a group turns the seats into orders and deletes the seats, and with
+-- them the only thing tying a person's browser to their own order. So the
+-- board could not tell one member's line from another's, and only whoever
+-- pressed close was taken to their total: everybody else landed on the split
+-- and had to find themselves in a list.
+--
+-- Written as each order is made. Nothing reads it but the group board, and a
+-- close works whether or not this has been run.
+alter table orders add column if not exists seat_token text;
+
+-- Supabase caches the schema; this makes the new column visible immediately.
+notify pgrst, 'reload schema';

@@ -138,7 +138,10 @@ export async function groupView(
         orderId: order.id,
         link: shortRef(order),
         stage: (order.status !== "pending" ? "paid" : "unpaid") as Stage,
-        isMine: false,
+        // The seat this order came out of, which is how a member who did not
+        // press close is still shown their own total rather than a list of
+        // everybody's.
+        isMine: seat !== "" && order.seat_token === seat,
         name: order.for_name ?? order.customer_name,
         items: countFor(order.id),
         food: order.subtotal_food,

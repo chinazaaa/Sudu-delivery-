@@ -116,6 +116,9 @@ export type Order = {
   status: OrderStatus;
   created_at: string;
   group_id: string | null;
+  /** The seat in a shared delivery this order was made from, so the browser
+   *  holding that seat can be shown its own order after the close. */
+  seat_token?: string | null;
   for_name: string | null;
   refund_owed: number;
   payment_method: "transfer" | "card";

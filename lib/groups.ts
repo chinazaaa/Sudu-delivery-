@@ -538,6 +538,15 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
 
     if (result.ok) {
       made += 1;
+      // Whose seat this order came out of. Closing deletes the seats, and
+      // with them the only thing tying a person's browser to their order, so
+      // the board could not tell one member's line from another's and only
+      // whoever pressed close was sent to their own total. Written after the
+      // fact so a database without the column yet still closes groups.
+      await db()
+        .from("orders")
+        .update({ seat_token: cart.member_token })
+        .eq("id", result.orderId);
       // Gone from the waiting room, because it is an order now. Anything left
       // here would be ordered again by a later close.
       await db().from("group_carts").delete().eq("id", cart.id);

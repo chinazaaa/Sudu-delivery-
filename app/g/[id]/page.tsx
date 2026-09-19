@@ -2,6 +2,7 @@ import Link from "next/link";
 import HelpLine from "@/components/HelpLine";
 import { groupView } from "@/lib/group-view";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { hostelNames } from "@/lib/hostels";
 import { shortRef } from "@/lib/links";
 import { safeSettings } from "@/lib/settings";
@@ -33,7 +34,9 @@ export default async function GroupPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ me?: string; placed?: string }>;
+  /** split=1 is the way back to the board from an order, for somebody who
+   *  wants to see what everybody else owed rather than their own total. */
+  searchParams: Promise<{ me?: string; placed?: string; split?: string }>;
 }) {
   const query = await searchParams;
   // The seat this browser holds. Read here rather than passed about, so the
@@ -66,6 +69,13 @@ export default async function GroupPage({
     group.members.find((one) => one.orderId === asked) ??
     null;
   const mine = me?.orderId ?? null;
+
+  // Closed, and this browser's own order is in it. Whoever pressed close is
+  // taken to their total; everybody else was left on the split, reading a
+  // list to find their own line. Same ending for all of them.
+  if (group.closedAt && me && query.me !== me.orderId && query.split !== "1") {
+    redirect(`/o/${me.link}`);
+  }
 
   // A group that picked a time says the time and nothing else. Putting a run
   // beside it reads as a second option, and there is not one.
