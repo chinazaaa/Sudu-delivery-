@@ -30,6 +30,7 @@ export default function CartView({
   slots = [],
   sameDayFrom = 6500,
   runFrom = 4000,
+  hostels = [],
 }: {
   restaurants?: { id: string; name: string }[];
   /** What a group could be put on, worked out on the server so the clock and
@@ -38,6 +39,8 @@ export default function CartView({
   slots?: Slot[];
   sameDayFrom?: number;
   runFrom?: number;
+  /** The blocks admin delivers to. Empty means anything typed is allowed. */
+  hostels?: string[];
 }) {
   // In somebody's group already, ordering for friends as well is two group
   // ideas at once and nobody untangles them. The bar at the top says which
@@ -59,6 +62,23 @@ export default function CartView({
   const [group, setGroup] = useState("");
   const [sending, setSending] = useState(false);
   const [problem, setProblem] = useState("");
+  // Finishing asks everything at once. Saying you are done and then being
+  // sent to a waiting room that wants a phone number is the same question
+  // asked twice.
+  const [asking, setAsking] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [hostel, setHostel] = useState("");
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("sudu_me_v1") ?? "null");
+      if (saved?.phone) setPhone((current) => current || saved.phone);
+      if (saved?.hostel) setHostel((current) => current || saved.hostel);
+    } catch {
+      /* Nothing saved, or storage is blocked. They type it. */
+    }
+  }, []);
 
   useEffect(() => {
     const read = () => setGroup(readGroup());
@@ -76,12 +96,22 @@ export default function CartView({
       const response = await fetch(`/api/party/${group}/finalise`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lines: toServerLines(cart) }),
+        body: JSON.stringify({ lines: toServerLines(cart), phone, hostel, note }),
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) {
         setProblem(data.error ?? "Could not save that.");
         return;
+      }
+      // Worth remembering: the same number and block are wanted next time.
+      try {
+        const saved = JSON.parse(localStorage.getItem("sudu_me_v1") ?? "{}");
+        localStorage.setItem(
+          "sudu_me_v1",
+          JSON.stringify({ ...saved, phone, hostel })
+        );
+      } catch {
+        /* Not worth failing on. */
       }
       router.push(`/g/${group}`);
     } catch {
@@ -295,6 +325,81 @@ export default function CartView({
         </div>
       </section>
 
+      {asking && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-4 sm:items-center">
+          <div className="w-full max-w-sm space-y-3 rounded-3xl bg-paper p-5 shadow-bar">
+            <div>
+              <h2 className="text-lg font-extrabold">Where does your food go?</h2>
+              <p className="mt-1 text-sm text-muted">
+                Last thing. Your share of delivery is worked out when the group
+                closes, so nothing is charged yet.
+              </p>
+            </div>
+
+            <input
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              placeholder="Your phone number"
+              aria-label="Your phone number"
+              inputMode="tel"
+              className="field"
+            />
+
+            {hostels.length > 0 ? (
+              <select
+                value={hostel}
+                onChange={(event) => setHostel(event.target.value)}
+                aria-label="Your block"
+                className="field"
+              >
+                <option value="">Which block?</option>
+                {hostels.map((one) => (
+                  <option key={one} value={one}>
+                    {one}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                value={hostel}
+                onChange={(event) => setHostel(event.target.value)}
+                placeholder="Your hostel or block"
+                aria-label="Your hostel or block"
+                className="field"
+              />
+            )}
+
+            <input
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="Anything we should know? (optional)"
+              aria-label="Anything we should know"
+              className="field"
+            />
+
+            {problem !== "" && (
+              <p className="text-sm font-semibold text-brand-dark">{problem}</p>
+            )}
+
+            <button
+              type="button"
+              onClick={finalise}
+              disabled={sending}
+              className="btn-primary w-full"
+            >
+              {sending ? "Saving…" : "Done, put me in"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAsking(false)}
+              className="w-full text-sm font-semibold text-muted"
+            >
+              Not yet, I am still choosing
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t border-black/5 bg-paper p-3 shadow-bar sm:bottom-0">
         {problem !== "" && (
           <p className="mx-auto mb-2 max-w-2xl rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
@@ -312,11 +417,10 @@ export default function CartView({
           {group !== "" ? (
             <button
               type="button"
-              onClick={finalise}
-              disabled={sending}
+              onClick={() => setAsking(true)}
               className="btn-primary shrink-0 px-7 py-3.5"
             >
-              {sending ? "Saving…" : "Finalise my food"}
+              Finalise my food
             </button>
           ) : (
             <Link href="/checkout" className="btn-primary shrink-0 px-7 py-3.5">

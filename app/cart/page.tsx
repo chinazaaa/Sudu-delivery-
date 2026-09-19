@@ -1,5 +1,6 @@
 import CartView from "@/components/CartView";
 import { openRestaurants } from "@/lib/menu";
+import { hostelNames } from "@/lib/hostels";
 import { openBatches } from "@/lib/batches";
 import { activeBands, deliveryHours, safeSettings, sameDayPricing } from "@/lib/settings";
 import { deliverySlots } from "@/lib/same-day";
@@ -37,6 +38,7 @@ export default async function CartPage() {
       slots={slots}
       sameDayFrom={pricing.bands[0]?.fee ?? 6500}
       runFrom={bands[0]?.fee ?? 4000}
+      hostels={await hostelNames()}
     />
   );
 }

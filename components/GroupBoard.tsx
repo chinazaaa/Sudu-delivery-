@@ -164,32 +164,43 @@ export default function GroupBoard({
 
   return (
     <div className="space-y-4">
-      {/* Not in yet. One question, which is the only one the others need. */}
+      {/* Not in yet. Over everything, because it is the only thing to do and
+          reading the board first would be reading about strangers. One
+          question, and it is the one the others need answered. */}
       {!mine && (
-        <section className="card space-y-3 border-2 border-brand/30 bg-brand-tint">
-          <div>
-            <h2 className="font-bold text-brand-dark">Join {leaderName}&apos;s delivery</h2>
-            <p className="text-sm text-ink/75">
-              Say who you are and pick your own food. You pay for your own, and the
-              delivery is one fee for the whole car, split evenly.
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-4 sm:items-center">
+          <div className="w-full max-w-sm space-y-3 rounded-3xl bg-paper p-5 shadow-bar">
+            <div>
+              <h2 className="text-lg font-extrabold">Join {leaderName}&apos;s delivery</h2>
+              <p className="mt-1 text-sm text-muted">
+                Everybody picks their own food and pays for their own food. The
+                delivery is one fee for the whole car, split evenly between you.
+              </p>
+            </div>
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && name.trim().length >= 2) void join();
+              }}
+              placeholder="Your first name"
+              aria-label="Your first name"
+              autoFocus
+              className="field"
+            />
+            <p className="text-xs text-muted">
+              So the others know who is in. Nothing else is asked for yet.
             </p>
+            <button
+              type="button"
+              onClick={join}
+              disabled={joining || name.trim().length < 2}
+              className="btn-primary w-full"
+            >
+              {joining ? "Joining…" : "Join and pick my food"}
+            </button>
           </div>
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Your first name"
-            aria-label="Your first name"
-            className="field"
-          />
-          <button
-            type="button"
-            onClick={join}
-            disabled={joining || name.trim().length < 2}
-            className="btn-primary w-full"
-          >
-            {joining ? "Joining…" : "Join and pick my food"}
-          </button>
-        </section>
+        </div>
       )}
 
       {/* In, but has not chosen anything yet. */}
