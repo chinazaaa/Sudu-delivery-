@@ -1380,6 +1380,19 @@ export type FullOrder = Order & {
   members: GroupMember[];
 };
 
+/**
+ * The bit of an order that belongs in a link.
+ *
+ * Orders carry a seven character code as well as their long identifier, and
+ * every lookup already accepts either. This is what turns a freshly made
+ * order into the short one, for the address somebody is about to be sent to
+ * and quite possibly to paste to a friend.
+ */
+export async function orderLinkId(id: string): Promise<string> {
+  const { data } = await db().from("orders").select("short").eq("id", id).maybeSingle();
+  return (data?.short as string | null) || id;
+}
+
 export async function getOrder(id: string): Promise<FullOrder | null> {
   // Either the long identifier or the short code: every link ever sent has
   // to go on working, and the short one is what new links use.

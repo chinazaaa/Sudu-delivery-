@@ -2,6 +2,7 @@ import { db } from "./supabase";
 import { getSharedGroup, groupOrders, shareNow } from "./groups";
 import { cartValues, groupCarts, isReady } from "./group-carts";
 import { getBatch } from "./batches";
+import { shortRef } from "./links";
 import type { Batch } from "./types";
 
 /** Where somebody has got to, which is the whole point of the board. */
@@ -9,6 +10,9 @@ export type Stage = "shopping" | "details" | "ready" | "paid" | "unpaid";
 
 export type Member = {
   orderId: string;
+  /** What goes in the address bar for this order: the short code once it is
+   *  a real order, and the seat's own id while it is still a seat. */
+  link: string;
   stage: Stage;
   /** Whether this is the person reading the page. */
   isMine: boolean;
@@ -115,6 +119,7 @@ export async function groupView(
   const members: Member[] = group.closed_at
     ? orders.map((order) => ({
         orderId: order.id,
+        link: shortRef(order),
         stage: (order.status !== "pending" ? "paid" : "unpaid") as Stage,
         isMine: false,
         name: order.for_name ?? order.customer_name,
@@ -128,6 +133,7 @@ export async function groupView(
       }))
     : waiting.map((cart) => ({
         orderId: cart.id,
+        link: cart.id,
         stage: (isReady(cart)
           ? "ready"
           : cart.finalised_at

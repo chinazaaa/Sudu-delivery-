@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { db } from "@/lib/supabase";
 import { getSharedGroup, groupOrders } from "@/lib/groups";
 import { seatFor } from "@/lib/group-carts";
-import { placeOrder } from "@/lib/orders";
+import { orderLinkId, placeOrder } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
@@ -90,5 +90,6 @@ export async function POST(
   await db().from("group_carts").delete().eq("id", seat.id);
   await db().from("orders").update({ group_id: group.id }).eq("id", result.orderId);
 
-  return NextResponse.json({ ok: true, orderId: result.orderId });
+  // The short code, because this id goes straight into the address bar.
+  return NextResponse.json({ ok: true, orderId: await orderLinkId(result.orderId) });
 }

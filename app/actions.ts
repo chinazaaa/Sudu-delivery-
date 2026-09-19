@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getOrder, moveOrder, placeOrder, previewCoupon, saveRating } from "@/lib/orders";
+import { getOrder, moveOrder, orderLinkId, placeOrder, previewCoupon, saveRating } from "@/lib/orders";
 import { lastOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import { rememberCart } from "@/lib/carts";
@@ -73,7 +73,7 @@ export async function submitOrder(
   if (result.sharedGroupId) {
     redirect(`/g/${result.sharedGroupId}?me=${result.orderId}&placed=1`);
   }
-  redirect(`/o/${result.orderId}?placed=1`);
+  redirect(`/o/${await orderLinkId(result.orderId)}?placed=1`);
 }
 
 export type ReorderState = { error: string | null };
@@ -98,7 +98,7 @@ export async function submitReorder(
   });
 
   if (!result.ok) return { error: result.error };
-  redirect(`/o/${result.orderId}?placed=1`);
+  redirect(`/o/${await orderLinkId(result.orderId)}?placed=1`);
 }
 
 /**

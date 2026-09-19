@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { shortRef } from "@/lib/links";
 import Empty from "@/components/Empty";
 import PinForm from "@/components/PinForm";
 import { currentCustomer } from "@/lib/customer-auth";
@@ -71,7 +72,7 @@ export default async function OrdersPage() {
         <ul className="space-y-3">
           {orders.map((order, index) => (
             <li key={order.id} className="card space-y-3">
-              <Link href={`/o/${order.id}`} className="block">
+              <Link href={`/o/${shortRef(order)}`} className="block">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-medium">
                     {runDateLabel(order.batch.run_date)} · {SLOT_LABEL[order.batch.slot]}
@@ -90,7 +91,7 @@ export default async function OrdersPage() {
               </Link>
               {gone(order) ? (
                 <Link
-                  href={`/o/${order.id}`}
+                  href={`/o/${shortRef(order)}`}
                   className="btn-quiet w-full py-2.5 text-sm"
                 >
                   Move it to another run

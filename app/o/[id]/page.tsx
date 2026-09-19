@@ -18,6 +18,7 @@ import MoveOrder from "@/components/MoveOrder";
 import { openBatches } from "@/lib/batches";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira, shareRef } from "@/lib/money";
+import { shortRef } from "@/lib/links";
 import { bandFor, splitFee } from "@/lib/fees";
 import { fillNote, narration, PAID_NOTE_DEFAULT } from "@/lib/messages";
 import {
@@ -297,7 +298,7 @@ export default async function OrderPage({
           closed={expired}
           shares={order.shares.map((share) => {
             const name = share.for_name ?? share.customer_name;
-            const url = `${site}/o/${share.id}`;
+            const url = `${site}/o/${shortRef(share)}`;
             return {
               id: share.id,
               name,

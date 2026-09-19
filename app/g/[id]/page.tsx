@@ -172,7 +172,7 @@ export default async function GroupPage({
                       <span className="text-xs font-bold text-mint">Paid</span>
                     ) : (
                       <Link
-                        href={`/o/${one.orderId}`}
+                        href={`/o/${one.link}`}
                         className="text-xs font-semibold text-brand"
                       >
                         {one.orderId === mine ? "Pay yours" : "Open"}
@@ -194,7 +194,7 @@ export default async function GroupPage({
           )}
 
           {me && !me.paid && (
-            <Link href={`/o/${me.orderId}`} className="btn-primary block w-full text-center">
+            <Link href={`/o/${me.link}`} className="btn-primary block w-full text-center">
               Pay my {naira(me.food + group.share)}
             </Link>
           )}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import PromoterLogin from "@/components/PromoterLogin";
 import { currentPromoter } from "@/lib/promoter-auth";
 import { promoterEarnings } from "@/lib/promoters";
+import { shortRef } from "@/lib/links";
 import { naira } from "@/lib/money";
 import { fillNudge, whatsappTo, NUDGE_TOKENS } from "@/lib/messages";
 import { siteUrl } from "@/lib/admin-templates";
@@ -95,7 +96,7 @@ export default async function PromoterPage() {
                       name: order.name,
                       batch: order.label,
                       total: naira(order.total),
-                      link: site ? `${site}/o/${order.id}` : "",
+                      link: site ? `${site}/o/${shortRef(order)}` : "",
                     })
                   )}
                   target="_blank"
