@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { PARTY_CHANGED, readGroup } from "./GroupLink";
 import { countItems, useCart } from "@/lib/cart";
 
 /** Thumb-height navigation, the way every food app on a phone does it. */
@@ -10,12 +12,31 @@ export default function BottomNav() {
   const cart = useCart();
   const count = countItems(cart);
 
+  // Ordering together is the whole point of the shop, so it gets a thumb on
+  // the bar rather than a card somebody has to scroll to. Which group, or
+  // whether there is one at all, is read here and kept current: somebody can
+  // start one from the page they are already standing on.
+  const [group, setGroup] = useState("");
+  useEffect(() => {
+    const read = () => setGroup(readGroup());
+    read();
+    window.addEventListener(PARTY_CHANGED, read);
+    return () => window.removeEventListener(PARTY_CHANGED, read);
+  }, []);
+
   if (path.startsWith("/admin")) return null;
 
   const tabs = [
     { href: "/", label: "Menu", icon: HomeIcon },
     { href: "/orders", label: "Orders", icon: ListIcon },
-    { href: "/reorder", label: "Again", icon: RepeatIcon },
+    // In a group this is the group; out of one it is the way into starting
+    // it. One tab either way, because it is one idea either way.
+    {
+      href: group ? `/g/${group}` : "/cart?start=1",
+      label: "Group",
+      icon: GroupIcon,
+      match: group ? `/g/${group}` : "",
+    },
     { href: "/cart", label: "Cart", icon: BagIcon, badge: count },
   ];
 
@@ -23,7 +44,9 @@ export default function BottomNav() {
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-black/5 bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden">
       <ul className="mx-auto flex max-w-lg">
         {tabs.map((tab) => {
-          const active = path === tab.href;
+          // A group page carries an id, so the tab cannot be lit by matching
+          // the whole address the way the fixed ones are.
+          const active = path === tab.href || (tab.match ? path === tab.match : false);
           const Icon = tab.icon;
           return (
             <li key={tab.href} className="flex-1">
@@ -73,10 +96,11 @@ function ListIcon() {
   );
 }
 
-function RepeatIcon() {
+/** Two people, which is the smallest a group can be. */
+function GroupIcon() {
   return (
     <svg viewBox="0 0 24 24" className="size-5" {...stroke}>
-      <path d="M4 10a6 6 0 0 1 6-6h8m0 0-3-3m3 3-3 3M20 14a6 6 0 0 1-6 6H6m0 0 3 3m-3-3 3-3" />
+      <path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20a6.5 6.5 0 0 1 13 0M16.5 11a3 3 0 1 0 0-6M18 14.2a5.5 5.5 0 0 1 3.5 5.1" />
     </svg>
   );
 }

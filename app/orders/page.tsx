@@ -44,6 +44,24 @@ export default async function OrdersPage() {
         </form>
       </div>
 
+      {/* The tab bar carries the group now, and the header's own link to this
+          is hidden on a phone, so ordering the same thing again lives here
+          where the same things are listed. */}
+      {orders.length > 0 && (
+        <Link
+          href="/reorder"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-black/10 bg-paper px-4 py-3"
+        >
+          <span>
+            <span className="block font-bold">Order the same thing again</span>
+            <span className="block text-sm text-muted">
+              Rebuilt at today&apos;s prices, ready for the next run.
+            </span>
+          </span>
+          <span className="shrink-0 text-sm font-extrabold text-brand">Open</span>
+        </Link>
+      )}
+
       {orders.length === 0 ? (
         <Empty icon="bag" title="No orders yet" href="/" action="Browse the menu">
           Everything you order shows up here, with where it has got to and a
