@@ -7,7 +7,8 @@ import { whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import SaveButton from "@/components/SaveButton";
-import { addCustomer, saveCustomerNote } from "../actions";
+import { addCustomer, deleteCustomer, saveCustomerNote } from "../actions";
+import ConfirmButton from "@/components/admin/ConfirmButton";
 
 export const dynamic = "force-dynamic";
 
@@ -159,6 +160,21 @@ export default async function CustomersPage({
                   >
                     Their orders
                   </a>
+                  {/* Testing a checkout makes a customer, so a shop that has
+                      been tested has a list mostly of itself. Anybody who has
+                      ordered stays: their orders point at this number. */}
+                  {row.orders === 0 && (
+                    <form action={deleteCustomer}>
+                      <input type="hidden" name="phone" value={row.phone} />
+                      <ConfirmButton
+                        tone="bare"
+                        className="chip border-black/10 bg-white text-brand"
+                        confirm={`Yes, delete ${row.name || row.phone}`}
+                      >
+                        Delete
+                      </ConfirmButton>
+                    </form>
+                  )}
                 </div>
 
                 <form action={saveCustomerNote} className="mt-3 flex gap-2">

@@ -860,6 +860,36 @@ export async function addCustomer(form: FormData): Promise<void> {
 }
 
 /** A note on a person, carried across every order they place. */
+/**
+ * A customer with nothing behind them, removed.
+ *
+ * Testing a checkout makes a customer, and a shop that has been tested a few
+ * times has a list mostly of itself. Anybody who has ever ordered stays: the
+ * orders point at the phone number, and a name and a PIN that vanish from
+ * under a real order help nobody.
+ */
+export async function deleteCustomer(form: FormData): Promise<void> {
+  await assertAdmin();
+  const phone = String(form.get("phone"));
+  if (!phone) return;
+
+  const { count } = await db()
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("customer_phone", phone);
+  if ((count ?? 0) > 0) {
+    throw new Error("That number has orders behind it, so it stays.");
+  }
+
+  // Their abandoned carts go too: a cart with nobody behind it is a row
+  // nobody will ever chase.
+  await db().from("carts").delete().eq("phone", phone);
+  const { error } = await db().from("customers").delete().eq("phone", phone);
+  if (error) throw new Error(`Could not delete that customer: ${error.message}`);
+
+  revalidatePath("/admin", "layout");
+}
+
 export async function saveCustomerNote(form: FormData): Promise<void> {
   await assertAdmin();
   await db()
