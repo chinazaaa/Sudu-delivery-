@@ -1,10 +1,14 @@
 import { useState } from "react";
+import { Linking } from "react-native";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api, naira } from "@/lib/api";
 import { cart, cartTotal, countItems, people, useStored, type Line } from "@/lib/store";
 import { T } from "@/lib/theme";
+
+// Groups are a web page, so the app hands over to it rather than pretending.
+const SITE = "https://sudu.store";
 
 /** What is in the bag, and what it will cost to bring it. */
 export default function Cart() {
@@ -54,9 +58,47 @@ export default function Cart() {
     );
   }
 
+  // What sharing a delivery would actually save them, on the food they have
+  // actually chosen. "Split one delivery" is an idea; two real numbers is an
+  // argument, and this is the moment it stops being abstract.
+  const alone = shop && items > 0 ? feeFrom(items, shop.bands, null) : 0;
+  const withOne =
+    shop && items > 0
+      ? Math.ceil(feeFrom(items * 2, shop.bands, null) / 2 / 100) * 100
+      : 0;
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 140, gap: 10 }}>
+        {/* Groups live on the website: the link somebody is sent is a web
+            address, and everybody in a car has to see the same page. Rather
+            than pretend the app can do it, this hands over to the thing that
+            can, with the food already in their cart waiting for them. */}
+        {alone > 0 && (
+          <Pressable
+            onPress={() => void Linking.openURL(`${SITE}/cart?start=1`)}
+            style={{
+              backgroundColor: T.tint,
+              borderRadius: T.radius,
+              borderWidth: 1,
+              borderColor: T.brand + "40",
+              padding: 14,
+              gap: 4,
+            }}
+          >
+            <Text style={{ fontWeight: "800", color: T.brand }}>
+              Ordering with friends?
+            </Text>
+            <Text style={{ color: T.ink }}>
+              Delivery on this is {naira(alone)} on your own. With one friend it is
+              about {naira(withOne)} each, and it keeps falling as more of you join.
+            </Text>
+            <Text style={{ fontWeight: "800", color: T.brand, marginTop: 2 }}>
+              Start a group →
+            </Text>
+          </Pressable>
+        )}
+
         <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <Text style={{ fontWeight: "800", color: T.ink }}>
