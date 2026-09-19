@@ -153,8 +153,10 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
 
   const orders = await groupOrders(groupId);
 
-  // A link somebody made and never used. Shut it so the clock stops coming
-  // back to it every minute, and so nobody can wander in an hour later.
+  // A link somebody made and never used, whose car has now gone. Shut it so
+  // the clock stops coming back to it every minute. This is only ever reached
+  // once closes_at has passed, and for a group nobody ordered in that is the
+  // car's own last call, not a quarter of an hour after the link was made.
   if (orders.length === 0) {
     if (!group.closed_at) {
       await db()
@@ -232,6 +234,33 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
   }
 
   return { ok: true, alreadyClosed: false, share, people: orders.length, items: carried };
+}
+
+/**
+ * Start the quarter of an hour, on the first order to land in a group.
+ *
+ * Until somebody has ordered there is nothing for anybody to join, so the
+ * clock has nothing to measure. It begins when the first order arrives and
+ * never runs past the car's own last call, which is what closes_at already
+ * holds. Only ever brings the time forward, so the second order in a group
+ * cannot push the door open again.
+ */
+export async function startGroupClock(groupId: string): Promise<void> {
+  const group = await getSharedGroup(groupId);
+  if (!group || group.closed_at) return;
+
+  const orders = await groupOrders(groupId);
+  if (orders.length !== 1) return; // Not the first. The clock is already going.
+
+  const wanted = Date.now() + SHARE_MINUTES * 60_000;
+  const current = group.closes_at ? new Date(group.closes_at).getTime() : wanted;
+  if (wanted >= current) return; // The car leaves before the quarter of an hour.
+
+  await db()
+    .from("order_groups")
+    .update({ closes_at: new Date(wanted).toISOString() })
+    .eq("id", groupId)
+    .is("closed_at", null);
 }
 
 /** Closes every shared delivery whose time is up. Run from a schedule. */

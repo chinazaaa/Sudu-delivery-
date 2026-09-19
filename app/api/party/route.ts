@@ -61,18 +61,29 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
 
-    // Open for a quarter of an hour, and on a run never past that run's own
-    // cut off, because a group that outlived its run would collect people for
-    // a car that had already gone.
+    // The quarter of an hour starts at the first order, not here.
     //
-    // A same day car carries no such limit. Its cut off is stamped at the
-    // moment it is made, so capping against it would close the group in the
-    // same breath as making it, and nobody would ever get in.
-    const wanted = Date.now() + SHARE_MINUTES * 60_000;
+    // It used to start here, which meant the person who made the link was
+    // racing it: browse the menu, choose, type a name, a number and a block,
+    // and the fifteen minutes were gone before their own order was placed. The
+    // group closed itself, empty, and their food then went out alone at the
+    // full fee with nothing anywhere saying why. Starting the clock at the
+    // link is timing the wrong thing. Fifteen minutes is how long friends have
+    // to pile into an order that exists, and until somebody has ordered there
+    // is nothing to pile into.
+    //
+    // So this is the outer limit only: the last moment the car itself can
+    // take anybody. A same day car is bounded by when it has to leave, and a
+    // run by its own cut off.
+    const lastCall =
+      batch.kind === "same_day" && batch.deliver_at
+        ? new Date(batch.deliver_at).getTime()
+        : new Date(batch.cut_off_at).getTime();
+
+    // A same day car stamps its cut off at the moment it is made, so a car
+    // with no time on it would otherwise close in the same breath.
     const closesAt = new Date(
-      batch.kind === "same_day"
-        ? wanted
-        : Math.min(wanted, new Date(batch.cut_off_at).getTime())
+      Math.max(lastCall, Date.now() + SHARE_MINUTES * 60_000)
     ).toISOString();
 
     const { data, error } = await db()

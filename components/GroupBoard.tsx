@@ -136,7 +136,7 @@ export default function GroupBoard({
         // group nobody is watching; this catches the one somebody is staring
         // at. Closing is idempotent and claims itself in one write, so the two
         // arriving together is fine.
-        if (!asked.current) {
+        if (!asked.current && members.length > 0) {
           asked.current = true;
           const form = new FormData();
           form.set("group_id", groupId);
@@ -161,7 +161,7 @@ export default function GroupBoard({
       clearInterval(clock);
       clearInterval(poll);
     };
-  }, [closesAt, router, groupId]);
+  }, [closesAt, router, groupId, members.length]);
 
   const ready = members.filter((one) => one.done).length;
   const me = members.find((one) => one.orderId === mine) ?? null;
@@ -201,12 +201,14 @@ export default function GroupBoard({
               ? "Nobody has added food yet"
               : `${ready} of ${members.length} ready`}
           </h2>
-          <span className="text-sm font-semibold text-brand-dark">{left}</span>
+          <span className="text-sm font-semibold text-brand-dark">
+            {members.length === 0 ? "15 minutes from the first order" : left}
+          </span>
         </div>
 
         <p className="text-sm text-muted">
           {members.length === 0
-            ? "Send the link round, then add yours. Everything ordered under it rides in the same car."
+            ? "Send the link round, then add yours. The clock only starts once somebody has ordered, so take your time."
             : ready === members.length
               ? "Everybody is done, so this is closing now."
               : leader

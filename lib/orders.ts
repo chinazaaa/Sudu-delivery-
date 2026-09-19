@@ -1,5 +1,11 @@
 import { db } from "./supabase";
-import { claimLeader, joinableGroup, openGroupFor, startSharedGroup } from "./groups";
+import {
+  claimLeader,
+  joinableGroup,
+  openGroupFor,
+  startGroupClock,
+  startSharedGroup,
+} from "./groups";
 import { feeFor, sameDayFee, splitFee, type Band } from "./fees";
 import { activeBands, deliveryHours, safeSettings, sameDayPricing } from "./settings";
 import {
@@ -259,6 +265,8 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // order, the group only knows their first name; now it knows their number,
   // so every other page can tell who the leader is without being told.
   if (party && input.partyLeader) await claimLeader(party.id, phone);
+  // The first order in a group is what starts the fifteen minutes.
+  if (party) await startGroupClock(party.id);
   await bindCustomer({ phone, name, hostel, returning });
   // The cart behind this order is no longer abandoned, and the admins are told
   // rather than having to keep refreshing. Neither can fail the order.
