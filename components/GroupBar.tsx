@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { joinedViaLink, leaveGroup, PARTY_CHANGED, readGroup } from "./GroupLink";
 
@@ -29,6 +29,7 @@ export default function GroupBar() {
   // The bar still earns its place there: it is what says you are in one, and
   // Leave is the way out.
   const pathname = usePathname();
+  const router = useRouter();
   const [token, setToken] = useState("");
   const [party, setParty] = useState<Party | null>(null);
   // Whose group it is reads differently depending on which of them is looking,
@@ -101,6 +102,10 @@ export default function GroupBar() {
                 leaveGroup();
                 setToken("");
                 setAsking(false);
+                // Standing on the board of the group you just left is a page
+                // about something you are no longer in, and it asks you to
+                // join it again. Somewhere you can still order is better.
+                if (pathname.startsWith("/g/")) router.push("/");
               }}
               className="btn-primary w-full"
             >
