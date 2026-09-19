@@ -162,12 +162,16 @@ export async function startGroupClock(groupId: string): Promise<void> {
   const group = await getSharedGroup(groupId);
   if (!group || group.closed_at) return;
 
-  const waiting = (await groupCarts(groupId)).filter((cart) => cart.lines.length > 0);
-  if (waiting.length !== 1) return; // Not the first. The clock is already going.
+  // Somebody has finished. Food sitting in a cart does not start it: people
+  // browse for half an hour, and a clock that began when the first person
+  // added a drink would shut the car before anybody had chosen.
+  const finished = (await groupCarts(groupId)).some((cart) => cart.finalised_at);
+  if (!finished) return;
 
   const wanted = Date.now() + SHARE_MINUTES * 60_000;
   const current = group.closes_at ? new Date(group.closes_at).getTime() : wanted;
-  if (wanted >= current) return; // The car leaves before the quarter of an hour.
+  // Only ever forward, so a later finaliser cannot push the door open again.
+  if (wanted >= current) return;
 
   await db()
     .from("order_groups")
@@ -309,6 +313,19 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
   void announceGroup(groupId);
 
   return { ok: true, alreadyClosed: false, share, people: made, items: carried };
+}
+
+/**
+ * Whose group it is, as the server can prove it.
+ *
+ * The leader takes the first seat at the moment they make the link, so the
+ * earliest seat is theirs. That is better than the browser saying so: every
+ * member's browser holds the group id, so "do I know this group" was true for
+ * everybody, and anybody in a group could close it.
+ */
+export async function leaderSeat(groupId: string): Promise<string> {
+  const seats = await groupCarts(groupId);
+  return seats[0]?.member_token ?? "";
 }
 
 /** Closes every shared delivery whose time is up. Run from a schedule. */

@@ -79,14 +79,14 @@ export default function GroupBoard({
   // Closing cannot be undone and leaves behind anybody still choosing, so it
   // is asked rather than done, from wherever it is pressed.
   const [confirming, setConfirming] = useState(false);
-  const [leader, setLeader] = useState(leaderOnServer);
+
   const asked = useRef(false);
 
   // Joining, for somebody who has just opened the link.
   // The person who made the link already said who they are. Asking again is
   // asking a question that has been answered, so it is filled in for them and
   // one tap gets them in.
-  const [name, setName] = useState(leaderOnServer ? leaderName : "");
+  const [name, setName] = useState("");
   const [joining, setJoining] = useState(false);
   const [joinProblem, setJoinProblem] = useState("");
 
@@ -97,16 +97,14 @@ export default function GroupBoard({
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState("");
 
+  // Whose group it is comes from the server, which can prove it. Every
+  // member's browser holds the group id, so asking the browser meant every
+  // member believed they were the leader.
+  const leader = leaderOnServer;
+
   useEffect(() => {
-    // The browser that made the link is the only thing that knows it is the
-    // leader until they have put food in, so it says so positively.
-    if (readGroup() === groupId) {
-      setLeader(true);
-      setName((current) => current || leaderName);
-    } else {
-      enterGroup(groupId, true);
-    }
-  }, [groupId, leaderName]);
+    if (readGroup() !== groupId) enterGroup(groupId, true);
+  }, [groupId]);
 
   useEffect(() => {
     const tick = () => {

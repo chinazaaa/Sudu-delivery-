@@ -86,7 +86,7 @@ export default async function GroupPage({
               groupId={group.id}
               shareUrl={shareUrl}
               leaderName={group.leaderName}
-              leaderOnServer={me?.isLeader ?? false}
+              leaderOnServer={group.mine?.isLeader ?? false}
               canClose={group.items > 0}
             />
           )}
@@ -159,7 +159,7 @@ export default async function GroupPage({
           mine={group.mine}
           hostels={await hostelNames()}
           closesAt={group.closesAt!}
-          leaderOnServer={me?.isLeader ?? false}
+          leaderOnServer={group.mine?.isLeader ?? false}
           shareUrl={shareUrl}
           leaderName={group.leaderName}
         />

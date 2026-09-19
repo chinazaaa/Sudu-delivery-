@@ -8,7 +8,7 @@ import { lastOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import { rememberCart } from "@/lib/carts";
 import { db } from "@/lib/supabase";
-import { closeGroup, markDone } from "@/lib/groups";
+import { closeGroup, leaderSeat, markDone } from "@/lib/groups";
 import {
   checkPin,
   currentCustomer,
@@ -311,6 +311,15 @@ export async function finishOrdering(form: FormData): Promise<void> {
 export async function closeSharedGroup(form: FormData): Promise<void> {
   const id = String(form.get("group_id") ?? "");
   if (!id) return;
+
+  // Only the person whose group it is. This was not checked at all: the page
+  // decided who the leader was and the server took its word for it, so
+  // anybody who knew a group id could price everybody in it and shut them
+  // out. The leader took the first seat when they made the link, and the
+  // cookie holding that seat is what proves it.
+  const seat = (await cookies()).get("sudu_seat")?.value ?? "";
+  const leader = await leaderSeat(id);
+  if (leader !== "" && seat !== leader) return;
 
   await closeGroup(id);
   revalidatePath(`/g/${id}`);

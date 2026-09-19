@@ -40,6 +40,8 @@ export type GroupView = {
   /** The seat this browser holds, if it holds one and has not finished. */
   mine: {
     stage: Stage;
+    /** Whether the reader is the one who made the link. */
+    isLeader: boolean;
     hasFood: boolean;
     phone: string;
     hostel: string;
@@ -144,6 +146,8 @@ export async function groupView(
           : seated.finalised_at
             ? "details"
             : "shopping") as Stage,
+        // The leader took the first seat when they made the link.
+        isLeader: waiting[0]?.member_token === seated.member_token,
         hasFood: seated.lines.length > 0,
         phone: seated.phone ?? "",
         hostel: seated.hostel ?? "",

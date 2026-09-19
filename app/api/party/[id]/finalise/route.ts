@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { joinableGroup } from "@/lib/groups";
+import { joinableGroup, startGroupClock } from "@/lib/groups";
 import { finaliseSeat, saveSeatDetails } from "@/lib/group-carts";
 import { normalisePhone } from "@/lib/phone";
 import type { CartLine } from "@/lib/types";
@@ -76,6 +76,11 @@ export async function POST(
     paymentMethod: body.paymentMethod === "card" ? "card" : "transfer",
   });
   if (!ok) return NextResponse.json({ error: "Could not save that." }, { status: 500 });
+
+  // The quarter of an hour runs from the first person finishing, not from the
+  // link being made: the leader would otherwise be racing a clock that
+  // started while they were still reading the menu.
+  await startGroupClock(group.id);
 
   return NextResponse.json({ ok: true });
 }

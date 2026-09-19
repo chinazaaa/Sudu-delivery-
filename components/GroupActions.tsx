@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { closeSharedGroup } from "@/app/actions";
-import { readGroup } from "./GroupLink";
 
 /**
  * Share and close, at the top where they are seen.
@@ -28,14 +27,9 @@ export default function GroupActions({
   canClose: boolean;
 }) {
   const router = useRouter();
-  const [leader, setLeader] = useState(leaderOnServer);
   const [asking, setAsking] = useState(false);
   const [closing, setClosing] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (readGroup() === groupId) setLeader(true);
-  }, [groupId]);
 
   const message =
     `${leaderName} is ordering food to campus with Sudu. Add yours and we ` +
@@ -84,7 +78,7 @@ export default function GroupActions({
           )}
         </button>
 
-        {leader && canClose && (
+        {leaderOnServer && canClose && (
           <button
             type="button"
             onClick={() => setAsking(true)}
