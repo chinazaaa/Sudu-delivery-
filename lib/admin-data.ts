@@ -247,7 +247,10 @@ export type Dashboard = {
   paidOrders: number;
   unpaidOrders: number;
   gross: number;
+  /** Delivery money kept, after any discount codes came off it. */
   fees: number;
+  /** What the codes gave away, so the figure above can say so. */
+  discounts: number;
   customers: number;
   newCustomers: number;
   averageOrder: number;
@@ -261,7 +264,7 @@ export async function dashboard(days = 28): Promise<Dashboard> {
 
   const { data, error } = await db()
     .from("orders")
-    .select("id, total, fee, status, created_at, customer_phone, batch_id")
+    .select("id, total, fee, discount, status, created_at, customer_phone, batch_id")
     .gte("created_at", since);
   if (error) throw new Error(error.message);
 
@@ -303,7 +306,14 @@ export async function dashboard(days = 28): Promise<Dashboard> {
     paidOrders: paid.length,
     unpaidOrders: orders.length - paid.length,
     gross,
-    fees: paid.reduce((total, order) => total + (order.fee as number), 0),
+    // A code comes out of the delivery, so a run where somebody used one kept
+    // less than it charged. Counting the fee alone called money margin that
+    // was never collected.
+    fees: paid.reduce(
+      (total, order) => total + (order.fee as number) - ((order.discount as number) ?? 0),
+      0
+    ),
+    discounts: paid.reduce((total, order) => total + ((order.discount as number) ?? 0), 0),
     customers: customers ?? 0,
     newCustomers: newCustomers ?? 0,
     averageOrder: paid.length === 0 ? 0 : Math.round(gross / paid.length),

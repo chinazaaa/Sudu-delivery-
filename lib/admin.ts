@@ -544,13 +544,18 @@ export async function batchOverview(window: "recent" | "all" = "recent"): Promis
   const rows = (batches ?? []) as Batch[];
   const { data: orders } = await db()
     .from("orders")
-    .select("batch_id, status, total, subtotal_food")
+    .select("id, batch_id, status, total, subtotal_food")
     .in("batch_id", rows.map((b) => b.id));
 
   const all = (orders ?? []) as Pick<
     Order,
-    "batch_id" | "status" | "total" | "subtotal_food"
+    "id" | "batch_id" | "status" | "total" | "subtotal_food"
   >[];
+
+  // What the counters really charged, where it has been said. Without this
+  // the list and the dashboard priced every run at the menu and disagreed
+  // with the run's own sheet, which is the one that had been reconciled.
+  const extra = await overMenu(rows, all);
   const commission = await commissionFor(
     all.filter((o) => o.status !== "pending" && o.status !== "refunded") as Order[]
   );
@@ -572,9 +577,84 @@ export async function batchOverview(window: "recent" | "all" = "recent"): Promis
       orderCount: mine.length,
       paidCount: paid.length,
       gross: sum(paid, (o) => o.total),
-      profit: Math.round(margin - paid.length * perOrderCommission - costs),
+      profit: Math.round(
+        margin - (extra.get(b.id) ?? 0) - paid.length * perOrderCommission - costs
+      ),
     };
   });
+}
+
+/**
+ * What the food cost above the menu, per run, or below it as a negative.
+ *
+ * The menu price is a guess at what a counter will charge, and the run's own
+ * sheet replaces that guess with what was really handed over. That correction
+ * lived only on the sheet, so a run reconciled down to a real saving still
+ * read at menu prices everywhere else and the dashboard disagreed with the
+ * run it was summing.
+ *
+ * Only runs somebody has actually reconciled are looked at: the rest are at
+ * the menu price by definition, and reading every line of every run to learn
+ * that would be a great deal of work to arrive back where we started.
+ */
+async function overMenu(
+  batches: Batch[],
+  orders: Pick<Order, "id" | "batch_id" | "status" | "subtotal_food">[]
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (batches.length === 0) return out;
+
+  const paidIn = (batchId: string) =>
+    orders.filter((o) => o.batch_id === batchId && o.status !== "pending" && o.status !== "refunded");
+  const menuOf = (batchId: string) => sum(paidIn(batchId), (o) => o.subtotal_food);
+
+  // One figure for the whole shop, which is the older way and needs no lines.
+  for (const batch of batches) {
+    const menu = menuOf(batch.id);
+    if (batch.food_spend > 0 && menu > 0) out.set(batch.id, batch.food_spend - menu);
+  }
+
+  let spend: { batch_id: string; line_key: string; paid: number; recovered?: number }[] = [];
+  try {
+    const { data } = await db()
+      .from("counter_spend")
+      .select("batch_id, line_key, paid, recovered")
+      .in("batch_id", batches.map((b) => b.id));
+    spend = (data ?? []) as typeof spend;
+  } catch {
+    return out;
+  }
+  if (spend.length === 0) return out;
+
+  const reconciledIds = [...new Set(spend.map((row) => row.batch_id))];
+  const wanted = orders.filter(
+    (o) => reconciledIds.includes(o.batch_id) && o.status !== "pending" && o.status !== "refunded"
+  );
+  const lines = await linesFor(wanted.map((o) => o.id));
+  const batchOfOrder = new Map(wanted.map((o) => [o.id, o.batch_id]));
+
+  for (const id of reconciledIds) {
+    const mine = lines.filter((line) => batchOfOrder.get(line.order_id) === id);
+    const everyLine = groupForCounter(mine).flatMap((place) => place.lines);
+    const rows = spend.filter((row) => row.batch_id === id);
+    const spentOn = new Map(rows.map((row) => [row.line_key, row.paid]));
+    const gotBack = new Map(rows.map((row) => [row.line_key, row.recovered ?? 0]));
+
+    // Lines nobody typed stay at the menu price, exactly as the sheet has it.
+    const real = everyLine.reduce(
+      (total, line) =>
+        total +
+        (spentOn.has(line.key)
+          ? (spentOn.get(line.key) as number) - (gotBack.get(line.key) ?? 0)
+          : line.qty * line.unitPrice),
+      0
+    );
+    // The per line figures win over one figure for the whole shop, which is
+    // what the run's own sheet does.
+    out.set(id, real - menuOf(id));
+  }
+
+  return out;
 }
 
 export type PromoterPayout = {

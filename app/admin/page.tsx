@@ -119,7 +119,16 @@ export default async function AdminHome() {
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Stat label="Paid orders" value={stats.paidOrders} hint="Last 28 days" />
             <Stat label="Money in" value={stats.gross} money hint="Paid orders" />
-            <Stat label="Delivery fees" value={stats.fees} money hint="Your margin" />
+            <Stat
+              label="Delivery fees"
+              value={stats.fees}
+              money
+              hint={
+                stats.discounts > 0
+                  ? `Your margin, after ${naira(stats.discounts)} of codes`
+                  : "Your margin"
+              }
+            />
             {/* A loss is not good news, whatever colour the card would rather
                 be. The tone follows the number. */}
             <Stat
