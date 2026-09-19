@@ -4,6 +4,7 @@ import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import { batchOverview } from "@/lib/admin";
 import { openUntil } from "@/lib/batches";
+import { sameDayTrips } from "@/lib/admin";
 import { safeSettings } from "@/lib/settings";
 import { diagnoseEmpty, keyKind } from "@/lib/health";
 import { ensureUpcomingBatches, closeExpiredBatches } from "@/lib/batches";
@@ -66,6 +67,10 @@ export default async function RunsPage({
           };
   }
 
+  // Same day cars asked for at the same time. Ten people wanting two o'clock
+  // is ten batches and one trip, and the trip is the thing somebody drives.
+  const trips = await sameDayTrips().catch(() => []);
+
   const live = batches.filter((batch) => batch.status !== "cancelled");
   const orders = live.reduce((total, batch) => total + batch.orderCount, 0);
   const paid = live.reduce((total, batch) => total + batch.paidCount, 0);
@@ -94,6 +99,43 @@ export default async function RunsPage({
           </>
         }
       />
+
+      {trips.length > 0 && (
+        <section className="card mb-4 space-y-2">
+          <div>
+            <h2 className="font-bold">Same day, by the time asked for</h2>
+            <p className="text-sm text-muted">
+              Each of these is one person asking for a car, so each is its own
+              run below. Everybody who asked for the same time is one trip for
+              whoever is buying, which is what this is.
+            </p>
+          </div>
+          <ul className="divide-y divide-black/5">
+            {trips.map((trip) => (
+              <li key={trip.at} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <span className="min-w-0">
+                  <span className="font-bold">{trip.label}</span>
+                  <span className="block text-xs text-muted">
+                    {trip.orders} {trip.orders === 1 ? "order" : "orders"} ·{" "}
+                    {trip.items} item{trip.items === 1 ? "" : "s"} ·{" "}
+                    {trip.paid} paid
+                    {trip.unpaid > 0 && `, ${trip.unpaid} not yet`}
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-center gap-3">
+                  <span className="font-extrabold">{naira(trip.gross)}</span>
+                  <Link
+                    href={`/admin/trip/${encodeURIComponent(trip.at)}`}
+                    className="text-sm font-bold text-brand"
+                  >
+                    Open the trip
+                  </Link>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="no-scrollbar -mx-4 mb-3 flex gap-2 overflow-x-auto px-4">
         <Link

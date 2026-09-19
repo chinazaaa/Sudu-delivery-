@@ -253,6 +253,159 @@ export type BatchRow = Batch & {
   gross: number;
 };
 
+export type SameDayTrip = {
+  /** The instant they all asked for, which is what makes it one trip. */
+  at: string;
+  label: string;
+  batchIds: string[];
+  orders: number;
+  paid: number;
+  unpaid: number;
+  items: number;
+  gross: number;
+};
+
+/**
+ * Same day cars going to the same place at the same time.
+ *
+ * Every one of these is its own batch, because each was one person asking for
+ * a car. Ten people asking for two o'clock is ten batches and, to whoever is
+ * buying the food, one trip. Reading it as ten was going to mean ten counter
+ * sheets and no list of what to actually buy.
+ */
+export async function sameDayTrips(): Promise<SameDayTrip[]> {
+  const from = new Date(Date.now() - 12 * 3600_000).toISOString();
+
+  const { data, error } = await db()
+    .from("batches")
+    .select("id, deliver_at, delivery_window_text")
+    .eq("kind", "same_day")
+    .not("deliver_at", "is", null)
+    .gte("deliver_at", from)
+    .order("deliver_at");
+
+  // A database without `kind` yet has no same day cars in it either.
+  if (error) return [];
+
+  const rows = (data ?? []) as {
+    id: string;
+    deliver_at: string;
+    delivery_window_text: string;
+  }[];
+  if (rows.length === 0) return [];
+
+  const { data: orders } = await db()
+    .from("orders")
+    .select("id, batch_id, status, total")
+    .in("batch_id", rows.map((one) => one.id))
+    .neq("status", "refunded");
+
+  const live = (orders ?? []) as {
+    id: string;
+    batch_id: string;
+    status: string;
+    total: number;
+  }[];
+
+  const { data: items } = live.length
+    ? await db()
+        .from("order_items")
+        .select("order_id, qty")
+        .in("order_id", live.map((one) => one.id))
+    : { data: [] as { order_id: string; qty: number }[] };
+
+  const byTime = new Map<string, SameDayTrip>();
+
+  for (const row of rows) {
+    const trip = byTime.get(row.deliver_at) ?? {
+      at: row.deliver_at,
+      label: row.delivery_window_text,
+      batchIds: [],
+      orders: 0,
+      paid: 0,
+      unpaid: 0,
+      items: 0,
+      gross: 0,
+    };
+
+    trip.batchIds.push(row.id);
+    for (const order of live.filter((one) => one.batch_id === row.id)) {
+      trip.orders += 1;
+      if (order.status === "pending") trip.unpaid += 1;
+      else {
+        trip.paid += 1;
+        trip.gross += order.total;
+      }
+      trip.items += (items ?? [])
+        .filter((line) => line.order_id === order.id)
+        .reduce((sum, line) => sum + (line.qty as number), 0);
+    }
+
+    byTime.set(row.deliver_at, trip);
+  }
+
+  // Only trips somebody is actually going on.
+  return [...byTime.values()].filter((trip) => trip.orders > 0);
+}
+
+export type TripSheet = {
+  at: string;
+  label: string;
+  counter: CounterGroup[];
+  handout: HandoutOrder[];
+  unpaid: HandoutOrder[];
+  items: number;
+  gross: number;
+};
+
+/**
+ * Everything going out at one time, as one shopping trip.
+ *
+ * The counter list is the point: what to buy, by restaurant, across every car
+ * asked for at this time. Ten separate sheets is ten chances to miss a drink.
+ */
+export async function tripSheet(at: string): Promise<TripSheet | null> {
+  const { data: batches } = await db()
+    .from("batches")
+    .select("id, delivery_window_text")
+    .eq("kind", "same_day")
+    .eq("deliver_at", at);
+
+  const cars = (batches ?? []) as { id: string; delivery_window_text: string }[];
+  if (cars.length === 0) return null;
+
+  const { data } = await db()
+    .from("orders")
+    .select("*")
+    .in("batch_id", cars.map((one) => one.id))
+    .neq("status", "refunded")
+    .order("customer_name");
+
+  const orders = (data ?? []) as Order[];
+  const lines = await linesFor(orders.map((o) => o.id));
+  const byOrder = new Map<string, OrderLine[]>();
+  for (const line of lines) {
+    byOrder.set(line.order_id, [...(byOrder.get(line.order_id) ?? []), line]);
+  }
+  const withLines = (o: Order): HandoutOrder => ({ ...o, lines: byOrder.get(o.id) ?? [] });
+
+  // Unpaid food is not bought, here as everywhere else.
+  const paid = orders.filter((o) => o.status !== "pending");
+  const paidIds = new Set(paid.map((o) => o.id));
+
+  return {
+    at,
+    label: cars[0].delivery_window_text,
+    counter: groupForCounter(lines.filter((line) => paidIds.has(line.order_id))),
+    handout: paid.map(withLines),
+    unpaid: orders.filter((o) => o.status === "pending").map(withLines),
+    items: lines
+      .filter((line) => paidIds.has(line.order_id))
+      .reduce((sum, line) => sum + line.qty, 0),
+    gross: sum(paid, (o) => o.total),
+  };
+}
+
 /**
  * Batches with live counts and profit. The default window is the last few days
  * and everything ahead, which is what today needs; "all" reaches back through
