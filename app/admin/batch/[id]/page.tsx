@@ -762,10 +762,24 @@ export default async function BatchPage({
                       }
                       value={`−${naira(summary.commission)}`}
                     />
-                    {batch.food_spend > 0 && batch.food_spend < summary.menuCost && (
+                    {summary.reconciled.lines === 0 &&
+                      batch.food_spend > 0 &&
+                      batch.food_spend < summary.menuCost && (
+                        <Row
+                          label="Bought under the menu price"
+                          value={`+${naira(summary.menuCost - batch.food_spend)}`}
+                        />
+                      )}
+                    {summary.reconciled.lines > 0 && summary.foodCost !== summary.menuCost && (
                       <Row
-                        label="Bought under the menu price"
-                        value={`+${naira(summary.menuCost - batch.food_spend)}`}
+                        label={
+                          summary.foodCost < summary.menuCost
+                            ? "Bought under the menu price"
+                            : "Cost over the menu price"
+                        }
+                        value={`${summary.foodCost < summary.menuCost ? "+" : "−"}${naira(
+                          Math.abs(summary.menuCost - summary.foodCost)
+                        )}`}
                       />
                     )}
                     {batch.fuel_cost > 0 && (
@@ -841,11 +855,24 @@ export default async function BatchPage({
                           className="field"
                         />
                         <p className="mt-1 text-xs text-muted">
-                          The whole shop, whichever way it went: less than the
-                          menu and the profit goes up, more and it goes down.
-                          Blank means the menu prices stand. For one item that
-                          moved, use What it actually cost below instead, which
-                          also takes money a customer handed back.
+                          {summary.reconciled.lines > 0 ? (
+                            <>
+                              Not being used: {summary.reconciled.lines} line
+                              {summary.reconciled.lines === 1 ? " has" : "s have"}{" "}
+                              been priced one by one under What it actually cost,
+                              and those win. Clear them there to use one figure
+                              for the whole shop instead.
+                            </>
+                          ) : (
+                            <>
+                              The whole shop in one figure, whichever way it went:
+                              less than the menu and the profit goes up, more and it
+                              goes down. Blank means the menu prices stand. For the
+                              usual case, two or three items out of thirty, use What
+                              it actually cost below instead, which also takes money
+                              a customer handed back.
+                            </>
+                          )}
                         </p>
                       </div>
                       <div>
