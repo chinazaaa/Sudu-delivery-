@@ -791,8 +791,11 @@ export default async function BatchPage({
                           className="field"
                         />
                         <p className="mt-1 text-xs text-muted">
-                          Only if the counters charged you less than the menu.
-                          Blank means the menu prices stand.
+                          The whole shop, whichever way it went: less than the
+                          menu and the profit goes up, more and it goes down.
+                          Blank means the menu prices stand. For one item that
+                          moved, use What it actually cost below instead, which
+                          also takes money a customer handed back.
                         </p>
                       </div>
                       <div>
