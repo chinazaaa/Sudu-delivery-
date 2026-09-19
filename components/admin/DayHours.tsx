@@ -38,6 +38,13 @@ export default function DayHours({
 }) {
   const [days, setDays] = useState<Record<string, DaySetting>>(saved);
 
+  // A value the list does not offer would leave the select showing its first
+  // option, which is how three in the afternoon came back as seven in the
+  // morning. Anything unrecognised falls back to the hours above.
+  const offered = new Set(hours.map((hour) => hour.value));
+  const pick = (value: number, fallback: number) =>
+    offered.has(String(value)) ? String(value) : String(fallback);
+
   const set = (weekday: number, patch: Partial<DaySetting> | null) =>
     setDays((current) => {
       const next = { ...current };
@@ -72,7 +79,7 @@ export default function DayHours({
               {own && !off ? (
                 <>
                   <select
-                    value={String(own.first)}
+                    value={pick(own.first, base.first)}
                     onChange={(event) =>
                       set(day.weekday, { first: Number(event.target.value) })
                     }
@@ -87,7 +94,7 @@ export default function DayHours({
                   </select>
                   <span className="text-sm text-muted">to</span>
                   <select
-                    value={String(own.last)}
+                    value={pick(own.last, base.last)}
                     onChange={(event) =>
                       set(day.weekday, { last: Number(event.target.value) })
                     }

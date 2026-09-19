@@ -623,25 +623,6 @@ export default async function SettingsAdmin() {
         </p>
 
         <div>
-          <p className="label">Days that are different</p>
-          <DayHours
-            hours={HOURS}
-            base={{
-              first: Number(settings.same_day_first_hour) || 12,
-              last: Number(settings.same_day_last_hour) || 18,
-            }}
-            saved={(() => {
-              try {
-                const raw = (settings.same_day_day_hours ?? "").trim();
-                return raw.startsWith("{") ? JSON.parse(raw) : {};
-              } catch {
-                return {};
-              }
-            })()}
-          />
-        </div>
-
-        <div>
           <label className="label" htmlFor="same_day_urgent_extra">
             Extra when it is under five hours away
           </label>
@@ -660,6 +641,37 @@ export default async function SettingsAdmin() {
         </div>
 
         <SaveButton>Save same day prices</SaveButton>
+      </form>
+
+      {/* Its own card and its own save. Sitting inside the pricing form, the
+          week was several decisions away from the button that kept them, and
+          the button did not say it was keeping them. */}
+      <form action={saveSettings} className="card space-y-3">
+        <div>
+          <h2 className="font-semibold">Days that are different</h2>
+          <p className="text-sm text-muted">
+            Saturday and Wednesday are not the same business. A day left alone
+            follows the hours above; closing one takes it off entirely.
+          </p>
+        </div>
+
+        <DayHours
+          hours={HOURS}
+          base={{
+            first: Number(settings.same_day_first_hour) || 12,
+            last: Number(settings.same_day_last_hour) || 18,
+          }}
+          saved={(() => {
+            try {
+              const raw = (settings.same_day_day_hours ?? "").trim();
+              return raw.startsWith("{") ? JSON.parse(raw) : {};
+            } catch {
+              return {};
+            }
+          })()}
+        />
+
+        <SaveButton>Save the week</SaveButton>
       </form>
 
       <form action={saveSettings} className="card space-y-4">
