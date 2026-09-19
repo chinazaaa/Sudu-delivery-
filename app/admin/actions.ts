@@ -970,7 +970,9 @@ export async function deleteClosedCarts(): Promise<void> {
  * waiting on a car nobody is going to close. This prices it now and turns
  * every seat that has food and a number into an ordinary order.
  */
-export async function closeGroupNow(form: FormData): Promise<void> {
+export async function closeGroupNow(
+  form: FormData
+): Promise<{ ok: boolean; error?: string }> {
   await assertAdmin();
   const id = String(form.get("group_id"));
 
@@ -978,18 +980,24 @@ export async function closeGroupNow(form: FormData): Promise<void> {
   // them orders nothing: the seats cannot travel, so the group shuts with
   // nobody in it and everybody has to come back and fill their details in.
   // Better to say so than to do it.
+  // Said rather than thrown. A throw here took the whole page down to the
+  // error screen, which tells somebody standing in a kitchen nothing about
+  // what to do next.
   const seats = await groupCarts(id);
   if (seats.length > 0 && !seats.some(canTravel)) {
-    throw new Error(
-      "Nobody in that group has given a number and a block yet, so closing it " +
-        "would order nothing. Leave it to the clock, or ask them to finish."
-    );
+    return {
+      ok: false,
+      error:
+        "Nobody in that group has given a number and a block yet, so closing " +
+        "it would order nothing. Leave it to the clock, or ask them to finish.",
+    };
   }
 
   const result = await closeGroup(id);
-  if (!result.ok) throw new Error(result.error);
+  if (!result.ok) return { ok: false, error: result.error };
 
   revalidatePath("/admin", "layout");
+  return { ok: true };
 }
 
 /**
@@ -999,21 +1007,26 @@ export async function closeGroupNow(form: FormData): Promise<void> {
  * because food left behind in a closed group is food somebody is still
  * waiting for. Nobody is charged and nothing is bought.
  */
-export async function cancelGroup(form: FormData): Promise<void> {
+export async function cancelGroup(
+  form: FormData
+): Promise<{ ok: boolean; error?: string }> {
   await assertAdmin();
   const id = String(form.get("group_id"));
 
   const seats = await db().from("group_carts").delete().eq("group_id", id);
-  if (seats.error) throw new Error(`Could not clear those seats: ${seats.error.message}`);
+  if (seats.error) {
+    return { ok: false, error: `Could not clear those seats: ${seats.error.message}` };
+  }
 
   const { error } = await db()
     .from("order_groups")
     .update({ closed_at: new Date().toISOString() })
     .eq("id", id)
     .is("closed_at", null);
-  if (error) throw new Error(`Could not cancel that group: ${error.message}`);
+  if (error) return { ok: false, error: `Could not cancel that group: ${error.message}` };
 
   revalidatePath("/admin", "layout");
+  return { ok: true };
 }
 
 /** Closed by mistake, or they came back. It goes back on the list. */

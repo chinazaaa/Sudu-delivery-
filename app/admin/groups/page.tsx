@@ -6,8 +6,7 @@ import { shortGroupsNow } from "@/lib/groups";
 import ShortGroups from "@/components/admin/ShortGroups";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
-import ConfirmButton from "@/components/admin/ConfirmButton";
-import { cancelGroup, closeGroupNow } from "@/app/admin/actions";
+import GroupClose from "@/components/admin/GroupClose";
 
 export const dynamic = "force-dynamic";
 
@@ -146,32 +145,11 @@ export default async function GroupsPage() {
                 Nothing here is an order yet, so nothing needs buying or collecting.
               </p>
 
-              {/* The clock closes these, and so does anybody looking at the
-                  board. Neither happens when everybody has put their phone
-                  away, so it can be done from here. */}
-              <div className="flex flex-wrap items-center gap-2 border-t border-black/5 pt-3">
-                <form action={closeGroupNow}>
-                  <input type="hidden" name="group_id" value={group.id} />
-                  <ConfirmButton tone="brand" confirm="Yes, close it now">
-                    Close it now
-                  </ConfirmButton>
-                </form>
-                <form action={cancelGroup}>
-                  <input type="hidden" name="group_id" value={group.id} />
-                  <ConfirmButton confirm="Yes, bin the whole group">
-                    Cancel it
-                  </ConfirmButton>
-                </form>
-                <span className="text-xs text-muted">
-                  {group.travelling === 0
-                    ? "Nobody has given a number and a block yet, so closing it now would order nothing."
-                    : `Closing makes ${group.travelling} order${
-                        group.travelling === 1 ? "" : "s"
-                      } out of ${group.carts.length} ${
-                        group.carts.length === 1 ? "seat" : "seats"
-                      }. Anybody without details can still give them afterwards. Cancelling bins the food and charges nobody.`}
-                </span>
-              </div>
+              <GroupClose
+                groupId={group.id}
+                travelling={group.travelling}
+                seats={group.carts.length}
+              />
             </article>
           ))}
         </div>
@@ -194,10 +172,7 @@ export default async function GroupsPage() {
                     {group.when ? `arriving ${group.when}` : "no run named"}
                   </span>
                 </span>
-                <form action={cancelGroup}>
-                  <input type="hidden" name="group_id" value={group.id} />
-                  <ConfirmButton confirm="Yes, shut it">Shut it</ConfirmButton>
-                </form>
+                <GroupClose groupId={group.id} travelling={0} seats={0} empty />
               </li>
             ))}
           </ul>
