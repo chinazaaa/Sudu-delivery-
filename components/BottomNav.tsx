@@ -29,13 +29,15 @@ export default function BottomNav() {
   const tabs = [
     { href: "/", label: "Menu", icon: HomeIcon },
     { href: "/orders", label: "Orders", icon: ListIcon },
-    // In a group this is the group; out of one it is the way into starting
-    // it. One tab either way, because it is one idea either way.
+    // In a group this is the group itself; out of one it is the page about
+    // ordering together, which is where starting one lives along with the
+    // cars you have been in. One tab either way, because it is one idea
+    // either way.
     {
-      href: group ? `/g/${group}` : "/cart?start=1",
+      href: group ? `/g/${group}` : "/group",
       label: "Group",
       icon: GroupIcon,
-      match: group ? `/g/${group}` : "",
+      match: group ? `/g/${group}` : "/group",
     },
     { href: "/cart", label: "Cart", icon: BagIcon, badge: count },
   ];
