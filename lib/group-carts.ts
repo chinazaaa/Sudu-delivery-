@@ -161,8 +161,10 @@ export function countCartItems(carts: GroupCart[]): number {
  * exists because "2 items" tells somebody far less than "2 items, 3,600",
  * and the group is a thing people read while deciding whether to join.
  */
-export async function cartValues(carts: GroupCart[]): Promise<Map<string, number>> {
-  const out = new Map<string, number>();
+export async function cartValues(
+  carts: GroupCart[]
+): Promise<Map<string, { value: number; summary: string }>> {
+  const out = new Map<string, { value: number; summary: string }>();
   if (carts.length === 0) return out;
 
   const itemIds = [...new Set(carts.flatMap((c) => c.lines.map((l) => l.menu_item_id)))];
@@ -171,27 +173,32 @@ export async function cartValues(carts: GroupCart[]): Promise<Map<string, number
   ];
 
   const [{ data: items }, { data: options }] = await Promise.all([
-    db().from("menu_items").select("id, price_food").in("id", itemIds),
+    db().from("menu_items").select("id, name, price_food").in("id", itemIds),
     optionIds.length > 0
       ? db().from("item_options").select("id, price_delta").in("id", optionIds)
       : Promise.resolve({ data: [] as { id: string; price_delta: number }[] }),
   ]);
 
   const price = new Map((items ?? []).map((i) => [i.id as string, i.price_food as number]));
+  const named = new Map((items ?? []).map((i) => [i.id as string, i.name as string]));
   const delta = new Map(
     (options ?? []).map((o) => [o.id as string, o.price_delta as number])
   );
 
   for (const cart of carts) {
-    out.set(
-      cart.id,
-      cart.lines.reduce((sum, line) => {
+    out.set(cart.id, {
+      value: cart.lines.reduce((sum, line) => {
         const unit =
           (price.get(line.menu_item_id) ?? 0) +
           (line.option_ids ?? []).reduce((extra, id) => extra + (delta.get(id) ?? 0), 0);
         return sum + unit * (line.qty ?? 0);
-      }, 0)
-    );
+      }, 0),
+      // What they actually put in, because a group cart that only says "2
+      // items" is not a cart anybody can look at.
+      summary: cart.lines
+        .map((line) => `${line.qty}× ${named.get(line.menu_item_id) ?? "something"}`)
+        .join(", "),
+    });
   }
   return out;
 }

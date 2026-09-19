@@ -18,6 +18,8 @@ export type Member = {
   done: boolean;
   paid: boolean;
   isLeader: boolean;
+  /** What they put in, in words. Empty until they have chosen something. */
+  summary: string;
   /** Only carried while the group is still open and this person has not
    *  finished, because the only reason to have it is to chase them. */
   phone: string;
@@ -100,6 +102,7 @@ export async function groupView(
         done: true,
         paid: order.status !== "pending",
         isLeader: group.leader_phone !== "" && order.customer_phone === group.leader_phone,
+        summary: "",
         phone: "",
       }))
     : waiting.map((cart) => ({
@@ -112,7 +115,8 @@ export async function groupView(
         isMine: seat !== "" && cart.member_token === seat,
         name: cart.name,
         items: cart.lines.reduce((sum, line) => sum + (line.qty ?? 0), 0),
-        food: worth.get(cart.id) ?? 0,
+        food: worth.get(cart.id)?.value ?? 0,
+        summary: worth.get(cart.id)?.summary ?? "",
         done: cart.done_at !== null,
         paid: false,
         isLeader: group.leader_phone !== "" && cart.phone === group.leader_phone,

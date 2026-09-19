@@ -122,6 +122,26 @@ export default function CartView({
   };
 
   if (cart.length === 0) {
+    // In a group this cart is yours alone: everybody picks their own food and
+    // pays for their own. Saying so here is the difference between an empty
+    // cart that makes sense and one that looks like the group lost something.
+    if (group !== "") {
+      return (
+        <div className="space-y-4 pb-10">
+          <Empty icon="cart" title="Your cart is empty" href="/" action="Browse the menu">
+            Everybody in the group picks their own food and pays for their own. This
+            is yours, and it goes in the same car as theirs.
+          </Empty>
+          <Link
+            href={`/g/${group}`}
+            className="btn-quiet mx-auto block max-w-sm text-center"
+          >
+            See what the group has ordered
+          </Link>
+        </div>
+      );
+    }
+
     return (
       <Empty icon="cart" title="Your cart is empty" href="/" action="Browse the menu">
         Pick a few things and they gather here, ready to go on the next run.
@@ -139,7 +159,14 @@ export default function CartView({
 
   return (
     <div className="space-y-5 pb-36">
-      <h1 className="text-2xl font-extrabold">Your cart</h1>
+      <div className="flex items-baseline justify-between gap-3">
+        <h1 className="text-2xl font-extrabold">Your cart</h1>
+        {group !== "" && (
+          <Link href={`/g/${group}`} className="text-sm font-bold text-brand">
+            See the group
+          </Link>
+        )}
+      </div>
 
       {/* Before anything else, because it costs nothing to send and it is what
           makes the delivery cheaper for all of them. In a group already, the

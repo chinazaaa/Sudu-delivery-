@@ -44,7 +44,7 @@ export default async function GroupsPage() {
         when: (batch?.delivery_window_text as string) ?? "",
         carts,
         items: countCartItems(carts),
-        food: [...worth.values()].reduce((sum, one) => sum + one, 0),
+        food: [...worth.values()].reduce((sum, one) => sum + one.value, 0),
         worth,
       };
     })
@@ -109,7 +109,7 @@ export default async function GroupsPage() {
                       <span className="text-xs text-muted">
                         {cart.lines.reduce((n, line) => n + (line.qty ?? 0), 0)} items
                       </span>
-                      <span className="font-bold">{naira(group.worth.get(cart.id) ?? 0)}</span>
+                      <span className="font-bold">{naira(group.worth.get(cart.id)?.value ?? 0)}</span>
                       {cart.done_at ? (
                         <span className="text-xs font-bold text-mint">Ready</span>
                       ) : (

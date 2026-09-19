@@ -14,6 +14,7 @@ type Member = {
   stage: Stage;
   isMine: boolean;
   name: string;
+  summary: string;
   items: number;
   food: number;
   done: boolean;
@@ -414,6 +415,11 @@ export default function GroupBoard({
                       ? "nothing yet"
                       : `${one.items} item${one.items === 1 ? "" : "s"} · ${naira(one.food)}`}
                   </span>
+                  {/* What they put in. A shared cart that only says how many
+                      is not a cart anybody can look at. */}
+                  {one.summary !== "" && (
+                    <span className="block truncate text-xs text-ink/70">{one.summary}</span>
+                  )}
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
                   <span
