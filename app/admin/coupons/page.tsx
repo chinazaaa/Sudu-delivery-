@@ -6,8 +6,15 @@ import { couponLabel, listCoupons } from "@/lib/coupons";
 import { naira } from "@/lib/money";
 import { SLOT_LABEL } from "@/lib/config";
 import { runDateLabel } from "@/lib/time";
-import { deleteCoupon, saveCoupon, setCouponRuns, toggleCoupon } from "../actions";
+import {
+  deleteCoupon,
+  saveCoupon,
+  setCouponPlaces,
+  setCouponRuns,
+  toggleCoupon,
+} from "../actions";
 import { batchOverview } from "@/lib/admin";
+import { openRestaurants } from "@/lib/menu";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +24,9 @@ export default async function CouponsAdmin() {
   const runs = (await batchOverview()).filter(
     (run) => new Date(run.cut_off_at).getTime() > Date.now()
   );
+  // A code can belong to one kitchen rather than to the shop, which is what a
+  // deal with that kitchen actually is.
+  const places = await openRestaurants();
 
   return (
     <div>
@@ -58,7 +68,17 @@ export default async function CouponsAdmin() {
               {coupon.runs.length === 0
                 ? "any run"
                 : coupon.runs.map((run) => run.label).join(", ")}
+              {" · "}
+              {coupon.places.length === 0
+                ? "any restaurant"
+                : `${coupon.places.map((place) => place.name).join(", ")} only`}
             </p>
+
+            {coupon.places.length > 0 && (
+              <p className="mt-1 text-sm text-ink/75">
+                A cart with anything else in it cannot use this one.
+              </p>
+            )}
 
             {/* A code is usually for one night. Ticking runs here is how it is
                 kept to that one, or carried into next week's as well. */}
@@ -93,10 +113,45 @@ export default async function CouponsAdmin() {
               </form>
             )}
 
+            {/* A deal struck with one kitchen holds to that kitchen. Ticking
+                one here means the code only comes off a cart made entirely of
+                their food. */}
+            {places.length > 0 && (
+              <form action={setCouponPlaces} className="mt-3 space-y-2">
+                <input type="hidden" name="code" value={coupon.code} />
+                <p className="label mb-0">Only at</p>
+                <div className="flex flex-wrap gap-2">
+                  {places.map((place) => (
+                    <label
+                      key={place.id}
+                      className="chip cursor-pointer border-black/10 bg-white font-medium"
+                    >
+                      <input
+                        type="checkbox"
+                        name="restaurant_id"
+                        value={place.id}
+                        defaultChecked={coupon.places.some((one) => one.id === place.id)}
+                      />
+                      {place.name}
+                    </label>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <SaveButton quiet className="px-4 py-2 text-sm">
+                    Save which restaurants
+                  </SaveButton>
+                  <span className="text-xs text-muted">
+                    Tick none and it works anywhere. Tick one and the whole
+                    cart has to come from there.
+                  </span>
+                </div>
+              </form>
+            )}
+
             <div className="mt-3 flex flex-wrap gap-2">
               <form action={toggleCoupon}>
                 <input type="hidden" name="code" value={coupon.code} />
-                <input type="hidden" name="active" value={String(!coupon.active)} />
+                <input type="hidden" name="next_active" value={String(!coupon.active)} />
                 <ActionButton done="Done ✓">
                   {coupon.active ? "Switch it off" : "Switch it on"}
                 </ActionButton>
@@ -197,6 +252,28 @@ export default async function CouponsAdmin() {
             </div>
             <p className="mt-1 text-xs text-muted">
               Tick none and it works on every run, this term and next.
+            </p>
+          </div>
+        )}
+
+        {places.length > 0 && (
+          <div>
+            <p className="label">Only at</p>
+            <div className="flex flex-wrap gap-2">
+              {places.map((place) => (
+                <label
+                  key={place.id}
+                  className="chip cursor-pointer border-black/10 bg-white font-medium"
+                >
+                  <input type="checkbox" name="restaurant_id" value={place.id} />
+                  {place.name}
+                </label>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-muted">
+              For a deal with one kitchen. The code then only comes off a cart
+              made entirely of their food, so a cart with anything else in it
+              is told the code is for them only.
             </p>
           </div>
         )}

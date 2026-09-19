@@ -18,11 +18,45 @@ export type Coupon = {
 export type CouponWithRuns = Coupon & {
   /** The runs it works on. Empty means every run. */
   runs: { batchId: string; label: string }[];
+  /** The restaurants it works on. Empty means anywhere. */
+  places: { id: string; name: string }[];
 };
+
+/**
+ * The restaurants a code is tied to, or an empty list for a code tied to
+ * none.
+ *
+ * A missing table reads as no restriction rather than as an error, so a
+ * deploy that lands before the SQL does leaves every existing code working
+ * exactly as it did.
+ */
+export async function couponPlaces(code: string): Promise<string[]> {
+  try {
+    const { data, error } = await db()
+      .from("coupon_restaurants")
+      .select("restaurant_id")
+      .eq("coupon_code", code);
+    if (error) return [];
+    return (data ?? []).map((row) => row.restaurant_id as string);
+  } catch {
+    return [];
+  }
+}
 
 export type CouponCheck =
   | { ok: true; coupon: Coupon; discount: number }
   | { ok: false; error: string };
+
+/** Restaurant names, for saying what a code is actually for. */
+async function placeNames(ids: string[]): Promise<string[]> {
+  if (ids.length === 0) return [];
+  try {
+    const { data } = await db().from("restaurants").select("name").in("id", ids);
+    return (data ?? []).map((row) => row.name as string);
+  } catch {
+    return [];
+  }
+}
 
 /**
  * A discount code, checked against the order it is being used on. Nothing here
@@ -36,6 +70,8 @@ export async function checkCoupon(args: {
   returning: boolean;
   /** The run being ordered into, for a code tied to particular ones. */
   batchId: string;
+  /** Every restaurant the cart draws on, for a code tied to one kitchen. */
+  restaurantIds?: string[];
 }): Promise<CouponCheck> {
   const wanted = args.code.trim().toUpperCase();
   if (!wanted) return { ok: false, error: "Enter a code." };
@@ -69,6 +105,32 @@ export async function checkCoupon(args: {
 
   if ((runs ?? []).length > 0 && !runs!.some((row) => row.batch_id === args.batchId)) {
     return { ok: false, error: "That code is not for this run." };
+  }
+
+  // A code tied to a kitchen is a deal with that kitchen, so the whole cart
+  // has to come from it. Domino's and a shawarma is the code paying for the
+  // shawarma as well, which is not what was agreed, and it is refused rather
+  // than quietly discounted.
+  const places = await couponPlaces(coupon.code);
+  if (places.length > 0) {
+    const cart = [...new Set(args.restaurantIds ?? [])];
+    const outside = cart.filter((id) => !places.includes(id));
+    if (cart.length === 0 || outside.length > 0) {
+      const names = await placeNames(places);
+      const only =
+        names.length === 1
+          ? names[0]
+          : names.length > 1
+            ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`
+            : "one restaurant";
+      return {
+        ok: false,
+        error:
+          outside.length > 0 && cart.length > outside.length
+            ? `That code is only for ${only}, so it cannot be used on a cart with anything else in it.`
+            : `That code is only for ${only}.`,
+      };
+    }
   }
 
   // Delivery codes never pay out more than the delivery being charged: "free
@@ -136,6 +198,27 @@ export async function listCoupons(): Promise<CouponWithRuns[]> {
     ])
   );
 
+  // Which kitchens each code is kept to. Read separately and forgivingly:
+  // before the table exists every code is simply tied to nowhere.
+  let ties: { coupon_code: string; restaurant_id: string }[] = [];
+  let names = new Map<string, string>();
+  try {
+    const { data: rows } = await db()
+      .from("coupon_restaurants")
+      .select("coupon_code, restaurant_id");
+    ties = (rows ?? []) as typeof ties;
+    const placeIds = [...new Set(ties.map((row) => row.restaurant_id))];
+    if (placeIds.length > 0) {
+      const { data: places } = await db()
+        .from("restaurants")
+        .select("id, name")
+        .in("id", placeIds);
+      names = new Map(((places ?? []) as any[]).map((one) => [one.id as string, one.name as string]));
+    }
+  } catch {
+    /* No table yet, so no code is tied to anywhere. */
+  }
+
   return coupons.map((coupon) => ({
     ...coupon,
     runs: (links ?? [])
@@ -143,6 +226,12 @@ export async function listCoupons(): Promise<CouponWithRuns[]> {
       .map((row) => ({
         batchId: row.batch_id as string,
         label: labels.get(row.batch_id as string) ?? "A past run",
+      })),
+    places: ties
+      .filter((row) => row.coupon_code === coupon.code)
+      .map((row) => ({
+        id: row.restaurant_id,
+        name: names.get(row.restaurant_id) ?? "A restaurant",
       })),
   }));
 }
@@ -179,9 +268,15 @@ export async function publicOffer(code: string): Promise<PublicOffer | null> {
         ? `${naira(coupon.amount)} off delivery`
         : `${naira(coupon.amount)} off`;
 
+    // A code kept to one kitchen says so in the strip. Announcing "₦500 off"
+    // to the whole site and then refusing it at the counter is the sort of
+    // thing people remember.
+    const names = await placeNames(await couponPlaces(coupon.code));
+    const where = names.length > 0 ? ` at ${names.join(" or ")}` : "";
+
     return {
       code: coupon.code,
-      line: coupon.first_order_only ? `${what} your first order` : what,
+      line: coupon.first_order_only ? `${what} your first order${where}` : `${what}${where}`,
     };
   } catch {
     // A code nobody can read is a code nobody is offered. The site is fine.

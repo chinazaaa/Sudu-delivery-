@@ -931,7 +931,34 @@ export async function saveCoupon(form: FormData): Promise<void> {
       .insert(runs.map((batch_id) => ({ coupon_code: code, batch_id })));
   }
 
+  // The same for a code that belongs to one kitchen rather than to the shop.
+  const places = form.getAll("restaurant_id").map(String).filter(Boolean);
+  if (places.length > 0) await writeCouponPlaces(code, places);
+
   revalidatePath("/admin", "layout");
+}
+
+/**
+ * Which restaurants a code is kept to. None picked means anywhere.
+ *
+ * A code for one kitchen only comes off a cart entirely from that kitchen:
+ * the deal is with them, so it cannot end up paying for the shawarma bought
+ * alongside it.
+ */
+export async function setCouponPlaces(form: FormData): Promise<void> {
+  await assertAdmin();
+  const code = String(form.get("code"));
+  await writeCouponPlaces(code, form.getAll("restaurant_id").map(String).filter(Boolean));
+  revalidatePath("/admin", "layout");
+}
+
+async function writeCouponPlaces(code: string, places: string[]): Promise<void> {
+  await db().from("coupon_restaurants").delete().eq("coupon_code", code);
+  if (places.length > 0) {
+    await db()
+      .from("coupon_restaurants")
+      .insert(places.map((restaurant_id) => ({ coupon_code: code, restaurant_id })));
+  }
 }
 
 /** Which runs a code works on. No runs picked means every run. */

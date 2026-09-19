@@ -182,6 +182,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
         food: countFood(priced.lines),
         returning,
         batchId: batch.id,
+        restaurantIds: placesIn(priced.lines),
       })
     : null;
   if (coupon && !coupon.ok) return { ok: false, error: coupon.error };
@@ -345,6 +346,11 @@ async function priceLines(
   }
   return { lines: priced };
 }
+
+/** Every kitchen a cart draws on, for a code that belongs to one of them. */
+const placesIn = (lines: PricedLine[]) => [
+  ...new Set(lines.map((l) => l.item.restaurant_id)),
+];
 
 const countItems = (lines: PricedLine[]) => lines.reduce((sum, l) => sum + l.qty, 0);
 const countFood = (lines: PricedLine[]) =>
@@ -923,6 +929,7 @@ export async function previewCoupon(args: {
     food: countFood(priced.lines),
     returning: phone ? await isReturningCustomer(phone) : false,
     batchId: batch.id,
+    restaurantIds: placesIn(priced.lines),
   });
 
   return result.ok
