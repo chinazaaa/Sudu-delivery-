@@ -1,43 +1,58 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { randomUUID } from "crypto";
 import { joinableGroup } from "@/lib/groups";
+import { takeSeat } from "@/lib/group-carts";
 
 export const dynamic = "force-dynamic";
 
-/** A day is longer than any group lives, and a closed group is refused on the
- *  way in anyway, so this only ever has to outlast the quarter of an hour. */
 const A_DAY = 60 * 60 * 24;
 
 /**
- * Remember, on the server, which group this browser is in.
+ * Take a seat in a shared delivery, by name.
  *
- * The group used to live only in localStorage, read by the checkout page and
- * posted back in a hidden field. Anything at all that lost it, a cleared
- * store, a different tab, a private window, an effect that had not run yet,
- * meant the order went out alone at the full fee, and nothing on either side
- * could tell that was not what the customer wanted.
+ * Joining and ordering used to be the same moment, which meant a phone number
+ * and a block were asked for before anybody had chosen so much as a drink.
+ * They are two moments. This is the first: who you are, and that you are in.
+ * The food comes next and the delivery details after that, while everybody
+ * waits for the last person.
  *
- * A cookie goes with the checkout POST on its own, so the server can read the
- * group whether or not the browser managed to say it.
+ * The seat is held by a token this browser keeps, not by a number nobody has
+ * given yet. It is a cookie, so it goes with every request on its own and
+ * survives whatever the browser does or does not manage to remember.
  */
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const id = (await params).id;
 
-  // Checked before it is kept, so a stale or closed link cannot quietly
-  // attach somebody's next order to a group that has already been priced.
+  // Checked before anything is kept, so a closed or vanished link cannot
+  // quietly attach somebody to a group that has already been priced.
   const group = await joinableGroup(id);
   if (!group) return NextResponse.json({ ok: false }, { status: 404 });
 
-  (await cookies()).set("sudu_group", group.id, {
+  const body = await request.json().catch(() => ({}) as { name?: string });
+  const name = String((body as { name?: string }).name ?? "").trim().slice(0, 40);
+
+  const jar = await cookies();
+  const token = jar.get("sudu_seat")?.value || randomUUID();
+
+  const keep = {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: A_DAY,
-  });
+  };
+  jar.set("sudu_group", group.id, keep);
+  jar.set("sudu_seat", token, keep);
 
-  return NextResponse.json({ ok: true });
+  // A name is what the others see, so the seat is only written once there is
+  // one. Somebody arriving on the link before they have said who they are is
+  // in the group as far as the cookies go, and appears to everybody else the
+  // moment they say.
+  if (name.length >= 2) await takeSeat({ groupId: group.id, token, name });
+
+  return NextResponse.json({ ok: true, named: name.length >= 2 });
 }

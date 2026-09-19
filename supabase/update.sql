@@ -433,5 +433,35 @@ create table if not exists group_carts (
 create index if not exists group_carts_group_idx on group_carts (group_id);
 alter table group_carts enable row level security;
 
+
+-- The shared cart, reshaped: you join by name, not by checking out.
+--
+-- Joining a group and ordering are two moments, and squashing them into one
+-- asked for a phone number and a block before anybody had decided anything.
+-- So a seat in the car is taken by name, keyed on a token this browser keeps,
+-- and the number and block are filled in afterwards while everybody waits for
+-- the last person to finish.
+alter table group_carts add column if not exists member_token text;
+alter table group_carts add column if not exists finalised_at timestamptz;
+alter table group_carts alter column phone drop not null;
+alter table group_carts alter column phone set default '';
+alter table group_carts alter column lines set default '[]'::jsonb;
+
+-- The seat belongs to the browser that took it, not to a number nobody has
+-- given yet. Anybody already keyed by phone keeps their seat.
+update group_carts set member_token = id::text where member_token is null;
+
+do $seat_per_browser$
+begin
+  if exists (
+    select 1 from pg_constraint where conname = 'group_carts_group_id_phone_key'
+  ) then
+    alter table group_carts drop constraint group_carts_group_id_phone_key;
+  end if;
+end $seat_per_browser$;
+
+create unique index if not exists group_carts_seat_idx
+  on group_carts (group_id, member_token);
+
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';

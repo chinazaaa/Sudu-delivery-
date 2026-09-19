@@ -1,11 +1,17 @@
 import { db } from "./supabase";
 import { getSharedGroup, groupOrders } from "./groups";
-import { cartValues, groupCarts } from "./group-carts";
+import { cartValues, groupCarts, isReady } from "./group-carts";
 import { getBatch } from "./batches";
 import type { Batch } from "./types";
 
+/** Where somebody has got to, which is the whole point of the board. */
+export type Stage = "shopping" | "details" | "ready" | "paid" | "unpaid";
+
 export type Member = {
   orderId: string;
+  stage: Stage;
+  /** Whether this is the person reading the page. */
+  isMine: boolean;
   name: string;
   items: number;
   food: number;
@@ -29,6 +35,14 @@ export type GroupView = {
   /** What each of them owes for delivery, once it has been closed. */
   share: number;
   ready: number;
+  /** The seat this browser holds, if it holds one and has not finished. */
+  mine: {
+    stage: Stage;
+    hasFood: boolean;
+    phone: string;
+    hostel: string;
+    note: string;
+  } | null;
   /** Whether this car is one they picked a time for, rather than a run. */
   sameDay: boolean;
 };
@@ -41,7 +55,12 @@ export type GroupView = {
  * who made the link sees, and the first thing their friends see when they
  * open it, so it cannot be a missing page.
  */
-export async function groupView(groupId: string): Promise<GroupView | null> {
+export async function groupView(
+  groupId: string,
+  /** The seat this browser holds, so it can be shown as theirs. Never leaves
+   *  the server: only the flag does. */
+  seat = ""
+): Promise<GroupView | null> {
   const group = await getSharedGroup(groupId);
   if (!group || !group.closes_at) return null;
 
@@ -73,6 +92,8 @@ export async function groupView(groupId: string): Promise<GroupView | null> {
   const members: Member[] = group.closed_at
     ? orders.map((order) => ({
         orderId: order.id,
+        stage: (order.status !== "pending" ? "paid" : "unpaid") as Stage,
+        isMine: false,
         name: order.for_name ?? order.customer_name,
         items: countFor(order.id),
         food: order.subtotal_food,
@@ -83,6 +104,12 @@ export async function groupView(groupId: string): Promise<GroupView | null> {
       }))
     : waiting.map((cart) => ({
         orderId: cart.id,
+        stage: (isReady(cart)
+          ? "ready"
+          : cart.finalised_at
+            ? "details"
+            : "shopping") as Stage,
+        isMine: seat !== "" && cart.member_token === seat,
         name: cart.name,
         items: cart.lines.reduce((sum, line) => sum + (line.qty ?? 0), 0),
         food: worth.get(cart.id) ?? 0,
@@ -103,7 +130,22 @@ export async function groupView(groupId: string): Promise<GroupView | null> {
     members,
     items: members.reduce((sum, one) => sum + one.items, 0),
     share: group.closed_at ? orders[0]?.fee ?? 0 : 0,
-    ready: members.filter((one) => one.done).length,
+    ready: members.filter((one) => one.stage === "ready").length,
+    mine: (() => {
+      const seated = waiting.find((cart) => seat !== "" && cart.member_token === seat);
+      if (!seated) return null;
+      return {
+        stage: (isReady(seated)
+          ? "ready"
+          : seated.finalised_at
+            ? "details"
+            : "shopping") as Stage,
+        hasFood: seated.lines.length > 0,
+        phone: seated.phone ?? "",
+        hostel: seated.hostel ?? "",
+        note: seated.customer_note ?? "",
+      };
+    })(),
     sameDay: batch.kind === "same_day",
   };
 }

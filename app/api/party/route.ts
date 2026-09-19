@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { randomUUID } from "crypto";
+import { takeSeat } from "@/lib/group-carts";
 import { db } from "@/lib/supabase";
 import { createSameDayBatch, getBatch, isOrderable } from "@/lib/batches";
 import { deliveryHours, safeSettings } from "@/lib/settings";
@@ -104,6 +107,22 @@ export async function POST(request: Request): Promise<NextResponse> {
       console.error("party insert failed:", error?.message);
       return NextResponse.json({ error: "Could not start that group." }, { status: 500 });
     }
+
+    // The leader takes the first seat, by the name they just gave. Without
+    // this the group page would turn round and ask them who they are, which
+    // they have already said.
+    const jar = await cookies();
+    const token = jar.get("sudu_seat")?.value || randomUUID();
+    const keep = {
+      httpOnly: true,
+      sameSite: "lax" as const,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24,
+    };
+    jar.set("sudu_group", data.id as string, keep);
+    jar.set("sudu_seat", token, keep);
+    await takeSeat({ groupId: data.id as string, token, name });
 
     return NextResponse.json({ id: data.id, when: batch.delivery_window_text });
   } catch {

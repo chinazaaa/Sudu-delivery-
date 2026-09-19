@@ -1,6 +1,7 @@
 "use client";
 
 import GroupLink, { PARTY_CHANGED, readGroup } from "./GroupLink";
+import { useRouter } from "next/navigation";
 import type { Slot } from "@/lib/same-day";
 
 import Link from "next/link";
@@ -12,6 +13,7 @@ import {
   clearPeople,
   cartSubtotal,
   countItems,
+  toServerLines,
   groupNames,
   removePerson,
   setForName,
@@ -53,6 +55,41 @@ export default function CartView({
   const cart = useCart();
   const { people } = usePeople();
   const [newPerson, setNewPerson] = useState("");
+  const router = useRouter();
+  const [group, setGroup] = useState("");
+  const [sending, setSending] = useState(false);
+  const [problem, setProblem] = useState("");
+
+  useEffect(() => {
+    const read = () => setGroup(readGroup());
+    read();
+    window.addEventListener(PARTY_CHANGED, read);
+    return () => window.removeEventListener(PARTY_CHANGED, read);
+  }, []);
+
+  // In a group there is no checkout. The food is settled here and priced when
+  // the group closes, because until then nobody knows what delivery costs.
+  const finalise = async () => {
+    setProblem("");
+    setSending(true);
+    try {
+      const response = await fetch(`/api/party/${group}/finalise`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lines: toServerLines(cart) }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setProblem(data.error ?? "Could not save that.");
+        return;
+      }
+      router.push(`/g/${group}`);
+    } catch {
+      setProblem("Could not save that.");
+    } finally {
+      setSending(false);
+    }
+  };
 
   if (cart.length === 0) {
     return (
@@ -259,6 +296,11 @@ export default function CartView({
       </section>
 
       <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t border-black/5 bg-paper p-3 shadow-bar sm:bottom-0">
+        {problem !== "" && (
+          <p className="mx-auto mb-2 max-w-2xl rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
+            {problem}
+          </p>
+        )}
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-sm text-muted">
@@ -267,9 +309,20 @@ export default function CartView({
             </p>
             <p className="truncate text-lg font-extrabold">{naira(cartSubtotal(cart))}</p>
           </div>
-          <Link href="/checkout" className="btn-primary shrink-0 px-7 py-3.5">
-            Checkout
-          </Link>
+          {group !== "" ? (
+            <button
+              type="button"
+              onClick={finalise}
+              disabled={sending}
+              className="btn-primary shrink-0 px-7 py-3.5"
+            >
+              {sending ? "Saving…" : "Finalise my food"}
+            </button>
+          ) : (
+            <Link href="/checkout" className="btn-primary shrink-0 px-7 py-3.5">
+              Checkout
+            </Link>
+          )}
         </div>
       </div>
     </div>

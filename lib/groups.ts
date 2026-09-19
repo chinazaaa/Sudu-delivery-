@@ -1,7 +1,7 @@
 import { db } from "./supabase";
 import { evenShare, feeFor, isUrgent, sameDayFee, splitFee } from "./fees";
 import { activeBands, sameDayPricing } from "./settings";
-import { countCartItems, groupCarts, markCartDone } from "./group-carts";
+import { countCartItems, groupCarts, isReady, markCartDone } from "./group-carts";
 import { announceGroup } from "./announce-group";
 import type { Batch, Order, OrderGroup } from "./types";
 
@@ -162,7 +162,7 @@ export async function startGroupClock(groupId: string): Promise<void> {
   const group = await getSharedGroup(groupId);
   if (!group || group.closed_at) return;
 
-  const waiting = await groupCarts(groupId);
+  const waiting = (await groupCarts(groupId)).filter((cart) => cart.lines.length > 0);
   if (waiting.length !== 1) return; // Not the first. The clock is already going.
 
   const wanted = Date.now() + SHARE_MINUTES * 60_000;
@@ -194,7 +194,17 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
     };
   }
 
-  const waiting = await groupCarts(groupId);
+  const everybody = await groupCarts(groupId);
+
+  // Only the ones who can actually travel. Somebody still choosing, or who
+  // never said where their food goes, has nowhere for it to be delivered, so
+  // there is nothing to order and nothing to charge them. They are left where
+  // they are rather than turned into an order that cannot be fulfilled.
+  const waiting = everybody.filter(isReady);
+  const notReady = everybody.length - waiting.length;
+  if (notReady > 0) {
+    console.error(`closing group ${groupId} without ${notReady} who were not ready`);
+  }
 
   // A link somebody made and never used, whose car has now gone. Shut it so
   // the clock stops coming back to it every minute.

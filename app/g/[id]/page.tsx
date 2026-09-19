@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { groupView } from "@/lib/group-view";
+import { cookies } from "next/headers";
+import { hostelNames } from "@/lib/hostels";
 import { safeSettings } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
 import { naira } from "@/lib/money";
@@ -30,7 +32,11 @@ export default async function GroupPage({
   searchParams: Promise<{ me?: string; placed?: string }>;
 }) {
   const query = await searchParams;
-  const group = await groupView((await params).id);
+  // The seat this browser holds. Read here rather than passed about, so the
+  // page can show somebody their own row without anybody else's token ever
+  // reaching a browser.
+  const seat = (await cookies()).get("sudu_seat")?.value ?? "";
+  const group = await groupView((await params).id, seat);
   const settings = await safeSettings();
   const site = await siteUrl();
 
@@ -51,8 +57,11 @@ export default async function GroupPage({
   // Which of them is reading. Their own order sets this when it sends them
   // here; the board remembers it after that.
   const asked = query.me ?? "";
-  const mine = group.members.find((one) => one.orderId === asked)?.orderId ?? null;
-  const me = group.members.find((one) => one.orderId === mine) ?? null;
+  const me =
+    group.members.find((one) => one.isMine) ??
+    group.members.find((one) => one.orderId === asked) ??
+    null;
+  const mine = me?.orderId ?? null;
 
   // A group that picked a time says the time and nothing else. Putting a run
   // beside it reads as a second option, and there is not one.
@@ -128,7 +137,8 @@ export default async function GroupPage({
         <GroupBoard
           groupId={group.id}
           members={group.members}
-          mine={mine}
+          mine={group.mine}
+          hostels={await hostelNames()}
           closesAt={group.closesAt!}
           leaderOnServer={me?.isLeader ?? false}
           shareUrl={shareUrl}

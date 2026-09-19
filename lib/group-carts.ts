@@ -4,6 +4,9 @@ import type { CartLine } from "./types";
 export type GroupCart = {
   id: string;
   group_id: string;
+  /** The seat, held by the browser that took it. Not the phone number: the
+   *  number is asked for later, once the food is chosen. */
+  member_token: string;
   phone: string;
   name: string;
   hostel: string;
@@ -11,9 +14,22 @@ export type GroupCart = {
   payment_method: string;
   customer_note: string;
   coupon: string;
+  /** Set when they say their food is finished. */
+  finalised_at: string | null;
+  /** Set when they are finished and we know where their food goes. */
   done_at: string | null;
   created_at: string;
 };
+
+/** Ready to travel: their food is settled and we know how to deliver it. */
+export function isReady(cart: GroupCart): boolean {
+  return (
+    cart.finalised_at !== null &&
+    cart.phone.trim() !== "" &&
+    cart.hostel.trim() !== "" &&
+    cart.lines.length > 0
+  );
+}
 
 /**
  * Food put into a shared delivery, held until the group closes.
@@ -22,40 +38,90 @@ export type GroupCart = {
  * somebody adding a drink they forgot is the same person in the same car, not
  * a second seat in it.
  */
-export async function saveGroupCart(cart: {
+export async function takeSeat(args: {
   groupId: string;
-  phone: string;
+  token: string;
   name: string;
-  hostel: string;
-  lines: CartLine[];
-  paymentMethod: "transfer" | "card";
-  customerNote: string;
-  coupon: string;
 }): Promise<string | null> {
   const { data, error } = await db()
     .from("group_carts")
     .upsert(
       {
-        group_id: cart.groupId,
-        phone: cart.phone,
-        name: cart.name,
-        hostel: cart.hostel,
-        lines: cart.lines,
-        payment_method: cart.paymentMethod,
-        customer_note: cart.customerNote,
-        coupon: cart.coupon,
-        updated_at: new Date().toISOString(),
+        group_id: args.groupId,
+        member_token: args.token,
+        name: args.name,
+        phone: "",
       },
-      { onConflict: "group_id,phone" }
+      { onConflict: "group_id,member_token", ignoreDuplicates: false }
     )
     .select("id")
     .single();
 
   if (error) {
-    console.error("saveGroupCart failed:", error.message);
+    console.error("takeSeat failed:", error.message);
     return null;
   }
   return (data?.id as string) ?? null;
+}
+
+/** The food somebody has chosen, and that they are finished choosing. */
+export async function finaliseSeat(args: {
+  groupId: string;
+  token: string;
+  lines: CartLine[];
+}): Promise<boolean> {
+  const { error } = await db()
+    .from("group_carts")
+    .update({
+      lines: args.lines,
+      finalised_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("group_id", args.groupId)
+    .eq("member_token", args.token);
+
+  if (error) console.error("finaliseSeat failed:", error.message);
+  return !error;
+}
+
+/** Where the food goes, filled in while they wait for everybody else. */
+export async function saveSeatDetails(args: {
+  groupId: string;
+  token: string;
+  phone: string;
+  hostel: string;
+  note: string;
+  paymentMethod: "transfer" | "card";
+}): Promise<boolean> {
+  const { error } = await db()
+    .from("group_carts")
+    .update({
+      phone: args.phone,
+      hostel: args.hostel,
+      customer_note: args.note,
+      payment_method: args.paymentMethod,
+      done_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("group_id", args.groupId)
+    .eq("member_token", args.token);
+
+  if (error) console.error("saveSeatDetails failed:", error.message);
+  return !error;
+}
+
+/** The seat this browser holds in a group, if it holds one. */
+export async function seatFor(
+  groupId: string,
+  token: string
+): Promise<GroupCart | null> {
+  const { data } = await db()
+    .from("group_carts")
+    .select("*")
+    .eq("group_id", groupId)
+    .eq("member_token", token)
+    .maybeSingle();
+  return (data as GroupCart) ?? null;
 }
 
 /** Everybody waiting in one shared delivery, in the order they arrived. */
@@ -72,7 +138,7 @@ export async function groupCarts(groupId: string): Promise<GroupCart[]> {
 export async function markCartDone(cartId: string): Promise<string | null> {
   const { data } = await db()
     .from("group_carts")
-    .update({ done_at: new Date().toISOString() })
+    .update({ finalised_at: new Date().toISOString() })
     .eq("id", cartId)
     .select("group_id")
     .single();
