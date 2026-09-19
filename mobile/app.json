@@ -8,11 +8,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "primaryColor": "#ff5a1f",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ff5a1f"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -45,7 +40,15 @@
         }
       ],
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ff5a1f"
+        }
+      ]
     ],
     "extra": {
       "api": "https://sudu.store",

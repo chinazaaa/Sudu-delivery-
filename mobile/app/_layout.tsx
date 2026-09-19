@@ -9,8 +9,12 @@ import { T } from "@/lib/theme";
 // A notification that lands while somebody is looking at the app should still
 // be seen: they are usually in the app because they are waiting for it.
 Notifications.setNotificationHandler({
+  // "Show it" is two answers now: the banner across the top, and the entry in
+  // the notification list behind it. We want both, which is what the single
+  // shouldShowAlert used to mean.
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
