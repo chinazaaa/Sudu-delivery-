@@ -8,6 +8,7 @@ import { naira } from "@/lib/money";
 import { SLOT_LABEL } from "@/lib/config";
 import { runDateLabel } from "@/lib/time";
 import GroupBoard from "@/components/GroupBoard";
+import GroupActions from "@/components/GroupActions";
 import ClearCartKeepGroup from "@/components/ClearCartKeepGroup";
 
 export const dynamic = "force-dynamic";
@@ -74,9 +75,22 @@ export default async function GroupPage({
     <div className="mx-auto max-w-lg space-y-4">
       {query.placed === "1" && <ClearCartKeepGroup />}
       <section className="card space-y-1">
-        <p className="text-sm font-bold uppercase tracking-wide text-brand-dark">
-          {group.leaderName}&apos;s delivery
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-sm font-bold uppercase tracking-wide text-brand-dark">
+            {group.leaderName}&apos;s delivery
+          </p>
+          {/* The two things somebody opens this page to do, where they can be
+              seen without scrolling past everything they did not come for. */}
+          {!group.closedAt && (
+            <GroupActions
+              groupId={group.id}
+              shareUrl={shareUrl}
+              leaderName={group.leaderName}
+              leaderOnServer={me?.isLeader ?? false}
+              canClose={group.items > 0}
+            />
+          )}
+        </div>
         <h1 className="text-2xl font-bold tracking-tight">
           {group.members.length === 0
             ? "Waiting for the first person"
