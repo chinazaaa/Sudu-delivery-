@@ -44,14 +44,33 @@ export default function Order() {
           ORDER {order.ref}
         </Text>
         <Text style={{ color: T.paper, fontSize: 20, fontWeight: "800", marginTop: 2 }}>
-          {order.status === "pending" ? `Pay ${naira(order.total)}` : "Paid. You are on the run."}
+          {order.status !== "pending"
+            ? "Paid. You are on the run."
+            : order.payable
+              ? `Pay ${naira(order.total)}`
+              : "This run has gone"}
         </Text>
         <Text style={{ color: "rgba(255,255,255,0.75)", marginTop: 4 }}>
-          {order.run.label} · {order.run.window}
+          {order.run.sameDay
+            ? `Going out ${order.run.window}`
+            : `${order.run.label} · ${order.run.window}`}
         </Text>
       </View>
 
-      {order.status === "pending" && order.paymentMethod === "transfer" && account && (
+      {/* A run that has been shopped for cannot take money: paying into it
+          now is a refund waiting to happen, so the details come off and the
+          screen says so. */}
+      {order.status === "pending" && !order.payable && (
+        <View style={{ backgroundColor: T.tint, borderRadius: T.radius, padding: 14 }}>
+          <Text style={{ fontWeight: "800", color: T.ink }}>Do not pay this one</Text>
+          <Text style={{ color: T.muted, marginTop: 4 }}>
+            Nothing was charged. This run has been bought for already, so message
+            us and we will put your food on the next one.
+          </Text>
+        </View>
+      )}
+
+      {order.status === "pending" && order.payable && order.paymentMethod === "transfer" && account && (
         <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
           <Row label="Bank" value={account.bank} />
           <Row label="Account name" value={account.name} />
@@ -135,7 +154,7 @@ export default function Order() {
         </View>
       )}
 
-      {order.status === "pending" && order.paymentMethod === "card" && (
+      {order.status === "pending" && order.payable && order.paymentMethod === "card" && (
         <View style={{ backgroundColor: T.tint, borderRadius: T.radius, padding: 14 }}>
           <Text style={{ fontWeight: "800", color: T.ink }}>Your card link is coming</Text>
           <Text style={{ color: T.muted, marginTop: 4 }}>

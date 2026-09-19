@@ -8,6 +8,8 @@ import { cart, cartTotal, countItems, people, useStored, type Line } from "@/lib
 import { T } from "@/lib/theme";
 
 // Groups are a web page, so the app hands over to it rather than pretending.
+// /group is that page: the car you are in, the way to start one, and the ones
+// you have ordered in before.
 const SITE = "https://sudu.store";
 
 /** What is in the bag, and what it will cost to bring it. */
@@ -73,7 +75,7 @@ export default function Cart() {
             can, with the food already in their cart waiting for them. */}
         {alone > 0 && (
           <Pressable
-            onPress={() => void Linking.openURL(`${SITE}/cart?start=1`)}
+            onPress={() => void Linking.openURL(`${SITE}/group`)}
             style={{
               backgroundColor: T.tint,
               borderRadius: T.radius,

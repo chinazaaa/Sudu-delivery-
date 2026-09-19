@@ -3,6 +3,7 @@ import { getOrder } from "@/lib/orders";
 import { narration } from "@/lib/messages";
 import { payableAccounts } from "@/lib/banks";
 import { safeSettings } from "@/lib/settings";
+import { takesMoney } from "@/lib/batches";
 import { shareRef } from "@/lib/money";
 import { SLOT_LABEL } from "@/lib/config";
 import { runDateLabel } from "@/lib/time";
@@ -27,6 +28,10 @@ export async function GET(
       ref: shareRef(order, order.shares),
       status: order.status,
       stage: order.batch.stage,
+      // Whether this run can still take money. The app showed the account
+      // details off "pending" alone, so it went on asking for a transfer
+      // into a run that had already been shopped for and delivered.
+      payable: takesMoney(order.batch),
       total: order.total,
       food: order.subtotal_food,
       fee: order.fee,
@@ -40,6 +45,9 @@ export async function GET(
       rating: order.rating ?? null,
       feedback: order.feedback ?? "",
       run: {
+        // A car of its own rather than a shared run, so the app can say when
+        // it goes out instead of naming a run and a slot nobody chose.
+        sameDay: order.batch.kind === "same_day",
         label: `${runDateLabel(order.batch.run_date)} · ${SLOT_LABEL[order.batch.slot]}`,
         cutOffISO: order.batch.cut_off_at,
         window: order.batch.delivery_window_text,

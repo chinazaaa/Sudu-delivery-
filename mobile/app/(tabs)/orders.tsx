@@ -11,6 +11,8 @@ type Row = {
   ref: string;
   status: string;
   stage: string;
+  /** Whether that run can still take money. */
+  payable: boolean;
   total: number;
   items: number;
   run: string;
@@ -170,7 +172,9 @@ export default function Orders() {
             }}
           >
             {row.status === "pending"
-              ? "Not paid yet"
+              ? row.payable
+                ? "Not paid yet"
+                : "Run gone. Message us to move it."
               : row.status === "refunded"
                 ? "Refunded"
                 : row.stage === "delivered"

@@ -117,6 +117,9 @@ export type OrderView = {
   ref: string;
   status: string;
   stage: string;
+  /** Whether this run can still take money. False once the shopping has
+   *  started, and then asking for a transfer is asking for a refund. */
+  payable: boolean;
   total: number;
   food: number;
   fee: number;
@@ -130,7 +133,7 @@ export type OrderView = {
   /** What they said about it last time, if they have answered. */
   rating?: number | null;
   feedback?: string;
-  run: { label: string; cutOffISO: string; window: string };
+  run: { sameDay?: boolean; label: string; cutOffISO: string; window: string };
   lines: { name: string; restaurant: string; qty: number; choices: string[]; unitPrice: number }[];
   accounts: { bank: string; name: string; number: string }[];
 };
@@ -169,7 +172,18 @@ export const api = {
       token
     ),
   myOrders: (token: string) =>
-    get<{ orders: { id: string; ref: string; status: string; stage: string; total: number; items: number; run: string }[] }>(
+    get<{
+      orders: {
+        id: string;
+        ref: string;
+        status: string;
+        stage: string;
+        payable: boolean;
+        total: number;
+        items: number;
+        run: string;
+      }[];
+    }>(
       "/orders",
       token
     ),

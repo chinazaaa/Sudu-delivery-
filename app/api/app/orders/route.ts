@@ -3,6 +3,7 @@ import { phoneFromToken } from "@/lib/customer-auth";
 import { ordersForPhone } from "@/lib/orders";
 import { shareRef } from "@/lib/money";
 import { SLOT_LABEL } from "@/lib/config";
+import { takesMoney } from "@/lib/batches";
 import { runDateLabel } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,9 @@ export async function GET(request: Request): Promise<NextResponse> {
         ref: shareRef(order, order.shares ?? []),
         status: order.status,
         stage: order.batch.stage,
+        // So the list can say a run has gone rather than "not paid yet",
+        // which reads as something they can still put right.
+        payable: takesMoney(order.batch),
         total: order.total,
         items: order.lines.reduce((count, line) => count + line.qty, 0),
         run: `${runDateLabel(order.batch.run_date)} · ${SLOT_LABEL[order.batch.slot]}`,
