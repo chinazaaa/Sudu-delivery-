@@ -79,6 +79,14 @@ export default function CartView({
       food: number;
       summary: string;
       ready: boolean;
+      lines: {
+        name: string;
+        restaurant: string;
+        imageUrl: string;
+        choices: string[];
+        unitPrice: number;
+        qty: number;
+      }[];
     }[]
   >([]);
 
@@ -378,38 +386,57 @@ export default function CartView({
         </section>
       ))}
 
-      {group !== "" && others.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-extrabold uppercase tracking-wide text-muted">
-            Also in this car
-          </h2>
-          {others.map((one) => (
-            <div key={one.name} className="card flex items-center justify-between gap-3 py-3">
-              <span className="min-w-0">
-                <span className="font-bold">{one.name}</span>
-                <span className="block truncate text-sm text-muted">
-                  {one.items === 0 ? "still choosing" : one.summary}
-                </span>
-              </span>
-              <span className="shrink-0 text-right">
-                {one.items > 0 && (
-                  <span className="block font-extrabold">{naira(one.food)}</span>
-                )}
-                <span
-                  className={`block text-xs font-semibold ${
-                    one.ready ? "text-mint" : "text-muted"
-                  }`}
-                >
-                  {one.ready ? "Ready" : "Not ready"}
-                </span>
+      {group !== "" &&
+        others.map((one) => (
+          <section key={one.name} className="space-y-3">
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="text-sm font-extrabold uppercase tracking-wide text-muted">
+                {one.name}
+              </h2>
+              <span
+                className={`text-xs font-semibold ${
+                  one.ready ? "text-mint" : "text-muted"
+                }`}
+              >
+                {one.ready ? "Ready" : "Still choosing"}
               </span>
             </div>
-          ))}
-          <p className="text-xs text-muted">
-            Everybody pays for their own food. The delivery is one fee for the whole
-            car, split evenly when the group closes.
-          </p>
-        </section>
+
+            {one.lines.length === 0 ? (
+              <p className="card text-sm text-muted">Nothing yet.</p>
+            ) : (
+              one.lines.map((line, index) => (
+                // The same card as their own food, because it is the same
+                // kind of thing. No controls and no links: it is theirs, and
+                // a minus button on somebody else's dinner is not a feature.
+                <div key={`${one.name}-${index}`} className="card flex gap-3">
+                  <div className="size-20 shrink-0 overflow-hidden rounded-xl">
+                    <Thumb src={line.imageUrl} name={line.name} rounded="rounded-none" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-bold">
+                      {line.qty > 1 && <span className="text-brand">{line.qty}× </span>}
+                      {line.name}
+                    </p>
+                    <p className="text-sm text-muted">
+                      {line.restaurant}
+                      {line.choices.length > 0 && ` · ${line.choices.join(", ")}`}
+                    </p>
+                    <p className="mt-2 font-extrabold">
+                      {naira(line.unitPrice * line.qty)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </section>
+        ))}
+
+      {group !== "" && others.length > 0 && (
+        <p className="px-1 text-xs text-muted">
+          Everybody pays for their own food. The delivery is one fee for the whole
+          car, split evenly when the group closes.
+        </p>
       )}
 
       <section className="card space-y-2">

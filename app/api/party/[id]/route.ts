@@ -65,6 +65,7 @@ export async function GET(
               items: seat.lines.reduce((sum, line) => sum + (line.qty ?? 0), 0),
               food: worth.get(seat.id)?.value ?? 0,
               summary: worth.get(seat.id)?.summary ?? "",
+              lines: worth.get(seat.id)?.lines ?? [],
               ready: isReady(seat),
             }));
           })(),

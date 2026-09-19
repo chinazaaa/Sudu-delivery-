@@ -161,10 +161,19 @@ export function countCartItems(carts: GroupCart[]): number {
  * exists because "2 items" tells somebody far less than "2 items, 3,600",
  * and the group is a thing people read while deciding whether to join.
  */
+export type CartLineView = {
+  name: string;
+  restaurant: string;
+  imageUrl: string;
+  choices: string[];
+  unitPrice: number;
+  qty: number;
+};
+
 export async function cartValues(
   carts: GroupCart[]
-): Promise<Map<string, { value: number; summary: string }>> {
-  const out = new Map<string, { value: number; summary: string }>();
+): Promise<Map<string, { value: number; summary: string; lines: CartLineView[] }>> {
+  const out = new Map<string, { value: number; summary: string; lines: CartLineView[] }>();
   if (carts.length === 0) return out;
 
   const itemIds = [...new Set(carts.flatMap((c) => c.lines.map((l) => l.menu_item_id)))];
@@ -173,14 +182,36 @@ export async function cartValues(
   ];
 
   const [{ data: items }, { data: options }] = await Promise.all([
-    db().from("menu_items").select("id, name, price_food").in("id", itemIds),
+    db()
+      .from("menu_items")
+      .select("id, name, price_food, image_url, restaurant_id")
+      .in("id", itemIds),
     optionIds.length > 0
-      ? db().from("item_options").select("id, price_delta").in("id", optionIds)
-      : Promise.resolve({ data: [] as { id: string; price_delta: number }[] }),
+      ? db().from("item_options").select("id, name, price_delta").in("id", optionIds)
+      : Promise.resolve({ data: [] as { id: string; name: string; price_delta: number }[] }),
   ]);
+
+  // The restaurant is part of reading a cart: two things called Refuel from
+  // different counters are two different orders to whoever collects them.
+  const placeIds = [
+    ...new Set((items ?? []).map((i) => i.restaurant_id as string).filter(Boolean)),
+  ];
+  const { data: places } = placeIds.length
+    ? await db().from("restaurants").select("id, name").in("id", placeIds)
+    : { data: [] as { id: string; name: string }[] };
+  const placeNamed = new Map((places ?? []).map((r) => [r.id as string, r.name as string]));
 
   const price = new Map((items ?? []).map((i) => [i.id as string, i.price_food as number]));
   const named = new Map((items ?? []).map((i) => [i.id as string, i.name as string]));
+  const pictured = new Map(
+    (items ?? []).map((i) => [i.id as string, (i.image_url as string) ?? ""])
+  );
+  const from = new Map(
+    (items ?? []).map((i) => [i.id as string, placeNamed.get(i.restaurant_id as string) ?? ""])
+  );
+  const optionNamed = new Map(
+    (options ?? []).map((o) => [o.id as string, o.name as string])
+  );
   const delta = new Map(
     (options ?? []).map((o) => [o.id as string, o.price_delta as number])
   );
@@ -198,6 +229,20 @@ export async function cartValues(
       summary: cart.lines
         .map((line) => `${line.qty}× ${named.get(line.menu_item_id) ?? "something"}`)
         .join(", "),
+      // Enough to read it as a cart, which is what it is. Every price comes
+      // from the menu here, exactly as their own cart's does.
+      lines: cart.lines.map((line) => ({
+        name: named.get(line.menu_item_id) ?? "Something",
+        restaurant: from.get(line.menu_item_id) ?? "",
+        imageUrl: pictured.get(line.menu_item_id) ?? "",
+        choices: (line.option_ids ?? [])
+          .map((id) => optionNamed.get(id) ?? "")
+          .filter(Boolean),
+        unitPrice:
+          (price.get(line.menu_item_id) ?? 0) +
+          (line.option_ids ?? []).reduce((extra, id) => extra + (delta.get(id) ?? 0), 0),
+        qty: line.qty ?? 0,
+      })),
     });
   }
   return out;
