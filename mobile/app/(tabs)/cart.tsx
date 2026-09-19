@@ -40,8 +40,12 @@ export default function Cart() {
    *  the restaurant, so renaming one in admin does not break the link. */
   const placeOf = (line: Line) =>
     shop?.menu.find((place) => place.items.some((one) => one.id === line.itemId)) ?? null;
-  const fee =
-    shop && run ? feeFrom(items, shop.bands, run.flashFee) : null;
+  // Every line from a kitchen with an offer on it means the ladder is not
+  // what prices this, and the shop settles it when the order is placed.
+  const offered =
+    lines.length > 0 &&
+    lines.every((line) => Boolean(shop?.offers?.[placeOf(line)?.restaurant.id ?? ""]?.badge));
+  const fee = offered ? null : shop && run ? feeFrom(items, shop.bands, run.flashFee) : null;
 
   if (lines.length === 0) {
     return (
@@ -63,7 +67,10 @@ export default function Cart() {
   // What sharing a delivery would actually save them, on the food they have
   // actually chosen. "Split one delivery" is an idea; two real numbers is an
   // argument, and this is the moment it stops being abstract.
-  const alone = shop && items > 0 ? feeFrom(items, shop.bands, null) : 0;
+  // Only where the ladder is what they would pay. Under an offer this number
+  // is not what ordering alone costs, and the whole point of the line is that
+  // the two figures are real.
+  const alone = shop && items > 0 && !offered ? feeFrom(items, shop.bands, null) : 0;
 
 
   return (
@@ -268,7 +275,7 @@ export default function Cart() {
           <Row label="Food" value={naira(food)} />
           <Row
             label={`Delivery (${items} item${items === 1 ? "" : "s"})`}
-            value={fee === null ? "at checkout" : naira(fee)}
+            value={offered ? "an offer prices this" : fee === null ? "at checkout" : naira(fee)}
           />
           <View style={{ height: 1, backgroundColor: T.line, marginVertical: 4 }} />
           <Row label="Total" value={naira(food + (fee ?? 0))} strong />

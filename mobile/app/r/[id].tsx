@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { api, naira, type Item, type Place } from "@/lib/api";
 import { cart, countItems, useStored, type Line } from "@/lib/store";
 import { T } from "@/lib/theme";
+import Deals, { type Deal } from "@/components/Deals";
 
 /** One restaurant: its menu, and a sheet for the questions a meal asks. */
 export default function Restaurant() {
@@ -35,6 +36,9 @@ export default function Restaurant() {
   const router = useRouter();
 
   const [place, setPlace] = useState<Place | null>(null);
+  // What is on at this kitchen, worked out by the shop rather than guessed
+  // at here, so the app and the website never disagree about a price.
+  const [offer, setOffer] = useState<{ line: string; deals: Deal[] } | null>(null);
   const [open, setOpen] = useState<Item | null>(null);
   const [query, setQuery] = useState("");
   /** Which category is being looked at. Empty means the whole menu. */
@@ -47,6 +51,8 @@ export default function Restaurant() {
       .then((shop) => {
         const found = shop.menu.find((one) => one.restaurant.id === id) ?? null;
         setPlace(found);
+        const here = shop.offers?.[id];
+        setOffer(here ? { line: here.line, deals: here.deals } : null);
         if (found) {
           navigation.setOptions({ title: found.restaurant.name });
           const asked = wanted ? found.items.find((one) => one.id === wanted) : null;
@@ -95,6 +101,8 @@ export default function Restaurant() {
   return (
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 10 }}>
+        {offer && <Deals line={offer.line} deals={offer.deals} />}
+
         <TextInput
           value={query}
           onChangeText={setQuery}

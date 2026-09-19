@@ -282,7 +282,7 @@ export default function GroupBoard({
               onKeyDown={(event) => {
                 if (event.key === "Enter" && name.trim().length >= 2) void join();
               }}
-              placeholder="Your first name"
+              placeholder="John Doe"
               aria-label="Your first name"
               autoFocus
               className="field"

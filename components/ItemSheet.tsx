@@ -181,7 +181,7 @@ export default function ItemSheet({
                       setNewPerson("");
                       setAddingPerson(false);
                     }}
-                    placeholder="Name"
+                    placeholder="John Doe"
                     className="field w-28 py-1.5 text-sm"
                   />
                   <button

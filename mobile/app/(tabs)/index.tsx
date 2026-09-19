@@ -269,6 +269,26 @@ export default function Home() {
                     {place.items.length} item{place.items.length === 1 ? "" : "s"} on the menu
                   </Text>
                 </View>
+
+                {/* What delivery costs here when a promotion is pricing it.
+                    The number is the reason to tap, so it goes on the
+                    outside rather than behind the word "offer". */}
+                {shop?.offers?.[place.restaurant.id]?.badge ? (
+                  <View
+                    style={{
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: T.brand + "55",
+                      backgroundColor: T.tint,
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
+                    }}
+                  >
+                    <Text style={{ color: T.brandDark, fontWeight: "800", fontSize: 12 }}>
+                      {shop.offers[place.restaurant.id].badge}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
             </Pressable>
           </Link>

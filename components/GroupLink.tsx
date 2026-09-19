@@ -209,7 +209,7 @@ export default function GroupLink({
           id="group_name"
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder="Nasa"
+          placeholder="John Doe"
           className="field"
         />
         <p className="mt-1 text-xs text-ink/70">So they know whose group they joined.</p>

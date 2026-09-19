@@ -3,6 +3,8 @@ import { openBatches } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
 import { hostelNames } from "@/lib/hostels";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
+import { dealsAt, offersByRestaurant } from "@/lib/coupons";
+import { offerBadge, offerLine } from "@/lib/offers";
 import { deliverySlots } from "@/lib/same-day";
 import { serialiseBands } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
@@ -37,6 +39,24 @@ export async function GET(): Promise<NextResponse> {
     const slots =
       settings.same_day_on === "on" ? deliverySlots(new Date(), await hoursByDay()) : [];
 
+    // What is on at each kitchen, said the way the site says it: a few words
+    // for the card, a sentence for the top of the menu, and the whole list
+    // for the drawer. The app was quoting a band fee on food a promotion was
+    // about to price, which is a number nobody was going to be charged.
+    const offers = await offersByRestaurant();
+    const deals = await Promise.all(
+      menu.map(async (place) => ({
+        restaurantId: place.restaurant.id,
+        badge: offers.has(place.restaurant.id)
+          ? offerBadge(offers.get(place.restaurant.id)!)
+          : "",
+        line: offers.has(place.restaurant.id)
+          ? offerLine(offers.get(place.restaurant.id)!)
+          : "",
+        deals: await dealsAt(place.restaurant.id, place.restaurant.name),
+      }))
+    );
+
     return NextResponse.json({
       menu,
       hostels,
@@ -49,6 +69,13 @@ export async function GET(): Promise<NextResponse> {
         urgentExtra: pricing.urgentExtra,
       },
       runs: batches.map(toBatchView),
+      // Keyed by restaurant, so the app can look one up without walking a
+      // list on every card it draws.
+      offers: Object.fromEntries(
+        deals
+          .filter((one) => one.badge !== "" || one.deals.length > 0)
+          .map((one) => [one.restaurantId, { badge: one.badge, line: one.line, deals: one.deals }])
+      ),
       bands: bands.map((band) => ({
         maxItems: Number.isFinite(band.maxItems) ? band.maxItems : null,
         fee: band.fee,

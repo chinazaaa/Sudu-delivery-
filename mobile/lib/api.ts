@@ -110,6 +110,16 @@ export type Shop = {
     urgentExtra: number;
   };
   shop: { tagline: string; ribbon: string; whatsapp: string };
+  /** What is on at each kitchen, by restaurant id: a few words for the card,
+   *  a sentence for the top of its menu, and the list behind the button. */
+  offers?: Record<
+    string,
+    {
+      badge: string;
+      line: string;
+      deals: { title: string; detail: string; code?: string }[];
+    }
+  >;
 };
 
 export type OrderView = {

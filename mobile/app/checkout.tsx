@@ -156,6 +156,18 @@ export default function Checkout() {
       ? Math.max(0, feeFrom(items + adding.items, shop.bands, run.flashFee) - adding.feeCharged)
       : 0;
 
+  // A promotion prices delivery outright, and the shop works out whether one
+  // applies. The app cannot, so where the cart is all from a kitchen with an
+  // offer on it, the ladder figure here is not the figure anybody is charged
+  // and saying so beats printing it.
+  const mayBeOffered =
+    !picked &&
+    lines.length > 0 &&
+    lines.every((line) => {
+      const place = shop?.menu.find((one) => one.items.some((item) => item.id === line.itemId));
+      return place ? Boolean(shop?.offers?.[place.restaurant.id]?.badge) : false;
+    });
+
   const place = async () => {
     setError("");
     setBusy(true);
@@ -564,11 +576,19 @@ export default function Checkout() {
               ? `Delivery top-up (${items + adding.items} items)`
               : `Delivery (${items} item${items === 1 ? "" : "s"})`
           }
-          value={naira(fee)}
+          value={mayBeOffered ? "worked out on the order" : naira(fee)}
         />
+        {mayBeOffered && (
+          <Text style={{ color: T.muted, fontSize: 12 }}>
+            There is an offer on this kitchen, so delivery is priced when the
+            order is placed. You will see it on your order before you pay.
+          </Text>
+        )}
         {applied && <Row label={`Code ${applied.code}`} value={`−${naira(applied.discount)}`} />}
         <View style={{ height: 1, backgroundColor: T.line, marginVertical: 4 }} />
-        <Row label="Total" value={naira(Math.max(0, food + fee - (applied?.discount ?? 0)))} strong />
+        {!mayBeOffered && (
+          <Row label="Total" value={naira(Math.max(0, food + fee - (applied?.discount ?? 0)))} strong />
+        )}
 
         {/* A code is something somebody was given in a group chat, so it is
             typed in rather than carried by a link. Checked here, by the same
@@ -670,7 +690,9 @@ export default function Checkout() {
         <Text style={{ color: T.paper, fontWeight: "800", fontSize: 16 }}>
           {busy
             ? "Placing…"
-            : `Place order · ${naira(Math.max(0, food + fee - (applied?.discount ?? 0)))}`}
+            : mayBeOffered
+              ? "Place order"
+              : `Place order · ${naira(Math.max(0, food + fee - (applied?.discount ?? 0)))}`}
         </Text>
       </Pressable>
     </ScrollView>
