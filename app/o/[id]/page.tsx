@@ -30,7 +30,7 @@ import {
 } from "@/lib/orders";
 import { formatPhone } from "@/lib/phone";
 import { STAGE_LABEL, stageIndex } from "@/lib/stages";
-import { clockLabel, lagosToday, runDateLabel, weekdayLabel } from "@/lib/time";
+import { clockLabel, dayLabel, lagosToday, runDateLabel, weekdayLabel } from "@/lib/time";
 import {
   activeBands,
   externalUrl,
@@ -192,9 +192,20 @@ export default async function OrderPage({
           <span className="rounded-full bg-white/20 px-3 py-1.5">
             {expired
               ? "Closed"
-              : `Closes ${clockLabel(order.batch.cut_off_at)}, ${runDateLabel(
-                  order.batch.run_date
-                )}`}
+              : order.batch.kind === "same_day"
+                ? // A car of its own: it was made for this order and goes out
+                  // when it goes out. It has a cut off the way every batch
+                  // does, set to the moment it was created, and printing that
+                  // beside the delivery date read "closes 6:57pm" on a day it
+                  // had already closed.
+                  `Going out ${order.batch.delivery_window_text}`
+                : // The cut off's own day, not the run's. A group closing on
+                  // the cut off makes its orders moments later, and pairing
+                  // this evening's time with tomorrow's date said the run
+                  // closes at 6:57pm tomorrow.
+                  `Closes ${clockLabel(order.batch.cut_off_at)}, ${dayLabel(
+                    order.batch.cut_off_at
+                  )}`}
           </span>
           {paid && order.batch.stage !== "ordering" && (
             <span className="rounded-full bg-white/20 px-3 py-1.5">

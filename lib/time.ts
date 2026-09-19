@@ -25,6 +25,11 @@ export function weekdayLabel(runDate: string): string {
     .format(new Date(runDate + "T12:00:00Z"));
 }
 
+/** "Friday, 19 Sep" for any ISO instant, in Lagos time. */
+export function dayLabel(iso: string): string {
+  return DATE_FMT.format(new Date(iso));
+}
+
 /** "11:30 am" in Lagos time, for any ISO instant. */
 export function clockLabel(iso: string): string {
   return TIME_FMT.format(new Date(iso));
