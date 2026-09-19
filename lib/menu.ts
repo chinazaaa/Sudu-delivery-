@@ -34,6 +34,7 @@ async function readMenu(): Promise<MenuView[]> {
   return places.map((restaurant) => ({
     restaurant: {
       id: restaurant.id,
+      href: restaurant.slug || restaurant.id,
       name: restaurant.name,
       logoUrl: restaurant.logo_url ?? "",
       bannerUrl: restaurant.banner_url ?? "",
@@ -130,15 +131,30 @@ export async function optionGroupsFor(
  * every item and every option in the system to show one of them, which is why
  * it felt slow to open.
  */
-async function readMenuFor(restaurantId: string): Promise<MenuView | null> {
-  const { data } = await db()
-    .from("restaurants")
-    .select("*")
-    .eq("id", restaurantId)
-    .eq("active", true)
-    .maybeSingle();
+/** A uuid, as opposed to a name somebody can read. */
+const looksLikeId = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
+async function readMenuFor(ref: string): Promise<MenuView | null> {
+  // By name first, because that is what links say now, and by id as well,
+  // because every link ever sent says that and none of them may break.
+  const find = (byId: boolean) =>
+    db()
+      .from("restaurants")
+      .select("*")
+      .eq(byId ? "id" : "slug", ref)
+      .eq("active", true)
+      .maybeSingle();
+
+  let { data, error } = looksLikeId(ref) ? await find(true) : await find(false);
+  // A database without the column yet answers with an error rather than
+  // nothing, and a shop that cannot show a menu because a migration has not
+  // been run is worse than one with ugly links.
+  if (error && !looksLikeId(ref)) ({ data } = await find(true));
+
   const restaurant = data as Restaurant | null;
   if (!restaurant) return null;
+  const restaurantId = restaurant.id;
 
   const [categories, items] = await Promise.all([
     db().from("menu_categories").select("*").eq("restaurant_id", restaurantId).order("sort_order"),
@@ -151,6 +167,7 @@ async function readMenuFor(restaurantId: string): Promise<MenuView | null> {
   return {
     restaurant: {
       id: restaurant.id,
+      href: restaurant.slug || restaurant.id,
       name: restaurant.name,
       logoUrl: restaurant.logo_url ?? "",
       bannerUrl: restaurant.banner_url ?? "",
@@ -176,15 +193,30 @@ async function readMenuFor(restaurantId: string): Promise<MenuView | null> {
 }
 
 /** Just the names, for the navigation bar. Never throws during a build. */
-export async function openRestaurants(): Promise<{ id: string; name: string }[]> {
-  try {
-    const { data } = await db()
+export async function openRestaurants(): Promise<
+  { id: string; name: string; href: string }[]
+> {
+  // The column list is decided at run time, so the query builder cannot know
+  // the shape and neither can the types. The rows are read defensively below.
+  const read = (withSlug: boolean) =>
+    db()
       .from("restaurants")
-      .select("id, name")
+      .select(withSlug ? "id, name, slug" : "id, name")
       .eq("active", true)
       .order("sort_order")
-      .order("name");
-    return (data ?? []) as { id: string; name: string }[];
+      .order("name")
+      .overrideTypes<{ id: string; name: string; slug?: string | null }[]>();
+
+  try {
+    // Without the column the links are ids, which is what they always were.
+    let { data, error } = await read(true);
+    if (error) ({ data } = await read(false));
+
+    return (data ?? []).map((one) => ({
+      id: one.id,
+      name: one.name,
+      href: one.slug || one.id,
+    }));
   } catch {
     return [];
   }

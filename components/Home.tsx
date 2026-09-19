@@ -188,7 +188,7 @@ export default function Home({
               {menu.map((place) => (
                 <Link
                   key={place.restaurant.id}
-                  href={`/r/${place.restaurant.id}`}
+                  href={`/r/${place.restaurant.href}`}
                   className="group overflow-hidden rounded-2xl bg-paper shadow-card transition active:scale-[0.99]"
                 >
                   <span className="block h-36 sm:h-40">
@@ -239,7 +239,7 @@ export default function Home({
                   name: place.restaurant.name,
                   headline: autoHeadline.replace("{restaurant}", place.restaurant.name),
                   body: autoLines[index % autoLines.length] ?? "",
-                  href: `/r/${place.restaurant.id}`,
+                  href: `/r/${place.restaurant.href}`,
                   linkText: "See the menu",
                 }))
             ).map((slide) => (

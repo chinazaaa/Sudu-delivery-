@@ -821,5 +821,50 @@ end $seat_per_browser$;
 create unique index if not exists group_carts_seat_idx
   on group_carts (group_id, member_token);
 
+
+-- A restaurant link somebody can read.
+--
+-- /r/a4e5104f-a815-49c8-b491-cb07325ddec7 is not a link anybody pastes into
+-- a group chat. /r/dominos-pizza is. The id stays the key and old links keep
+-- working; this is only a second way in.
+alter table restaurants add column if not exists slug text;
+
+-- Made from the name, once, for everything that has not got one. Anything
+-- already set is left alone, because a link that has been sent out must not
+-- change under it.
+update restaurants
+set slug = base.candidate
+from (
+  select
+    id,
+    case
+      when row_number() over (partition by cleaned order by sort_order, name) = 1
+        then cleaned
+      else cleaned || '-' ||
+           row_number() over (partition by cleaned order by sort_order, name)::text
+    end as candidate
+  from (
+    select
+      id,
+      name,
+      sort_order,
+      -- Apostrophes go rather than becoming hyphens: Domino's Pizza is
+      -- dominos-pizza, not domino-s-pizza.
+      trim(both '-' from
+        regexp_replace(
+          regexp_replace(lower(name), '[''’`]', '', 'g'),
+          '[^a-z0-9]+', '-', 'g'
+        )
+      ) as cleaned
+    from restaurants
+  ) tidy
+  where cleaned <> ''
+) base
+where restaurants.id = base.id
+  and (restaurants.slug is null or restaurants.slug = '');
+
+create unique index if not exists restaurants_slug_idx
+  on restaurants (slug) where slug is not null and slug <> '';
+
 -- Supabase caches the schema; this makes the new tables visible immediately.
 notify pgrst, 'reload schema';

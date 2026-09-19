@@ -4,6 +4,9 @@ import type { BatchStage } from "./stages";
 export type Restaurant = {
   id: string;
   name: string;
+  /** The readable half of a link: /r/dominos-pizza. Empty on a database that
+   *  has not had the migration run, which is why nothing depends on it. */
+  slug?: string | null;
   address: string;
   closes_at: string;
   active: boolean;

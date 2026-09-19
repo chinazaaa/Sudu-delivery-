@@ -32,7 +32,7 @@ export default function CartView({
   runFrom = 4000,
   hostels = [],
 }: {
-  restaurants?: { id: string; name: string }[];
+  restaurants?: { id: string; name: string; href: string }[];
   /** What a group could be put on, worked out on the server so the clock and
    *  the prices are the shop's. */
   runs?: { id: string; label: string }[];
@@ -199,23 +199,117 @@ export default function CartView({
     }
   };
 
+  // The rest of the car. Needed in two places: under somebody's own
+  // food, and instead of it when they have none, because an empty cart
+  // in a group is still a seat in a car full of other people's dinner.
+  const theCar = (
+    <>
+      {group !== "" &&
+        others.map((one) => (
+          <section key={one.name} className="space-y-3">
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="text-sm font-extrabold uppercase tracking-wide text-muted">
+                {one.name}
+              </h2>
+              <span
+                className={`text-xs font-semibold ${
+                  one.ready ? "text-mint" : "text-muted"
+                }`}
+              >
+                {one.ready ? "Ready" : "Still choosing"}
+              </span>
+            </div>
+
+            {one.lines.length === 0 ? (
+              <p className="card text-sm text-muted">Nothing yet.</p>
+            ) : (
+              one.lines.map((line, index) => (
+                // The same card as their own food, because it is the same
+                // kind of thing. No controls and no links: it is theirs, and
+                // a minus button on somebody else's dinner is not a feature.
+                <div key={`${one.name}-${index}`} className="card flex gap-3">
+                  <div className="size-20 shrink-0 overflow-hidden rounded-xl">
+                    <Thumb src={line.imageUrl} name={line.name} rounded="rounded-none" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-bold">
+                      {line.qty > 1 && <span className="text-brand">{line.qty}× </span>}
+                      {line.name}
+                    </p>
+                    <p className="text-sm text-muted">
+                      {line.restaurant}
+                      {line.choices.length > 0 && ` · ${line.choices.join(", ")}`}
+                    </p>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <span className="font-extrabold">
+                        {naira(line.unitPrice * line.qty)}
+                      </span>
+                      {/* The same control, switched off. Leaving it out made
+                          the two sections read as different kinds of thing;
+                          greyed, it says plainly that this is somebody else's
+                          to change and yours is above. */}
+                      <span
+                        aria-hidden="true"
+                        className="flex items-center gap-1 rounded-full border border-black/10 p-1 opacity-40"
+                      >
+                        <span className="grid size-8 place-items-center rounded-full text-lg leading-none">
+                          −
+                        </span>
+                        <span className="w-5 text-center font-bold">{line.qty}</span>
+                        <span className="grid size-8 place-items-center rounded-full text-lg leading-none">
+                          +
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </section>
+        ))}
+
+      {group !== "" && others.length > 0 && (
+        <div className="rounded-2xl bg-brand-tint px-4 py-3">
+          {eachNow > 0 && (
+            <p className="text-sm font-extrabold text-brand-dark">
+              Delivery right now: about {naira(eachNow)} each
+            </p>
+          )}
+          <p className="mt-0.5 text-xs text-ink/70">
+            Everybody pays for their own food. The delivery is one fee for the whole
+            car, split evenly when the group closes, so it moves as people add food
+            and as more of you join.
+          </p>
+        </div>
+      )}
+
+    </>
+  );
+
   if (cart.length === 0) {
     // In a group this cart is yours alone: everybody picks their own food and
     // pays for their own. Saying so here is the difference between an empty
     // cart that makes sense and one that looks like the group lost something.
     if (group !== "") {
       return (
-        <div className="space-y-4 pb-10">
-          <Empty icon="cart" title="Your cart is empty" href="/" action="Browse the menu">
+        <div className="space-y-5 pb-10">
+          <div className="flex items-baseline justify-between gap-3">
+            <h1 className="text-2xl font-extrabold">Your cart</h1>
+            <Link href={`/g/${group}`} className="text-sm font-bold text-brand">
+              See the group
+            </Link>
+          </div>
+
+          <Empty icon="cart" title="Nothing in yours yet" href="/" action="Browse the menu">
             Everybody in the group picks their own food and pays for their own. This
             is yours, and it goes in the same car as theirs.
           </Empty>
-          <Link
-            href={`/g/${group}`}
-            className="btn-quiet mx-auto block max-w-sm text-center"
-          >
-            See what the group has ordered
-          </Link>
+
+          {/* Everybody else's food stays on screen. Emptying a cart does not
+              take somebody out of the group, and a page that forgets the car
+              the moment their own part of it is empty reads as having lost
+              the group. */}
+          {theCar}
         </div>
       );
     }
@@ -425,84 +519,7 @@ export default function CartView({
         </section>
       ))}
 
-      {group !== "" &&
-        others.map((one) => (
-          <section key={one.name} className="space-y-3">
-            <div className="flex items-baseline justify-between gap-2">
-              <h2 className="text-sm font-extrabold uppercase tracking-wide text-muted">
-                {one.name}
-              </h2>
-              <span
-                className={`text-xs font-semibold ${
-                  one.ready ? "text-mint" : "text-muted"
-                }`}
-              >
-                {one.ready ? "Ready" : "Still choosing"}
-              </span>
-            </div>
-
-            {one.lines.length === 0 ? (
-              <p className="card text-sm text-muted">Nothing yet.</p>
-            ) : (
-              one.lines.map((line, index) => (
-                // The same card as their own food, because it is the same
-                // kind of thing. No controls and no links: it is theirs, and
-                // a minus button on somebody else's dinner is not a feature.
-                <div key={`${one.name}-${index}`} className="card flex gap-3">
-                  <div className="size-20 shrink-0 overflow-hidden rounded-xl">
-                    <Thumb src={line.imageUrl} name={line.name} rounded="rounded-none" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold">
-                      {line.qty > 1 && <span className="text-brand">{line.qty}× </span>}
-                      {line.name}
-                    </p>
-                    <p className="text-sm text-muted">
-                      {line.restaurant}
-                      {line.choices.length > 0 && ` · ${line.choices.join(", ")}`}
-                    </p>
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <span className="font-extrabold">
-                        {naira(line.unitPrice * line.qty)}
-                      </span>
-                      {/* The same control, switched off. Leaving it out made
-                          the two sections read as different kinds of thing;
-                          greyed, it says plainly that this is somebody else's
-                          to change and yours is above. */}
-                      <span
-                        aria-hidden="true"
-                        className="flex items-center gap-1 rounded-full border border-black/10 p-1 opacity-40"
-                      >
-                        <span className="grid size-8 place-items-center rounded-full text-lg leading-none">
-                          −
-                        </span>
-                        <span className="w-5 text-center font-bold">{line.qty}</span>
-                        <span className="grid size-8 place-items-center rounded-full text-lg leading-none">
-                          +
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </section>
-        ))}
-
-      {group !== "" && others.length > 0 && (
-        <div className="rounded-2xl bg-brand-tint px-4 py-3">
-          {eachNow > 0 && (
-            <p className="text-sm font-extrabold text-brand-dark">
-              Delivery right now: about {naira(eachNow)} each
-            </p>
-          )}
-          <p className="mt-0.5 text-xs text-ink/70">
-            Everybody pays for their own food. The delivery is one fee for the whole
-            car, split evenly when the group closes, so it moves as people add food
-            and as more of you join.
-          </p>
-        </div>
-      )}
+      {theCar}
 
       <section className="card space-y-2">
         <h2 className="font-bold">Add something else</h2>
@@ -510,7 +527,7 @@ export default function CartView({
           {restaurants.map((restaurant) => (
             <Link
               key={restaurant.id}
-              href={`/r/${restaurant.id}`}
+              href={`/r/${restaurant.href}`}
               className="chip border-black/10 bg-white hover:border-ink/30"
             >
               {restaurant.name}

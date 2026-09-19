@@ -8,6 +8,9 @@ import type { Batch } from "./types";
 export type MenuView = {
   restaurant: {
     id: string;
+    /** What a link says. Falls back to the id, so a database without the
+     *  column still produces links that work. */
+    href: string;
     name: string;
     logoUrl: string;
     bannerUrl: string;

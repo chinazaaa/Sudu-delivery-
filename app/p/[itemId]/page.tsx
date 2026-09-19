@@ -29,7 +29,7 @@ export default async function ProductPage({
       <nav className="flex flex-wrap items-center gap-1 text-sm text-muted">
         <Link href="/" className="hover:text-ink">Menu</Link>
         <span>/</span>
-        <Link href={`/r/${place.restaurant.id}`} className="hover:text-ink">
+        <Link href={`/r/${place.restaurant.href}`} className="hover:text-ink">
           {place.restaurant.name}
         </Link>
         {category && (
@@ -50,7 +50,7 @@ export default async function ProductPage({
         <div className="space-y-5">
           <div>
             <Link
-              href={`/r/${place.restaurant.id}`}
+              href={`/r/${place.restaurant.href}`}
               className="inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-ink"
             >
               <span className="size-6 overflow-hidden rounded-md">
