@@ -11,10 +11,15 @@ export const dynamic = "force-dynamic";
 
 export default async function ProductPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ itemId: string }>;
+  // `line` arrives when this was opened from the cart, so the buy box below
+  // starts on the choices already made rather than blank.
+  searchParams: Promise<{ line?: string }>;
 }) {
   const { itemId } = await params;
+  const editingKey = (await searchParams).line ?? "";
   const [menu, settings] = await Promise.all([menuView(), safeSettings()]);
 
   const place = menu.find((m) => m.items.some((i) => i.id === itemId));
@@ -75,7 +80,7 @@ export default async function ProductPage({
             )}
           </div>
 
-          <AddToCart item={item} restaurant={place.restaurant} />
+          <AddToCart item={item} restaurant={place.restaurant} editingKey={editingKey} />
 
           <ul className="space-y-1 border-t border-black/5 pt-4 text-sm text-muted">
             {productNotes(settings, place.restaurant.name).map((note) => (

@@ -13,7 +13,7 @@ import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { api, naira, type Item, type Place } from "@/lib/api";
-import { cart, countItems, useStored } from "@/lib/store";
+import { cart, countItems, useStored, type Line } from "@/lib/store";
 import { T } from "@/lib/theme";
 
 /** One restaurant: its menu, and a sheet for the questions a meal asks. */
@@ -22,10 +22,14 @@ export default function Restaurant() {
   // that dish opens on top of its own menu rather than making them find it.
   // `category` arrives from a notification about a restaurant's deals, so
   // tapping "new deal at Domino's" opens the deals rather than the whole menu.
-  const { id, item: wanted, category } = useLocalSearchParams<{
+  // `line` arrives when the dish was tapped in the cart: that is somebody
+  // going back to the thing they already chose, so the sheet opens holding
+  // their answers rather than blank, and saving replaces it.
+  const { id, item: wanted, category, line: editingKey } = useLocalSearchParams<{
     id: string;
     item?: string;
     category?: string;
+    line?: string;
   }>();
   const navigation = useNavigation();
   const router = useRouter();
@@ -236,7 +240,12 @@ export default function Restaurant() {
             accessibilityLabel="Close"
           />
           {open && (
-            <ItemSheet item={open} restaurant={place.restaurant.name} onDone={() => setOpen(null)} />
+            <ItemSheet
+              item={open}
+              restaurant={place.restaurant.name}
+              editing={lines.find((one) => one.key === editingKey) ?? null}
+              onDone={() => setOpen(null)}
+            />
           )}
         </View>
       </Modal>
@@ -248,14 +257,31 @@ export default function Restaurant() {
 function ItemSheet({
   item,
   restaurant,
+  editing,
   onDone,
 }: {
   item: Item;
   restaurant: string;
+  /** The cart line being changed, when this was opened from the cart. */
+  editing: Line | null;
   onDone: () => void;
 }) {
-  const [picked, setPicked] = useState<Record<string, string[]>>({});
-  const [qty, setQty] = useState(1);
+  // Opened from the cart, the sheet starts where they left it: the same
+  // choices ticked and the same number. Starting blank made every visit back
+  // to a meal a rebuild, and answering the questions again from scratch is
+  // exactly what somebody checking their cart is not doing.
+  const [picked, setPicked] = useState<Record<string, string[]>>(() => {
+    if (!editing) return {};
+    const start: Record<string, string[]> = {};
+    for (const group of item.groups) {
+      const theirs = group.options
+        .filter((option) => editing.optionIds.includes(option.id))
+        .map((option) => option.id);
+      if (theirs.length > 0) start[group.id] = theirs;
+    }
+    return start;
+  });
+  const [qty, setQty] = useState(editing ? editing.qty : 1);
 
   const chosen = useMemo(() => Object.values(picked).flat(), [picked]);
 
@@ -290,6 +316,11 @@ function ItemSheet({
       .filter((option) => chosen.includes(option.id))
       .map((option) => option.name);
 
+    // The old line goes first, or changing the choices on something would
+    // leave the original sitting in the cart beside the new one. Whose food
+    // it is travels with it: a bag is labelled by name.
+    if (editing) await cart.setQty(editing.key, 0);
+
     await cart.add(
       {
         itemId: item.id,
@@ -299,6 +330,7 @@ function ItemSheet({
         unitPrice: item.price + extra,
         optionIds: chosen,
         choices: names,
+        forName: editing?.forName ?? "",
       },
       qty
     );

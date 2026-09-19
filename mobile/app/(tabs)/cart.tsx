@@ -196,7 +196,14 @@ export default function Cart() {
                 <Pressable
                   onPress={() => {
                     const place = placeOf(line);
-                    if (place) router.push(`/r/${place.restaurant.id}?item=${line.itemId}`);
+                    // The line, not just the dish: tapping something in the
+                    // cart is going back to what you chose, so the sheet
+                    // opens holding your choices and saving replaces it.
+                    if (place)
+                      router.push(
+                        `/r/${place.restaurant.id}?item=${line.itemId}` +
+                          `&line=${encodeURIComponent(line.key)}`
+                      );
                   }}
                   disabled={placeOf(line) === null}
                   accessibilityRole="link"

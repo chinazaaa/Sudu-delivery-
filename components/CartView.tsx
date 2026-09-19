@@ -492,7 +492,7 @@ export default function CartView({
               {/* The picture and the name go back to the product, which is
                   where you go to check what is in it or change the choices. */}
               <Link
-                href={`/p/${line.itemId}`}
+                href={`/p/${line.itemId}?line=${encodeURIComponent(line.key)}`}
                 aria-label={`Open ${line.name}`}
                 className="size-20 shrink-0 overflow-hidden rounded-xl"
               >
@@ -504,7 +504,10 @@ export default function CartView({
                     of something read as one item in the cart. */}
                 <p className="truncate font-bold">
                   {line.qty > 1 && <span className="text-brand">{line.qty}× </span>}
-                  <Link href={`/p/${line.itemId}`} className="hover:underline">
+                  <Link
+                    href={`/p/${line.itemId}?line=${encodeURIComponent(line.key)}`}
+                    className="hover:underline"
+                  >
                     {line.name}
                   </Link>
                 </p>

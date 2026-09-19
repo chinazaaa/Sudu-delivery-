@@ -199,10 +199,18 @@ export function clearPeople(): void {
   savePeople({ people: [], active: "" });
 }
 
-export function addLine(line: Omit<CartLine, "key" | "qty" | "forName">, qty = 1): void {
+/**
+ * @param owner Whose food this is, when it is not whoever is being shopped
+ *  for right now: changing Bola's pizza has to give it back to Bola.
+ */
+export function addLine(
+  line: Omit<CartLine, "key" | "qty" | "forName">,
+  qty = 1,
+  owner?: string
+): void {
   load();
   // Whoever is being shopped for right now owns the line.
-  const forName = activePerson;
+  const forName = owner ?? activePerson;
   const key = lineKey(line.itemId, line.optionIds, forName);
   const existing = lines.find((l) => l.key === key);
   save(

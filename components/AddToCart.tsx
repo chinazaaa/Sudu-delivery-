@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { addLine, addPerson, setActivePerson, usePeople } from "@/lib/cart";
+import { useEffect, useState } from "react";
+import { addLine, addPerson, setActivePerson, setQty as setCartQty, useCart, usePeople } from "@/lib/cart";
+import { useRouter } from "next/navigation";
 import { naira } from "@/lib/money";
 import type { ItemView } from "@/lib/view";
 
@@ -10,13 +11,39 @@ import type { ItemView } from "@/lib/view";
 export default function AddToCart({
   item,
   restaurant,
+  /** The cart line being changed, when this page was opened from the cart. */
+  editingKey = "",
 }: {
   item: ItemView;
   restaurant: { id: string; name: string };
+  editingKey?: string;
 }) {
   const { people, active } = usePeople();
+  const router = useRouter();
+  const lines = useCart();
+  const editing = editingKey ? (lines.find((line) => line.key === editingKey) ?? null) : null;
+
+  // Opened from the cart, the questions start answered. Coming back to
+  // something you already chose and finding every choice blank made changing
+  // one of them a rebuild of the whole thing.
   const [picked, setPicked] = useState<Record<string, string[]>>({});
   const [qty, setQty] = useState(1);
+  // The cart is read in the browser, so the line arrives a moment after the
+  // page does. This fills the boxes in as soon as it is there, once.
+  const [filled, setFilled] = useState(false);
+  useEffect(() => {
+    if (filled || !editing) return;
+    const start: Record<string, string[]> = {};
+    for (const group of item.groups) {
+      const theirs = group.options
+        .filter((option) => editing.optionIds.includes(option.id))
+        .map((option) => option.id);
+      if (theirs.length > 0) start[group.id] = theirs;
+    }
+    setPicked(start);
+    setQty(editing.qty);
+    setFilled(true);
+  }, [editing, filled, item.groups]);
   const [added, setAdded] = useState(0);
   const [forWho, setForWho] = useState(false);
   const [friend, setFriend] = useState("");
@@ -43,6 +70,10 @@ export default function AddToCart({
   }
 
   function put() {
+    // Changing something replaces it rather than leaving the old one behind,
+    // and it stays whoever's it was: a bag is labelled by name.
+    if (editing) setCartQty(editing.key, 0);
+
     addLine(
       {
         itemId: item.id,
@@ -54,8 +85,17 @@ export default function AddToCart({
         unitPrice,
         choices: chosen.map((o) => o.name),
       },
-      qty
+      qty,
+      editing ? editing.forName : undefined
     );
+
+    // Changing a line is finished business: back to the cart they came from,
+    // rather than a page saying it has been added to a cart they are looking
+    // at in another tab of their head.
+    if (editing) {
+      router.push("/cart");
+      return;
+    }
     setAdded((count) => count + qty);
   }
 
@@ -131,7 +171,9 @@ export default function AddToCart({
             ? "Sold out today"
             : missing.length > 0
               ? `Choose ${missing[0].name.toLowerCase()}`
-              : `Add${active ? ` for ${active}` : ""} · ${naira(unitPrice * qty)}`}
+              : editing
+                ? `Save the change · ${naira(unitPrice * qty)}`
+                : `Add${active ? ` for ${active}` : ""} · ${naira(unitPrice * qty)}`}
         </button>
       </div>
 

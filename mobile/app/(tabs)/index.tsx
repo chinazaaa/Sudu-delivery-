@@ -26,19 +26,22 @@ export default function Home() {
   const router = useRouter();
   const [shop, setShop] = useState<Shop | null>(null);
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  // Only a pull sets this. The first load has its own spinner in the middle
+  // of the page, and turning the pull-to-refresh one on as well put two
+  // spinners on the screen for the same wait.
+  const [pulling, setPulling] = useState(false);
   const [latest, setLatest] = useState<OrderView | null>(null);
   const [query, setQuery] = useState("");
 
   const load = useCallback(async (fresh = false) => {
-    setBusy(true);
+    if (fresh) setPulling(true);
     try {
       setShop(await api.shop(fresh));
       setError("");
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : "Could not reach the shop.");
     } finally {
-      setBusy(false);
+      if (fresh) setPulling(false);
     }
 
     try {
@@ -86,7 +89,7 @@ export default function Home() {
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 24, gap: 14 }}
         refreshControl={
-          <RefreshControl refreshing={busy} onRefresh={() => load(true)} tintColor={T.brand} />
+          <RefreshControl refreshing={pulling} onRefresh={() => load(true)} tintColor={T.brand} />
         }
       >
         {latest && (
