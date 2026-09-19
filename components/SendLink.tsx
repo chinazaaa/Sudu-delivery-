@@ -21,11 +21,17 @@ import { useState } from "react";
  */
 export default function SendLink({
   message,
+  link,
   label = "Send on WhatsApp",
   tone = "primary",
 }: {
   /** The whole message, ending in the link. */
   message: string;
+  /** Just the address. Copy puts this on the clipboard rather than the whole
+   *  message, because somebody copying a link is nearly always about to write
+   *  their own words around it, and a sentence they did not write is then
+   *  something to delete. */
+  link?: string;
   label?: string;
   tone?: "primary" | "quiet";
 }) {
@@ -33,7 +39,7 @@ export default function SendLink({
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(message);
+      await navigator.clipboard.writeText(link ?? message);
       setCopied("yes");
       setTimeout(() => setCopied("no"), 2500);
     } catch {
@@ -64,9 +70,9 @@ export default function SendLink({
         <textarea
           readOnly
           rows={3}
-          value={message}
+          value={link ?? message}
           onFocus={(event) => event.currentTarget.select()}
-          aria-label="The message to copy"
+          aria-label={link ? "The link to copy" : "The message to copy"}
           className="field text-xs"
         />
       )}

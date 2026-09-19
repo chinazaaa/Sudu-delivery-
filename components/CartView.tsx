@@ -24,6 +24,7 @@ import {
 import { feeFor, type Band } from "@/lib/fees";
 import { nearMiss, type LiveOffer } from "@/lib/offers";
 import { naira } from "@/lib/money";
+import PayChoice from "./PayChoice";
 
 /** Review and fix the order. Nothing is asked for here except the food. */
 export default function CartView({
@@ -84,6 +85,9 @@ export default function CartView({
   const [phone, setPhone] = useState("");
   const [hostel, setHostel] = useState("");
   const [note, setNote] = useState("");
+  // A group order never passes a checkout screen, so this is the only place
+  // it gets asked. Without it everybody in a car was put down as a transfer.
+  const [method, setMethod] = useState<"transfer" | "card">("transfer");
   // Everybody else's food, so this page shows the whole car rather than only
   // the part of it this person is holding.
   const [eachNow, setEachNow] = useState(0);
@@ -180,7 +184,13 @@ export default function CartView({
       const response = await fetch(`/api/party/${group}/finalise`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lines: toServerLines(cart), phone, hostel, note }),
+        body: JSON.stringify({
+          lines: toServerLines(cart),
+          phone,
+          hostel,
+          note,
+          paymentMethod: method,
+        }),
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) {
@@ -618,7 +628,9 @@ export default function CartView({
 
       {asking && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-4 sm:items-center">
-          <div className="w-full max-w-sm space-y-3 rounded-3xl bg-paper p-5 shadow-bar">
+          {/* Tall enough now to run off a small phone, so it scrolls rather
+              than hiding the button at the bottom of it. */}
+          <div className="max-h-[85vh] w-full max-w-sm space-y-3 overflow-y-auto rounded-3xl bg-paper p-5 shadow-bar">
             <div>
               <h2 className="text-lg font-extrabold">
                 {mine?.finalised ? "Update your food?" : "Put this food in the group?"}
@@ -681,6 +693,8 @@ export default function CartView({
               aria-label="Anything we should know"
               className="field"
             />
+
+            <PayChoice value={method} onChange={setMethod} />
 
             {problem !== "" && (
               <p className="text-sm font-semibold text-brand-dark">{problem}</p>

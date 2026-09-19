@@ -28,6 +28,7 @@ export default function ShareLink({ label }: { label: string }) {
   return (
     <SendLink
       message={`Please help me pay for this Sudu order: ${url}`}
+      link={url}
       label={label}
       tone="quiet"
     />

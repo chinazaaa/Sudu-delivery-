@@ -45,7 +45,9 @@ export default function GroupActions({
         await navigator.share({ text: message });
         return;
       }
-      await navigator.clipboard.writeText(message);
+      // No sheet, so this is a copy, and a copy is the link on its own:
+      // whoever pastes it is about to write their own words around it.
+      await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {

@@ -492,6 +492,7 @@ export default function GroupBoard({
 
         <SendLink
           message={invite}
+          link={shareUrl}
           tone="quiet"
           label={members.length === 0 ? "Send the link on WhatsApp" : "Add somebody on WhatsApp"}
         />

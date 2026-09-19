@@ -35,7 +35,7 @@ export default function ShareDelivery({
         food, on their own number.
       </p>
       <div className="mt-3">
-        <SendLink message={message} label="Send my friends the link on WhatsApp" />
+        <SendLink message={message} link={url} label="Send my friends the link on WhatsApp" />
       </div>
     </div>
   );
