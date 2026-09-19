@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { db } from "@/lib/supabase";
 import { groupOrders } from "@/lib/groups";
-import { cartValues, groupCarts, isReady } from "@/lib/group-carts";
+import { cartValues, changedSinceFinalised, groupCarts, isReady } from "@/lib/group-carts";
 import { shareNow } from "@/lib/groups";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +69,10 @@ export async function GET(
               summary: worth.get(seat.id)?.summary ?? "",
               lines: worth.get(seat.id)?.lines ?? [],
               ready: isReady(seat),
+              finalised: seat.finalised_at !== null,
+              // Their food moved after they said they were done, so what the
+              // car holds is not what they agreed to any more.
+              changed: changedSinceFinalised(seat),
             }));
           })(),
       closesAt: data.closes_at,

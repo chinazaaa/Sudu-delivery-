@@ -19,7 +19,24 @@ export type GroupCart = {
   /** Set when they are finished and we know where their food goes. */
   done_at: string | null;
   created_at: string;
+  updated_at: string;
 };
+
+/**
+ * Food changed after they said they were done.
+ *
+ * The cart is shared with the car as it is chosen, so the seat's food is
+ * always current; what says whether it still matches what they agreed to is
+ * when it last moved against when they finished. A second of slack, because
+ * finalising writes both stamps and they are not written in the same
+ * instant.
+ */
+export function changedSinceFinalised(cart: GroupCart): boolean {
+  if (!cart.finalised_at) return false;
+  return (
+    new Date(cart.updated_at).getTime() - new Date(cart.finalised_at).getTime() > 1000
+  );
+}
 
 /** Ready to travel: their food is settled and we know how to deliver it. */
 export function isReady(cart: GroupCart): boolean {

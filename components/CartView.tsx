@@ -72,9 +72,14 @@ export default function CartView({
   // Everybody else's food, so this page shows the whole car rather than only
   // the part of it this person is holding.
   const [eachNow, setEachNow] = useState(0);
+  // Where this person stands: not finished, finished, or finished and then
+  // changed their mind. The button has to say which.
+  const [mine, setMine] = useState<{ finalised: boolean; changed: boolean } | null>(null);
   const [others, setOthers] = useState<
     {
       isMine?: boolean;
+      finalised?: boolean;
+      changed?: boolean;
       name: string;
       items: number;
       food: number;
@@ -119,6 +124,8 @@ export default function CartView({
         .then((response) => response.json())
         .then((data: { members?: typeof others; eachNow?: number }) => {
           if (alive) setEachNow(data.eachNow ?? 0);
+          const me = (data.members ?? []).find((one) => one.isMine);
+          if (alive) setMine(me ? { finalised: !!me.finalised, changed: !!me.changed } : null);
           // Everybody but the reader. Their own food is the section above,
           // where they can change it; listing it twice, once unchangeable,
           // reads as somebody else having ordered the same thing.
@@ -489,10 +496,13 @@ export default function CartView({
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-4 sm:items-center">
           <div className="w-full max-w-sm space-y-3 rounded-3xl bg-paper p-5 shadow-bar">
             <div>
-              <h2 className="text-lg font-extrabold">Put this food in the group?</h2>
+              <h2 className="text-lg font-extrabold">
+                {mine?.finalised ? "Update your food?" : "Put this food in the group?"}
+              </h2>
               <p className="mt-1 text-sm text-muted">
-                Your share of delivery is worked out when the group closes, so
-                nothing is charged yet.
+                {mine?.finalised
+                  ? "This replaces what you put in before. Your share of delivery is worked out when the group closes, so nothing is charged yet."
+                  : "Your share of delivery is worked out when the group closes, so nothing is charged yet."}
               </p>
             </div>
 
@@ -558,7 +568,11 @@ export default function CartView({
               disabled={sending}
               className="btn-primary w-full"
             >
-              {sending ? "Saving…" : "Yes, put my food in"}
+              {sending
+                ? "Saving…"
+                : mine?.finalised
+                  ? "Yes, update it"
+                  : "Yes, put my food in"}
             </button>
             <button
               type="button"
@@ -586,13 +600,25 @@ export default function CartView({
             <p className="truncate text-lg font-extrabold">{naira(cartSubtotal(cart))}</p>
           </div>
           {group !== "" ? (
-            <button
-              type="button"
-              onClick={() => setAsking(true)}
-              className="btn-primary shrink-0 px-7 py-3.5"
-            >
-              Finalise my food
-            </button>
+            mine?.finalised && !mine.changed ? (
+              // Nothing has moved since they finished, so there is nothing to
+              // do here. Saying "Finalise" again invites them to wonder
+              // whether the first one took.
+              <span className="shrink-0 rounded-full bg-mint/15 px-5 py-3 text-center text-sm font-bold text-mint">
+                Finalised
+                <span className="block text-xs font-semibold text-mint/80">
+                  change something to update
+                </span>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAsking(true)}
+                className="btn-primary shrink-0 px-7 py-3.5"
+              >
+                {mine?.finalised ? "Update my food" : "Finalise my food"}
+              </button>
+            )
           ) : (
             <Link href="/checkout" className="btn-primary shrink-0 px-7 py-3.5">
               Checkout
