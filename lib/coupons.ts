@@ -27,8 +27,7 @@ export type Coupon = {
   included_items: number | null;
   /** What each item beyond that adds. */
   extra_per_item: number;
-  /** Same day windows it is good for, as start hours: "12,15". */
-  windows: string;
+
   /** A choice every line must have made, by name: "Large". */
   required_choice: string;
   /** Whether the offer reaches a car somebody has to themselves. */
@@ -177,10 +176,6 @@ export async function liveOffers(): Promise<LiveOffer[]> {
     runs: (runs ?? [])
       .filter((row) => row.coupon_code === coupon.code)
       .map((row) => row.batch_id as string),
-    windows: (coupon.windows ?? "")
-      .split(",")
-      .map((one) => Number(one.trim()))
-      .filter((one) => Number.isFinite(one)),
     sameDay: coupon.same_day ?? false,
     firstOrderOnly: coupon.first_order_only,
     minEach: coupon.min_per_person ?? 0,

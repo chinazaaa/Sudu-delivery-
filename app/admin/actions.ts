@@ -1086,8 +1086,6 @@ export async function saveCoupon(form: FormData): Promise<void> {
       const floor = Math.round(Number(form.get("min_per_person") ?? 0));
       return Number.isFinite(floor) && floor > 0 ? floor : 0;
     })(),
-    // Same day windows it is good for, as the hours they open.
-    windows: form.getAll("window").map(String).filter(Boolean).join(","),
     // Whether it reaches a car somebody has to themselves at all. Off by
     // default: a flat price built for a shared run does not cover one trip
     // for one person.

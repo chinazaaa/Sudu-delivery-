@@ -116,13 +116,6 @@ export default async function CouponsAdmin({
     }
   }
 
-  const hours = await hoursSpan();
-  const windows: { from: number; label: string }[] = [];
-  for (let from = hours.first; from < hours.last; from += 3) {
-    const to = Math.min(from + 3, hours.last);
-    windows.push({ from, label: `${clockOf(from, 0)} to ${clockOf(to, 0)}` });
-  }
-
   // One bundle for the form, whether it is making an offer or changing one.
   const formData: CouponFormData = {
     shops,
@@ -131,7 +124,6 @@ export default async function CouponsAdmin({
       id: run.id,
       label: `${runDateLabel(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
     })),
-    windows,
   };
 
   return (
@@ -267,7 +259,6 @@ function valuesOf(coupon: Awaited<ReturnType<typeof listCoupons>>[number]): Coup
     extra_per_item: coupon.extra_per_item ?? 0,
     min_per_person: coupon.min_per_person ?? 0,
     required_choice: coupon.required_choice ?? "",
-    windows: coupon.windows ?? "",
     sameDay: coupon.same_day ?? false,
     runs: coupon.runs.map((run) => run.batchId),
     places: coupon.places.map((place) => place.id),

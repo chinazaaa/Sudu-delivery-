@@ -11,7 +11,6 @@ export type CouponFormData = {
   shops: ScopeShop[];
   dishes: { id: string; name: string; restaurant: string }[];
   runs: { id: string; label: string }[];
-  windows: { from: number; label: string }[];
 };
 
 export type CouponFormValues = {
@@ -27,7 +26,6 @@ export type CouponFormValues = {
   extra_per_item: number;
   min_per_person: number;
   required_choice: string;
-  windows: string;
   sameDay: boolean;
   runs: string[];
   places: string[];
@@ -72,7 +70,7 @@ export default function CouponForm({
   values: CouponFormValues | null;
   data: CouponFormData;
 }) {
-  const { shops, dishes, runs, windows } = data;
+  const { shops, dishes, runs } = data;
   const editing = values !== null;
 
   const [kind, setKind] = useState<Kind>(
@@ -87,9 +85,6 @@ export default function CouponForm({
 
   const [pickedRuns, setPickedRuns] = useState<string[]>(values?.runs ?? []);
   const [onSameDay, setOnSameDay] = useState(values?.sameDay ?? false);
-  const [pickedWindows, setPickedWindows] = useState<string[]>(
-    (values?.windows ?? "").split(",").map((one) => one.trim()).filter(Boolean)
-  );
 
   const toggle = (value: string, list: string[], set: (next: string[]) => void) =>
     set(list.includes(value) ? list.filter((one) => one !== value) : [...list, value]);
@@ -384,33 +379,9 @@ export default function CouponForm({
           </button>
         </div>
 
-        {onSameDay && windows.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {pickedWindows.map((from) => (
-              <input key={from} type="hidden" name="window" value={from} />
-            ))}
-            {windows.map((window) => (
-              <button
-                key={window.from}
-                type="button"
-                onClick={() =>
-                  toggle(String(window.from), pickedWindows, setPickedWindows)
-                }
-                className={`chip ${
-                  pickedWindows.includes(String(window.from))
-                    ? "border-brand bg-brand text-white"
-                    : "border-black/10 bg-white"
-                }`}
-              >
-                {window.label}
-              </button>
-            ))}
-          </div>
-        )}
-
         <p className="mt-1 text-xs text-muted">
           {onSameDay
-            ? "Pick the windows it is good for, or none for any of them. A same day car is one trip for one person, so a flat price can cost you more than it brings."
+            ? "When you can go is already set by your delivery hours. Worth knowing: a same day car is one trip for one person, so a flat price can cost you more than it brings."
             : "It applies on runs and never on a car somebody has to themselves."}
         </p>
       </div>

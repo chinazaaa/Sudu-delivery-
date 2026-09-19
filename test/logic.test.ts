@@ -18,7 +18,6 @@ import {
   choiceValues,
   everyLineChose,
   nearMiss,
-  inWindowHours,
   offerFee,
   offerShare,
   pickOffer,
@@ -963,8 +962,9 @@ test("a promotion is flat until the taper, then it charges by the item", () => {
     items: [],
     choice: "",
     sameDay: false,
+    fromHour: null,
+    toHour: null,
     runs: [],
-    windows: [],
     firstOrderOnly: false,
     minEach: 1000,
   };
@@ -987,8 +987,9 @@ test("an offer for one kitchen stands down on a cart with anything else in it", 
     items: [],
     choice: "",
     sameDay: false,
+    fromHour: null,
+    toHour: null,
     runs: [],
-    windows: [],
     firstOrderOnly: false,
     minEach: 1000,
   };
@@ -1000,15 +1001,6 @@ test("an offer for one kitchen stands down on a cart with anything else in it", 
   assert.equal(ask([]), null);
 });
 
-test("a promotion good for one window ignores a car outside it", () => {
-  // Noon and three o'clock Lagos, which is eleven and two in UTC.
-  assert.equal(inWindowHours([12], "2026-09-19T11:00:00Z"), true);
-  assert.equal(inWindowHours([12], "2026-09-19T13:59:00Z"), true);
-  assert.equal(inWindowHours([12], "2026-09-19T14:00:00Z"), false);
-  // No windows named is every window, and a run has no time at all.
-  assert.equal(inWindowHours([], "2026-09-19T14:00:00Z"), true);
-  assert.equal(inWindowHours([12], null), true);
-});
 
 test("the top band can charge by the item instead of one price for any load", () => {
   const bands = [
@@ -1035,8 +1027,9 @@ test("a promotion splits in a group, but never below the floor", () => {
     items: [],
     choice: "",
     sameDay: false,
+    fromHour: null,
+    toHour: null,
     runs: [],
-    windows: [],
     firstOrderOnly: false,
     minEach: 1000,
   };
@@ -1062,8 +1055,9 @@ test("free delivery is earned by the dishes that carry it, and nothing else", ()
     items: ["bbq-beef", "bbq-chicken"],
     choice: "",
     sameDay: false,
+    fromHour: null,
+    toHour: null,
     runs: [],
-    windows: [],
     firstOrderOnly: false,
     minEach: 0,
   };
@@ -1118,8 +1112,9 @@ test("the cart says what is standing between it and an offer", () => {
     items: ["bbq-beef"],
     choice: "",
     sameDay: false,
+    fromHour: null,
+    toHour: null,
     runs: [],
-    windows: [],
     firstOrderOnly: false,
     minEach: 0,
   };
@@ -1184,4 +1179,36 @@ test("a link opens whether it carries the long id or the short code", async () =
   assert.equal(shortRef({ id: long, short: "k3f9x2a" }), "k3f9x2a");
   assert.equal(shortRef({ id: long, short: null }), long);
   assert.equal(shortRef({ id: long, short: "  " }), long);
+});
+
+test("an offer stays off a car somebody has to themselves unless it says so", () => {
+  const offer = {
+    code: "DOM2K",
+    note: "Domino's",
+    fee: 2000,
+    includedItems: null,
+    extraPerItem: 0,
+    places: ["dominos"],
+    items: [],
+    choice: "",
+    sameDay: false,
+    runs: [],
+    firstOrderOnly: false,
+    minEach: 0,
+  };
+  const ask = (one: typeof offer, deliverAt: string | null) =>
+    pickOffer([one], {
+      restaurantIds: ["dominos"],
+      items: 2,
+      batchId: "b1",
+      deliverAt,
+      returning: false,
+    });
+
+  // A run has no time of its own, so it is never held back.
+  assert.equal(ask(offer, null)?.fee, 2000);
+  // A same day car is a trip for one person, and a flat price does not cover
+  // one unless somebody says it should.
+  assert.equal(ask(offer, "2026-09-19T14:00:00Z"), null);
+  assert.equal(ask({ ...offer, sameDay: true }, "2026-09-19T14:00:00Z")?.fee, 2000);
 });

@@ -36,12 +36,11 @@ export type LiveOffer = {
   choice: string;
   /** Empty means any run. */
   runs: string[];
-  /** Same day window opening hours. Empty means the offer is for runs only,
-   *  which is the safe answer: a flat price that replaces a car somebody has
-   *  to themselves is driving at a loss rather than discounting. */
-  windows: number[];
-  /** Whether it reaches a same day car at all. */
+  /** Whether it reaches a same day car at all. Off is the safe answer: a
+   *  flat price that replaces a car somebody has to themselves is driving at
+   *  a loss rather than discounting. */
   sameDay: boolean;
+
   firstOrderOnly: boolean;
   /** In a group the fee splits, but never below this each. */
   minEach: number;
@@ -95,7 +94,6 @@ export function pickOffer(
     // when it says so, because the flat price that makes sense shared across
     // a run does not cover a car going out for one order.
     if (context.deliverAt && !offer.sameDay) continue;
-    if (!inWindowHours(offer.windows, context.deliverAt ?? null)) continue;
 
     earned.push({ offer, fee: offerFee(offer, context.items) });
   }
@@ -124,26 +122,6 @@ export function offerFee(offer: LiveOffer, items: number): number {
   return offer.fee + Math.max(0, items - offer.includedItems) * offer.extraPerItem;
 }
 
-/**
- * Whether a delivery time falls in one of the windows an offer names.
- *
- * The windows on offer slide through the day as it gets late, so an offer
- * pinned to an instant would stop matching by two o'clock. It is pinned to
- * the hour a window opens instead, and a time belongs to it if it falls
- * inside the three hours that window covers.
- *
- * No windows named means every window, and a run is not a window at all, so
- * an order on a run is never held back by this.
- */
-export function inWindowHours(hours: number[], deliverAt: string | null): boolean {
-  // A run has no time of its own, so nothing here can hold it back.
-  if (!deliverAt) return true;
-  if (hours.length === 0) return true;
-
-  // Lagos is UTC+1 all year, so the hour there is the hour here plus one.
-  const hour = (new Date(deliverAt).getUTCHours() + 1) % 24;
-  return hours.some((from) => hour >= from && hour < from + 3);
-}
 
 /**
  * The offer in a few words, for a badge on a card.
@@ -293,7 +271,6 @@ export function nearMiss(
     if (offer.firstOrderOnly && context.returning) continue;
     if (offer.runs.length > 0 && !offer.runs.includes(context.batchId)) continue;
     if (context.deliverAt && !offer.sameDay) continue;
-    if (!inWindowHours(offer.windows, context.deliverAt ?? null)) continue;
 
     const qualifies = (line: CartItem) =>
       (offer.places.length === 0 || offer.places.includes(line.restaurantId)) &&
