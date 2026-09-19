@@ -263,8 +263,8 @@ export default async function BatchPage({
                 {shopped && (
                   <p className="rounded-2xl bg-mint/10 px-4 py-3 text-sm font-semibold text-mint">
                     {finished
-                      ? "This run is finished. The counter sheet is here for the record."
-                      : "The food is bought and on the road. This is here for the record."}
+                      ? "This run is finished. The list is here for the record, and what you actually paid still goes in below."
+                      : "The food is bought and on the road. The list is here for the record, and what you actually paid still goes in below."}
                   </p>
                 )}
 
@@ -785,6 +785,9 @@ export default async function BatchPage({
                     {batch.fuel_cost > 0 && (
                       <Row label="Fuel" value={`−${naira(batch.fuel_cost)}`} />
                     )}
+                    {batch.transport_cost > 0 && (
+                      <Row label="Transport" value={`−${naira(batch.transport_cost)}`} />
+                    )}
                     {batch.driver_cost > 0 && (
                       <Row label="Driver" value={`−${naira(batch.driver_cost)}`} />
                     )}
@@ -831,6 +834,11 @@ export default async function BatchPage({
                       <input type="hidden" name="batch_id" value={batch.id} />
                       <input type="hidden" name="fuel_cost" value={batch.fuel_cost || ""} />
                       <input type="hidden" name="driver_cost" value={batch.driver_cost || ""} />
+                      <input
+                        type="hidden"
+                        name="transport_cost"
+                        value={batch.transport_cost || ""}
+                      />
                       <input type="hidden" name="other_cost" value={batch.other_cost || ""} />
                       <input type="hidden" name="cost_note" value={batch.cost_note || ""} />
                       <input type="hidden" name="food_spend" value="" />
@@ -861,6 +869,22 @@ export default async function BatchPage({
                           placeholder="0"
                           className="field"
                         />
+                      </div>
+                      <div>
+                        <label className="label" htmlFor="transport_cost">
+                          Transport
+                        </label>
+                        <input
+                          id="transport_cost"
+                          name="transport_cost"
+                          inputMode="numeric"
+                          defaultValue={batch.transport_cost || ""}
+                          placeholder="0"
+                          className="field"
+                        />
+                        <p className="mt-1 text-xs text-muted">
+                          Keke, bike, a car for the bags.
+                        </p>
                       </div>
                       <div>
                         <label className="label" htmlFor="driver_cost">Driver</label>

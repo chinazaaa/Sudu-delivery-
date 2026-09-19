@@ -135,7 +135,8 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   const gotBack = new Map(rows.map((row) => [row.line_key, row.recovered ?? 0]));
 
   const commission = await commissionFor(paid);
-  const costs = batch.fuel_cost + batch.driver_cost + batch.other_cost;
+  const costs =
+    batch.fuel_cost + batch.driver_cost + (batch.transport_cost ?? 0) + batch.other_cost;
 
   // What the food actually cost. The menu price is only a guess at it: buy
   // enough from one counter and they give it to you for less, and that
@@ -564,7 +565,7 @@ export async function batchOverview(window: "recent" | "all" = "recent"): Promis
     const mine = all.filter((o) => o.batch_id === b.id && o.status !== "refunded");
     const paid = mine.filter((o) => o.status !== "pending");
     const margin = sum(paid, (o) => o.total - o.subtotal_food);
-    const costs = b.fuel_cost + b.driver_cost + b.other_cost;
+    const costs = b.fuel_cost + b.driver_cost + (b.transport_cost ?? 0) + b.other_cost;
 
     return {
       ...b,
@@ -640,15 +641,39 @@ export async function promoterRows(): Promise<PromoterRow[]> {
  * know rather than inventing a number.
  */
 export async function typicalCosts(): Promise<number | null> {
-  const { data } = await db()
-    .from("batches")
-    .select("fuel_cost, driver_cost, other_cost")
-    .eq("stage", "handed_out")
-    .order("run_date", { ascending: false })
-    .limit(6);
+  // Named columns, so the query fails outright if one of them is not there
+  // yet. The fallback is the same question without the newest column.
+  const read = (withTransport: boolean) =>
+    db()
+      .from("batches")
+      .select(
+        withTransport
+          ? "fuel_cost, driver_cost, transport_cost, other_cost"
+          : "fuel_cost, driver_cost, other_cost"
+      )
+      .eq("stage", "handed_out")
+      .order("run_date", { ascending: false })
+      .limit(6)
+      .overrideTypes<
+        {
+          fuel_cost: number;
+          driver_cost: number;
+          transport_cost?: number;
+          other_cost: number;
+        }[]
+      >();
+
+  let { data, error } = await read(true);
+  if (error) ({ data } = await read(false));
 
   const runs = (data ?? [])
-    .map((row) => (row.fuel_cost ?? 0) + (row.driver_cost ?? 0) + (row.other_cost ?? 0))
+    .map(
+      (row) =>
+        (row.fuel_cost ?? 0) +
+        (row.driver_cost ?? 0) +
+        (row.transport_cost ?? 0) +
+        (row.other_cost ?? 0)
+    )
     .filter((cost) => cost > 0);
 
   if (runs.length === 0) return null;

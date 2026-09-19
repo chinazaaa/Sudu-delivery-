@@ -39,7 +39,10 @@ export async function openRunsBetween(from: string, to: string): Promise<number>
   // what customers are told about when it lands.
   const schedule = await runSchedule();
   const windows = await deliveryWindows();
-  const rows: Array<Omit<Batch, "id">> = [];
+  // transport_cost is left out rather than sent as a zero: the column has a
+  // default, and naming a column the database has not been given yet would
+  // fail the whole insert and open no runs at all.
+  const rows: Array<Omit<Batch, "id" | "transport_cost">> = [];
 
   for (let date = from; date <= to; date = addDays(date, 1)) {
     const weekday = weekdayOf(date);

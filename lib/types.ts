@@ -77,6 +77,8 @@ export type Batch = {
    *  price. Zero means the menu prices stand. */
   food_spend: number;
   driver_cost: number;
+  /** Keke, bike, a car for the bags. Not the fuel and not the driver. */
+  transport_cost: number;
   other_cost: number;
   cost_note: string;
 };

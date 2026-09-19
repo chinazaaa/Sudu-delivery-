@@ -309,16 +309,23 @@ export async function setRunCosts(form: FormData): Promise<void> {
   // keep theirs: absent means leave it alone, not set it to nothing.
   const whole = form.has("food_spend") ? { food_spend: money("food_spend") } : {};
 
-  await db()
+  const id = String(form.get("batch_id"));
+  const costs = {
+    fuel_cost: money("fuel_cost"),
+    driver_cost: money("driver_cost"),
+    other_cost: money("other_cost"),
+    ...whole,
+    cost_note: String(form.get("cost_note") ?? "").trim(),
+  };
+
+  // Transport is the newest of these. Naming a column the database has not
+  // been given yet fails the whole update, which would lose the fuel and the
+  // driver along with it, so it is tried and then dropped.
+  const { error } = await db()
     .from("batches")
-    .update({
-      fuel_cost: money("fuel_cost"),
-      driver_cost: money("driver_cost"),
-      other_cost: money("other_cost"),
-      ...whole,
-      cost_note: String(form.get("cost_note") ?? "").trim(),
-    })
-    .eq("id", String(form.get("batch_id")));
+    .update({ ...costs, transport_cost: money("transport_cost") })
+    .eq("id", id);
+  if (error) await db().from("batches").update(costs).eq("id", id);
 
   revalidatePath("/admin", "layout");
 }
