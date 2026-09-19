@@ -13,7 +13,12 @@ export const dynamic = "force-dynamic";
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
-  const home = [{ url: site, changeFrequency: "daily" as const, priority: 1 }];
+  const home = [
+    { url: site, changeFrequency: "daily" as const, priority: 1 },
+    // Both are public pages the stores point at, so they are worth finding.
+    { url: `${site}/support`, changeFrequency: "monthly" as const, priority: 0.3 },
+    { url: `${site}/privacy`, changeFrequency: "monthly" as const, priority: 0.3 },
+  ];
 
   try {
     const menu = await menuView();

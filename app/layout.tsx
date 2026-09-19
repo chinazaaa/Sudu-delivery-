@@ -97,8 +97,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   Promoters
                 </Link>
               )}
-              {/* The app stores require this at a public address, and it
-                  belongs where anybody can find it anyway. */}
+              {/* Both app stores require these at a public address, and they
+                  belong where anybody can find them anyway. */}
+              <Link href="/support" className="underline">
+                Help
+              </Link>
               <Link href="/privacy" className="underline">
                 Privacy
               </Link>

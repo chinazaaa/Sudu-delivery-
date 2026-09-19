@@ -200,6 +200,7 @@ export default function Account() {
           location, read your contacts, or use your camera.
         </Text>
         <Link label="Read the full privacy policy" onPress={() => Linking.openURL(`${SITE}/privacy`)} />
+        <Link label="Get help with an order" onPress={() => Linking.openURL(`${SITE}/support`)} />
       </View>
 
       <View style={card}>
