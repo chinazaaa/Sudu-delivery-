@@ -17,6 +17,8 @@ export type CounterLine = {
   key: string;
   /** What was actually handed over for this line, once somebody has said. */
   paid: number | null;
+  /** So a price that has really gone up can be put right on the menu. */
+  itemId: string;
 };
 export type CounterGroup = {
   restaurant: string;
@@ -255,6 +257,7 @@ export function groupForCounter(lines: OrderLine[]): CounterGroup[] {
         unitPrice: line.unit_price_at_order,
         key: `${line.restaurant}|${key}`,
         paid: null,
+        itemId: line.menu_item_id,
       });
     byRestaurant.set(line.restaurant, items);
   }

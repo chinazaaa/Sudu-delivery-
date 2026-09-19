@@ -201,6 +201,42 @@ export async function setCounterSpend(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
 }
 
+/**
+ * Put a menu price up, because a counter really has put it up.
+ *
+ * Only ever upward, and only from a figure somebody typed after paying it.
+ * A counter charging less is usually a promo or a good mood on the day, and
+ * following it down would drop the shop's own price on the strength of one
+ * afternoon. Charging more tends to stay charged, and a menu that is behind
+ * loses money on every order until somebody notices.
+ *
+ * Never automatic. The figure came from a phone at a counter, so a slipped
+ * digit would otherwise raise a price nobody meant to raise.
+ */
+export async function raiseMenuPrice(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const itemId = String(form.get("item_id") ?? "");
+  const by = Math.round(Number(form.get("by") ?? 0));
+  if (!itemId || !Number.isFinite(by) || by <= 0) return;
+
+  const { data: item } = await db()
+    .from("menu_items")
+    .select("price_food")
+    .eq("id", itemId)
+    .maybeSingle();
+  if (!item) return;
+
+  await db()
+    .from("menu_items")
+    .update({ price_food: (item.price_food as number) + by })
+    .eq("id", itemId);
+
+  updateTag("menu");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
+}
+
 export async function setRunCosts(form: FormData): Promise<void> {
   await assertAdmin();
   const money = (field: string) => {

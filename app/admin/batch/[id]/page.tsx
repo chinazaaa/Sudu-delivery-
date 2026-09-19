@@ -1,5 +1,5 @@
 import SaveButton from "@/components/SaveButton";
-import { setCounterSpend } from "@/app/admin/actions";
+import { raiseMenuPrice, setCounterSpend } from "@/app/admin/actions";
 import ShortGroups from "@/components/admin/ShortGroups";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -346,6 +346,42 @@ export default async function BatchPage({
                             </span>
                           </form>
                         ))
+                    )}
+
+                    {/* Paid more than the menu says, on something whose price
+                        has probably just gone up. Offered rather than done:
+                        the figure came from a phone at a counter, and a
+                        slipped digit must not raise a price nobody meant to
+                        raise. Nothing is offered when it came in under,
+                        because that is usually a promo and following it down
+                        would cut the shop's price on one afternoon. */}
+                    {counter.flatMap((group) =>
+                      group.lines
+                        .filter(
+                          (line) =>
+                            line.paid !== null && line.paid > line.qty * line.unitPrice
+                        )
+                        .map((line) => {
+                          const upBy = Math.ceil(
+                            ((line.paid ?? 0) - line.qty * line.unitPrice) / line.qty
+                          );
+                          return (
+                            <form
+                              key={`raise-${line.key}`}
+                              action={raiseMenuPrice}
+                              className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-brand-tint px-3 py-2"
+                            >
+                              <input type="hidden" name="item_id" value={line.itemId} />
+                              <input type="hidden" name="by" value={upBy} />
+                              <span className="min-w-0 text-sm text-ink/80">
+                                <span className="font-semibold">{line.name}</span> cost{" "}
+                                {naira(upBy)} more each than the menu says. Put the
+                                menu up to {naira(line.unitPrice + upBy)}?
+                              </span>
+                              <SaveButton quiet>Put it up</SaveButton>
+                            </form>
+                          );
+                        })
                     )}
 
                     {/* One at a time, because one is what usually changed. */}
