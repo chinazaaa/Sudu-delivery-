@@ -13,6 +13,7 @@ import { runSchedule } from "@/lib/schedule";
 import { deliverySlots } from "@/lib/same-day";
 import { lagosInstant, lagosToday } from "@/lib/time";
 import { clearDeadGroups, ensureUpcomingBatches, openRunsBetween } from "@/lib/batches";
+import { closeGroup } from "@/lib/groups";
 import { fileFrom, uploadImage } from "@/lib/uploads";
 import { parseMenuText } from "@/lib/menu-import";
 import { newPin } from "@/lib/customer-auth";
@@ -956,6 +957,46 @@ export async function deleteClosedCarts(): Promise<void> {
     .delete()
     .not("handled_at", "is", null);
   if (error) throw new Error(`Could not clear those: ${error.message}`);
+
+  revalidatePath("/admin", "layout");
+}
+
+/**
+ * Close a shared delivery from this side.
+ *
+ * The clock is the usual way, and whoever is looking at the board is the
+ * second. Neither helps when the leader has shut their phone and the rest are
+ * waiting on a car nobody is going to close. This prices it now and turns
+ * every seat that has food and a number into an ordinary order.
+ */
+export async function closeGroupNow(form: FormData): Promise<void> {
+  await assertAdmin();
+  const result = await closeGroup(String(form.get("group_id")));
+  if (!result.ok) throw new Error(result.error);
+
+  revalidatePath("/admin", "layout");
+}
+
+/**
+ * Shut a group without ordering any of it.
+ *
+ * For a link nobody used, or a car that was a test. The seats go with it,
+ * because food left behind in a closed group is food somebody is still
+ * waiting for. Nobody is charged and nothing is bought.
+ */
+export async function cancelGroup(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("group_id"));
+
+  const seats = await db().from("group_carts").delete().eq("group_id", id);
+  if (seats.error) throw new Error(`Could not clear those seats: ${seats.error.message}`);
+
+  const { error } = await db()
+    .from("order_groups")
+    .update({ closed_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("closed_at", null);
+  if (error) throw new Error(`Could not cancel that group: ${error.message}`);
 
   revalidatePath("/admin", "layout");
 }

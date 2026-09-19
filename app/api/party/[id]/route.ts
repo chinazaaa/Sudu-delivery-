@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { db } from "@/lib/supabase";
+import { lookupColumn } from "@/lib/links";
 import { groupOrders } from "@/lib/groups";
 import { cartValues, changedSinceFinalised, groupCarts, isReady } from "@/lib/group-carts";
-import { shareNow } from "@/lib/groups";
+import { shareNow, sweepGroups } from "@/lib/groups";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +18,14 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
+  // Anybody watching the bar keeps the clock honest for everybody else.
+  sweepGroups();
+
   try {
     const { data } = await db()
       .from("order_groups")
       .select("id, leader_name, closes_at, closed_at, batch_id")
-      .eq("id", (await params).id)
+      .eq(lookupColumn((await params).id), (await params).id)
       .maybeSingle();
 
     if (!data) return NextResponse.json({ started: false });

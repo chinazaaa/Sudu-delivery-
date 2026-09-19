@@ -14,10 +14,15 @@ import { toBatchView } from "@/lib/view";
 import { deliverySlots } from "@/lib/same-day";
 import { offersByRestaurant } from "@/lib/coupons";
 import { offerBadge } from "@/lib/offers";
+import { sweepGroups } from "@/lib/groups";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
+  // Somebody opening the site is enough to close a group whose time is up, so
+  // a car does not sit open because everybody in it put their phone away.
+  sweepGroups();
+
   const [menu, batches, slides, settings, popularIds, bands] = await Promise.all([
     menuView(),
     openBatches(),

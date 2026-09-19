@@ -6,6 +6,8 @@ import { shortGroupsNow } from "@/lib/groups";
 import ShortGroups from "@/components/admin/ShortGroups";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
+import ConfirmButton from "@/components/admin/ConfirmButton";
+import { cancelGroup, closeGroupNow } from "@/app/admin/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +55,9 @@ export default async function GroupsPage() {
   );
 
   const filling = groups.filter((one) => one.carts.length > 0);
+  // Links somebody made and nobody used. Worth seeing only so they can be
+  // shut, because an open one keeps the clock coming back to it.
+  const empty = groups.filter((one) => one.carts.length === 0);
   // Read here while a run is still filling, which is early enough to ask
   // somebody for the difference rather than absorb it on the way out.
   const short = await shortGroupsNow();
@@ -135,9 +140,58 @@ export default async function GroupsPage() {
                 Delivery is worked out when this closes, split evenly between them.
                 Nothing here is an order yet, so nothing needs buying or collecting.
               </p>
+
+              {/* The clock closes these, and so does anybody looking at the
+                  board. Neither happens when everybody has put their phone
+                  away, so it can be done from here. */}
+              <div className="flex flex-wrap items-center gap-2 border-t border-black/5 pt-3">
+                <form action={closeGroupNow}>
+                  <input type="hidden" name="group_id" value={group.id} />
+                  <ConfirmButton tone="brand" confirm="Yes, close it now">
+                    Close it now
+                  </ConfirmButton>
+                </form>
+                <form action={cancelGroup}>
+                  <input type="hidden" name="group_id" value={group.id} />
+                  <ConfirmButton confirm="Yes, bin the whole group">
+                    Cancel it
+                  </ConfirmButton>
+                </form>
+                <span className="text-xs text-muted">
+                  Closing prices it and makes everybody&apos;s order. Cancelling bins
+                  the food and charges nobody.
+                </span>
+              </div>
             </article>
           ))}
         </div>
+      )}
+
+      {empty.length > 0 && (
+        <section className="card mt-4 space-y-2">
+          <h3 className="font-bold">Links nobody used</h3>
+          <p className="text-sm text-muted">
+            Somebody asked for a link and nothing came of it. Shutting one stops
+            it turning up here, and nobody is affected because there is no food
+            in it.
+          </p>
+          <ul className="divide-y divide-black/5 text-sm">
+            {empty.map((group) => (
+              <li key={group.id} className="flex items-center justify-between gap-3 py-2">
+                <span className="min-w-0">
+                  <span className="font-semibold">{group.leader || "No name"}</span>
+                  <span className="block text-xs text-muted">
+                    {group.when ? `arriving ${group.when}` : "no run named"}
+                  </span>
+                </span>
+                <form action={cancelGroup}>
+                  <input type="hidden" name="group_id" value={group.id} />
+                  <ConfirmButton confirm="Yes, shut it">Shut it</ConfirmButton>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   );

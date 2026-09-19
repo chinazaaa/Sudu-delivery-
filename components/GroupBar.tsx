@@ -131,7 +131,6 @@ export default function GroupBar() {
               party && (party.people ?? 0) > 0
                 ? `${party.ready ?? 0} of ${party.people} ready`
                 : "",
-              party?.when ? `arriving ${party.when}` : "",
             ]
               .filter(Boolean)
               .join(" · ")}

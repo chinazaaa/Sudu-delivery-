@@ -31,7 +31,7 @@ export async function POST(
   }
 
   const token = (await cookies()).get("sudu_seat")?.value ?? "";
-  const seat = token ? await seatFor(id, token) : null;
+  const seat = token ? await seatFor(group.id, token) : null;
   if (!seat || seat.lines.length === 0) {
     return NextResponse.json({ error: "There is no food waiting for you." }, { status: 404 });
   }
@@ -57,7 +57,7 @@ export async function POST(
   // What everybody else in this car was charged. Read from an order rather
   // than worked out again, so one number covers the whole car however late
   // this arrives.
-  const made = await groupOrders(id);
+  const made = await groupOrders(group.id);
   const share = made[0]?.fee ?? 0;
 
   const result = await placeOrder({
@@ -77,7 +77,7 @@ export async function POST(
   // It is an order now, so the seat goes. Leaving it would put them back in
   // this same state on the next page load.
   await db().from("group_carts").delete().eq("id", seat.id);
-  await db().from("orders").update({ group_id: id }).eq("id", result.orderId);
+  await db().from("orders").update({ group_id: group.id }).eq("id", result.orderId);
 
   return NextResponse.json({ ok: true, orderId: result.orderId });
 }

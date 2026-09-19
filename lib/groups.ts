@@ -280,9 +280,12 @@ export async function shareNow(
   groupId: string
 ): Promise<{ whole: number; each: number; people: number; offer?: string }> {
   const group = await getSharedGroup(groupId);
-  const carts = await groupCarts(groupId);
+  if (!group) return { whole: 0, each: 0, people: 0 };
+  // Everything below looks up by the group's real id, because what came in
+  // may have been the short code off a shared link.
+  const carts = await groupCarts(group.id);
   const people = carts.length;
-  if (!group || people === 0) return { whole: 0, each: 0, people: 0 };
+  if (people === 0) return { whole: 0, each: 0, people: 0 };
 
   const carried = countCartItems(carts);
   if (carried === 0) return { whole: 0, each: 0, people };
@@ -363,7 +366,7 @@ export async function startGroupClock(groupId: string): Promise<void> {
   // Somebody has finished. Food sitting in a cart does not start it: people
   // browse for half an hour, and a clock that began when the first person
   // added a drink would shut the car before anybody had chosen.
-  const finished = (await groupCarts(groupId)).some((cart) => cart.finalised_at);
+  const finished = (await groupCarts(group.id)).some((cart) => cart.finalised_at);
   if (!finished) return;
 
   const wanted = Date.now() + SHARE_MINUTES * 60_000;
@@ -374,7 +377,7 @@ export async function startGroupClock(groupId: string): Promise<void> {
   await db()
     .from("order_groups")
     .update({ closes_at: new Date(wanted).toISOString() })
-    .eq("id", groupId)
+    .eq("id", group.id)
     .is("closed_at", null);
 }
 
@@ -386,7 +389,7 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
   // owe, so this must change nothing: a second caller arriving late must not
   // re-price something somebody is in the middle of paying.
   if (group.closed_at) {
-    const made = await groupOrders(groupId);
+    const made = await groupOrders(group.id);
     return {
       ok: true,
       alreadyClosed: true,
@@ -396,7 +399,7 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
     };
   }
 
-  const everybody = await groupCarts(groupId);
+  const everybody = await groupCarts(group.id);
 
   // Only the ones who can actually travel. Somebody still choosing, or who
   // never said where their food goes, has nowhere for it to be delivered, so
@@ -422,7 +425,7 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
     await db()
       .from("order_groups")
       .update({ closed_at: new Date().toISOString() })
-      .eq("id", groupId)
+      .eq("id", group.id)
       .is("closed_at", null);
     return { ok: false, error: "Nobody has ordered in that group." };
   }
@@ -477,12 +480,12 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
   const { data: claimed } = await db()
     .from("order_groups")
     .update({ closed_at: new Date().toISOString() })
-    .eq("id", groupId)
+    .eq("id", group.id)
     .is("closed_at", null)
     .select("id");
 
   if (!claimed || claimed.length === 0) {
-    const made = await groupOrders(groupId);
+    const made = await groupOrders(group.id);
     return {
       ok: true,
       alreadyClosed: true,
@@ -535,7 +538,7 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
   }
 
   // One mail for the whole car, now that there is something to act on.
-  void announceGroup(groupId);
+  void announceGroup(group.id);
 
   return { ok: true, alreadyClosed: false, share, people: made, items: carried };
 }
@@ -549,7 +552,9 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
  * everybody, and anybody in a group could close it.
  */
 export async function leaderSeat(groupId: string): Promise<string> {
-  const seats = await groupCarts(groupId);
+  const group = await getSharedGroup(groupId);
+  if (!group) return "";
+  const seats = await groupCarts(group.id);
   return seats[0]?.member_token ?? "";
 }
 
@@ -570,6 +575,32 @@ export async function closeDueGroups(): Promise<number> {
     if (result.ok && !result.alreadyClosed) closed += 1;
   }
   return closed;
+}
+
+/** The last time ordinary traffic swept up due groups, per server. */
+let sweptAt = 0;
+
+/**
+ * Close what is due, off the back of somebody visiting the site.
+ *
+ * The clock in the browser closes a group while somebody is looking at the
+ * board, and /api/groups/close does it on a schedule. Neither is a promise:
+ * the leader can shut their phone and walk off, and then a car of food sits
+ * open with no delivery fee, so nobody in it can pay for anything.
+ *
+ * This makes leaving safe. Any page load anywhere on the site sweeps up
+ * groups whose time is up, at most once a minute, and never makes the visitor
+ * wait for it.
+ */
+export function sweepGroups(): void {
+  const now = Date.now();
+  if (now - sweptAt < 60_000) return;
+  sweptAt = now;
+  void closeDueGroups().catch(() => {
+    // Next visitor tries again in a minute. Nothing here is worth failing a
+    // page somebody is reading.
+    sweptAt = 0;
+  });
 }
 
 /**

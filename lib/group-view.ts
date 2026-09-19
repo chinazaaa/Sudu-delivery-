@@ -78,8 +78,10 @@ export async function groupView(
   const group = await getSharedGroup(groupId);
   if (!group || !group.closes_at) return null;
 
+  // Everything past this point uses the group's real id: the link may have
+  // carried the short code, which nothing else knows about.
   const [orders, batch] = await Promise.all([
-    groupOrders(groupId),
+    groupOrders(group.id),
     getBatch(group.batch_id),
   ]);
   if (!batch) return null;
@@ -87,7 +89,7 @@ export async function groupView(
   // Before it closes there are no orders: the food waits in the group, because
   // nobody has a delivery fee to put on an order yet. After it closes there
   // are, and they are the bill.
-  const everySeat = await groupCarts(groupId);
+  const everySeat = await groupCarts(group.id);
   const waiting = group.closed_at ? [] : everySeat;
   // A seat left behind by the close: food chosen, no number given, so there
   // was no order to make out of it.
@@ -148,7 +150,7 @@ export async function groupView(
   // twice for two fields of the same answer.
   const running = group.closed_at
     ? { each: 0, offer: "" }
-    : await shareNow(groupId);
+    : await shareNow(group.id);
 
   return {
     id: group.id,

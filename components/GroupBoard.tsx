@@ -132,6 +132,13 @@ export default function GroupBoard({
         return;
       }
       const mins = Math.floor(ms / 60000);
+      // The quarter of an hour only starts when somebody finalises. Until
+      // then closes_at is the run's own cut off, which can be most of a day
+      // away, and printing that as minutes read "closes in 1053m".
+      if (mins >= 20) {
+        setLeft("15 minutes from the first finish");
+        return;
+      }
       const secs = Math.floor((ms % 60000) / 1000);
       setLeft(`closes in ${mins}m ${String(secs).padStart(2, "0")}s`);
     };
