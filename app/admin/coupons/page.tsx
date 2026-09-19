@@ -1,3 +1,4 @@
+import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
@@ -17,7 +18,14 @@ import { clockOf } from "@/lib/same-day";
 
 export const dynamic = "force-dynamic";
 
-export default async function CouponsAdmin() {
+export default async function CouponsAdmin({
+  searchParams,
+}: {
+  searchParams: Promise<{ new?: string }>;
+}) {
+  // The form opens at the top rather than waiting at the bottom of however
+  // many offers there are.
+  const making = (await searchParams).new === "1";
   const coupons = await listCoupons();
   // Only runs still ahead are worth attaching a code to.
   const runs = (await batchOverview()).filter(
@@ -112,9 +120,30 @@ export default async function CouponsAdmin() {
   return (
     <div>
       <PageHeader
-        title="Discount codes"
-        detail="For a slow Wednesday, an apology, or a push in a group chat. Nothing to do with the promoter."
+        title="Offers"
+        detail="Free delivery on a dish, a set price on a kitchen, or a code for a group chat."
+        actions={
+          <Link
+            href={making ? "/admin/coupons" : "/admin/coupons?new=1"}
+            className="btn-primary px-4 py-2.5 text-sm"
+          >
+            {making ? "Close" : "New offer"}
+          </Link>
+        }
       />
+
+      {making && (
+        <section className="card mb-4 space-y-3">
+          <div>
+            <h2 className="font-bold">A new offer</h2>
+            <p className="text-sm text-muted">
+              Pick what kind it is and it asks only that kind&apos;s questions.
+              Everything here saves together.
+            </p>
+          </div>
+          <CouponForm values={null} data={formData} />
+        </section>
+      )}
 
       <ul className="mb-4 space-y-3">
         {coupons.map((coupon) => (
@@ -199,16 +228,6 @@ export default async function CouponsAdmin() {
         )}
       </ul>
 
-      <section className="card space-y-3">
-        <div>
-          <h2 className="font-bold">A new offer</h2>
-          <p className="text-sm text-muted">
-            For free delivery on a dish, a flat price on a kitchen, or a code
-            to put in a group chat. Everything here saves together.
-          </p>
-        </div>
-        <CouponForm values={null} data={formData} />
-      </section>
     </div>
   );
 }
