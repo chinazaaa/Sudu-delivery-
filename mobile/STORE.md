@@ -205,9 +205,27 @@ will otherwise write to you about:
 > physical good delivered to the customer, so in-app purchase does not apply
 > under 3.1.3(e).
 
-Replace NUMBER and PIN CODE with a real number and PIN before submitting.
-Create one by placing a small test order, then read the PIN in Admin under
-that customer. Do not use a real customer's PIN.
+Replace NUMBER and PIN CODE before submitting. **Do not place a test order to
+get them, and never use a real customer's PIN.**
+
+Make the sign in by hand instead, in Admin under Customers, "Add somebody by
+hand". Give it a name like `App Review`, a number you control, and a PIN you
+choose. It exists the moment you save it, with no order behind it and nothing
+for anybody to deliver.
+
+The reviewer needs it for one thing only: Apple requires account deletion to
+be testable inside the app (5.1.1(v)), and the delete button needs somebody
+signed in. Signing in with no orders is honest and shows an empty list, which
+is what a new customer sees anyway.
+
+Two things follow from that:
+
+- **The reviewer's delete will really delete it.** That is the point, but it
+  means the sign in is gone afterwards. If the app comes back for a second
+  review, add it again first, with the same number and PIN, or the notes will
+  point at somebody who no longer exists.
+- Use a number you actually control. A made up one works for signing in, but
+  if a reviewer ever asks you to prove it, an invented number is awkward.
 
 ### Account deletion, exactly what it does
 

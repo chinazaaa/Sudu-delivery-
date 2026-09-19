@@ -7,7 +7,7 @@ import { whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import SaveButton from "@/components/SaveButton";
-import { saveCustomerNote } from "../actions";
+import { addCustomer, saveCustomerNote } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -54,9 +54,60 @@ export default async function CustomersPage({
         <button className="btn-quiet px-4 py-2 text-sm">Search</button>
       </form>
 
+      {/* A customer with no order behind them. Needed whenever somebody must
+          be able to sign in without food going into a car: an app reviewer who
+          has to try the delete, or somebody who orders on WhatsApp and wants
+          their history on the site. */}
+      <details className="card mb-4">
+        <summary className="cursor-pointer text-sm font-bold">
+          Add somebody by hand
+        </summary>
+        <form action={addCustomer} className="mt-3 space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="new_name">
+                Name
+              </label>
+              <input id="new_name" name="name" required className="field" placeholder="App Review" />
+            </div>
+            <div>
+              <label className="label" htmlFor="new_phone">
+                Phone
+              </label>
+              <input id="new_phone" name="phone" required className="field" placeholder="0803 000 0000" />
+            </div>
+            <div>
+              <label className="label" htmlFor="new_hostel">
+                Block (optional)
+              </label>
+              <input id="new_hostel" name="hostel" className="field" />
+            </div>
+            <div>
+              <label className="label" htmlFor="new_pin">
+                PIN (optional)
+              </label>
+              <input
+                id="new_pin"
+                name="pin"
+                inputMode="numeric"
+                maxLength={4}
+                className="field"
+                placeholder="Four digits, or leave it"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted">
+            They can sign in straight away, with no orders behind them. Somebody
+            who already exists is left exactly as they are, PIN and all.
+          </p>
+          <SaveButton>Add them</SaveButton>
+        </form>
+      </details>
+
       {rows.length === 0 ? (
         <p className="card text-sm text-muted">
-          No customers yet. A customer is created by their first order.
+          No customers yet. A customer is created by their first order, or by hand
+          above.
         </p>
       ) : (
         <div className="space-y-3">

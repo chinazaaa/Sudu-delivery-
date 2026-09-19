@@ -1,5 +1,6 @@
 "use server";
 
+import { normalisePhone } from "@/lib/phone";
 import { redirect } from "next/navigation";
 import { revalidatePath, updateTag } from "next/cache";
 import { isSignedIn, passwordMatches, signIn, signOut } from "@/lib/admin-auth";
@@ -592,6 +593,41 @@ export async function saveOrderNote(form: FormData): Promise<void> {
 
   revalidatePath("/admin", "layout");
   }
+
+/**
+ * A customer made by hand, with no order behind them.
+ *
+ * A PIN normally arrives with somebody's first order, which is fine until you
+ * need a working number and PIN for something that must not put food in a car:
+ * an app reviewer who has to sign in and try the delete, or somebody who
+ * orders by WhatsApp and wants to see their history on the site.
+ *
+ * It only ever creates. An existing customer is left exactly as they are,
+ * because overwriting a real person's PIN from a form that looks like this is
+ * how somebody loses access to their own orders.
+ */
+export async function addCustomer(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const phone = normalisePhone(String(form.get("phone") ?? ""));
+  const name = String(form.get("name") ?? "").trim();
+  if (!phone || name === "") return;
+
+  const pin = String(form.get("pin") ?? "").trim();
+
+  await db()
+    .from("customers")
+    .insert({
+      phone,
+      name,
+      hostel: String(form.get("hostel") ?? "").trim(),
+      // Four digits of their choosing, or one made the same way a first
+      // order makes them.
+      pin: /^\d{4}$/.test(pin) ? pin : newPin(),
+    });
+
+  revalidatePath("/admin/customers");
+}
 
 /** A note on a person, carried across every order they place. */
 export async function saveCustomerNote(form: FormData): Promise<void> {
