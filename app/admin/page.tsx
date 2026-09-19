@@ -127,7 +127,7 @@ export default async function AdminHome() {
               value={profit}
               money
               tone={profit >= 0 ? "good" : "warn"}
-              hint="After food, commission, fuel and driver"
+              hint="After food, commission and running costs"
             />
           </div>
 
@@ -274,8 +274,8 @@ export default async function AdminHome() {
                   ))}
               </ul>
               <p className="mt-2 text-xs text-muted">
-                Put fuel and driver on a run&apos;s Profit tab and these become
-                the real numbers.
+                Put what each run cost on its Profit tab and these become the
+                real numbers.
               </p>
             </section>
           </div>
