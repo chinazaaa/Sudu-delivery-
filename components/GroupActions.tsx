@@ -29,6 +29,28 @@ export default function GroupActions({
   const router = useRouter();
   const [asking, setAsking] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [problem, setProblem] = useState("");
+
+  /** Close it, and say so when the server will not. */
+  const close = async () => {
+    setProblem("");
+    setClosing(true);
+    const form = new FormData();
+    form.set("group_id", groupId);
+    try {
+      const result = await closeSharedGroup(form);
+      if (!result.ok) {
+        setProblem(result.error ?? "Could not close that.");
+        return;
+      }
+      setAsking(false);
+      router.refresh();
+    } catch {
+      setProblem("Could not close that. Try again in a moment.");
+    } finally {
+      setClosing(false);
+    }
+  };
   const [copied, setCopied] = useState(false);
 
   const message =
@@ -112,15 +134,17 @@ export default function GroupActions({
               them gets their total. Nobody can add after this, and anybody who has
               not finalised their food yet is left out.
             </p>
-            <form
-              action={closeSharedGroup}
-              onSubmit={() => setClosing(true)}
+            {problem !== "" && (
+              <p className="text-sm font-semibold text-brand-dark">{problem}</p>
+            )}
+            <button
+              type="button"
+              onClick={close}
+              disabled={closing}
+              className="btn-primary w-full"
             >
-              <input type="hidden" name="group_id" value={groupId} />
-              <button type="submit" className="btn-primary w-full" disabled={closing}>
-                {closing ? "Closing…" : "Yes, close it"}
-              </button>
-            </form>
+              {closing ? "Closing…" : "Yes, close it"}
+            </button>
             <button
               type="button"
               onClick={() => {

@@ -307,10 +307,18 @@ export async function finishOrdering(form: FormData): Promise<void> {
   revalidatePath("/o", "layout");
 }
 
-/** The leader closing it by hand, rather than waiting out the clock. */
-export async function closeSharedGroup(form: FormData): Promise<void> {
+/**
+ * The leader closing it by hand, rather than waiting out the clock.
+ *
+ * Gives back what happened. It used to return nothing at all, so a close that
+ * was refused, by the seat check or by the orders themselves, left the button
+ * reading "Closing…" for ever with no way to know why.
+ */
+export async function closeSharedGroup(
+  form: FormData
+): Promise<{ ok: boolean; error?: string }> {
   const id = String(form.get("group_id") ?? "");
-  if (!id) return;
+  if (!id) return { ok: false, error: "That group could not be found." };
 
   // Only the person whose group it is. This was not checked at all: the page
   // decided who the leader was and the server took its word for it, so
@@ -319,9 +327,15 @@ export async function closeSharedGroup(form: FormData): Promise<void> {
   // cookie holding that seat is what proves it.
   const seat = (await cookies()).get("sudu_seat")?.value ?? "";
   const leader = await leaderSeat(id);
-  if (leader !== "" && seat !== leader) return;
+  if (leader !== "" && seat !== leader) {
+    return {
+      ok: false,
+      error: "Only whoever started this group can close it. The clock will close it anyway.",
+    };
+  }
 
-  await closeGroup(id);
+  const result = await closeGroup(id);
   revalidatePath(`/g/${id}`);
   revalidatePath("/o", "layout");
+  return result.ok ? { ok: true } : { ok: false, error: result.error };
 }

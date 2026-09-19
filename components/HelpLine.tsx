@@ -11,13 +11,21 @@ import { whatsappLink } from "@/lib/settings";
 export default function HelpLine({
   number,
   about,
+  page,
 }: {
   number: string;
   /** What they were doing, so the chat opens knowing it. */
   about: string;
+  /** The page they are on. Without it the message says there is a problem and
+   *  leaves us asking which group, which is the one thing they cannot easily
+   *  tell us from their phone. */
+  page?: string;
 }) {
   if (!number) return null;
-  const link = whatsappLink(number, `Hi Sudu, something is not right with ${about}.`);
+  const link = whatsappLink(
+    number,
+    `Hi Sudu, something is not right with ${about}.` + (page ? `\n\n${page}` : "")
+  );
 
   return (
     <p className="text-center text-xs text-muted">

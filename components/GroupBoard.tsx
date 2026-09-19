@@ -91,6 +91,34 @@ export default function GroupBoard({
   const [confirming, setConfirming] = useState(false);
 
   const asked = useRef(false);
+  const [closeProblem, setCloseProblem] = useState("");
+
+  /**
+   * Close it now, and say what stopped it when something does.
+   *
+   * This was a plain form posting to the action, which gave back nothing: a
+   * refusal left the button reading "Closing…" and the group open, with
+   * nothing on the screen to say why.
+   */
+  const closeNow = async () => {
+    setCloseProblem("");
+    setBusy(true);
+    const form = new FormData();
+    form.set("group_id", groupId);
+    try {
+      const result = await closeSharedGroup(form);
+      if (!result.ok) {
+        setCloseProblem(result.error ?? "Could not close that.");
+        return;
+      }
+      setConfirming(false);
+      router.refresh();
+    } catch {
+      setCloseProblem("Could not close that. Try again in a moment.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   // Joining, for somebody who has just opened the link.
   // The person who made the link already said who they are. Asking again is
@@ -128,6 +156,14 @@ export default function GroupBoard({
           const form = new FormData();
           form.set("group_id", groupId);
           void closeSharedGroup(form)
+            .then((result) => {
+              // Refused rather than broken: say so, and let it be tried
+              // again, because the group is still open.
+              if (!result.ok) {
+                asked.current = false;
+                setCloseProblem(result.error ?? "");
+              }
+            })
             .catch(() => {
               asked.current = false;
             })
@@ -377,12 +413,17 @@ export default function GroupBoard({
               their total. Nobody can add after this, and anybody who has not
               finalised is left out.
             </p>
-            <form action={closeSharedGroup} onSubmit={() => setBusy(true)}>
-              <input type="hidden" name="group_id" value={groupId} />
-              <button type="submit" className="btn-primary w-full" disabled={busy}>
-                {busy ? "Closing…" : "Yes, close it"}
-              </button>
-            </form>
+            {closeProblem !== "" && (
+              <p className="text-sm font-semibold text-brand-dark">{closeProblem}</p>
+            )}
+            <button
+              type="button"
+              onClick={closeNow}
+              disabled={busy}
+              className="btn-primary w-full"
+            >
+              {busy ? "Closing…" : "Yes, close it"}
+            </button>
             <button
               type="button"
               onClick={() => setConfirming(false)}
@@ -407,6 +448,12 @@ export default function GroupBoard({
             {anyFood ? left : "15 minutes from the first order"}
           </span>
         </div>
+
+        {closeProblem !== "" && !confirming && (
+          <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
+            {closeProblem}
+          </p>
+        )}
 
         <p className="text-sm text-muted">
           {!anyFood

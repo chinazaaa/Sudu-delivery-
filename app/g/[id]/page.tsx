@@ -214,7 +214,11 @@ export default async function GroupPage({
         />
       )}
 
-      <HelpLine number={settings.whatsapp_number} about="my group order" />
+      <HelpLine
+        number={settings.whatsapp_number}
+        about="my group order"
+        page={shareUrl}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import HelpLine from "@/components/HelpLine";
+import { siteUrl } from "@/lib/admin-templates";
 import type { Metadata } from "next";
 import { rootOrder, deliveryLoad } from "@/lib/orders";
 import { activeBands, safeSettings } from "@/lib/settings";
@@ -109,7 +110,11 @@ export default async function JoinPage({ params }: { params: Promise<{ id: strin
         .
       </p>
 
-      <HelpLine number={settings.whatsapp_number} about="joining this order" />
+      <HelpLine
+        number={settings.whatsapp_number}
+        about="joining this order"
+        page={`${siteUrl()}/join/${order.id}`}
+      />
     </div>
   );
 }
