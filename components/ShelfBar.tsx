@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { naira } from "@/lib/money";
+import { feeFor, type Band } from "@/lib/fees";
 import { shelfCount, shelfTotal, useShelf } from "@/lib/skincare-cart";
 
 /**
@@ -11,12 +12,16 @@ import { shelfCount, shelfTotal, useShelf } from "@/lib/skincare-cart";
  * afternoon and this one is about a car going on Saturday, and one bar trying
  * to say both says neither.
  */
-export default function ShelfBar({ fee, when }: { fee: number; when: string }) {
+export default function ShelfBar({ bands, when }: { bands: Band[]; when: string }) {
   const cart = useShelf();
   const count = shelfCount(cart);
   if (count === 0) return null;
 
   const food = shelfTotal(cart);
+  // The ladder, worked out here rather than quoted as a "from": by the time
+  // somebody has a basket, the real number is knowable and a number they
+  // will be charged beats a number they might be.
+  const fee = feeFor(count, null, bands);
 
   return (
     <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 px-3 sm:bottom-3">

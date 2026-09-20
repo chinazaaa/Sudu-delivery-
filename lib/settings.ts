@@ -107,6 +107,8 @@ export type Settings = {
   skincare_cut_off: string;
   skincare_window: string;
   skincare_blurb: string;
+  /** The skincare delivery ladder, as JSON. Empty means the flat fee. */
+  skincare_bands: string;
 };
 
 /** Every setting at its default, which is also what a missing row reads as. */
@@ -158,6 +160,7 @@ export const EMPTY: Settings = {
   skincare_cut_off: "08:00",
   skincare_window: "",
   skincare_blurb: "",
+  skincare_bands: "",
 };
 
 export async function getSettings(): Promise<Settings> {

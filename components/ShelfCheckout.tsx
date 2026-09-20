@@ -7,6 +7,8 @@ import Empty from "./Empty";
 import PayChoice from "./PayChoice";
 import Thumb from "./Thumb";
 import { naira } from "@/lib/money";
+import FeeBands from "./FeeBands";
+import { feeFor, type Band } from "@/lib/fees";
 import { placeSkincareOrder } from "@/app/actions";
 import { emptyShelf, setShelfQty, shelfTotal, useShelf } from "@/lib/skincare-cart";
 
@@ -19,14 +21,16 @@ import { emptyShelf, setShelfQty, shelfTotal, useShelf } from "@/lib/skincare-ca
  * comes on Saturday and not today.
  */
 export default function ShelfCheckout({
-  fee,
+  bands,
   when,
   window: arrives,
   cutOff,
   hostels,
   me,
 }: {
-  fee: number;
+  /** The skincare ladder: it is the car, not the cream, so it goes by how
+   *  much room the order takes. */
+  bands: Band[];
   /** "Saturday, 27 Sep", the whole promise in four words. */
   when: string;
   /** The hours the car delivers in that day, in the shop's own words. */
@@ -59,6 +63,8 @@ export default function ShelfCheckout({
   }, []);
 
   const food = shelfTotal(cart);
+  const items = cart.reduce((count, one) => count + one.qty, 0);
+  const fee = feeFor(items, null, bands);
 
   if (cart.length === 0) {
     return (
@@ -227,11 +233,13 @@ export default function ShelfCheckout({
           <span>Total</span>
           <span>{naira(food + fee)}</span>
         </div>
-        {fee > 0 && (
-          <p className="text-xs text-muted">
-            One fee for the whole basket, however much of it there is.
-          </p>
-        )}
+        {/* The whole ladder, one tap away. Four bottles costing less than
+            fifteen looks arbitrary until you can see why. */}
+        <FeeBands itemCount={items} flashFee={null} bands={bands} />
+        <p className="text-xs text-muted">
+          One fee for the whole basket. It is the car, not the cream, so it
+          goes by how much room your order takes.
+        </p>
       </section>
 
       <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t border-black/5 bg-paper p-3 shadow-bar sm:bottom-0">

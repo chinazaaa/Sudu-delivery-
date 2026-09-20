@@ -6,6 +6,7 @@ import {
   dropLabel,
   nextDrop,
   PER_PAGE,
+  skincareBands,
   skincareFacets,
   skincareOn,
   skincareShop,
@@ -57,6 +58,7 @@ export default async function SkincarePage({
   ]);
 
   const drop = nextDrop(settings);
+  const bands = skincareBands(settings);
 
   return (
     <div className="space-y-4 pb-36">
@@ -68,8 +70,7 @@ export default async function SkincarePage({
         <p className="text-sm text-muted">
           {settings.skincare_blurb ||
             `One car a week. Order before ${settings.skincare_cut_off || "08:00"} that morning and you are on it, otherwise it is the week after.`}
-          {settings.skincare_fee > 0 &&
-            ` Delivery is ${naira(settings.skincare_fee)}, whatever you order.`}
+          {bands[0].fee > 0 && ` Delivery from ${naira(bands[0].fee)}.`}
         </p>
       </header>
 
@@ -101,7 +102,7 @@ export default async function SkincarePage({
         , delivered today or on the next run.
       </p>
 
-      <ShelfBar fee={settings.skincare_fee} when={dropLabel(drop.date)} />
+      <ShelfBar bands={bands} when={dropLabel(drop.date)} />
     </div>
   );
 }

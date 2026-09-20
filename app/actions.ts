@@ -9,7 +9,7 @@ import { normalisePhone } from "@/lib/phone";
 import { rememberCart } from "@/lib/carts";
 import { countCheckoutLinkUse, getCheckoutLink } from "@/lib/checkout-links";
 import { arrivalNow } from "@/lib/arrival-server";
-import { dropBatch } from "@/lib/skincare";
+import { dropBatch, skincareFee } from "@/lib/skincare";
 import { safeSettings } from "@/lib/settings";
 import { db } from "@/lib/supabase";
 import { closeGroup, getSharedGroup, groupOrders, leaderSeat } from "@/lib/groups";
@@ -474,9 +474,12 @@ export async function placeSkincareOrder(input: {
     lines,
     paymentMethod: input.paymentMethod,
     customerNote: input.note,
-    // One flat fee, whatever is in it. A Saturday drop with everybody's
-    // parcels in one car is not priced like a Domino's run.
-    fixedFee: settings.skincare_fee,
+    // Priced by the skincare ladder, which is its own: it is the car, not
+    // the cream, so it goes by how much room the order takes.
+    fixedFee: skincareFee(
+      settings,
+      lines.reduce((count, one) => count + one.qty, 0)
+    ),
   });
 
   if (!result.ok) return { ok: false, error: result.error };

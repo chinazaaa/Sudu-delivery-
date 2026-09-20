@@ -3,6 +3,7 @@ import HelpLine from "@/components/HelpLine";
 import { siteUrl } from "@/lib/admin-templates";
 import type { Metadata } from "next";
 import { rootOrder, deliveryLoad } from "@/lib/orders";
+import { bandsFor } from "@/lib/skincare";
 import { activeBands, safeSettings } from "@/lib/settings";
 import { feeFor } from "@/lib/fees";
 import { naira } from "@/lib/money";
@@ -43,7 +44,7 @@ export default async function JoinPage({ params }: { params: Promise<{ id: strin
     );
   }
 
-  const bands = await activeBands();
+  const bands = await bandsFor(order.batch);
   const load = await deliveryLoad(order.batch_id, order.id);
 
   // What one more person's food would cost to carry, as against ordering

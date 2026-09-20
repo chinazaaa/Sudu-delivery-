@@ -1,7 +1,8 @@
 import { unstable_cache } from "next/cache";
 import { db } from "./supabase";
 import { lagosInstant, lagosToday } from "./time";
-import type { Settings } from "./settings";
+import { activeBands, safeSettings, type Settings } from "./settings";
+import { feeFor, parseBands, type Band } from "./fees";
 import type { Batch, MenuItem } from "./types";
 import { TZ } from "./config";
 
@@ -26,6 +27,25 @@ export type SkincareProduct = {
   /** Who makes it, which is the first thing anybody narrows by. */
   brand: string;
 };
+
+/**
+ * What delivery costs on a skincare order.
+ *
+ * A ladder, for the same reason the food has one: it is the car, not the
+ * cream, and four bottles and fifteen bottles do not take the same room. A
+ * shop that has not written one yet falls back to the flat fee it started
+ * with, which is a ladder of one band.
+ */
+export function skincareBands(settings: Settings): Band[] {
+  return settings.skincare_bands.trim() !== ""
+    ? parseBands(settings.skincare_bands)
+    : [{ maxItems: Infinity, fee: Math.max(0, settings.skincare_fee) }];
+}
+
+/** What this basket would pay, by that ladder. */
+export function skincareFee(settings: Settings, items: number): number {
+  return feeFor(items, null, skincareBands(settings));
+}
 
 /** Whether the shop is open at all. Off means the page is not there. */
 export function skincareOn(settings: Settings): boolean {
@@ -292,4 +312,62 @@ function toProduct(one: MenuItem): SkincareProduct {
     available: one.available,
     brand: (one.brand ?? "").trim(),
   };
+}
+
+/**
+ * Whether a link points at the skincare shelf rather than a restaurant.
+ *
+ * Asked only when a restaurant page has already failed to find a menu, so
+ * the cost is paid on a page that was going to be a not-found anyway.
+ */
+export async function isSkincare(ref: string): Promise<boolean> {
+  const shop = await skincareShop();
+  if (!shop) return false;
+  if (shop.id === ref) return true;
+
+  const { data } = await db()
+    .from("restaurants")
+    .select("id")
+    .eq("slug", ref)
+    .maybeSingle();
+  return Boolean(data && (data as { id: string }).id === shop.id);
+}
+
+/**
+ * Whether any of these products belong to the skincare shelf.
+ *
+ * Asked on the way into an order, because the shelf and the menu are two
+ * different days and a basket holding both cannot be one delivery.
+ */
+export async function skincareIn(itemIds: string[]): Promise<boolean> {
+  const shop = await skincareShop();
+  if (!shop || itemIds.length === 0) return false;
+
+  const { data } = await db()
+    .from("menu_items")
+    .select("id")
+    .eq("restaurant_id", shop.id)
+    .in("id", itemIds.slice(0, 100))
+    .limit(1);
+  return (data ?? []).length > 0;
+}
+
+/**
+ * The ladder a batch is priced by.
+ *
+ * Which car something is going in decides what delivery costs, because the
+ * cost is the car. A Saturday drop full of parcels is not a Domino's run, so
+ * asking the batch rather than the settings is what stops a cleanser being
+ * priced as a pizza wherever a fee is worked out.
+ */
+export async function bandsFor(batch: { kind?: string } | null): Promise<Band[]> {
+  const settings = await safeSettings();
+  return (batch?.kind ?? "run") === "skincare"
+    ? skincareBands(settings)
+    : await activeBands();
+}
+
+/** Whether this order is skincare, for wording that would otherwise say food. */
+export function isSkincareBatch(batch: { kind?: string } | null): boolean {
+  return (batch?.kind ?? "run") === "skincare";
 }

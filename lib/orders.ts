@@ -25,6 +25,7 @@ import { naira, orderRef } from "./money";
 import { SLOT_LABEL } from "./config";
 import { runDateLabel, weekdayLabel } from "./time";
 import { createSameDayBatch, getBatch, isOrderable, orderCounts } from "./batches";
+import { bandsFor, skincareIn } from "./skincare";
 import { stageIndex } from "./stages";
 import { deliverySlots, sameInstant, type Slot } from "./same-day";
 import { normalisePhone } from "./phone";
@@ -168,6 +169,24 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     console.error("group not joinable, ordering alone:", input.partyId);
   }
 
+  // Skincare goes in one car a week and food goes this afternoon, so a
+  // basket holding both cannot be one order. The shelf and the menu are kept
+  // apart everywhere somebody can reach them, and this is the last door:
+  // priced on the food ladder, a cleanser would go out on a run at a fee
+  // nobody set, on a day nobody said.
+  const mixed = await skincareIn(input.lines.map((line) => line.menu_item_id));
+  if (mixed && input.deliverAt === undefined && !input.partyId) {
+    const car = await getBatch(input.batchId);
+    if (!car || (car.kind ?? "run") !== "skincare") {
+      return {
+        ok: false,
+        error:
+          "Skincare comes on its own car, once a week, so it cannot go on a " +
+          "food run. Order it from the skincare shelf and your food here.",
+      };
+    }
+  }
+
   const batch = party
     ? await getBatch(party.batch_id)
     : sameDay
@@ -206,8 +225,9 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   if ("error" in priced) return { ok: false, error: priced.error };
 
   // Delivery is priced from whatever bands the admin has set, read here so a
-  // price change takes effect on the next order and not on a redeploy.
-  const bands = await activeBands();
+  // price change takes effect on the next order and not on a redeploy. Which
+  // ladder is a fact about the car: the weekly skincare drop has its own.
+  const bands = await bandsFor(batch);
   const customerNote = (input.customerNote ?? "").trim();
   const returning = await isReturningCustomer(phone);
 
@@ -1041,7 +1061,7 @@ export async function previewCoupon(args: {
 
   const result = await checkCoupon({
     code: args.code,
-    fee: feeFor(countItems(priced.lines), batch.flash_fee, await activeBands()),
+    fee: feeFor(countItems(priced.lines), batch.flash_fee, await bandsFor(batch)),
     food: countFood(priced.lines),
     returning: phone ? await isReturningCustomer(phone) : false,
     batchId: batch.id,
@@ -1100,7 +1120,7 @@ export async function moveOrder(orderId: string, batchId: string): Promise<MoveR
           .map((share) => share.id)
       : [orderId];
 
-  const bands = await activeBands();
+  const bands = await bandsFor(batch);
 
   for (const id of moving) {
     const one = await getOrder(id);

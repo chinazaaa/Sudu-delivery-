@@ -2,7 +2,8 @@ import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import { db } from "@/lib/supabase";
 import { safeSettings } from "@/lib/settings";
-import { cutOffTime, dropLabel, nextDrop, skincareShop } from "@/lib/skincare";
+import { cutOffTime, dropLabel, nextDrop, skincareBands, skincareShop } from "@/lib/skincare";
+import BandEditor from "@/components/admin/BandEditor";
 import { clockOf } from "@/lib/same-day";
 import { naira } from "@/lib/money";
 import { saveSettings } from "@/app/admin/actions";
@@ -77,22 +78,6 @@ export default async function AdminSkincarePage() {
           </div>
 
           <div>
-            <label className="label" htmlFor="skincare_fee">
-              Delivery on a skincare order
-            </label>
-            <input
-              id="skincare_fee"
-              name="skincare_fee"
-              inputMode="numeric"
-              defaultValue={settings.skincare_fee}
-              className="field"
-            />
-            <p className="mt-1 text-xs text-muted">
-              One flat fee, whatever is in the basket. 0 means free.
-            </p>
-          </div>
-
-          <div>
             <label className="label" htmlFor="skincare_day">
               The day it goes
             </label>
@@ -154,6 +139,16 @@ export default async function AdminSkincarePage() {
           />
         </div>
 
+        <div className="border-t border-black/5 pt-3">
+          <p className="label mb-0">What delivery costs</p>
+          <p className="mb-2 text-xs text-muted">
+            Its own ladder, because it is the car and not the cream: four
+            bottles and fifteen do not take the same room. The top band catches
+            everything above it.
+          </p>
+          <BandEditor initial={skincareBands(settings)} field="skincare_bands" />
+        </div>
+
         <button type="submit" className="btn-primary px-5">
           Save
         </button>
@@ -162,7 +157,9 @@ export default async function AdminSkincarePage() {
           As it stands: the next one is{" "}
           <span className="font-semibold text-ink">{dropLabel(drop.date)}</span>, orders
           for it close at {clockOf(hour, minute)} that morning, and delivery is{" "}
-          {settings.skincare_fee > 0 ? naira(settings.skincare_fee) : "free"}.
+          {skincareBands(settings)[0].fee > 0
+            ? `from ${naira(skincareBands(settings)[0].fee)}`
+            : "free"}.
         </p>
       </form>
 

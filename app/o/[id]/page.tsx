@@ -19,6 +19,7 @@ import { openBatches, takesMoney } from "@/lib/batches";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira, shareRef } from "@/lib/money";
 import { shortRef } from "@/lib/links";
+import { bandsFor, isSkincareBatch } from "@/lib/skincare";
 import { bandFor, splitFee } from "@/lib/fees";
 import { fillNote, narration, PAID_NOTE_DEFAULT } from "@/lib/messages";
 import {
@@ -52,7 +53,7 @@ export default async function OrderPage({
   if (!order) notFound();
 
   const settings = await getSettings();
-  const bands = await activeBands();
+  const bands = await bandsFor(order.batch);
   // Every account they may pay into, best first.
   const accounts = await payableAccounts(settings);
   const fees = await feeStory(order);
@@ -380,6 +381,7 @@ export default async function OrderPage({
           url={`${site}/join/${order.shared_with ?? order.id}`}
           name={(order.for_name ?? order.customer_name).split(" ")[0]}
           closes={clockLabel(order.batch.cut_off_at)}
+          what={isSkincareBatch(order.batch) ? "skincare" : "food"}
         />
       )}
 
@@ -514,7 +516,10 @@ export default async function OrderPage({
         )}
 
         <dl className="space-y-1 border-t border-black/10 pt-3 text-sm">
-          <Row label="Food" value={naira(order.subtotal_food)} />
+          <Row
+            label={isSkincareBatch(order.batch) ? "Skincare" : "Food"}
+            value={naira(order.subtotal_food)}
+          />
           <Row
             label={
               fees.otherItems > 0

@@ -160,6 +160,10 @@ async function readMenuFor(ref: string): Promise<MenuView | null> {
 
   const restaurant = data as Restaurant | null;
   if (!restaurant) return null;
+  // The skincare shelf is not a restaurant page. Two thousand products with
+  // a food cart under them is how a cleanser ends up on the afternoon run,
+  // priced by the food ladder, arriving on a day nobody said.
+  if ((restaurant.kind ?? "food") === "skincare") return null;
   const restaurantId = restaurant.id;
 
   const [categories, items] = await Promise.all([

@@ -1,4 +1,6 @@
 import CartView from "@/components/CartView";
+import ShelfNote from "@/components/ShelfNote";
+import { dropLabel, nextDrop, skincareOn } from "@/lib/skincare";
 import { openRestaurants } from "@/lib/menu";
 import { hostelNames } from "@/lib/hostels";
 import { liveOffers } from "@/lib/coupons";
@@ -46,7 +48,12 @@ export default async function CartPage({
   ]);
 
   return (
-    <CartView
+    <div className="space-y-4">
+      {/* The other basket, which is its own order on its own day. Kept in
+          sight here, because one you can only see from the shelf is one
+          somebody leaves behind. */}
+      {skincareOn(settings) && <ShelfNote when={dropLabel(nextDrop(settings).date)} />}
+      <CartView
       restaurants={restaurants}
       runs={batches
         .slice(0, 4)
@@ -61,7 +68,8 @@ export default async function CartPage({
       offers={await liveOffers()}
       nextRunId={batches[0]?.id ?? ""}
       bands={bands}
-      startGroup={startGroup}
-    />
+        startGroup={startGroup}
+      />
+    </div>
   );
 }

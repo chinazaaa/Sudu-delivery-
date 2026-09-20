@@ -79,7 +79,10 @@ export type Batch = {
   stage: BatchStage;
   stage_updated_at: string;
   /** A scheduled run everybody shares, or one person's same day delivery. */
-  kind: "run" | "same_day";
+  /** A shared car, a car going out for one order, or the weekly skincare
+   *  drop. It is what keeps the last two out of the list customers pick a
+   *  run from. */
+  kind: "run" | "same_day" | "skincare";
   /** The time asked for. Only ever set on a same day delivery. */
   deliver_at: string | null;
   /** What the run cost to make, typed in once it is done. */

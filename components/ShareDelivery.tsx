@@ -15,15 +15,20 @@ export default function ShareDelivery({
   url,
   name,
   closes,
+  what = "food",
 }: {
   url: string;
   /** Whose delivery it is, for the message. */
   name: string;
   /** When the run stops taking orders, so nobody shares a closed one. */
   closes: string;
+  /** What is in the car. The skincare drop is the same offer in every way
+   *  that matters and a different word, and calling somebody's cleanser
+   *  food is the tell that a page was written for the other shop. */
+  what?: "food" | "skincare";
 }) {
   const message =
-    `${name} is ordering food to campus with Sudu, closing ${closes}. ` +
+    `${name} is ordering ${what} to campus with Sudu, closing ${closes}. ` +
     `Add yours and we split one delivery fee: ${url}`;
 
   return (
@@ -32,7 +37,7 @@ export default function ShareDelivery({
       <p className="mt-1 text-sm text-ink/80">
         Send them this. Whatever they order rides in the same delivery, so between
         you there is one delivery fee instead of one each. They pay for their own
-        food, on their own number.
+        {what === "skincare" ? " things" : " food"}, on their own number.
       </p>
       <div className="mt-3">
         <SendLink message={message} link={url} label="Send my friends the link on WhatsApp" />

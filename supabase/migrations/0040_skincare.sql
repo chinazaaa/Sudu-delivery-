@@ -74,3 +74,11 @@ create index if not exists menu_items_image_file_idx on menu_items (image_file)
 -- substring match on the name with its bars, which cannot half-match
 -- "Skin Care" against "Korean Skin Care".
 alter table menu_items add column if not exists shelves text not null default '';
+
+-- Delivery on a skincare order, as a ladder rather than one number.
+--
+-- It is the car, not the cream: four bottles and fifteen bottles do not take
+-- the same room, and the flat fee it started as charged them the same. Empty
+-- falls back to the flat fee above, so nothing changes until a ladder is
+-- written.
+alter table settings add column if not exists skincare_bands text not null default '';

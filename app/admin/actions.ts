@@ -1433,6 +1433,7 @@ const SETTING_FIELDS = [
   "skincare_cut_off",
   "skincare_window",
   "skincare_blurb",
+  "skincare_bands",
 ] as const;
 
 export async function saveSettings(form: FormData): Promise<void> {

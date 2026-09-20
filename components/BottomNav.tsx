@@ -5,12 +5,16 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PARTY_CHANGED, readGroup } from "./GroupLink";
 import { countItems, useCart } from "@/lib/cart";
+import { shelfCount, useShelf } from "@/lib/skincare-cart";
 
 /** Thumb-height navigation, the way every food app on a phone does it. */
 export default function BottomNav() {
   const path = usePathname();
   const cart = useCart();
-  const count = countItems(cart);
+  // Both baskets. They are two orders and two days, but one badge: a
+  // skincare basket nobody can see from the menu is a basket nobody
+  // remembers they have.
+  const count = countItems(cart) + shelfCount(useShelf());
 
   // Ordering together is the whole point of the shop, so it gets a thumb on
   // the bar rather than a card somebody has to scroll to. Which group, or

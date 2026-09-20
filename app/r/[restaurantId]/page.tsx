@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import RestaurantMenu from "@/components/RestaurantMenu";
 import Thumb from "@/components/Thumb";
 import { menuViewFor } from "@/lib/menu";
 import { dealsAt } from "@/lib/coupons";
+import { isSkincare } from "@/lib/skincare";
 import Deals from "@/components/Deals";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,10 @@ export default async function RestaurantPage({
   // Only the menu now. The runs were fetched to draw a strip this page no
   // longer has, and fetching them was the slowest thing it did.
   const place = await menuViewFor(restaurantId);
+  // The skincare shelf has its own page, its own basket and its own day, and
+  // this one would put its products in the food cart. Anybody who reached
+  // here wanted the shelf, so they are sent to it rather than turned away.
+  if (!place && (await isSkincare(restaurantId))) redirect("/skincare");
   if (!place) notFound();
 
   // Everything on offer here, in one place somebody can look on purpose
