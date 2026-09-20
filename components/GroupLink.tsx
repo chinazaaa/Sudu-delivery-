@@ -111,6 +111,7 @@ export default function GroupLink({
   slots,
   today,
   alone = 0,
+  splits = true,
 }: {
   /** Opened already, because they pressed something that said Start. */
   openNow?: boolean;
@@ -119,6 +120,10 @@ export default function GroupLink({
   /** Today in Lagos, from the shop's clock, so a run going today can be told
    *  from one going tomorrow. */
   today: string;
+  /** Whether that fee really does divide between them. An offer with a
+   *  floor under it does not, and a split promised here that the checkout
+   *  refuses is worse than saying nothing about it. */
+  splits?: boolean;
   /** What delivery costs on this cart alone. A fact about their own food,
    *  which is worth saying; what each of them ends up paying is not, because
    *  it depends on who turns up and what they order, and a figure quoted
@@ -189,7 +194,9 @@ export default function GroupLink({
           </span>
           <span className="block text-sm text-ink/75">
             {alone > 0
-              ? "Start a group and that splits evenly between everybody in the car. You each pay for your own food."
+              ? splits
+                ? "Start a group and that splits evenly between everybody in the car. You each pay for your own food."
+                : "Start a group and everybody orders their own food out of one car. Your share of delivery is worked out when it closes."
               : "Start a group and send them a link. Everybody orders their own food and you split one delivery."}
           </span>
         </span>

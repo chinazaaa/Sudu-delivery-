@@ -24,7 +24,7 @@ import {
   usePeople,
 } from "@/lib/cart";
 import { feeFor, type Band } from "@/lib/fees";
-import { nearMiss, type LiveOffer } from "@/lib/offers";
+import { nearMiss, pickOffer, type LiveOffer } from "@/lib/offers";
 import { naira } from "@/lib/money";
 import PayChoice from "./PayChoice";
 
@@ -399,6 +399,26 @@ export default function CartView({
     { batchId: nextRunId, deliverAt: null, returning: false }
   );
 
+  // What delivery on this cart actually costs, promotions and all. Working
+  // it off the ladder alone said four thousand over a cart that an offer
+  // prices at two, which is the shop quoting a number it is not going to
+  // charge. The same function decides it here, at the checkout and on the
+  // server, so all three agree.
+  const promotion = pickOffer(offers, {
+    restaurantIds: [...new Set(cart.map((line) => line.restaurantId))],
+    itemIds: cart.map((line) => line.itemId),
+    lineChoices: cart.map((line) => line.choices),
+    items: countItems(cart),
+    batchId: nextRunId,
+    deliverAt: null,
+    returning: false,
+  });
+  const alone = promotion
+    ? promotion.fee
+    : bands.length > 0
+      ? feeFor(countItems(cart), null, bands)
+      : 0;
+
   const names = people.map((p) => p.name);
   const groups = groupNames(cart, people)
     .map((person) => ({
@@ -458,7 +478,11 @@ export default function CartView({
         runs={runs}
         slots={slots}
         today={today}
-        alone={bands.length > 0 ? feeFor(countItems(cart), null, bands) : 0}
+        alone={alone}
+        // An offer with a floor under it does not split evenly: five people
+        // at a thousand each is five thousand, not two. Promising a split
+        // the offer will not give is worse than promising nothing.
+        splits={promotion ? promotion.offer.minEach === 0 : true}
       />
 
 
