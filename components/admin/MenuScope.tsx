@@ -26,21 +26,28 @@ export type ScopeShop = {
  */
 export default function MenuScope({
   shops,
-  restaurant,
+  restaurants,
   categories,
   choice,
   sizes = true,
 }: {
   shops: ScopeShop[];
-  /** What is already saved, when an offer is being changed. */
-  restaurant: string;
+  /** What is already saved, when an offer is being changed. Several, because
+   *  an offer can be for two kitchens at once: everything from Domino's or
+   *  Chicken Republic, and nothing else in the car. */
+  restaurants: string[];
   categories: string[];
   choice: string;
   /** Whether a size can be asked for. A typed code is a deal with a kitchen,
    *  and nobody types a code to get a discount on the medium one. */
   sizes?: boolean;
 }) {
-  const [shopId, setShopId] = useState(restaurant);
+  const [shopIds, setShopIds] = useState<string[]>(restaurants);
+  // The sections of a menu and the words a kitchen uses for a size are that
+  // kitchen's own: Domino's says Large where Panarottis says Standard. So
+  // those two pickers only appear once it is down to one restaurant, and an
+  // offer across several is the whole of each.
+  const shopId = shopIds.length === 1 ? shopIds[0] : "";
   const [sections, setSections] = useState<string[]>(categories);
   // Read back as the picker wrote them, question and all, or a refresh would
   // find nothing it recognised and quietly clear every tick.
@@ -96,7 +103,9 @@ export default function MenuScope({
 
   return (
     <div className="space-y-3">
-      {shopId !== "" && <input type="hidden" name="restaurant_id" value={shopId} />}
+      {shopIds.map((id) => (
+        <input key={id} type="hidden" name="restaurant_id" value={id} />
+      ))}
       {sections.map((id) => (
         <input key={id} type="hidden" name="category_id" value={id} />
       ))}
@@ -110,12 +119,14 @@ export default function MenuScope({
           <button
             type="button"
             onClick={() => {
-              setShopId("");
+              setShopIds([]);
               setSections([]);
               setChosen([]);
             }}
             className={`chip ${
-              shopId === "" ? "border-ink bg-ink text-white" : "border-black/10 bg-white"
+              shopIds.length === 0
+                ? "border-ink bg-ink text-white"
+                : "border-black/10 bg-white"
             }`}
           >
             Any
@@ -125,18 +136,34 @@ export default function MenuScope({
               key={one.id}
               type="button"
               onClick={() => {
-                setShopId(one.id);
+                // Tapped again it comes off, so two kitchens is two taps and
+                // changing your mind is one. Anything picked under a menu
+                // belongs to the shop it came from, so it goes.
+                setShopIds(
+                  shopIds.includes(one.id)
+                    ? shopIds.filter((id) => id !== one.id)
+                    : [...shopIds, one.id]
+                );
                 setSections([]);
                 setChosen([]);
               }}
               className={`chip ${
-                shopId === one.id ? "border-ink bg-ink text-white" : "border-black/10 bg-white"
+                shopIds.includes(one.id)
+                  ? "border-ink bg-ink text-white"
+                  : "border-black/10 bg-white"
               }`}
             >
               {one.name}
             </button>
           ))}
         </div>
+        <p className="mt-1 text-xs text-muted">
+          {shopIds.length === 0
+            ? "Any means the offer is on whatever they order."
+            : shopIds.length === 1
+              ? "The cart has to be from here and nowhere else."
+              : "The cart has to be from these, and nothing outside them. Pick one on its own to narrow it to a section or a size."}
+        </p>
       </div>
 
       {shop && shop.categories.length > 0 && (

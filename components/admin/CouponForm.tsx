@@ -276,7 +276,7 @@ export default function CouponForm({
         <p className="label">What it covers</p>
         <MenuScope
           shops={shops}
-          restaurant={values?.places[0] ?? ""}
+          restaurants={values?.places ?? []}
           categories={values?.sections ?? []}
           choice={values?.required_choice ?? ""}
           sizes={sets}
