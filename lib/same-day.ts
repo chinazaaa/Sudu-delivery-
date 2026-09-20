@@ -168,8 +168,12 @@ export function slotsWorthOffering(
     );
     const to = from + WINDOW_HOURS;
 
+    // Covered, not merely touching. A run delivering between 12 and 5:30
+    // does not get somebody the five to six window: it is gone by then, so
+    // hiding that window leaves nothing today at all. Only a run that gets
+    // the food there across the whole window is the better deal.
     return !covered.some(
-      (run) => run.date === date && run.hours.from < to && run.hours.to >= from
+      (run) => run.date === date && run.hours.from <= from && run.hours.to >= to
     );
   });
 }

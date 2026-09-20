@@ -1275,9 +1275,9 @@ test("a time a run already covers is not offered as a car of its own", () => {
   // Nothing going, so every window stands.
   assert.equal(slotsWorthOffering(slots, []).length, slots.length);
 
-  // A run delivering between 12 and 3 today. The same window as a car of its
-  // own costs two and a half thousand more for food arriving at the same
-  // time, so it goes.
+  // A run delivering between 12 and 3 today covers the noon window exactly,
+  // and the same window as a car of its own costs two and a half thousand
+  // more for food arriving at the same time, so it goes.
   const left = slotsWorthOffering(slots, [
     { run_date: "2026-09-20", window: "Between 12pm and 3pm" },
   ]);
@@ -1288,12 +1288,21 @@ test("a time a run already covers is not offered as a car of its own", () => {
   // Later today still stands, and so does tomorrow.
   assert.equal(left.some((slot) => slot.day === "tomorrow"), true);
 
-  // An arrival time rather than a window: "about 2pm" falls inside 12 to 3.
-  const arrival = slotsWorthOffering(slots, [
-    { run_date: "2026-09-20", window: "On campus ~2:00pm" },
+  // A run that is gone before the window ends does not cover it. Between 12
+  // and 5:30 leaves the five to six window standing, because that run cannot
+  // get anybody their food at six.
+  const partly = slotsWorthOffering(slots, [
+    { run_date: "2026-09-20", window: "Between 12pm and 5:30pm" },
   ]);
+  // Three to six in Lagos is 14:00 UTC, and a run gone by half five cannot
+  // deliver at six.
   assert.equal(
-    arrival.some((slot) => slot.at.startsWith("2026-09-20T11")),
+    partly.some((slot) => slot.at.startsWith("2026-09-20T14")),
+    true
+  );
+  // The window it does cover is still hidden.
+  assert.equal(
+    partly.some((slot) => slot.at.startsWith("2026-09-20T11")),
     false
   );
 
