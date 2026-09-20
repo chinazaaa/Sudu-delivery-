@@ -45,6 +45,14 @@ export default function ShelfCheckout({
   const [name, setName] = useState(me?.name ?? "");
   const [phone, setPhone] = useState("");
   const [hostel, setHostel] = useState(me?.hostel ?? "");
+  // Where it goes: a block on campus, or an address anywhere in Lagos.
+  //
+  // Only skincare asks this. Food is fetched hot and driven straight over,
+  // so it goes to PAU and nowhere else; a parcel on a weekly car can go to a
+  // house in Lekki without the day being any different. Somebody who is not
+  // at PAU is not a lost customer here, they are a customer with an address.
+  const [inPau, setInPau] = useState(true);
+  const [address, setAddress] = useState("");
   const [note, setNote] = useState("");
   const [method, setMethod] = useState<"transfer" | "card">(me?.paymentMethod ?? "transfer");
   const [busy, setBusy] = useState(false);
@@ -82,7 +90,7 @@ export default function ShelfCheckout({
         lines: cart.map((one) => ({ id: one.id, qty: one.qty })),
         name,
         phone,
-        hostel,
+        hostel: inPau ? hostel : address,
         note,
         paymentMethod: method,
       });
@@ -186,28 +194,63 @@ export default function ShelfCheckout({
           className="field"
           autoComplete="tel"
         />
-        {hostels.length > 0 ? (
-          <select
-            value={hostel}
-            onChange={(event) => setHostel(event.target.value)}
-            aria-label="Your block"
-            className="field"
-          >
-            <option value="">Which block?</option>
-            {hostels.map((one) => (
-              <option key={one} value={one}>
-                {one}
-              </option>
-            ))}
-          </select>
+        <div className="flex gap-2">
+          {[
+            { at: true, label: "I am at PAU" },
+            { at: false, label: "Somewhere else in Lagos" },
+          ].map((one) => (
+            <button
+              key={one.label}
+              type="button"
+              onClick={() => setInPau(one.at)}
+              className={`chip flex-1 justify-center ${
+                inPau === one.at ? "border-ink bg-ink text-white" : "border-black/10 bg-white"
+              }`}
+            >
+              {one.label}
+            </button>
+          ))}
+        </div>
+
+        {inPau ? (
+          hostels.length > 0 ? (
+            <select
+              value={hostel}
+              onChange={(event) => setHostel(event.target.value)}
+              aria-label="Your block"
+              className="field"
+            >
+              <option value="">Which block?</option>
+              {hostels.map((one) => (
+                <option key={one} value={one}>
+                  {one}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              value={hostel}
+              onChange={(event) => setHostel(event.target.value)}
+              placeholder="Your hostel or block"
+              aria-label="Your hostel or block"
+              className="field"
+            />
+          )
         ) : (
-          <input
-            value={hostel}
-            onChange={(event) => setHostel(event.target.value)}
-            placeholder="Your hostel or block"
-            aria-label="Your hostel or block"
-            className="field"
-          />
+          <div>
+            <textarea
+              value={address}
+              onChange={(event) => setAddress(event.target.value)}
+              rows={3}
+              placeholder="Street, area, and anything the driver needs to find you"
+              aria-label="Your address in Lagos"
+              className="field"
+            />
+            <p className="mt-1 text-xs text-muted">
+              Anywhere in Lagos. Outside Lagos we cannot bring it, and we would
+              rather say so now than take your money and ring you on Saturday.
+            </p>
+          </div>
         )}
         <input
           value={note}
@@ -252,7 +295,7 @@ export default function ShelfCheckout({
           <button
             type="button"
             onClick={place}
-            disabled={busy}
+            disabled={busy || (inPau ? hostel.trim() === "" : address.trim().length < 8)}
             className="btn-primary w-full py-4 text-base"
           >
             {busy ? "Placing…" : `Place order · ${naira(food + fee)}`}

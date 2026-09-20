@@ -458,6 +458,16 @@ export async function placeSkincareOrder(input: {
     .map((one) => ({ menu_item_id: one.id, qty: Math.min(20, Math.round(one.qty)) }));
   if (lines.length === 0) return { ok: false, error: "There is nothing in the basket." };
 
+  // A block on campus, or an address in Lagos. Food goes to PAU and nowhere
+  // else because it is fetched hot and driven straight over; a parcel on a
+  // weekly car can go to a house without the day being any different. What
+  // it cannot be is three characters somebody typed to get past the form,
+  // because the driver has to find it on Saturday.
+  const goesTo = input.hostel.trim();
+  if (goesTo.length < 2) {
+    return { ok: false, error: "We need somewhere to bring it: your block, or your address." };
+  }
+
   // The car for the next drop, made if it is not there yet. Everybody who
   // ordered for that Saturday is in this one, which is what makes one flat
   // fee honest.
@@ -470,7 +480,7 @@ export async function placeSkincareOrder(input: {
     batchId: car.id,
     name: input.name,
     phone: input.phone,
-    hostel: input.hostel,
+    hostel: goesTo,
     lines,
     paymentMethod: input.paymentMethod,
     customerNote: input.note,
