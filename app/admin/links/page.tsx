@@ -84,6 +84,11 @@ export default async function LinksPage({
       />
 
       <LinkBuilder
+        // A fresh form per link. Without this, going from the list to an edit
+        // keeps the same form alive, and a form's starting values are read
+        // once when it appears: the fields stayed empty and the dishes stayed
+        // as they were, so Edit looked like it had not worked.
+        key={editing?.id ?? "new"}
         editing={
           editing && {
             id: editing.id,
