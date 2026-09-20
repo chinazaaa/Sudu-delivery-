@@ -23,7 +23,7 @@ export default function LinkCheckout({
   food,
   fee,
   hostels,
-  openChoices,
+  swaps,
   hasCardLink,
   askUs,
   me,
@@ -42,9 +42,11 @@ export default function LinkCheckout({
    *  because a promotion may price it. */
   fee: number | null;
   hostels: string[];
-  /** Questions the link left open, by name, so the note can say what it is
-   *  for rather than sitting there blank. */
-  openChoices: string[];
+  /** What they can swap at no cost, with what the link currently says: the
+   *  crust is Hand Tossed, and Thin Crust is there for the asking. The note
+   *  says so rather than sitting blank, because nobody asks for a change
+   *  they have not been told they can have. */
+  swaps: { name: string; chosen: string; others: string[] }[];
   /** Whether a card link is waiting, so card needs no message. */
   hasCardLink: boolean;
   /** A WhatsApp link, opened with the basket written out, for asking
@@ -201,21 +203,32 @@ export default function LinkCheckout({
           value={note}
           onChange={(event) => setNote(event.target.value)}
           placeholder={
-            openChoices.length > 0
-              ? `${openChoices[0]}? Say it here`
+            swaps.length > 0
+              ? `Prefer ${swaps[0].others[0]}? Say it here`
               : "Anything we should know? (optional)"
           }
           aria-label="Anything we should know"
           className="field"
         />
-        {openChoices.length > 0 && (
-          <p className="text-xs text-muted">
-            {openChoices.length === 1
-              ? `${openChoices[0]} is yours to pick, and it costs nothing either way: say which in the note and the counter is told.`
-              : `${openChoices.slice(0, -1).join(", ")} and ${
-                  openChoices[openChoices.length - 1]
-                } are yours to pick, and they cost nothing either way: say which in the note and the counter is told.`}
-          </p>
+        {swaps.length > 0 && (
+          <ul className="space-y-0.5 text-xs text-muted">
+            {swaps.map((swap) => (
+              <li key={swap.name}>
+                {swap.chosen !== "" ? (
+                  <>
+                    {swap.name} is <span className="font-semibold">{swap.chosen}</span>.
+                    Want {swap.others.join(" or ")} instead? It costs the same, so
+                    say so in the note and the counter is told.
+                  </>
+                ) : (
+                  <>
+                    {swap.name} is yours to pick: {swap.others.join(" or ")}, same
+                    price either way. Say which in the note.
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
 
         <PayChoice value={method} onChange={setMethod} />

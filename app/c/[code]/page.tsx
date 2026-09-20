@@ -25,35 +25,61 @@ export const dynamic = "force-dynamic";
  * still get dinner.
  */
 /**
- * The questions this basket leaves open.
+ * The swaps this basket allows, with what it currently says.
  *
- * A link settles everything that moves the price. What it does not settle,
- * and should not, is which crust or which drink: that belongs to whoever is
- * eating, and the note is where they say it. Naming them beats a blank box,
- * because nobody writes "thin crust please" unless they know they may.
+ * A link settles every question that moves the price, and the crust is not
+ * one of them: Hand Tossed and Thin Crust cost the same, so somebody who
+ * would rather have the other can simply have it. Saying which was picked,
+ * and what else there is, is the difference between a blank box and an offer.
+ *
+ * It used to leave out anything the link had already answered, which meant
+ * picking Hand Tossed hid the fact that Thin Crust was free.
  */
-async function freeChoices(lines: CartLine[]): Promise<string[]> {
+async function freeSwaps(
+  lines: CartLine[]
+): Promise<{ name: string; chosen: string; others: string[] }[]> {
   const chosen = new Set(lines.flatMap((line) => line.option_ids ?? []));
   const items = [...new Set(lines.map((line) => line.menu_item_id))];
   if (items.length === 0) return [];
 
   const { data: groups } = await db()
     .from("item_option_groups")
-    .select("id, name, menu_item_id")
+    .select("id, name")
     .in("menu_item_id", items);
   if (!groups || groups.length === 0) return [];
 
   const { data: options } = await db()
     .from("item_options")
-    .select("id, group_id, price_delta")
-    .in("id", [...chosen].length > 0 ? [...chosen] : ["none"]);
-
-  // A question already answered by the link is not theirs to answer again.
-  const answered = new Set((options ?? []).map((one) => one.group_id as string));
+    .select("id, group_id, name, price_delta, available")
+    .in(
+      "group_id",
+      (groups as { id: string }[]).map((group) => group.id)
+    );
 
   return (groups as { id: string; name: string }[])
-    .filter((group) => !answered.has(group.id))
-    .map((group) => group.name);
+    .map((group) => {
+      const theirs = ((options ?? []) as {
+        id: string;
+        group_id: string;
+        name: string;
+        price_delta: number;
+        available: boolean;
+      }[]).filter((option) => option.group_id === group.id && option.available);
+
+      // Only where every answer costs the same. A size is not a swap, it is
+      // a different price, and offering it in a note would be a promise the
+      // total does not keep.
+      const free = theirs.every((option) => option.price_delta === theirs[0]?.price_delta);
+      const others = theirs.filter((option) => !chosen.has(option.id));
+      if (!free || theirs.length < 2 || others.length === 0) return null;
+
+      return {
+        name: group.name,
+        chosen: theirs.find((option) => chosen.has(option.id))?.name ?? "",
+        others: others.map((option) => option.name),
+      };
+    })
+    .filter((one): one is { name: string; chosen: string; others: string[] } => one !== null);
 }
 
 export default async function CheckoutLinkPage({
@@ -182,10 +208,10 @@ export default async function CheckoutLinkPage({
           choices: line.options.map((one) => one.name),
           total: line.unitPrice * line.qty,
         }))}
-        // What is still theirs to say: a crust, which drink. Anything that
-        // moved the price was settled when the link was made, so this is only
-        // ever the free choices, and the note is where they go.
-        openChoices={await freeChoices(link.lines)}
+        // What they can swap at no cost: the crust, which drink. Anything
+        // that moves the price was settled when the link was made, so this
+        // is only ever the free ones, and the note is where they say it.
+        swaps={await freeSwaps(link.lines)}
         food={food}
         fee={link.fee}
         hostels={await hostelNames()}
