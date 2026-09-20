@@ -192,6 +192,17 @@ export default async function CheckoutLinkPage({
         hasCardLink={link.payment_link !== ""}
       />
 
+      {/* A basket somebody was sent is one thing the shop sells, not the
+          only one. Anybody who opened it wanting something else should not
+          have to guess that there is a menu behind it. */}
+      <p className="text-center text-sm text-muted">
+        Wanted something else?{" "}
+        <Link href="/" className="font-semibold text-brand">
+          Order anything off the menu
+        </Link>
+        , on this run or another.
+      </p>
+
       <HelpLine number={settings.whatsapp_number} about="a link I was sent" />
     </div>
   );
