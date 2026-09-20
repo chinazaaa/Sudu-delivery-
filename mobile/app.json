@@ -17,7 +17,11 @@
       "buildNumber": "3",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "associatedDomains": [
+        "applinks:sudu.store",
+        "applinks:www.sudu.store"
+      ]
     },
     "android": {
       "package": "store.sudu.app",
@@ -25,7 +29,49 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#fff1ea"
-      }
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "sudu.store",
+              "pathPrefix": "/g"
+            },
+            {
+              "scheme": "https",
+              "host": "www.sudu.store",
+              "pathPrefix": "/g"
+            },
+            {
+              "scheme": "https",
+              "host": "sudu.store",
+              "pathPrefix": "/o"
+            },
+            {
+              "scheme": "https",
+              "host": "www.sudu.store",
+              "pathPrefix": "/o"
+            },
+            {
+              "scheme": "https",
+              "host": "sudu.store",
+              "pathPrefix": "/r"
+            },
+            {
+              "scheme": "https",
+              "host": "www.sudu.store",
+              "pathPrefix": "/r"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

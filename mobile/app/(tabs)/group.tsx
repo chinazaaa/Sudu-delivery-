@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { api, naira, type GroupBoard } from "@/lib/api";
 import { cart, countItems, me, party, pastParties, useStored, type Party } from "@/lib/store";
@@ -22,6 +22,10 @@ const SITE = "https://sudu.store";
  */
 export default function Group() {
   const router = useRouter();
+  // A tapped link lands here with the code on it. It is only ever a way in:
+  // the seat call swaps it for the group's real id, and nothing else is
+  // allowed to see it.
+  const { code: arrived } = useLocalSearchParams<{ code?: string }>();
   const [seated] = useStored(party.read, null);
   const [past] = useStored(pastParties.read, []);
   const [shop] = useStored(() => api.shop().catch(() => null), null);
@@ -46,6 +50,10 @@ export default function Group() {
   useEffect(() => {
     void me.read().then((saved) => setName((was) => was || saved.name.split(" ")[0]));
   }, []);
+
+  useEffect(() => {
+    if (arrived) setCode(String(arrived));
+  }, [arrived]);
 
   /** The board, kept current while somebody is looking at it. */
   const look = useCallback(async () => {
@@ -266,9 +274,13 @@ export default function Group() {
           </View>
 
           <View style={card()}>
-            <Text style={{ fontWeight: "800", color: T.ink }}>Somebody sent you a link?</Text>
+            <Text style={{ fontWeight: "800", color: T.ink }}>
+              {arrived ? "Join this group" : "Somebody sent you a link?"}
+            </Text>
             <Text style={{ color: T.muted, marginTop: 2 }}>
-              Paste it here and you are in their car.
+              {arrived
+                ? "Say who you are and you are in their car. Everybody orders their own food and pays for their own."
+                : "Paste it here and you are in their car."}
             </Text>
             <TextInput
               value={code}
@@ -519,10 +531,11 @@ function Board({
           <Text style={{ color: T.muted, fontWeight: "700" }}>Copy link</Text>
         </Pressable>
 
-        {/* Closing is the leader's, which the server checks by the seat. It
-            is offered to everybody and refused with a sentence rather than
-            hidden, because a hidden button explains nothing. */}
-        {(board.people ?? 0) > 0 && (board.ready ?? 0) > 0 && (
+        {/* Only whoever made the link, exactly as the website has it. The
+            server decides that from the seat and says so; asking the phone
+            would say yes to everybody, since every member holds the group
+            id. Anybody else waits for them or for the clock. */}
+        {board.leaderIsMine && (board.ready ?? 0) > 0 && (
           <Pressable
             onPress={onClose}
             disabled={busy}
@@ -537,6 +550,13 @@ function Board({
               {busy ? "Closing…" : "Close it and get everybody's total"}
             </Text>
           </Pressable>
+        )}
+
+        {!board.leaderIsMine && (board.people ?? 0) > 0 && (
+          <Text style={{ color: T.muted, textAlign: "center", fontSize: 13 }}>
+            {board.leader || "Whoever started it"} closes this when everybody is
+            ready, or the clock does.
+          </Text>
         )}
 
         <Pressable onPress={onLeave} disabled={busy} style={{ paddingVertical: 10, alignItems: "center" }}>

@@ -94,3 +94,38 @@ in front of us a second time. Each line is a rule, then the bug that bought it.
 
 19. **Past groups are ones an order came out of.** A link somebody opened and
     left is a door into nothing.
+
+## Deep links
+
+20. **A link opens the app, and the code stays a code.** sudu.store/g/<code>
+    is claimed by the app on both platforms, but the code goes straight to
+    the join call and nowhere else: it is swapped for the group's real id the
+    moment a seat is taken.
+
+21. **The association files claim nothing until they can claim it properly.**
+    Apple and Google both cache what they fetch, so an empty or half-filled
+    file is worse than a missing one. Each answers 404 until its credential
+    is in the environment.
+
+## Setting the links up
+
+The app declares what it claims in `mobile/app.json`; the site serves what the
+platforms check. Two values are needed, and neither can be read off the
+repository:
+
+- `APPLE_APP_ID` — the Apple team id and the bundle id together, for example
+  `AB12CD34EF.store.sudu.app`. The team id is in the Apple Developer account
+  under Membership.
+- `ANDROID_CERT_SHA256` — the SHA-256 fingerprint of the key that signs the
+  build, from `eas credentials` or Play Console under Setup, App signing. A
+  Play build and an EAS build are signed by different keys, and both can be
+  listed, separated by commas.
+
+Set both in Vercel, redeploy, then check:
+
+    curl -sS https://sudu.store/.well-known/apple-app-site-association
+    curl -sS https://sudu.store/.well-known/assetlinks.json
+
+Both must answer plain JSON over https with no redirect. Android verifies on
+install; iOS fetches when the app is installed, so a link tapped before that
+opens the website, which is the right fallback.

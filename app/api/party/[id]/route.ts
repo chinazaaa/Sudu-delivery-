@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { seatFrom } from "@/lib/seat";
 import { db } from "@/lib/supabase";
 import { lookupColumn } from "@/lib/links";
-import { groupOrders } from "@/lib/groups";
+import { groupOrders, leaderSeat } from "@/lib/groups";
 import { cartValues, changedSinceFinalised, groupCarts, isReady } from "@/lib/group-carts";
 import { shareNow, sweepGroups } from "@/lib/groups";
 
@@ -87,6 +87,16 @@ export async function GET(
               changed: changedSinceFinalised(seat),
             }));
           })(),
+      // Whether this caller is the one who made the link. The server works
+      // it out and the client is told, rather than the client deciding: every
+      // member holds the group id, so a browser asking itself said yes to
+      // everybody and anybody could close a car they had joined.
+      leaderIsMine: await (async () => {
+        if (closed) return false;
+        const token = await seatFrom(request);
+        if (!token) return false;
+        return (await leaderSeat(data.id as string)) === token;
+      })(),
       // What this browser's own seat holds, so a form that asks for it can
       // open on what they already said rather than on nothing. Only their
       // own, matched on the seat cookie: everything above is readable by

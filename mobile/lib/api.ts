@@ -112,6 +112,10 @@ export type GroupBoard = {
   closesAt?: string;
   /** What delivery would cost each of them if it closed now. */
   eachNow?: number;
+  /** Whether this phone is the one that made the link. Worked out by the
+   *  server from the seat, because every member holds the group id and a
+   *  client asking itself said yes to everybody. */
+  leaderIsMine?: boolean;
   /** Named when a promotion is pricing the car, because then the figure does
    *  not fall as people join and a board implying it will is a surprise
    *  waiting at the close. */
