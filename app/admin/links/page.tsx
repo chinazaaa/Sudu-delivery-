@@ -3,7 +3,9 @@ import PageHeader from "@/components/admin/PageHeader";
 import LinkBuilder from "@/components/admin/LinkBuilder";
 import { listCheckoutLinks } from "@/lib/checkout-links";
 import { menuView } from "@/lib/menu";
-import { openBatches } from "@/lib/batches";
+import { getBatch, openBatches } from "@/lib/batches";
+import { clockLabel, dayWord, runDateLabel } from "@/lib/time";
+import { SLOT_LABEL } from "@/lib/config";
 import { hoursByDay, safeSettings } from "@/lib/settings";
 import { deliverySlots } from "@/lib/same-day";
 import { toBatchView } from "@/lib/view";
@@ -41,6 +43,8 @@ export default async function LinksPage({
 
   const wanted = (await searchParams).edit ?? "";
   const editing = links.find((one) => one.id === wanted) ?? null;
+  // The run it was saved against, which may have closed since.
+  const savedRun = editing?.batch_id ? await getBatch(editing.batch_id) : null;
 
   const slots =
     settings.same_day_on === "on" ? deliverySlots(new Date(), await hoursByDay()) : [];
@@ -104,6 +108,28 @@ export default async function LinksPage({
           .filter((one) => !one.closed && !one.full)
           .map((one) => ({ id: one.id, label: one.label }))}
         slots={slots.map((slot) => ({ at: slot.at, label: slot.label }))}
+        // What this link was saved with, in case it is a run that has since
+        // closed or a window that has passed: without it the dropdown falls
+        // back to the first option and quietly changes what was saved.
+        saved={
+          editing
+            ? {
+                value: editing.batch_id
+                  ? `run:${editing.batch_id}`
+                  : (editing.deliver_at ?? ""),
+                label: editing.batch_id
+                  ? savedRun
+                    ? `${runDateLabel(savedRun.run_date)} · ${SLOT_LABEL[savedRun.slot]}`
+                    : "The run it was made for"
+
+                  : editing.deliver_at
+                    ? `${clockLabel(editing.deliver_at)}, ${dayWord(
+                        editing.deliver_at.slice(0, 10)
+                      )}`
+                    : "",
+              }
+            : null
+        }
       />
 
       <div className="mt-4 space-y-3">

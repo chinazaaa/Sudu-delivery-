@@ -45,11 +45,16 @@ export default function LinkBuilder({
   dishes,
   runs,
   slots,
+  saved,
   editing,
 }: {
   dishes: Dish[];
   runs: { id: string; label: string }[];
   slots: { at: string; label: string }[];
+  /** What this link already says, when the run has closed or the window has
+   *  passed and so is not in the lists any more. Kept as its own option so
+   *  opening an edit does not quietly move it. */
+  saved?: { value: string; label: string } | null;
   /** A link being changed rather than made. Everything comes back filled in,
    *  and saving keeps the same address, so whatever was already sent to
    *  people goes on working. */
@@ -372,6 +377,12 @@ export default function LinkBuilder({
           defaultValue={editing?.when ?? ""}
         >
           <option value="">Whichever run is open when they tap it</option>
+          {saved &&
+            saved.value !== "" &&
+            !slots.some((slot) => slot.at === saved.value) &&
+            !runs.some((run) => `run:${run.id}` === saved.value) && (
+              <option value={saved.value}>{saved.label} (as saved)</option>
+            )}
           {slots.length > 0 && (
             <optgroup label="A car of its own">
               {slots.map((slot) => (

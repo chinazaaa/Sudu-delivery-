@@ -19,6 +19,23 @@ export function runDateLabel(runDate: string): string {
   return DATE_FMT.format(new Date(runDate + "T12:00:00Z"));
 }
 
+/**
+ * "today", "tomorrow", or the date itself.
+ *
+ * Printing "Sunday, 20 Sep" on the twentieth makes somebody work out whether
+ * that is now. It is only worth spelling a date out once it is far enough
+ * away to need spelling out.
+ */
+export function dayWord(runDate: string, now: Date = new Date()): string {
+  const today = lagosToday(now);
+  if (runDate === today) return "today";
+
+  const tomorrow = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(
+    new Date(now.getTime() + 86_400_000)
+  );
+  return runDate === tomorrow ? "tomorrow" : runDateLabel(runDate);
+}
+
 /** "Friday", used in the countdown lines. */
 export function weekdayLabel(runDate: string): string {
   return new Intl.DateTimeFormat("en-NG", { timeZone: TZ, weekday: "long" })
