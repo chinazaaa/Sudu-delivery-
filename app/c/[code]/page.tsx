@@ -181,7 +181,7 @@ export default async function CheckoutLinkPage({
       <LinkCheckout
         code={link.short ?? link.id}
         title={link.label || "Your order"}
-        when={going.when}
+        when={`Order now, get it ${going.said}`}
         // The same sentence as everywhere else: a time here is an estimate,
         // and being a quarter of an hour out is not a failure unless somebody
         // was told a time to the minute.

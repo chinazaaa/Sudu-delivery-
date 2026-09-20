@@ -185,7 +185,6 @@ export default function LinkBuilder({
             setProblem(result.error ?? "Could not save that.");
             return;
           }
-          setInstead([]);
           if (editing) {
             // Out of the edit and back to the list. The refresh is the half
             // that was missing: leaving the address behind does not re-read
@@ -196,6 +195,12 @@ export default function LinkBuilder({
             router.refresh();
             return;
           }
+          // Emptied only on the way to a fresh link. Clearing the swaps on
+          // the edit path wiped them out of the form while it was still on
+          // screen, so a second Save, which anybody gives a form that has
+          // not visibly done anything, posted a link with no swaps on it and
+          // took them off for real.
+          setInstead([]);
           setPicked([]);
           setQuery("");
           setDone(true);

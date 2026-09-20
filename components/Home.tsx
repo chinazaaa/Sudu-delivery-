@@ -6,39 +6,27 @@ import Carousel from "./Carousel";
 import CartBar from "./CartBar";
 import ItemRow from "./ItemRow";
 import ItemSheet from "./ItemSheet";
-import RunStrip from "./RunStrip";
-import SameDayStrip from "./SameDayStrip";
-import type { Slot } from "@/lib/same-day";
+import ArrivalStrip from "./ArrivalStrip";
 import Thumb from "./Thumb";
-import { countItems, useCart } from "@/lib/cart";
-import FeeBands from "./FeeBands";
+import { useCart } from "@/lib/cart";
 import SplitPrompt from "./SplitPrompt";
-import { feeFor, type Band } from "@/lib/fees";
-import { naira } from "@/lib/money";
-import type { ItemView, MenuView, BatchView } from "@/lib/view";
+import type { ItemView, MenuView } from "@/lib/view";
 import type { Slide } from "@/lib/slides";
 
 export default function Home({
   menu,
-  nextRun,
+  arriving,
   slides,
   popularIds,
   autoHeadline,
   autoLines,
-  bands,
-  soonest,
-  today,
   promos,
 }: {
   menu: MenuView[];
-  nextRun: BatchView | null;
-  /** The soonest time we can actually hit, today or tomorrow, or null when
-   *  the pick-a-time service is off. Worked out on the server, from the
-   *  shop's clock rather than the phone's. */
-  soonest: Slot | null;
-  /** Today in Lagos, worked out on the server: a phone's own clock can be
-   *  anything, and this decides which strip leads the page. */
-  today: string;
+  /** When something ordered right now would land, said as a sentence and
+   *  worked out on the server: a phone's own clock can be anything, and this
+   *  is the same decision the checkout makes. Empty when nothing is going. */
+  arriving: string;
   /** Written in admin. Empty falls back to a slide per restaurant. */
   slides: Slide[];
   /** Menu item ids, most bought first. Empty until people have ordered. */
@@ -46,8 +34,6 @@ export default function Home({
   /** The wording for the slider the page builds when there are no slides. */
   autoHeadline: string;
   autoLines: string[];
-  /** What delivery costs, so the page can say where it starts. */
-  bands: Band[];
   /** A promotion on a restaurant, in a few words, keyed by its id. An offer
    *  announces itself on the card of the food it is for, because the front
    *  page has quite enough on it already. */
@@ -97,29 +83,6 @@ export default function Home({
     };
   }, [menu, popularIds]);
 
-  // Said once, wherever it ends up sitting.
-  const feeLine = (
-    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-      <span className="font-bold">
-        Delivery from {naira(feeFor(1, nextRun?.flashFee ?? null, bands))}
-      </span>
-      {/* The explanation is inside the panel below on a phone, where two
-          extra lines of it cost more than they say. */}
-      <span className="hidden text-sm text-muted sm:inline">
-        one fee for the whole order, however many restaurants
-      </span>
-      <span className="sm:w-auto">
-        {/* Marked against what is actually in the cart, so an empty one
-            claims no band. */}
-        <FeeBands
-          itemCount={countItems(cart)}
-          flashFee={nextRun?.flashFee ?? null}
-          bands={bands}
-        />
-      </span>
-    </div>
-  );
-
   if (menu.length === 0) {
     return (
       <div className="card mx-auto mt-10 max-w-md text-center">
@@ -144,19 +107,10 @@ export default function Home({
           menu they have already decided how they are ordering. */}
       <SplitPrompt />
 
-      {/* A run going today leads, because it is four thousand against six
-          and a half for food arriving inside the same afternoon. A car of its
-          own is what to say when there is no run today: then the question is
-          not which is cheaper, it is whether anybody can eat today at all. */}
-      {nextRun && nextRun.runDate === today ? (
-        <RunStrip run={nextRun} note={feeLine} />
-      ) : soonest ? (
-        <SameDayStrip soonest={soonest} />
-      ) : nextRun ? (
-        <RunStrip run={nextRun} note={feeLine} />
-      ) : (
-        <div className="rounded-2xl bg-paper px-4 py-3 shadow-card">{feeLine}</div>
-      )}
+      {/* One sentence, and nothing else. Which run or which car it is has
+          already been decided, by the same rule the checkout uses, so all
+          that is left to say is when the food turns up. */}
+      {arriving !== "" && <ArrivalStrip said={arriving} />}
 
       <div className="relative">
         <input

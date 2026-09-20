@@ -1,4 +1,4 @@
-import type { Slot } from "./same-day";
+import { aroundPhrase, type Slot } from "./same-day";
 
 /**
  * When an order lands, worked out rather than asked for.
@@ -20,6 +20,10 @@ export type ArrivalRun = {
   runDate: string;
   /** "Between 12pm and 3pm, today", already said the way it is read. */
   when: string;
+  /** The same thing inside a sentence: "get it between 12pm and 3pm today".
+   *  A capital B mid sentence is the tell that a label has been dropped into
+   *  prose without being read. */
+  said: string;
 };
 
 export type Arrival = {
@@ -29,6 +33,9 @@ export type Arrival = {
   at: string;
   /** What to put on the screen, said as a window. */
   when: string;
+  /** The same thing inside a sentence, with the day always said: "between
+   *  4pm and 6pm today". */
+  said: string;
   /** Whether this is a shared run, which is what makes it the cheaper one. */
   onARun: boolean;
 };
@@ -53,14 +60,23 @@ export function nextArrival(
     runId: run.id,
     at: "",
     when: run.when,
+    said: run.said,
     onARun: true,
   });
-  const onItsOwn = (slot: Slot): Arrival => ({
-    runId: "",
-    at: slot.at,
-    when: slot.label,
-    onARun: false,
-  });
+  const onItsOwn = (slot: Slot): Arrival => {
+    // A car of its own is three hours out, so what is promised is that time:
+    // "around 4:30pm", not the whole block the shop divides the day into,
+    // which reads as a three hour wait. The day is always said, because a
+    // time on its own reads as today whatever day it is on.
+    const said = `${aroundPhrase(slot.at)} ${slot.day}`;
+    return {
+      runId: "",
+      at: slot.at,
+      when: said.charAt(0).toUpperCase() + said.slice(1),
+      said,
+      onARun: false,
+    };
+  };
 
   const runToday = runs.find((one) => one.runDate === today);
   if (runToday) return onRun(runToday);
@@ -99,12 +115,14 @@ export function runArrival(run: {
   deliveryWindow: string;
   label: string;
 }): ArrivalRun {
+  // The label carries the day word already worked out against the shop's
+  // clock ("today · Lunch"), so the day is taken from it rather than worked
+  // out a second time and risking a different answer.
+  const day = run.label.split(" · ")[0];
   return {
     id: run.id,
     runDate: run.runDate,
-    // The label carries the day word already worked out against the shop's
-    // clock ("today · Lunch"), so the day is taken from it rather than
-    // worked out a second time and risking a different answer.
-    when: `${run.deliveryWindow}, ${run.label.split(" · ")[0]}`,
+    when: `${run.deliveryWindow}, ${day}`,
+    said: `${run.deliveryWindow.charAt(0).toLowerCase()}${run.deliveryWindow.slice(1)} ${day}`,
   };
 }

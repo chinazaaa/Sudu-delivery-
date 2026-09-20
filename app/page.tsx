@@ -13,6 +13,7 @@ import {
 } from "@/lib/settings";
 import { toBatchView } from "@/lib/view";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
+import { nextArrival, runArrival } from "@/lib/arrival";
 import { offersByRestaurant } from "@/lib/coupons";
 import { offerBadge } from "@/lib/offers";
 import { sweepGroups } from "@/lib/groups";
@@ -59,12 +60,20 @@ export default async function HomePage() {
       popularIds={popularIds}
       autoHeadline={settings.auto_headline || AUTO_HEADLINE}
       autoLines={lines.length > 0 ? lines : [""]}
-      bands={bands}
-      nextRun={batches.length > 0 ? toBatchView(batches[0]) : null}
-      // The soonest time we can actually hit, from the shop's clock rather
-      // than the phone's, and only when same day is switched on today.
-      soonest={slots[0] ?? null}
-      today={lagosToday()}
+      // When something ordered right now would land, by the one rule every
+      // other way of ordering uses: a run going today while it is taking
+      // orders, a car of its own today, a run tomorrow, tomorrow's first
+      // window. Worked out here so the clock is the shop's.
+      arriving={
+        nextArrival(
+          batches
+            .map(toBatchView)
+            .filter((one) => !one.closed && !one.full)
+            .map(runArrival),
+          slots,
+          lagosToday()
+        )?.said ?? ""
+      }
       promos={promos}
     />
   );

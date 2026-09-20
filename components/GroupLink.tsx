@@ -221,7 +221,7 @@ export default function GroupLink({
       {going && (
         <div>
           <p className="label">When it arrives</p>
-          <p className="font-extrabold text-ink">{going.when}</p>
+          <p className="font-extrabold text-ink">Order now, get it {going.said}</p>
           <p className="mt-1 text-xs text-ink/70">
             {going.onARun
               ? "It rides on the run going out then, which is why it costs less. Everybody who joins is told the same time."

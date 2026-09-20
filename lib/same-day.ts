@@ -242,6 +242,31 @@ export function windowPhrase(at: string, now: Date = new Date()): string {
   return day === tomorrow ? `${window} tomorrow` : `${window}, ${day}`;
 }
 
+/**
+ * The time a car of its own would get there, said as the estimate it is.
+ *
+ * Three hours from now is the promise, and nobody means it to the minute:
+ * "around 4:30pm" is a sentence somebody can plan an afternoon around.
+ * "Between 3pm and 6pm", which is only the block the shop happens to divide
+ * the day into, is not, and it reads as a three hour wait.
+ *
+ * Rounded up to the next half hour, never down. Rounding down would name a
+ * time the food cannot be there by, which is the one thing an estimate must
+ * not do.
+ */
+export function aroundPhrase(at: string): string {
+  const when = new Date(at);
+  const hour = Number(
+    new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", hour12: false })
+      .format(when)
+  );
+  const minute = Number(
+    new Intl.DateTimeFormat("en-GB", { timeZone: TZ, minute: "2-digit" }).format(when)
+  );
+  const rounded = Math.ceil((hour * 60 + minute) / 30) * 30;
+  return `around ${clockOf(Math.floor(rounded / 60), rounded % 60)}`;
+}
+
 export function clockOf(hour: number, minute: number): string {
   const suffix = hour >= 12 ? "pm" : "am";
   const shown = hour > 12 ? hour - 12 : hour;

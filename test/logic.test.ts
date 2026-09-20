@@ -1355,8 +1355,18 @@ test("what is left of a window is still offered today", () => {
 test("the soonest way to eat is picked, not asked for", () => {
   const slots = deliverySlots(new Date("2026-09-20T12:12:00Z"), { first: 12, last: 17 });
   const today = "2026-09-20";
-  const runToday = { id: "a", runDate: today, when: "Between 2pm and 5pm, today" };
-  const runTomorrow = { id: "b", runDate: "2026-09-21", when: "Between 2pm and 5pm, tomorrow" };
+  const runToday = {
+    id: "a",
+    runDate: today,
+    when: "Between 2pm and 5pm, today",
+    said: "between 2pm and 5pm today",
+  };
+  const runTomorrow = {
+    id: "b",
+    runDate: "2026-09-21",
+    when: "Between 2pm and 5pm, tomorrow",
+    said: "between 2pm and 5pm tomorrow",
+  };
 
   // A run going today beats a car of its own today: same afternoon, two and
   // a half thousand less.
@@ -1365,7 +1375,9 @@ test("the soonest way to eat is picked, not asked for", () => {
   // No run today, but the day is not over: a car of its own, today.
   const car = nextArrival([runTomorrow], slots, today);
   assert.equal(car?.onARun, false);
-  assert.equal(car?.when, "Between 4:15pm and 5pm");
+  // The time it lands, rounded up to the next half hour, rather than the
+  // block the shop happens to divide the day into.
+  assert.equal(car?.when, "Around 4:30pm today");
 
   // Nothing left today. A run tomorrow beats a car tomorrow, because it is
   // the same hours for less money.
@@ -1376,7 +1388,11 @@ test("the soonest way to eat is picked, not asked for", () => {
   // is whenever the shop opens. Never nothing.
   const none = nextArrival([], tomorrowOnly, today);
   assert.equal(none?.onARun, false);
-  assert.equal(none?.when, "Between 12pm and 3pm tomorrow");
+  assert.equal(none?.when, "Around 12pm tomorrow");
+
+  // The day is always said, so a window never reads as today by default.
+  assert.equal(car?.said, "around 4:30pm today");
+  assert.equal(none?.said, "around 12pm tomorrow");
 
   // Nothing anywhere is the only case with no answer.
   assert.equal(nextArrival([], [], today), null);

@@ -26,7 +26,7 @@ import GroupLink, {
   PARTY_CHANGED,
   readGroup,
 } from "@/components/GroupLink";
-import type { Slot } from "@/lib/same-day";
+import { aroundPhrase, type Slot } from "@/lib/same-day";
 import { ESTIMATE_NOTE, nextArrival, runArrival } from "@/lib/arrival";
 import FillDetails from "@/components/FillDetails";
 import KeepCart from "@/components/KeepCart";
@@ -306,23 +306,22 @@ export default function Checkout({
       );
 
   /**
-   * When this order arrives, as an estimate rather than a promise.
+   * When this order arrives, in the same words as the front page.
    *
-   * Three hours is how long it takes to fetch food and drive it over, so a
-   * one o'clock order is a four o'clock delivery. Said as a time to the
-   * minute that is a promise nobody can keep in Lagos traffic, and being
-   * fifteen minutes out is not a failure. So it is said as the window it
-   * really is, and the line underneath says plainly that it is an estimate.
+   * A run is the window it delivers in: "between 12pm and 2pm today". A car
+   * of its own is three hours out, so it is the time it lands: "around
+   * 4:30pm today". One sentence either way, and the line under it says
+   * plainly that a time is an estimate.
    */
   const onARun = deliverAt === "";
   const runNow = batches.find((one) => one.id === batchId) ?? null;
   const arriving = onARun
     ? runNow
-      ? runArrival(runNow).when
-      : "On the next run"
+      ? runArrival(runNow).said
+      : "on the next run"
     : sameDay
-      ? sameDay.label
-      : "On the next run";
+      ? `${aroundPhrase(sameDay.at)} ${sameDay.day}`
+      : "on the next run";
 
   /**
    * The one alternative worth a sentence.
@@ -587,13 +586,10 @@ export default function Checkout({
         </section>
       ) : (
       <section className="card space-y-2">
-        <h2 className="font-bold">Estimated arrival</h2>
-
-        {/* Decided, not asked. Three hours is how long it takes to fetch food
-            and drive it over, and a run going today gets there for four
-            thousand rather than six and a half, so there is one right answer
-            and a dropdown only made somebody find it. */}
-        <p className="text-lg font-extrabold text-ink">{arriving}</p>
+        {/* Decided, not asked, and said the same way as the front page. A
+            dropdown here asked somebody to know the fee ladder and the cut
+            off before they could buy lunch. */}
+        <h2 className="text-lg font-extrabold text-ink">Order now, get it {arriving}</h2>
 
         <p className="text-sm text-muted">
           {onARun

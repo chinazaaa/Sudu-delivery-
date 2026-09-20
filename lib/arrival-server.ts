@@ -30,15 +30,20 @@ export async function arrivalNow(pinned?: {
     const batch = await getBatch(pinned.batchId);
     if (batch && isOrderable(batch)) {
       const view = toBatchView({ ...batch, order_count: 0, full: false });
-      return { runId: view.id, at: "", when: runArrival(view).when, onARun: true };
+      const said = runArrival(view);
+      return { runId: view.id, at: "", when: said.when, said: said.said, onARun: true };
     }
   }
 
   if (pinned?.deliverAt && slots.some((slot) => sameInstant(slot.at, pinned.deliverAt!))) {
+    const phrase = windowPhrase(pinned.deliverAt);
     return {
       runId: "",
       at: pinned.deliverAt,
-      when: windowPhrase(pinned.deliverAt).replace(/^./, (one) => one.toUpperCase()),
+      when: phrase.replace(/^./, (one) => one.toUpperCase()),
+      // windowPhrase says tomorrow when it is tomorrow and nothing when it
+      // is today, so today is said here rather than left to be assumed.
+      said: /tomorrow|\d{4}-\d{2}-\d{2}/.test(phrase) ? phrase : `${phrase} today`,
       onARun: false,
     };
   }
