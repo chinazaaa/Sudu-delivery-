@@ -73,6 +73,14 @@ export default async function SkincarePage({
             `One car a week. Order before ${settings.skincare_cut_off || "08:00"} that morning and you are on it, otherwise it is the week after.`}
           {bands[0].fee > 0 && ` Delivery from ${naira(bands[0].fee)}.`}
         </p>
+        {/* Where it comes from, and where it goes. Skincare is the one thing
+            people are right to be careful about, and a shelf that does not
+            answer that has answered it badly. Said above the products rather
+            than at the checkout alone, because by then somebody has already
+            decided. */}
+        <p className="text-sm font-semibold text-brand-dark">
+          {skincarePromise(settings)} To PAU, or anywhere in Lagos.
+        </p>
       </header>
 
       <Shelf
