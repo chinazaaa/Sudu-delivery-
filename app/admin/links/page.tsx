@@ -154,13 +154,28 @@ export default async function LinksPage({
                       {` · used ${link.used} time${link.used === 1 ? "" : "s"}`}
                     </p>
                   </div>
-                  <span
-                    className={`chip text-xs ${
-                      link.active ? "border-mint/30 bg-mint/10 text-mint" : "border-black/10 bg-shell"
-                    }`}
-                  >
-                    {link.active ? "Live" : "Stopped"}
-                  </span>
+                  {/* A link pinned to a time dies quietly: the time passes,
+                      and the next person to tap it is told so. Better to see
+                      it here, while there is still something to do about
+                      it. */}
+                  {(() => {
+                    const dead =
+                      link.deliver_at !== null &&
+                      !slots.some((slot) => slot.at === link.deliver_at);
+                    return (
+                      <span
+                        className={`chip text-xs ${
+                          !link.active
+                            ? "border-black/10 bg-shell"
+                            : dead
+                              ? "border-brand/30 bg-brand-tint text-brand-dark"
+                              : "border-mint/30 bg-mint/10 text-mint"
+                        }`}
+                      >
+                        {!link.active ? "Stopped" : dead ? "Time has gone" : "Live"}
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 <CopyText value={address} label="Copy link" className="px-3 py-2 text-sm" />

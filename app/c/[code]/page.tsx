@@ -4,13 +4,13 @@ import { getCheckoutLink } from "@/lib/checkout-links";
 import { priceLines } from "@/lib/orders";
 import { getBatch, isOrderable, openBatches } from "@/lib/batches";
 import { hostelNames } from "@/lib/hostels";
-import { safeSettings, whatsappLink } from "@/lib/settings";
+import { hoursByDay, safeSettings, whatsappLink } from "@/lib/settings";
 import { currentCustomer, customerDetails } from "@/lib/customer-auth";
 import { naira } from "@/lib/money";
 import { db } from "@/lib/supabase";
 import type { CartLine } from "@/lib/types";
 import { dayWord } from "@/lib/time";
-import { windowPhrase } from "@/lib/same-day";
+import { deliverySlots, windowPhrase } from "@/lib/same-day";
 import LinkCheckout from "@/components/LinkCheckout";
 import HelpLine from "@/components/HelpLine";
 
@@ -151,13 +151,29 @@ export default async function CheckoutLinkPage({
   const batch = named ?? (link.deliver_at ? null : open[0] ?? null);
   const gone = named !== null && !isOrderable(named);
 
-  if (gone || (!batch && !link.deliver_at)) {
+  // A time is only orderable while it is still on offer, and a car needs
+  // three hours' notice, so a link made for noon stops working mid morning.
+  // Checked here rather than after they have filled the form in: being told
+  // "that time has gone" by a page that never offered a time is being told
+  // off for somebody else's mistake.
+  const timePassed =
+    link.deliver_at !== null &&
+    !(settings.same_day_on === "on"
+      ? deliverySlots(new Date(), await hoursByDay())
+      : []
+    ).some((slot) => slot.at === link.deliver_at);
+
+  if (gone || timePassed || (!batch && !link.deliver_at)) {
     return (
       <div className="mx-auto max-w-lg space-y-3 py-10 text-center">
-        <h1 className="text-2xl font-bold">That run has closed</h1>
+        <h1 className="text-2xl font-bold">
+          {timePassed ? "That time has gone" : "That run has closed"}
+        </h1>
         <p className="text-muted">
-          Nothing was charged. The same food is on the menu, and the next run is
-          taking orders.
+          Nothing was charged. The same food is on the menu, and{" "}
+          {timePassed
+            ? "you can pick a time that still works, or put it on a run."
+            : "the next run is taking orders."}
         </p>
         <Link href="/" className="btn-primary mt-2 inline-block px-6">
           Put it on the next run
