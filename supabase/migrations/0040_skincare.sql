@@ -82,3 +82,11 @@ alter table menu_items add column if not exists shelves text not null default ''
 -- falls back to the flat fee above, so nothing changes until a ladder is
 -- written.
 alter table settings add column if not exists skincare_bands text not null default '';
+
+-- Why the products are real.
+--
+-- Nothing on the shelf said where any of it comes from, and skincare is the
+-- one thing people are right to be careful about: a counterfeit serum is not
+-- a disappointing dinner, it is somebody's face. Kept as a setting because it
+-- is a claim about how the shop buys, and that is the shop's to word.
+alter table settings add column if not exists skincare_promise text not null default '';

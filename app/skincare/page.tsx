@@ -8,6 +8,7 @@ import {
   PER_PAGE,
   skincareBands,
   skincareFacets,
+  skincarePromise,
   skincareOn,
   skincareShop,
 } from "@/lib/skincare";

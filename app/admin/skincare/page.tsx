@@ -2,7 +2,7 @@ import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import { db } from "@/lib/supabase";
 import { safeSettings } from "@/lib/settings";
-import { cutOffTime, dropLabel, nextDrop, skincareBands, skincareShelves, skincareShop } from "@/lib/skincare";
+import { cutOffTime, dropLabel, nextDrop, PROMISE, skincareBands, skincareShelves, skincareShop } from "@/lib/skincare";
 import BandEditor from "@/components/admin/BandEditor";
 import SkincareForm from "@/components/admin/SkincareForm";
 import Shelves from "@/components/admin/Shelves";
@@ -47,6 +47,18 @@ export default async function AdminSkincarePage() {
         .select("id", { count: "exact", head: true })
         .eq("restaurant_id", shop.id)
         .eq("image_url", "")
+    : null;
+
+  // Pictures that came in with the catalogue and are still being served from
+  // the shop it was exported from. They work, which is why the shelf looked
+  // finished on day one, and they are somebody else's to take down.
+  const borrowed = shop
+    ? await db()
+        .from("menu_items")
+        .select("id", { count: "exact", head: true })
+        .eq("restaurant_id", shop.id)
+        .neq("image_url", "")
+        .not("image_url", "ilike", "%/storage/v1/object/public/%")
     : null;
 
   const drop = nextDrop(settings);
@@ -128,6 +140,25 @@ export default async function AdminSkincarePage() {
         </div>
 
         <div>
+          <label className="label" htmlFor="skincare_promise">
+            Where the products come from
+          </label>
+          <input
+            id="skincare_promise"
+            name="skincare_promise"
+            defaultValue={settings.skincare_promise}
+            placeholder={PROMISE}
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">
+            Said on the shelf, at the checkout and on the card a link draws.
+            Skincare is the one thing people are right to be careful about, so
+            a shelf that does not answer this has answered it badly. Empty
+            uses the line above.
+          </p>
+        </div>
+
+        <div>
           <label className="label" htmlFor="skincare_blurb">
             The line under the heading
           </label>
@@ -166,6 +197,7 @@ export default async function AdminSkincarePage() {
         shopName={shop?.name ?? "Skincare"}
         products={products}
         missingPhotos={missing?.count ?? 0}
+        borrowedPhotos={borrowed?.count ?? 0}
         photosHref={shop ? `/admin/menu/${shop.id}/photos` : ""}
       />
     </div>

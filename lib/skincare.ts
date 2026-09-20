@@ -47,6 +47,24 @@ export function skincareFee(settings: Settings, items: number): number {
   return feeFor(items, null, skincareBands(settings));
 }
 
+/**
+ * Why the products are real, said in one line.
+ *
+ * Skincare is the one thing people are right to be careful about: a
+ * counterfeit serum is not a disappointing dinner, it is somebody's face.
+ * Nothing on the shelf said where any of it came from, and a shelf that does
+ * not answer that question has answered it badly.
+ *
+ * A default in the code rather than an empty string, so it reads right from
+ * the first minute, and a setting over the top of it because it is a claim
+ * about how the shop buys and the shop should word it.
+ */
+export const PROMISE = "Sourced from authorised Lagos retailers.";
+
+export function skincarePromise(settings: Settings): string {
+  return settings.skincare_promise.trim() || PROMISE;
+}
+
 /** Whether the shop is open at all. Off means the page is not there. */
 export function skincareOn(settings: Settings): boolean {
   return settings.skincare_on === "on";

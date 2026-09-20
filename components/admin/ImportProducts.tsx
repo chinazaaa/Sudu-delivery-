@@ -16,6 +16,7 @@ export default function ImportProducts({
   shopName,
   products,
   missingPhotos,
+  borrowedPhotos,
   photosHref,
 }: {
   shopName: string;
@@ -23,6 +24,11 @@ export default function ImportProducts({
   /** How many have no picture yet, which is the whole reason to go and
    *  upload a folder of them. */
   missingPhotos: number;
+  /** How many are still on the pictures the catalogue came in with. They
+   *  work, which is why the shelf looked finished on day one, and they are
+   *  served from somebody else's shop, which is why they are worth
+   *  replacing before that shop takes them down. */
+  borrowedPhotos: number;
   photosHref: string;
 }) {
   const [state, action, busy] = useActionState(importSkincare, { done: "", error: "" });
@@ -35,7 +41,11 @@ export default function ImportProducts({
           {products === 0
             ? "Nothing in yet. Bring the file in and the shelf fills."
             : `${products} product${products === 1 ? "" : "s"} on the shelf` +
-              (missingPhotos > 0 ? `, ${missingPhotos} still without a picture.` : ".")}
+              (borrowedPhotos > 0
+                ? `, ${borrowedPhotos} still on the pictures they came in with`
+                : "") +
+              (missingPhotos > 0 ? `, ${missingPhotos} with no picture at all` : "") +
+              "."}
         </p>
       </div>
 
@@ -101,8 +111,11 @@ export default function ImportProducts({
           {busy ? "Bringing it in…" : "Import"}
         </button>
         {photosHref !== "" && (
-          <Link href={photosHref} className="chip border-black/10 bg-white text-brand">
-            Upload the pictures
+          <Link
+            href={`${photosHref}${borrowedPhotos > 0 ? "?show=theirs" : ""}`}
+            className="chip border-black/10 bg-white text-brand"
+          >
+            {borrowedPhotos > 0 ? "Replace the borrowed pictures" : "Upload the pictures"}
           </Link>
         )}
       </div>

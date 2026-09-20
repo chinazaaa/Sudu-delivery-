@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { safeSettings } from "@/lib/settings";
-import { dropLabel, nextDrop, skincareBands, skincareOn, skincareShop } from "@/lib/skincare";
+import { dropLabel, nextDrop, skincareBands, skincareOn, skincarePromise, skincareShop } from "@/lib/skincare";
 import { hostelNames } from "@/lib/hostels";
 import { currentCustomer, customerDetails } from "@/lib/customer-auth";
 import { clockOf } from "@/lib/same-day";
@@ -24,6 +24,7 @@ export default async function SkincareCheckoutPage() {
       when={dropLabel(drop.date)}
       window={settings.skincare_window}
       cutOff={clockOf(hour, minute)}
+      promise={skincarePromise(settings)}
       hostels={await hostelNames()}
       me={signedIn ? await customerDetails(signedIn) : null}
     />

@@ -72,8 +72,8 @@ export default function SkincareOpengraphImage() {
             Skincare, delivered to you
           </div>
           <div style={{ fontSize: 34, color: "rgba(255,255,255,0.7)" }}>
-            The brands you already buy, brought to your door anywhere in
-            Lagos. Order any day, it comes on the weekly run.
+            Sourced from authorised Lagos retailers, brought to your door
+            anywhere in Lagos. Order any day, it comes on the weekly run.
           </div>
         </div>
 

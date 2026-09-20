@@ -1435,6 +1435,7 @@ const SETTING_FIELDS = [
   "skincare_window",
   "skincare_blurb",
   "skincare_bands",
+  "skincare_promise",
 ] as const;
 
 export async function saveSettings(form: FormData): Promise<void> {
@@ -2461,6 +2462,7 @@ export async function saveSkincare(
     "skincare_window",
     "skincare_blurb",
     "skincare_bands",
+    "skincare_promise",
   ] as const;
 
   const patch: Record<string, string> = {};

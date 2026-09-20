@@ -16,14 +16,41 @@ export default async function RestaurantsAdmin() {
     .select("*")
     .order("sort_order")
     .order("name");
-  const { data: items } = await db()
-    .from("menu_items")
-    .select("id, restaurant_id, name, image_url, description, available");
-
   const list = (restaurants ?? []) as Restaurant[];
   const problem = list.length === 0 ? await diagnoseEmpty() : null;
+
+  // Counted by the database, one number per restaurant, rather than by
+  // reading every item and measuring the pile. PostgREST hands back at most
+  // a thousand rows, so the moment a shelf of two thousand products existed
+  // the pile was a sample: it said Skincare had 246 items, which was simply
+  // the part of it that fitted.
+  const counted = await Promise.all(
+    list.map(async (one) => {
+      const { count } = await db()
+        .from("menu_items")
+        .select("id", { count: "exact", head: true })
+        .eq("restaurant_id", one.id);
+      return [one.id, count ?? 0] as const;
+    })
+  );
+  const counts = new Map(counted);
+  const countFor = (id: string) => counts.get(id) ?? 0;
+
+  // The gaps below are about the food menu, which is small enough to read
+  // whole. The skincare shelf has its own page, and pulling two thousand
+  // products through here to look for missing photographs would be the row
+  // cap all over again.
+  const foodIds = list
+    .filter((one) => (one.kind ?? "food") !== "skincare")
+    .map((one) => one.id);
+  const { data: items } =
+    foodIds.length > 0
+      ? await db()
+          .from("menu_items")
+          .select("id, restaurant_id, name, image_url, description, available")
+          .in("restaurant_id", foodIds)
+      : { data: [] };
   const rows = (items ?? []) as MenuItem[];
-  const countFor = (id: string) => rows.filter((i) => i.restaurant_id === id).length;
 
   // A photo is the single biggest thing between an item and being ordered, and
   // a missing one is invisible from here: you would have to open every

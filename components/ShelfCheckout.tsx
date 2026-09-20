@@ -25,6 +25,7 @@ export default function ShelfCheckout({
   when,
   window: arrives,
   cutOff,
+  promise,
   hostels,
   me,
 }: {
@@ -37,6 +38,9 @@ export default function ShelfCheckout({
   window: string;
   /** When it stops taking orders that morning. */
   cutOff: string;
+  /** Where the products come from. Said here as well as on the shelf,
+   *  because this is the screen where the money changes hands. */
+  promise: string;
   hostels: string[];
   me: { name: string; hostel: string; paymentMethod: "transfer" | "card" } | null;
 }) {
@@ -134,6 +138,7 @@ export default function ShelfCheckout({
 
       <section className="card space-y-2">
         <h2 className="font-bold">What you are getting</h2>
+        <p className="text-sm text-muted">{promise}</p>
         <ul className="divide-y divide-black/5">
           {cart.map((line) => (
             <li key={line.id} className="flex items-center gap-3 py-2">

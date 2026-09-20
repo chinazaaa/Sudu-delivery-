@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { safeSettings } from "@/lib/settings";
-import { dropLabel, nextDrop, skincareShop } from "@/lib/skincare";
+import { dropLabel, nextDrop, skincarePromise, skincareShop } from "@/lib/skincare";
 
 /**
  * What the link draws when it is pasted into a chat.
@@ -19,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const name = shop?.name ?? "Skincare";
   const blurb =
     settings.skincare_blurb ||
-    `Order any day, it comes ${dropLabel(nextDrop(settings).date)}. Delivered anywhere in Lagos.`;
+    `${skincarePromise(settings)} Order any day, it comes ${dropLabel(nextDrop(settings).date)}. Delivered anywhere in Lagos.`;
 
   return {
     title: name,
