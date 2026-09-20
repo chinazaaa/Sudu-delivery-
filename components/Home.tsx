@@ -27,6 +27,7 @@ export default function Home({
   autoLines,
   bands,
   soonest,
+  today,
   promos,
 }: {
   menu: MenuView[];
@@ -35,6 +36,9 @@ export default function Home({
    *  the pick-a-time service is off. Worked out on the server, from the
    *  shop's clock rather than the phone's. */
   soonest: Slot | null;
+  /** Today in Lagos, worked out on the server: a phone's own clock can be
+   *  anything, and this decides which strip leads the page. */
+  today: string;
   /** Written in admin. Empty falls back to a slide per restaurant. */
   slides: Slide[];
   /** Menu item ids, most bought first. Empty until people have ordered. */
@@ -140,7 +144,13 @@ export default function Home({
           menu they have already decided how they are ordering. */}
       <SplitPrompt />
 
-      {soonest ? (
+      {/* A run going today leads, because it is four thousand against six
+          and a half for food arriving inside the same afternoon. A car of its
+          own is what to say when there is no run today: then the question is
+          not which is cheaper, it is whether anybody can eat today at all. */}
+      {nextRun && nextRun.runDate === today ? (
+        <RunStrip run={nextRun} note={feeLine} />
+      ) : soonest ? (
         <SameDayStrip soonest={soonest} />
       ) : nextRun ? (
         <RunStrip run={nextRun} note={feeLine} />

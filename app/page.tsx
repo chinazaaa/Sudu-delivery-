@@ -1,3 +1,4 @@
+import { lagosToday } from "@/lib/time";
 import Home from "@/components/Home";
 import { openBatches } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
@@ -63,6 +64,7 @@ export default async function HomePage() {
       // The soonest time we can actually hit, from the shop's clock rather
       // than the phone's, and only when same day is switched on today.
       soonest={slots[0] ?? null}
+      today={lagosToday()}
       promos={promos}
     />
   );

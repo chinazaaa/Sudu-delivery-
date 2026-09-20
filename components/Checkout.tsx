@@ -53,6 +53,7 @@ export type AddingTo = {
 
 export default function Checkout({
   batches,
+  today,
   adding,
   sameDaySlots,
   sameDayBands,
@@ -62,6 +63,9 @@ export default function Checkout({
   hostels,
 }: {
   batches: BatchView[];
+  /** Today in Lagos, from the shop's clock: it decides whether a run going
+   *  today opens instead of a time of their own. */
+  today: string;
   adding: AddingTo | null;
   /** Times still available today, worked out on the server so the clock is
    *  the shop's rather than the phone's. Empty means same day is off. */
@@ -235,11 +239,17 @@ export default function Checkout({
       window.removeEventListener(PARTY_CHANGED, reread);
     };
   }, []);
-  // Same day instead of a run. Empty means they are on a run, which is the
-  // cheap way and stays the default.
-  // Picking a time is the default, because it is what most people are here
-  // for. Empty means a run, which is one tap away and still cheaper.
-  const [deliverAt, setDeliverAt] = useState(sameDaySlots[0]?.at ?? "");
+  // Same day instead of a run. Empty means they are on a run.
+  //
+  // A run going today is what opens, because it is four thousand against six
+  // and a half for food arriving the same afternoon: nobody should have to
+  // notice the cheaper way is there. A car of its own leads only when no run
+  // is going today, and then the question is not which is cheaper, it is
+  // whether anybody can eat today at all.
+  const runToday = openable.some((one) => one.runDate === today);
+  const [deliverAt, setDeliverAt] = useState(
+    runToday ? "" : (sameDaySlots[0]?.at ?? "")
+  );
   const sameDay = sameDaySlots.find((one) => one.at === deliverAt) ?? null;
   const shared = joining !== null || party !== "";
 

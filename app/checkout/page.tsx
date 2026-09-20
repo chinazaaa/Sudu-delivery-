@@ -1,3 +1,4 @@
+import { lagosToday } from "@/lib/time";
 import { cookies } from "next/headers";
 import {
   activeBands,
@@ -58,6 +59,7 @@ export default async function CheckoutPage({
   return (
     <Checkout
       batches={views}
+      today={lagosToday()}
       adding={adding}
       // Worked out here so the clock is the shop's, not whatever the phone
       // says, and so a page left open all morning cannot offer a time that
