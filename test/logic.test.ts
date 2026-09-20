@@ -37,6 +37,8 @@ import { groupNames, lineKey as cartLineKey, reclaim } from "../lib/cart";
 import { renderEmail, renderText, type Block } from "../lib/email-html";
 import { deliverySlots, slotFee, slotsToday } from "../lib/same-day";
 import { nextArrival } from "../lib/arrival";
+import { parseProducts } from "../lib/skincare-import";
+import { nextDrop } from "../lib/skincare";
 
 /** A settings row with nothing filled in, for the template tests. */
 const EMPTY_SETTINGS: Settings = { ...SETTINGS_DEFAULTS };
@@ -1396,4 +1398,59 @@ test("the soonest way to eat is picked, not asked for", () => {
 
   // Nothing anywhere is the only case with no answer.
   assert.equal(nextArrival([], [], today), null);
+});
+
+test("a catalogue comes in at the real price, with what is out of stock left out", () => {
+  const csv = [
+    `"title","current_price","original_price","on_sale","stock_status","vendor","product_type","collections","image_filename"`,
+    `"CeraVe Foaming Cleanser 236ml","5400.00","16000.00","yes","in_stock","CeraVe","SKIN CARE","Cleansers, All Products, Products, CeraVe","images/cerave-foaming-cleanser-236ml.png"`,
+    `"Bioderma Sensibio H2O 500ml","12000.00","12000.00","","out_of_stock","Bioderma","SKIN CARE","Cleansers, All Products, Products","images/bioderma-sensibio-h2o-500ml.jpg"`,
+    `"Half a thing","","","","partial","Nobody","","All Products, Products","x.png"`,
+  ].join("\n");
+
+  const { products, skipped } = parseProducts(csv);
+
+  // The row with no price is not a product.
+  assert.equal(skipped, 1);
+  assert.equal(products.length, 2);
+
+  // What the shop charges when nothing is on, never today's promotion: a
+  // sale price imported as the price is a discount that never ends.
+  assert.equal(products[0].price, 16000);
+  assert.equal(products[0].brand, "CeraVe");
+  assert.equal(products[0].imageFile, "cerave-foaming-cleanser-236ml.png");
+
+  // Only what can actually be bought is on the shelf.
+  assert.equal(products[0].available, true);
+  assert.equal(products[1].available, false);
+
+  // The shop's plumbing collections hold everything there is, so they narrow
+  // nothing and are dropped. A collection named after the brand goes too,
+  // because the brand is its own filter and a better one.
+  assert.deepEqual(products[0].shelves, ["Cleansers"]);
+  assert.equal(products[0].category, "Cleansers");
+});
+
+test("a product with a comma in its name stays one product", () => {
+  const csv = [
+    `"title","original_price","vendor"`,
+    `"Cleanser, 200ml","3000","Nobody"`,
+  ].join("\n");
+  const { products } = parseProducts(csv);
+  assert.equal(products[0].name, "Cleanser, 200ml");
+  assert.equal(products[0].price, 3000);
+});
+
+test("skincare goes on one day a week, and ordering never stops", () => {
+  const settings = { skincare_day: 6, skincare_cut_off: "08:00" } as never;
+
+  // A Wednesday: the Saturday coming.
+  assert.equal(nextDrop(settings, new Date("2026-09-23T10:00:00+01:00")).date, "2026-09-26");
+
+  // Saturday, before the cut off: today, and they are on it.
+  assert.equal(nextDrop(settings, new Date("2026-09-26T07:30:00+01:00")).date, "2026-09-26");
+
+  // Saturday, an hour after it: the car has gone, so it is the week after.
+  // Not a refusal, which is the point: the order is taken either way.
+  assert.equal(nextDrop(settings, new Date("2026-09-26T09:00:00+01:00")).date, "2026-10-03");
 });

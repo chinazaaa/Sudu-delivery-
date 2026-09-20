@@ -9,6 +9,8 @@ import { normalisePhone } from "@/lib/phone";
 import { rememberCart } from "@/lib/carts";
 import { countCheckoutLinkUse, getCheckoutLink } from "@/lib/checkout-links";
 import { arrivalNow } from "@/lib/arrival-server";
+import { dropBatch } from "@/lib/skincare";
+import { safeSettings } from "@/lib/settings";
 import { db } from "@/lib/supabase";
 import { closeGroup, getSharedGroup, groupOrders, leaderSeat } from "@/lib/groups";
 import { groupCarts } from "@/lib/group-carts";
@@ -428,4 +430,57 @@ export async function closeSharedGroup(
       : undefined;
 
   return { ok: true, orderId: theirs ? shortRef(theirs) : undefined };
+}
+
+/**
+ * A skincare order: one flat fee, and the next Saturday.
+ *
+ * It goes through the same placeOrder as everything else, because everything
+ * downstream, the payment, the order page, the admin, already understands an
+ * order and has no reason to learn about skincare. What is different is only
+ * which car it is on and what delivery costs, and both are decided here.
+ */
+export async function placeSkincareOrder(input: {
+  lines: { id: string; qty: number }[];
+  name: string;
+  phone: string;
+  hostel: string;
+  note: string;
+  paymentMethod: "transfer" | "card";
+}): Promise<{ ok: true; orderId: string } | { ok: false; error: string }> {
+  const settings = await safeSettings();
+  if (settings.skincare_on !== "on") {
+    return { ok: false, error: "The skincare shop is closed just now." };
+  }
+
+  const lines = input.lines
+    .filter((one) => one.id !== "" && one.qty > 0)
+    .map((one) => ({ menu_item_id: one.id, qty: Math.min(20, Math.round(one.qty)) }));
+  if (lines.length === 0) return { ok: false, error: "There is nothing in the basket." };
+
+  // The car for the next drop, made if it is not there yet. Everybody who
+  // ordered for that Saturday is in this one, which is what makes one flat
+  // fee honest.
+  const car = await dropBatch(settings);
+  if (!car) {
+    return { ok: false, error: "Could not open Saturday's delivery. Try again shortly." };
+  }
+
+  const result = await placeOrder({
+    batchId: car.id,
+    name: input.name,
+    phone: input.phone,
+    hostel: input.hostel,
+    lines,
+    paymentMethod: input.paymentMethod,
+    customerNote: input.note,
+    // One flat fee, whatever is in it. A Saturday drop with everybody's
+    // parcels in one car is not priced like a Domino's run.
+    fixedFee: settings.skincare_fee,
+  });
+
+  if (!result.ok) return { ok: false, error: result.error };
+
+  revalidatePath("/admin", "layout");
+  return { ok: true, orderId: await orderLinkId(result.orderId) };
 }

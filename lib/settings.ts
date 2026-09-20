@@ -99,6 +99,14 @@ export type Settings = {
    */
   auto_headline: string;
   auto_lines: string;
+  /** The skincare shop: on or off, what delivery costs on one of its orders,
+   *  which day the car goes and when it stops taking orders that morning. */
+  skincare_on: string;
+  skincare_fee: number;
+  skincare_day: number;
+  skincare_cut_off: string;
+  skincare_window: string;
+  skincare_blurb: string;
 };
 
 /** Every setting at its default, which is also what a missing row reads as. */
@@ -144,6 +152,12 @@ export const EMPTY: Settings = {
   offer_code: "",
   auto_headline: "",
   auto_lines: "",
+  skincare_on: "",
+  skincare_fee: 0,
+  skincare_day: 6,
+  skincare_cut_off: "08:00",
+  skincare_window: "",
+  skincare_blurb: "",
 };
 
 export async function getSettings(): Promise<Settings> {

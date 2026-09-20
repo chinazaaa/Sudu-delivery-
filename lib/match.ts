@@ -8,7 +8,15 @@
  * wrong pizza is worse than no photograph.
  */
 
-export type Candidate = { id: string; name: string };
+export type Candidate = {
+  id: string;
+  name: string;
+  /** The file this one's picture is expected to arrive as, when the
+   *  catalogue it came from named it. Two thousand products cannot be
+   *  matched by the look of their names, and they do not have to be: the
+   *  export already said which file is which. */
+  file?: string;
+};
 
 export type Match =
   | { file: string; itemId: string; itemName: string; confident: true }
@@ -63,7 +71,26 @@ const GAP = 0.15;
  * can take it.
  */
 export function matchPhotos(filenames: string[], items: Candidate[]): Match[] {
-  const scored = filenames.flatMap((file) => {
+  // Anything the catalogue already named, claimed outright. It is not a
+  // guess and nothing scored can beat it.
+  const byFile = new Map<string, Candidate>();
+  for (const item of items) {
+    const named = (item.file ?? "").trim().toLowerCase();
+    if (named !== "") byFile.set(named, item);
+  }
+
+  const exact = new Map<string, Candidate>();
+  const spoken = new Set<string>();
+  for (const file of filenames) {
+    const found = byFile.get(file.trim().toLowerCase());
+    if (found && !spoken.has(found.id)) {
+      spoken.add(found.id);
+      exact.set(file, found);
+    }
+  }
+
+  const left = filenames.filter((file) => !exact.has(file));
+  const scored = left.flatMap((file) => {
     const ranked = items
       .map((item) => ({ item, value: score(file, item.name) }))
       .sort((a, b) => b.value - a.value);
@@ -78,8 +105,8 @@ export function matchPhotos(filenames: string[], items: Candidate[]): Match[] {
 
   scored.sort((a, b) => b.value - a.value);
 
-  const taken = new Set<string>();
-  const placed = new Map<string, Candidate>();
+  const taken = new Set<string>(spoken);
+  const placed = new Map<string, Candidate>(exact);
   for (const row of scored) {
     if (taken.has(row.item.id)) continue;
     taken.add(row.item.id);

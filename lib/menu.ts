@@ -19,7 +19,13 @@ async function readMenu(): Promise<MenuView[]> {
     .order("name");
   if (error) throw new Error(error.message);
 
-  const places = (restaurants ?? []) as Restaurant[];
+  // Skincare is the same shop on a different day, and two thousand products
+  // under the restaurants would bury the food. Filtered here rather than in
+  // the query, because a database that has not had the migration yet has no
+  // kind column and naming one errors the whole statement.
+  const places = ((restaurants ?? []) as Restaurant[]).filter(
+    (one) => (one.kind ?? "food") !== "skincare"
+  );
   if (places.length === 0) return [];
 
   const ids = places.map((r) => r.id);
@@ -198,25 +204,32 @@ export async function openRestaurants(): Promise<
 > {
   // The column list is decided at run time, so the query builder cannot know
   // the shape and neither can the types. The rows are read defensively below.
-  const read = (withSlug: boolean) =>
+  const read = (columns: string) =>
     db()
       .from("restaurants")
-      .select(withSlug ? "id, name, slug" : "id, name")
+      .select(columns)
       .eq("active", true)
       .order("sort_order")
       .order("name")
-      .overrideTypes<{ id: string; name: string; slug?: string | null }[]>();
+      .overrideTypes<{ id: string; name: string; slug?: string | null; kind?: string }[]>();
 
   try {
-    // Without the column the links are ids, which is what they always were.
-    let { data, error } = await read(true);
-    if (error) ({ data } = await read(false));
+    // Every column this wants, then fewer, then fewest. A database that has
+    // not had a migration run does not have the column, and naming one it
+    // does not have errors the whole statement rather than that one field.
+    let { data, error } = await read("id, name, slug, kind");
+    if (error) ({ data, error } = await read("id, name, slug"));
+    if (error) ({ data } = await read("id, name"));
 
-    return (data ?? []).map((one) => ({
-      id: one.id,
-      name: one.name,
-      href: one.slug || one.id,
-    }));
+    return (data ?? [])
+      // The skincare shelf is not a restaurant somebody forgot the drinks
+      // from. It has its own page, its own basket and its own day.
+      .filter((one) => (one.kind ?? "food") !== "skincare")
+      .map((one) => ({
+        id: one.id,
+        name: one.name,
+        href: one.slug || one.id,
+      }));
   } catch {
     return [];
   }

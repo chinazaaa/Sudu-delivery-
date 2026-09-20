@@ -14,6 +14,9 @@ export type Restaurant = {
   logo_url: string;
   banner_url: string;
   brand_hex: string;
+  /** "food" or "skincare". Skincare is the same shop on a different day, and
+   *  this is what keeps its two thousand products out of a food menu. */
+  kind?: string;
 };
 
 export type MenuCategory = {
@@ -51,6 +54,14 @@ export type MenuItem = {
   image_url: string;
   description: string;
   category_id: string | null;
+  /** Who makes it. Empty on food, where the restaurant is the maker. */
+  brand?: string;
+  /** The file its picture is expected to arrive as, so a photograph uploaded
+   *  later lands on the right product without anybody matching names. */
+  image_file?: string;
+  /** Every shelf it sits on, as "|Cleansers|Korean Skin Care|". A shop's own
+   *  sections overlap, and one category_id can only hold the first. */
+  shelves?: string;
 };
 
 export type BatchStatus = "open" | "closed" | "delivered" | "cancelled";

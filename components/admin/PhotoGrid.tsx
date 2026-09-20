@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { matchPhotos } from "@/lib/match";
 
-type Row = { id: string; name: string; imageUrl: string };
+type Row = { id: string; name: string; imageUrl: string; file?: string };
 type State = "idle" | "working" | "done" | "failed";
 
 /**
@@ -62,7 +62,7 @@ export default function PhotoGrid({ items }: { items: Row[] }) {
   async function sendMany(files: File[]) {
     const found = matchPhotos(
       files.map((f) => f.name),
-      items.map((i) => ({ id: i.id, name: i.name }))
+      items.map((i) => ({ id: i.id, name: i.name, file: i.file }))
     );
 
     const byName = new Map(files.map((f) => [f.name, f]));

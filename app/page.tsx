@@ -15,6 +15,7 @@ import { toBatchView } from "@/lib/view";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { nextArrival, runArrival } from "@/lib/arrival";
 import { offersByRestaurant } from "@/lib/coupons";
+import { dropLabel, nextDrop, skincareOn, skincareShop } from "@/lib/skincare";
 import { offerBadge } from "@/lib/offers";
 import { sweepGroups } from "@/lib/groups";
 
@@ -75,6 +76,13 @@ export default async function HomePage() {
         )?.said ?? ""
       }
       promos={promos}
+      // One car a week, on a Saturday. Empty when that shelf is off, and then
+      // the page does not mention it at all.
+      skincare={
+        skincareOn(settings) && (await skincareShop())
+          ? `Order any day. It comes ${dropLabel(nextDrop(settings).date)}.`
+          : ""
+      }
     />
   );
 }

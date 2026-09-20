@@ -16,6 +16,7 @@ import type { Slide } from "@/lib/slides";
 export default function Home({
   menu,
   arriving,
+  skincare,
   slides,
   popularIds,
   autoHeadline,
@@ -27,6 +28,9 @@ export default function Home({
    *  worked out on the server: a phone's own clock can be anything, and this
    *  is the same decision the checkout makes. Empty when nothing is going. */
   arriving: string;
+  /** When the skincare car next goes, said in a line. Empty when that shelf
+   *  is switched off, and then there is no door to it. */
+  skincare: string;
   /** Written in admin. Empty falls back to a slide per restaurant. */
   slides: Slide[];
   /** Menu item ids, most bought first. Empty until people have ordered. */
@@ -111,6 +115,22 @@ export default function Home({
           already been decided, by the same rule the checkout uses, so all
           that is left to say is when the food turns up. */}
       {arriving !== "" && <ArrivalStrip said={arriving} />}
+
+      {/* The other half of the shop. It is not a restaurant and it does not
+          come today, so it is a door rather than a card in the row: one car a
+          week, and the page behind this says which Saturday. */}
+      {skincare !== "" && (
+        <Link
+          href="/skincare"
+          className="flex items-center justify-between gap-3 rounded-2xl bg-paper px-4 py-3 shadow-card transition active:scale-[0.99]"
+        >
+          <span>
+            <span className="block font-bold">Skincare</span>
+            <span className="block text-sm text-muted">{skincare}</span>
+          </span>
+          <span className="shrink-0 text-sm font-extrabold text-brand">Shop</span>
+        </Link>
+      )}
 
       <div className="relative">
         <input

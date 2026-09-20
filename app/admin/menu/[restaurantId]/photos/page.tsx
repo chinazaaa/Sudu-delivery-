@@ -51,6 +51,9 @@ export default async function Photos({
           id: item.id,
           name: item.name,
           imageUrl: item.image_url ?? "",
+          // What the catalogue said this one's picture is called, so a
+          // folder of two thousand lands without anybody matching names.
+          file: item.image_file ?? "",
         }))}
       />
     </div>

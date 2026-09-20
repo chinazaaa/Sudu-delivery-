@@ -28,6 +28,7 @@ import {
 } from "@/lib/checkout-links";
 import { fileFrom, uploadImage } from "@/lib/uploads";
 import { parseMenuText } from "@/lib/menu-import";
+import { parseProducts, shelfText } from "@/lib/skincare-import";
 import { newPin } from "@/lib/customer-auth";
 import { pushDeal, pushToPhone } from "@/lib/push";
 
@@ -1426,6 +1427,12 @@ const SETTING_FIELDS = [
   "offer_code",
   "auto_headline",
   "auto_lines",
+  "skincare_on",
+  "skincare_fee",
+  "skincare_day",
+  "skincare_cut_off",
+  "skincare_window",
+  "skincare_blurb",
 ] as const;
 
 export async function saveSettings(form: FormData): Promise<void> {
@@ -2201,4 +2208,180 @@ export async function moveOrderToAnother(form: FormData): Promise<void> {
       result.ok ? "Moved. Tell them which run they are on now." : result.error
     )}`
   );
+}
+
+/**
+ * A whole catalogue, in from the file a shop platform exported.
+ *
+ * Two thousand products is not something anybody types in, and it is not
+ * something anybody wants to do twice, so this is safe to run again: a
+ * product already there by name keeps its id, its picture and anything that
+ * has been changed about it by hand. What comes in is the price, the brand
+ * and the shelf it sits on.
+ *
+ * Anything the file does not mention is left alone rather than deleted. A
+ * shorter export is a shorter export, not an instruction to empty the shop.
+ */
+export async function importSkincare(
+  _prev: { done: string; error: string },
+  form: FormData
+): Promise<{ done: string; error: string }> {
+  await assertAdmin();
+
+  const file = form.get("csv");
+  const text =
+    file instanceof File && file.size > 0
+      ? await file.text()
+      : String(form.get("pasted") ?? "");
+
+  const { products, skipped } = parseProducts(text);
+  if (products.length === 0) {
+    return {
+      done: "",
+      error:
+        "Nothing to import. It wants a file with a title and a price on every " +
+        "row, and a header naming its columns.",
+    };
+  }
+
+  // The shop itself. One row, marked skincare, which is what keeps two
+  // thousand products out of a food menu.
+  const shopName = String(form.get("shop_name") ?? "").trim() || "Skincare";
+  const { data: existing } = await db()
+    .from("restaurants")
+    .select("id")
+    .eq("kind", "skincare")
+    .limit(1);
+
+  let shopId = ((existing ?? [])[0]?.id as string) ?? "";
+  if (shopId === "") {
+    const { data, error } = await db()
+      .from("restaurants")
+      .insert({
+        name: shopName,
+        slug: "skincare",
+        address: "",
+        closes_at: "23:59",
+        active: true,
+        sort_order: 99,
+        logo_url: "",
+        banner_url: "",
+        brand_hex: "",
+        kind: "skincare",
+      })
+      .select("id")
+      .single();
+    if (error || !data) {
+      return { done: "", error: error?.message ?? "Could not make the shop." };
+    }
+    shopId = data.id as string;
+  }
+
+  // The shelves, by name. Everything already there keeps its id so that
+  // anything filed under it stays filed under it.
+  const wantedSections = [
+    ...new Set(products.flatMap((one) => (one.shelves.length > 0 ? one.shelves : [one.category]))),
+  ].filter(Boolean);
+  const { data: sections } = await db()
+    .from("menu_categories")
+    .select("id, name")
+    .eq("restaurant_id", shopId);
+  const sectionId = new Map(
+    ((sections ?? []) as { id: string; name: string }[]).map((one) => [one.name, one.id])
+  );
+
+  const newSections = wantedSections.filter((name) => !sectionId.has(name));
+  if (newSections.length > 0) {
+    const { data: made } = await db()
+      .from("menu_categories")
+      .insert(
+        newSections.map((name, index) => ({
+          restaurant_id: shopId,
+          name,
+          sort_order: sectionId.size + index,
+        }))
+      )
+      .select("id, name");
+    for (const one of ((made ?? []) as { id: string; name: string }[])) {
+      sectionId.set(one.name, one.id);
+    }
+  }
+
+  // What is already on the shelf, by name, so running this again changes
+  // prices rather than making a second copy of everything.
+  const { data: already } = await db()
+    .from("menu_items")
+    .select("id, name")
+    .eq("restaurant_id", shopId);
+  const itemId = new Map(
+    ((already ?? []) as { id: string; name: string }[]).map((one) => [
+      one.name.toLowerCase(),
+      one.id,
+    ])
+  );
+
+  const rows = products.map((one, index) => ({
+    restaurant_id: shopId,
+    category_id: one.category ? (sectionId.get(one.category) ?? null) : null,
+    name: one.name,
+    price_food: one.price,
+    description: "",
+    // The picture the export carried, so the shelf is not two thousand grey
+    // boxes on the first day. Photographs uploaded later replace it.
+    image_url: one.imageUrl,
+    image_file: one.imageFile,
+    shelves: shelfText(one.shelves),
+    brand: one.brand,
+    available: true,
+    sort_order: index,
+  }));
+
+  // In chunks, because a single insert of two thousand rows is one request
+  // that either works or loses the lot, and this way a failure says which
+  // part of the file it got to.
+  let added = 0;
+  let changed = 0;
+  const SIZE = 200;
+
+  for (let at = 0; at < rows.length; at += SIZE) {
+    const chunk = rows.slice(at, at + SIZE);
+    const fresh = chunk.filter((row) => !itemId.has(row.name.toLowerCase()));
+    const known = chunk.filter((row) => itemId.has(row.name.toLowerCase()));
+
+    if (fresh.length > 0) {
+      const { error } = await db().from("menu_items").insert(fresh);
+      if (error) {
+        return {
+          done: `${added} in, then it stopped.`,
+          error: `${error.message}. Nothing after ${chunk[0].name} went in.`,
+        };
+      }
+      added += fresh.length;
+    }
+
+    for (const row of known) {
+      const id = itemId.get(row.name.toLowerCase())!;
+      const { error } = await db()
+        .from("menu_items")
+        .update({
+          price_food: row.price_food,
+          category_id: row.category_id,
+          brand: row.brand,
+          image_file: row.image_file,
+          shelves: row.shelves,
+        })
+        .eq("id", id);
+      if (!error) changed += 1;
+    }
+  }
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/skincare");
+
+  return {
+    done:
+      `${added} new, ${changed} updated, ${wantedSections.length} sections` +
+      (skipped > 0 ? `, ${skipped} rows skipped for having no name or price.` : "."),
+    error: "",
+  };
 }
