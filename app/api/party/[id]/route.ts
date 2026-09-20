@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { seatFrom } from "@/lib/seat";
 import { db } from "@/lib/supabase";
 import { lookupColumn } from "@/lib/links";
 import { groupOrders } from "@/lib/groups";
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
  * can read this, and it must not hand out numbers or addresses.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   // Anybody watching the bar keeps the clock honest for everybody else.
@@ -24,7 +24,7 @@ export async function GET(
   try {
     const { data } = await db()
       .from("order_groups")
-      .select("id, leader_name, closes_at, closed_at, batch_id")
+      .select("id, leader_name, closes_at, closed_at, batch_id, short")
       .eq(lookupColumn((await params).id), (await params).id)
       .maybeSingle();
 
@@ -71,7 +71,7 @@ export async function GET(
         ? []
         : await (async () => {
             const worth = await cartValues(seats);
-            const token = (await cookies()).get("sudu_seat")?.value ?? "";
+            const token = await seatFrom(request);
             return seats.map((seat) => ({
               // So a page can leave the reader out of a list of other people.
               isMine: token !== "" && seat.member_token === token,
@@ -93,7 +93,7 @@ export async function GET(
       // anybody holding the link, and this is not.
       mine: await (async () => {
         if (closed) return null;
-        const token = (await cookies()).get("sudu_seat")?.value ?? "";
+        const token = await seatFrom(request);
         const seat = token ? seats.find((one) => one.member_token === token) : undefined;
         return seat
           ? {
@@ -104,6 +104,9 @@ export async function GET(
             }
           : null;
       })(),
+      // What a link says, so the app can share the same address the website
+      // would have shared.
+      short: data.short ?? null,
       closesAt: data.closes_at,
       closed: data.closed_at !== null,
     });

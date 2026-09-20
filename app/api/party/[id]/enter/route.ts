@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { randomUUID } from "crypto";
 import { joinableGroup } from "@/lib/groups";
+import { holdsOwnSeat, seatFrom } from "@/lib/seat";
 import { takeSeat } from "@/lib/group-carts";
 
 export const dynamic = "force-dynamic";
@@ -35,24 +36,32 @@ export async function POST(
   const body = await request.json().catch(() => ({}) as { name?: string });
   const name = String((body as { name?: string }).name ?? "").trim().slice(0, 40);
 
-  const jar = await cookies();
-  const token = jar.get("sudu_seat")?.value || randomUUID();
+  // The app keeps its own seat and sends it; a browser is given one to keep.
+  const own = holdsOwnSeat(request);
+  const token = (await seatFrom(request)) || randomUUID();
 
-  const keep = {
-    httpOnly: true,
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: A_DAY,
-  };
-  jar.set("sudu_group", group.id, keep);
-  jar.set("sudu_seat", token, keep);
+  if (!own) {
+    const jar = await cookies();
+    const keep = {
+      httpOnly: true,
+      sameSite: "lax" as const,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: A_DAY,
+    };
+    jar.set("sudu_group", group.id, keep);
+    jar.set("sudu_seat", token, keep);
+  }
 
   // A name is what the others see, so the seat is only written once there is
   // one. Somebody arriving on the link before they have said who they are is
   // in the group as far as the cookies go, and appears to everybody else the
   // moment they say.
-  if (name.length < 2) return NextResponse.json({ ok: true, named: false });
+  // The seat goes back to the app, which has nowhere else to learn it, and
+  // the group's real id with it: the caller may have arrived on a short code.
+  if (name.length < 2) {
+    return NextResponse.json({ ok: true, named: false, seat: token, groupId: group.id });
+  }
 
   const seat = await takeSeat({ groupId: group.id, token, name });
   if (!seat) {
@@ -64,5 +73,5 @@ export async function POST(
     );
   }
 
-  return NextResponse.json({ ok: true, named: true });
+  return NextResponse.json({ ok: true, named: true, seat: token, groupId: group.id });
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { seatFrom } from "@/lib/seat";
 import { db } from "@/lib/supabase";
 import { joinableGroup } from "@/lib/groups";
 import type { CartLine } from "@/lib/types";
@@ -25,7 +25,7 @@ export async function POST(
   const group = await joinableGroup((await params).id);
   if (!group) return NextResponse.json({ ok: false }, { status: 404 });
 
-  const token = (await cookies()).get("sudu_seat")?.value ?? "";
+  const token = await seatFrom(request);
   if (!token) return NextResponse.json({ ok: false }, { status: 400 });
 
   const body = (await request.json().catch(() => ({}))) as { lines?: CartLine[] };

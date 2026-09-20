@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { seatFrom } from "@/lib/seat";
 import { joinableGroup, startGroupClock } from "@/lib/groups";
 import { finaliseSeat, saveSeatDetails } from "@/lib/group-carts";
 import { normalisePhone } from "@/lib/phone";
@@ -28,7 +28,7 @@ export async function POST(
     return NextResponse.json({ error: "That group has closed." }, { status: 404 });
   }
 
-  const token = (await cookies()).get("sudu_seat")?.value ?? "";
+  const token = await seatFrom(request);
   if (!token) {
     return NextResponse.json({ error: "Join the group first." }, { status: 400 });
   }

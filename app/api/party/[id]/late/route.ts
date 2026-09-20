@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { seatFrom } from "@/lib/seat";
 import { db } from "@/lib/supabase";
 import { getSharedGroup, groupOrders } from "@/lib/groups";
 import { seatFor } from "@/lib/group-carts";
@@ -30,7 +30,7 @@ export async function POST(
     return NextResponse.json({ error: "That group is still open." }, { status: 400 });
   }
 
-  const token = (await cookies()).get("sudu_seat")?.value ?? "";
+  const token = await seatFrom(request);
   const seat = token ? await seatFor(group.id, token) : null;
   if (!seat || seat.lines.length === 0) {
     return NextResponse.json({ error: "There is no food waiting for you." }, { status: 404 });
