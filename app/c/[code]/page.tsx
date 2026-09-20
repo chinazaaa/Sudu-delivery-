@@ -151,19 +151,22 @@ export default async function CheckoutLinkPage({
   const batch = named ?? (link.deliver_at ? null : open[0] ?? null);
   const gone = named !== null && !isOrderable(named);
 
+  // A link made without a car takes whatever is going, cheapest first: a run
+  // while one is taking orders, and a window of its own when there is not.
+  // It is why such a link never needs editing.
+  const slots =
+    settings.same_day_on === "on" ? deliverySlots(new Date(), await hoursByDay()) : [];
+  const falling = !link.batch_id && !link.deliver_at && !batch ? (slots[0] ?? null) : null;
+
   // A time is only orderable while it is still on offer, and a car needs
   // three hours' notice, so a link made for noon stops working mid morning.
   // Checked here rather than after they have filled the form in: being told
   // "that time has gone" by a page that never offered a time is being told
   // off for somebody else's mistake.
   const timePassed =
-    link.deliver_at !== null &&
-    !(settings.same_day_on === "on"
-      ? deliverySlots(new Date(), await hoursByDay())
-      : []
-    ).some((slot) => sameInstant(slot.at, link.deliver_at!));
+    link.deliver_at !== null && !slots.some((slot) => sameInstant(slot.at, link.deliver_at!));
 
-  if (gone || timePassed || (!batch && !link.deliver_at)) {
+  if (gone || timePassed || (!batch && !link.deliver_at && !falling)) {
     return (
       <div className="mx-auto max-w-lg space-y-3 py-10 text-center">
         <h1 className="text-2xl font-bold">

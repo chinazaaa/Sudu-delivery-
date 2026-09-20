@@ -619,13 +619,21 @@ export default function LinkBuilder({
         <label className="label" htmlFor="when">
           When does it go
         </label>
+        <p className="mb-1 text-xs text-muted">
+          Left as it is, the link rides a run while one is taking orders and
+          falls back to the next window of its own when none is. That one never
+          needs editing; a named run or window is fixed and stops working when
+          it passes.
+        </p>
         <select
           id="when"
           name="when"
           className="field"
           defaultValue={editing?.when ?? ""}
         >
-          <option value="">Whichever run is open when they tap it</option>
+          <option value="">
+            Whatever is going when they tap it, cheapest first
+          </option>
           {saved &&
             saved.value !== "" &&
             !slots.some((slot) => slot.at === saved.value) &&

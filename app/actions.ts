@@ -9,6 +9,8 @@ import { normalisePhone } from "@/lib/phone";
 import { rememberCart } from "@/lib/carts";
 import { countCheckoutLinkUse, getCheckoutLink } from "@/lib/checkout-links";
 import { openBatches } from "@/lib/batches";
+import { deliverySlots } from "@/lib/same-day";
+import { hoursByDay, safeSettings } from "@/lib/settings";
 import { db } from "@/lib/supabase";
 import { closeGroup, getSharedGroup, groupOrders, leaderSeat } from "@/lib/groups";
 import { groupCarts } from "@/lib/group-carts";
@@ -334,16 +336,25 @@ export async function orderFromLink(input: {
   }
   const lines = swap ? [swap] : link.lines;
 
-  // Whichever run is taking orders, for a link made without one: that is what
-  // a link sitting in a group chat wants.
-  const batchId = link.batch_id ?? (link.deliver_at ? "" : (await openBatches())[0]?.id ?? "");
-  if (!batchId && !link.deliver_at) {
-    return { ok: false, error: "No run is taking orders just now." };
+  // A link made without a car takes whatever is going, cheapest first: a run
+  // if one is still taking orders, and a window of its own only when there is
+  // no run to ride. That is what a link sitting in a group chat wants, and it
+  // is why such a link never needs editing.
+  const settings = await safeSettings();
+  const riding = link.batch_id ?? (link.deliver_at ? "" : (await openBatches())[0]?.id ?? "");
+  const window =
+    link.deliver_at ??
+    (riding === "" && settings.same_day_on === "on"
+      ? (deliverySlots(new Date(), await hoursByDay())[0]?.at ?? null)
+      : null);
+
+  if (!riding && !window) {
+    return { ok: false, error: "Nothing is going just now. Try again shortly." };
   }
 
   const result = await placeOrder({
-    batchId,
-    deliverAt: link.deliver_at ?? undefined,
+    batchId: riding,
+    deliverAt: window ?? undefined,
     name: input.name,
     phone: input.phone,
     hostel: input.hostel,
