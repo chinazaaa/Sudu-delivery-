@@ -102,6 +102,16 @@ export default async function CheckoutLinkPage({
     );
   }
 
+  // The kitchens behind these dishes, by id, so each line can say where it
+  // is from.
+  const { data: places } = await db()
+    .from("restaurants")
+    .select("id, name")
+    .in("id", [...new Set(priced.lines.map((line) => line.item.restaurant_id))]);
+  const kitchens = new Map(
+    ((places ?? []) as { id: string; name: string }[]).map((one) => [one.id, one.name])
+  );
+
   const food = priced.lines.reduce(
     (sum, line) => sum + line.unitPrice * line.qty,
     0
@@ -163,6 +173,10 @@ export default async function CheckoutLinkPage({
         me={me}
         lines={priced.lines.map((line) => ({
           name: line.item.name,
+          // Whose kitchen it comes from. A dish name on its own is half the
+          // answer: "BBQ Chicken" is a pizza from Domino's or something else
+          // entirely, depending on who is reading it.
+          restaurant: kitchens.get(line.item.restaurant_id) ?? "",
           qty: line.qty,
           choices: line.options.map((one) => one.name),
           total: line.unitPrice * line.qty,

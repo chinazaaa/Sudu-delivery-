@@ -28,7 +28,13 @@ export default function LinkCheckout({
   me,
 }: {
   code: string;
-  lines: { name: string; qty: number; choices: string[]; total: number }[];
+  lines: {
+    name: string;
+    restaurant: string;
+    qty: number;
+    choices: string[];
+    total: number;
+  }[];
   food: number;
   /** What whoever made the link set delivery at, when they set it. Null means
    *  the ordinary rules, which cannot be worked out until the order is placed
@@ -113,9 +119,9 @@ export default function LinkCheckout({
                 <span className="font-semibold">
                   {line.qty}× {line.name}
                 </span>
-                {line.choices.length > 0 && (
-                  <span className="block text-xs text-muted">{line.choices.join(", ")}</span>
-                )}
+                <span className="block text-xs text-muted">
+                  {[line.restaurant, ...line.choices].filter(Boolean).join(" · ")}
+                </span>
               </span>
               <span className="font-bold">{naira(line.total)}</span>
             </li>
