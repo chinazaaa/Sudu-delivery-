@@ -113,14 +113,15 @@ export default function LinkBuilder({
   const food = picked.reduce((sum, one) => sum + lineTotal(one), 0);
 
   /**
-   * Alternatives have to cost what the basket costs.
+   * An alternative may cost the same or less, never more.
    *
-   * A swap that moves the total is not a swap, it is a different order:
-   * the page would have to reprice itself under somebody's thumb, and the
-   * figure they agreed to would change while they were reading it. Same
-   * money, and picking one is just picking one.
+   * Less is honest: they pay for what they take, and the total on the page
+   * goes down when they pick it. More is not a swap, it is an upsell hidden
+   * inside a basket somebody has already agreed to, and the figure they were
+   * reading would go up under their thumb. Anybody wanting the dearer thing
+   * can ask, and the button for that is right there.
    */
-  const mispriced = instead.filter((one) => lineTotal(one) !== food);
+  const mispriced = instead.filter((one) => lineTotal(one) > food);
 
   /** Questions that must be answered before this link can be sent. */
   const unanswered = [...picked, ...instead].filter((one) => {
@@ -403,8 +404,9 @@ export default function LinkBuilder({
           />
           <p className="mt-1 text-xs text-muted">
             Offered on the page as a swap, so somebody who wanted the chicken
-            does not close the tab. It has to come to {naira(food)}, the same as
-            the basket: a swap that moves the total is a different order.
+            does not close the tab. It can cost {naira(food)} or less, never
+            more: they pay for what they take, and a basket that gets dearer
+            when you look at it is not one anybody agreed to.
           </p>
 
           {otherQuery.trim().length >= 2 && (
@@ -471,10 +473,15 @@ export default function LinkBuilder({
                       <span className="flex shrink-0 items-center gap-2">
                         <span
                           className={`font-bold ${
-                            total === food ? "text-mint" : "text-brand-dark"
+                            total > food ? "text-brand-dark" : "text-mint"
                           }`}
                         >
                           {naira(total)}
+                          {total < food && (
+                            <span className="ml-1 text-xs font-semibold text-muted">
+                              {naira(food - total)} less
+                            </span>
+                          )}
                         </span>
                         <button
                           type="button"
@@ -543,8 +550,9 @@ export default function LinkBuilder({
                 .map((one) => named(one.id)?.name)
                 .filter(Boolean)
                 .join(", ")}{" "}
-              does not come to {naira(food)}. Change the size until it does, or
-              take it out: a swap that moves the total is a different order.
+              costs more than {naira(food)}. Change the size until it does not,
+              or take it out: a basket cannot get dearer while somebody is
+              reading it.
             </p>
           )}
         </div>

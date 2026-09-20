@@ -50,7 +50,13 @@ export default function LinkCheckout({
   swaps: { name: string; chosen: string; others: string[] }[];
   /** What they can have instead, each costing what the basket costs. A swap
    *  that moved the total would be a different order, so these never do. */
-  instead: { index: number; name: string; restaurant: string; choices: string[] }[];
+  instead: {
+    index: number;
+    name: string;
+    restaurant: string;
+    choices: string[];
+    food: number;
+  }[];
   /** Whether a card link is waiting, so card needs no message. */
   hasCardLink: boolean;
   /** A WhatsApp link, opened with the basket written out, for asking
@@ -67,6 +73,9 @@ export default function LinkCheckout({
   const [method, setMethod] = useState<"transfer" | "card">(me?.paymentMethod ?? "transfer");
   // Which of them they are having. Nought is the basket the link came with.
   const [having, setHaving] = useState(0);
+  // What that one costs. A swap is the same money or less, so this only ever
+  // falls, and every figure on the page follows it.
+  const cost = having === 0 ? food : (instead.find((one) => one.index + 1 === having)?.food ?? food);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
 
@@ -138,6 +147,7 @@ export default function LinkCheckout({
                 name: lines.map((line) => `${line.qty}× ${line.name}`).join(", "),
                 restaurant: lines[0]?.restaurant ?? "",
                 choices: lines.flatMap((line) => line.choices),
+                food,
               },
               ...instead.map((one) => ({ ...one, index: one.index + 1 })),
             ].map((one) => {
@@ -158,12 +168,13 @@ export default function LinkCheckout({
                     >
                       {on && <span className="text-xs font-black">✓</span>}
                     </span>
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1">
                       <span className="block font-semibold">{one.name}</span>
                       <span className="block text-xs text-muted">
                         {[one.restaurant, ...one.choices].filter(Boolean).join(" · ")}
                       </span>
                     </span>
+                    <span className="shrink-0 text-sm font-bold">{naira(one.food)}</span>
                   </button>
                 </li>
               );
@@ -189,14 +200,16 @@ export default function LinkCheckout({
 
         {instead.length > 0 && (
           <p className="text-xs text-muted">
-            Whichever you pick, it is the same money.
+            {instead.every((one) => one.food === food)
+              ? "Whichever you pick, it is the same money."
+              : "Pick whichever you want. Nothing here costs more than what the link came with."}
           </p>
         )}
 
         <dl className="space-y-1 border-t border-black/10 pt-2 text-sm">
           <div className="flex justify-between text-muted">
             <dt>Food</dt>
-            <dd>{naira(food)}</dd>
+            <dd>{naira(cost)}</dd>
           </div>
           <div className="flex justify-between text-muted">
             <dt>Delivery</dt>
@@ -207,7 +220,7 @@ export default function LinkCheckout({
           </div>
           <div className="flex justify-between font-extrabold">
             <dt>Total</dt>
-            <dd>{fee === null ? naira(food) + " + delivery" : naira(food + fee)}</dd>
+            <dd>{fee === null ? naira(cost) + " + delivery" : naira(cost + fee)}</dd>
           </div>
         </dl>
       </section>

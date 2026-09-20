@@ -243,6 +243,10 @@ export default async function CheckoutLinkPage({
                   name: one.lines[0].item.name,
                   restaurant: kitchens.get(one.lines[0].item.restaurant_id) ?? "",
                   choices: one.lines[0].options.map((option) => option.name),
+                  // What this one costs. The same as the basket, or less:
+                  // never more, so the total can only fall when somebody
+                  // picks one.
+                  food: one.lines[0].unitPrice * one.lines[0].qty,
                 };
           })
         ).then((all) => all.filter((one) => one !== null))}
