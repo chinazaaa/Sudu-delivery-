@@ -547,15 +547,24 @@ function Board({
             }}
           >
             <Text style={{ color: T.paper, fontWeight: "800" }}>
-              {busy ? "Closing…" : "Close it and get everybody's total"}
+              {busy
+                ? "Closing…"
+                : (board.ready ?? 0) === (board.people ?? 0)
+                  ? "Everybody is ready. Close it"
+                  : "Close it and get everybody's total"}
             </Text>
           </Pressable>
         )}
 
         {!board.leaderIsMine && (board.people ?? 0) > 0 && (
           <Text style={{ color: T.muted, textAlign: "center", fontSize: 13 }}>
-            {board.leader || "Whoever started it"} closes this when everybody is
-            ready, or the clock does.
+            {(board.ready ?? 0) === (board.people ?? 0)
+              ? `Everybody is ready. Waiting for ${
+                  board.leader || "whoever started it"
+                } to close it, or for the clock to run out.`
+              : `${
+                  board.leader || "Whoever started it"
+                } closes this when everybody is ready, or the clock does.`}
           </Text>
         )}
 

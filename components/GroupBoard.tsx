@@ -378,10 +378,16 @@ export default function GroupBoard({
         )}
 
         <p className="text-sm text-muted">
+          {/* "Everybody is done, so this is closing now" was not true:
+              nothing closes it but the leader or the clock, and saying
+              otherwise left people watching a board waiting for something
+              that was never coming. */}
           {!anyFood
             ? "Send the link round. The clock only starts once somebody finalises their food, so take your time."
             : ready === members.length
-              ? "Everybody is done, so this is closing now."
+              ? leader
+                ? "Everybody is ready. Close it whenever you like, or let the clock do it."
+                : `Everybody is ready. Waiting for ${leaderName} to close it, or for the clock to run out.`
               : leader
                 ? "Close it as soon as everyone is ready, or wait for the clock."
                 : `Waiting for ${leaderName} to close it, or for the clock to run out.`}
