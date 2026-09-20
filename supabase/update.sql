@@ -850,3 +850,21 @@ alter table checkout_links enable row level security;
 
 -- Supabase caches the schema; this makes the new table visible immediately.
 notify pgrst, 'reload schema';
+
+
+-- When a run actually arrives, as times rather than as a sentence.
+--
+-- The window was typed out by hand, so the shop knew what it had promised
+-- only as words: "Between 12pm and 5.30pm" could not be compared with
+-- anything. Times can be, which is what lets a same day window that a run
+-- already covers be left out of the list instead of being guessed at.
+--
+-- The sentence the customer reads is built from these. The old free text
+-- stays as the fallback, so nothing changes until these are filled in.
+alter table settings add column if not exists window_afternoon_from text not null default '';
+alter table settings add column if not exists window_afternoon_to   text not null default '';
+alter table settings add column if not exists window_night_from     text not null default '';
+alter table settings add column if not exists window_night_to       text not null default '';
+
+-- Supabase caches the schema; this makes the new columns visible immediately.
+notify pgrst, 'reload schema';

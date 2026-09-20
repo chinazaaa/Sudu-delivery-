@@ -53,6 +53,14 @@ export type Settings = {
   /** What customers are told about when each run lands. */
   window_afternoon: string;
   window_night: string;
+  /** The same two windows as times rather than as a sentence, "12:00" and
+   *  "17:30". What the customer reads is built from these, so a run's hours
+   *  are a fact the shop can reason about rather than words it has to parse.
+   *  Empty falls back to whatever the sentence above says. */
+  window_afternoon_from: string;
+  window_afternoon_to: string;
+  window_night_from: string;
+  window_night_to: string;
   /** How many days ahead a customer may order into. */
   order_horizon_days: number;
   /** The line under the name in the header. */
@@ -118,6 +126,10 @@ export const EMPTY: Settings = {
   abandon_minutes: 45,
   window_afternoon: "",
   window_night: "",
+  window_afternoon_from: "",
+  window_afternoon_to: "",
+  window_night_from: "",
+  window_night_to: "",
   order_horizon_days: 7,
   tagline: "",
   hide_promoter_link: "",
@@ -266,9 +278,51 @@ export async function hoursSpan(): Promise<{ first: number; last: number }> {
 export async function deliveryWindows(): Promise<Record<BatchSlot, string>> {
   const settings = await safeSettings();
   return {
-    afternoon: settings.window_afternoon.trim() || DELIVERY_WINDOWS.afternoon,
-    night: settings.window_night.trim() || DELIVERY_WINDOWS.night,
+    afternoon:
+      sayWindow(settings.window_afternoon_from, settings.window_afternoon_to) ||
+      settings.window_afternoon.trim() ||
+      DELIVERY_WINDOWS.afternoon,
+    night:
+      sayWindow(settings.window_night_from, settings.window_night_to) ||
+      settings.window_night.trim() ||
+      DELIVERY_WINDOWS.night,
   };
+}
+
+/** The hours each kind of run delivers in, for anything that has to compare
+ *  them rather than print them. Absent where nobody has set them. */
+export async function windowTimes(): Promise<
+  Record<BatchSlot, { from: string; to: string } | null>
+> {
+  const settings = await safeSettings();
+  const pair = (from: string, to: string) =>
+    from.trim() !== "" && to.trim() !== "" ? { from: from.trim(), to: to.trim() } : null;
+  return {
+    afternoon: pair(settings.window_afternoon_from, settings.window_afternoon_to),
+    night: pair(settings.window_night_from, settings.window_night_to),
+  };
+}
+
+/**
+ * Two times as the sentence a customer reads: "Between 12pm and 5:30pm".
+ *
+ * The window used to be typed out by hand, which meant the shop knew what it
+ * had promised only as words. Times can be compared, so a same day window
+ * that a run already covers can be left out of the list rather than guessed
+ * at from a sentence.
+ */
+export function sayWindow(from: string, to: string): string {
+  const said = (time: string): string | null => {
+    const [hours, minutes] = time.split(":").map((one) => Number(one));
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+    const suffix = hours >= 12 ? "pm" : "am";
+    const shown = hours % 12 === 0 ? 12 : hours % 12;
+    return minutes === 0 ? `${shown}${suffix}` : `${shown}:${String(minutes).padStart(2, "0")}${suffix}`;
+  };
+
+  const start = said(from);
+  const end = said(to);
+  return start && end ? `Between ${start} and ${end}` : "";
 }
 
 /**

@@ -26,7 +26,6 @@ import {
   toggleHostel,
 } from "../actions";
 import { listHostels } from "@/lib/hostels";
-import { DELIVERY_WINDOWS } from "@/lib/config";
 
 /** Whole hours, named the way somebody says them. */
 const HOURS = Array.from({ length: 16 }, (_, index) => {
@@ -369,24 +368,50 @@ export default async function SettingsAdmin() {
             the run itself. It is the {"{window}"} in your messages.
           </p>
         </div>
+        {/* Times rather than a sentence. The words the customer reads are
+            built from these, and because they are times the shop can compare
+            them: a same day window a run already covers is left out of the
+            list instead of being guessed at from prose. */}
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="label" htmlFor="window_afternoon">Afternoon runs</label>
-            <input
-              id="window_afternoon"
-              name="window_afternoon"
-              defaultValue={settings.window_afternoon || DELIVERY_WINDOWS.afternoon}
-              className="field"
-            />
+            <p className="label">Afternoon runs arrive between</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="time"
+                aria-label="Afternoon runs, earliest"
+                name="window_afternoon_from"
+                defaultValue={settings.window_afternoon_from || "12:00"}
+                className="field"
+              />
+              <span className="text-sm text-muted">and</span>
+              <input
+                type="time"
+                aria-label="Afternoon runs, latest"
+                name="window_afternoon_to"
+                defaultValue={settings.window_afternoon_to || "15:00"}
+                className="field"
+              />
+            </div>
           </div>
           <div>
-            <label className="label" htmlFor="window_night">Night runs</label>
-            <input
-              id="window_night"
-              name="window_night"
-              defaultValue={settings.window_night || DELIVERY_WINDOWS.night}
-              className="field"
-            />
+            <p className="label">Night runs arrive between</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="time"
+                aria-label="Night runs, earliest"
+                name="window_night_from"
+                defaultValue={settings.window_night_from || "19:00"}
+                className="field"
+              />
+              <span className="text-sm text-muted">and</span>
+              <input
+                type="time"
+                aria-label="Night runs, latest"
+                name="window_night_to"
+                defaultValue={settings.window_night_to || "21:00"}
+                className="field"
+              />
+            </div>
           </div>
         </div>
         <div className="w-44">

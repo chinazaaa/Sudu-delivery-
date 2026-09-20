@@ -24,6 +24,7 @@ import {
   pickOffer,
 } from "../lib/offers";
 import { slotsWorthOffering, windowPhrase } from "../lib/same-day";
+import { sayWindow } from "../lib/settings";
 import { sheetAsText } from "../lib/sheet-text";
 import { template, whatsappTo } from "../lib/messages";
 import { newPin } from "../lib/customer-auth";
@@ -1303,4 +1304,13 @@ test("a time a run already covers is not offered as a car of its own", () => {
       .length,
     slots.length
   );
+});
+
+test("a run's window is said from the times it was set with", () => {
+  assert.equal(sayWindow("12:00", "17:30"), "Between 12pm and 5:30pm");
+  assert.equal(sayWindow("19:00", "21:00"), "Between 7pm and 9pm");
+  // Midnight and noon are the two that catch a twelve-hour clock out.
+  assert.equal(sayWindow("00:30", "12:00"), "Between 12:30am and 12pm");
+  // Nothing set is nothing said, and the words typed by hand still stand.
+  assert.equal(sayWindow("", ""), "");
 });
