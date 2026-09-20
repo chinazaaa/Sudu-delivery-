@@ -8,7 +8,7 @@ import { lastOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import { rememberCart } from "@/lib/carts";
 import { db } from "@/lib/supabase";
-import { closeGroup, getSharedGroup, groupOrders, leaderSeat, markDone } from "@/lib/groups";
+import { closeGroup, getSharedGroup, groupOrders, leaderSeat } from "@/lib/groups";
 import { groupCarts } from "@/lib/group-carts";
 import { shortRef } from "@/lib/links";
 import {
@@ -295,18 +295,6 @@ export async function rateOrder(
 
   revalidatePath(`/o/${id}`);
   return { error: null, saved: true };
-}
-
-/** "I have finished ordering." Closes the group when it was the last of them. */
-export async function finishOrdering(form: FormData): Promise<void> {
-  // The id of their food waiting in the group, not of an order: in a shared
-  // delivery there is no order until the group closes.
-  const id = String(form.get("order_id") ?? "");
-  if (!id) return;
-
-  await markDone(id);
-  revalidatePath("/g", "layout");
-  revalidatePath("/o", "layout");
 }
 
 /**

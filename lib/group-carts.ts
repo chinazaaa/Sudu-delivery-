@@ -177,17 +177,6 @@ export async function groupCarts(groupId: string): Promise<GroupCart[]> {
   return (data ?? []) as GroupCart[];
 }
 
-/** "I have finished ordering", from one person in a shared delivery. */
-export async function markCartDone(cartId: string): Promise<string | null> {
-  const { data } = await db()
-    .from("group_carts")
-    .update({ finalised_at: new Date().toISOString() })
-    .eq("id", cartId)
-    .select("group_id")
-    .single();
-  return (data?.group_id as string) ?? null;
-}
-
 /** How many containers are travelling, which is what the band is worked out on. */
 export function countCartItems(carts: GroupCart[]): number {
   return carts.reduce(

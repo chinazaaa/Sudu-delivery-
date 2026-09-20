@@ -5,7 +5,6 @@ import {
   canTravel,
   countCartItems,
   groupCarts,
-  markCartDone,
   choicesInCarts,
   placesInCarts,
 } from "./group-carts";
@@ -639,23 +638,15 @@ export function sweepGroups(): void {
   });
 }
 
-/**
- * One person has finished adding. When that is the last of them, the group
- * closes there and then rather than making everybody wait out the clock.
+/*
+ * There was a markDone here, which closed a group the moment the last person
+ * finished. Nothing ever called it, so it never fired, and it was a live wire:
+ * wiring an "I am done" button to it later would have closed cars the second
+ * two people were ready and shut out a third who was still choosing.
+ *
+ * A group closes when whoever made it closes it, or when the fifteen minutes
+ * run out. Nothing else.
  */
-export async function markDone(cartId: string): Promise<CloseResult | null> {
-  const groupId = await markCartDone(cartId);
-  if (!groupId) return null;
-
-  // When that was the last of them, the group closes there and then rather
-  // than making everybody sit out the rest of the clock: waiting fifteen
-  // minutes when everyone is finished is fifteen minutes of nobody being able
-  // to pay.
-  const waiting = await groupCarts(groupId);
-  const everybody = waiting.length > 0 && waiting.every((one) => one.done_at !== null);
-  return everybody ? closeGroup(groupId) : null;
-}
-
 
 /**
  * Start a shared delivery.

@@ -95,6 +95,14 @@ in front of us a second time. Each line is a rule, then the bug that bought it.
 19. **Past groups are ones an order came out of.** A link somebody opened and
     left is a door into nothing.
 
+## Closing, once and for all
+
+22. **A group closes when whoever made it closes it, or when the fifteen
+    minutes run out. Nothing else.** It does not close itself when everybody
+    is ready: a car that shuts the moment two people are done locks out a
+    third who was still choosing. The board says who everybody is waiting on
+    rather than implying something is about to happen on its own.
+
 ## Deep links
 
 20. **A link opens the app, and the code stays a code.** sudu.store/g/<code>
