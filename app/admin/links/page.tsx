@@ -1,3 +1,4 @@
+import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import LinkBuilder from "@/components/admin/LinkBuilder";
 import { listCheckoutLinks } from "@/lib/checkout-links";
@@ -22,7 +23,14 @@ export const dynamic = "force-dynamic";
  * done. It is also how somebody pays by card without a message, because the
  * card link rides along.
  */
-export default async function LinksPage() {
+export default async function LinksPage({
+  searchParams,
+}: {
+  /** The link being changed, if one is. Editing lives in the address rather
+   *  than in a piece of client state, so a half-finished edit survives a
+   *  reload and the page can fill the form in on the server. */
+  searchParams: Promise<{ edit?: string }>;
+}) {
   const [links, menu, batches, settings, site] = await Promise.all([
     listCheckoutLinks(),
     menuView(),
@@ -30,6 +38,9 @@ export default async function LinksPage() {
     safeSettings(),
     siteUrl(),
   ]);
+
+  const wanted = (await searchParams).edit ?? "";
+  const editing = links.find((one) => one.id === wanted) ?? null;
 
   const slots =
     settings.same_day_on === "on" ? deliverySlots(new Date(), await hoursByDay()) : [];
@@ -69,6 +80,24 @@ export default async function LinksPage() {
       />
 
       <LinkBuilder
+        editing={
+          editing && {
+            id: editing.id,
+            label: editing.label,
+            lines: editing.lines.map((line) => ({
+              id: line.menu_item_id,
+              qty: line.qty,
+              options: line.option_ids ?? [],
+            })),
+            when: editing.batch_id
+              ? `run:${editing.batch_id}`
+              : (editing.deliver_at ?? ""),
+            fee: editing.fee,
+            coupon: editing.coupon_code ?? "",
+            paymentLink: editing.payment_link,
+            note: editing.note,
+          }
+        }
         dishes={dishes}
         runs={batches
           .map(toBatchView)
@@ -111,6 +140,12 @@ export default async function LinksPage() {
                 <CopyText value={address} label="Copy link" className="px-3 py-2 text-sm" />
 
                 <div className="flex flex-wrap items-center gap-2 border-t border-black/5 pt-2">
+                  <Link
+                    href={`/admin/links?edit=${link.id}`}
+                    className="chip border-black/10 bg-white text-brand"
+                  >
+                    Edit
+                  </Link>
                   <form action={link.active ? stopLink : startLink}>
                     <input type="hidden" name="link_id" value={link.id} />
                     <button type="submit" className="chip border-black/10 bg-white">

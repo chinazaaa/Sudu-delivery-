@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { naira } from "@/lib/money";
+import { useRouter } from "next/navigation";
 import { saveLink } from "@/app/admin/actions";
 
 type Option = { id: string; name: string; priceDelta: number };
@@ -44,16 +45,31 @@ export default function LinkBuilder({
   dishes,
   runs,
   slots,
+  editing,
 }: {
   dishes: Dish[];
   runs: { id: string; label: string }[];
   slots: { at: string; label: string }[];
+  /** A link being changed rather than made. Everything comes back filled in,
+   *  and saving keeps the same address, so whatever was already sent to
+   *  people goes on working. */
+  editing?: {
+    id: string;
+    label: string;
+    lines: { id: string; qty: number; options: string[] }[];
+    when: string;
+    fee: number | null;
+    coupon: string;
+    paymentLink: string;
+    note: string;
+  } | null;
 }) {
-  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const [open, setOpen] = useState(Boolean(editing));
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<
     { id: string; qty: number; options: string[] }[]
-  >([]);
+  >(editing?.lines ?? []);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const [done, setDone] = useState(false);
@@ -116,6 +132,12 @@ export default function LinkBuilder({
             setProblem(result.error ?? "Could not save that.");
             return;
           }
+          if (editing) {
+            // Out of the edit and back to the list, which is now showing
+            // what was just saved.
+            router.replace("/admin/links");
+            return;
+          }
           setPicked([]);
           setQuery("");
           setDone(true);
@@ -125,18 +147,28 @@ export default function LinkBuilder({
       }}
       className="card space-y-4"
     >
+      {editing && <input type="hidden" name="link_id" value={editing.id} />}
+      {editing && (
+        <p className="text-sm font-bold text-brand-dark">
+          Changing a link that is already out. Saving keeps the same address, so
+          whatever you have sent people goes on working.
+        </p>
+      )}
+
       <div>
         <label className="label" htmlFor="label">
-          What is it for
+          Title
         </label>
         <input
           id="label"
           name="label"
-          placeholder="Domino's meatball, Friday"
+          defaultValue={editing?.label ?? ""}
+          placeholder="Domino's meatball deal"
           className="field"
         />
         <p className="mt-1 text-xs text-muted">
-          Only you see this. It is how you find the link again next week.
+          They see this at the top of the page, above the food, so write it for
+          them rather than for yourself.
         </p>
       </div>
 
@@ -333,7 +365,12 @@ export default function LinkBuilder({
         <label className="label" htmlFor="when">
           When does it go
         </label>
-        <select id="when" name="when" className="field" defaultValue="">
+        <select
+          id="when"
+          name="when"
+          className="field"
+          defaultValue={editing?.when ?? ""}
+        >
           <option value="">Whichever run is open when they tap it</option>
           {slots.length > 0 && (
             <optgroup label="A car of its own">
@@ -365,6 +402,7 @@ export default function LinkBuilder({
             id="fee"
             name="fee"
             inputMode="numeric"
+            defaultValue={editing?.fee ?? ""}
             placeholder="Leave empty for the usual"
             className="field"
           />
@@ -377,7 +415,13 @@ export default function LinkBuilder({
           <label className="label" htmlFor="coupon">
             Code applied for them
           </label>
-          <input id="coupon" name="coupon" placeholder="Optional" className="field" />
+          <input
+            id="coupon"
+            name="coupon"
+            defaultValue={editing?.coupon ?? ""}
+            placeholder="Optional"
+            className="field"
+          />
           <p className="mt-1 text-xs text-muted">
             Nobody has to be told to type it. One offer applies at a time, so a
             code on food a promotion already prices is refused.
@@ -392,6 +436,7 @@ export default function LinkBuilder({
         <input
           id="payment_link"
           name="payment_link"
+          defaultValue={editing?.paymentLink ?? ""}
           placeholder="Optional. Paste the payment link"
           className="field"
         />
@@ -408,6 +453,7 @@ export default function LinkBuilder({
         <input
           id="note"
           name="note"
+          defaultValue={editing?.note ?? ""}
           placeholder="Optional. Shows above the basket"
           className="field"
         />
@@ -426,14 +472,14 @@ export default function LinkBuilder({
           disabled={busy || picked.length === 0 || unanswered.length > 0}
           className="btn-primary px-5"
         >
-          {busy ? "Saving…" : "Make the link"}
+          {busy ? "Saving…" : editing ? "Save the changes" : "Make the link"}
         </button>
         <button
           type="button"
-          onClick={() => setOpen(false)}
+          onClick={() => (editing ? router.replace("/admin/links") : setOpen(false))}
           className="text-sm font-semibold text-muted"
         >
-          Not now
+          {editing ? "Leave it as it was" : "Not now"}
         </button>
       </div>
     </form>
