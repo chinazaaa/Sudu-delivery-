@@ -985,23 +985,29 @@ export async function saveLink(form: FormData): Promise<{ ok: boolean; error?: s
 
   // The basket, and the dishes somebody can have instead of it. Both are
   // ordinary cart lines, so a size or a flavour is settled on either.
-  const asLines = (field: string) =>
-    form
-      .getAll(field)
-      .map(String)
-      .filter(Boolean)
-      .map((id) => ({
+  // Three lists that line up, rather than fields named after the dish: the
+  // same dish can be offered twice, once hand tossed and once thin crust, and
+  // a name built from its id would have collided.
+  const asLines = (prefix: string) => {
+    const ids = form.getAll(`${prefix}_id`).map(String);
+    const quantities = form.getAll(`${prefix}_qty`).map(String);
+    const options = form.getAll(`${prefix}_options`).map(String);
+
+    return ids
+      .map((id, index) => ({
         menu_item_id: id,
-        qty: Math.max(1, Number(form.get(`qty_${id}`) ?? 1)),
+        qty: Math.max(1, Number(quantities[index] ?? 1)),
         // Everything that moves the price, settled when the link was made.
         // Priced on the server like any other order.
-        option_ids: String(form.get(`options_${id}`) ?? "")
+        option_ids: String(options[index] ?? "")
           .split(",")
           .map((one) => one.trim())
           .filter(Boolean),
-      }));
+      }))
+      .filter((line) => line.menu_item_id !== "");
+  };
 
-  const lines = asLines("item_id");
+  const lines = asLines("item");
 
   const when = String(form.get("when") ?? "");
   const fee = String(form.get("fee") ?? "").trim();
@@ -1010,7 +1016,7 @@ export async function saveLink(form: FormData): Promise<{ ok: boolean; error?: s
     id: String(form.get("link_id") ?? "") || undefined,
     label: String(form.get("label") ?? ""),
     lines,
-    alternatives: asLines("alt_id"),
+    alternatives: asLines("alt"),
     // One control, two kinds of answer: a run is its id behind a marker, a
     // time is the instant itself, exactly as the group form does it.
     batchId: when.startsWith("run:") ? when.slice(4) : null,

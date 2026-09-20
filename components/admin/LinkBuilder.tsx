@@ -17,6 +17,7 @@ type Dish = {
   id: string;
   name: string;
   restaurant: string;
+  restaurantId: string;
   price: number;
   groups: Group[];
 };
@@ -41,7 +42,17 @@ function costs(group: Group): boolean {
  * picked stays on screen whatever is typed, or saving after a search would
  * quietly drop everything the search hid.
  */
-type Picked = { id: string; qty: number; options: string[] };
+type Picked = {
+  /** This line, not this dish: the same dish can be here twice, once hand
+   *  tossed and once thin crust, so it needs a name of its own. */
+  key: string;
+  id: string;
+  qty: number;
+  options: string[];
+};
+
+let counter = 0;
+const nextKey = () => `line-${(counter += 1)}`;
 
 export default function LinkBuilder({
   dishes,
@@ -75,10 +86,14 @@ export default function LinkBuilder({
   const router = useRouter();
   const [open, setOpen] = useState(Boolean(editing));
   const [query, setQuery] = useState("");
-  const [picked, setPicked] = useState<Picked[]>(editing?.lines ?? []);
+  const [picked, setPicked] = useState<Picked[]>(
+    (editing?.lines ?? []).map((line) => ({ ...line, key: nextKey() }))
+  );
   // What somebody can have instead of it. The same shape, so a size or a
   // flavour is settled on these too.
-  const [instead, setInstead] = useState<Picked[]>(editing?.alternatives ?? []);
+  const [instead, setInstead] = useState<Picked[]>(
+    (editing?.alternatives ?? []).map((line) => ({ ...line, key: nextKey() }))
+  );
   const [otherQuery, setOtherQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
@@ -122,6 +137,11 @@ export default function LinkBuilder({
    * can ask, and the button for that is right there.
    */
   const mispriced = instead.filter((one) => lineTotal(one) > food);
+
+  /** The kitchens this basket is already from. */
+  const kitchens = [
+    ...new Set(picked.map((one) => named(one.id)?.restaurantId).filter(Boolean)),
+  ] as string[];
 
   /**
    * The least a dish can come to: its price, plus the cheapest answer to
@@ -242,6 +262,7 @@ export default function LinkBuilder({
                     setPicked((was) => [
                       ...was,
                       {
+                        key: nextKey(),
                         id: dish.id,
                         qty: 1,
                         // A question with one answer answers itself.
@@ -271,14 +292,10 @@ export default function LinkBuilder({
               const dish = named(one.id);
               if (!dish) return null;
               return (
-                <li key={one.id} className="space-y-2 rounded-xl bg-shell px-3 py-2 text-sm">
+                <li key={one.key} className="space-y-2 rounded-xl bg-shell px-3 py-2 text-sm">
                   <input type="hidden" name="item_id" value={one.id} />
-                  <input type="hidden" name={`qty_${one.id}`} value={one.qty} />
-                  <input
-                    type="hidden"
-                    name={`options_${one.id}`}
-                    value={one.options.join(",")}
-                  />
+                  <input type="hidden" name="item_qty" value={one.qty} />
+                  <input type="hidden" name="item_options" value={one.options.join(",")} />
                   <div className="flex items-center justify-between gap-3">
                   <span className="min-w-0">
                     <span className="font-semibold">{dish.name}</span>
@@ -290,7 +307,7 @@ export default function LinkBuilder({
                       onClick={() =>
                         setPicked((was) =>
                           was.map((item) =>
-                            item.id === one.id
+                            item.key === one.key
                               ? { ...item, qty: Math.max(1, item.qty - 1) }
                               : item
                           )
@@ -306,7 +323,7 @@ export default function LinkBuilder({
                       onClick={() =>
                         setPicked((was) =>
                           was.map((item) =>
-                            item.id === one.id ? { ...item, qty: item.qty + 1 } : item
+                            item.key === one.key ? { ...item, qty: item.qty + 1 } : item
                           )
                         )
                       }
@@ -317,7 +334,7 @@ export default function LinkBuilder({
                     <button
                       type="button"
                       onClick={() =>
-                        setPicked((was) => was.filter((item) => item.id !== one.id))
+                        setPicked((was) => was.filter((item) => item.key !== one.key))
                       }
                       className="text-xs font-semibold text-muted"
                     >
@@ -341,7 +358,7 @@ export default function LinkBuilder({
                             onClick={() =>
                               setPicked((was) =>
                                 was.map((item) =>
-                                  item.id !== one.id
+                                  item.key !== one.key
                                     ? item
                                     : {
                                         ...item,
@@ -423,9 +440,10 @@ export default function LinkBuilder({
           />
           <p className="mt-1 text-xs text-muted">
             Offered on the page as a swap, so somebody who wanted the chicken
-            does not close the tab. Only dishes that can come to {naira(food)}
-            or less are listed: they pay for what they take, and a basket that
-            gets dearer while you look at it is not one anybody agreed to.
+            does not close the tab. The same kitchen, and{" "}
+            {naira(food)} or less: they pay for what they take, a basket that
+            gets dearer while you look at it is not one anybody agreed to, and
+            a swap to another restaurant is another trip.
           </p>
 
           {otherQuery.trim().length >= 2 && (
@@ -433,8 +451,10 @@ export default function LinkBuilder({
               {dishes
                 .filter(
                   (dish) =>
-                    !instead.some((one) => one.id === dish.id) &&
-                    !picked.some((one) => one.id === dish.id) &&
+                    // The same kitchen the basket is from. A swap to another
+                    // restaurant is another trip, and it would walk out of
+                    // whatever offer is pricing this one.
+                    kitchens.includes(dish.restaurantId) &&
                     // Only what can actually be offered. A dish whose
                     // cheapest form is dearer than the basket has no size
                     // that saves it, so listing it is offering something
@@ -452,6 +472,7 @@ export default function LinkBuilder({
                         setInstead((was) => [
                           ...was,
                           {
+                            key: nextKey(),
                             id: dish.id,
                             qty: picked[0]?.qty ?? 1,
                             options: dish.groups
@@ -481,14 +502,10 @@ export default function LinkBuilder({
                 if (!dish) return null;
                 const total = lineTotal(one);
                 return (
-                  <li key={one.id} className="space-y-2 rounded-xl bg-shell px-3 py-2 text-sm">
+                  <li key={one.key} className="space-y-2 rounded-xl bg-shell px-3 py-2 text-sm">
                     <input type="hidden" name="alt_id" value={one.id} />
-                    <input type="hidden" name={`qty_${one.id}`} value={one.qty} />
-                    <input
-                      type="hidden"
-                      name={`options_${one.id}`}
-                      value={one.options.join(",")}
-                    />
+                    <input type="hidden" name="alt_qty" value={one.qty} />
+                    <input type="hidden" name="alt_options" value={one.options.join(",")} />
                     <div className="flex items-center justify-between gap-3">
                       <span className="min-w-0">
                         <span className="font-semibold">{dish.name}</span>
@@ -510,7 +527,7 @@ export default function LinkBuilder({
                         <button
                           type="button"
                           onClick={() =>
-                            setInstead((was) => was.filter((item) => item.id !== one.id))
+                            setInstead((was) => was.filter((item) => item.key !== one.key))
                           }
                           className="text-xs font-semibold text-muted"
                         >
@@ -531,7 +548,7 @@ export default function LinkBuilder({
                               onClick={() =>
                                 setInstead((was) =>
                                   was.map((item) =>
-                                    item.id !== one.id
+                                    item.key !== one.key
                                       ? item
                                       : {
                                           ...item,

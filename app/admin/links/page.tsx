@@ -56,6 +56,7 @@ export default async function LinksPage({
         id: item.id,
         name: item.name,
         restaurant: place.restaurant.name,
+        restaurantId: place.restaurant.id,
         price: item.price,
         // The questions this dish asks. A size changes the price, so a link
         // that skipped it would charge the wrong amount; a crust does not,
