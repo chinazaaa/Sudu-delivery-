@@ -123,6 +123,25 @@ export default function LinkBuilder({
    */
   const mispriced = instead.filter((one) => lineTotal(one) > food);
 
+  /**
+   * The least a dish can come to: its price, plus the cheapest answer to
+   * every question it insists on.
+   *
+   * Used to leave the dearer half of the menu out of the search rather than
+   * letting somebody pick one and then telling them it will not do. If the
+   * cheapest way to have it is still more than the basket, there is no size
+   * that saves it.
+   */
+  const cheapest = (dish: Dish, qty: number) => {
+    const musts = dish.groups
+      .filter((group) => group.required && group.options.length > 0)
+      .reduce(
+        (sum, group) => sum + Math.min(...group.options.map((option) => option.priceDelta)),
+        0
+      );
+    return (dish.price + musts) * qty;
+  };
+
   /** Questions that must be answered before this link can be sent. */
   const unanswered = [...picked, ...instead].filter((one) => {
     const dish = named(one.id);
@@ -404,9 +423,9 @@ export default function LinkBuilder({
           />
           <p className="mt-1 text-xs text-muted">
             Offered on the page as a swap, so somebody who wanted the chicken
-            does not close the tab. It can cost {naira(food)} or less, never
-            more: they pay for what they take, and a basket that gets dearer
-            when you look at it is not one anybody agreed to.
+            does not close the tab. Only dishes that can come to {naira(food)}
+            or less are listed: they pay for what they take, and a basket that
+            gets dearer while you look at it is not one anybody agreed to.
           </p>
 
           {otherQuery.trim().length >= 2 && (
@@ -416,6 +435,11 @@ export default function LinkBuilder({
                   (dish) =>
                     !instead.some((one) => one.id === dish.id) &&
                     !picked.some((one) => one.id === dish.id) &&
+                    // Only what can actually be offered. A dish whose
+                    // cheapest form is dearer than the basket has no size
+                    // that saves it, so listing it is offering something
+                    // that will be refused.
+                    cheapest(dish, picked[0]?.qty ?? 1) <= food &&
                     (dish.name.toLowerCase().includes(otherQuery.trim().toLowerCase()) ||
                       dish.restaurant.toLowerCase().includes(otherQuery.trim().toLowerCase()))
                 )
