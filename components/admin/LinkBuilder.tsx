@@ -138,14 +138,21 @@ export default function LinkBuilder({
             return;
           }
           if (editing) {
-            // Out of the edit and back to the list, which is now showing
-            // what was just saved.
+            // Out of the edit and back to the list. The refresh is the half
+            // that was missing: leaving the address behind does not re-read
+            // the page, so the list came back showing what it was showing
+            // before, and saving again looked like the only way to make it
+            // take.
             router.replace("/admin/links");
+            router.refresh();
             return;
           }
           setPicked([]);
           setQuery("");
           setDone(true);
+          // The link that was just made is not in the list until the page is
+          // read again.
+          router.refresh();
         } finally {
           setBusy(false);
         }
