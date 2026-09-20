@@ -41,6 +41,8 @@ function costs(group: Group): boolean {
  * picked stays on screen whatever is typed, or saving after a search would
  * quietly drop everything the search hid.
  */
+type Picked = { id: string; qty: number; options: string[] };
+
 export default function LinkBuilder({
   dishes,
   runs,
@@ -62,6 +64,7 @@ export default function LinkBuilder({
     id: string;
     label: string;
     lines: { id: string; qty: number; options: string[] }[];
+    alternatives: { id: string; qty: number; options: string[] }[];
     when: string;
     fee: number | null;
     coupon: string;
@@ -72,9 +75,11 @@ export default function LinkBuilder({
   const router = useRouter();
   const [open, setOpen] = useState(Boolean(editing));
   const [query, setQuery] = useState("");
-  const [picked, setPicked] = useState<
-    { id: string; qty: number; options: string[] }[]
-  >(editing?.lines ?? []);
+  const [picked, setPicked] = useState<Picked[]>(editing?.lines ?? []);
+  // What somebody can have instead of it. The same shape, so a size or a
+  // flavour is settled on these too.
+  const [instead, setInstead] = useState<Picked[]>(editing?.alternatives ?? []);
+  const [otherQuery, setOtherQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const [done, setDone] = useState(false);
@@ -107,8 +112,18 @@ export default function LinkBuilder({
 
   const food = picked.reduce((sum, one) => sum + lineTotal(one), 0);
 
+  /**
+   * Alternatives have to cost what the basket costs.
+   *
+   * A swap that moves the total is not a swap, it is a different order:
+   * the page would have to reprice itself under somebody's thumb, and the
+   * figure they agreed to would change while they were reading it. Same
+   * money, and picking one is just picking one.
+   */
+  const mispriced = instead.filter((one) => lineTotal(one) !== food);
+
   /** Questions that must be answered before this link can be sent. */
-  const unanswered = picked.filter((one) => {
+  const unanswered = [...picked, ...instead].filter((one) => {
     const dish = named(one.id);
     if (!dish) return false;
     return dish.groups.some(
@@ -137,6 +152,7 @@ export default function LinkBuilder({
             setProblem(result.error ?? "Could not save that.");
             return;
           }
+          setInstead([]);
           if (editing) {
             // Out of the edit and back to the list. The refresh is the half
             // that was missing: leaving the address behind does not re-read
@@ -373,6 +389,167 @@ export default function LinkBuilder({
         )}
       </div>
 
+      {picked.length > 0 && (
+        <div>
+          <label className="label" htmlFor="other">
+            Or they can have
+          </label>
+          <input
+            id="other"
+            value={otherQuery}
+            onChange={(event) => setOtherQuery(event.target.value)}
+            placeholder="Another dish at the same price"
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">
+            Offered on the page as a swap, so somebody who wanted the chicken
+            does not close the tab. It has to come to {naira(food)}, the same as
+            the basket: a swap that moves the total is a different order.
+          </p>
+
+          {otherQuery.trim().length >= 2 && (
+            <ul className="mt-2 space-y-1">
+              {dishes
+                .filter(
+                  (dish) =>
+                    !instead.some((one) => one.id === dish.id) &&
+                    !picked.some((one) => one.id === dish.id) &&
+                    (dish.name.toLowerCase().includes(otherQuery.trim().toLowerCase()) ||
+                      dish.restaurant.toLowerCase().includes(otherQuery.trim().toLowerCase()))
+                )
+                .slice(0, 8)
+                .map((dish) => (
+                  <li key={dish.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInstead((was) => [
+                          ...was,
+                          {
+                            id: dish.id,
+                            qty: picked[0]?.qty ?? 1,
+                            options: dish.groups
+                              .filter((group) => group.required && group.options.length === 1)
+                              .map((group) => group.options[0].id),
+                          },
+                        ]);
+                        setOtherQuery("");
+                      }}
+                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-black/10 px-3 py-2 text-left text-sm"
+                    >
+                      <span>
+                        <span className="font-semibold">{dish.name}</span>
+                        <span className="block text-xs text-muted">{dish.restaurant}</span>
+                      </span>
+                      <span className="font-bold">{naira(dish.price)}</span>
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          )}
+
+          {instead.length > 0 && (
+            <ul className="mt-3 space-y-2">
+              {instead.map((one) => {
+                const dish = named(one.id);
+                if (!dish) return null;
+                const total = lineTotal(one);
+                return (
+                  <li key={one.id} className="space-y-2 rounded-xl bg-shell px-3 py-2 text-sm">
+                    <input type="hidden" name="alt_id" value={one.id} />
+                    <input type="hidden" name={`qty_${one.id}`} value={one.qty} />
+                    <input
+                      type="hidden"
+                      name={`options_${one.id}`}
+                      value={one.options.join(",")}
+                    />
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="min-w-0">
+                        <span className="font-semibold">{dish.name}</span>
+                        <span className="block text-xs text-muted">{dish.restaurant}</span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <span
+                          className={`font-bold ${
+                            total === food ? "text-mint" : "text-brand-dark"
+                          }`}
+                        >
+                          {naira(total)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setInstead((was) => was.filter((item) => item.id !== one.id))
+                          }
+                          className="text-xs font-semibold text-muted"
+                        >
+                          Remove
+                        </button>
+                      </span>
+                    </div>
+
+                    {dish.groups.filter(costs).map((group) => (
+                      <div key={group.id} className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-xs font-bold text-muted">{group.name}</span>
+                        {group.options.map((option) => {
+                          const on = one.options.includes(option.id);
+                          return (
+                            <button
+                              key={option.id}
+                              type="button"
+                              onClick={() =>
+                                setInstead((was) =>
+                                  was.map((item) =>
+                                    item.id !== one.id
+                                      ? item
+                                      : {
+                                          ...item,
+                                          options: on
+                                            ? item.options.filter((id) => id !== option.id)
+                                            : [
+                                                ...item.options.filter(
+                                                  (id) =>
+                                                    group.maxSelect > 1 ||
+                                                    !group.options.some((other) => other.id === id)
+                                                ),
+                                                option.id,
+                                              ],
+                                        }
+                                  )
+                                )
+                              }
+                              className={`chip text-xs ${
+                                on
+                                  ? "border-brand bg-brand-tint text-brand-dark"
+                                  : "border-black/10 bg-white"
+                              }`}
+                            >
+                              {option.name}
+                              {option.priceDelta !== 0 && ` +${naira(option.priceDelta)}`}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {mispriced.length > 0 && (
+            <p className="mt-2 text-xs font-semibold text-brand-dark">
+              {mispriced
+                .map((one) => named(one.id)?.name)
+                .filter(Boolean)
+                .join(", ")}{" "}
+              does not come to {naira(food)}. Change the size until it does, or
+              take it out: a swap that moves the total is a different order.
+            </p>
+          )}
+        </div>
+      )}
+
       <div>
         <label className="label" htmlFor="when">
           When does it go
@@ -493,7 +670,9 @@ export default function LinkBuilder({
       <div className="flex items-center gap-2">
         <button
           type="submit"
-          disabled={busy || picked.length === 0 || unanswered.length > 0}
+          disabled={
+            busy || picked.length === 0 || unanswered.length > 0 || mispriced.length > 0
+          }
           className="btn-primary px-5"
         >
           {busy ? "Saving…" : editing ? "Save the changes" : "Make the link"}

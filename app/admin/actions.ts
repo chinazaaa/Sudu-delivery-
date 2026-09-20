@@ -983,17 +983,25 @@ export async function deleteClosedCarts(): Promise<void> {
 export async function saveLink(form: FormData): Promise<{ ok: boolean; error?: string }> {
   await assertAdmin();
 
-  const items = form.getAll("item_id").map(String).filter(Boolean);
-  const lines = items.map((id) => ({
-    menu_item_id: id,
-    qty: Math.max(1, Number(form.get(`qty_${id}`) ?? 1)),
-    // The size, the flavour: everything that moves the price, settled when
-    // the link was made. Priced on the server like any other order.
-    option_ids: String(form.get(`options_${id}`) ?? "")
-      .split(",")
-      .map((one) => one.trim())
-      .filter(Boolean),
-  }));
+  // The basket, and the dishes somebody can have instead of it. Both are
+  // ordinary cart lines, so a size or a flavour is settled on either.
+  const asLines = (field: string) =>
+    form
+      .getAll(field)
+      .map(String)
+      .filter(Boolean)
+      .map((id) => ({
+        menu_item_id: id,
+        qty: Math.max(1, Number(form.get(`qty_${id}`) ?? 1)),
+        // Everything that moves the price, settled when the link was made.
+        // Priced on the server like any other order.
+        option_ids: String(form.get(`options_${id}`) ?? "")
+          .split(",")
+          .map((one) => one.trim())
+          .filter(Boolean),
+      }));
+
+  const lines = asLines("item_id");
 
   const when = String(form.get("when") ?? "");
   const fee = String(form.get("fee") ?? "").trim();
@@ -1002,6 +1010,7 @@ export async function saveLink(form: FormData): Promise<{ ok: boolean; error?: s
     id: String(form.get("link_id") ?? "") || undefined,
     label: String(form.get("label") ?? ""),
     lines,
+    alternatives: asLines("alt_id"),
     // One control, two kinds of answer: a run is its id behind a marker, a
     // time is the instant itself, exactly as the group form does it.
     batchId: when.startsWith("run:") ? when.slice(4) : null,

@@ -98,6 +98,11 @@ export default async function LinksPage({
               qty: line.qty,
               options: line.option_ids ?? [],
             })),
+            alternatives: (editing.alternatives ?? []).map((line) => ({
+              id: line.menu_item_id,
+              qty: line.qty,
+              options: line.option_ids ?? [],
+            })),
             // Matched to the option it belongs to rather than passed
             // straight through: a time out of the database is written
             // differently from the one in the list, so the dropdown could not

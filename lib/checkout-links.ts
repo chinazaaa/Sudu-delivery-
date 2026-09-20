@@ -27,6 +27,9 @@ export type CheckoutLink = {
    *  say. Null leaves the ordinary rules, promotions and all. */
   fee: number | null;
   coupon_code: string | null;
+  /** Other dishes somebody can have off this link instead of what it came
+   *  with. One basket either way: picking one swaps it in. */
+  alternatives: CartLine[];
   /** A card link, so paying by card needs no message. */
   payment_link: string;
   note: string;
@@ -55,13 +58,16 @@ export async function getCheckoutLink(code: string): Promise<CheckoutLink | null
     .eq(lookupColumn(code), code)
     .maybeSingle();
   if (error) return null;
-  return (data as CheckoutLink) ?? null;
+  if (!data) return null;
+  // A database that has not had the column yet simply offers nothing else.
+  return { ...(data as CheckoutLink), alternatives: (data.alternatives ?? []) as CartLine[] };
 }
 
 export async function saveCheckoutLink(args: {
   id?: string;
   label: string;
   lines: CartLine[];
+  alternatives: CartLine[];
   batchId: string | null;
   deliverAt: string | null;
   /** Null leaves delivery to the ordinary rules. */
@@ -77,6 +83,7 @@ export async function saveCheckoutLink(args: {
   const row = {
     label: args.label.slice(0, 80),
     lines: args.lines,
+    alternatives: args.alternatives,
     batch_id: args.batchId,
     deliver_at: args.deliverAt,
     fee: args.fee,

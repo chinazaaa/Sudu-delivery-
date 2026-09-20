@@ -24,6 +24,7 @@ export default function LinkCheckout({
   fee,
   hostels,
   swaps,
+  instead,
   hasCardLink,
   askUs,
   me,
@@ -47,6 +48,9 @@ export default function LinkCheckout({
    *  says so rather than sitting blank, because nobody asks for a change
    *  they have not been told they can have. */
   swaps: { name: string; chosen: string; others: string[] }[];
+  /** What they can have instead, each costing what the basket costs. A swap
+   *  that moved the total would be a different order, so these never do. */
+  instead: { index: number; name: string; restaurant: string; choices: string[] }[];
   /** Whether a card link is waiting, so card needs no message. */
   hasCardLink: boolean;
   /** A WhatsApp link, opened with the basket written out, for asking
@@ -61,6 +65,8 @@ export default function LinkCheckout({
   const [hostel, setHostel] = useState(me?.hostel ?? "");
   const [note, setNote] = useState("");
   const [method, setMethod] = useState<"transfer" | "card">(me?.paymentMethod ?? "transfer");
+  // Which of them they are having. Nought is the basket the link came with.
+  const [having, setHaving] = useState(0);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
 
@@ -89,6 +95,9 @@ export default function LinkCheckout({
         hostel,
         note,
         paymentMethod: method,
+        // Nought is what the link came with; anything else is one of the
+        // swaps, which the server checks for itself.
+        instead: having,
       });
       if (!result.ok) {
         setProblem(result.error);
@@ -118,6 +127,49 @@ export default function LinkCheckout({
     <>
       <section className="card space-y-2">
         <h2 className="font-bold">What you are getting</h2>
+
+        {/* A choice where there is one, and the price stays where it is
+            whichever they take: every swap costs what the basket costs. */}
+        {instead.length > 0 ? (
+          <ul className="space-y-2">
+            {[
+              {
+                index: 0,
+                name: lines.map((line) => `${line.qty}× ${line.name}`).join(", "),
+                restaurant: lines[0]?.restaurant ?? "",
+                choices: lines.flatMap((line) => line.choices),
+              },
+              ...instead.map((one) => ({ ...one, index: one.index + 1 })),
+            ].map((one) => {
+              const on = having === one.index;
+              return (
+                <li key={one.index}>
+                  <button
+                    type="button"
+                    onClick={() => setHaving(one.index)}
+                    className={`flex w-full items-start gap-3 rounded-2xl border p-3 text-left ${
+                      on ? "border-brand bg-brand-tint" : "border-black/10"
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border ${
+                        on ? "border-brand bg-brand text-white" : "border-black/20"
+                      }`}
+                    >
+                      {on && <span className="text-xs font-black">✓</span>}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-semibold">{one.name}</span>
+                      <span className="block text-xs text-muted">
+                        {[one.restaurant, ...one.choices].filter(Boolean).join(" · ")}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
         <ul className="divide-y divide-black/5 text-sm">
           {lines.map((line, index) => (
             <li key={`${line.name}-${index}`} className="flex justify-between gap-3 py-2">
@@ -133,6 +185,13 @@ export default function LinkCheckout({
             </li>
           ))}
         </ul>
+        )}
+
+        {instead.length > 0 && (
+          <p className="text-xs text-muted">
+            Whichever you pick, it is the same money.
+          </p>
+        )}
 
         <dl className="space-y-1 border-t border-black/10 pt-2 text-sm">
           <div className="flex justify-between text-muted">

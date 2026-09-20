@@ -868,3 +868,18 @@ alter table settings add column if not exists window_night_to       text not nul
 
 -- Supabase caches the schema; this makes the new columns visible immediately.
 notify pgrst, 'reload schema';
+
+
+-- Other things somebody can have off the same link.
+--
+-- "I am going to Domino's, here is the meatball" is a link one person says
+-- yes to and another closes, because what they wanted was the chicken. These
+-- are the dishes they can have instead: picked here, priced from the menu
+-- like everything else, and swapped in place of what the link came with.
+--
+-- Cart lines, the same shape as the basket itself, so a size or a flavour is
+-- settled here too.
+alter table checkout_links add column if not exists alternatives jsonb not null default '[]'::jsonb;
+
+-- Supabase caches the schema; this makes the new column visible immediately.
+notify pgrst, 'reload schema';

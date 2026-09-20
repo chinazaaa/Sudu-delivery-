@@ -231,6 +231,21 @@ export default async function CheckoutLinkPage({
         food={food}
         fee={link.fee}
         hostels={await hostelNames()}
+        // What they can have instead, each costing what the basket costs, so
+        // picking one swaps the food and leaves every figure where it is.
+        instead={await Promise.all(
+          link.alternatives.map(async (line, index) => {
+            const one = await priceLines([line]);
+            return "error" in one
+              ? null
+              : {
+                  index,
+                  name: one.lines[0].item.name,
+                  restaurant: kitchens.get(one.lines[0].item.restaurant_id) ?? "",
+                  choices: one.lines[0].options.map((option) => option.name),
+                };
+          })
+        ).then((all) => all.filter((one) => one !== null))}
         hasCardLink={link.payment_link !== ""}
         // A way to say something the form cannot hold: swapping the beef for
         // chicken, asking whether a second one can go in. Click to send,

@@ -315,11 +315,24 @@ export async function orderFromLink(input: {
   hostel: string;
   note: string;
   paymentMethod: "transfer" | "card";
+  /** Which of the things on offer they are having: nought is the basket the
+   *  link came with, and anything else is one of its swaps. */
+  instead?: number;
 }): Promise<{ ok: true; orderId: string } | { ok: false; error: string }> {
   const link = await getCheckoutLink(input.code);
   if (!link || !link.active) {
     return { ok: false, error: "That link has been stopped." };
   }
+
+  // The food they picked, chosen here rather than sent from the browser: a
+  // page can say anything, and a swap is only a swap because the shop said
+  // it costs the same.
+  const wanted = Number(input.instead ?? 0);
+  const swap = wanted > 0 ? link.alternatives[wanted - 1] : null;
+  if (wanted > 0 && !swap) {
+    return { ok: false, error: "That choice is not on this link any more." };
+  }
+  const lines = swap ? [swap] : link.lines;
 
   // Whichever run is taking orders, for a link made without one: that is what
   // a link sitting in a group chat wants.
@@ -334,7 +347,7 @@ export async function orderFromLink(input: {
     name: input.name,
     phone: input.phone,
     hostel: input.hostel,
-    lines: link.lines,
+    lines,
     coupon: link.coupon_code ?? undefined,
     paymentMethod: input.paymentMethod,
     customerNote: input.note,
