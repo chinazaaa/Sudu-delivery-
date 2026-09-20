@@ -7,7 +7,7 @@ import { getBatch, openBatches } from "@/lib/batches";
 import { clockLabel, dayWord, runDateLabel } from "@/lib/time";
 import { SLOT_LABEL } from "@/lib/config";
 import { hoursByDay, safeSettings } from "@/lib/settings";
-import { deliverySlots } from "@/lib/same-day";
+import { deliverySlots, sameInstant } from "@/lib/same-day";
 import { toBatchView } from "@/lib/view";
 import { siteUrl } from "@/lib/admin-templates";
 import { naira } from "@/lib/money";
@@ -161,7 +161,7 @@ export default async function LinksPage({
                   {(() => {
                     const dead =
                       link.deliver_at !== null &&
-                      !slots.some((slot) => slot.at === link.deliver_at);
+                      !slots.some((slot) => sameInstant(slot.at, link.deliver_at!));
                     return (
                       <span
                         className={`chip text-xs ${

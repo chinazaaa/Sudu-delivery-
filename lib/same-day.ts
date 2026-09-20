@@ -190,6 +190,21 @@ function nextDay(date: string): string {
 
 /** "12:30pm", the way a time is said rather than the way a clock prints it. */
 /**
+ * Two times, asked whether they are the same moment.
+ *
+ * A slot is written by the code as "2026-09-20T11:00:00.000Z". The same
+ * instant read back out of a timestamptz column comes as
+ * "2026-09-20T11:00:00+00:00", which is the same moment and a different
+ * string, so comparing the text said a link made four hours ago was for a
+ * time that had gone.
+ */
+export function sameInstant(one: string, two: string): boolean {
+  const a = new Date(one).getTime();
+  const b = new Date(two).getTime();
+  return Number.isFinite(a) && Number.isFinite(b) && a === b;
+}
+
+/**
  * A time somebody asked for, said as the window it means.
  *
  * A same day car is kept as the instant it has to be ready, because that is

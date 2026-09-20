@@ -26,7 +26,7 @@ import { SLOT_LABEL } from "./config";
 import { runDateLabel, weekdayLabel } from "./time";
 import { createSameDayBatch, getBatch, isOrderable, orderCounts } from "./batches";
 import { stageIndex } from "./stages";
-import { deliverySlots, type Slot } from "./same-day";
+import { deliverySlots, sameInstant, type Slot } from "./same-day";
 import { normalisePhone } from "./phone";
 import { newPin } from "./customer-auth";
 import type {
@@ -115,8 +115,11 @@ async function checkSameDay(
     return { error: "Same day delivery is not running today. Pick a run instead." };
   }
 
-  const slot = deliverySlots(new Date(), await hoursByDay()).find(
-    (one) => one.at === wanted
+  // By the moment rather than by the text: a time kept in the database comes
+  // back written differently from the one the code wrote, and comparing the
+  // strings refused an order for a slot that was hours away.
+  const slot = deliverySlots(new Date(), await hoursByDay()).find((one) =>
+    sameInstant(one.at, wanted)
   );
   if (!slot) {
     return {

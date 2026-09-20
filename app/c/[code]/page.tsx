@@ -10,7 +10,7 @@ import { naira } from "@/lib/money";
 import { db } from "@/lib/supabase";
 import type { CartLine } from "@/lib/types";
 import { dayWord } from "@/lib/time";
-import { deliverySlots, windowPhrase } from "@/lib/same-day";
+import { deliverySlots, sameInstant, windowPhrase } from "@/lib/same-day";
 import LinkCheckout from "@/components/LinkCheckout";
 import HelpLine from "@/components/HelpLine";
 
@@ -161,7 +161,7 @@ export default async function CheckoutLinkPage({
     !(settings.same_day_on === "on"
       ? deliverySlots(new Date(), await hoursByDay())
       : []
-    ).some((slot) => slot.at === link.deliver_at);
+    ).some((slot) => sameInstant(slot.at, link.deliver_at!));
 
   if (gone || timePassed || (!batch && !link.deliver_at)) {
     return (

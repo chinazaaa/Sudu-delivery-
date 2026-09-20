@@ -23,7 +23,7 @@ import {
   offerNote,
   pickOffer,
 } from "../lib/offers";
-import { slotsWorthOffering, windowPhrase } from "../lib/same-day";
+import { sameInstant, slotsWorthOffering, windowPhrase } from "../lib/same-day";
 import { sayWindow } from "../lib/settings";
 import { sheetAsText } from "../lib/sheet-text";
 import { template, whatsappTo } from "../lib/messages";
@@ -1313,4 +1313,13 @@ test("a run's window is said from the times it was set with", () => {
   assert.equal(sayWindow("00:30", "12:00"), "Between 12:30am and 12pm");
   // Nothing set is nothing said, and the words typed by hand still stand.
   assert.equal(sayWindow("", ""), "");
+});
+
+test("a time is matched by the moment, not by how it is written", () => {
+  // What the code writes, and what a timestamptz column gives back. Same
+  // moment, different text: comparing the strings refused orders for slots
+  // that were hours away.
+  assert.equal(sameInstant("2026-09-20T11:00:00.000Z", "2026-09-20T11:00:00+00:00"), true);
+  assert.equal(sameInstant("2026-09-20T11:00:00.000Z", "2026-09-20T12:00:00+00:00"), false);
+  assert.equal(sameInstant("not a time", "2026-09-20T11:00:00Z"), false);
 });
