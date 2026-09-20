@@ -83,23 +83,30 @@ export function deliverySlots(
     // a window nobody will drive.
     if (open.off) continue;
 
-    let opening = open.first;
-    while (
-      opening < open.last &&
-      new Date(lagosInstant(date, opening, 0)).getTime() < earliest
-    ) {
-      opening += 1;
-    }
+    // The soonest anything could land, in minutes past midnight, rounded up
+    // to the next quarter hour. Rounding to the next whole hour threw the
+    // afternoon away: at ten past one, three hours' notice is ten past four,
+    // and rounding that to five is closing time on a day that shuts at five.
+    const soonest = (() => {
+      const opens = new Date(lagosInstant(date, 0, 0)).getTime();
+      const minutes = Math.ceil((earliest - opens) / 60_000 / 15) * 15;
+      return Math.max(minutes, open.first * 60);
+    })();
 
-    for (let from = opening; from < open.last; from += WINDOW_HOURS) {
+    for (let block = open.first; block < open.last; block += WINDOW_HOURS) {
       // The last block is whatever is left rather than running past closing:
       // a day ending at two is noon to two, not noon to three.
-      const to = Math.min(from + WINDOW_HOURS, open.last);
+      const to = Math.min(block + WINDOW_HOURS, open.last);
 
-      const at = lagosInstant(date, from, 0);
-      if (new Date(at).getTime() < earliest) continue;
+      // What is left of this block, rather than the block itself. A window
+      // whose start has passed is still worth offering while there is time
+      // to deliver inside it, and the promise is the part that remains:
+      // "between 4:15pm and 5pm" is true where "between 2pm and 5pm" is not.
+      const start = Math.max(block * 60, soonest);
+      if (start >= to * 60) continue;
 
-      const window = `between ${clockOf(from, 0)} and ${clockOf(to, 0)}`;
+      const at = lagosInstant(date, Math.floor(start / 60), start % 60);
+      const window = `between ${clockOf(Math.floor(start / 60), start % 60)} and ${clockOf(to, 0)}`;
       const said = day === "today" ? window : `${window} tomorrow`;
       slots.push({
         at,

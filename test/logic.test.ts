@@ -1332,3 +1332,21 @@ test("a time is matched by the moment, not by how it is written", () => {
   assert.equal(sameInstant("2026-09-20T11:00:00.000Z", "2026-09-20T12:00:00+00:00"), false);
   assert.equal(sameInstant("not a time", "2026-09-20T11:00:00Z"), false);
 });
+
+test("what is left of a window is still offered today", () => {
+  // Ten past one on a day the shop works noon to five, with three hours'
+  // notice. Food ordered now lands comfortably before closing, so today has
+  // to be on the page: this said "nothing today, try tomorrow".
+  const now = new Date("2026-09-20T12:12:00Z");
+  const slots = deliverySlots(now, { first: 12, last: 17 });
+  const today = slots.filter((slot) => slot.day === "today");
+
+  assert.equal(today.length, 1);
+  // The part that is left, not the block it came from: promising from two
+  // o'clock would be promising a time that has gone.
+  assert.equal(today[0].label, "Between 4:15pm and 5pm");
+
+  // Too late for any of it, and tomorrow is all there is.
+  const late = deliverySlots(new Date("2026-09-20T15:30:00Z"), { first: 12, last: 17 });
+  assert.equal(late.some((slot) => slot.day === "today"), false);
+});
