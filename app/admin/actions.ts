@@ -2436,3 +2436,79 @@ export async function deleteEmptyShelves(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
   revalidatePath("/skincare");
 }
+
+/**
+ * The skincare settings, saved without taking the page down.
+ *
+ * The general settings action throws when the database has not got a column
+ * yet, and a throw from a server action is the error boundary: a yellow
+ * exclamation mark and a minified React number where the sentence explaining
+ * what to do should be. These columns are the newest in the shop, so this is
+ * exactly the form where that happens, and it hands back what went wrong
+ * instead of losing it.
+ */
+export async function saveSkincare(
+  _prev: { done: string; error: string },
+  form: FormData
+): Promise<{ done: string; error: string }> {
+  await assertAdmin();
+
+  const fields = [
+    "skincare_on",
+    "skincare_fee",
+    "skincare_day",
+    "skincare_cut_off",
+    "skincare_window",
+    "skincare_blurb",
+    "skincare_bands",
+  ] as const;
+
+  const patch: Record<string, string> = {};
+  for (const field of fields) {
+    const value = form.get(field);
+    if (value !== null) patch[field] = String(value).trim();
+  }
+  if (Object.keys(patch).length === 0) return { done: "", error: "" };
+
+  const write = (fields: Record<string, string>) =>
+    db()
+      .from("settings")
+      .update({ ...fields, updated_at: new Date().toISOString() })
+      .eq("id", true);
+
+  let { error } = await write(patch);
+
+  // One column the database has not been given yet rejects the whole update,
+  // so the day and the cut off would fail to save because of a ladder added
+  // later. The unknown one is dropped and the rest saved, and what did not
+  // save is said plainly rather than guessed at.
+  const missing: string[] = [];
+  while (error && missing.length < fields.length) {
+    const named = fields.find((field) => field in patch && error!.message.includes(field));
+    if (!named) break;
+    missing.push(named);
+    delete patch[named];
+    if (Object.keys(patch).length === 0) break;
+    ({ error } = await write(patch));
+  }
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/skincare");
+  revalidatePath("/", "layout");
+
+  if (error) {
+    return {
+      done: "",
+      error: `Could not save that: ${error.message}. If it names a column, run supabase/update.sql in Supabase.`,
+    };
+  }
+  if (missing.length > 0) {
+    return {
+      done: "",
+      error:
+        `Saved everything except ${missing.join(", ")}: the database has not got ` +
+        "that column yet. Run supabase/update.sql in Supabase and save again.",
+    };
+  }
+  return { done: "Saved.", error: "" };
+}

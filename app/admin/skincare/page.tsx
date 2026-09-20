@@ -4,10 +4,10 @@ import { db } from "@/lib/supabase";
 import { safeSettings } from "@/lib/settings";
 import { cutOffTime, dropLabel, nextDrop, skincareBands, skincareShelves, skincareShop } from "@/lib/skincare";
 import BandEditor from "@/components/admin/BandEditor";
+import SkincareForm from "@/components/admin/SkincareForm";
 import Shelves from "@/components/admin/Shelves";
 import { clockOf } from "@/lib/same-day";
 import { naira } from "@/lib/money";
-import { saveSettings } from "@/app/admin/actions";
 import ImportProducts from "@/components/admin/ImportProducts";
 
 export const dynamic = "force-dynamic";
@@ -59,7 +59,7 @@ export default async function AdminSkincarePage() {
         detail="The same shop on a different day. One car a week, one flat fee, and a catalogue that comes in from a file."
       />
 
-      <form action={saveSettings} className="card space-y-3">
+      <SkincareForm>
         <h2 className="font-bold">How it works</h2>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -150,10 +150,6 @@ export default async function AdminSkincarePage() {
           <BandEditor initial={skincareBands(settings)} field="skincare_bands" />
         </div>
 
-        <button type="submit" className="btn-primary px-5">
-          Save
-        </button>
-
         <p className="border-t border-black/5 pt-3 text-sm text-muted">
           As it stands: the next one is{" "}
           <span className="font-semibold text-ink">{dropLabel(drop.date)}</span>, orders
@@ -162,7 +158,7 @@ export default async function AdminSkincarePage() {
             ? `from ${naira(skincareBands(settings)[0].fee)}`
             : "free"}.
         </p>
-      </form>
+      </SkincareForm>
 
       <Shelves shelves={await skincareShelves()} />
 
