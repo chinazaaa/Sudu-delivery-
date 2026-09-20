@@ -166,9 +166,12 @@ export default function LinkBuilder({
   const unanswered = [...picked, ...instead].filter((one) => {
     const dish = named(one.id);
     if (!dish) return false;
+    // Anything that moves the price, whether or not the menu marks it as
+    // required. A size that was never picked does not stop the link saving,
+    // it just prices the pizza as though the question had never been asked.
     return dish.groups.some(
       (group) =>
-        group.required && !group.options.some((option) => one.options.includes(option.id))
+        costs(group) && !group.options.some((option) => one.options.includes(option.id))
     );
   });
 
@@ -265,10 +268,20 @@ export default function LinkBuilder({
                         key: nextKey(),
                         id: dish.id,
                         qty: 1,
-                        // A question with one answer answers itself.
+                        // Every question that moves the price, answered
+                        // with its cheapest option. A line with nothing
+                        // picked prices as though the question was never
+                        // asked, and shows as a row of blank chips when it
+                        // is opened again.
                         options: dish.groups
-                          .filter((group) => group.required && group.options.length === 1)
-                          .map((group) => group.options[0].id),
+                          .filter(costs)
+                          .map(
+                            (group) =>
+                              [...group.options].sort(
+                                (a, b) => a.priceDelta - b.priceDelta
+                              )[0]?.id
+                          )
+                          .filter(Boolean) as string[],
                       },
                     ]);
                     setQuery("");
@@ -388,12 +401,9 @@ export default function LinkBuilder({
                           </button>
                         );
                       })}
-                      {group.required &&
-                        !group.options.some((option) => one.options.includes(option.id)) && (
-                          <span className="text-xs font-semibold text-brand-dark">
-                            pick one
-                          </span>
-                        )}
+                      {!group.options.some((option) => one.options.includes(option.id)) && (
+                        <span className="text-xs font-semibold text-brand-dark">pick one</span>
+                      )}
                     </div>
                   ))}
 
@@ -476,8 +486,14 @@ export default function LinkBuilder({
                             id: dish.id,
                             qty: picked[0]?.qty ?? 1,
                             options: dish.groups
-                              .filter((group) => group.required && group.options.length === 1)
-                              .map((group) => group.options[0].id),
+                              .filter(costs)
+                              .map(
+                                (group) =>
+                                  [...group.options].sort(
+                                    (a, b) => a.priceDelta - b.priceDelta
+                                  )[0]?.id
+                              )
+                              .filter(Boolean) as string[],
                           },
                         ]);
                         setOtherQuery("");
