@@ -93,7 +93,7 @@ export type PlaceOrderResult =
   | { ok: false; error: string };
 
 type PricedOption = { id: string; name: string; price_delta: number };
-type PricedLine = CartLine & {
+export type PricedLine = CartLine & {
   item: MenuItem;
   options: PricedOption[];
   /** Base price plus every chosen option, per unit. */
@@ -369,7 +369,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
  * Nothing about price comes from the browser: a large pepperoni costs what the
  * menu says a large pepperoni costs.
  */
-async function priceLines(
+export async function priceLines(
   lines: CartLine[]
 ): Promise<{ lines: PricedLine[] } | { error: string }> {
   const wanted = lines.filter((l) => l.qty > 0);

@@ -7,6 +7,8 @@ import { getOrder, moveOrder, orderLinkId, placeOrder, previewCoupon, saveRating
 import { lastOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import { rememberCart } from "@/lib/carts";
+import { countCheckoutLinkUse, getCheckoutLink } from "@/lib/checkout-links";
+import { openBatches } from "@/lib/batches";
 import { db } from "@/lib/supabase";
 import { closeGroup, getSharedGroup, groupOrders, leaderSeat } from "@/lib/groups";
 import { groupCarts } from "@/lib/group-carts";
@@ -295,6 +297,68 @@ export async function rateOrder(
 
   revalidatePath(`/o/${id}`);
   return { error: null, saved: true };
+}
+
+/**
+ * Ordering off a link somebody was sent.
+ *
+ * The food, the run and the delivery fee were settled by whoever made the
+ * link. This adds the only things it cannot know: who they are, where it goes
+ * and how they are paying. Everything else goes down the ordinary path, so
+ * the menu prices it, coupons are checked, and the customer is bound and
+ * given their PIN exactly as any other order is.
+ */
+export async function orderFromLink(input: {
+  code: string;
+  name: string;
+  phone: string;
+  hostel: string;
+  note: string;
+  paymentMethod: "transfer" | "card";
+}): Promise<{ ok: true; orderId: string } | { ok: false; error: string }> {
+  const link = await getCheckoutLink(input.code);
+  if (!link || !link.active) {
+    return { ok: false, error: "That link has been stopped." };
+  }
+
+  // Whichever run is taking orders, for a link made without one: that is what
+  // a link sitting in a group chat wants.
+  const batchId = link.batch_id ?? (link.deliver_at ? "" : (await openBatches())[0]?.id ?? "");
+  if (!batchId && !link.deliver_at) {
+    return { ok: false, error: "No run is taking orders just now." };
+  }
+
+  const result = await placeOrder({
+    batchId,
+    deliverAt: link.deliver_at ?? undefined,
+    name: input.name,
+    phone: input.phone,
+    hostel: input.hostel,
+    lines: link.lines,
+    coupon: link.coupon_code ?? undefined,
+    paymentMethod: input.paymentMethod,
+    customerNote: input.note,
+    // What whoever made the link said delivery costs on this one. Left alone,
+    // the ordinary rules price it, promotions and all.
+    fixedFee: link.fee ?? undefined,
+  });
+
+  if (!result.ok) return { ok: false, error: result.error };
+
+  // The card link, so paying by card needs no message. Written onto the order
+  // rather than shown here, because the order page is where somebody comes
+  // back to pay.
+  if (link.payment_link !== "" && input.paymentMethod === "card") {
+    await db()
+      .from("orders")
+      .update({ payment_link: link.payment_link })
+      .eq("id", result.orderId);
+  }
+
+  await countCheckoutLinkUse(link.id);
+  revalidatePath("/admin", "layout");
+
+  return { ok: true, orderId: await orderLinkId(result.orderId) };
 }
 
 /**

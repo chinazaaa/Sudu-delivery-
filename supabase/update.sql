@@ -809,3 +809,44 @@ alter table orders add column if not exists seat_token text;
 
 -- Supabase caches the schema; this makes the new column visible immediately.
 notify pgrst, 'reload schema';
+
+
+-- A checkout link: a basket somebody made by hand, ready to send.
+--
+-- "I am going to Domino's, the meatball pizza is on offer, here is a link."
+-- Whoever taps it says who they are and where it goes, and that is the whole
+-- order. The food is fixed by whoever made the link; the price is not, because
+-- prices and promotions live on the menu and this must never disagree with it.
+create table if not exists checkout_links (
+  id           uuid primary key default gen_random_uuid(),
+  short        text unique not null default short_code(),
+  -- What it is for, so a list of links is readable a week later.
+  label        text not null default '',
+  -- The basket, as ordinary cart lines: item, quantity, chosen options.
+  lines        jsonb not null default '[]'::jsonb,
+  -- The run it goes on. Null means whichever run is taking orders when they
+  -- tap it, which is what a link sent to a group chat wants.
+  batch_id     uuid references batches(id) on delete set null,
+  -- Or a time they are going anyway, which makes its own car when the first
+  -- person orders, exactly as a same day order does.
+  deliver_at   timestamptz,
+  -- What delivery costs on this one, when it is not what the ladder would
+  -- say: a shop run that is going regardless, a favour, a flat price agreed
+  -- with a hostel. Null leaves the ordinary rules, promotions and all.
+  fee          int,
+  -- A code applied for them, so nobody has to be told to type it.
+  coupon_code  text,
+  -- A card link, when there is one, so paying by card needs no message.
+  payment_link text not null default '',
+  note         text not null default '',
+  active       boolean not null default true,
+  used         int not null default 0,
+  created_at   timestamptz not null default now()
+);
+
+create index if not exists checkout_links_short_idx on checkout_links (short);
+
+alter table checkout_links enable row level security;
+
+-- Supabase caches the schema; this makes the new table visible immediately.
+notify pgrst, 'reload schema';

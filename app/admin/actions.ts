@@ -15,6 +15,11 @@ import { lagosInstant, lagosToday } from "@/lib/time";
 import { clearDeadGroups, ensureUpcomingBatches, openRunsBetween } from "@/lib/batches";
 import { closeGroup } from "@/lib/groups";
 import { canTravel, groupCarts } from "@/lib/group-carts";
+import {
+  deleteCheckoutLink,
+  saveCheckoutLink,
+  setCheckoutLinkActive,
+} from "@/lib/checkout-links";
 import { fileFrom, uploadImage } from "@/lib/uploads";
 import { parseMenuText } from "@/lib/menu-import";
 import { newPin } from "@/lib/customer-auth";
@@ -959,6 +964,63 @@ export async function deleteClosedCarts(): Promise<void> {
     .not("handled_at", "is", null);
   if (error) throw new Error(`Could not clear those: ${error.message}`);
 
+  revalidatePath("/admin", "layout");
+}
+
+/**
+ * Make a link somebody can order off.
+ *
+ * A basket picked by hand: "I am going to Domino's, the meatball pizza is on
+ * offer, here is a link." The food is fixed here and the price is not, because
+ * prices live on the menu and a link that carried its own would disagree with
+ * the shop the moment anything moved.
+ */
+export async function saveLink(form: FormData): Promise<{ ok: boolean; error?: string }> {
+  await assertAdmin();
+
+  const items = form.getAll("item_id").map(String).filter(Boolean);
+  const lines = items.map((id) => ({
+    menu_item_id: id,
+    qty: Math.max(1, Number(form.get(`qty_${id}`) ?? 1)),
+  }));
+
+  const when = String(form.get("when") ?? "");
+  const fee = String(form.get("fee") ?? "").trim();
+
+  const result = await saveCheckoutLink({
+    id: String(form.get("link_id") ?? "") || undefined,
+    label: String(form.get("label") ?? ""),
+    lines,
+    // One control, two kinds of answer: a run is its id behind a marker, a
+    // time is the instant itself, exactly as the group form does it.
+    batchId: when.startsWith("run:") ? when.slice(4) : null,
+    deliverAt: when.startsWith("run:") || when === "" ? null : when,
+    // Empty means the ordinary rules, which is not the same as nought.
+    fee: fee === "" ? null : Math.max(0, Math.round(Number(fee))),
+    couponCode: String(form.get("coupon") ?? "").trim().toUpperCase() || null,
+    paymentLink: String(form.get("payment_link") ?? ""),
+    note: String(form.get("note") ?? ""),
+  });
+
+  revalidatePath("/admin", "layout");
+  return result.ok ? { ok: true } : { ok: false, error: result.error };
+}
+
+export async function stopLink(form: FormData): Promise<void> {
+  await assertAdmin();
+  await setCheckoutLinkActive(String(form.get("link_id")), false);
+  revalidatePath("/admin", "layout");
+}
+
+export async function startLink(form: FormData): Promise<void> {
+  await assertAdmin();
+  await setCheckoutLinkActive(String(form.get("link_id")), true);
+  revalidatePath("/admin", "layout");
+}
+
+export async function removeLink(form: FormData): Promise<void> {
+  await assertAdmin();
+  await deleteCheckoutLink(String(form.get("link_id")));
   revalidatePath("/admin", "layout");
 }
 
