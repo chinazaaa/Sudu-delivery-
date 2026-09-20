@@ -19,6 +19,9 @@ import { orderFromLink } from "@/app/actions";
  */
 export default function LinkCheckout({
   code,
+  title,
+  when,
+  note: aLine,
   lines,
   food,
   fee,
@@ -30,6 +33,12 @@ export default function LinkCheckout({
   me,
 }: {
   code: string;
+  /** What whoever made the link called it, which is the first thing read. */
+  title: string;
+  /** When it lands, already said as a window. */
+  when: string;
+  /** A line from the shop, above the food. */
+  note: string;
   lines: {
     name: string;
     restaurant: string;
@@ -55,6 +64,7 @@ export default function LinkCheckout({
     name: string;
     restaurant: string;
     choices: string[];
+    items: number;
     food: number;
   }[];
   /** Whether a card link is waiting, so card needs no message. */
@@ -75,7 +85,12 @@ export default function LinkCheckout({
   const [having, setHaving] = useState(0);
   // What that one costs. A swap is the same money or less, so this only ever
   // falls, and every figure on the page follows it.
-  const cost = having === 0 ? food : (instead.find((one) => one.index + 1 === having)?.food ?? food);
+  const chosen = instead.find((one) => one.index + 1 === having) ?? null;
+  const cost = having === 0 ? food : (chosen?.food ?? food);
+  const items =
+    having === 0
+      ? lines.reduce((sum, line) => sum + line.qty, 0)
+      : (chosen?.items ?? 1);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
 
@@ -134,6 +149,18 @@ export default function LinkCheckout({
 
   return (
     <>
+      <section className="card space-y-1">
+        <p className="text-sm font-bold uppercase tracking-wide text-brand-dark">{title}</p>
+        {/* Follows whichever they are on. It sat on the server before, where
+            it could only ever say what the link came with, so swapping to a
+            cheaper dish left the heading quoting the dearer one. */}
+        <h1 className="text-2xl font-bold tracking-tight">
+          {items} item{items === 1 ? "" : "s"} · {naira(cost)}
+        </h1>
+        {when !== "" && <p className="text-ink/75">{when}</p>}
+        {aLine !== "" && <p className="text-sm text-muted">{aLine}</p>}
+      </section>
+
       <section className="card space-y-2">
         <h2 className="font-bold">What you are getting</h2>
 
@@ -147,6 +174,7 @@ export default function LinkCheckout({
                 name: lines.map((line) => `${line.qty}× ${line.name}`).join(", "),
                 restaurant: lines[0]?.restaurant ?? "",
                 choices: lines.flatMap((line) => line.choices),
+                items: lines.reduce((sum, line) => sum + line.qty, 0),
                 food,
               },
               ...instead.map((one) => ({ ...one, index: one.index + 1 })),

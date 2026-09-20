@@ -185,32 +185,20 @@ export default async function CheckoutLinkPage({
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <section className="card space-y-1">
-        <p className="text-sm font-bold uppercase tracking-wide text-brand-dark">
-          {link.label || "Your order"}
-        </p>
-        <h1 className="text-2xl font-bold tracking-tight">
-          {priced.lines.reduce((sum, line) => sum + line.qty, 0)} item
-          {priced.lines.reduce((sum, line) => sum + line.qty, 0) === 1 ? "" : "s"} ·{" "}
-          {naira(food)}
-        </h1>
-        <p className="text-ink/75">
-          {/* The window it lands in, said the way somebody waiting for food
-              would say it, and the day in words when the day is near: "today"
-              beats "Sunday, 20 Sep" on the twentieth. */}
-          {link.deliver_at
-            ? `Arriving ${windowPhrase(link.deliver_at)}`
-            : batch
-              ? `Arriving ${batch.delivery_window_text.toLowerCase()}, ${dayWord(
-                  batch.run_date
-                )}`
-              : ""}
-        </p>
-        {link.note !== "" && <p className="text-sm text-muted">{link.note}</p>}
-      </section>
-
+      {/* The heading lives inside the form rather than above it, because
+          what it says depends on which of the choices they are on, and a
+          server cannot follow somebody's thumb. */}
       <LinkCheckout
         code={link.short ?? link.id}
+        title={link.label || "Your order"}
+        when={
+          link.deliver_at
+            ? `Arriving ${windowPhrase(link.deliver_at)}`
+            : batch
+              ? `Arriving ${batch.delivery_window_text.toLowerCase()}, ${dayWord(batch.run_date)}`
+              : ""
+        }
+        note={link.note}
         // Somebody signed in on this phone has already told us all of this
         // once. The browser fills the rest in for everybody else.
         me={me}
@@ -243,6 +231,7 @@ export default async function CheckoutLinkPage({
                   name: one.lines[0].item.name,
                   restaurant: kitchens.get(one.lines[0].item.restaurant_id) ?? "",
                   choices: one.lines[0].options.map((option) => option.name),
+                  items: one.lines[0].qty,
                   // What this one costs. The same as the basket, or less:
                   // never more, so the total can only fall when somebody
                   // picks one.
