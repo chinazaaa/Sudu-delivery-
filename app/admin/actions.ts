@@ -2332,7 +2332,10 @@ export async function importSkincare(
     image_file: one.imageFile,
     shelves: shelfText(one.shelves),
     brand: one.brand,
-    available: true,
+    // What the shop says it has. Anything not plainly in stock is off the
+    // shelf rather than something somebody orders and then has to be rung
+    // about, and a later import puts it back the moment it returns.
+    available: one.available,
     sort_order: index,
   }));
 
@@ -2359,19 +2362,36 @@ export async function importSkincare(
       added += fresh.length;
     }
 
-    for (const row of known) {
-      const id = itemId.get(row.name.toLowerCase())!;
+    // What is already there, in one request rather than one each. A second
+    // import used to be two thousand round trips, which is not a slow import,
+    // it is one that never finishes.
+    //
+    // Only the columns named here are written, so a photograph uploaded
+    // afterwards and anything typed in by hand survive being re-imported.
+    if (known.length > 0) {
       const { error } = await db()
         .from("menu_items")
-        .update({
-          price_food: row.price_food,
-          category_id: row.category_id,
-          brand: row.brand,
-          image_file: row.image_file,
-          shelves: row.shelves,
-        })
-        .eq("id", id);
-      if (!error) changed += 1;
+        .upsert(
+          known.map((row) => ({
+            id: itemId.get(row.name.toLowerCase())!,
+            restaurant_id: row.restaurant_id,
+            name: row.name,
+            price_food: row.price_food,
+            category_id: row.category_id,
+            brand: row.brand,
+            image_file: row.image_file,
+            shelves: row.shelves,
+            available: row.available,
+          })),
+          { onConflict: "id" }
+        );
+      if (error) {
+        return {
+          done: `${added} new and ${changed} updated, then it stopped.`,
+          error: `${error.message}. Nothing after ${chunk[0].name} was touched.`,
+        };
+      }
+      changed += known.length;
     }
   }
 
