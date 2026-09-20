@@ -56,6 +56,14 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="group"
+        options={{
+          title: "Ordering together",
+          tabBarLabel: "Group",
+          tabBarIcon: ({ color, size }) => <Ionicons name="people" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="cart"
         options={{
           title: "Your cart",

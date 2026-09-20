@@ -20,6 +20,29 @@ async function get<T>(path: string, token?: string | null): Promise<T> {
   return body;
 }
 
+/**
+ * The shared delivery routes, which live outside /api/app because the website
+ * uses them too. The seat goes in a header: a browser holds it in a cookie it
+ * cannot read, and the app holds it itself.
+ */
+async function party<T>(
+  path: string,
+  seat: string | null,
+  data?: unknown
+): Promise<T> {
+  const response = await fetch(`${BASE}/api/party${path}`, {
+    method: data === undefined ? "GET" : "POST",
+    headers: {
+      ...(data === undefined ? {} : { "Content-Type": "application/json" }),
+      ...(seat ? { "x-sudu-seat": seat } : {}),
+    },
+    ...(data === undefined ? {} : { body: JSON.stringify(data) }),
+  });
+  const body = (await response.json()) as T & { error?: string };
+  if (!response.ok) throw new Error(body.error ?? "Something went wrong.");
+  return body;
+}
+
 async function post<T>(path: string, data: unknown, token?: string | null): Promise<T> {
   const response = await fetch(`${BASE}/api/app${path}`, {
     method: "POST",
@@ -72,6 +95,44 @@ export type Place = {
   restaurant: { id: string; name: string; logoUrl: string; bannerUrl: string };
   categories: { id: string; name: string }[];
   items: Item[];
+};
+
+/** A shared delivery as everybody in it sees it. */
+export type GroupBoard = {
+  started: boolean;
+  id?: string;
+  short?: string | null;
+  leader?: string;
+  when?: string;
+  sameDay?: boolean;
+  people?: number;
+  names?: string[];
+  ready?: number;
+  closed?: boolean;
+  closesAt?: string;
+  /** What delivery would cost each of them if it closed now. */
+  eachNow?: number;
+  /** Named when a promotion is pricing the car, because then the figure does
+   *  not fall as people join and a board implying it will is a surprise
+   *  waiting at the close. */
+  offer?: string;
+  members?: {
+    isMine: boolean;
+    name: string;
+    items: number;
+    food: number;
+    summary: string;
+    ready: boolean;
+    finalised: boolean;
+    changed: boolean;
+  }[];
+  /** This browser's own seat, and nobody else's. */
+  mine?: {
+    phone: string;
+    hostel: string;
+    note: string;
+    paymentMethod: "transfer" | "card";
+  } | null;
 };
 
 export type Run = {
@@ -182,6 +243,53 @@ export const api = {
       pin,
     }),
   order: (id: string) => get<OrderView>(`/order/${id}`),
+  /**
+   * Shared deliveries. Every one of these carries the seat, which is the only
+   * thing that says who somebody is in a group: never the group id, which
+   * everybody in the car holds.
+   */
+  group: {
+    /** Start one. The answer carries the seat this phone must keep. */
+    start: (body: { name: string; batchId?: string; deliverAt?: string }, seat: string | null) =>
+      party<{ id: string; short: string | null; seat: string; when: string }>("", seat, body),
+    /** What the board shows. First names and food only: a group link gets
+     *  pasted into a chat, so anybody holding it can read this. */
+    board: (id: string, seat: string | null) =>
+      party<GroupBoard>(`/${id}`, seat),
+    /** Take a seat, by name. Answers with the group's real id, because the
+     *  way in may have been a short code and nothing else accepts one. */
+    enter: (id: string, name: string, seat: string | null) =>
+      party<{ ok: boolean; named: boolean; seat: string; groupId: string }>(
+        `/${id}/enter`,
+        seat,
+        { name }
+      ),
+    /** Food, number, block, note and how they are paying, in one call: the
+     *  website learnt the hard way that asking twice is two forms for one
+     *  answer. */
+    finalise: (
+      id: string,
+      seat: string | null,
+      body: {
+        lines: { menu_item_id: string; qty: number; option_ids?: string[] }[];
+        phone: string;
+        hostel: string;
+        note: string;
+        paymentMethod: "transfer" | "card";
+      }
+    ) => party<{ ok: boolean }>(`/${id}/finalise`, seat, body),
+    /** Leaving: the seat goes with them, so the others stop paying a share. */
+    leave: (groupId: string, seat: string | null) =>
+      party<{ ok: boolean }>("/leave", seat, { groupId }),
+    /** Close it now. Only whoever made the link, which the seat proves, and
+     *  the answer carries their own order so they land on their total. */
+    close: (id: string, seat: string | null) =>
+      party<{ ok: boolean; share: number; people: number; orderId: string | null }>(
+        `/${id}/close`,
+        seat,
+        {}
+      ),
+  },
   /** Put an order on another run. Only your own, which the token proves. */
   move: (id: string, batchId: string, token: string) =>
     post<{ ok: boolean; orderId: string }>(`/order/${id}/move`, { batchId }, token),

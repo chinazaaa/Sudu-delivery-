@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { db } from "@/lib/supabase";
+import { holdsOwnSeat, seatFrom } from "@/lib/seat";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +16,16 @@ export const dynamic = "force-dynamic";
  * Only their own seat, found by the cookie they are holding. Nobody can
  * remove anybody else.
  */
-export async function POST(): Promise<NextResponse> {
+export async function POST(request: Request): Promise<NextResponse> {
   const jar = await cookies();
-  const group = jar.get("sudu_group")?.value ?? "";
-  const seat = jar.get("sudu_seat")?.value ?? "";
+  const own = holdsOwnSeat(request);
+  const seat = await seatFrom(request);
+  // The app knows which group it is in and says so; a browser has it in a
+  // cookie. Either way the seat is what proves the seat is theirs.
+  const body = (await request.json().catch(() => ({}))) as { groupId?: string };
+  const group = own
+    ? String(body.groupId ?? "")
+    : (jar.get("sudu_group")?.value ?? "");
 
   if (group && seat) {
     // A seat that has become an order is not deleted: the group has closed,
@@ -30,7 +37,9 @@ export async function POST(): Promise<NextResponse> {
       .eq("member_token", seat);
   }
 
-  jar.delete("sudu_group");
-  jar.delete("sudu_seat");
+  if (!own) {
+    jar.delete("sudu_group");
+    jar.delete("sudu_seat");
+  }
   return NextResponse.json({ ok: true });
 }

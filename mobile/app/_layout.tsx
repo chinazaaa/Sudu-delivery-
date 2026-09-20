@@ -71,6 +71,7 @@ export default function Layout() {
             somewhere, and leaving is going back rather than sideways. */}
         <Stack.Screen name="r/[id]" options={{ title: "" }} />
         <Stack.Screen name="checkout" options={{ title: "Checkout" }} />
+        <Stack.Screen name="finalise" options={{ title: "Put my food in" }} />
         <Stack.Screen name="order/[id]" options={{ title: "Your order" }} />
       </Stack>
     </>

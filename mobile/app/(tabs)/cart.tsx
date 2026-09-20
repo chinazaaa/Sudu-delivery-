@@ -1,16 +1,10 @@
 import { useEffect, useState } from "react";
-import { Linking } from "react-native";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api, naira } from "@/lib/api";
-import { cart, cartTotal, countItems, people, useStored, type Line } from "@/lib/store";
+import { cart, cartTotal, countItems, party, people, useStored, type Line } from "@/lib/store";
 import { T } from "@/lib/theme";
-
-// Groups are a web page, so the app hands over to it rather than pretending.
-// /group is that page: the car you are in, the way to start one, and the ones
-// you have ordered in before.
-const SITE = "https://sudu.store";
 
 /** What is in the bag, and what it will cost to bring it. */
 export default function Cart() {
@@ -18,6 +12,9 @@ export default function Cart() {
   const [lines] = useStored(cart.read, []);
   const [shop] = useStored(() => api.shop().catch(() => null), null);
   const [friends] = useStored(people.read, []);
+  // In a car, this cart is their part of it: it is finalised into the group
+  // rather than checked out, and nobody has a delivery fee until it closes.
+  const [seated] = useStored(party.read, null);
   const [adding, setAdding] = useState("");
 
   const items = countItems(lines);
@@ -159,7 +156,7 @@ export default function Cart() {
 
         {alone > 0 && (
           <Pressable
-            onPress={() => void Linking.openURL(`${SITE}/group`)}
+            onPress={() => router.push("/group")}
             style={{
               backgroundColor: T.tint,
               borderRadius: T.radius,
@@ -177,7 +174,7 @@ export default function Cart() {
               that splits evenly between everybody in the car.
             </Text>
             <Text style={{ fontWeight: "800", color: T.brand, marginTop: 2 }}>
-              Start a group →
+              Start a group
             </Text>
           </Pressable>
         )}
@@ -364,7 +361,7 @@ export default function Cart() {
       </ScrollView>
 
       <Pressable
-        onPress={() => router.push("/checkout")}
+        onPress={() => router.push(seated ? "/finalise" : "/checkout")}
         style={{
           position: "absolute",
           left: 16,
@@ -376,7 +373,9 @@ export default function Cart() {
           alignItems: "center",
         }}
       >
-        <Text style={{ color: T.paper, fontWeight: "800", fontSize: 16 }}>Checkout</Text>
+        <Text style={{ color: T.paper, fontWeight: "800", fontSize: 16 }}>
+          {seated ? "Finalise my food" : "Checkout"}
+        </Text>
       </Pressable>
     </View>
   );
