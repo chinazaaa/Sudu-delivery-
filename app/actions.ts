@@ -8,9 +8,7 @@ import { lastOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import { rememberCart } from "@/lib/carts";
 import { countCheckoutLinkUse, getCheckoutLink } from "@/lib/checkout-links";
-import { openBatches } from "@/lib/batches";
-import { deliverySlots } from "@/lib/same-day";
-import { hoursByDay, safeSettings } from "@/lib/settings";
+import { arrivalNow } from "@/lib/arrival-server";
 import { db } from "@/lib/supabase";
 import { closeGroup, getSharedGroup, groupOrders, leaderSeat } from "@/lib/groups";
 import { groupCarts } from "@/lib/group-carts";
@@ -336,25 +334,21 @@ export async function orderFromLink(input: {
   }
   const lines = swap ? [swap] : link.lines;
 
-  // A link made without a car takes whatever is going, cheapest first: a run
-  // if one is still taking orders, and a window of its own only when there is
-  // no run to ride. That is what a link sitting in a group chat wants, and it
-  // is why such a link never needs editing.
-  const settings = await safeSettings();
-  const riding = link.batch_id ?? (link.deliver_at ? "" : (await openBatches())[0]?.id ?? "");
-  const window =
-    link.deliver_at ??
-    (riding === "" && settings.same_day_on === "on"
-      ? (deliverySlots(new Date(), await hoursByDay())[0]?.at ?? null)
-      : null);
+  // Whatever is going soonest when they tap it: a run while one is still
+  // taking orders, a car of its own within the three hours it takes, else
+  // tomorrow. A link the admin pinned before links stopped being pinned is
+  // honoured while it is live and quietly let go when it is not, because
+  // refusing an order over a time nobody chose is a dead end where there is
+  // always a next way to eat.
+  const going = await arrivalNow({ batchId: link.batch_id, deliverAt: link.deliver_at });
 
-  if (!riding && !window) {
+  if (!going) {
     return { ok: false, error: "Nothing is going just now. Try again shortly." };
   }
 
   const result = await placeOrder({
-    batchId: riding,
-    deliverAt: window ?? undefined,
+    batchId: going.runId,
+    deliverAt: going.at || undefined,
     name: input.name,
     phone: input.phone,
     hostel: input.hostel,

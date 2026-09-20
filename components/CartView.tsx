@@ -4,6 +4,7 @@ import GroupLink, { PARTY_CHANGED, readGroup } from "./GroupLink";
 import Sheet from "./Sheet";
 import { useRouter } from "next/navigation";
 import type { Slot } from "@/lib/same-day";
+import type { ArrivalRun } from "@/lib/arrival";
 
 import Link from "next/link";
 import Empty from "@/components/Empty";
@@ -32,8 +33,7 @@ export default function CartView({
   restaurants = [],
   runs = [],
   slots = [],
-  sameDayFrom = 6500,
-  runFrom = 4000,
+  today = "",
   hostels = [],
   bands = [],
   offers = [],
@@ -43,10 +43,11 @@ export default function CartView({
   restaurants?: { id: string; name: string; href: string }[];
   /** What a group could be put on, worked out on the server so the clock and
    *  the prices are the shop's. */
-  runs?: { id: string; label: string }[];
+  runs?: ArrivalRun[];
   slots?: Slot[];
-  sameDayFrom?: number;
-  runFrom?: number;
+  /** Today in Lagos, from the shop's clock, so the group can be put on
+   *  whatever is going soonest without asking anybody. */
+  today?: string;
   /** The blocks admin delivers to. Empty means anything typed is allowed. */
   hostels?: string[];
   /** The delivery price list in force, so the saving shown is the real one. */
@@ -456,8 +457,7 @@ export default function CartView({
         openNow={startGroup}
         runs={runs}
         slots={slots}
-        sameDayFrom={sameDayFrom}
-        runFrom={runFrom}
+        today={today}
         alone={bands.length > 0 ? feeFor(countItems(cart), null, bands) : 0}
       />
 

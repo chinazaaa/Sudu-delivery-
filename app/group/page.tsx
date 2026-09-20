@@ -1,8 +1,10 @@
 import GroupHub from "@/components/GroupHub";
 import { openBatches } from "@/lib/batches";
-import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
+import { hoursByDay, safeSettings } from "@/lib/settings";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { toBatchView } from "@/lib/view";
+import { runArrival } from "@/lib/arrival";
+import { lagosToday } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +18,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function GroupPage() {
   const [batches, settings] = await Promise.all([openBatches(), safeSettings()]);
-  const [slots, pricing, bands] = await Promise.all([
+  const [slots] = await Promise.all([
     settings.same_day_on === "on"
       ? hoursByDay().then((hours) =>
           slotsWorthOffering(
@@ -28,8 +30,6 @@ export default async function GroupPage() {
           )
         )
       : Promise.resolve([]),
-    sameDayPricing(),
-    activeBands(),
   ]);
 
   return (
@@ -38,10 +38,9 @@ export default async function GroupPage() {
         .slice(0, 4)
         .map(toBatchView)
         .filter((view) => !view.closed && !view.full)
-        .map((view) => ({ id: view.id, label: view.label }))}
+        .map(runArrival)}
       slots={slots}
-      sameDayFrom={pricing.bands[0]?.fee ?? 6500}
-      runFrom={bands[0]?.fee ?? 4000}
+      today={lagosToday()}
     />
   );
 }

@@ -3,12 +3,8 @@ import PageHeader from "@/components/admin/PageHeader";
 import LinkBuilder from "@/components/admin/LinkBuilder";
 import { listCheckoutLinks } from "@/lib/checkout-links";
 import { menuView } from "@/lib/menu";
-import { getBatch, openBatches } from "@/lib/batches";
-import { runDateLabel } from "@/lib/time";
-import { SLOT_LABEL } from "@/lib/config";
 import { hoursByDay, safeSettings } from "@/lib/settings";
-import { deliverySlots, sameInstant, windowPhrase } from "@/lib/same-day";
-import { toBatchView } from "@/lib/view";
+import { deliverySlots, sameInstant } from "@/lib/same-day";
 import { siteUrl } from "@/lib/admin-templates";
 import { naira } from "@/lib/money";
 import { stopLink, startLink, removeLink } from "@/app/admin/actions";
@@ -33,19 +29,15 @@ export default async function LinksPage({
    *  reload and the page can fill the form in on the server. */
   searchParams: Promise<{ edit?: string }>;
 }) {
-  const [links, menu, batches, settings, site] = await Promise.all([
+  const [links, menu, settings, site] = await Promise.all([
     listCheckoutLinks(),
     menuView(),
-    openBatches(),
     safeSettings(),
     siteUrl(),
   ]);
 
   const wanted = (await searchParams).edit ?? "";
   const editing = links.find((one) => one.id === wanted) ?? null;
-  // The run it was saved against, which may have closed since.
-  const savedRun = editing?.batch_id ? await getBatch(editing.batch_id) : null;
-
   const slots =
     settings.same_day_on === "on" ? deliverySlots(new Date(), await hoursByDay()) : [];
 
@@ -104,15 +96,6 @@ export default async function LinksPage({
               qty: line.qty,
               options: line.option_ids ?? [],
             })),
-            // Matched to the option it belongs to rather than passed
-            // straight through: a time out of the database is written
-            // differently from the one in the list, so the dropdown could not
-            // recognise its own answer and showed it as something unknown.
-            when: editing.batch_id
-              ? `run:${editing.batch_id}`
-              : (slots.find((slot) => sameInstant(slot.at, editing.deliver_at ?? ""))?.at ??
-                editing.deliver_at ??
-                ""),
             fee: editing.fee,
             coupon: editing.coupon_code ?? "",
             paymentLink: editing.payment_link,
@@ -120,34 +103,6 @@ export default async function LinksPage({
           }
         }
         dishes={dishes}
-        runs={batches
-          .map(toBatchView)
-          .filter((one) => !one.closed && !one.full)
-          .map((one) => ({ id: one.id, label: one.label }))}
-        slots={slots.map((slot) => ({ at: slot.at, label: slot.label }))}
-        // What this link was saved with, in case it is a run that has since
-        // closed or a window that has passed: without it the dropdown falls
-        // back to the first option and quietly changes what was saved.
-        saved={
-          editing
-            ? {
-                value: editing.batch_id
-                  ? `run:${editing.batch_id}`
-                  : (editing.deliver_at ?? ""),
-                label: editing.batch_id
-                  ? savedRun
-                    ? `${runDateLabel(savedRun.run_date)} · ${SLOT_LABEL[savedRun.slot]}`
-                    : "The run it was made for"
-
-                  // The window it means, said the way the list says it, so a
-                  // time that has since passed still reads as a time rather
-                  // than as an instant.
-                  : editing.deliver_at
-                    ? windowPhrase(editing.deliver_at)
-                    : "",
-              }
-            : null
-        }
       />
 
       <div className="mt-4 space-y-3">

@@ -3,9 +3,11 @@ import { openRestaurants } from "@/lib/menu";
 import { hostelNames } from "@/lib/hostels";
 import { liveOffers } from "@/lib/coupons";
 import { openBatches } from "@/lib/batches";
-import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
+import { activeBands, hoursByDay, safeSettings } from "@/lib/settings";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { toBatchView } from "@/lib/view";
+import { runArrival } from "@/lib/arrival";
+import { lagosToday } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +28,7 @@ export default async function CartPage({
     safeSettings(),
   ]);
 
-  const [slots, pricing, bands] = await Promise.all([
+  const [slots, bands] = await Promise.all([
     // Worked out here so the clock is the shop's rather than the phone's, and
     // so a page left open all morning cannot offer a time that has gone.
     settings.same_day_on === "on"
@@ -40,7 +42,6 @@ export default async function CartPage({
           )
         )
       : Promise.resolve([]),
-    sameDayPricing(),
     activeBands(),
   ]);
 
@@ -51,10 +52,9 @@ export default async function CartPage({
         .slice(0, 4)
         .map(toBatchView)
         .filter((view) => !view.closed && !view.full)
-        .map((view) => ({ id: view.id, label: view.label }))}
+        .map(runArrival)}
       slots={slots}
-      sameDayFrom={pricing.bands[0]?.fee ?? 6500}
-      runFrom={bands[0]?.fee ?? 4000}
+      today={lagosToday()}
       hostels={await hostelNames()}
       // What is on today, so the cart can say when it is one thing away from
       // an offer rather than leaving somebody to wonder why it is not free.

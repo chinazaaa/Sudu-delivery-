@@ -103,6 +103,42 @@ in front of us a second time. Each line is a rule, then the bug that bought it.
     third who was still choosing. The board says who everybody is waiting on
     rather than implying something is about to happen on its own.
 
+## When it arrives
+
+23. **Nobody picks a time, anywhere.** The checkout, a link somebody was sent,
+    the admin making that link and a group all ask the same question of
+    `nextArrival`, and all get the same answer: a run going today while it is
+    still taking orders, else a car of its own today, else a run tomorrow,
+    else tomorrow's first window. A dropdown with two prices in it asked
+    somebody to know the fee ladder and the cut off before they could buy
+    lunch, and the commonest answer to it was the dear one twenty minutes
+    before a run went to the same block.
+
+24. **Whether it is four thousand or six and a half is a fact about the time,
+    not a choice.** Make a run's cut off and the food rides that run, which is
+    what makes it cheaper. Miss it and the next way to eat is a car of its
+    own, three hours out. A promotion supersedes both: Domino's at two
+    thousand is two thousand whenever it was ordered. The time still decides
+    when it comes; the offer decides what it costs.
+
+25. **A time is an estimate and says so.** One sentence, the same words on
+    every screen, out of `ESTIMATE_NOTE`. Four o'clock to the minute is a
+    promise nobody can keep in Lagos traffic, and a quarter past is fine
+    unless somebody was told four o'clock exactly.
+
+26. **There is no such thing as nothing going.** "That run has closed" and
+    "that time has gone" were pages that took somebody who wanted dinner and
+    gave them a dead end. A link pinned to a run or a time is honoured while
+    it is live and quietly let go when it is not, and what they get instead is
+    the next way to eat. If it is not today it is tomorrow. The only thing
+    that stops a link is being stopped by hand.
+
+27. **Moving somebody between runs is a person's job.** Paying after the cut
+    off means the food for that car has been bought, so the admin moves the
+    order onto the next run or a car of its own and messages them about it by
+    hand. Click to send, never automated, and a paid order carries its money
+    across: nothing is charged again and nothing is refunded.
+
 ## Deep links
 
 20. **A link opens the app, and the code stays a code.** sudu.store/g/<code>

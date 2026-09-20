@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Slot } from "@/lib/same-day";
+import type { ArrivalRun } from "@/lib/arrival";
 import GroupLink, { PARTY_CHANGED, readGroup } from "./GroupLink";
 import RecentGroups from "./RecentGroups";
 
@@ -16,13 +17,12 @@ import RecentGroups from "./RecentGroups";
 export default function GroupHub({
   runs,
   slots,
-  sameDayFrom,
-  runFrom,
+  today,
 }: {
-  runs: { id: string; label: string }[];
+  runs: ArrivalRun[];
   slots: Slot[];
-  sameDayFrom: number;
-  runFrom: number;
+  /** Today in Lagos, from the shop's clock. */
+  today: string;
 }) {
   const [group, setGroup] = useState("");
   const [read, setRead] = useState(false);
@@ -68,8 +68,7 @@ export default function GroupHub({
         openNow
         runs={runs}
         slots={slots}
-        sameDayFrom={sameDayFrom}
-        runFrom={runFrom}
+        today={today}
       />
 
       <RecentGroups />

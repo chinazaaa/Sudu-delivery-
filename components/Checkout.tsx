@@ -27,6 +27,7 @@ import GroupLink, {
   readGroup,
 } from "@/components/GroupLink";
 import type { Slot } from "@/lib/same-day";
+import { ESTIMATE_NOTE, nextArrival, runArrival } from "@/lib/arrival";
 import FillDetails from "@/components/FillDetails";
 import KeepCart from "@/components/KeepCart";
 import { countdown } from "@/lib/time";
@@ -85,7 +86,20 @@ export default function Checkout({
   const cart = useCart();
   const { people } = usePeople();
   const openable = batches.filter((b) => !b.closed && !b.full);
-  const [batchId, setBatchId] = useState(adding?.batchId ?? openable[0]?.id ?? "");
+
+  // The soonest way to eat, the same rule as everywhere else: a run today, a
+  // car of its own today, a run tomorrow, tomorrow's first window.
+  const todayRun = openable.find((one) => one.runDate === today) ?? null;
+  const todaySlot = sameDaySlots.find((one) => one.day === "today") ?? null;
+  const laterRun = openable.find((one) => one.runDate > today) ?? null;
+  const laterSlot = sameDaySlots.find((one) => one.day !== "today") ?? null;
+  const decided = nextArrival(openable.map(runArrival), sameDaySlots, today);
+  // A car of its own still carries a run id, because that is what the
+  // coupon and the offer rules are asked about. The time is what decides
+  // the price, and it wins wherever both are set.
+  const [batchId, setBatchId] = useState(
+    adding?.batchId ?? decided?.runId ?? openable[0]?.id ?? ""
+  );
   const [method, setMethod] = useState<"transfer" | "card">("transfer");
   const [mode, setMode] = useState<GroupMode>("one_payer");
   // Not asked: every friend has already said where their own food goes, and
@@ -241,15 +255,11 @@ export default function Checkout({
   }, []);
   // Same day instead of a run. Empty means they are on a run.
   //
-  // A run going today is what opens, because it is four thousand against six
-  // and a half for food arriving the same afternoon: nobody should have to
-  // notice the cheaper way is there. A car of its own leads only when no run
-  // is going today, and then the question is not which is cheaper, it is
-  // whether anybody can eat today at all.
-  const runToday = openable.some((one) => one.runDate === today);
-  const [deliverAt, setDeliverAt] = useState(
-    runToday ? "" : (sameDaySlots[0]?.at ?? "")
-  );
+  // Whatever the decision above landed on: a run today if there is one,
+  // else a car of its own today, else a run tomorrow, else tomorrow's first
+  // window. Nobody is asked, because there is one right answer and the
+  // dropdown that used to be here only made somebody find it.
+  const [deliverAt, setDeliverAt] = useState(decided?.at ?? "");
   const sameDay = sameDaySlots.find((one) => one.at === deliverAt) ?? null;
   const shared = joining !== null || party !== "";
 
@@ -294,6 +304,63 @@ export default function Checkout({
         0,
         feeFor(itemCount + alreadyItems, selected?.flashFee ?? null, bands) - alreadyCharged
       );
+
+  /**
+   * When this order arrives, as an estimate rather than a promise.
+   *
+   * Three hours is how long it takes to fetch food and drive it over, so a
+   * one o'clock order is a four o'clock delivery. Said as a time to the
+   * minute that is a promise nobody can keep in Lagos traffic, and being
+   * fifteen minutes out is not a failure. So it is said as the window it
+   * really is, and the line underneath says plainly that it is an estimate.
+   */
+  const onARun = deliverAt === "";
+  const runNow = batches.find((one) => one.id === batchId) ?? null;
+  const arriving = onARun
+    ? runNow
+      ? runArrival(runNow).when
+      : "On the next run"
+    : sameDay
+      ? sameDay.label
+      : "On the next run";
+
+  /**
+   * The one alternative worth a sentence.
+   *
+   * A car of its own can be two and a half thousand dearer than waiting for a
+   * run, and nobody should pay that without being told there was another way.
+   * The other direction matters too: somebody on a run tomorrow may not know
+   * a car today is even possible.
+   */
+  const waitingSaves = (() => {
+    const runFee = Math.max(
+      0,
+      feeFor(itemCount + alreadyItems, null, bands) - alreadyCharged
+    );
+    const soon = todaySlot ?? laterSlot;
+    const soonFee = soon
+      ? sameDayFee(itemCount, soon.urgent, sameDayBands, urgentExtra)
+      : 0;
+
+    if (shared || promotion || itemCount === 0) return null;
+
+    if (onARun) {
+      // Already on the cheap way. Only worth saying a car exists at all.
+      return soon && soonFee > runFee
+        ? { runId: batchId, label: "", instead: soonFee, saving: 0 }
+        : null;
+    }
+
+    const cheaper = todayRun ?? laterRun;
+    return cheaper && runFee < soonFee
+      ? {
+          runId: cheaper.id,
+          label: cheaper.label,
+          instead: runFee,
+          saving: soonFee - runFee,
+        }
+      : null;
+  })();
 
   // Naming friends to carry food for is a different thing from being in a
   // shared delivery, and doing both at once is two answers to one question.
@@ -519,79 +586,51 @@ export default function Checkout({
           </p>
         </section>
       ) : (
-      <section className="card space-y-3">
-        <h2 className="font-bold">When do you want it?</h2>
+      <section className="card space-y-2">
+        <h2 className="font-bold">Estimated arrival</h2>
 
-        {offersSameDay ? (
-          <>
-            <select
-              className="field"
-              value={sameDay ? "today" : "run"}
-              onChange={(event) =>
-                setDeliverAt(event.target.value === "today" ? sameDaySlots[0].at : "")
+        {/* Decided, not asked. Three hours is how long it takes to fetch food
+            and drive it over, and a run going today gets there for four
+            thousand rather than six and a half, so there is one right answer
+            and a dropdown only made somebody find it. */}
+        <p className="text-lg font-extrabold text-ink">{arriving}</p>
+
+        <p className="text-sm text-muted">
+          {onARun
+            ? "Everybody's food in one car, which is why it costs less."
+            : "A car of its own, because no run is going in time for this."}
+        </p>
+
+        {/* An estimate, and said to be one. A time to the minute is a promise
+            nobody can keep in Lagos traffic, and arriving at 4:15 for a four
+            o'clock is fine unless somebody was told four o'clock exactly. */}
+        <p className="text-sm text-muted">{ESTIMATE_NOTE}</p>
+
+        {/* The one choice worth keeping. Where waiting for a run would save
+            real money, it is offered as a sentence rather than as a menu: a
+            car of its own can be two and a half thousand dearer, and nobody
+            should pay that without being told there was another way. */}
+        {waitingSaves !== null && (
+          <button
+            type="button"
+            onClick={() => {
+              if (onARun) {
+                setDeliverAt(sameDaySlots[0]?.at ?? "");
+              } else {
+                setDeliverAt("");
+                setBatchId(waitingSaves.runId);
               }
-              aria-label="How you want it delivered"
-            >
-              {/* Short enough to survive a narrow phone. A native select
-                  truncates its option text with no warning, and a price cut
-                  off halfway is worse than no price. */}
-              {/* An offer prices the delivery outright, so quoting the
-                  ladder beside it would be quoting a number nobody is going
-                  to be charged. Each option says what it would actually
-                  cost, and only falls back to "from" when nothing applies. */}
-              <option value="today">
-                {sameDaySlots[0].day === "today" ? "Today" : "Tomorrow"} ·{" "}
-                {priceFor(sameDaySlots[0].at) ??
-                  `from ${naira(sameDayBands[0]?.fee ?? 6500)}`}
-              </option>
-              <option value="run">
-                On a run · {priceFor(null) ?? `from ${naira(bands[0]?.fee ?? 4000)}`}
-              </option>
-            </select>
-
-            {sameDay ? (
-              <div className="space-y-2">
-                <label className="label" htmlFor="deliver_at">
-                  What time?
-                </label>
-                <select
-                  id="deliver_at"
-                  className="field"
-                  value={deliverAt}
-                  onChange={(event) => setDeliverAt(event.target.value)}
-                >
-                  {sameDaySlots.map((slot) => (
-                    <option key={slot.at} value={slot.at}>
-                      {slot.label}
-                      {slot.urgent ? " · urgent" : ""}
-                      {` · ${
-                        priceFor(slot.at) ??
-                        naira(sameDayFee(itemCount, slot.urgent, sameDayBands, urgentExtra))
-                      }`}
-                    </option>
-                  ))}
-                </select>
-                {/* One line. The reasons behind the times are ours, not
-                    theirs: they want to know when they can eat. */}
-                <p className="text-sm text-muted">
-                  {sameDaySlots[0].day === "tomorrow"
-                    ? `Past our delivery time. The soonest is ${sameDaySlots[0].phrase}.`
-                    : sameDay.urgent
-                      ? "Under five hours, so this one is urgent. A later time is cheaper."
-                      : `The soonest is ${sameDaySlots[0].phrase}.`}
-                </p>
-              </div>
-            ) : (
-              <>
-                <RunPicker />
-                <p className="text-sm text-muted">
-                  A run is everybody&apos;s food in one car, which is why it is cheaper.
-                </p>
-              </>
-            )}
-          </>
-        ) : (
-          <RunPicker />
+            }}
+            className="text-left text-sm font-semibold text-brand"
+          >
+            {onARun
+              ? `Need it sooner? A car of its own can be there ${
+                  (todaySlot ?? laterSlot)?.phrase ?? "today"
+                }, for ${naira(waitingSaves.instead)}.`
+              : `Rather wait and pay less? ${waitingSaves.label} for ${naira(
+                  waitingSaves.instead
+                )}, ${naira(waitingSaves.saving)} less.`}
+          </button>
         )}
       </section>
       )}
@@ -605,10 +644,9 @@ export default function Checkout({
       {!groupOn && !joining && party === "" && (
         <section className="space-y-3">
           <GroupLink
-            runs={openable.map((batch) => ({ id: batch.id, label: batch.label }))}
+            runs={openable.map(runArrival)}
             slots={sameDaySlots}
-            sameDayFrom={sameDayBands[0]?.fee ?? 6500}
-            runFrom={bands[0]?.fee ?? 4000}
+            today={today}
           />
         </section>
       )}

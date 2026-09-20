@@ -56,18 +56,9 @@ const nextKey = () => `line-${(counter += 1)}`;
 
 export default function LinkBuilder({
   dishes,
-  runs,
-  slots,
-  saved,
   editing,
 }: {
   dishes: Dish[];
-  runs: { id: string; label: string }[];
-  slots: { at: string; label: string }[];
-  /** What this link already says, when the run has closed or the window has
-   *  passed and so is not in the lists any more. Kept as its own option so
-   *  opening an edit does not quietly move it. */
-  saved?: { value: string; label: string } | null;
   /** A link being changed rather than made. Everything comes back filled in,
    *  and saving keeps the same address, so whatever was already sent to
    *  people goes on working. */
@@ -76,7 +67,6 @@ export default function LinkBuilder({
     label: string;
     lines: { id: string; qty: number; options: string[] }[];
     alternatives: { id: string; qty: number; options: string[] }[];
-    when: string;
     fee: number | null;
     coupon: string;
     paymentLink: string;
@@ -615,51 +605,19 @@ export default function LinkBuilder({
         </div>
       )}
 
-      <div>
-        <label className="label" htmlFor="when">
-          When does it go
-        </label>
-        <p className="mb-1 text-xs text-muted">
-          Left as it is, the link rides a run while one is taking orders and
-          falls back to the next window of its own when none is. That one never
-          needs editing; a named run or window is fixed and stops working when
-          it passes.
-        </p>
-        <select
-          id="when"
-          name="when"
-          className="field"
-          defaultValue={editing?.when ?? ""}
-        >
-          <option value="">
-            Whatever is going when they tap it, cheapest first
-          </option>
-          {saved &&
-            saved.value !== "" &&
-            !slots.some((slot) => slot.at === saved.value) &&
-            !runs.some((run) => `run:${run.id}` === saved.value) && (
-              <option value={saved.value}>{saved.label} (as saved)</option>
-            )}
-          {slots.length > 0 && (
-            <optgroup label="A car of its own">
-              {slots.map((slot) => (
-                <option key={slot.at} value={slot.at}>
-                  {slot.label}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {runs.length > 0 && (
-            <optgroup label="On a run">
-              {runs.map((run) => (
-                <option key={run.id} value={`run:${run.id}`}>
-                  {run.label}
-                </option>
-              ))}
-            </optgroup>
-          )}
-        </select>
-      </div>
+      {/* Not asked any more. A link pinned to a run or a window dies the
+          moment that time passes, and whoever made it has to remember to go
+          back and change it. Every link now takes whatever is going soonest
+          when somebody taps it, which is the same answer the checkout gives:
+          a run today while one is taking orders, a car of its own today, a
+          run tomorrow, else tomorrow's first window. Saving an old link that
+          was pinned puts it on that rule too. */}
+      <input type="hidden" name="when" value="" />
+      <p className="text-xs text-muted">
+        It goes on whatever is going soonest when somebody taps it: a run
+        while one is taking orders, otherwise a car of its own within about
+        three hours. The link never needs editing for time.
+      </p>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>

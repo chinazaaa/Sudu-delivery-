@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { naira } from "@/lib/money";
 import type { Slot } from "@/lib/same-day";
+import { ESTIMATE_NOTE, nextArrival, type ArrivalRun } from "@/lib/arrival";
 
 const KEY = "sudu_group_v2";
 const JOINED = "sudu_group_joined_v2";
@@ -95,27 +96,29 @@ function announce(): void {
 }
 
 /**
- * Start a group: your name, when it arrives, and then the link.
+ * Start a group: your name, and then the link.
  *
- * Both answers are needed before there is anything to share. Without a name
- * the group is nobody's, and without a car nobody joining can be told when
- * their food is coming, which is the first thing anybody asks. Two taps buys
- * a group that is real and complete the moment the link exists.
+ * The car is not asked for any more. It is whatever is going soonest, worked
+ * out by the same rule as every other way of ordering, and a leader who had
+ * to pick one was being asked to price a fee ladder and a cut off before she
+ * could invite anybody. One answer buys a group that is real and complete the
+ * moment the link exists, and whoever joins is told when their food is
+ * coming, which is the first thing anybody asks.
  */
 export default function GroupLink({
   openNow = false,
   runs,
   slots,
-  sameDayFrom,
-  runFrom,
+  today,
   alone = 0,
 }: {
   /** Opened already, because they pressed something that said Start. */
   openNow?: boolean;
-  runs: { id: string; label: string }[];
+  runs: ArrivalRun[];
   slots: Slot[];
-  sameDayFrom: number;
-  runFrom: number;
+  /** Today in Lagos, from the shop's clock, so a run going today can be told
+   *  from one going tomorrow. */
+  today: string;
   /** What delivery costs on this cart alone. A fact about their own food,
    *  which is worth saying; what each of them ends up paying is not, because
    *  it depends on who turns up and what they order, and a figure quoted
@@ -124,11 +127,9 @@ export default function GroupLink({
 }) {
   const [open, setOpen] = useState(openNow);
   const [name, setName] = useState("");
-  // One control, two kinds of answer. A time is the instant itself; a run is
-  // its id behind a marker, because the two cannot share a value space.
-  const [choice, setChoice] = useState(
-    slots[0] ? slots[0].at : runs[0] ? `run:${runs[0].id}` : ""
-  );
+  // Whatever is going soonest: a run today, a car of its own today, a run
+  // tomorrow, tomorrow's first window. Nobody picks, here or anywhere else.
+  const going = nextArrival(runs, slots, today);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [inGroup, setInGroup] = useState(false);
@@ -148,9 +149,9 @@ export default function GroupLink({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
-          choice.startsWith("run:")
-            ? { name, batchId: choice.slice(4) }
-            : { name, deliverAt: choice }
+          going?.onARun
+            ? { name, batchId: going.runId }
+            : { name, deliverAt: going?.at ?? "" }
         ),
       });
       const data = (await response.json()) as { id?: string; error?: string };
@@ -215,47 +216,27 @@ export default function GroupLink({
         <p className="mt-1 text-xs text-ink/70">So they know whose group they joined.</p>
       </div>
 
-      <div>
-        <label className="label" htmlFor="group_when">
-          When does it arrive?
-        </label>
-        <select
-          id="group_when"
-          value={choice}
-          onChange={(event) => setChoice(event.target.value)}
-          className="field"
-        >
-          {slots.length > 0 && (
-            <optgroup label={`A car to yourselves · from ${naira(sameDayFrom)}`}>
-              {slots.map((slot) => (
-                <option key={slot.at} value={slot.at}>
-                  {slot.label}
-                  {slot.urgent ? " · urgent" : ""}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {runs.length > 0 && (
-          <optgroup label={`On a run, shared · from ${naira(runFrom)}`}>
-            {runs.map((run) => (
-              <option key={run.id} value={`run:${run.id}`}>
-                {run.label}
-              </option>
-            ))}
-          </optgroup>
-          )}
-        </select>
-        <p className="mt-1 text-xs text-ink/70">
-          You pick it once, for everybody. They see it when they join.
-        </p>
-      </div>
+      {/* Said, not asked. The group goes on whatever is going soonest, which
+          is the same answer the checkout gives anybody ordering alone. */}
+      {going && (
+        <div>
+          <p className="label">When it arrives</p>
+          <p className="font-extrabold text-ink">{going.when}</p>
+          <p className="mt-1 text-xs text-ink/70">
+            {going.onARun
+              ? "It rides on the run going out then, which is why it costs less. Everybody who joins is told the same time."
+              : "A car of your own, because no run is going in time for this. Everybody who joins is told the same time."}
+          </p>
+          <p className="mt-1 text-xs text-ink/70">{ESTIMATE_NOTE}</p>
+        </div>
+      )}
 
       {error !== "" && <p className="text-sm font-semibold text-brand-dark">{error}</p>}
 
       <button
         type="button"
         onClick={start}
-        disabled={busy || name.trim().length < 2 || choice === ""}
+        disabled={busy || name.trim().length < 2 || going === null}
         className="btn-primary w-full"
       >
         {busy ? "Starting…" : "Start the group"}

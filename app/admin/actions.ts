@@ -10,10 +10,16 @@ import { STAGES, type BatchStage } from "@/lib/stages";
 import { type BatchSlot } from "@/lib/config";
 import { hoursByDay, deliveryWindows, externalUrl, sayWindow } from "@/lib/settings";
 import { runSchedule } from "@/lib/schedule";
-import { deliverySlots } from "@/lib/same-day";
+import { deliverySlots, windowPhrase } from "@/lib/same-day";
 import { lagosInstant, lagosToday } from "@/lib/time";
-import { clearDeadGroups, ensureUpcomingBatches, openRunsBetween } from "@/lib/batches";
+import {
+  clearDeadGroups,
+  createSameDayBatch,
+  ensureUpcomingBatches,
+  openRunsBetween,
+} from "@/lib/batches";
 import { closeGroup } from "@/lib/groups";
+import { moveOrder } from "@/lib/orders";
 import { canTravel, groupCarts } from "@/lib/group-carts";
 import {
   deleteCheckoutLink,
@@ -2151,4 +2157,48 @@ export async function sendDealPush(
 
   revalidatePath("/admin/notifications");
   return { error: null, sent: result.sent };
+}
+
+/**
+ * Moving one order onto another run, by hand.
+ *
+ * Somebody pays after the cut off. The food for that run has been bought, so
+ * their money is sitting against a car that has gone, and the only honest
+ * answer is the next one: a run later today, or a car of its own within the
+ * three hours it takes to fetch and drive. That is a decision about a person
+ * rather than a rule, which is why it is a button here and not a job that
+ * runs at night, and why the message telling them is written by hand.
+ *
+ * A time rather than a run makes the car first, exactly as a same day order
+ * does, and then moves them into it.
+ */
+export async function moveOrderToAnother(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const orderId = String(form.get("order_id") ?? "");
+  const going = String(form.get("going") ?? "");
+  if (orderId === "" || going === "") return;
+
+  let batchId = going.startsWith("run:") ? going.slice(4) : "";
+
+  if (batchId === "") {
+    // A window of its own. The label is what the customer sees on their
+    // order, so it is said the way every other window is said.
+    const car = await createSameDayBatch({
+      deliverAt: going,
+      label: windowPhrase(going).replace(/^./, (one) => one.toUpperCase()),
+    });
+    if (!car) {
+      redirect(`/admin/orders/${orderId}?moved=Could+not+make+that+car.`);
+    }
+    batchId = car.id;
+  }
+
+  const result = await moveOrder(orderId, batchId);
+  revalidatePath("/admin", "layout");
+  redirect(
+    `/admin/orders/${orderId}?moved=${encodeURIComponent(
+      result.ok ? "Moved. Tell them which run they are on now." : result.error
+    )}`
+  );
 }

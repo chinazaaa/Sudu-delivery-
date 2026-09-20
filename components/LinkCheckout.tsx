@@ -21,6 +21,7 @@ export default function LinkCheckout({
   code,
   title,
   when,
+  estimate,
   note: aLine,
   lines,
   food,
@@ -37,6 +38,8 @@ export default function LinkCheckout({
   title: string;
   /** When it lands, already said as a window. */
   when: string;
+  /** That a time is an estimate, in the same words every screen uses. */
+  estimate: string;
   /** A line from the shop, above the food. */
   note: string;
   lines: {
@@ -157,7 +160,12 @@ export default function LinkCheckout({
         <h1 className="text-2xl font-bold tracking-tight">
           {items} item{items === 1 ? "" : "s"} · {naira(cost)}
         </h1>
-        {when !== "" && <p className="text-ink/75">{when}</p>}
+        {when !== "" && (
+          <>
+            <p className="text-ink/75">{when}</p>
+            <p className="text-sm text-muted">{estimate}</p>
+          </>
+        )}
         {aLine !== "" && <p className="text-sm text-muted">{aLine}</p>}
       </section>
 

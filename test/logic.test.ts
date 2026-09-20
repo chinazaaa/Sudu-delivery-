@@ -36,6 +36,7 @@ import { matchPhotos, tidy } from "../lib/match";
 import { groupNames, lineKey as cartLineKey, reclaim } from "../lib/cart";
 import { renderEmail, renderText, type Block } from "../lib/email-html";
 import { deliverySlots, slotFee, slotsToday } from "../lib/same-day";
+import { nextArrival } from "../lib/arrival";
 
 /** A settings row with nothing filled in, for the template tests. */
 const EMPTY_SETTINGS: Settings = { ...SETTINGS_DEFAULTS };
@@ -1349,4 +1350,34 @@ test("what is left of a window is still offered today", () => {
   // Too late for any of it, and tomorrow is all there is.
   const late = deliverySlots(new Date("2026-09-20T15:30:00Z"), { first: 12, last: 17 });
   assert.equal(late.some((slot) => slot.day === "today"), false);
+});
+
+test("the soonest way to eat is picked, not asked for", () => {
+  const slots = deliverySlots(new Date("2026-09-20T12:12:00Z"), { first: 12, last: 17 });
+  const today = "2026-09-20";
+  const runToday = { id: "a", runDate: today, when: "Between 2pm and 5pm, today" };
+  const runTomorrow = { id: "b", runDate: "2026-09-21", when: "Between 2pm and 5pm, tomorrow" };
+
+  // A run going today beats a car of its own today: same afternoon, two and
+  // a half thousand less.
+  assert.equal(nextArrival([runToday, runTomorrow], slots, today)?.runId, "a");
+
+  // No run today, but the day is not over: a car of its own, today.
+  const car = nextArrival([runTomorrow], slots, today);
+  assert.equal(car?.onARun, false);
+  assert.equal(car?.when, "Between 4:15pm and 5pm");
+
+  // Nothing left today. A run tomorrow beats a car tomorrow, because it is
+  // the same hours for less money.
+  const tomorrowOnly = slots.filter((slot) => slot.day !== "today");
+  assert.equal(nextArrival([runTomorrow], tomorrowOnly, today)?.runId, "b");
+
+  // No runs at all, and nothing left today: tomorrow's first window, which
+  // is whenever the shop opens. Never nothing.
+  const none = nextArrival([], tomorrowOnly, today);
+  assert.equal(none?.onARun, false);
+  assert.equal(none?.when, "Between 12pm and 3pm tomorrow");
+
+  // Nothing anywhere is the only case with no answer.
+  assert.equal(nextArrival([], [], today), null);
 });

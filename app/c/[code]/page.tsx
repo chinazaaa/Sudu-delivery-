@@ -2,15 +2,14 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCheckoutLink } from "@/lib/checkout-links";
 import { priceLines } from "@/lib/orders";
-import { getBatch, isOrderable, openBatches } from "@/lib/batches";
 import { hostelNames } from "@/lib/hostels";
-import { hoursByDay, safeSettings, whatsappLink } from "@/lib/settings";
+import { safeSettings, whatsappLink } from "@/lib/settings";
 import { currentCustomer, customerDetails } from "@/lib/customer-auth";
 import { naira } from "@/lib/money";
 import { db } from "@/lib/supabase";
 import type { CartLine } from "@/lib/types";
-import { dayWord } from "@/lib/time";
-import { deliverySlots, sameInstant, windowPhrase } from "@/lib/same-day";
+import { ESTIMATE_NOTE } from "@/lib/arrival";
+import { arrivalNow } from "@/lib/arrival-server";
 import LinkCheckout from "@/components/LinkCheckout";
 import HelpLine from "@/components/HelpLine";
 
@@ -143,43 +142,31 @@ export default async function CheckoutLinkPage({
     0
   );
 
-  // The run this is for. A link made for one names it; a link made for
-  // whatever is open finds the next one when somebody taps it, which is what
-  // a link sitting in a group chat wants.
-  const named = link.batch_id ? await getBatch(link.batch_id) : null;
-  const open = await openBatches();
-  const batch = named ?? (link.deliver_at ? null : open[0] ?? null);
-  const gone = named !== null && !isOrderable(named);
+  // When it would land if they ordered now. Links are not pinned to a time
+  // any more: they take whatever is going soonest, which is the same rule the
+  // checkout uses and the reason such a link never needs editing. One made
+  // before that still names a run or a time, and is honoured while it is
+  // live.
+  //
+  // There is no dead end here. "That run has closed" and "that time has gone"
+  // were both pages that took somebody who wanted dinner and gave them
+  // nothing: there is always a next way, and if it is not today it is
+  // tomorrow. The only thing that stops a link is being stopped by hand.
+  const going = await arrivalNow({
+    batchId: link.batch_id,
+    deliverAt: link.deliver_at,
+  });
 
-  // A link made without a car takes whatever is going, cheapest first: a run
-  // while one is taking orders, and a window of its own when there is not.
-  // It is why such a link never needs editing.
-  const slots =
-    settings.same_day_on === "on" ? deliverySlots(new Date(), await hoursByDay()) : [];
-  const falling = !link.batch_id && !link.deliver_at && !batch ? (slots[0] ?? null) : null;
-
-  // A time is only orderable while it is still on offer, and a car needs
-  // three hours' notice, so a link made for noon stops working mid morning.
-  // Checked here rather than after they have filled the form in: being told
-  // "that time has gone" by a page that never offered a time is being told
-  // off for somebody else's mistake.
-  const timePassed =
-    link.deliver_at !== null && !slots.some((slot) => sameInstant(slot.at, link.deliver_at!));
-
-  if (gone || timePassed || (!batch && !link.deliver_at && !falling)) {
+  if (!going) {
     return (
       <div className="mx-auto max-w-lg space-y-3 py-10 text-center">
-        <h1 className="text-2xl font-bold">
-          {timePassed ? "That time has gone" : "That run has closed"}
-        </h1>
+        <h1 className="text-2xl font-bold">Nothing is going just now</h1>
         <p className="text-muted">
-          Nothing was charged. The same food is on the menu, and{" "}
-          {timePassed
-            ? "you can pick a time that still works, or put it on a run."
-            : "the next run is taking orders."}
+          Nothing was charged. The menu is still open, and the next run will be
+          on it.
         </p>
         <Link href="/" className="btn-primary mt-2 inline-block px-6">
-          Put it on the next run
+          See what is on
         </Link>
         <HelpLine number={settings.whatsapp_number} about="a link I was sent" />
       </div>
@@ -194,13 +181,11 @@ export default async function CheckoutLinkPage({
       <LinkCheckout
         code={link.short ?? link.id}
         title={link.label || "Your order"}
-        when={
-          link.deliver_at
-            ? `Arriving ${windowPhrase(link.deliver_at)}`
-            : batch
-              ? `Arriving ${batch.delivery_window_text.toLowerCase()}, ${dayWord(batch.run_date)}`
-              : ""
-        }
+        when={going.when}
+        // The same sentence as everywhere else: a time here is an estimate,
+        // and being a quarter of an hour out is not a failure unless somebody
+        // was told a time to the minute.
+        estimate={ESTIMATE_NOTE}
         note={link.note}
         // Somebody signed in on this phone has already told us all of this
         // once. The browser fills the rest in for everybody else.
