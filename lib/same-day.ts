@@ -7,6 +7,7 @@ import {
   type Band,
 } from "./fees";
 import { lagosInstant, lagosToday } from "./time";
+import { TZ } from "./config";
 
 export type Slot = {
   /** The start of the window, as an ISO string. It is what the trip has to
@@ -130,6 +131,33 @@ function nextDay(date: string): string {
 }
 
 /** "12:30pm", the way a time is said rather than the way a clock prints it. */
+/**
+ * A time somebody asked for, said as the window it means.
+ *
+ * A same day car is kept as the instant it has to be ready, because that is
+ * what the price is worked out from. Nobody waiting for lunch thinks in
+ * instants, and the windows on offer change through the day, so this builds
+ * the sentence from the time itself rather than looking it up in a list that
+ * may have moved on: "between 12pm and 3pm", and tomorrow said as tomorrow.
+ */
+export function windowPhrase(at: string, now: Date = new Date()): string {
+  const start = new Date(at);
+  const hour = Number(
+    new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", hour12: false })
+      .format(start)
+  );
+  const window = `between ${clockOf(hour, 0)} and ${clockOf(hour + WINDOW_HOURS, 0)}`;
+
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(start);
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(now);
+  if (day === today) return window;
+
+  const tomorrow = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(
+    new Date(now.getTime() + 86_400_000)
+  );
+  return day === tomorrow ? `${window} tomorrow` : `${window}, ${day}`;
+}
+
 export function clockOf(hour: number, minute: number): string {
   const suffix = hour >= 12 ? "pm" : "am";
   const shown = hour > 12 ? hour - 12 : hour;

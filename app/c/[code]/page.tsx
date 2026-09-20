@@ -9,9 +9,8 @@ import { currentCustomer, customerDetails } from "@/lib/customer-auth";
 import { naira } from "@/lib/money";
 import { db } from "@/lib/supabase";
 import type { CartLine } from "@/lib/types";
-import { clockLabel, dayWord } from "@/lib/time";
-import { deliverySlots } from "@/lib/same-day";
-import { hoursByDay } from "@/lib/settings";
+import { dayWord } from "@/lib/time";
+import { windowPhrase } from "@/lib/same-day";
 import LinkCheckout from "@/components/LinkCheckout";
 import HelpLine from "@/components/HelpLine";
 
@@ -25,22 +24,6 @@ export const dynamic = "force-dynamic";
  * are and where it goes, which is the least anybody can be asked for and
  * still get dinner.
  */
-/**
- * A time on a link, said as the window it belongs to.
- *
- * The link keeps the instant the car has to be ready for, which is what the
- * price is worked out from. Nobody waiting for lunch thinks in instants: they
- * think "between 12 and 3", so that is what this says, with the day in words
- * when the day is near.
- */
-function slotPhrase(at: string, slots: { at: string; phrase: string }[]): string {
-  const known = slots.find((slot) => slot.at === at);
-  if (known) return known.phrase;
-  // A window the shop is no longer offering, which happens to a link made
-  // yesterday. The time itself is still true.
-  return `${clockLabel(at)}, ${dayWord(at.slice(0, 10))}`;
-}
-
 /**
  * The questions this basket leaves open.
  *
@@ -82,10 +65,6 @@ export default async function CheckoutLinkPage({
   if (!link) notFound();
 
   const settings = await safeSettings();
-  // The windows the shop is offering, so a time on a link can be said as a
-  // window rather than as the instant the car leaves.
-  const slots =
-    settings.same_day_on === "on" ? deliverySlots(new Date(), await hoursByDay()) : [];
 
   // Signed in on this device, so their own details fill the form in without
   // being asked for a second time.
@@ -178,7 +157,7 @@ export default async function CheckoutLinkPage({
               would say it, and the day in words when the day is near: "today"
               beats "Sunday, 20 Sep" on the twentieth. */}
           {link.deliver_at
-            ? `Arriving ${slotPhrase(link.deliver_at, slots)}`
+            ? `Arriving ${windowPhrase(link.deliver_at)}`
             : batch
               ? `Arriving ${batch.delivery_window_text.toLowerCase()}, ${dayWord(
                   batch.run_date

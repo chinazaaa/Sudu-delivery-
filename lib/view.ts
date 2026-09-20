@@ -1,5 +1,5 @@
 import { SLOT_LABEL } from "./config";
-import { clockLabel, runDateLabel } from "./time";
+import { clockLabel, dayWord } from "./time";
 import type { OpenBatch } from "./batches";
 import type { Batch } from "./types";
 
@@ -76,10 +76,12 @@ export function toBatchView(batch: OpenBatch): BatchView {
   return {
     id: batch.id,
     // The date is part of the label: two runs can be open at once, and
-    // "Friday night" does not say which Friday in exam week.
-    label: `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`,
+    // "Friday night" does not say which Friday in exam week. Near days are
+    // said in words though, because "Sunday, 20 Sep" on the twentieth makes
+    // somebody work out whether that is now.
+    label: `${dayWord(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`,
     cutOffISO: batch.cut_off_at,
-    cutOffLabel: `${runDateLabel(batch.run_date)}, ${clockLabel(batch.cut_off_at)}`,
+    cutOffLabel: `${dayWord(batch.run_date)}, ${clockLabel(batch.cut_off_at)}`,
     deliveryWindow: batch.delivery_window_text,
     full: batch.full,
     flashFee: batch.flash_fee,

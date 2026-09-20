@@ -10,7 +10,7 @@ import RepeatOrder from "@/components/RepeatOrder";
 import { ordersForPhone, repeatLines } from "@/lib/orders";
 import { STAGE_LABEL } from "@/lib/stages";
 import { takesMoney } from "@/lib/batches";
-import { runDateLabel } from "@/lib/time";
+import { dayWord } from "@/lib/time";
 import { forgetMe } from "@/app/actions";
 
 export const dynamic = "force-dynamic";
@@ -76,7 +76,7 @@ export default async function OrdersPage() {
               <Link href={`/o/${shortRef(order)}`} className="block">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-medium">
-                    {runDateLabel(order.batch.run_date)} · {SLOT_LABEL[order.batch.slot]}
+                    {dayWord(order.batch.run_date)} · {SLOT_LABEL[order.batch.slot]}
                     {order.for_name && (
                       <span className="text-muted"> · {order.for_name}&apos;s share</span>
                     )}

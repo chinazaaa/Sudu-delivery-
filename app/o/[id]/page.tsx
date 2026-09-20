@@ -30,7 +30,7 @@ import {
 } from "@/lib/orders";
 import { formatPhone } from "@/lib/phone";
 import { STAGE_LABEL } from "@/lib/stages";
-import { clockLabel, dayLabel, runDateLabel, weekdayLabel } from "@/lib/time";
+import { clockLabel, dayLabel, dayWord, runDateLabel, weekdayLabel } from "@/lib/time";
 import {
   activeBands,
   externalUrl,
@@ -98,7 +98,7 @@ export default async function OrderPage({
 
   const batchLabel = `${weekdayLabel(order.batch.run_date)} ${SLOT_LABEL[order.batch.slot]}`;
   // Two runs can be open at once, so a weekday on its own does not say which.
-  const runLabel = `${runDateLabel(order.batch.run_date)} · ${SLOT_LABEL[order.batch.slot]}`;
+  const runLabel = `${dayWord(order.batch.run_date)} · ${SLOT_LABEL[order.batch.slot]}`;
   // A run stops taking money once the shopping has started, because after
   // that somebody would be paying for food already being cooked and the money
   // has to go back.
@@ -231,7 +231,7 @@ export default async function OrderPage({
             total={order.total}
             runs={others.map((run) => ({
               id: run.id,
-              label: `${runDateLabel(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
+              label: `${dayWord(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
               closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
             }))}
           />
@@ -293,7 +293,7 @@ export default async function OrderPage({
               openLabel="Want it on another run instead?"
               runs={others.map((run) => ({
                 id: run.id,
-                label: `${runDateLabel(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
+                label: `${dayWord(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
                 closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
               }))}
             />
@@ -363,7 +363,7 @@ export default async function OrderPage({
               openLabel="Want it on another night instead?"
               runs={others.map((run) => ({
                 id: run.id,
-                label: `${runDateLabel(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
+                label: `${dayWord(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
                 closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
               }))}
             />

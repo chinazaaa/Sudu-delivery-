@@ -23,6 +23,7 @@ import {
   offerNote,
   pickOffer,
 } from "../lib/offers";
+import { windowPhrase } from "../lib/same-day";
 import { sheetAsText } from "../lib/sheet-text";
 import { template, whatsappTo } from "../lib/messages";
 import { newPin } from "../lib/customer-auth";
@@ -1250,4 +1251,18 @@ test("an offer stays off a car somebody has to themselves unless it says so", ()
   // one unless somebody says it should.
   assert.equal(ask(offer, "2026-09-19T14:00:00Z"), null);
   assert.equal(ask({ ...offer, sameDay: true }, "2026-09-19T14:00:00Z")?.fee, 2000);
+});
+
+test("a time on a link is said as the window it means", () => {
+  // Nigeria is UTC+1 all year, so noon in Lagos is 11:00 UTC.
+  const now = new Date("2026-09-20T09:00:00Z");
+  assert.equal(
+    windowPhrase("2026-09-20T11:00:00Z", now),
+    "between 12pm and 3pm"
+  );
+  // Tomorrow says so, rather than making somebody read a date.
+  assert.equal(
+    windowPhrase("2026-09-21T14:00:00Z", now),
+    "between 3pm and 6pm tomorrow"
+  );
 });
