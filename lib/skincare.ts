@@ -371,3 +371,50 @@ export async function bandsFor(batch: { kind?: string } | null): Promise<Band[]>
 export function isSkincareBatch(batch: { kind?: string } | null): boolean {
   return (batch?.kind ?? "run") === "skincare";
 }
+
+/**
+ * Every shelf the shop has, with what is actually on it.
+ *
+ * Importing a catalogue makes a shelf for every collection it names, and a
+ * later import leaves the ones nothing came in for standing there empty. Two
+ * counts, because a shelf holds products two ways: the one a product is filed
+ * under, and every one it appears on. Empty means both, so nothing is offered
+ * for deletion while anything still points at it.
+ */
+export async function skincareShelves(): Promise<
+  { id: string; name: string; items: number; filed: number }[]
+> {
+  const shop = await skincareShop();
+  if (!shop) return [];
+
+  const [sections, items] = await Promise.all([
+    db()
+      .from("menu_categories")
+      .select("id, name")
+      .eq("restaurant_id", shop.id)
+      .order("sort_order"),
+    // Everything, in stock or not: a shelf holding only what is sold out is
+    // a shelf, and deleting it would lose the filing when it comes back.
+    db().from("menu_items").select("category_id, shelves").eq("restaurant_id", shop.id),
+  ]);
+
+  const on = new Map<string, number>();
+  const filed = new Map<string, number>();
+
+  for (const one of ((items.data ?? []) as { category_id?: string | null; shelves?: string }[])) {
+    if (one.category_id) filed.set(one.category_id, (filed.get(one.category_id) ?? 0) + 1);
+    for (const shelf of (one.shelves ?? "").split("|")) {
+      const name = shelf.trim();
+      if (name !== "") on.set(name, (on.get(name) ?? 0) + 1);
+    }
+  }
+
+  return ((sections.data ?? []) as { id: string; name: string }[])
+    .map((one) => ({
+      id: one.id,
+      name: one.name,
+      items: on.get(one.name) ?? 0,
+      filed: filed.get(one.id) ?? 0,
+    }))
+    .sort((a, b) => a.items + a.filed - (b.items + b.filed) || a.name.localeCompare(b.name));
+}

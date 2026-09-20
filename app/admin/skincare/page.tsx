@@ -2,8 +2,9 @@ import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import { db } from "@/lib/supabase";
 import { safeSettings } from "@/lib/settings";
-import { cutOffTime, dropLabel, nextDrop, skincareBands, skincareShop } from "@/lib/skincare";
+import { cutOffTime, dropLabel, nextDrop, skincareBands, skincareShelves, skincareShop } from "@/lib/skincare";
 import BandEditor from "@/components/admin/BandEditor";
+import Shelves from "@/components/admin/Shelves";
 import { clockOf } from "@/lib/same-day";
 import { naira } from "@/lib/money";
 import { saveSettings } from "@/app/admin/actions";
@@ -162,6 +163,8 @@ export default async function AdminSkincarePage() {
             : "free"}.
         </p>
       </form>
+
+      <Shelves shelves={await skincareShelves()} />
 
       <ImportProducts
         shopName={shop?.name ?? "Skincare"}

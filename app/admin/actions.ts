@@ -29,6 +29,7 @@ import {
 import { fileFrom, uploadImage } from "@/lib/uploads";
 import { parseMenuText } from "@/lib/menu-import";
 import { parseProducts, shelfText } from "@/lib/skincare-import";
+import { skincareShelves } from "@/lib/skincare";
 import { newPin } from "@/lib/customer-auth";
 import { pushDeal, pushToPhone } from "@/lib/push";
 
@@ -2405,4 +2406,33 @@ export async function importSkincare(
       (skipped > 0 ? `, ${skipped} rows skipped for having no name or price.` : "."),
     error: "",
   };
+}
+
+/**
+ * Shelves nothing is on any more.
+ *
+ * An import makes a shelf for every collection the file names, and the next
+ * file, or a hand edit, leaves some of them standing there empty. They are
+ * only ever deleted when nothing is on them and nothing is filed under them,
+ * which is checked here rather than trusted from the form: a page can be
+ * stale by the time a button is pressed, and a shelf deleted out from under
+ * two hundred products is a filing job nobody wants.
+ */
+export async function deleteEmptyShelves(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const asked = new Set(form.getAll("shelf_id").map(String).filter(Boolean));
+  if (asked.size === 0) return;
+
+  const empty = (await skincareShelves())
+    .filter((one) => one.items === 0 && one.filed === 0)
+    .map((one) => one.id)
+    .filter((id) => asked.has(id));
+
+  if (empty.length > 0) {
+    await db().from("menu_categories").delete().in("id", empty);
+  }
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/skincare");
 }
