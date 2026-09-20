@@ -5,10 +5,15 @@ import { ImageResponse } from "next/og";
  *
  * The shop's own card talks about KFC and Domino's, which is a card about the
  * wrong shop: somebody sent a link to cleanser and their friends saw fried
- * chicken. Same drawing, its own words, and the words say the thing that is
- * actually different, which is the day.
+ * chicken. Same drawing, its own words.
+ *
+ * And it does not say PAU. Food goes to campus and nowhere else, but a parcel
+ * on a weekly car goes anywhere in Lagos, so a card naming the university
+ * turns away every person this shelf was opened for: the link gets forwarded
+ * out of the student group to somebody's sister in Ikeja, and she reads it as
+ * not for her.
  */
-export const alt = "Skincare from Sudu, delivered to Pan-Atlantic University";
+export const alt = "Skincare from Sudu, delivered anywhere in Lagos";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -64,11 +69,11 @@ export default function SkincareOpengraphImage() {
               letterSpacing: -2,
             }}
           >
-            Skincare, delivered to PAU
+            Skincare, delivered to you
           </div>
           <div style={{ fontSize: 34, color: "rgba(255,255,255,0.7)" }}>
-            The brands you already buy, brought to your block. Order any day,
-            it comes on the weekly run.
+            The brands you already buy, brought to your door anywhere in
+            Lagos. Order any day, it comes on the weekly run.
           </div>
         </div>
 

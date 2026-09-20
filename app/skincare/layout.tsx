@@ -8,6 +8,10 @@ import { dropLabel, nextDrop, skincareShop } from "@/lib/skincare";
  * Nearly everybody arrives from a link somebody sent, and the shop's own card
  * talks about KFC and Domino's, which is a card about the wrong shop. The
  * skincare link says what it is and, more to the point, when it comes.
+ *
+ * It does not name the university. Food goes to campus and nowhere else, but
+ * this goes anywhere in Lagos, and a card saying PAU turns away everybody the
+ * shelf was opened for the moment the link leaves the student group.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await safeSettings();
@@ -15,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const name = shop?.name ?? "Skincare";
   const blurb =
     settings.skincare_blurb ||
-    `Order any day, it comes ${dropLabel(nextDrop(settings).date)}. Delivered to Pan-Atlantic University.`;
+    `Order any day, it comes ${dropLabel(nextDrop(settings).date)}. Delivered anywhere in Lagos.`;
 
   return {
     title: name,
