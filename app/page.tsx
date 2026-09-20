@@ -11,7 +11,7 @@ import {
   hoursByDay,
 } from "@/lib/settings";
 import { toBatchView } from "@/lib/view";
-import { deliverySlots } from "@/lib/same-day";
+import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { offersByRestaurant } from "@/lib/coupons";
 import { offerBadge } from "@/lib/offers";
 import { sweepGroups } from "@/lib/groups";
@@ -38,7 +38,13 @@ export default async function HomePage() {
     [...offers.entries()].map(([id, offer]) => [id, offerBadge(offer)])
   );
 
-  const slots = settings.same_day_on === "on" ? deliverySlots(new Date(), await hoursByDay()) : [];
+  const slots =
+    settings.same_day_on === "on"
+      ? slotsWorthOffering(
+          deliverySlots(new Date(), await hoursByDay()),
+          batches.map((one) => ({ run_date: one.run_date, window: one.delivery_window_text }))
+        )
+      : [];
 
   const lines = (settings.auto_lines || AUTO_LINES)
     .split("\n")

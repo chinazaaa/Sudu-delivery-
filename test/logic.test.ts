@@ -23,7 +23,7 @@ import {
   offerNote,
   pickOffer,
 } from "../lib/offers";
-import { windowPhrase } from "../lib/same-day";
+import { slotsWorthOffering, windowPhrase } from "../lib/same-day";
 import { sheetAsText } from "../lib/sheet-text";
 import { template, whatsappTo } from "../lib/messages";
 import { newPin } from "../lib/customer-auth";
@@ -1264,5 +1264,43 @@ test("a time on a link is said as the window it means", () => {
   assert.equal(
     windowPhrase("2026-09-21T14:00:00Z", now),
     "between 3pm and 6pm tomorrow"
+  );
+});
+
+test("a time a run already covers is not offered as a car of its own", () => {
+  const now = new Date("2026-09-20T06:00:00Z");
+  const slots = deliverySlots(now, { first: 12, last: 21 });
+
+  // Nothing going, so every window stands.
+  assert.equal(slotsWorthOffering(slots, []).length, slots.length);
+
+  // A run delivering between 12 and 3 today. The same window as a car of its
+  // own costs two and a half thousand more for food arriving at the same
+  // time, so it goes.
+  const left = slotsWorthOffering(slots, [
+    { run_date: "2026-09-20", window: "Between 12pm and 3pm" },
+  ]);
+  assert.equal(
+    left.some((slot) => slot.day === "today" && slot.at.startsWith("2026-09-20T11")),
+    false
+  );
+  // Later today still stands, and so does tomorrow.
+  assert.equal(left.some((slot) => slot.day === "tomorrow"), true);
+
+  // An arrival time rather than a window: "about 2pm" falls inside 12 to 3.
+  const arrival = slotsWorthOffering(slots, [
+    { run_date: "2026-09-20", window: "On campus ~2:00pm" },
+  ]);
+  assert.equal(
+    arrival.some((slot) => slot.at.startsWith("2026-09-20T11")),
+    false
+  );
+
+  // Words with no time in them hide nothing: better to offer a window than
+  // to swallow one because a sentence could not be read.
+  assert.equal(
+    slotsWorthOffering(slots, [{ run_date: "2026-09-20", window: "When we get there" }])
+      .length,
+    slots.length
   );
 });

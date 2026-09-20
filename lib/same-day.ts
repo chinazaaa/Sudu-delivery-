@@ -116,6 +116,64 @@ export function deliverySlots(
   return slots;
 }
 
+/**
+ * The hours a run's delivery window covers, read out of the words it is
+ * written in.
+ *
+ * The window is free text because it is the shop's promise in the shop's own
+ * words: "Between 12pm and 3pm", "On campus ~2:00pm". Both are readable, and
+ * anything unreadable simply does not count as an overlap, which errs towards
+ * offering a time rather than hiding one.
+ */
+export function windowHours(text: string): { from: number; to: number } | null {
+  const found = [...text.matchAll(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/gi)].map((one) => {
+    const hour = Number(one[1]) % 12;
+    return one[3].toLowerCase() === "pm" ? hour + 12 : hour;
+  });
+  if (found.length === 0) return null;
+  // One time is an arrival, not a window: "on campus about two" is two.
+  return { from: found[0], to: found.length > 1 ? found[found.length - 1] : found[0] };
+}
+
+/**
+ * Times still worth offering, given the runs already going.
+ *
+ * A car of its own costs six and a half; a run at the same hour costs four.
+ * Offering both, one above the other, asks somebody to pay two and a half
+ * thousand extra for food arriving at the same time, which nobody means to
+ * do and some people will do by accident. So a window a run already covers is
+ * not offered: the run is strictly the better deal, and it is right there.
+ *
+ * Only runs still taking orders count. Once the cut off has passed the run is
+ * not an option any more, and the time is worth offering again.
+ */
+export function slotsWorthOffering(
+  slots: Slot[],
+  runs: { run_date: string; window: string }[]
+): Slot[] {
+  const covered = runs
+    .map((run) => ({ date: run.run_date, hours: windowHours(run.window) }))
+    .filter((one): one is { date: string; hours: { from: number; to: number } } =>
+      one.hours !== null
+    );
+  if (covered.length === 0) return slots;
+
+  return slots.filter((slot) => {
+    const date = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(
+      new Date(slot.at)
+    );
+    const from = Number(
+      new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", hour12: false })
+        .format(new Date(slot.at))
+    );
+    const to = from + WINDOW_HOURS;
+
+    return !covered.some(
+      (run) => run.date === date && run.hours.from < to && run.hours.to >= from
+    );
+  });
+}
+
 /** Only what is left today, for anything that should not promise tomorrow. */
 export function slotsToday(
   now: Date = new Date(),

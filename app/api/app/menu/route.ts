@@ -5,7 +5,7 @@ import { hostelNames } from "@/lib/hostels";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
 import { dealsAt, offersByRestaurant } from "@/lib/coupons";
 import { offerBadge, offerLine } from "@/lib/offers";
-import { deliverySlots } from "@/lib/same-day";
+import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { serialiseBands } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
 
@@ -37,7 +37,15 @@ export async function GET(): Promise<NextResponse> {
     // alone rather than a second way to say the same thing.
     const pricing = await sameDayPricing();
     const slots =
-      settings.same_day_on === "on" ? deliverySlots(new Date(), await hoursByDay()) : [];
+      settings.same_day_on === "on"
+        ? slotsWorthOffering(
+            deliverySlots(new Date(), await hoursByDay()),
+            batches.map((one) => ({
+              run_date: one.run_date,
+              window: one.delivery_window_text,
+            }))
+          )
+        : [];
 
     // What is on at each kitchen, said the way the site says it: a few words
     // for the card, a sentence for the top of the menu, and the whole list

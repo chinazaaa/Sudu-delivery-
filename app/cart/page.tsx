@@ -4,7 +4,7 @@ import { hostelNames } from "@/lib/hostels";
 import { liveOffers } from "@/lib/coupons";
 import { openBatches } from "@/lib/batches";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
-import { deliverySlots } from "@/lib/same-day";
+import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { toBatchView } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +30,15 @@ export default async function CartPage({
     // Worked out here so the clock is the shop's rather than the phone's, and
     // so a page left open all morning cannot offer a time that has gone.
     settings.same_day_on === "on"
-      ? hoursByDay().then((hours) => deliverySlots(new Date(), hours))
+      ? hoursByDay().then((hours) =>
+          slotsWorthOffering(
+            deliverySlots(new Date(), hours),
+            batches.map((one) => ({
+              run_date: one.run_date,
+              window: one.delivery_window_text,
+            }))
+          )
+        )
       : Promise.resolve([]),
     sameDayPricing(),
     activeBands(),

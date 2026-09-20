@@ -10,7 +10,7 @@ import { hostelNames } from "@/lib/hostels";
 import Checkout, { type AddingTo } from "@/components/Checkout";
 import { openBatches, recentlyClosedBatch } from "@/lib/batches";
 import { existingLoad } from "@/lib/orders";
-import { deliverySlots } from "@/lib/same-day";
+import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { normalisePhone } from "@/lib/phone";
 import { toBatchView, toClosedBatchView } from "@/lib/view";
 
@@ -64,7 +64,15 @@ export default async function CheckoutPage({
       // has already gone.
       sameDaySlots={
         (await safeSettings()).same_day_on === "on"
-          ? deliverySlots(new Date(), await hoursByDay())
+          ? slotsWorthOffering(
+              deliverySlots(new Date(), await hoursByDay()),
+              // A window a run already covers is not offered: the run gets
+              // there at the same hour for two and a half thousand less.
+              batches.map((one) => ({
+                run_date: one.run_date,
+                window: one.delivery_window_text,
+              }))
+            )
           : []
       }
       sameDayBands={(await sameDayPricing()).bands}
