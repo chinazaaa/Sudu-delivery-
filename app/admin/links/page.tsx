@@ -4,10 +4,10 @@ import LinkBuilder from "@/components/admin/LinkBuilder";
 import { listCheckoutLinks } from "@/lib/checkout-links";
 import { menuView } from "@/lib/menu";
 import { getBatch, openBatches } from "@/lib/batches";
-import { clockLabel, dayWord, runDateLabel } from "@/lib/time";
+import { runDateLabel } from "@/lib/time";
 import { SLOT_LABEL } from "@/lib/config";
 import { hoursByDay, safeSettings } from "@/lib/settings";
-import { deliverySlots, sameInstant } from "@/lib/same-day";
+import { deliverySlots, sameInstant, windowPhrase } from "@/lib/same-day";
 import { toBatchView } from "@/lib/view";
 import { siteUrl } from "@/lib/admin-templates";
 import { naira } from "@/lib/money";
@@ -98,9 +98,15 @@ export default async function LinksPage({
               qty: line.qty,
               options: line.option_ids ?? [],
             })),
+            // Matched to the option it belongs to rather than passed
+            // straight through: a time out of the database is written
+            // differently from the one in the list, so the dropdown could not
+            // recognise its own answer and showed it as something unknown.
             when: editing.batch_id
               ? `run:${editing.batch_id}`
-              : (editing.deliver_at ?? ""),
+              : (slots.find((slot) => sameInstant(slot.at, editing.deliver_at ?? ""))?.at ??
+                editing.deliver_at ??
+                ""),
             fee: editing.fee,
             coupon: editing.coupon_code ?? "",
             paymentLink: editing.payment_link,
@@ -127,10 +133,11 @@ export default async function LinksPage({
                     ? `${runDateLabel(savedRun.run_date)} · ${SLOT_LABEL[savedRun.slot]}`
                     : "The run it was made for"
 
+                  // The window it means, said the way the list says it, so a
+                  // time that has since passed still reads as a time rather
+                  // than as an instant.
                   : editing.deliver_at
-                    ? `${clockLabel(editing.deliver_at)}, ${dayWord(
-                        editing.deliver_at.slice(0, 10)
-                      )}`
+                    ? windowPhrase(editing.deliver_at)
                     : "",
               }
             : null
