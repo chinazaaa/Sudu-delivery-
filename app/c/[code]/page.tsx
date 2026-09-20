@@ -4,7 +4,7 @@ import { getCheckoutLink } from "@/lib/checkout-links";
 import { priceLines } from "@/lib/orders";
 import { getBatch, isOrderable, openBatches } from "@/lib/batches";
 import { hostelNames } from "@/lib/hostels";
-import { safeSettings } from "@/lib/settings";
+import { safeSettings, whatsappLink } from "@/lib/settings";
 import { currentCustomer, customerDetails } from "@/lib/customer-auth";
 import { naira } from "@/lib/money";
 import { db } from "@/lib/supabase";
@@ -190,6 +190,21 @@ export default async function CheckoutLinkPage({
         fee={link.fee}
         hostels={await hostelNames()}
         hasCardLink={link.payment_link !== ""}
+        // A way to say something the form cannot hold: swapping the beef for
+        // chicken, asking whether a second one can go in. Click to send,
+        // never sent on anybody's behalf, and it opens with the basket
+        // already written out so nobody has to describe what they are
+        // looking at.
+        askUs={
+          whatsappLink(
+            settings.whatsapp_number,
+            `Hi Sudu, about ${link.label || "the link you sent"}:\n\n` +
+              priced.lines
+                .map((line) => `${line.qty}x ${line.item.name}`)
+                .join("\n") +
+              `\n\n`
+          ) ?? ""
+        }
       />
 
       {/* A basket somebody was sent is one thing the shop sells, not the

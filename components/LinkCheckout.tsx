@@ -25,6 +25,7 @@ export default function LinkCheckout({
   hostels,
   openChoices,
   hasCardLink,
+  askUs,
   me,
 }: {
   code: string;
@@ -46,6 +47,9 @@ export default function LinkCheckout({
   openChoices: string[];
   /** Whether a card link is waiting, so card needs no message. */
   hasCardLink: boolean;
+  /** A WhatsApp link, opened with the basket written out, for asking
+   *  something the form cannot hold. Empty where no number is set. */
+  askUs: string;
   /** Their own details, when they are signed in on this device. */
   me: { name: string; hostel: string; paymentMethod: "transfer" | "card" } | null;
 }) {
@@ -234,6 +238,20 @@ export default function LinkCheckout({
         >
           {busy ? "Placing…" : "Place my order"}
         </button>
+
+        {/* Anything the form cannot hold: the beef swapped for chicken, a
+            second one added, a question. It opens with the basket written
+            out, so nobody has to describe what they are looking at. */}
+        {askUs !== "" && (
+          <a
+            href={askUs}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-quiet block w-full text-center"
+          >
+            Ask us to change something
+          </a>
+        )}
       </section>
     </>
   );

@@ -465,9 +465,15 @@ export default function LinkBuilder({
           id="note"
           name="note"
           defaultValue={editing?.note ?? ""}
-          placeholder="Optional. Shows above the basket"
+          placeholder="Beef can be swapped for chicken, just say so"
           className="field"
         />
+        <p className="mt-1 text-xs text-muted">
+          Shows above the basket. Worth saying what can be changed: somebody
+          who wants the chicken instead will take the beef or close the tab
+          unless they are told they can ask. There is a button under the form
+          that opens WhatsApp with this basket written out.
+        </p>
       </div>
 
       {problem !== "" && <p className="text-sm font-semibold text-brand-dark">{problem}</p>}
