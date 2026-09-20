@@ -185,14 +185,20 @@ export async function funnel(days = 7): Promise<Funnel> {
   // carts table for this called somebody who typed their number a cart, which
   // put the second step of the funnel below the last one and made the whole
   // shape a lie.
-  const reached = (prefix: string) =>
+  const reached = (...prefixes: string[]) =>
     new Set(
-      seen.filter((row) => row.path.startsWith(prefix)).map((row) => row.visitor)
+      seen
+        .filter((row) => prefixes.some((prefix) => row.path.startsWith(prefix)))
+        .map((row) => row.visitor)
     ).size;
 
   return {
     visitors: new Set(seen.map((row) => row.visitor)).size,
-    openedCart: reached("/cart"),
+    // Both baskets. The skincare shelf has a basket of its own and its
+    // orders are counted in the step below, so leaving it out put more
+    // orders in the funnel than people who reached a cart, which is a shape
+    // that cannot happen and made the whole thing read as a lie.
+    openedCart: reached("/cart", "/skincare"),
     gaveNumber: carts,
     orders,
     paid,
@@ -296,4 +302,93 @@ async function runLabels(ids: string[]): Promise<Map<string, string>> {
       `${runDateLabel(row.run_date as string)} · ${SLOT_LABEL[row.slot as keyof typeof SLOT_LABEL]}`,
     ])
   );
+}
+
+export type ShelfNumbers = {
+  orders: number;
+  paid: number;
+  /** What the products came to, and what delivery came to, kept apart: they
+   *  are two different arguments about whether this is working. */
+  food: number;
+  delivery: number;
+  /** The next car, and what is already on it. */
+  waiting: number;
+  top: { name: string; qty: number }[];
+};
+
+/**
+ * The skincare shelf on its own.
+ *
+ * Its orders are ordinary orders and land in every total on this page, which
+ * is right: money is money. What that hides is whether the shelf is working,
+ * because two thousand products next to a pizza shop is either a second
+ * business or a page nobody opens, and one number cannot say which.
+ */
+export async function shelfNumbers(days = 7): Promise<ShelfNumbers | null> {
+  const since = new Date(Date.now() - days * 86400_000).toISOString();
+
+  const { data: cars, error } = await db()
+    .from("batches")
+    .select("id, status")
+    .eq("kind", "skincare");
+  // No column, no shelf, nothing to say.
+  if (error) return null;
+
+  const ids = ((cars ?? []) as { id: string; status: string }[]).map((one) => one.id);
+  if (ids.length === 0) return { orders: 0, paid: 0, food: 0, delivery: 0, waiting: 0, top: [] };
+
+  const open = ((cars ?? []) as { id: string; status: string }[])
+    .filter((one) => one.status === "open")
+    .map((one) => one.id);
+
+  const { data: orders } = await db()
+    .from("orders")
+    .select("id, batch_id, status, subtotal_food, fee")
+    .in("batch_id", ids)
+    .gte("created_at", since);
+
+  const rows = ((orders ?? []) as {
+    id: string;
+    batch_id: string;
+    status: string;
+    subtotal_food: number;
+    fee: number;
+  }[]).filter((one) => one.status !== "refunded");
+
+  // What people actually bought, so the next import knows what to keep in
+  // stock. Only from the orders just counted, which keeps it to one query.
+  const top: { name: string; qty: number }[] = [];
+  if (rows.length > 0) {
+    const { data: items } = await db()
+      .from("order_items")
+      .select("menu_item_id, qty")
+      .in("order_id", rows.map((one) => one.id).slice(0, 200));
+
+    const counts = new Map<string, number>();
+    for (const one of ((items ?? []) as { menu_item_id: string; qty: number }[])) {
+      counts.set(one.menu_item_id, (counts.get(one.menu_item_id) ?? 0) + one.qty);
+    }
+
+    const wanted = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+    if (wanted.length > 0) {
+      const { data: named } = await db()
+        .from("menu_items")
+        .select("id, name")
+        .in("id", wanted.map(([id]) => id));
+      const names = new Map(
+        ((named ?? []) as { id: string; name: string }[]).map((one) => [one.id, one.name])
+      );
+      for (const [id, qty] of wanted) top.push({ name: names.get(id) ?? "Gone", qty });
+    }
+  }
+
+  return {
+    orders: rows.length,
+    paid: rows.filter((one) => one.status !== "pending").length,
+    food: rows.reduce((sum, one) => sum + one.subtotal_food, 0),
+    delivery: rows.reduce((sum, one) => sum + one.fee, 0),
+    // On the car that has not gone yet, whenever it was ordered.
+    waiting: rows.filter((one) => open.includes(one.batch_id)).length,
+    top,
+  };
 }

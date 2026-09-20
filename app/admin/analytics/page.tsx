@@ -1,7 +1,7 @@
 import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
-import { feedback, funnel, traffic } from "@/lib/analytics";
+import { feedback, funnel, shelfNumbers, traffic } from "@/lib/analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -16,10 +16,11 @@ export default async function AnalyticsPage({
   const days = RANGES.includes(asked as (typeof RANGES)[number]) ? asked : 7;
 
   // Null means nothing is counting yet. The rest of the page still works.
-  const [views, steps, said] = await Promise.all([
+  const [views, steps, said, shelf] = await Promise.all([
     traffic(days),
     funnel(days),
     feedback(days),
+    shelfNumbers(days),
   ]);
   const busiest = views ? Math.max(...views.perDay.map((day) => day.views), 1) : 1;
 
@@ -67,6 +68,54 @@ export default async function AnalyticsPage({
           hint="Of the people who looked"
         />
       </div>
+
+      {/* The shelf on its own. Its orders are in every total above, which is
+          right, and that is exactly what hides whether the shelf itself is
+          working: two thousand products beside a pizza shop is either a
+          second business or a page nobody opens. */}
+      {shelf && (shelf.orders > 0 || shelf.waiting > 0) && (
+        <section className="card space-y-3">
+          <div>
+            <h2 className="font-bold">Skincare</h2>
+            <p className="text-sm text-muted">
+              Counted again on its own. These orders are also in the totals
+              above.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Stat
+              label="Orders"
+              value={shelf.orders}
+              hint={`${shelf.paid} paid · last ${days} days`}
+            />
+            <Stat label="Products" value={shelf.food} money hint="What they bought" />
+            <Stat label="Delivery" value={shelf.delivery} money hint="What the cars took" />
+            <Stat
+              label="On the next car"
+              value={shelf.waiting}
+              hint="Ordered, not gone yet"
+            />
+          </div>
+
+          {shelf.top.length > 0 && (
+            <div>
+              <p className="label mb-1">What sold</p>
+              <ul className="space-y-1">
+                {shelf.top.map((one) => (
+                  <li
+                    key={one.name}
+                    className="flex items-center justify-between gap-3 rounded-xl bg-shell px-3 py-2 text-sm"
+                  >
+                    <span className="min-w-0 truncate">{one.name}</span>
+                    <span className="shrink-0 font-bold">{one.qty}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="card space-y-3">
         <div>
