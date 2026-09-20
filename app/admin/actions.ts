@@ -8,7 +8,7 @@ import { batchSheet, stillOpen } from "@/lib/admin";
 import { db } from "@/lib/supabase";
 import { STAGES, type BatchStage } from "@/lib/stages";
 import { type BatchSlot } from "@/lib/config";
-import { hoursByDay, deliveryWindows, externalUrl } from "@/lib/settings";
+import { hoursByDay, deliveryWindows, externalUrl, sayWindow } from "@/lib/settings";
 import { runSchedule } from "@/lib/schedule";
 import { deliverySlots } from "@/lib/same-day";
 import { lagosInstant, lagosToday } from "@/lib/time";
@@ -365,11 +365,16 @@ export async function updateRun(form: FormData): Promise<void> {
       ? String(form.get("slot"))
       : (batch.slot as string);
 
-  const patch: Record<string, string> = {
-    run_date: runDate,
-    slot,
-    delivery_window_text: String(form.get("delivery_window_text") ?? "").trim(),
-  };
+  const patch: Record<string, string> = { run_date: runDate, slot };
+
+  // Two times rather than a sentence, so this run's hours can be compared
+  // with a same day window instead of being read out of prose. Both empty
+  // leaves the window exactly as it was.
+  const said = sayWindow(
+    String(form.get("window_from") ?? ""),
+    String(form.get("window_to") ?? "")
+  );
+  if (said !== "") patch.delivery_window_text = said;
 
   const time = String(form.get("cut_off_time") ?? "").trim();
   if (/^\d{2}:\d{2}$/.test(time)) {

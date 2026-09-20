@@ -1091,18 +1091,34 @@ export default async function BatchPage({
                       </div>
                     )}
 
+                    {/* Two times rather than a sentence, so this run's hours
+                        can be compared with a same day window rather than
+                        read out of prose. What the customer is told is built
+                        from them. */}
                     <div className="flex flex-wrap items-end gap-2">
                       <div className="grow">
-                        <label className="label" htmlFor="delivery_window_text">
-                          What customers are told
-                        </label>
-                        <input
-                          id="delivery_window_text"
-                          name="delivery_window_text"
-                          defaultValue={batch.delivery_window_text}
-                          placeholder="On campus ~2:00pm"
-                          className="field"
-                        />
+                        <p className="label">This run arrives between</p>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="time"
+                            name="window_from"
+                            aria-label="Earliest this run arrives"
+                            defaultValue={windowValues(batch.delivery_window_text).from}
+                            className="field"
+                          />
+                          <span className="text-sm text-muted">and</span>
+                          <input
+                            type="time"
+                            name="window_to"
+                            aria-label="Latest this run arrives"
+                            defaultValue={windowValues(batch.delivery_window_text).to}
+                            className="field"
+                          />
+                        </div>
+                        <p className="mt-1 text-xs text-muted">
+                          Now: {batch.delivery_window_text || "nothing set"}. Leave both
+                          empty to keep it as it is.
+                        </p>
                       </div>
                       <div className="w-36">
                         <label className="label" htmlFor="cut_off_time">
@@ -1260,6 +1276,24 @@ export default async function BatchPage({
 }
 
 /** A timestamp as an <input type="time"> wants it, in Lagos time. */
+/**
+ * The two times behind a window, read back out of the words it was written
+ * in, so the pickers open on what the run already says.
+ *
+ * A window created before these pickers existed, or typed by hand, may have
+ * no times in it at all: "On campus soon" answers nothing, and the pickers
+ * start empty rather than inventing an hour.
+ */
+function windowValues(text: string): { from: string; to: string } {
+  const found = [...text.matchAll(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/gi)].map((one) => {
+    const hour = Number(one[1]) % 12;
+    const minutes = one[2] ?? "00";
+    const adjusted = one[3].toLowerCase() === "pm" ? hour + 12 : hour;
+    return `${String(adjusted).padStart(2, "0")}:${minutes}`;
+  });
+  return { from: found[0] ?? "", to: found[1] ?? "" };
+}
+
 function clockValue(iso: string): string {
   return new Date(iso).toLocaleTimeString("en-GB", {
     hour: "2-digit",
