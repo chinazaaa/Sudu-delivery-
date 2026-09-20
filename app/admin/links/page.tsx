@@ -42,6 +42,22 @@ export default async function LinksPage() {
         name: item.name,
         restaurant: place.restaurant.name,
         price: item.price,
+        // The questions this dish asks. A size changes the price, so a link
+        // that skipped it would charge the wrong amount; a crust does not,
+        // and is better left to the person eating it.
+        groups: item.groups.map((group) => ({
+          id: group.id,
+          name: group.name,
+          required: group.required,
+          maxSelect: group.maxSelect,
+          options: group.options
+            .filter((option) => option.available)
+            .map((option) => ({
+              id: option.id,
+              name: option.name,
+              priceDelta: option.priceDelta,
+            })),
+        })),
       }))
   );
 

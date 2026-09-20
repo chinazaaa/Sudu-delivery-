@@ -23,6 +23,7 @@ export default function LinkCheckout({
   food,
   fee,
   hostels,
+  openChoices,
   hasCardLink,
   me,
 }: {
@@ -34,6 +35,9 @@ export default function LinkCheckout({
    *  because a promotion may price it. */
   fee: number | null;
   hostels: string[];
+  /** Questions the link left open, by name, so the note can say what it is
+   *  for rather than sitting there blank. */
+  openChoices: string[];
   /** Whether a card link is waiting, so card needs no message. */
   hasCardLink: boolean;
   /** Their own details, when they are signed in on this device. */
@@ -186,10 +190,23 @@ export default function LinkCheckout({
         <input
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          placeholder="Anything we should know? (optional)"
+          placeholder={
+            openChoices.length > 0
+              ? `${openChoices[0]}? Say it here`
+              : "Anything we should know? (optional)"
+          }
           aria-label="Anything we should know"
           className="field"
         />
+        {openChoices.length > 0 && (
+          <p className="text-xs text-muted">
+            {openChoices.length === 1
+              ? `${openChoices[0]} is yours to pick, and it costs nothing either way: say which in the note and the counter is told.`
+              : `${openChoices.slice(0, -1).join(", ")} and ${
+                  openChoices[openChoices.length - 1]
+                } are yours to pick, and they cost nothing either way: say which in the note and the counter is told.`}
+          </p>
+        )}
 
         <PayChoice value={method} onChange={setMethod} />
         {method === "card" && hasCardLink && (

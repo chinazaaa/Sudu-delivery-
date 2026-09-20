@@ -7,6 +7,8 @@ import { hostelNames } from "@/lib/hostels";
 import { safeSettings } from "@/lib/settings";
 import { currentCustomer, customerDetails } from "@/lib/customer-auth";
 import { naira } from "@/lib/money";
+import { db } from "@/lib/supabase";
+import type { CartLine } from "@/lib/types";
 import { runDateLabel, clockLabel } from "@/lib/time";
 import { SLOT_LABEL } from "@/lib/config";
 import LinkCheckout from "@/components/LinkCheckout";
@@ -22,6 +24,38 @@ export const dynamic = "force-dynamic";
  * are and where it goes, which is the least anybody can be asked for and
  * still get dinner.
  */
+/**
+ * The questions this basket leaves open.
+ *
+ * A link settles everything that moves the price. What it does not settle,
+ * and should not, is which crust or which drink: that belongs to whoever is
+ * eating, and the note is where they say it. Naming them beats a blank box,
+ * because nobody writes "thin crust please" unless they know they may.
+ */
+async function freeChoices(lines: CartLine[]): Promise<string[]> {
+  const chosen = new Set(lines.flatMap((line) => line.option_ids ?? []));
+  const items = [...new Set(lines.map((line) => line.menu_item_id))];
+  if (items.length === 0) return [];
+
+  const { data: groups } = await db()
+    .from("item_option_groups")
+    .select("id, name, menu_item_id")
+    .in("menu_item_id", items);
+  if (!groups || groups.length === 0) return [];
+
+  const { data: options } = await db()
+    .from("item_options")
+    .select("id, group_id, price_delta")
+    .in("id", [...chosen].length > 0 ? [...chosen] : ["none"]);
+
+  // A question already answered by the link is not theirs to answer again.
+  const answered = new Set((options ?? []).map((one) => one.group_id as string));
+
+  return (groups as { id: string; name: string }[])
+    .filter((group) => !answered.has(group.id))
+    .map((group) => group.name);
+}
+
 export default async function CheckoutLinkPage({
   params,
 }: {
@@ -133,6 +167,10 @@ export default async function CheckoutLinkPage({
           choices: line.options.map((one) => one.name),
           total: line.unitPrice * line.qty,
         }))}
+        // What is still theirs to say: a crust, which drink. Anything that
+        // moved the price was settled when the link was made, so this is only
+        // ever the free choices, and the note is where they go.
+        openChoices={await freeChoices(link.lines)}
         food={food}
         fee={link.fee}
         hostels={await hostelNames()}

@@ -982,6 +982,12 @@ export async function saveLink(form: FormData): Promise<{ ok: boolean; error?: s
   const lines = items.map((id) => ({
     menu_item_id: id,
     qty: Math.max(1, Number(form.get(`qty_${id}`) ?? 1)),
+    // The size, the flavour: everything that moves the price, settled when
+    // the link was made. Priced on the server like any other order.
+    option_ids: String(form.get(`options_${id}`) ?? "")
+      .split(",")
+      .map((one) => one.trim())
+      .filter(Boolean),
   }));
 
   const when = String(form.get("when") ?? "");

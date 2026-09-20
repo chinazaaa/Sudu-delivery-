@@ -4,7 +4,33 @@ import { useState } from "react";
 import { naira } from "@/lib/money";
 import { saveLink } from "@/app/admin/actions";
 
-type Dish = { id: string; name: string; restaurant: string; price: number };
+type Option = { id: string; name: string; priceDelta: number };
+type Group = {
+  id: string;
+  name: string;
+  required: boolean;
+  maxSelect: number;
+  options: Option[];
+};
+type Dish = {
+  id: string;
+  name: string;
+  restaurant: string;
+  price: number;
+  groups: Group[];
+};
+
+/**
+ * A question worth answering here rather than leaving to the note.
+ *
+ * Anything that moves the price has to be settled when the link is made, or
+ * the basket says one figure and the order charges another. Anything that
+ * does not, a crust or which drink, is better left to the person eating it,
+ * and the link tells them to say so in the note.
+ */
+function costs(group: Group): boolean {
+  return group.required || group.options.some((option) => option.priceDelta !== 0);
+}
 
 /**
  * Making a link to send.
@@ -25,7 +51,9 @@ export default function LinkBuilder({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [picked, setPicked] = useState<{ id: string; qty: number }[]>([]);
+  const [picked, setPicked] = useState<
+    { id: string; qty: number; options: string[] }[]
+  >([]);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const [done, setDone] = useState(false);
@@ -44,10 +72,29 @@ export default function LinkBuilder({
           .slice(0, 8);
 
   const named = (id: string) => dishes.find((dish) => dish.id === id);
-  const food = picked.reduce(
-    (sum, one) => sum + (named(one.id)?.price ?? 0) * one.qty,
-    0
-  );
+  /** What a line costs, the chosen options included, exactly as the order
+   *  will price it. */
+  const lineTotal = (one: { id: string; qty: number; options: string[] }) => {
+    const dish = named(one.id);
+    if (!dish) return 0;
+    const extras = dish.groups
+      .flatMap((group) => group.options)
+      .filter((option) => one.options.includes(option.id))
+      .reduce((sum, option) => sum + option.priceDelta, 0);
+    return (dish.price + extras) * one.qty;
+  };
+
+  const food = picked.reduce((sum, one) => sum + lineTotal(one), 0);
+
+  /** Questions that must be answered before this link can be sent. */
+  const unanswered = picked.filter((one) => {
+    const dish = named(one.id);
+    if (!dish) return false;
+    return dish.groups.some(
+      (group) =>
+        group.required && !group.options.some((option) => one.options.includes(option.id))
+    );
+  });
 
   if (!open) {
     return (
@@ -112,7 +159,17 @@ export default function LinkBuilder({
                 <button
                   type="button"
                   onClick={() => {
-                    setPicked((was) => [...was, { id: dish.id, qty: 1 }]);
+                    setPicked((was) => [
+                      ...was,
+                      {
+                        id: dish.id,
+                        qty: 1,
+                        // A question with one answer answers itself.
+                        options: dish.groups
+                          .filter((group) => group.required && group.options.length === 1)
+                          .map((group) => group.options[0].id),
+                      },
+                    ]);
                     setQuery("");
                   }}
                   className="flex w-full items-center justify-between gap-3 rounded-xl border border-black/10 px-3 py-2 text-left text-sm"
@@ -134,12 +191,15 @@ export default function LinkBuilder({
               const dish = named(one.id);
               if (!dish) return null;
               return (
-                <li
-                  key={one.id}
-                  className="flex items-center justify-between gap-3 rounded-xl bg-shell px-3 py-2 text-sm"
-                >
+                <li key={one.id} className="space-y-2 rounded-xl bg-shell px-3 py-2 text-sm">
                   <input type="hidden" name="item_id" value={one.id} />
                   <input type="hidden" name={`qty_${one.id}`} value={one.qty} />
+                  <input
+                    type="hidden"
+                    name={`options_${one.id}`}
+                    value={one.options.join(",")}
+                  />
+                  <div className="flex items-center justify-between gap-3">
                   <span className="min-w-0">
                     <span className="font-semibold">{dish.name}</span>
                     <span className="block text-xs text-muted">{dish.restaurant}</span>
@@ -184,6 +244,73 @@ export default function LinkBuilder({
                       Remove
                     </button>
                   </span>
+                  </div>
+
+                  {/* The questions that move the price, answered here. A
+                      basket that skipped the size would say one figure and
+                      the order would charge another. */}
+                  {dish.groups.filter(costs).map((group) => (
+                    <div key={group.id} className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-xs font-bold text-muted">{group.name}</span>
+                      {group.options.map((option) => {
+                        const on = one.options.includes(option.id);
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() =>
+                              setPicked((was) =>
+                                was.map((item) =>
+                                  item.id !== one.id
+                                    ? item
+                                    : {
+                                        ...item,
+                                        options: on
+                                          ? item.options.filter((id) => id !== option.id)
+                                          : [
+                                              // One answer to a one-answer
+                                              // question: picking a second
+                                              // size replaces the first.
+                                              ...item.options.filter(
+                                                (id) =>
+                                                  group.maxSelect > 1 ||
+                                                  !group.options.some((other) => other.id === id)
+                                              ),
+                                              option.id,
+                                            ],
+                                      }
+                                )
+                              )
+                            }
+                            className={`chip text-xs ${
+                              on ? "border-brand bg-brand-tint text-brand-dark" : "border-black/10 bg-white"
+                            }`}
+                          >
+                            {option.name}
+                            {option.priceDelta !== 0 && ` +${naira(option.priceDelta)}`}
+                          </button>
+                        );
+                      })}
+                      {group.required &&
+                        !group.options.some((option) => one.options.includes(option.id)) && (
+                          <span className="text-xs font-semibold text-brand-dark">
+                            pick one
+                          </span>
+                        )}
+                    </div>
+                  ))}
+
+                  {/* Anything that does not move the price is better left to
+                      the person eating it, and the link says so. */}
+                  {dish.groups.some((group) => !costs(group)) && (
+                    <p className="text-xs text-muted">
+                      {dish.groups
+                        .filter((group) => !costs(group))
+                        .map((group) => group.name)
+                        .join(" and ")}{" "}
+                      is left to them, and the link tells them to say so in the note.
+                    </p>
+                  )}
                 </li>
               );
             })}
@@ -192,6 +319,13 @@ export default function LinkBuilder({
 
         {picked.length > 0 && (
           <p className="mt-2 text-sm font-bold">Food: {naira(food)}</p>
+        )}
+        {unanswered.length > 0 && (
+          <p className="mt-1 text-xs font-semibold text-brand-dark">
+            Answer every question above first. A size or a flavour that changes
+            the price has to be settled here, or the basket says one figure and
+            the order charges another.
+          </p>
         )}
       </div>
 
@@ -287,7 +421,11 @@ export default function LinkBuilder({
       )}
 
       <div className="flex items-center gap-2">
-        <button type="submit" disabled={busy || picked.length === 0} className="btn-primary px-5">
+        <button
+          type="submit"
+          disabled={busy || picked.length === 0 || unanswered.length > 0}
+          className="btn-primary px-5"
+        >
           {busy ? "Saving…" : "Make the link"}
         </button>
         <button
