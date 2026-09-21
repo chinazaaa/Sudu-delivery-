@@ -5,6 +5,7 @@ import Sheet from "./Sheet";
 import { useRouter } from "next/navigation";
 import type { Slot } from "@/lib/same-day";
 import type { ArrivalRun } from "@/lib/arrival";
+import { dearestArea, withExtra, type Area } from "@/lib/areas";
 
 import Link from "next/link";
 import Empty from "@/components/Empty";
@@ -36,6 +37,8 @@ export default function CartView({
   today = "",
   hostels = [],
   bands = [],
+  areas = [],
+  areaOf = {},
   offers = [],
   nextRunId = "",
   startGroup = false,
@@ -50,8 +53,12 @@ export default function CartView({
   today?: string;
   /** The blocks admin delivers to. Empty means anything typed is allowed. */
   hostels?: string[];
-  /** The delivery price list in force, so the saving shown is the real one. */
+  /** The delivery price list in force, so the saving shown is the real one.
+   *  It is what Sangotedo costs; anywhere further adds to every band. */
   bands?: Band[];
+  /** The areas the shop delivers from, and which one each kitchen is in. */
+  areas?: Area[];
+  areaOf?: Record<string, string>;
   /** The offers on today, so the cart can say when it is one thing away from
    *  one rather than leaving somebody to wonder why it is not free. */
   offers?: LiveOffer[];
@@ -413,10 +420,17 @@ export default function CartView({
     deliverAt: null,
     returning: false,
   });
+  // Priced by the furthest kitchen in the cart, the same rule the checkout
+  // quotes and the server charges by: one car fetches all of it, so the trip
+  // is as long as its longest leg.
+  const ladder = withExtra(
+    bands,
+    dearestArea(areas, [...new Set(cart.map((line) => line.restaurantId))], areaOf).runExtra
+  );
   const alone = promotion
     ? promotion.fee
-    : bands.length > 0
-      ? feeFor(countItems(cart), null, bands)
+    : ladder.length > 0
+      ? feeFor(countItems(cart), null, ladder)
       : 0;
 
   const names = people.map((p) => p.name);

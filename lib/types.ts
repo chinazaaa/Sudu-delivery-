@@ -17,6 +17,9 @@ export type Restaurant = {
   /** "food" or "skincare". Skincare is the same shop on a different day, and
    *  this is what keeps its two thousand products out of a food menu. */
   kind?: string;
+  /** Where it is. Empty is Sangotedo, which is what the ladders were written
+   *  for; anywhere else is further to drive and says so. */
+  area?: string;
 };
 
 export type MenuCategory = {
@@ -83,6 +86,8 @@ export type Batch = {
    *  drop. It is what keeps the last two out of the list customers pick a
    *  run from. */
   kind: "run" | "same_day" | "skincare";
+  /** Which areas this car goes to, beyond Sangotedo, as "|lekki|". */
+  areas?: string;
   /** The time asked for. Only ever set on a same day delivery. */
   deliver_at: string | null;
   /** What the run cost to make, typed in once it is done. */

@@ -24,6 +24,8 @@ import ActionButton from "@/components/admin/ActionButton";
 import StagePicker from "@/components/admin/StagePicker";
 import SendSheet from "@/components/admin/SendSheet";
 import { payableAccounts } from "@/lib/banks";
+import { allAreas } from "@/lib/areas-server";
+import { areasOfRun } from "@/lib/areas";
 import { batchSheet, notPriced, stillOpen, typicalCosts, shortfalls } from "@/lib/admin";
 import { SLOT_LABEL } from "@/lib/config";
 import Link from "next/link";
@@ -60,6 +62,7 @@ export default async function BatchPage({
   if (!sheet) notFound();
 
   const { batch, counter, handout, unpaid, summary, refunds, groupsShort, pins } = sheet;
+  const areas = await allAreas();
 
   // One wording for a share, here and in the message the customer gets:
   // #1001a and #1001b, never #1001 on this screen and #1001a on theirs.
@@ -1063,6 +1066,31 @@ export default async function BatchPage({
                           : "It has orders on it, so the day and the slot are fixed. The window and the cut-off can still move."}
                       </p>
                     </div>
+
+                    {areas.length > 0 && (
+                      <div className="space-y-2 rounded-2xl bg-shell p-3">
+                        <input type="hidden" name="areas_set" value="1" />
+                        <p className="label mb-0">Where this car goes</p>
+                        <p className="text-xs text-muted">
+                          It always passes Sangotedo. Tick anywhere else it is
+                          going, and those restaurants can be ordered onto it.
+                          Left unticked, an order from there cannot pick this
+                          run, which is the point: a car that was never going
+                          to Lekki cannot fetch from Lekki.
+                        </p>
+                        {areas.map((one) => (
+                          <label key={one.id} className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              name="area"
+                              value={one.id}
+                              defaultChecked={areasOfRun(batch.areas ?? "").includes(one.id)}
+                            />
+                            {one.name}
+                          </label>
+                        ))}
+                      </div>
+                    )}
 
                     {empty && (
                       <div className="grid gap-3 sm:grid-cols-2">

@@ -25,7 +25,9 @@ import { naira, orderRef } from "./money";
 import { SLOT_LABEL } from "./config";
 import { runDateLabel, weekdayLabel } from "./time";
 import { createSameDayBatch, getBatch, isOrderable, orderCounts } from "./batches";
-import { bandsFor, skincareIn } from "./skincare";
+import { bandsFor, isSkincareBatch, skincareIn } from "./skincare";
+import { areaOfCart } from "./areas-server";
+import { areasOfRun, runCovers } from "./areas";
 import { stageIndex } from "./stages";
 import { deliverySlots, sameInstant, type Slot } from "./same-day";
 import { normalisePhone } from "./phone";
@@ -154,6 +156,31 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   const sameDay = input.deliverAt ? await checkSameDay(input.deliverAt) : null;
   if (sameDay && "error" in sameDay) return { ok: false, error: sameDay.error };
 
+  // Priced here, before anything commits to a car, because an order that
+  // cannot go at all should be refused before a car is made for it.
+  const priced = await priceLines(input.lines);
+  if ("error" in priced) return { ok: false, error: priced.error };
+
+  // How far the car has to go, which decides both what delivery costs and
+  // what this order is allowed to go on. Looked up here rather than trusted
+  // from the browser: a cart is written on a phone and a phone can say
+  // anything, and this is the sentence the bill comes from.
+  const where = await areaOfCart(placesIn(priced.lines));
+
+  // Three hours is the whole promise of a car of its own: fetch it, drive it
+  // over. An hour each way to somewhere further out eats that before the
+  // kitchen has started, so a far order rides a run or it waits, rather than
+  // being a promise broken on the day.
+  if (sameDay && !where.sameDay) {
+    const far = where.all.find((one) => !one.sameDay);
+    return {
+      ok: false,
+      error:
+        `${far?.name ?? "That restaurant"} is too far for a car of its own. ` +
+        "It goes on a run, so pick one and everything travels together.",
+    };
+  }
+
   // A party that is already going has a car. Whoever ordered first chose it,
   // for a time or for a run, and everybody after rides in that one: letting a
   // joiner pick their own would be two cars, which is not sharing a delivery.
@@ -197,6 +224,22 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
       : await getBatch(input.batchId);
 
   if (!batch) return { ok: false, error: "That batch no longer exists." };
+
+  // A run is a car with a route. It always passes Sangotedo and it goes
+  // anywhere else only because somebody said so when it was made, so a
+  // Thursday run that was never going to Lekki cannot pick up a Lekki order
+  // because somebody put one in the basket.
+  if (!sameDay && !isSkincareBatch(batch) && !runCovers(batch.areas ?? "", where.all)) {
+    const missed = where.all.find(
+      (one) => !areasOfRun(batch.areas ?? "").includes(one.id)
+    );
+    return {
+      ok: false,
+      error:
+        `That run is not going to ${missed?.name ?? "that area"}. ` +
+        "Pick one that does, or take those things out.",
+    };
+  }
   if (!sameDay && !party && !isOrderable(batch)) {
     return { ok: false, error: "That batch has closed. Pick the next one." };
   }
@@ -221,13 +264,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   const capacityError = await checkCapacity(batch);
   if (capacityError) return { ok: false, error: capacityError };
 
-  const priced = await priceLines(input.lines);
-  if ("error" in priced) return { ok: false, error: priced.error };
-
   // Delivery is priced from whatever bands the admin has set, read here so a
   // price change takes effect on the next order and not on a redeploy. Which
-  // ladder is a fact about the car: the weekly skincare drop has its own.
-  const bands = await bandsFor(batch);
+  // ladder is a fact about two things: how far the car has to go, and whether
+  // it is the weekly skincare drop, which has one of its own.
+  const bands = isSkincareBatch(batch) ? await bandsFor(batch) : where.bands;
   const customerNote = (input.customerNote ?? "").trim();
   const returning = await isReturningCustomer(phone);
 
@@ -334,8 +375,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
             ? sameDayFee(
                 countItems(priced.lines),
                 sameDay.slot.urgent,
-                sameDay.pricing.bands,
-                sameDay.pricing.urgentExtra
+                // The ladder as this cart is charged it, distance and all.
+                // A car of its own only goes to areas that allow one, so
+                // this is the home ladder unless an area says otherwise.
+                where.sameDayBands,
+                where.urgentExtra
               )
             : null,
           groupMode: input.groupMode ?? null,

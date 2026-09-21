@@ -14,6 +14,14 @@ import {
   usePeople,
 } from "@/lib/cart";
 import { feeFor, sameDayFee, splitFee, type Band } from "@/lib/fees";
+import {
+  areasIn,
+  canGoSameDay,
+  dearestArea,
+  runCovers,
+  withExtra,
+  type Area,
+} from "@/lib/areas";
 import { offerShare, pickOffer, type LiveOffer } from "@/lib/offers";
 import { normalisePhone } from "@/lib/phone";
 import FeeBands from "./FeeBands";
@@ -56,10 +64,12 @@ export default function Checkout({
   batches,
   today,
   adding,
-  sameDaySlots,
-  sameDayBands,
+  sameDaySlots: allSlots,
+  sameDayBands: baseSameDayBands,
   urgentExtra,
-  bands,
+  bands: baseBands,
+  areas,
+  areaOf,
   offers,
   hostels,
 }: {
@@ -75,8 +85,12 @@ export default function Checkout({
    *  charged. */
   sameDayBands: Band[];
   urgentExtra: number;
-  /** The delivery price list in force, read from settings on the server. */
+  /** The delivery price list in force, read from settings on the server. It
+   *  is what Sangotedo costs; anywhere further adds to every band. */
   bands: Band[];
+  /** The areas the shop delivers from, and which one each kitchen is in. */
+  areas: Area[];
+  areaOf: Record<string, string>;
   /** Promotions on today. The same rule that prices the order judges them
    *  here, so what is quoted is what is charged. */
   offers: LiveOffer[];
@@ -85,7 +99,23 @@ export default function Checkout({
 }) {
   const cart = useCart();
   const { people } = usePeople();
-  const openable = batches.filter((b) => !b.closed && !b.full);
+
+  // How far the car has to go for this cart, which decides three things: what
+  // delivery costs, whether a car of its own can go at all, and which runs
+  // can carry it. The same rule the server prices by, so the number here is
+  // the number on the bill.
+  const kitchens = [...new Set(cart.map((line) => line.restaurantId))];
+  const cartAreas = areasIn(areas, kitchens, areaOf);
+  const area = dearestArea(areas, kitchens, areaOf);
+  const bands = withExtra(baseBands, area.runExtra);
+  const sameDayBands = withExtra(baseSameDayBands, area.sameDayExtra);
+  // One thing from a far area makes the whole order a run: a car cannot be
+  // in two places in three hours.
+  const sameDaySlots = canGoSameDay(cartAreas) ? allSlots : [];
+
+  const openable = batches.filter(
+    (b) => !b.closed && !b.full && runCovers(b.areas, cartAreas)
+  );
 
   // The soonest way to eat, the same rule as everywhere else: a run today, a
   // car of its own today, a run tomorrow, tomorrow's first window.

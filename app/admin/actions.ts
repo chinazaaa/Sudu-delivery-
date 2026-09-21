@@ -30,6 +30,7 @@ import { fileFrom, uploadImage } from "@/lib/uploads";
 import { parseMenuText } from "@/lib/menu-import";
 import { parseProducts, shelfText } from "@/lib/skincare-import";
 import { skincareShelves } from "@/lib/skincare";
+import { areaText } from "@/lib/areas";
 import { newPin } from "@/lib/customer-auth";
 import { pushDeal, pushToPhone } from "@/lib/push";
 
@@ -388,6 +389,13 @@ export async function updateRun(form: FormData): Promise<void> {
   if (/^\d{2}:\d{2}$/.test(time)) {
     const [hour, minute] = time.split(":").map(Number);
     patch.cut_off_at = lagosInstant(runDate, hour, minute);
+  }
+
+  // Where this car goes beyond Sangotedo, which it always passes. A run that
+  // was never going to Lekki cannot pick up a Lekki order because somebody
+  // put one in a basket, so this is what the checkout checks against.
+  if (form.get("areas_set") !== null) {
+    patch.areas = areaText(form.getAll("area").map(String));
   }
 
   await db().from("batches").update(patch).eq("id", id);
@@ -1436,6 +1444,7 @@ const SETTING_FIELDS = [
   "skincare_blurb",
   "skincare_bands",
   "skincare_promise",
+  "delivery_areas",
 ] as const;
 
 export async function saveSettings(form: FormData): Promise<void> {
@@ -1627,6 +1636,9 @@ export async function updateRestaurant(form: FormData): Promise<void> {
       // Off keeps a restaurant and its menu but takes it off the site, which is
       // how the brief adds Panarottis and the rest once the run is boring.
       active: form.get("active") === "on",
+      // Where it is. Empty is Sangotedo, which is what the ladders were
+      // written for; anywhere else adds to every band and may be run only.
+      area: String(form.get("area") ?? "").trim(),
     })
     .eq("id", String(form.get("restaurant_id")));
   revalidatePath("/admin", "layout");

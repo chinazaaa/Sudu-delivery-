@@ -1,6 +1,8 @@
 import SaveButton from "@/components/SaveButton";
 import PageHeader from "@/components/admin/PageHeader";
 import BandEditor from "@/components/admin/BandEditor";
+import AreaEditor from "@/components/admin/AreaEditor";
+import { parseAreas } from "@/lib/areas";
 import DayHours from "@/components/admin/DayHours";
 import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
@@ -566,6 +568,24 @@ export default async function SettingsAdmin() {
         </div>
         <BandEditor initial={parseBands(settings.fee_bands)} />
         <SaveButton>Save prices</SaveButton>
+      </form>
+
+      <form action={saveSettings} className="card space-y-3">
+        <div>
+          <h2 className="font-semibold">Restaurants further out</h2>
+          <p className="text-sm text-muted">
+            The ladders above are what Sangotedo costs, because that is the
+            parade the shop was built around. A kitchen further out is the
+            same order and more road, and charging the Sangotedo price for it
+            is losing money on every one without noticing.
+          </p>
+        </div>
+        <AreaEditor
+          initial={parseAreas(settings.delivery_areas)}
+          runBands={parseBands(settings.fee_bands)}
+          sameDayBands={parseBands(settings.same_day_bands)}
+        />
+        <SaveButton>Save areas</SaveButton>
       </form>
 
       <form action={saveSettings} className="card space-y-3">

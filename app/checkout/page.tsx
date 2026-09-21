@@ -13,6 +13,7 @@ import { openBatches, recentlyClosedBatch } from "@/lib/batches";
 import { existingLoad } from "@/lib/orders";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { normalisePhone } from "@/lib/phone";
+import { allAreas, areaOfEach } from "@/lib/areas-server";
 import { toBatchView, toClosedBatchView } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -80,6 +81,11 @@ export default async function CheckoutPage({
       sameDayBands={(await sameDayPricing()).bands}
       urgentExtra={(await sameDayPricing()).urgentExtra}
       bands={await activeBands()}
+      // Where each kitchen is, and what that adds. The checkout prices by the
+      // furthest thing in the cart, which is the same rule the server charges
+      // by, so the number on this page is the number on the bill.
+      areas={await allAreas()}
+      areaOf={await areaOfEach()}
       // The promotions on today, with their rules, so the checkout quotes the
       // price it is about to charge rather than the ladder it is replacing.
       offers={await liveOffers()}

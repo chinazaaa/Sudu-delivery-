@@ -43,6 +43,8 @@ export type OptionGroupView = {
 export type BatchView = {
   id: string;
   label: string;
+  /** The areas this run covers, as "|lekki|". Empty is Sangotedo only. */
+  areas: string;
   /** The day it delivers, so a page can tell a run going today from one
    *  going tomorrow without reading the label. */
   runDate: string;
@@ -83,6 +85,10 @@ export function toBatchView(batch: OpenBatch): BatchView {
     // said in words though, because "Sunday, 20 Sep" on the twentieth makes
     // somebody work out whether that is now.
     label: `${dayWord(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`,
+    // Where this car goes beyond Sangotedo. A run that was never going to
+    // Lekki cannot carry a Lekki order, and the checkout has to know that
+    // before somebody picks it rather than after.
+    areas: batch.areas ?? "",
     runDate: batch.run_date,
     cutOffISO: batch.cut_off_at,
     cutOffLabel: `${dayWord(batch.run_date)}, ${clockLabel(batch.cut_off_at)}`,

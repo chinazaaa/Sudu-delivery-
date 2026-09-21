@@ -25,6 +25,7 @@ import {
   updateRestaurant,
 } from "../../actions";
 import type { MenuCategory, MenuItem, Restaurant } from "@/lib/types";
+import { allAreas } from "@/lib/areas-server";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,8 @@ export default async function RestaurantAdmin({
     .maybeSingle();
   const restaurant = data as Restaurant | null;
   if (!restaurant) notFound();
+
+  const areas = await allAreas();
 
   const [{ data: siblings }, { data: categories }, { data: items }] = await Promise.all([
     db().from("restaurants").select("id, name").order("name"),
@@ -121,9 +124,32 @@ export default async function RestaurantAdmin({
             On the site
           </label>
         </div>
-        <div>
-          <label className="label">Address</label>
-          <input name="address" defaultValue={restaurant.address} className="field" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="label">Address</label>
+            <input name="address" defaultValue={restaurant.address} className="field" />
+          </div>
+          <div>
+            <label className="label" htmlFor="area">Which area</label>
+            <select
+              id="area"
+              name="area"
+              defaultValue={restaurant.area ?? ""}
+              className="field"
+            >
+              <option value="">Sangotedo</option>
+              {areas.map((one) => (
+                <option key={one.id} value={one.id}>
+                  {one.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-muted">
+              {areas.length === 0
+                ? "Add areas under Settings to put a restaurant further out."
+                : "Decides what delivery costs from here, and whether a car of its own can go at all."}
+            </p>
+          </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>

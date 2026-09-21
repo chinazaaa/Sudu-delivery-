@@ -1,5 +1,6 @@
 import CartView from "@/components/CartView";
 import ShelfNote from "@/components/ShelfNote";
+import { allAreas, areaOfEach } from "@/lib/areas-server";
 import { dropLabel, nextDrop, skincareOn } from "@/lib/skincare";
 import { openRestaurants } from "@/lib/menu";
 import { hostelNames } from "@/lib/hostels";
@@ -68,6 +69,8 @@ export default async function CartPage({
       offers={await liveOffers()}
       nextRunId={batches[0]?.id ?? ""}
       bands={bands}
+      areas={await allAreas()}
+      areaOf={await areaOfEach()}
         startGroup={startGroup}
       />
     </div>
