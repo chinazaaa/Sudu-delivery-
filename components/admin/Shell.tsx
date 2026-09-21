@@ -140,7 +140,11 @@ export default function AdminShell({
 
       <div className="mx-auto flex max-w-6xl gap-6 px-4 py-4 sm:py-6">
         <aside className="hidden w-52 shrink-0 lg:block">
-          <div className="sticky top-6 space-y-5">
+          {/* Its own scroll, not the page's. Sixteen sections is taller than
+              a laptop, so the last few sat below the fold and the only way to
+              reach them was to scroll the page, which moved the work as well
+              as the menu. */}
+          <div className="sticky top-6 max-h-[calc(100vh-3rem)] space-y-5 overflow-y-auto pb-4">
             <Link href="/admin" className="flex items-center gap-2">
               <span className="block size-9 shrink-0 overflow-hidden rounded-xl">
                 <Mark />

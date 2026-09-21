@@ -7,6 +7,7 @@ import { db } from "@/lib/supabase";
 import { diagnoseEmpty } from "@/lib/health";
 import { addRestaurant, moveRestaurant, seedLaunchRestaurants } from "../actions";
 import type { MenuItem, Restaurant } from "@/lib/types";
+import { allAreas } from "@/lib/areas-server";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export default async function RestaurantsAdmin() {
     .order("sort_order")
     .order("name");
   const list = (restaurants ?? []) as Restaurant[];
+  const areas = await allAreas();
   const problem = list.length === 0 ? await diagnoseEmpty() : null;
 
   // Counted by the database, one number per restaurant, rather than by
@@ -70,6 +72,12 @@ export default async function RestaurantsAdmin() {
           Each one holds its own categories, items and choices. Switch a restaurant off
           to take it off the site without losing its menu.
         </p>
+        {/* The form is at the bottom, under however many restaurants there
+            are, which is the right place for it and the wrong place to have
+            to scroll to. */}
+        <a href="#add" className="btn-quiet mt-2 inline-block px-4 py-2 text-sm">
+          Add a restaurant
+        </a>
       </section>
 
       {problem && !problem.ok && (
@@ -179,7 +187,7 @@ export default async function RestaurantsAdmin() {
         ))}
       </ul>
 
-      <form action={addRestaurant} className="card space-y-3">
+      <form id="add" action={addRestaurant} className="card space-y-3">
         <h2 className="font-semibold">Add a restaurant</h2>
         <div className="flex flex-wrap items-end gap-2">
           <div className="grow">
@@ -191,9 +199,27 @@ export default async function RestaurantsAdmin() {
             <input name="closes_at" type="time" defaultValue="21:00" className="field" />
           </div>
         </div>
-        <div>
-          <label className="label">Address</label>
-          <input name="address" placeholder="Novare Mall, Sangotedo" className="field" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="label">Address</label>
+            <input name="address" placeholder="Novare Mall, Sangotedo" className="field" />
+          </div>
+          <div>
+            <label className="label" htmlFor="new_area">Which area</label>
+            <select id="new_area" name="area" className="field" defaultValue="">
+              <option value="">Sangotedo</option>
+              {areas.map((one) => (
+                <option key={one.id} value={one.id}>
+                  {one.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-muted">
+              {areas.length === 0
+                ? "Add areas under Settings to put a restaurant further out."
+                : "Decides what delivery costs from here, and whether a car of its own can go at all."}
+            </p>
+          </div>
         </div>
         <SaveButton>Add restaurant</SaveButton>
       </form>

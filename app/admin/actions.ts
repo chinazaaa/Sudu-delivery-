@@ -1606,13 +1606,26 @@ export async function addRestaurant(form: FormData): Promise<void> {
   const name = String(form.get("name") ?? "").trim();
   if (!name) return;
 
-  await db().from("restaurants").insert({
+  const row: Record<string, unknown> = {
     name,
     address: String(form.get("address") ?? "").trim(),
     closes_at: String(form.get("closes_at") ?? "").trim() || "21:00",
     active: true,
     sort_order: 100,
-  });
+    // Where it is, from the off. Setting it afterwards means a window where
+    // a Lekki restaurant is priced as a Sangotedo one, and the orders placed
+    // in that window are the expensive kind of mistake.
+    area: String(form.get("area") ?? "").trim(),
+  };
+
+  let { error } = await db().from("restaurants").insert(row);
+  // A database that has not had the areas migration yet has no column, and
+  // refusing to add a restaurant over it would be worse than adding one that
+  // is in Sangotedo by default.
+  if (error) {
+    delete row.area;
+    ({ error } = await db().from("restaurants").insert(row));
+  }
   revalidatePath("/admin", "layout");
   updateTag("menu");
   revalidatePath("/", "layout");
