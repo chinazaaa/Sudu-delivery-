@@ -78,6 +78,10 @@ export default function Layout() {
             them: nobody browses skincare and food in the same breath. */}
         <Stack.Screen name="skincare" options={{ title: "Skincare" }} />
         <Stack.Screen name="skincare-checkout" options={{ title: "Checkout" }} />
+        {/* A basket somebody was sent. sudu.store/c/<code> opens here rather
+            than in a browser, which is the whole reason the app knows about
+            links at all. */}
+        <Stack.Screen name="c/[code]" options={{ title: "Your order" }} />
       </Stack>
     </>
   );

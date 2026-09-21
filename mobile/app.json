@@ -64,6 +64,26 @@
               "scheme": "https",
               "host": "www.sudu.store",
               "pathPrefix": "/r"
+            },
+            {
+              "scheme": "https",
+              "host": "sudu.store",
+              "pathPrefix": "/c"
+            },
+            {
+              "scheme": "https",
+              "host": "sudu.store",
+              "pathPrefix": "/skincare"
+            },
+            {
+              "scheme": "https",
+              "host": "www.sudu.store",
+              "pathPrefix": "/c"
+            },
+            {
+              "scheme": "https",
+              "host": "www.sudu.store",
+              "pathPrefix": "/skincare"
             }
           ],
           "category": [

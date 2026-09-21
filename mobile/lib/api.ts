@@ -449,6 +449,24 @@ export const api = {
     const tail = asked.toString();
     return get<Shelf>(`/skincare${tail === "" ? "" : `?${tail}`}`);
   },
+  /** A basket somebody was sent, worked out by the same code the website
+   *  draws it with, so the two cannot quote different prices. */
+  link: (code: string) => get<LinkView>(`/link/${encodeURIComponent(code)}`),
+  placeLink: (
+    code: string,
+    order: {
+      name: string;
+      phone: string;
+      hostel: string;
+      note: string;
+      paymentMethod: "transfer" | "card";
+      instead: number;
+    }
+  ) =>
+    post<{ orderId: string; token: string | null }>(
+      `/link/${encodeURIComponent(code)}/order`,
+      order
+    ),
   placeShelf: (order: {
     lines: { id: string; qty: number }[];
     name: string;
@@ -682,3 +700,29 @@ export function aroundPhrase(at: string): string {
 export function lagosToday(now: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(now);
 }
+
+/** A basket somebody was sent, as the shop works it out. */
+export type LinkView = {
+  code: string;
+  title: string;
+  /** "Order now, get it around 4:30pm today". */
+  when: string;
+  estimate: string;
+  note: string;
+  lines: { name: string; restaurant: string; qty: number; choices: string[]; total: number }[];
+  food: number;
+  /** Null means the ordinary rules, which cannot be known until it is placed. */
+  fee: number | null;
+  swaps: { name: string; chosen: string; others: string[] }[];
+  instead: {
+    index: number;
+    name: string;
+    restaurant: string;
+    choices: string[];
+    items: number;
+    food: number;
+  }[];
+  hasCardLink: boolean;
+  hostels: string[];
+  askUs: string;
+};
