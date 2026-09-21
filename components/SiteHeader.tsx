@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 import Mark from "./Mark";
 import { countItems, useCart } from "@/lib/cart";
 
@@ -16,13 +15,27 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
   const path = usePathname();
   const router = useRouter();
 
-  // The arrow went home from every page, so anyone who had come from their
-  // orders, or a restaurant, was thrown out of what they were doing. It goes
-  // back where they came from, and only falls home when there is no back.
-  const [canGoBack, setCanGoBack] = useState(false);
-  useEffect(() => {
-    setCanGoBack(window.history.length > 1);
-  }, [path]);
+  /*
+   * The arrow went home from every page, so anyone who had come from their
+   * orders, or a restaurant, was thrown out of what they were doing. It goes
+   * back where they came from, and only falls home when there is no back.
+   *
+   * Which of those it is cannot be worked out beforehand. It used to ask
+   * whether the history had more than one entry, but that counts what is
+   * ahead as well as what is behind: somebody who opened a link from
+   * WhatsApp, went forward and came back has two entries and nothing behind
+   * them, so the arrow called back and the browser rightly did nothing.
+   *
+   * So it is tried rather than predicted. If the address has not moved a
+   * moment later, there was nothing to go back to, and home is the answer.
+   */
+  const back = () => {
+    const from = window.location.pathname + window.location.search;
+    router.back();
+    window.setTimeout(() => {
+      if (window.location.pathname + window.location.search === from) router.push("/");
+    }, 400);
+  };
 
   if (path.startsWith("/admin")) return null;
 
@@ -34,7 +47,7 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
         {deep ? (
           <button
             type="button"
-            onClick={() => (canGoBack ? router.back() : router.push("/"))}
+            onClick={back}
             aria-label="Back"
             className="-ml-1 grid size-9 shrink-0 place-items-center rounded-full text-lg hover:bg-black/[0.04]"
           >
