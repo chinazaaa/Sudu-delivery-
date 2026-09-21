@@ -3,6 +3,7 @@ import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import Diagnostic from "@/components/Diagnostic";
 import CopyText from "@/components/CopyText";
+import RenamePromoter from "@/components/admin/RenamePromoter";
 import { promoterRows } from "@/lib/admin";
 import { promoterEarnings } from "@/lib/promoters";
 import { promoterSchema } from "@/lib/health";
@@ -335,6 +336,11 @@ export default async function PromotersAdmin({
                   Change their details
                 </summary>
                 <PromoterForm promoter={promoter} />
+
+                {/* Its own form, because it is the one thing here that can
+                    break somebody's earnings: every customer they have ever
+                    brought points at that code. */}
+                <RenamePromoter code={promoter.code} />
               </details>
             </article>
           );

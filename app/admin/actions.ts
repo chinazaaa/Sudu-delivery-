@@ -2732,3 +2732,61 @@ export async function setCustomerPromoter(form: FormData): Promise<void> {
 
   revalidatePath("/admin", "layout");
 }
+
+/**
+ * A promoter's code, changed without losing who they brought.
+ *
+ * The code is the key: a customer carries it for life, an order carries it,
+ * a payout is filed under it. The database moves all of that itself, so this
+ * is one update, but it is still the one thing on that page that can break
+ * somebody's earnings, which is why it is its own form and says what it is
+ * about to do.
+ *
+ * Their sign-in changes with it, so whoever renames them has to send them
+ * their details again.
+ */
+export async function renamePromoter(
+  _prev: { done: string; error: string },
+  form: FormData
+): Promise<{ done: string; error: string }> {
+  await assertAdmin();
+
+  const from = String(form.get("code") ?? "").trim();
+  const to = String(form.get("new_code") ?? "").trim().toUpperCase();
+  if (from === "" || to === "") return { done: "", error: "" };
+  if (from === to) return { done: "", error: "That is the code they already have." };
+
+  // Letters and numbers, because it is typed into a sign-in box by somebody
+  // reading it off a WhatsApp message.
+  if (!/^[A-Z0-9]{2,20}$/.test(to)) {
+    return {
+      done: "",
+      error: "A code is 2 to 20 letters or numbers, with nothing else in it.",
+    };
+  }
+
+  const { data: taken } = await db()
+    .from("promoters")
+    .select("code")
+    .eq("code", to)
+    .maybeSingle();
+  if (taken) return { done: "", error: `${to} belongs to somebody else already.` };
+
+  const { error } = await db().from("promoters").update({ code: to }).eq("code", from);
+  if (error) {
+    return {
+      done: "",
+      error:
+        `Could not rename that: ${error.message}. If it mentions a constraint or a key, ` +
+        "run supabase/update.sql in Supabase and try again.",
+    };
+  }
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/promoter");
+
+  return {
+    done: `${from} is now ${to}. Everyone they brought came with it. Send them their details again, because their sign-in changed.`,
+    error: "",
+  };
+}
