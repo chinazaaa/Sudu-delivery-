@@ -2,8 +2,10 @@ import { useEffect } from "react";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as Notifications from "expo-notifications";
+import * as Linking from "expo-linking";
 import Track from "@/components/Track";
-import { landingFor } from "@/lib/landing";
+import { BASE } from "@/lib/api";
+import { handledInApp, landingFor } from "@/lib/landing";
 import { T } from "@/lib/theme";
 
 // A notification that lands while somebody is looking at the app should still
@@ -41,7 +43,14 @@ export default function Layout() {
   useEffect(() => {
     const go = (response: Notifications.NotificationResponse | null) => {
       const path = landingFor(response?.notification.request.content.data?.path);
-      if (path) router.push(path as never);
+      if (!path) return;
+
+      // The website grows faster than the app does, and the shop can point a
+      // notification at anything on it. Somewhere this app has no screen for
+      // opens on the website instead, so whoever tapped gets what they were
+      // promised rather than a blank.
+      if (handledInApp(path)) router.push(path as never);
+      else void Linking.openURL(`${BASE}${path}`);
     };
 
     void Notifications.getLastNotificationResponseAsync().then(go);

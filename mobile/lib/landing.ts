@@ -11,6 +11,33 @@ const REWRITES: [RegExp, (id: string) => string][] = [
   [/^\/p\/([^/?#]+)/, () => "/"],
 ];
 
+/**
+ * Paths this app has a screen for.
+ *
+ * The shop can point a notification at anything on the website, and the
+ * website grows faster than the app does: boxes exist there and not here
+ * yet. Pushing a route that does not exist lands on nothing, which from the
+ * outside is a notification that does not work.
+ *
+ * So anything not on this list is opened on the website instead. A person
+ * who tapped gets what they were promised, and the app stops being the
+ * reason a campaign fell flat.
+ */
+const KNOWN = [
+  /^\/$/,
+  /^\/order\//,
+  /^\/r\//,
+  /^\/skincare/,
+  /^\/cart/,
+  /^\/checkout/,
+  /^\/group/,
+  /^\/orders/,
+];
+
+export function handledInApp(path: string): boolean {
+  return KNOWN.some((one) => one.test(path));
+}
+
 export function landingFor(path: unknown): string | null {
   if (typeof path !== "string") return null;
 

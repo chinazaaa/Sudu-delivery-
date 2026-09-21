@@ -8,7 +8,7 @@ import Constants from "expo-constants";
  * change made in admin shows up in the app the moment it is saved, and a
  * phone cannot be taken apart to find a key that reads customers.
  */
-const BASE =
+export const BASE =
   (Constants.expoConfig?.extra as { api?: string } | undefined)?.api ?? "https://sudu.store";
 
 async function get<T>(path: string, token?: string | null): Promise<T> {

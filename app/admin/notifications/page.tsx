@@ -3,6 +3,10 @@ import Stat from "@/components/admin/Stat";
 import DealPush from "@/components/admin/DealPush";
 import { menuView } from "@/lib/menu";
 import { dealAudience } from "@/lib/push";
+import { liveOccasions } from "@/lib/boxes";
+import { listCheckoutLinks } from "@/lib/checkout-links";
+import { skincareOn } from "@/lib/skincare";
+import { safeSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +19,13 @@ export const dynamic = "force-dynamic";
  * left the switch on, and can turn it off in the app.
  */
 export default async function NotificationsPage() {
-  const [menu, audience] = await Promise.all([menuView(), dealAudience()]);
+  const [menu, audience, occasions, links, settings] = await Promise.all([
+    menuView(),
+    dealAudience(),
+    liveOccasions(),
+    listCheckoutLinks().catch(() => []),
+    safeSettings(),
+  ]);
 
   return (
     <div className="space-y-5">
@@ -35,6 +45,12 @@ export default async function NotificationsPage() {
           name: place.restaurant.name,
           categories: place.categories,
         }))}
+        occasions={occasions.map((one) => ({ slug: one.slug, name: one.name }))}
+        links={links
+          .filter((one) => one.active && one.short)
+          .slice(0, 20)
+          .map((one) => ({ short: one.short as string, label: one.label }))}
+        skincare={skincareOn(settings)}
       />
     </div>
   );

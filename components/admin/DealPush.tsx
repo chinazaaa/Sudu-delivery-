@@ -12,7 +12,20 @@ type Restaurant = { id: string; name: string; categories: { id: string; name: st
  * typed by hand is a path typed wrong, and a notification that opens the wrong
  * screen is worse than one nobody sent.
  */
-export default function DealPush({ restaurants }: { restaurants: Restaurant[] }) {
+export default function DealPush({
+  restaurants,
+  occasions = [],
+  links = [],
+  skincare = false,
+}: {
+  restaurants: Restaurant[];
+  /** Boxes somebody has packed, which is the thing most worth a notification:
+   *  a match with a kick-off is a reason to tap that a menu never is. */
+  occasions?: { slug: string; name: string }[];
+  /** A basket already filled, so the notification is one tap from paying. */
+  links?: { short: string; label: string }[];
+  skincare?: boolean;
+}) {
   const [state, action, pending] = useActionState<DealPushState, FormData>(sendDealPush, {
     error: null,
     sent: null,
@@ -51,6 +64,9 @@ export default function DealPush({ restaurants }: { restaurants: Restaurant[] })
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
+          {/* One list rather than one box per kind of thing. Whoever is
+              sending this is choosing where it lands, not what sort of
+              destination it is. */}
           <label className="label" htmlFor="restaurant">Opens</label>
           <select
             id="restaurant"
@@ -63,9 +79,38 @@ export default function DealPush({ restaurants }: { restaurants: Restaurant[] })
             }}
           >
             <option value="">The shop, for anything about delivery or a code</option>
-            {restaurants.map((one) => (
-              <option key={one.id} value={one.id}>{one.name}</option>
-            ))}
+
+            {occasions.length > 0 && (
+              <optgroup label="Boxes">
+                {occasions.map((one) => (
+                  <option key={one.slug} value={`occasion:${one.slug}`}>
+                    {one.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+
+            {links.length > 0 && (
+              <optgroup label="Checkout links">
+                {links.map((one) => (
+                  <option key={one.short} value={`link:${one.short}`}>
+                    {one.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+
+            <optgroup label="Restaurants">
+              {restaurants.map((one) => (
+                <option key={one.id} value={one.id}>{one.name}</option>
+              ))}
+            </optgroup>
+
+            {skincare && (
+              <optgroup label="Other">
+                <option value="skincare">Skincare</option>
+              </optgroup>
+            )}
           </select>
         </div>
 

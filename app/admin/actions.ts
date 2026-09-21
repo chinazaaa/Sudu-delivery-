@@ -2282,14 +2282,23 @@ export async function sendDealPush(
   if (title.length < 3) return { error: "Give it a title.", sent: null };
   if (body.length < 3) return { error: "Give it a line of text.", sent: null };
 
-  const restaurant = String(form.get("restaurant") ?? "").trim();
+  const where = String(form.get("restaurant") ?? "").trim();
   const category = String(form.get("category") ?? "").trim();
 
   // Only ever one of ours, built here rather than typed, so a stray paste
-  // cannot send everybody somewhere off the shop.
-  const path = restaurant
-    ? `/r/${restaurant}${category ? `?category=${category}` : ""}`
-    : "/";
+  // cannot send everybody somewhere off the shop. The prefix says which
+  // kind of thing was picked, because they all come off one list: whoever
+  // is sending this is choosing where it lands, not what sort of place it
+  // is.
+  const path = where.startsWith("occasion:")
+    ? `/occasions/${where.slice(9)}`
+    : where.startsWith("link:")
+      ? `/c/${where.slice(5)}`
+      : where === "skincare"
+        ? "/skincare"
+        : where
+          ? `/r/${where}${category ? `?category=${category}` : ""}`
+          : "/";
 
   const result = await pushDeal({ title, body, path });
   if (result.of === 0) {
