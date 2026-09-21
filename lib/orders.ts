@@ -27,6 +27,7 @@ import { runDateLabel, weekdayLabel } from "./time";
 import { createSameDayBatch, getBatch, isOrderable, orderCounts } from "./batches";
 import { bandsFor, isSkincareBatch, skincareIn } from "./skincare";
 import { areaOfCart } from "./areas-server";
+import { realPromoter } from "./promoters";
 import { areasOfRun, runCovers } from "./areas";
 import { stageIndex } from "./stages";
 import { deliverySlots, sameInstant, type Slot } from "./same-day";
@@ -64,6 +65,9 @@ export type PlaceOrderInput = {
   }[];
   /** Anything the customer asked for, in their own words. */
   customerNote?: string;
+  /** Who they say they heard about the shop from, as a promoter's code.
+   *  Empty is a real answer: most people are nobody's referral. */
+  heardFrom?: string;
   /** A discount code typed at checkout. */
   coupon?: string;
   /** The order whose join link they opened, so their food rides along with it. */
@@ -407,7 +411,14 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // order, the group only knows their first name; now it knows their number,
   // so every other page can tell who the leader is without being told.
   if (party && input.partyLeader) await claimLeader(party.id, phone);
-  await bindCustomer({ phone, name, hostel, returning, paymentMethod });
+  await bindCustomer({
+    phone,
+    name,
+    hostel,
+    returning,
+    paymentMethod,
+    heardFrom: input.heardFrom ?? "",
+  });
   // The cart behind this order is no longer abandoned, and the admins are told
   // rather than having to keep refreshing. Neither can fail the order.
   await cartConverted(phone, batch.id).catch(() => {});
@@ -1403,6 +1414,8 @@ async function bindCustomer(args: {
    *  somebody who always pays by card is not put back on a transfer by a new
    *  phone or a cleared browser. */
   paymentMethod?: "transfer" | "card";
+  /** Who they said they heard about us from, on their first order. */
+  heardFrom?: string;
 }): Promise<void> {
   const way = args.paymentMethod ?? "transfer";
 
@@ -1422,11 +1435,19 @@ async function bindCustomer(args: {
     return;
   }
 
+  // Checked against the promoters table rather than trusted: the code comes
+  // off a form, and a made-up one would pay commission to nobody for ever.
+  const heardFrom =
+    args.heardFrom && (await realPromoter(args.heardFrom)) ? args.heardFrom.trim() : null;
+
   const row = {
     phone: args.phone,
     name: args.name,
     hostel: args.hostel,
     pin: newPin(),
+    // Written once, on the first order, and never touched again. That single
+    // column is what makes a promoter's commission lifetime.
+    promoter_code: heardFrom,
   };
   const { error } = await db()
     .from("customers")

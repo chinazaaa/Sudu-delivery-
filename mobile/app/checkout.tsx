@@ -50,6 +50,8 @@ export default function Checkout() {
   const [phone, setPhone] = useState("");
   const [hostel, setHostel] = useState("");
   const [method, setMethod] = useState<"transfer" | "card">("transfer");
+  /** Who they say they heard about us from. Empty is "somewhere else". */
+  const [heardFrom, setHeardFrom] = useState("");
   const [code, setCode] = useState("");
   const [applied, setApplied] = useState<{ code: string; discount: number; label: string } | null>(null);
   const [codeError, setCodeError] = useState("");
@@ -292,6 +294,7 @@ export default function Checkout() {
           for_name: line.forName || null,
         })),
         paymentMethod: method,
+        heardFrom,
         coupon: applied?.code ?? "",
         groupMode: sharing.length > 0 ? mode : null,
         collectMode: collect,
@@ -372,6 +375,40 @@ export default function Checkout() {
           </Text>
         )}
       </View>
+
+      {(shop.promoters ?? []).length > 0 && (
+        <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
+          {/* Asked once, on the one form a first order passes through.
+              Whoever they name is theirs for life, so there is no second
+              chance at it, and "somewhere else" is a real answer: most
+              people are nobody's referral. */}
+          <Text style={{ fontWeight: "800", color: T.ink }}>
+            Where did you hear about us?
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {[{ code: "", name: "Somewhere else" }, ...(shop.promoters ?? [])].map((one) => (
+                <Pressable
+                  key={one.code || "none"}
+                  onPress={() => setHeardFrom(one.code)}
+                  style={{
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: heardFrom === one.code ? T.brand : T.line,
+                    backgroundColor: heardFrom === one.code ? T.tint : T.paper,
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                  }}
+                >
+                  <Text style={{ color: T.ink, fontWeight: heardFrom === one.code ? "800" : "400" }}>
+                    {one.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+      )}
 
       {sharing.length > 0 && (
         <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 10 }}>

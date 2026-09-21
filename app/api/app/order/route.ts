@@ -26,6 +26,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       coupon?: string;
       paymentMethod?: string;
       customerNote?: string;
+      heardFrom?: string;
       groupMode?: string;
       collectMode?: string;
       people?: { name?: string; phone?: string; hostel?: string; pays?: string }[];
@@ -59,6 +60,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         pays: person.pays === "card" ? ("card" as const) : ("transfer" as const),
       })),
       customerNote: String(body.customerNote ?? "").trim().slice(0, 300),
+      heardFrom: String(body.heardFrom ?? "").trim(),
     });
 
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });

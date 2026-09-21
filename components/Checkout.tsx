@@ -72,6 +72,7 @@ export default function Checkout({
   areaOf,
   offers,
   hostels,
+  promoters,
 }: {
   batches: BatchView[];
   /** Today in Lagos, from the shop's clock: it decides whether a run going
@@ -96,6 +97,9 @@ export default function Checkout({
   offers: LiveOffer[];
   /** The blocks the admin delivers to. Empty means anything typed is allowed. */
   hostels: string[];
+  /** Who somebody could say they heard about the shop from. Empty means
+   *  nobody is promoting, and then the question is not worth asking. */
+  promoters: { code: string; name: string }[];
 }) {
   const cart = useCart();
   const { people } = usePeople();
@@ -1016,6 +1020,26 @@ export default function Checkout({
             />
           )}
         </div>
+
+        {/* Asked once, in the only place a first order passes through.
+            Whoever they name is theirs for life, so it is worth a line on a
+            form people are already filling in, and "somewhere else" is a
+            real answer: most people are nobody's referral. */}
+        {promoters.length > 0 && (
+          <div>
+            <label className="label" htmlFor="heard_from">
+              Where did you hear about us?
+            </label>
+            <select id="heard_from" name="heard_from" className="field" defaultValue="">
+              <option value="">Somewhere else</option>
+              {promoters.map((one) => (
+                <option key={one.code} value={one.code}>
+                  {one.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <label className="label" htmlFor="customer_note">

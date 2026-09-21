@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { openBatches } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
 import { hostelNames } from "@/lib/hostels";
+import { namedPromoters } from "@/lib/promoters";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
 import { dealsAt, offersByRestaurant } from "@/lib/coupons";
 import { offerBadge, offerLine } from "@/lib/offers";
@@ -95,6 +96,9 @@ export async function GET(): Promise<NextResponse> {
       // number. Empty means one area, and every price as it was.
       areas: await allAreas(),
       areaOf: await areaOfEach(),
+      // Who somebody could say they heard about the shop from. Empty means
+      // nobody is promoting, and then the question is not worth asking.
+      promoters: await namedPromoters(),
       shop: {
         tagline: settings.tagline,
         ribbon: settings.ribbon_text,

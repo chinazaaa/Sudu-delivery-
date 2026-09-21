@@ -66,6 +66,9 @@ export async function submitOrder(
     collectMode: String(form.get("collect_mode") ?? "") === "each" ? "each" : "leader",
     people: parsePeople(form.get("people")),
     customerNote: String(form.get("customer_note") ?? "").trim().slice(0, 300),
+    // Who they say they heard about us from. Checked against the promoters
+    // table on the way in, because a code off a form is not a promoter.
+    heardFrom: String(form.get("heard_from") ?? "").trim(),
     joinOrderId: String(form.get("join_order_id") ?? "") || undefined,
     shareDelivery: String(form.get("share_delivery") ?? "") === "on",
     deliverAt: String(form.get("deliver_at") ?? "") || undefined,

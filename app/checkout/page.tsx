@@ -8,6 +8,7 @@ import {
 } from "@/lib/settings";
 import { liveOffers } from "@/lib/coupons";
 import { hostelNames } from "@/lib/hostels";
+import { namedPromoters } from "@/lib/promoters";
 import Checkout, { type AddingTo } from "@/components/Checkout";
 import { openBatches, recentlyClosedBatch } from "@/lib/batches";
 import { existingLoad } from "@/lib/orders";
@@ -90,6 +91,9 @@ export default async function CheckoutPage({
       // price it is about to charge rather than the ladder it is replacing.
       offers={await liveOffers()}
       hostels={await hostelNames()}
+      // Asked on the one form a first order has to pass through. Whoever
+      // they name is theirs for life, so there is no second chance at it.
+      promoters={await namedPromoters()}
     />
   );
 }

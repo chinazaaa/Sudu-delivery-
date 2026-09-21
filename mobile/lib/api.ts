@@ -185,6 +185,9 @@ export type Shop = {
     urgentExtra: number;
   };
   shop: { tagline: string; ribbon: string; whatsapp: string };
+  /** Who somebody could say they heard about the shop from. Empty means
+   *  nobody is promoting, and the question is not worth asking. */
+  promoters?: { code: string; name: string }[];
   /** The areas the shop delivers from, beyond Sangotedo, and which one each
    *  kitchen is in. Older servers send neither, and then everything is
    *  Sangotedo and every price is what it always was. */
@@ -372,6 +375,9 @@ export const api = {
     coupon?: string;
     paymentMethod: "transfer" | "card";
     customerNote?: string;
+    /** Who they say they heard about the shop from, as a promoter's code.
+     *  Written once, on a first order, and theirs for life after that. */
+    heardFrom?: string;
     /** A group order: one payer, or everybody pays their own share. */
     groupMode?: "one_payer" | "split" | null;
     collectMode?: "leader" | "each";

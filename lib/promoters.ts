@@ -238,3 +238,34 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
     payouts: payouts as PromoterEarnings["payouts"],
   };
 }
+
+/**
+ * The people somebody could have heard about the shop from.
+ *
+ * Only the active ones, and only their name and code: the checkout is asking
+ * a customer a question, not showing them a staff list, so what they earn and
+ * how they sign in stay out of it.
+ */
+export async function namedPromoters(): Promise<{ code: string; name: string }[]> {
+  const { data, error } = await db()
+    .from("promoters")
+    .select("code, name")
+    .eq("active", true)
+    .order("name");
+  if (error) return [];
+  return ((data ?? []) as { code: string; name: string }[]).filter(
+    (one) => one.name.trim() !== ""
+  );
+}
+
+/** Whether that code belongs to somebody currently promoting. */
+export async function realPromoter(code: string): Promise<boolean> {
+  if (code.trim() === "") return false;
+  const { data } = await db()
+    .from("promoters")
+    .select("code")
+    .eq("code", code.trim())
+    .eq("active", true)
+    .maybeSingle();
+  return Boolean(data);
+}
