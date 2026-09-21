@@ -134,7 +134,16 @@ export default function GroupLink({
   const [name, setName] = useState("");
   // Whatever is going soonest: a run today, a car of its own today, a run
   // tomorrow, tomorrow's first window. Nobody picks, here or anywhere else.
-  const going = nextArrival(runs, slots, today);
+  const decided = nextArrival(runs, slots, today);
+  // The other way of getting it here, asked of the same rule: once with only
+  // runs and once with only cars. A group of people who want dinner tonight
+  // should not have to give up on a group because the next run is Saturday.
+  const other = decided
+    ? (decided.onARun ? nextArrival([], slots, today) : nextArrival(runs, [], today))
+    : null;
+  const [takeOther, setTakeOther] = useState(false);
+  const swap = other !== null && other.said !== decided?.said;
+  const going = swap && takeOther ? other : decided;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [inGroup, setInGroup] = useState(false);
@@ -235,6 +244,25 @@ export default function GroupLink({
               : "A car of your own, because no run is going in time for this. Everybody who joins is told the same time."}
           </p>
           <p className="mt-1 text-xs text-ink/70">{ESTIMATE_NOTE}</p>
+
+          {/* The other way, and a way to take it. Saying it without a tap
+              would be telling somebody what they cannot have. */}
+          {swap && other && (
+            <button
+              type="button"
+              onClick={() => setTakeOther((was) => !was)}
+              className="mt-2 block w-full rounded-xl bg-paper px-3 py-2 text-left text-sm font-semibold text-brand-dark"
+            >
+              {/* Always words the one it would move to, so the sentence
+                  stays true whichever way round it currently is. */}
+              {(takeOther ? decided : other)?.onARun
+                ? `Rather pay less? A run gets it to you ${(takeOther ? decided : other)?.said}.`
+                : `In a hurry? A car of its own can be there ${(takeOther ? decided : other)?.said}, for more.`}{" "}
+              <span className="underline decoration-dotted underline-offset-4">
+                Tap to start the group on that instead.
+              </span>
+            </button>
+          )}
         </div>
       )}
 
