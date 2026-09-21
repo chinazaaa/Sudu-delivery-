@@ -335,12 +335,13 @@ export default async function PromotersAdmin({
                 <summary className="cursor-pointer text-sm font-semibold text-brand">
                   Change their details
                 </summary>
-                <PromoterForm promoter={promoter} />
-
-                {/* Its own form, because it is the one thing here that can
+                {/* First, because it is the field people go looking for.
+                    Its own form, because it is the one thing here that can
                     break somebody's earnings: every customer they have ever
                     brought points at that code. */}
                 <RenamePromoter code={promoter.code} />
+
+                <PromoterForm promoter={promoter} />
               </details>
             </article>
           );
@@ -382,25 +383,28 @@ function PromoterForm({
   return (
     <form action={savePromoter} className="mt-3 space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label className="label" htmlFor={`code${at}`}>
-            Code
-          </label>
-          <input
-            id={`code${at}`}
-            name="code"
-            required
-            defaultValue={promoter?.code}
-            readOnly={Boolean(promoter)}
-            placeholder="TOBI"
-            className="field read-only:bg-shell"
-          />
-          <p className="mt-1 text-xs text-muted">
-            {promoter
-              ? "Their sign-in name. It cannot change: every customer they brought points at it."
-              : "Their sign-in name, not a link for customers."}
-          </p>
-        </div>
+        {/* An existing code is carried, not typed. A box you cannot type
+            into looks broken on a phone: you tap it and no keyboard comes
+            up. Renaming is the form above, which is a box that works. */}
+        {promoter ? (
+          <input type="hidden" name="code" value={promoter.code} />
+        ) : (
+          <div>
+            <label className="label" htmlFor={`code${at}`}>
+              Code
+            </label>
+            <input
+              id={`code${at}`}
+              name="code"
+              required
+              placeholder="TOBI"
+              className="field"
+            />
+            <p className="mt-1 text-xs text-muted">
+              Their sign-in name, not a link for customers.
+            </p>
+          </div>
+        )}
         <div>
           <label className="label" htmlFor={`name${at}`}>
             Name
