@@ -38,6 +38,7 @@ import { renderEmail, renderText, type Block } from "../lib/email-html";
 import { deliverySlots, slotFee, slotsToday } from "../lib/same-day";
 import { nextArrival } from "../lib/arrival";
 import { parseCatalogue, parseProducts } from "../lib/skincare-import";
+import { feeForValue, parseValueBands } from "../lib/value-bands";
 import { nextDrop } from "../lib/skincare";
 
 /** A settings row with nothing filled in, for the template tests. */
@@ -1482,4 +1483,31 @@ test("a catalogue reads the same from a spreadsheet or a list", () => {
   assert.equal(fromJson.products[0].price, 1900);
   assert.equal(fromJson.products[0].imageUrl, "https://example.test/bokku.png");
   assert.equal(fromJson.products[0].category, "Bread");
+});
+
+test("a market is priced by what the shopping comes to", () => {
+  // Eleven peppers and a bag of rice is one trip and two bags. The container
+  // ladder reads it as eleven containers and charges nine thousand naira for
+  // vegetables, which is the wrong question asked precisely.
+  const bands = parseValueBands(
+    JSON.stringify([
+      { upTo: 30000, fee: 4000 },
+      { upTo: null, fee: 4500 },
+    ])
+  );
+
+  assert.equal(feeForValue(2000, bands), 4000);
+  assert.equal(feeForValue(30000, bands), 4000);
+  // Over the line, which is where the heavy bags start.
+  assert.equal(feeForValue(30001, bands), 4500);
+  assert.equal(feeForValue(250000, bands), 4500);
+
+  // The top band catches everything, whatever was typed into it, so no shop
+  // can fall through the bottom and price as nothing.
+  const open = parseValueBands(JSON.stringify([{ upTo: 5000, fee: 4000 }]));
+  assert.equal(feeForValue(999999, open), 4000);
+
+  // Nothing set is the ordinary ladder, not free delivery.
+  assert.deepEqual(parseValueBands(""), []);
+  assert.equal(feeForValue(10000, []), 0);
 });

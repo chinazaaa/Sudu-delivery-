@@ -3,6 +3,7 @@ import { safeSettings } from "./settings";
 import { activeBands, sameDayPricing } from "./settings";
 import { parseAreas, dearestArea, areasIn, canGoSameDay, withExtra, HOME, type Area } from "./areas";
 import type { Band } from "./fees";
+import { parseValueBands, type ValueBand } from "./value-bands";
 
 /**
  * Where every restaurant is, read once.
@@ -36,6 +37,9 @@ export type CartArea = {
   bands: Band[];
   sameDayBands: Band[];
   urgentExtra: number;
+  /** Where a kitchen prices by what the shopping comes to rather than by how
+   *  many things it is, its ladder. Empty is the ordinary one. */
+  valueBands: ValueBand[];
 };
 
 /**
@@ -57,6 +61,7 @@ export async function areaOfCart(restaurantIds: string[]): Promise<CartArea> {
   const dearest = dearestArea(areas, restaurantIds, where);
 
   return {
+    valueBands: await valueLadder(restaurantIds),
     dearest,
     all,
     sameDay: canGoSameDay(all),
@@ -73,3 +78,54 @@ export async function areasOfCart(restaurantIds: string[]): Promise<Area[]> {
 }
 
 export { HOME };
+
+/**
+ * The value ladder this cart is priced by, if any kitchen in it has one.
+ *
+ * Dearest wins where two do, for the same reason the area does: one car
+ * fetches all of it, and the harder half of the trip is what it costs.
+ */
+export async function valueLadder(restaurantIds: string[]): Promise<ValueBand[]> {
+  if (restaurantIds.length === 0) return [];
+
+  const { data, error } = await db()
+    .from("restaurants")
+    .select("id, value_bands")
+    .in("id", restaurantIds);
+  // Before the migration there is no column, and every restaurant is on the
+  // ordinary ladder, which is what they were all on anyway.
+  if (error) return [];
+
+  const ladders = ((data ?? []) as { value_bands?: string }[])
+    .map((one) => parseValueBands(one.value_bands))
+    .filter((one) => one.length > 0);
+
+  return ladders.reduce<ValueBand[]>(
+    (worst, one) => (top(one) > top(worst) ? one : worst),
+    []
+  );
+}
+
+const top = (bands: ValueBand[]) => bands[bands.length - 1]?.fee ?? 0;
+
+/**
+ * Every kitchen that prices by what the shopping comes to, by id.
+ *
+ * Sent to the browser rather than worked out there: where a kitchen is and
+ * how it charges are facts about the shop, and a cart written on a phone
+ * cannot be trusted with either. The browser only picks which of them
+ * applies to what is in front of it, and the server decides it again when
+ * the order is placed.
+ */
+export async function valueBandsOfEach(): Promise<Record<string, ValueBand[]>> {
+  const { data, error } = await db().from("restaurants").select("id, value_bands");
+  if (error) return {};
+
+  const found: Record<string, ValueBand[]> = {};
+  for (const one of ((data ?? []) as { id: string; value_bands?: string }[])) {
+    const bands = parseValueBands(one.value_bands);
+    if (bands.length > 0) found[one.id] = bands;
+  }
+  return found;
+}
+

@@ -26,6 +26,8 @@ import { offerShare, pickOffer, type LiveOffer } from "@/lib/offers";
 import { normalisePhone } from "@/lib/phone";
 import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
+import { feeForValue, type ValueBand } from "@/lib/value-bands";
+import { ladderFor } from "@/lib/areas-shared";
 import CouponBox from "@/components/CouponBox";
 import { clearJoin, readJoin } from "@/components/JoinDelivery";
 import GroupLink, {
@@ -70,6 +72,7 @@ export default function Checkout({
   bands: baseBands,
   areas,
   areaOf,
+  valueBandsOf,
   offers,
   hostels,
   promoters,
@@ -92,6 +95,9 @@ export default function Checkout({
   /** The areas the shop delivers from, and which one each kitchen is in. */
   areas: Area[];
   areaOf: Record<string, string>;
+  /** The kitchens that price by what the shopping comes to rather than by
+   *  how many things it is, by id. A market is one; a restaurant is not. */
+  valueBandsOf: Record<string, ValueBand[]>;
   /** Promotions on today. The same rule that prices the order judges them
    *  here, so what is quoted is what is charged. */
   offers: LiveOffer[];
@@ -112,6 +118,10 @@ export default function Checkout({
   const cartAreas = areasIn(areas, kitchens, areaOf);
   const area = dearestArea(areas, kitchens, areaOf);
   const bands = withExtra(baseBands, area.runExtra);
+  // A kitchen that charges by what the shopping comes to rather than by how
+  // many things it is. A market trip is one trip and two bags, and the
+  // container ladder would call eleven peppers eleven containers.
+  const byValue = ladderFor(kitchens, valueBandsOf);
   const sameDayBands = withExtra(baseSameDayBands, area.sameDayExtra);
   // One thing from a far area makes the whole order a run: a car cannot be
   // in two places in three hours.
@@ -346,10 +356,12 @@ export default function Checkout({
     ? sameDayFee(itemCount, sameDay.urgent, sameDayBands, urgentExtra)
     : shared
     ? 0
-    : Math.max(
-        0,
-        feeFor(itemCount + alreadyItems, selected?.flashFee ?? null, bands) - alreadyCharged
-      );
+    : byValue.length > 0
+      ? feeForValue(subtotal, byValue) + area.runExtra
+      : Math.max(
+          0,
+          feeFor(itemCount + alreadyItems, selected?.flashFee ?? null, bands) - alreadyCharged
+        );
 
   /**
    * When this order arrives, in the same words as the front page.
@@ -1107,7 +1119,7 @@ export default function Checkout({
         </div>
         {/* Four items costing more than three looks arbitrary until the whole
             ladder is there, so it is one tap away. */}
-        {!shared && !sameDay && (
+        {!shared && !sameDay && byValue.length === 0 && (
           <FeeBands
             itemCount={itemCount + alreadyItems}
             flashFee={selected?.flashFee ?? null}

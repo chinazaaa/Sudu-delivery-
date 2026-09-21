@@ -1724,6 +1724,9 @@ export async function updateRestaurant(form: FormData): Promise<void> {
       // Where it is. Empty is Sangotedo, which is what the ladders were
       // written for; anywhere else adds to every band and may be run only.
       area: String(form.get("area") ?? "").trim(),
+      // Priced by what the shopping comes to rather than by how many things
+      // it is. Empty puts it back on the ordinary ladder.
+      value_bands: String(form.get("value_bands") ?? "").trim(),
     })
     .eq("id", id);
   revalidatePath("/admin", "layout");

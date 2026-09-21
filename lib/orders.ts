@@ -27,6 +27,7 @@ import { runDateLabel, weekdayLabel } from "./time";
 import { createSameDayBatch, getBatch, isOrderable, orderCounts } from "./batches";
 import { bandsFor, isSkincareBatch, skincareIn } from "./skincare";
 import { areaOfCart } from "./areas-server";
+import { feeForValue } from "./value-bands";
 import { realPromoter } from "./promoters";
 import { areasOfRun, runCovers } from "./areas";
 import { stageIndex } from "./stages";
@@ -373,7 +374,18 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           // A promotion is the price, so it wins over the ladder and over the
           // same day pricing alike. A share worked out by a group that has
           // closed still wins over it: by then the money is decided.
-          fixedFee: input.fixedFee ?? (promotion && !sharedGroupId ? promotion.fee : undefined),
+          // A promotion prices delivery outright and wins. Under it, a
+          // kitchen that charges by what the shopping comes to rather than
+          // by how many things it is: a market trip is one trip and two
+          // bags, and the container ladder would call it eleven containers.
+          fixedFee:
+            input.fixedFee ??
+            (promotion && !sharedGroupId
+              ? promotion.fee
+              : where.valueBands.length > 0 && !sameDay && !party
+                ? feeForValue(countFood(priced.lines), where.valueBands) +
+                  where.dearest.runExtra
+                : undefined),
           promotionCode: promotion?.coupon.code ?? null,
           sameDayFee: sameDay && !party
             ? sameDayFee(

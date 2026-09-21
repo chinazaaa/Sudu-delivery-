@@ -1007,3 +1007,16 @@ alter table settings add column if not exists delivery_areas text not null defau
 -- somebody put one in the basket. Kept as "|lekki|ikeja|" so the check is an
 -- exact match on a name with its bars.
 alter table batches add column if not exists areas text not null default '';
+
+-- Delivery priced by what the shopping comes to, for the places where the
+-- container count is the wrong question.
+--
+-- A restaurant's ladder counts containers, because a car carrying twelve
+-- takeaway boxes is a different car from one carrying two. A market is not
+-- like that: eleven peppers and a bag of rice is one trip and two bags, and
+-- counting them as eleven containers charges somebody nine thousand naira to
+-- be brought their vegetables. Bulk is what costs more there, and the honest
+-- measure of bulk is the money.
+--
+-- Empty, which is every restaurant today, means the ordinary ladder.
+alter table restaurants add column if not exists value_bands text not null default '';

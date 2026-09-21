@@ -20,6 +20,9 @@ export type Restaurant = {
   /** Where it is. Empty is Sangotedo, which is what the ladders were written
    *  for; anywhere else is further to drive and says so. */
   area?: string;
+  /** Delivery priced by what the shopping comes to, as JSON. Empty is every
+   *  restaurant today, and means the ordinary ladder counting containers. */
+  value_bands?: string;
 };
 
 export type MenuCategory = {

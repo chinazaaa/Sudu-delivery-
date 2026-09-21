@@ -27,6 +27,8 @@ import {
 import type { MenuCategory, MenuItem, Restaurant } from "@/lib/types";
 import { allAreas } from "@/lib/areas-server";
 import ImportCatalogue from "@/components/admin/ImportCatalogue";
+import ValueBandEditor from "@/components/admin/ValueBandEditor";
+import { parseValueBands } from "@/lib/value-bands";
 
 export const dynamic = "force-dynamic";
 
@@ -152,6 +154,17 @@ export default async function RestaurantAdmin({
             </p>
           </div>
         </div>
+        <div className="border-t border-black/5 pt-3">
+          <p className="label mb-0">What delivery costs from here</p>
+          <p className="mb-2 text-xs text-muted">
+            The ordinary ladder counts containers, which is right for a
+            kitchen and wrong for a market: eleven peppers and a bag of rice
+            is one trip and two bags, not eleven containers. Where bulk is
+            what costs, price it by what the shopping comes to.
+          </p>
+          <ValueBandEditor initial={parseValueBands(restaurant.value_bands)} />
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="label" htmlFor="logo">Logo photo</label>

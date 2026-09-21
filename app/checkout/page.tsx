@@ -14,7 +14,7 @@ import { openBatches, recentlyClosedBatch } from "@/lib/batches";
 import { existingLoad } from "@/lib/orders";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { normalisePhone } from "@/lib/phone";
-import { allAreas, areaOfEach } from "@/lib/areas-server";
+import { allAreas, areaOfEach, valueBandsOfEach } from "@/lib/areas-server";
 import { toBatchView, toClosedBatchView } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -87,6 +87,9 @@ export default async function CheckoutPage({
       // by, so the number on this page is the number on the bill.
       areas={await allAreas()}
       areaOf={await areaOfEach()}
+      // The kitchens that charge by what the shopping comes to rather than
+      // by how many things it is. A market trip is one trip and two bags.
+      valueBandsOf={await valueBandsOfEach()}
       // The promotions on today, with their rules, so the checkout quotes the
       // price it is about to charge rather than the ladder it is replacing.
       offers={await liveOffers()}

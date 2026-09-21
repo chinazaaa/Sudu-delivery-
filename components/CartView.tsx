@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import type { Slot } from "@/lib/same-day";
 import type { ArrivalRun } from "@/lib/arrival";
 import { dearestArea, withExtra, type Area } from "@/lib/areas";
+import { ladderFor } from "@/lib/areas-shared";
+import { feeForValue, type ValueBand } from "@/lib/value-bands";
 
 import Link from "next/link";
 import Empty from "@/components/Empty";
@@ -39,6 +41,7 @@ export default function CartView({
   bands = [],
   areas = [],
   areaOf = {},
+  valueBandsOf = {},
   offers = [],
   nextRunId = "",
   startGroup = false,
@@ -59,6 +62,8 @@ export default function CartView({
   /** The areas the shop delivers from, and which one each kitchen is in. */
   areas?: Area[];
   areaOf?: Record<string, string>;
+  /** The kitchens that price by what the shopping comes to. */
+  valueBandsOf?: Record<string, ValueBand[]>;
   /** The offers on today, so the cart can say when it is one thing away from
    *  one rather than leaving somebody to wonder why it is not free. */
   offers?: LiveOffer[];
@@ -427,8 +432,15 @@ export default function CartView({
     bands,
     dearestArea(areas, [...new Set(cart.map((line) => line.restaurantId))], areaOf).runExtra
   );
+  const byValue = ladderFor(
+    [...new Set(cart.map((line) => line.restaurantId))],
+    valueBandsOf
+  );
   const alone = promotion
     ? promotion.fee
+    : byValue.length > 0
+      ? feeForValue(cartSubtotal(cart), byValue) +
+        dearestArea(areas, [...new Set(cart.map((line) => line.restaurantId))], areaOf).runExtra
     : ladder.length > 0
       ? feeFor(countItems(cart), null, ladder)
       : 0;
