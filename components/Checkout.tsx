@@ -392,45 +392,51 @@ export default function Checkout({
       ? `${aroundPhrase(sameDay.at)} ${sameDay.day}`
       : "on the next run";
 
-  /**
-   * The one alternative worth a sentence.
+  /*
+   * Comparing one way of getting the food here with the other.
    *
-   * A car of its own can be two and a half thousand dearer than waiting for a
-   * run, and nobody should pay that without being told there was another way.
-   * The other direction matters too: somebody on a run tomorrow may not know
-   * a car today is even possible.
+   * Only where the fee comes from the container ladder on both sides. A
+   * market is priced by what the shopping comes to, and a promotion is a
+   * price rather than a ladder, so there is nothing to compare.
    */
-  const waitingSaves = (() => {
+  const comparable =
+    !shared && !promotion && itemCount > 0 && byValue.length === 0;
+
+  /**
+   * The next run, for somebody in a car of its own.
+   *
+   * Named whether or not it is cheaper. It usually is, by thousands, but a
+   * run that costs the same is still the answer to "when else could I get
+   * this", and hiding it because the arithmetic came out level leaves the
+   * question looking unanswered.
+   */
+  const runInstead = (() => {
+    const run = todayRun ?? laterRun;
+    if (!comparable || onARun || !run || !sameDay) return null;
+
+    const fee = Math.max(
+      0,
+      feeFor(itemCount + alreadyItems, run.flashFee, bands) - alreadyCharged
+    );
+    const now = sameDayFee(itemCount, sameDay.urgent, sameDayBands, urgentExtra);
+    return { id: run.id, label: run.label, fee, saving: Math.max(0, now - fee) };
+  })();
+
+  /**
+   * The other direction: somebody on a run may not know a car today is even
+   * possible. Only worth a sentence when it costs more, because a car that
+   * were somehow cheaper would already have been chosen for them.
+   */
+  const carSooner = (() => {
+    const soon = todaySlot ?? laterSlot;
+    if (!comparable || !onARun || !soon) return null;
+
     const runFee = Math.max(
       0,
       feeFor(itemCount + alreadyItems, null, bands) - alreadyCharged
     );
-    const soon = sameDay ?? todaySlot ?? laterSlot;
-    const soonFee = soon
-      ? sameDayFee(itemCount, soon.urgent, sameDayBands, urgentExtra)
-      : 0;
-
-    // Nothing to say where the fee does not come from the container ladder:
-    // this line compares one ladder with the other, and a market is priced
-    // by what the shopping comes to on either.
-    if (shared || promotion || itemCount === 0 || byValue.length > 0) return null;
-
-    if (onARun) {
-      // Already on the cheap way. Only worth saying a car exists at all.
-      return soon && soonFee > runFee
-        ? { runId: batchId, label: "", instead: soonFee, saving: 0 }
-        : null;
-    }
-
-    const cheaper = todayRun ?? laterRun;
-    return cheaper && runFee < soonFee
-      ? {
-          runId: cheaper.id,
-          label: cheaper.label,
-          instead: runFee,
-          saving: soonFee - runFee,
-        }
-      : null;
+    const fee = sameDayFee(itemCount, soon.urgent, sameDayBands, urgentExtra);
+    return fee > runFee ? { fee, phrase: soon.phrase } : null;
   })();
 
   // Naming friends to carry food for is a different thing from being in a
@@ -703,15 +709,13 @@ export default function Checkout({
             real money, it is offered as a sentence rather than as a menu: a
             car of its own can be two and a half thousand dearer, and nobody
             should pay that without being told there was another way. */}
-        {waitingSaves !== null && onARun && (
+        {carSooner !== null && (
           <button
             type="button"
             onClick={() => setDeliverAt(sameDaySlots[0]?.at ?? "")}
             className="text-left text-sm font-semibold text-brand"
           >
-            {`Need it sooner? A car of its own can be there ${
-              (todaySlot ?? laterSlot)?.phrase ?? "today"
-            }, for ${naira(waitingSaves.instead)}.`}
+            {`Need it sooner? A car of its own can be there ${carSooner.phrase}, for ${naira(carSooner.fee)}.`}
           </button>
         )}
       </section>
@@ -1136,7 +1140,7 @@ export default function Checkout({
         </div>
         {/* Four items costing more than three looks arbitrary until the whole
             ladder is there, so it is one tap away. */}
-        {!shared && !sameDay && byValue.length === 0 && (
+        {!shared && !promotion && !sameDay && byValue.length === 0 && (
           <FeeBands
             itemCount={itemCount + alreadyItems}
             flashFee={selected?.flashFee ?? null}
@@ -1147,7 +1151,7 @@ export default function Checkout({
             is the dearest way to get food here, and the number is meaningless
             until you can see both the rung it landed on and the run it could
             have been on instead. The way out is a tap, inside the answer. */}
-        {!shared && sameDay && byValue.length === 0 && (
+        {!shared && !promotion && sameDay && byValue.length === 0 && (
           <FeeBands
             itemCount={itemCount}
             flashFee={null}
@@ -1159,17 +1163,18 @@ export default function Checkout({
             }
             note="A car of its own is one order, one driver, one trip, so there is nobody to share the petrol with. A run carries everybody at once, which is why it costs less."
           >
-            {waitingSaves !== null && !onARun ? (
+            {runInstead !== null ? (
               <button
                 type="button"
                 onClick={() => {
                   setDeliverAt("");
-                  setBatchId(waitingSaves.runId);
+                  setBatchId(runInstead.id);
                 }}
                 className="mt-2 w-full rounded-xl bg-brand-tint px-3 py-2 text-left font-semibold text-brand-dark"
               >
-                {waitingSaves.label} instead is {naira(waitingSaves.instead)}.
-                Tap to move onto it and save {naira(waitingSaves.saving)}.
+                {runInstead.label} instead is {naira(runInstead.fee)}
+                {runInstead.saving > 0 ? `, ${naira(runInstead.saving)} less` : ""}.
+                Tap to move onto it.
               </button>
             ) : (
               /* Say that the cheaper way is shut rather than showing nothing.
