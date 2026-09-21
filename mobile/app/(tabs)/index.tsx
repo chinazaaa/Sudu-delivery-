@@ -91,6 +91,21 @@ export default function Home() {
   // When something ordered right now would land, by the one rule every way
   // of ordering uses: a run going today while it is taking orders, a car of
   // its own today, a run tomorrow, then tomorrow's first window.
+  // One car a week, on a Saturday. Empty when the shelf is switched off,
+  // and then the app does not mention it at all.
+  const [skincare, setSkincare] = useState("");
+
+  useEffect(() => {
+    void api
+      .shelf()
+      .then((next) => {
+        if (next.on) setSkincare(`Order any day. It comes ${next.when}.`);
+      })
+      .catch(() => {
+        /* The shelf is a door, not the shop. A closed one is no error. */
+      });
+  }, []);
+
   const arriving =
     nextArrival(
       (shop?.runs ?? []).filter((one) => !one.closed && !one.full),
@@ -146,6 +161,28 @@ export default function Home() {
             <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink }}>
               Order now, get it {arriving}
             </Text>
+          </Pressable>
+        )}
+
+        {/* The other half of the shop. It is not a restaurant and it does not
+            come today, so it is a door rather than a card in the row. */}
+        {skincare !== "" && (
+          <Pressable
+            onPress={() => router.push("/skincare")}
+            style={{
+              backgroundColor: T.paper,
+              borderRadius: T.radius,
+              padding: 14,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: "800", color: T.ink }}>Skincare</Text>
+              <Text style={{ color: T.muted, marginTop: 2 }}>{skincare}</Text>
+            </View>
+            <Text style={{ color: T.brand, fontWeight: "800" }}>Shop</Text>
           </Pressable>
         )}
 

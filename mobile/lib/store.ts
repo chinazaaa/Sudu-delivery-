@@ -44,6 +44,7 @@ export type Me = {
 };
 
 const CART = "sudu.cart";
+const SHELF = "sudu.skincare";
 const PARTY = "sudu.party";
 const PAST = "sudu.parties";
 const PEOPLE = "sudu.people";
@@ -288,3 +289,54 @@ export function useStored<T>(load: () => Promise<T>, fallback: T): [T, () => voi
 export const countItems = (lines: Line[]) => lines.reduce((sum, line) => sum + line.qty, 0);
 export const cartTotal = (lines: Line[]) =>
   lines.reduce((sum, line) => sum + line.unitPrice * line.qty, 0);
+
+/**
+ * The skincare basket, kept apart from the food.
+ *
+ * Skincare arrives on one car a week and food arrives this afternoon, so they
+ * cannot be the same order, and a single basket holding both would have to
+ * explain that at the worst possible moment. Two baskets is the honest shape:
+ * putting a cleanser in changes nothing about the pizza waiting in the other
+ * one, and ordering either leaves the other where it is.
+ */
+export type ShelfLine = {
+  id: string;
+  name: string;
+  brand: string;
+  price: number;
+  imageUrl: string;
+  qty: number;
+};
+
+export const shelf = {
+  read: () => read<ShelfLine[]>(SHELF, []),
+  async add(line: Omit<ShelfLine, "qty">, qty = 1): Promise<void> {
+    const lines = await shelf.read();
+    const found = lines.find((one) => one.id === line.id);
+    await write(
+      SHELF,
+      found
+        ? lines.map((one) => (one.id === line.id ? { ...one, qty: one.qty + qty } : one))
+        : [...lines, { ...line, qty }]
+    );
+    changed();
+  },
+  async setQty(id: string, qty: number): Promise<void> {
+    const lines = await shelf.read();
+    await write(
+      SHELF,
+      qty <= 0
+        ? lines.filter((one) => one.id !== id)
+        : lines.map((one) => (one.id === id ? { ...one, qty } : one))
+    );
+    changed();
+  },
+  async clear(): Promise<void> {
+    await write(SHELF, []);
+    changed();
+  },
+};
+
+export const shelfCount = (lines: ShelfLine[]) => lines.reduce((sum, one) => sum + one.qty, 0);
+export const shelfTotal = (lines: ShelfLine[]) =>
+  lines.reduce((sum, one) => sum + one.price * one.qty, 0);

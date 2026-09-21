@@ -1,7 +1,7 @@
 import { Image, Text, View } from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { cart, countItems, useStored } from "@/lib/store";
+import { cart, countItems, shelf, shelfCount, useStored } from "@/lib/store";
 import { T } from "@/lib/theme";
 
 /**
@@ -12,7 +12,11 @@ import { T } from "@/lib/theme";
  */
 export default function TabsLayout() {
   const [lines] = useStored(cart.read, []);
-  const items = countItems(lines);
+  const [shelfLines] = useStored(shelf.read, []);
+  // Both baskets. They are two orders and two days, but one badge: a
+  // skincare basket nobody can see from the menu is one nobody remembers
+  // they have.
+  const items = countItems(lines) + shelfCount(shelfLines);
 
   return (
     <Tabs

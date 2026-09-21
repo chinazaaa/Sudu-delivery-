@@ -427,6 +427,74 @@ export const api = {
     post<{ ok: boolean }>("/prefs", { token: pushToken, deals }),
   registerPush: (pushToken: string, platform: string, token?: string | null) =>
     post<{ ok: boolean }>("/push", { token: pushToken, platform }, token),
+  /**
+   * The skincare shelf, a page at a time.
+   *
+   * Two thousand products never come down a phone line at once: the shelf is
+   * narrowed here the same way it is on the website, by shelf, by brand and
+   * by price, and the answer carries the facets so the filters can be drawn
+   * without a second call.
+   */
+  shelf: (query: {
+    shelf?: string;
+    brand?: string;
+    q?: string;
+    sort?: string;
+    page?: number;
+  } = {}) => {
+    const asked = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== "" && value !== 0) asked.set(key, String(value));
+    }
+    const tail = asked.toString();
+    return get<Shelf>(`/skincare${tail === "" ? "" : `?${tail}`}`);
+  },
+  placeShelf: (order: {
+    lines: { id: string; qty: number }[];
+    name: string;
+    phone: string;
+    hostel: string;
+    note: string;
+    paymentMethod: "transfer" | "card";
+  }) => post<{ orderId: string; token: string | null }>("/skincare/order", order),
+};
+
+/** A product on the skincare shelf. */
+export type ShelfProduct = {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl: string;
+  brand: string;
+  available: boolean;
+};
+
+/**
+ * The skincare shelf: what it is, and one page of it.
+ *
+ * `on` false is a real answer rather than an error. The shop can switch the
+ * shelf off, and then the app simply has no skincare tab, exactly as the
+ * website has no page.
+ */
+export type Shelf = {
+  on: boolean;
+  name?: string;
+  /** "Saturday, 27 Sep", the whole promise in four words. */
+  when?: string;
+  cutOff?: string;
+  window?: string;
+  blurb?: string;
+  /** Why the products are real, which is the thing people are right to ask. */
+  promise?: string;
+  bands?: { maxItems: number | null; fee: number }[];
+  hostels?: string[];
+  products?: ShelfProduct[];
+  total?: number;
+  perPage?: number;
+  page?: number;
+  shelves?: { name: string; items: number }[];
+  brands?: { name: string; items: number }[];
 };
 
 /** Delivery is priced by how many containers travel, exactly as on the web. */

@@ -73,6 +73,11 @@ export default function Layout() {
         <Stack.Screen name="checkout" options={{ title: "Checkout" }} />
         <Stack.Screen name="finalise" options={{ title: "Put my food in" }} />
         <Stack.Screen name="order/[id]" options={{ title: "Your order" }} />
+        {/* The other half of the shop. Its own shelf, its own basket and its
+            own day, so it is pushed over the tabs rather than living in
+            them: nobody browses skincare and food in the same breath. */}
+        <Stack.Screen name="skincare" options={{ title: "Skincare" }} />
+        <Stack.Screen name="skincare-checkout" options={{ title: "Checkout" }} />
       </Stack>
     </>
   );
