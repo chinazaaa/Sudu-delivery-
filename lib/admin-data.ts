@@ -204,6 +204,9 @@ export type CustomerRow = {
   /** How they paid last time, which is how they will want to pay next time.
    *  Worth knowing before a run: a card person needs a link sent by hand. */
   pays: "transfer" | "card";
+  /** Who brought them, if anybody. Written once on a first order and never
+   *  touched again, which is what makes a promoter's commission lifetime. */
+  promoterCode: string | null;
 };
 
 /** The customer book: who they are, what they have spent, and their PIN. */
@@ -212,11 +215,14 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
   // not had the migration run on it still shows the customer book.
   const full = await db()
     .from("customers")
-    .select("phone, name, hostel, pin, admin_note, payment_method")
+    .select("phone, name, hostel, pin, admin_note, payment_method, promoter_code")
     .order("name");
 
   const { data, error } = full.error
-    ? await db().from("customers").select("phone, name, hostel, pin, admin_note").order("name")
+    ? await db()
+        .from("customers")
+        .select("phone, name, hostel, pin, admin_note, promoter_code")
+        .order("name")
     : full;
   if (error) throw new Error(error.message);
 
@@ -238,6 +244,7 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
       pays: ((row as { payment_method?: string }).payment_method === "card"
         ? "card"
         : "transfer") as "transfer" | "card",
+      promoterCode: ((row as { promoter_code?: string | null }).promoter_code ?? null),
       orders: mine.length,
       spend: paid.reduce((total, order) => total + (order.total as number), 0),
       lastOrder:

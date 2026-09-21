@@ -36,6 +36,7 @@ import {
 import { skincareShelves } from "@/lib/skincare";
 import { areaText } from "@/lib/areas";
 import { newPin } from "@/lib/customer-auth";
+import { namedPromoters, realPromoter } from "@/lib/promoters";
 import { pushDeal, pushToPhone } from "@/lib/push";
 
 async function assertAdmin(): Promise<void> {
@@ -2688,4 +2689,31 @@ export async function importCatalogue(
   revalidatePath("/", "layout");
 
   return { done: said(added, changed, sections, skipped), error: "" };
+}
+
+/**
+ * Who a customer belongs to, set by hand.
+ *
+ * The order path writes this once, on a first order, and never touches it
+ * again: that is what makes a promoter's commission lifetime, and it is why
+ * nothing else in the shop is allowed to change it. This is the deliberate
+ * exception, for the customers who ordered before the question was asked and
+ * whose promoter everybody already knows.
+ *
+ * Moving somebody moves every order they have ever placed, so it is a
+ * decision about money rather than a tidy-up.
+ */
+export async function setCustomerPromoter(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const phone = normalisePhone(String(form.get("phone") ?? ""));
+  if (!phone) return;
+
+  const code = String(form.get("promoter_code") ?? "").trim();
+  // Nobody is a real answer, and a code that is not a promoter is not.
+  const belongs = code !== "" && (await realPromoter(code)) ? code : null;
+
+  await db().from("customers").update({ promoter_code: belongs }).eq("phone", phone);
+
+  revalidatePath("/admin", "layout");
 }

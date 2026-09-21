@@ -7,9 +7,10 @@ import { whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import SaveButton from "@/components/SaveButton";
-import { addCustomer, deleteCustomer, saveCustomerNote } from "../actions";
+import { addCustomer, deleteCustomer, saveCustomerNote, setCustomerPromoter } from "../actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { hostelNames } from "@/lib/hostels";
+import { namedPromoters } from "@/lib/promoters";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +20,12 @@ export default async function CustomersPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const query = await searchParams;
-  const [rows, settings, url, hostels] = await Promise.all([
+  const [rows, settings, url, hostels, promoters] = await Promise.all([
     customerRows(query.q),
     getSettings(),
     siteUrl(),
     hostelNames(),
+    namedPromoters(),
   ]);
 
   const spend = rows.reduce((total, row) => total + row.spend, 0);
@@ -193,6 +195,32 @@ export default async function CustomersPage({
                     </form>
                   )}
                 </div>
+
+                {/* Who brought them. The order path writes this once and
+                    never again, which is what makes the commission lifetime,
+                    so changing it here is the deliberate exception: it moves
+                    every order they have ever placed. */}
+                {promoters.length > 0 && (
+                  <form action={setCustomerPromoter} className="mt-3 flex gap-2">
+                    <input type="hidden" name="phone" value={row.phone} />
+                    <select
+                      name="promoter_code"
+                      defaultValue={row.promoterCode ?? ""}
+                      className="field grow py-2 text-sm"
+                      aria-label={`Who brought ${row.name || row.phone}`}
+                    >
+                      <option value="">Came in on their own</option>
+                      {promoters.map((one) => (
+                        <option key={one.code} value={one.code}>
+                          Brought by {one.name}
+                        </option>
+                      ))}
+                    </select>
+                    <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
+                      Save
+                    </SaveButton>
+                  </form>
+                )}
 
                 <form action={saveCustomerNote} className="mt-3 flex gap-2">
                   <input type="hidden" name="phone" value={row.phone} />
