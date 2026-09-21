@@ -186,8 +186,15 @@ export default function OccasionBoxes({
                         Swap
                       </summary>
                       <div className="mt-2 space-y-1">
-                        {[{ name: line.name, restaurant: line.restaurant, delta: 0 }, ...line.swaps].map(
-                          (option, index) => (
+                        {[
+                          {
+                            name: line.name,
+                            restaurant: line.restaurant,
+                            choices: line.choices,
+                            delta: 0,
+                          },
+                          ...line.swaps,
+                        ].map((option, index) => (
                             <label
                               key={`${line.id}-${index}`}
                               className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm odd:bg-black/[0.03]"
@@ -204,6 +211,17 @@ export default function OccasionBoxes({
                                 />
                                 <span>
                                   {option.name}
+                                  {/* The choice, in the name itself where it
+                                      is the only thing telling two rows
+                                      apart. Spicy and crunchy are the same
+                                      pot at the same price, and printing
+                                      both as "POT Chicken (8 Pieces)" asks
+                                      somebody to guess. */}
+                                  {option.choices.length > 0 && (
+                                    <span className="font-semibold">
+                                      {" "}· {option.choices.join(", ")}
+                                    </span>
+                                  )}
                                   <span className="block text-xs text-muted">
                                     {option.restaurant}
                                   </span>
@@ -219,8 +237,7 @@ export default function OccasionBoxes({
                                     : `−${naira(-option.delta)}`}
                               </span>
                             </label>
-                          )
-                        )}
+                        ))}
                       </div>
                     </details>
                   )}
