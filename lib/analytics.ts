@@ -392,3 +392,95 @@ export async function shelfNumbers(days = 7): Promise<ShelfNumbers | null> {
     top,
   };
 }
+
+export type BoxNumbers = {
+  orders: number;
+  paid: number;
+  food: number;
+  delivery: number;
+  /** Each box that sold, dearest first by what it brought in. */
+  boxes: { name: string; occasion: string; orders: number; money: number }[];
+  /** Occasions nobody has ordered from, which is as useful as the ones
+   *  that sold: an occasion with views and no orders is a wrong basket,
+   *  and one with neither is a wrong occasion. */
+  quiet: string[];
+};
+
+/**
+ * Boxes on their own.
+ *
+ * Their orders are ordinary orders and land in every total on this page,
+ * which is right: money is money. What that hides is which box anybody
+ * wanted, and that is the whole reason for packing three rather than one.
+ * Three cards selling evenly and one card selling everything are the same
+ * revenue and completely different businesses.
+ */
+export async function boxNumbers(days = 28): Promise<BoxNumbers | null> {
+  const since = new Date(Date.now() - days * 86400_000).toISOString();
+
+  const { data: orders, error } = await db()
+    .from("orders")
+    .select("box_id, subtotal_food, fee, paid_at")
+    .gte("created_at", since)
+    .not("box_id", "is", null)
+    .neq("status", "cancelled");
+
+  // The column is not there yet, which reads differently from nobody having
+  // ordered a box.
+  if (error) return null;
+
+  const { data: boxes } = await db().from("boxes").select("id, name, occasion_id");
+  const { data: occasions } = await db().from("occasions").select("id, name, active");
+
+  const occasionName = new Map(
+    (occasions ?? []).map((one: any) => [one.id as string, one.name as string])
+  );
+  const box = new Map(
+    (boxes ?? []).map((one: any) => [
+      one.id as string,
+      { name: one.name as string, occasion: occasionName.get(one.occasion_id) ?? "" },
+    ])
+  );
+
+  const tally = new Map<string, { orders: number; money: number }>();
+  let food = 0;
+  let delivery = 0;
+  let paid = 0;
+
+  for (const row of (orders ?? []) as any[]) {
+    food += Number(row.subtotal_food ?? 0);
+    delivery += Number(row.fee ?? 0);
+    if (row.paid_at) paid += 1;
+
+    const now = tally.get(row.box_id) ?? { orders: 0, money: 0 };
+    tally.set(row.box_id, {
+      orders: now.orders + 1,
+      money: now.money + Number(row.subtotal_food ?? 0) + Number(row.fee ?? 0),
+    });
+  }
+
+  const sold = new Set<string>();
+  const rows = [...tally.entries()]
+    .map(([id, one]) => {
+      const named = box.get(id);
+      if (named) sold.add(named.occasion);
+      return {
+        name: named?.name ?? "A box that has been deleted",
+        occasion: named?.occasion ?? "",
+        orders: one.orders,
+        money: one.money,
+      };
+    })
+    .sort((a, b) => b.money - a.money);
+
+  return {
+    orders: (orders ?? []).length,
+    paid,
+    food,
+    delivery,
+    boxes: rows,
+    quiet: (occasions ?? [])
+      .filter((one: any) => one.active !== false && !sold.has(one.name))
+      .map((one: any) => one.name as string),
+  };
+}

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
-import { feedback, funnel, shelfNumbers, traffic } from "@/lib/analytics";
+import { naira } from "@/lib/money";
+import { boxNumbers, feedback, funnel, shelfNumbers, traffic } from "@/lib/analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +17,12 @@ export default async function AnalyticsPage({
   const days = RANGES.includes(asked as (typeof RANGES)[number]) ? asked : 7;
 
   // Null means nothing is counting yet. The rest of the page still works.
-  const [views, steps, said, shelf] = await Promise.all([
+  const [views, steps, said, shelf, boxes] = await Promise.all([
     traffic(days),
     funnel(days),
     feedback(days),
     shelfNumbers(days),
+    boxNumbers(days),
   ]);
   const busiest = views ? Math.max(...views.perDay.map((day) => day.views), 1) : 1;
 
@@ -73,6 +75,69 @@ export default async function AnalyticsPage({
           right, and that is exactly what hides whether the shelf itself is
           working: two thousand products beside a pizza shop is either a
           second business or a page nobody opens. */}
+      {/* Boxes on their own. Three cards selling evenly and one card
+          selling everything are the same revenue on the totals above and
+          completely different businesses. */}
+      {boxes && (boxes.orders > 0 || boxes.quiet.length > 0) && (
+        <section className="card space-y-3">
+          <div>
+            <h2 className="font-bold">Boxes</h2>
+            <p className="text-sm text-muted">
+              Counted again on their own. These orders are also in the totals
+              above.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Stat
+              label="Box orders"
+              value={boxes.orders}
+              hint={`${boxes.paid} paid · last ${days} days`}
+            />
+            <Stat label="Food" value={boxes.food} money hint="What the boxes came to" />
+            <Stat label="Delivery" value={boxes.delivery} money hint="What the cars took" />
+            <Stat
+              label="Average box"
+              value={boxes.orders > 0 ? Math.round((boxes.food + boxes.delivery) / boxes.orders) : 0}
+              money
+              hint="All in"
+            />
+          </div>
+
+          {boxes.boxes.length > 0 && (
+            <div>
+              <p className="label mb-1">Which ones sold</p>
+              <ul className="divide-y divide-black/5 text-sm">
+                {boxes.boxes.map((one) => (
+                  <li key={`${one.occasion}-${one.name}`} className="flex justify-between gap-3 py-2">
+                    <span className="min-w-0 truncate">
+                      {one.name}
+                      {one.occasion !== "" && (
+                        <span className="text-muted"> · {one.occasion}</span>
+                      )}
+                    </span>
+                    <span className="shrink-0 font-semibold">
+                      {one.orders} · {naira(one.money)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {boxes.quiet.length > 0 && (
+            <div>
+              <p className="label mb-1">Nobody has ordered from</p>
+              <p className="text-sm text-muted">{boxes.quiet.join(" · ")}</p>
+              <p className="mt-1 text-xs text-muted">
+                An occasion with views and no orders is the wrong basket. One
+                with neither is the wrong occasion. The page above says which.
+              </p>
+            </div>
+          )}
+        </section>
+      )}
+
       {shelf && (shelf.orders > 0 || shelf.waiting > 0) && (
         <section className="card space-y-3">
           <div>

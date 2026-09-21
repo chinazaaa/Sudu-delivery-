@@ -96,6 +96,9 @@ export type PlaceOrderInput = {
    *  food goes and who is called when it lands. The block on the order is
    *  the recipient's, since that is where it is going either way. */
   giftTo?: { name: string; phone: string };
+  /** The box this came out of, so analytics can say which one anybody
+   *  wanted. Nothing about money depends on it. */
+  boxId?: string;
   /** Set only by the close of a group, making the orders it exists to make.
    *  By then the group is closed, so the ordinary "can I still join this?"
    *  lookup says no and the order fell back to being a lone one on a run
@@ -441,6 +444,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           joinRootId: sameDay ? null : joinRootId,
           sharedGroupId,
           gift,
+          boxId: input.boxId,
           // A promotion is the price, so it wins over the ladder and over the
           // same day pricing alike. A share worked out by a group that has
           // closed still wins over it: by then the money is decided.
@@ -631,6 +635,8 @@ async function placeSingleOrder(args: {
   fixedFee?: number;
   /** Who is being fed, when that is not the person paying. */
   gift?: { name: string; phone: string } | null;
+  /** The box it came out of, for analytics. */
+  boxId?: string;
 }): Promise<PlaceOrderResult> {
   // Adding to an existing order is a second order to the same batch, not an
   // edit: the admin view merges by phone into one bag (addendum §3). Only the
@@ -696,6 +702,7 @@ async function placeSingleOrder(args: {
     customer_name: args.name,
     hostel: args.hostel,
     gift: args.gift ?? null,
+    box_id: args.boxId ?? null,
     subtotal_food: countFood(lines),
     fee,
     discount: args.coupon?.discount ?? 0,
@@ -929,6 +936,8 @@ async function insertOrder(args: {
   hostel: string;
   /** Who is actually being fed, when that is not the person paying. */
   gift?: { name: string; phone: string } | null;
+  /** The box it came out of, for the analytics page and nothing else. */
+  box_id?: string | null;
   subtotal_food: number;
   fee: number;
   discount: number;
@@ -964,6 +973,7 @@ async function insertOrder(args: {
       ...(args.gift
         ? { deliver_to_name: args.gift.name, deliver_to_phone: args.gift.phone }
         : {}),
+      ...(args.box_id ? { box_id: args.box_id } : {}),
     })
     .select("id")
     .single();
@@ -972,8 +982,8 @@ async function insertOrder(args: {
   // a shop that has not run the migration yet takes the order anyway and
   // simply does not know it was a gift. Losing an order over it would be far
   // worse than losing the label.
-  if (error && args.gift) {
-    return insertOrder({ ...args, gift: null });
+  if (error && (args.gift || args.box_id)) {
+    return insertOrder({ ...args, gift: null, box_id: null });
   }
   if (error || !order) return null;
 

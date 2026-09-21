@@ -85,6 +85,9 @@ async function order(form: FormData): Promise<BoxOrderState> {
     // The whole point of a box: one price, delivery in it, whichever way it
     // travels. What that is depends on the car, not on the cart.
     fixedFee: going.fee,
+    // So analytics can say which box anybody wanted, which is the whole
+    // reason for packing three rather than one.
+    boxId: box.id,
   });
 
   if (!result.ok) return { error: result.error };
