@@ -9,7 +9,7 @@ import { offerBadge, offerLine } from "@/lib/offers";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { serialiseBands } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
-import { allAreas, areaOfEach } from "@/lib/areas-server";
+import { allAreas, areaOfEach, valueBandsOfEach } from "@/lib/areas-server";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +96,11 @@ export async function GET(): Promise<NextResponse> {
       // number. Empty means one area, and every price as it was.
       areas: await allAreas(),
       areaOf: await areaOfEach(),
+      // The kitchens that charge by what the shopping comes to rather than
+      // by how many things it is. Without this the app prices a market
+      // basket off the container ladder and quotes a number nobody is
+      // charged, which is the one thing a checkout must never do.
+      valueBandsOf: await valueBandsOfEach(),
       // Who somebody could say they heard about the shop from. Empty means
       // nobody is promoting, and then the question is not worth asking.
       promoters: await namedPromoters(),

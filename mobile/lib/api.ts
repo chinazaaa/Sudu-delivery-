@@ -193,6 +193,9 @@ export type Shop = {
    *  Sangotedo and every price is what it always was. */
   areas?: Area[];
   areaOf?: Record<string, string>;
+  /** The kitchens that price by what the shopping comes to rather than by
+   *  how many things it is. A market is one; a restaurant is not. */
+  valueBandsOf?: Record<string, ValueBand[]>;
   /** What is on at each kitchen, by restaurant id: a few words for the card,
    *  a sentence for the top of its menu, and the list behind the button. */
   offers?: Record<
@@ -732,3 +735,34 @@ export type LinkView = {
   hostels: string[];
   askUs: string;
 };
+
+/**
+ * Delivery priced by what the shopping comes to.
+ *
+ * A restaurant's ladder counts containers, because a car carrying twelve
+ * takeaway boxes is a different car from one carrying two. A market is not
+ * like that: eleven peppers and a bag of rice is one trip and two bags, and
+ * the container ladder would call it eleven containers.
+ */
+export type ValueBand = { upTo: number | null; fee: number };
+
+/** The dearest ladder this cart touches, because one car fetches all of it. */
+export function valueLadderFor(
+  shop: Shop | null,
+  restaurantIds: string[]
+): ValueBand[] {
+  const byKitchen = shop?.valueBandsOf ?? {};
+  return restaurantIds
+    .map((id) => byKitchen[id])
+    .filter((one): one is ValueBand[] => Array.isArray(one) && one.length > 0)
+    .reduce<ValueBand[]>((worst, one) => (last(one) > last(worst) ? one : worst), []);
+}
+
+/** What this much shopping costs to bring. */
+export function feeForValue(value: number, bands: ValueBand[]): number {
+  if (bands.length === 0) return 0;
+  const found = bands.find((band) => band.upTo === null || value <= band.upTo);
+  return (found ?? bands[bands.length - 1]).fee;
+}
+
+const last = (bands: ValueBand[]) => bands[bands.length - 1]?.fee ?? 0;

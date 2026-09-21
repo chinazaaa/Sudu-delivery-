@@ -13,6 +13,8 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   api,
   areasIn,
+  feeForValue,
+  valueLadderFor,
   aroundPhrase,
   canGoSameDay,
   dearestArea,
@@ -218,7 +220,14 @@ export default function Checkout() {
   // A picked time makes its own trip, so nothing is shared and there is no
   // earlier order on it to take off. A run is priced on everything travelling
   // for this number on it, less whatever the earlier order already paid.
-  const ladder = picked
+  // A kitchen that charges by what the shopping comes to rather than by how
+  // many things it is. The same rule the server charges by, so the number on
+  // this screen is the number on the bill.
+  const byValue = valueLadderFor(shop, kitchens);
+
+  const ladder = byValue.length > 0 && !picked
+    ? feeForValue(food, byValue) + area.runExtra
+    : picked
     ? sameDayFeeFor(items, picked.urgent, sameDayBands, shop?.sameDay?.urgentExtra ?? 0)
     : shop && run
       ? Math.max(0, feeFrom(items + adding.items, runBands, run.flashFee) - adding.feeCharged)
