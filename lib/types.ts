@@ -121,6 +121,12 @@ export type Order = {
   customer_phone: string;
   customer_name: string;
   hostel: string;
+  /** Bought for somebody else: who is fed and who the driver rings. The
+   *  customer above is whoever paid and is who every message about money
+   *  goes to. Both null on an ordinary order, and undefined on a database
+   *  that has not had the migration run. */
+  deliver_to_name?: string | null;
+  deliver_to_phone?: string | null;
   subtotal_food: number;
   fee: number;
   discount: number;

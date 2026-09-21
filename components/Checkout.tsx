@@ -1078,6 +1078,40 @@ export default function Checkout({
           </div>
         )}
 
+        {/* Buying it for somebody else. Folded away, because nearly every
+            order is for whoever is typing, and two more boxes on every
+            checkout would be a tax on all of them to serve the few.
+
+            Not offered in a group: a group is already several people with
+            their own names and blocks, and a gift inside one is two answers
+            to the same question. */}
+        {!shared && !groupOn && (
+          <details className="rounded-xl bg-black/[0.03] p-3">
+            <summary className="cursor-pointer text-sm font-semibold text-brand">
+              Sending this to somebody else?
+            </summary>
+            <label className="mt-2 flex items-center gap-2 text-sm font-semibold">
+              <input type="checkbox" name="gift" />
+              Deliver it to somebody else
+            </label>
+            <p className="mt-1 text-xs text-muted">
+              You pay, and we deal with you about the money. Put their block
+              above, and their name and number here so we know who to call
+              when it is there.
+            </p>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="label" htmlFor="gift_name">Their name</label>
+                <input id="gift_name" name="gift_name" className="field" />
+              </div>
+              <div>
+                <label className="label" htmlFor="gift_phone">Their number</label>
+                <input id="gift_phone" name="gift_phone" inputMode="tel" className="field" />
+              </div>
+            </div>
+          </details>
+        )}
+
         <div>
           <label className="label" htmlFor="customer_note">
             Anything we should know? (optional)

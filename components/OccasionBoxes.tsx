@@ -8,7 +8,6 @@ import { orderBox, type BoxOrderState } from "@/app/occasions/actions";
 import type { BoxView, WhenOption } from "@/lib/box-view";
 import { naira } from "@/lib/money";
 import { OPENED, TRAP } from "@/lib/guard";
-import Thumb from "./Thumb";
 
 /**
  * Picking a box and ordering it.
@@ -119,15 +118,10 @@ export default function OccasionBoxes({
             <button
               type="button"
               onClick={() => setPicked(one.id === picked ? "" : one.id)}
-              className={`flex w-full items-stretch gap-3 overflow-hidden rounded-2xl border-2 text-left transition active:scale-[0.99] ${
+              className={`w-full rounded-2xl border-2 p-4 text-left transition active:scale-[0.99] ${
                 one.id === picked ? "border-brand bg-brand-tint" : "border-black/10"
               }`}
             >
-              <span className="w-24 shrink-0 sm:w-28">
-                <Thumb src={one.imageUrl} name={one.name} rounded="" />
-              </span>
-
-              <span className="min-w-0 flex-1 p-4">
               <div className="flex items-baseline justify-between gap-3">
                 <span className="text-lg font-extrabold">{one.name}</span>
                 <span className="shrink-0 text-lg font-extrabold">
@@ -144,7 +138,6 @@ export default function OccasionBoxes({
               </span>
               <span className="mt-1 block text-sm font-semibold text-brand">
                 Delivery included
-              </span>
               </span>
             </button>
           </li>
@@ -324,7 +317,7 @@ export default function OccasionBoxes({
               </div>
             </div>
             <div>
-              <label className="label" htmlFor="box_hostel">Your block</label>
+              <label className="label" htmlFor="box_hostel">Which block it goes to</label>
               {hostels.length > 0 ? (
                 <select
                   id="box_hostel"
@@ -366,6 +359,33 @@ export default function OccasionBoxes({
                 </label>
               ))}
             </div>
+
+            {/* Buying it for somebody else. Folded away, because most
+                orders are for whoever is typing and an extra pair of
+                boxes on every checkout is a tax on all of them. */}
+            <details className="rounded-xl bg-black/[0.03] p-3">
+              <summary className="cursor-pointer text-sm font-semibold text-brand">
+                It is a gift for somebody else
+              </summary>
+              <label className="mt-2 flex items-center gap-2 text-sm font-semibold">
+                <input type="checkbox" name="gift" defaultChecked={false} />
+                Deliver it to somebody else
+              </label>
+              <p className="mt-1 text-xs text-muted">
+                You pay and we deal with you about it. The block above is
+                theirs, and these are who we call when it is there.
+              </p>
+              <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="label" htmlFor="gift_name">Their name</label>
+                  <input id="gift_name" name="gift_name" className="field" />
+                </div>
+                <div>
+                  <label className="label" htmlFor="gift_phone">Their number</label>
+                  <input id="gift_phone" name="gift_phone" inputMode="tel" className="field" />
+                </div>
+              </div>
+            </details>
 
             <div>
               <label className="label" htmlFor="box_note">Anything we should know?</label>

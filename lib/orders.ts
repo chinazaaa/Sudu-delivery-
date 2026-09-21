@@ -91,6 +91,11 @@ export type PlaceOrderInput = {
   /** A share worked out by a shared delivery when it closed. The order cannot
    *  work this out for itself: it depends on who else ended up in the car. */
   fixedFee?: number;
+  /** Buying it for somebody else. Whoever pays stays the customer, because
+   *  it is their money being chased and their PIN; this is only where the
+   *  food goes and who is called when it lands. The block on the order is
+   *  the recipient's, since that is where it is going either way. */
+  giftTo?: { name: string; phone: string };
   /** Set only by the close of a group, making the orders it exists to make.
    *  By then the group is closed, so the ordinary "can I still join this?"
    *  lookup says no and the order fell back to being a lone one on a run
@@ -179,6 +184,44 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
 
   const hostel = input.hostel.trim();
   if (hostel.length < 1) return { ok: false, error: "Please enter your hostel or block." };
+
+  /*
+   * Buying it for somebody else.
+   *
+   * The payer stays the customer, because it is their money being chased,
+   * their PIN and their order history. This is only who is fed and who is
+   * called when the food is at the block, and the block on the order is
+   * already the recipient's because that is where it is going.
+   *
+   * Refused rather than half-accepted if the number is wrong: a gift with a
+   * bad number is a bag at a block with nobody to call, which is the one
+   * outcome worse than not taking the order.
+   */
+  const gift = (() => {
+    const to = input.giftTo;
+    if (!to) return null;
+    const toName = to.name.trim();
+    const toPhone = normalisePhone(to.phone);
+    return toName.length >= 2 && toPhone ? { name: toName, phone: toPhone } : null;
+  })();
+
+  if (input.giftTo && !gift) {
+    return {
+      ok: false,
+      error:
+        "Check the name and number of whoever it is going to. They are the " +
+        "ones we call when it is at their block.",
+    };
+  }
+
+  // A gift to your own number is not a gift, it is your order with extra
+  // typing, and it would have the driver ringing the payer twice.
+  if (gift && gift.phone === phone) {
+    return {
+      ok: false,
+      error: "That is your own number. Leave the gift part off if it is for you.",
+    };
+  }
 
   // Same day makes its own trip rather than joining one, so the batch is
   // created here instead of chosen. Checked against the real clock, because a
@@ -397,6 +440,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           coupon: coupon?.ok ? coupon : null,
           joinRootId: sameDay ? null : joinRootId,
           sharedGroupId,
+          gift,
           // A promotion is the price, so it wins over the ladder and over the
           // same day pricing alike. A share worked out by a group that has
           // closed still wins over it: by then the money is decided.
@@ -585,6 +629,8 @@ async function placeSingleOrder(args: {
   promotionCode?: string | null;
   /** A share handed down by a shared delivery that has just closed. */
   fixedFee?: number;
+  /** Who is being fed, when that is not the person paying. */
+  gift?: { name: string; phone: string } | null;
 }): Promise<PlaceOrderResult> {
   // Adding to an existing order is a second order to the same batch, not an
   // edit: the admin view merges by phone into one bag (addendum §3). Only the
@@ -649,6 +695,7 @@ async function placeSingleOrder(args: {
     customer_phone: args.phone,
     customer_name: args.name,
     hostel: args.hostel,
+    gift: args.gift ?? null,
     subtotal_food: countFood(lines),
     fee,
     discount: args.coupon?.discount ?? 0,
@@ -880,6 +927,8 @@ async function insertOrder(args: {
   customer_phone: string;
   customer_name: string;
   hostel: string;
+  /** Who is actually being fed, when that is not the person paying. */
+  gift?: { name: string; phone: string } | null;
   subtotal_food: number;
   fee: number;
   discount: number;
@@ -912,9 +961,20 @@ async function insertOrder(args: {
       customer_note: args.customer_note,
       shared_with: args.shared_with ?? null,
       status: "pending",
+      ...(args.gift
+        ? { deliver_to_name: args.gift.name, deliver_to_phone: args.gift.phone }
+        : {}),
     })
     .select("id")
     .single();
+
+  // Naming a column the database has not got refuses the whole statement, so
+  // a shop that has not run the migration yet takes the order anyway and
+  // simply does not know it was a gift. Losing an order over it would be far
+  // worse than losing the label.
+  if (error && args.gift) {
+    return insertOrder({ ...args, gift: null });
+  }
   if (error || !order) return null;
 
   const { data: savedLines, error: linesError } = await db()

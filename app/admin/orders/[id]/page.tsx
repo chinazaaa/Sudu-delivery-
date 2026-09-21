@@ -96,7 +96,16 @@ async function orderPage(id: string, said: string) {
         // The same wording as the card below it and the transfer narration:
         // #1001a, not #1001 on one screen and #1001a on the next.
         title={`Order ${shareRef(order, order.shares.length > 0 ? order.shares : [order])}`}
-        detail={`${order.customer_name} · ${formatPhone(order.customer_phone)} · ${order.hostel}`}
+        // Two people on a gift, and the driver needs the second one. Whoever
+        // paid stays first, because they are who is chased for money.
+        detail={
+          order.deliver_to_name
+            ? `Paid by ${order.customer_name} · ${formatPhone(order.customer_phone)} — ` +
+              `goes to ${order.deliver_to_name} · ${formatPhone(
+                order.deliver_to_phone ?? ""
+              )} · ${order.hostel}`
+            : `${order.customer_name} · ${formatPhone(order.customer_phone)} · ${order.hostel}`
+        }
         backHref="/admin/orders"
         backLabel="All orders"
         actions={

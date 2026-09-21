@@ -69,11 +69,6 @@ export default function BoxForm({
       </div>
 
       <div>
-        <label className="label">Picture</label>
-        <input type="file" name="photo" accept="image/*" className="field py-2" />
-      </div>
-
-      <div>
         <p className="label">What is in it</p>
         <BoxLines catalogue={catalogue} start={box?.lines ?? []} />
       </div>

@@ -78,6 +78,16 @@ async function order(form: FormData): Promise<BoxOrderState> {
     paymentMethod: form.get("payment") === "card" ? "card" : "transfer",
     customerNote: String(form.get("note") ?? ""),
     heardFrom: String(form.get("heard_from") ?? ""),
+    // Buying it for somebody else. Their name and number, so the driver
+    // rings them; the payer stays the customer and keeps every message
+    // about money.
+    giftTo:
+      form.get("gift") === "on"
+        ? {
+            name: String(form.get("gift_name") ?? ""),
+            phone: String(form.get("gift_phone") ?? ""),
+          }
+        : undefined,
     // The whole point of a box: one price, delivery in it, whichever way it
     // travels. What that is depends on the car, not on the cart.
     fixedFee: going.fee,

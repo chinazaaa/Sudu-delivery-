@@ -70,14 +70,6 @@ export default function OccasionForm({
         <input name="blurb" defaultValue={occasion?.blurb} className="field" />
       </div>
 
-      <div>
-        <label className="label">Picture</label>
-        <input type="file" name="photo" accept="image/*" className="field py-2" />
-        <p className="mt-1 text-xs text-muted">
-          Food sells on photographs. A card without one is a line of text.
-        </p>
-      </div>
-
       {/* A clock of its own. Blank is the ordinary kind, where the customer
           picks a day from whatever is going. */}
       <fieldset className="rounded-xl border border-black/10 p-3">

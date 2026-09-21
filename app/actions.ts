@@ -82,6 +82,15 @@ export async function submitOrder(
     // Who they say they heard about us from. Checked against the promoters
     // table on the way in, because a code off a form is not a promoter.
     heardFrom: String(form.get("heard_from") ?? "").trim(),
+    // Buying it for somebody else. The payer stays the customer and keeps
+    // every message about money; this is only who the driver rings.
+    giftTo:
+      form.get("gift") === "on"
+        ? {
+            name: String(form.get("gift_name") ?? ""),
+            phone: String(form.get("gift_phone") ?? ""),
+          }
+        : undefined,
     joinOrderId: String(form.get("join_order_id") ?? "") || undefined,
     shareDelivery: String(form.get("share_delivery") ?? "") === "on",
     deliverAt: String(form.get("deliver_at") ?? "") || undefined,
