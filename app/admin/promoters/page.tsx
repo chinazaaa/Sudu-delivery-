@@ -77,6 +77,15 @@ export default async function PromotersAdmin({
         </div>
       )}
 
+      {/* At the top, folded. Adding somebody is a thing you come to this
+          page to do, and it was underneath however many promoters there
+          already were, which is the wrong way round: the more of them there
+          are, the further it moved. */}
+      <details className="card mb-3" open={everybody.length === 0}>
+        <summary className="cursor-pointer font-bold">Add a promoter</summary>
+        <PromoterForm />
+      </details>
+
       {/* One at a time once there are a few. A form rather than a script, so
           it works before anything has loaded and the choice stays in the
           address afterwards. */}
@@ -340,10 +349,6 @@ export default async function PromotersAdmin({
         </p>
       )}
 
-      <details className="card mt-4" open={everybody.length === 0}>
-        <summary className="cursor-pointer font-bold">Add a promoter</summary>
-        <PromoterForm />
-      </details>
     </div>
   );
 }
