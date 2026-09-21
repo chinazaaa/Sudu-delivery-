@@ -254,14 +254,19 @@ export type OpenBatch = Batch & { order_count: number; full: boolean };
  * the site roll forward instead of dead-ending: a student arriving after the
  * night cut-off is shown tomorrow, not a closed sign.
  */
-export async function openBatches(): Promise<OpenBatch[]> {
+export async function openBatches(days?: number): Promise<OpenBatch[]> {
   await ensureUpcomingBatches();
   await closeExpiredBatches();
 
   // Runs exist three weeks out so they can be planned, but a customer is only
   // offered the near ones: food is not planned a fortnight ahead, and an order
   // that sits unpaid that long is priced on a menu that has since moved.
-  const horizon = (await safeSettings()).order_horizon_days || 7;
+  //
+  // A box is the exception and says so by asking for its own number of days.
+  // A games night really is planned a fortnight out, and the menu-drift worry
+  // does not apply to it because a box is priced off the menu at the moment
+  // somebody orders.
+  const horizon = days ?? ((await safeSettings()).order_horizon_days || 7);
   // Whole days, to the end of the last one. Counting in hours from right now
   // put next Friday's 11:30 cut-off a few hours outside a seven-day window, so
   // on a Friday the only run anybody could see was that same night's.
@@ -283,7 +288,7 @@ export async function openBatches(): Promise<OpenBatch[]> {
       .gt("cut_off_at", new Date().toISOString())
       .lt("cut_off_at", until)
       .order("cut_off_at", { ascending: true })
-      .limit(8);
+      .limit(days ? 40 : 8);
     if (filterByKind) query = query.eq("kind", "run");
     return query;
   };

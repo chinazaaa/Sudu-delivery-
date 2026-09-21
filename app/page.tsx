@@ -1,4 +1,5 @@
 import { lagosToday } from "@/lib/time";
+import { liveOccasions } from "@/lib/boxes";
 import Home from "@/components/Home";
 import { openBatches } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
@@ -63,6 +64,18 @@ export default async function HomePage() {
   // the shop's rather than the phone's.
   const decided = nextArrival(runViews, slots, lagosToday());
 
+  // What is packed, said as the thing itself rather than as a category.
+  const occasions = await liveOccasions();
+  const occasionsLine =
+    occasions.length === 0
+      ? ""
+      : occasions.length === 1
+        ? `${occasions[0].name}. One price, delivery in it.`
+        : `${occasions
+            .slice(0, 2)
+            .map((one) => one.name)
+            .join(", ")} and more. One price, delivery in it.`;
+
   return (
     <Home
       menu={menu}
@@ -92,6 +105,9 @@ export default async function HomePage() {
         })()
       }
       promos={promos}
+      // The one signpost. Named by whatever is nearest, because "Match day,
+      // Saturday" is a reason to tap and "Occasions" is a filing cabinet.
+      occasions={occasionsLine}
       // One car a week, on a Saturday. Empty when that shelf is off, and then
       // the page does not mention it at all.
       skincare={

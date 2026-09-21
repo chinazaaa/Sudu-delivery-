@@ -18,6 +18,7 @@ export default function Home({
   arriving,
   alsoArriving = null,
   skincare,
+  occasions = "",
   slides,
   popularIds,
   autoHeadline,
@@ -35,6 +36,9 @@ export default function Home({
   /** When the skincare car next goes, said in a line. Empty when that shelf
    *  is switched off, and then there is no door to it. */
   skincare: string;
+  /** What is packed and ready, said in a line. The home page is the only
+   *  signpost this shop has, so anything not named here is unreachable. */
+  occasions?: string;
   /** Written in admin. Empty falls back to a slide per restaurant. */
   slides: Slide[];
   /** Menu item ids, most bought first. Empty until people have ordered. */
@@ -123,6 +127,19 @@ export default function Home({
       {/* The other half of the shop. It is not a restaurant and it does not
           come today, so it is a door rather than a card in the row: one car a
           week, and the page behind this says which Saturday. */}
+      {occasions !== "" && (
+        <Link
+          href="/occasions"
+          className="flex items-center justify-between gap-3 rounded-2xl bg-paper px-4 py-3 shadow-card transition active:scale-[0.99]"
+        >
+          <span>
+            <span className="block font-bold">Ordering for something?</span>
+            <span className="block text-sm text-muted">{occasions}</span>
+          </span>
+          <span className="shrink-0 text-sm font-extrabold text-brand">See</span>
+        </Link>
+      )}
+
       {skincare !== "" && (
         <Link
           href="/skincare"

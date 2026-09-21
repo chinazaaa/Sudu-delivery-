@@ -1,0 +1,89 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+
+import { boxById, cartOf, occasionBySlug } from "@/lib/boxes";
+import { whenOptions } from "@/lib/box-view";
+import { placeOrder } from "@/lib/orders";
+import { orderLinkId } from "@/lib/orders";
+import { OPENED, sprung, tooFast, TRAP } from "@/lib/guard";
+
+export type BoxOrderState = { error: string; orderId?: string };
+
+/**
+ * Ordering a box.
+ *
+ * Its own action rather than the ordinary checkout, for the same reason a
+ * checkout link has one: the price is settled before anybody arrives. The
+ * ladder would put eight containers at eight thousand and there would be no
+ * box left to sell.
+ *
+ * Everything that decides money is looked up here rather than read off the
+ * form. A page can say a box costs four thousand to deliver; only the shop
+ * can say it, and a swap is only a swap because the shop offered it.
+ */
+export async function orderBox(
+  _prev: BoxOrderState,
+  form: FormData
+): Promise<BoxOrderState> {
+  if (sprung(form.get(TRAP)) || tooFast(form.get(OPENED))) {
+    return { error: "That did not go through. Give it a moment and try again." };
+  }
+
+  const occasion = await occasionBySlug(String(form.get("occasion") ?? ""));
+  const box = await boxById(String(form.get("box") ?? ""));
+  if (!occasion || !occasion.active || !box || !box.active) {
+    return { error: "That box is not on any more." };
+  }
+
+  // Which of the ways of getting it here they picked, matched against the
+  // list the shop would offer right now. A page left open all afternoon is
+  // still showing this morning's cars.
+  const options = await whenOptions(occasion, box);
+  const going = options.find((one) => one.key === String(form.get("when") ?? ""));
+  if (!going) {
+    return {
+      error:
+        options.length === 0
+          ? "Nothing can get there in time now."
+          : "That time has gone. Pick another one.",
+    };
+  }
+
+  const result = await placeOrder({
+    batchId: going.runId,
+    deliverAt: going.at || undefined,
+    name: String(form.get("name") ?? ""),
+    phone: String(form.get("phone") ?? ""),
+    hostel: String(form.get("hostel") ?? ""),
+    lines: cartOf(box, swapsFrom(form)),
+    paymentMethod: form.get("payment") === "card" ? "card" : "transfer",
+    customerNote: String(form.get("note") ?? ""),
+    heardFrom: String(form.get("heard_from") ?? ""),
+    // The whole point of a box: one price, delivery in it, whichever way it
+    // travels. What that is depends on the car, not on the cart.
+    fixedFee: going.fee,
+  });
+
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath("/admin", "layout");
+  return { error: "", orderId: await orderLinkId(result.orderId) };
+}
+
+/**
+ * The swaps they chose, as a line id to the index of its alternative.
+ *
+ * Read off fields named for their line, so a box whose lines were reordered
+ * in admin between the page loading and the order landing cannot quietly
+ * move somebody's choice onto a different dish.
+ */
+function swapsFrom(form: FormData): Record<string, number> {
+  const chosen: Record<string, number> = {};
+  for (const [field, value] of form.entries()) {
+    if (!field.startsWith("swap_")) continue;
+    const pick = Number(value);
+    if (Number.isFinite(pick) && pick >= 0) chosen[field.slice(5)] = Math.round(pick);
+  }
+  return chosen;
+}
