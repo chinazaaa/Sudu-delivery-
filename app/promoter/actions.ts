@@ -116,6 +116,16 @@ export async function changeMyPin(form: FormData): Promise<void> {
   const code = await currentPromoter();
   if (!code) return;
 
+  // The one they have now, first. Being signed in is proof of who they are
+  // and not proof that they are still the one holding the phone: a page left
+  // open on a laptop somebody walked away from is the whole of what this
+  // stops. It is checked by the same function the sign-in uses, so a wrong
+  // one fails the same way here as it does there.
+  const asked = await checkPromoterPin(code, String(form.get("old_pin") ?? ""));
+  if (!asked.ok) {
+    throw new Error("That is not your current PIN. Nothing was changed.");
+  }
+
   const pin = String(form.get("pin") ?? "").replace(/\D/g, "");
   if (pin.length !== 4) {
     throw new Error("A PIN is four digits.");
