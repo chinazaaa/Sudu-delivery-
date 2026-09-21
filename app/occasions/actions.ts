@@ -26,6 +26,24 @@ export async function orderBox(
   _prev: BoxOrderState,
   form: FormData
 ): Promise<BoxOrderState> {
+  // Everything inside, because a throw from a server action is the error
+  // boundary, and the error boundary is a stranger's page saying "that did
+  // not go through" over a form they have already filled in. Reading runs
+  // and settings both throw on a database hiccup, and neither of them is
+  // worth losing an order over.
+  try {
+    return await order(form);
+  } catch (problem) {
+    return {
+      error:
+        problem instanceof Error && problem.message !== ""
+          ? `Could not place that: ${problem.message}`
+          : "Could not place that just now. Try again in a moment.",
+    };
+  }
+}
+
+async function order(form: FormData): Promise<BoxOrderState> {
   if (sprung(form.get(TRAP)) || tooFast(form.get(OPENED))) {
     return { error: "That did not go through. Give it a moment and try again." };
   }
@@ -67,8 +85,18 @@ export async function orderBox(
 
   if (!result.ok) return { error: result.error };
 
-  revalidatePath("/admin", "layout");
-  return { error: "", orderId: await orderLinkId(result.orderId) };
+  // The order exists from here on, so nothing after it may fail loudly. A
+  // short code that cannot be read is a nicer address, not a condition of
+  // having ordered, and the long id opens the same page.
+  let where = result.orderId;
+  try {
+    where = await orderLinkId(result.orderId);
+    revalidatePath("/admin", "layout");
+  } catch {
+    /* Ordered either way. */
+  }
+
+  return { error: "", orderId: where };
 }
 
 /**

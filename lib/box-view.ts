@@ -5,7 +5,7 @@ import { deliverySlots, slotsWorthOffering, type Slot } from "./same-day";
 import { hoursByDay, safeSettings } from "./settings";
 import { runDateLabel } from "./time";
 import { SLOT_LABEL } from "./config";
-import { cartOf, isTimed, type Box, type Occasion } from "./boxes";
+import { cartOf, isTimed, type Box, type BoxLine, type Occasion } from "./boxes";
 
 /** How far ahead a box looks. A games night really is planned a fortnight
  *  out, which is further than the shop offers for an ordinary dinner. */
@@ -219,3 +219,64 @@ export async function whenOptions(
 
 const byWhen = (a: WhenOption, b: WhenOption): number =>
   (a.date === b.date ? (a.onARun ? -1 : 1) : a.date < b.date ? -1 : 1);
+
+/**
+ * What the cheapest box on each occasion comes to, delivery in.
+ *
+ * The list page lives or dies on this number. "Games night" is a category;
+ * "Games night, from ₦32,900 with delivery" is an offer, and the difference
+ * is whether anybody taps.
+ *
+ * Worked out in two queries for the whole page rather than by pricing every
+ * box properly, because a list does not need swaps, restaurants or choices,
+ * and asking for them would put a round trip on every card.
+ */
+export async function cheapestBoxes(
+  boxes: { id: string; occasion_id: string; run_fee: number; is_extra: boolean; lines: BoxLine[] }[]
+): Promise<Map<string, number>> {
+  const meals = boxes.filter((one) => !one.is_extra && one.lines.length > 0);
+  if (meals.length === 0) return new Map();
+
+  const itemIds = [...new Set(meals.flatMap((b) => b.lines.map((l) => l.menu_item_id)))];
+  const optionIds = [...new Set(meals.flatMap((b) => b.lines.flatMap((l) => l.option_ids)))];
+
+  const [items, options] = await Promise.all([
+    db().from("menu_items").select("id, price_food, available").in("id", itemIds),
+    optionIds.length > 0
+      ? db().from("item_options").select("id, price_delta").in("id", optionIds)
+      : Promise.resolve({ data: [] as { id: string; price_delta: number }[] }),
+  ]);
+
+  const price = new Map(
+    (items.data ?? []).map((row: any) => [row.id as string, Number(row.price_food ?? 0)])
+  );
+  const gone = new Set(
+    (items.data ?? []).filter((row: any) => row.available === false).map((row: any) => row.id as string)
+  );
+  const delta = new Map(
+    (options.data ?? []).map((row: any) => [row.id as string, Number(row.price_delta ?? 0)])
+  );
+
+  const cheapest = new Map<string, number>();
+  for (const box of meals) {
+    // A box with something off the menu in it is not a price anybody can be
+    // quoted, so it is left out of the "from" rather than quoted wrong.
+    if (box.lines.some((line) => gone.has(line.menu_item_id) || !price.has(line.menu_item_id))) {
+      continue;
+    }
+
+    const food = box.lines.reduce(
+      (sum, line) =>
+        sum +
+        line.qty *
+          ((price.get(line.menu_item_id) ?? 0) +
+            line.option_ids.reduce((on: number, id: string) => on + (delta.get(id) ?? 0), 0)),
+      0
+    );
+
+    const total = food + box.run_fee;
+    const now = cheapest.get(box.occasion_id);
+    if (now === undefined || total < now) cheapest.set(box.occasion_id, total);
+  }
+  return cheapest;
+}

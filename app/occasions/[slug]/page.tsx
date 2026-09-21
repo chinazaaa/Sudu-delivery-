@@ -21,6 +21,26 @@ export const dynamic = "force-dynamic";
  * off today's menu, and every way it could get there. The page that follows
  * only has to let somebody point at one.
  */
+const safely = async (box: Parameters<typeof boxView>[0]) => {
+  try {
+    return await boxView(box);
+  } catch {
+    return null;
+  }
+};
+
+const cars = async (
+  occasion: Parameters<typeof whenOptions>[0],
+  boxes: Parameters<typeof whenOptions>[1][]
+): Promise<WhenOption[]> => {
+  if (boxes.length === 0) return [];
+  try {
+    return await whenOptions(occasion, boxes[0]);
+  } catch {
+    return [];
+  }
+};
+
 export default async function OccasionPage({
   params,
 }: {
@@ -30,15 +50,19 @@ export default async function OccasionPage({
   if (!occasion || !occasion.active) notFound();
 
   const boxes = await boxesOf(occasion.id);
-  const views = (await Promise.all(boxes.map(boxView))).filter(
+
+  // Pricing a box reads the menu and reading the cars reads the runs, and
+  // both throw if the database so much as blinks. A throw here is the error
+  // boundary, which is a stranger's page where an offer should be, so the
+  // worst this may do is show fewer boxes or no times.
+  const views = (await Promise.all(boxes.map(safely))).filter(
     (one): one is BoxView => one !== null
   );
 
   // Every box on one occasion rides the same cars, so this is asked once
   // rather than per box. The fee on each row is the first box's; the page
   // puts the right one on when somebody picks a box.
-  const when: WhenOption[] =
-    boxes.length > 0 ? await whenOptions(occasion, boxes[0]) : [];
+  const when: WhenOption[] = await cars(occasion, boxes);
 
   const signedIn = await currentCustomer();
   const settings = await safeSettings();
