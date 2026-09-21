@@ -703,26 +703,15 @@ export default function Checkout({
             real money, it is offered as a sentence rather than as a menu: a
             car of its own can be two and a half thousand dearer, and nobody
             should pay that without being told there was another way. */}
-        {waitingSaves !== null && (
+        {waitingSaves !== null && onARun && (
           <button
             type="button"
-            onClick={() => {
-              if (onARun) {
-                setDeliverAt(sameDaySlots[0]?.at ?? "");
-              } else {
-                setDeliverAt("");
-                setBatchId(waitingSaves.runId);
-              }
-            }}
+            onClick={() => setDeliverAt(sameDaySlots[0]?.at ?? "")}
             className="text-left text-sm font-semibold text-brand"
           >
-            {onARun
-              ? `Need it sooner? A car of its own can be there ${
-                  (todaySlot ?? laterSlot)?.phrase ?? "today"
-                }, for ${naira(waitingSaves.instead)}.`
-              : `Rather wait and pay less? ${waitingSaves.label} for ${naira(
-                  waitingSaves.instead
-                )}, ${naira(waitingSaves.saving)} less.`}
+            {`Need it sooner? A car of its own can be there ${
+              (todaySlot ?? laterSlot)?.phrase ?? "today"
+            }, for ${naira(waitingSaves.instead)}.`}
           </button>
         )}
       </section>
@@ -1153,6 +1142,37 @@ export default function Checkout({
             flashFee={selected?.flashFee ?? null}
             bands={bands}
           />
+        )}
+        {/* The same question, and a sharper one, for a car of its own: this
+            is the dearest way to get food here, and the number is meaningless
+            until you can see both the rung it landed on and the run it could
+            have been on instead. The way out is a tap, inside the answer. */}
+        {!shared && sameDay && byValue.length === 0 && (
+          <FeeBands
+            itemCount={itemCount}
+            flashFee={null}
+            bands={sameDayBands}
+            extra={
+              sameDay.urgent && urgentExtra > 0
+                ? { label: "Leaving within the hour", fee: urgentExtra }
+                : null
+            }
+            note="A car of its own is one order, one driver, one trip, so there is nobody to share the petrol with. A run carries everybody at once, which is why it costs less."
+          >
+            {waitingSaves !== null && !onARun && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDeliverAt("");
+                  setBatchId(waitingSaves.runId);
+                }}
+                className="mt-2 w-full rounded-xl bg-brand-tint px-3 py-2 text-left font-semibold text-brand-dark"
+              >
+                {waitingSaves.label} instead is {naira(waitingSaves.instead)}.
+                Tap to move onto it and save {naira(waitingSaves.saving)}.
+              </button>
+            )}
+          </FeeBands>
         )}
         <div className="flex justify-between border-t border-black/10 pt-2 text-lg font-extrabold">
           <span>{shared ? "Food so far" : "Total"}</span>
