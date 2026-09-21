@@ -367,13 +367,11 @@ export default function OccasionBoxes({
               <summary className="cursor-pointer text-sm font-semibold text-brand">
                 It is a gift for somebody else
               </summary>
-              <label className="mt-2 flex items-center gap-2 text-sm font-semibold">
-                <input type="checkbox" name="gift" defaultChecked={false} />
-                Deliver it to somebody else
-              </label>
-              <p className="mt-1 text-xs text-muted">
-                You pay and we deal with you about it. The block above is
-                theirs, and these are who we call when it is there.
+              <p className="mt-2 text-xs text-muted">
+                Fill these in and it goes to them instead. You pay, and we
+                deal with you about the money. The block above is theirs, and
+                these are who we call when it is at their door. Leave them
+                blank and it comes to you.
               </p>
               <div className="mt-2 grid gap-3 sm:grid-cols-2">
                 <div>

@@ -81,13 +81,7 @@ async function order(form: FormData): Promise<BoxOrderState> {
     // Buying it for somebody else. Their name and number, so the driver
     // rings them; the payer stays the customer and keeps every message
     // about money.
-    giftTo:
-      form.get("gift") === "on"
-        ? {
-            name: String(form.get("gift_name") ?? ""),
-            phone: String(form.get("gift_phone") ?? ""),
-          }
-        : undefined,
+    giftTo: giftFrom(form),
     // The whole point of a box: one price, delivery in it, whichever way it
     // travels. What that is depends on the car, not on the cart.
     fixedFee: going.fee,
@@ -124,4 +118,23 @@ function swapsFrom(form: FormData): Record<string, number> {
     if (Number.isFinite(pick) && pick >= 0) chosen[field.slice(5)] = Math.round(pick);
   }
   return chosen;
+}
+
+
+/**
+ * Who it is going to, when that is not the person paying.
+ *
+ * Filling either field is the answer. There used to be a tick box as well,
+ * which meant somebody could type a friend's name and number, leave it
+ * unticked, and have their friend's dinner delivered to themselves with no
+ * sign anything had been ignored.
+ *
+ * Half of one goes through as a gift on purpose, so the order is refused
+ * with a sentence about the missing half rather than quietly becoming an
+ * ordinary order.
+ */
+function giftFrom(form: FormData): { name: string; phone: string } | undefined {
+  const name = String(form.get("gift_name") ?? "").trim();
+  const phone = String(form.get("gift_phone") ?? "").trim();
+  return name === "" && phone === "" ? undefined : { name, phone };
 }

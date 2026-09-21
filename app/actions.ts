@@ -84,13 +84,7 @@ export async function submitOrder(
     heardFrom: String(form.get("heard_from") ?? "").trim(),
     // Buying it for somebody else. The payer stays the customer and keeps
     // every message about money; this is only who the driver rings.
-    giftTo:
-      form.get("gift") === "on"
-        ? {
-            name: String(form.get("gift_name") ?? ""),
-            phone: String(form.get("gift_phone") ?? ""),
-          }
-        : undefined,
+    giftTo: giftFrom(form),
     joinOrderId: String(form.get("join_order_id") ?? "") || undefined,
     shareDelivery: String(form.get("share_delivery") ?? "") === "on",
     deliverAt: String(form.get("deliver_at") ?? "") || undefined,
@@ -521,4 +515,23 @@ export async function placeSkincareOrder(input: {
 
   revalidatePath("/admin", "layout");
   return { ok: true, orderId: await orderLinkId(result.orderId) };
+}
+
+
+/**
+ * Who it is going to, when that is not the person paying.
+ *
+ * Filling either field is the answer. There used to be a tick box as well,
+ * which meant somebody could type a friend's name and number, leave it
+ * unticked, and have their friend's dinner delivered to themselves with no
+ * sign anything had been ignored.
+ *
+ * Half of one goes through as a gift on purpose, so the order is refused
+ * with a sentence about the missing half rather than quietly becoming an
+ * ordinary order.
+ */
+function giftFrom(form: FormData): { name: string; phone: string } | undefined {
+  const name = String(form.get("gift_name") ?? "").trim();
+  const phone = String(form.get("gift_phone") ?? "").trim();
+  return name === "" && phone === "" ? undefined : { name, phone };
 }
