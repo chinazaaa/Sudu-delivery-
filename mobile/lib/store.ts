@@ -20,6 +20,10 @@ export type Line = {
   choices: string[];
   /** Whose food this is, in a group order. Empty means the person ordering. */
   forName: string;
+  /** How much of the car it takes, as a percentage of one container. Kept on
+   *  the line so the cart can price without asking the shop again, and absent
+   *  on a cart saved before this existed, which reads as a whole one. */
+  containerPct?: number;
 };
 
 /** Somebody else with food in this cart. */
@@ -286,7 +290,32 @@ export function useStored<T>(load: () => Promise<T>, fallback: T): [T, () => voi
   return [value, refresh];
 }
 
-export const countItems = (lines: Line[]) => lines.reduce((sum, line) => sum + line.qty, 0);
+/**
+ * How much of the car this cart fills, which is what delivery is priced on.
+ *
+ * Not a count of lines: a bottle of Coke is a quarter of a container and a
+ * restaurant's own three-pizza deal is three. The same rule the shop uses,
+ * so the app cannot quote six thousand on an order the shop charges four
+ * thousand for.
+ *
+ * Rounded down, so three drinks ride free, and never below one, because a
+ * car still goes out for a bottle of water.
+ */
+export const countItems = (lines: Line[]) =>
+  Math.max(
+    1,
+    Math.floor(
+      lines.reduce(
+        (sum, line) =>
+          sum +
+          line.qty *
+            (typeof line.containerPct === "number" && line.containerPct >= 0
+              ? line.containerPct
+              : 100),
+        0
+      ) / 100
+    )
+  );
 export const cartTotal = (lines: Line[]) =>
   lines.reduce((sum, line) => sum + line.unitPrice * line.qty, 0);
 

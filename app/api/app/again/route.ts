@@ -31,6 +31,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         unitPrice: line.unitPrice,
         qty: line.qty,
         choices: line.choices,
+        containerPct: line.containerPct,
       })),
       blocked: repeat.blocked,
     });

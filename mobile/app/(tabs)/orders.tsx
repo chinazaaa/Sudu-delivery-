@@ -78,6 +78,7 @@ export default function Orders() {
             unitPrice: line.unitPrice,
             optionIds: line.optionIds,
             choices: line.choices,
+            containerPct: line.containerPct,
           },
           line.qty
         );

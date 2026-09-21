@@ -82,6 +82,10 @@ export type Item = {
   imageUrl: string;
   available: boolean;
   categoryId: string | null;
+  /** How much of the car it takes, as a percentage of one container. A
+   *  drink is 25, four making one. Missing on an older shop, which reads
+   *  as a whole container and prices as it always did. */
+  containerPct?: number;
   groups: {
     id: string;
     name: string;
@@ -408,6 +412,7 @@ export const api = {
         unitPrice: number;
         qty: number;
         choices: string[];
+        containerPct?: number;
       }[];
       blocked: { name: string; reason: string }[];
     }>("/again", token),

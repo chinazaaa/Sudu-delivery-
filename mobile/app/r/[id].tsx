@@ -339,6 +339,7 @@ function ItemSheet({
         optionIds: chosen,
         choices: names,
         forName: editing?.forName ?? "",
+        containerPct: item.containerPct,
       },
       qty
     );
