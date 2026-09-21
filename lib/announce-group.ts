@@ -84,7 +84,7 @@ export async function announceGroup(groupId: string): Promise<void> {
     ];
 
     const tagline = (await safeSettings()).tagline || undefined;
-    await emailAdmins(title, renderText(title, blocks), renderEmail(title, blocks, tagline));
+    await emailAdmins(title, renderText(title, blocks), renderEmail(title, blocks, tagline), "group");
   } catch {
     /* A group that closed correctly must not be undone by a failed email. */
   }

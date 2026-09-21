@@ -1020,3 +1020,15 @@ alter table batches add column if not exists areas text not null default '';
 --
 -- Empty, which is every restaurant today, means the ordinary ladder.
 alter table restaurants add column if not exists value_bands text not null default '';
+
+-- Which admin emails to stop sending.
+--
+-- Every notification went to everybody on the list, with no way to turn one
+-- off short of taking your address out altogether and losing the lot. An
+-- afternoon of testing is then an inbox of "New order #1004 · fgxdfg", and a
+-- real order arriving in the middle of that is one nobody sees.
+--
+-- The ones to stop, rather than the ones to send, so empty means everything
+-- exactly as it is today and nobody's notifications go quiet because a
+-- migration ran.
+alter table settings add column if not exists email_mute text not null default '';

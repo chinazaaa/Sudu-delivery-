@@ -24,6 +24,7 @@ import {
 } from "@/lib/areas";
 import { offerShare, pickOffer, type LiveOffer } from "@/lib/offers";
 import { normalisePhone } from "@/lib/phone";
+import { OPENED, TRAP } from "@/lib/guard";
 import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
 import { feeForValue, type ValueBand } from "@/lib/value-bands";
@@ -169,6 +170,9 @@ export default function Checkout({
   const [phone, setPhone] = useState(adding?.phone ?? "");
   const [hostel, setHostel] = useState(adding?.hostel ?? "");
   const [filled, setFilled] = useState(false);
+  // Set once, when the page is drawn, rather than read at submit: what
+  // matters is how long it was open.
+  const [openedAt] = useState(() => Date.now());
   const [applied, setApplied] = useState<{ code: string; discount: number } | null>(null);
   const [state, action, pending] = useActionState<SubmitState, FormData>(submitOrder, {
     error: null,
@@ -597,6 +601,20 @@ export default function Checkout({
           </button>
         </div>
       )}
+
+      {/* Nobody can see this, so anything in it was not typed by a person.
+          Labelled like an ordinary optional field rather than as a trap,
+          because a script good enough to read the name is good enough to
+          skip one that announces itself. Out of the tab order and hidden
+          from a screen reader too: somebody using one is a customer. */}
+      <div aria-hidden className="absolute left-[-9999px] h-px w-px overflow-hidden">
+        <label htmlFor={TRAP}>Collection reference</label>
+        <input id={TRAP} name={TRAP} type="text" tabIndex={-1} autoComplete="off" />
+      </div>
+
+      {/* When this page was opened. Nobody fills a checkout in three
+          seconds, and a script does the whole thing in one go. */}
+      <input type="hidden" name={OPENED} value={openedAt} />
 
       <input type="hidden" name="cart" value={JSON.stringify(toServerLines(cart))} />
       <input type="hidden" name="coupon" value={applied?.code ?? ""} />

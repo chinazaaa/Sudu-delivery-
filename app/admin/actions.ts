@@ -1450,6 +1450,7 @@ const SETTING_FIELDS = [
   "skincare_bands",
   "skincare_promise",
   "delivery_areas",
+  "email_mute",
 ] as const;
 
 export async function saveSettings(form: FormData): Promise<void> {
@@ -1460,6 +1461,17 @@ export async function saveSettings(form: FormData): Promise<void> {
     const value = form.get(field);
     if (value !== null) patch[field] = String(value).trim();
   }
+
+  // Tick boxes say what to send; the setting holds what to stop. Unticked
+  // boxes post nothing at all, so the form says it is answering this
+  // question and the unticked ones are read from what is missing.
+  if (form.get("email_asked") !== null) {
+    const on = new Set(form.getAll("email_on").map(String));
+    patch.email_mute = ["order", "group", "abandoned"]
+      .filter((kind) => !on.has(kind))
+      .join(",");
+  }
+
   if (Object.keys(patch).length === 0) return;
 
   const write = (fields: Record<string, string>) =>

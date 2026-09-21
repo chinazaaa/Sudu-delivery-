@@ -115,6 +115,9 @@ export type Settings = {
   /** The areas the shop delivers from, as JSON. Empty means one area, and
    *  every price exactly as it was. */
   delivery_areas: string;
+  /** Which admin notifications to stop sending, by kind. Empty is all of
+   *  them, which is what it has always been. */
+  email_mute: string;
 };
 
 /** Every setting at its default, which is also what a missing row reads as. */
@@ -169,6 +172,7 @@ export const EMPTY: Settings = {
   skincare_bands: "",
   skincare_promise: "",
   delivery_areas: "",
+  email_mute: "",
 };
 
 export async function getSettings(): Promise<Settings> {

@@ -39,6 +39,7 @@ import { deliverySlots, slotFee, slotsToday } from "../lib/same-day";
 import { nextArrival } from "../lib/arrival";
 import { parseCatalogue, parseProducts } from "../lib/skincare-import";
 import { feeForValue, parseValueBands } from "../lib/value-bands";
+import { isExampleNumber, sprung, tooFast } from "../lib/guard";
 import { nextDrop } from "../lib/skincare";
 
 /** A settings row with nothing filled in, for the template tests. */
@@ -1510,4 +1511,28 @@ test("a market is priced by what the shopping comes to", () => {
   // Nothing set is the ordinary ladder, not free delivery.
   assert.deepEqual(parseValueBands(""), []);
   assert.equal(feeForValue(10000, []), 0);
+});
+
+test("the things no person does", () => {
+  // A field nobody can see. Anything at all in it was typed by a script.
+  assert.equal(sprung(""), false);
+  assert.equal(sprung("   "), false);
+  assert.equal(sprung(null), false);
+  assert.equal(sprung("http://spam.test"), true);
+
+  // Nobody fills in a name, a number and a block in three seconds.
+  assert.equal(tooFast(String(Date.now())), true);
+  assert.equal(tooFast(String(Date.now() - 20_000)), false);
+  // Missing, unreadable, or a clock that is ahead of ours: all forgiven,
+  // because refusing a real order over somebody's wrong clock is worse than
+  // letting a script through.
+  assert.equal(tooFast(null), false);
+  assert.equal(tooFast("not a time"), false);
+  assert.equal(tooFast(String(Date.now() + 60_000)), false);
+
+  // The number printed as an example on every phone field on the site.
+  assert.equal(isExampleNumber("08031234567"), true);
+  assert.equal(isExampleNumber("0803 123 4567"), true);
+  assert.equal(isExampleNumber("+2348031234567"), true);
+  assert.equal(isExampleNumber("08123456789"), false);
 });

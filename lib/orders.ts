@@ -29,6 +29,7 @@ import { bandsFor, isSkincareBatch, skincareIn } from "./skincare";
 import { areaOfCart } from "./areas-server";
 import { feeForValue } from "./value-bands";
 import { realPromoter } from "./promoters";
+import { isExampleNumber, ordersLately, TOO_MANY } from "./guard";
 import { areasOfRun, runCovers } from "./areas";
 import { stageIndex } from "./stages";
 import { deliverySlots, sameInstant, type Slot } from "./same-day";
@@ -150,6 +151,29 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
 
   const name = input.name.trim();
   if (name.length < 2) return { ok: false, error: "Please enter your name." };
+
+  // The number printed as an example on every phone field on the site. A
+  // script filling a form takes the example as the answer, and a person who
+  // really owns it can say so to us rather than being told their order
+  // failed for no reason.
+  if (isExampleNumber(phone)) {
+    return {
+      ok: false,
+      error: "That is the example number. Put your own in so we can reach you.",
+    };
+  }
+
+  // A person orders lunch once, or twice if they forgot the drinks. Past
+  // that in ten minutes it is a loop, and a run sheet full of orders nobody
+  // placed is worse than a refusal somebody can read.
+  if ((await ordersLately(phone)) >= TOO_MANY) {
+    return {
+      ok: false,
+      error:
+        "That is a lot of orders from one number in a few minutes. " +
+        "Give it ten minutes, or message us and we will put it through.",
+    };
+  }
 
   const hostel = input.hostel.trim();
   if (hostel.length < 1) return { ok: false, error: "Please enter your hostel or block." };
@@ -1081,7 +1105,7 @@ async function announceOrder(args: {
     ];
 
     const tagline = (await safeSettings()).tagline || undefined;
-    await emailAdmins(title, renderText(title, blocks), renderEmail(title, blocks, tagline));
+    await emailAdmins(title, renderText(title, blocks), renderEmail(title, blocks, tagline), "order");
   } catch {
     /* Never let a notification break an order that is already saved. */
   }

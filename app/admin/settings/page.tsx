@@ -8,6 +8,7 @@ import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { parseBands, SAME_DAY_BANDS, URGENT_EXTRA } from "@/lib/fees";
 import { missingSettings } from "@/lib/health";
+import { muted } from "@/lib/email";
 import { getSettings } from "@/lib/settings";
 import { allAccounts } from "@/lib/banks";
 import {
@@ -458,6 +459,38 @@ export default async function SettingsAdmin() {
             className="field"
           />
         </div>
+        <div>
+          <input type="hidden" name="email_asked" value="1" />
+          <p className="label mb-1">What to email about</p>
+          {/* One switch each, rather than the only way out being to take
+              your address off the list and lose the lot. An afternoon of
+              testing is otherwise an inbox of test orders, and a real one
+              arriving in the middle of that is one nobody sees. */}
+          <div className="space-y-1">
+            {(
+              [
+                ["order", "Every new order"],
+                ["group", "A group closing"],
+                ["abandoned", "Carts left behind"],
+              ] as const
+            ).map(([kind, label]) => (
+              <label key={kind} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="email_on"
+                  value={kind}
+                  defaultChecked={!muted(settings.email_mute).includes(kind)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            Turning one off stops that email for everybody on the list above.
+            Nothing is lost: it is all still in admin.
+          </p>
+        </div>
+
         <div className="w-40">
           <label className="label" htmlFor="abandon_minutes">
             Abandoned after

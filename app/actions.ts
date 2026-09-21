@@ -9,6 +9,7 @@ import { normalisePhone } from "@/lib/phone";
 import { rememberCart } from "@/lib/carts";
 import { countCheckoutLinkUse, getCheckoutLink } from "@/lib/checkout-links";
 import { arrivalNow } from "@/lib/arrival-server";
+import { OPENED, sprung, tooFast, TRAP } from "@/lib/guard";
 import { dropBatch, skincareFee } from "@/lib/skincare";
 import { safeSettings } from "@/lib/settings";
 import { db } from "@/lib/supabase";
@@ -40,6 +41,18 @@ export async function submitOrder(
   _prev: SubmitState,
   form: FormData
 ): Promise<SubmitState> {
+  // Two things no person does: fill in a field they cannot see, and finish
+  // a checkout in three seconds. Either one is a script, and what it costs
+  // is a run sheet full of orders nobody placed and a real order buried in
+  // an inbox of fake ones.
+  //
+  // Said as a plain refusal rather than a quiet success. A script learns
+  // nothing from it either way, and if this ever catches a real person, a
+  // sentence they can read beats an order that vanished.
+  if (sprung(form.get(TRAP)) || tooFast(form.get(OPENED))) {
+    return { error: "That did not go through. Give it a moment and try again." };
+  }
+
   const lines = parseCart(form.get("cart"));
   if (lines.length === 0) {
     return { error: "Something went wrong with your cart. Please rebuild it." };
