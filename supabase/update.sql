@@ -1086,17 +1086,18 @@ end $$;
 alter table menu_items
   add column if not exists container_pct int not null default 100;
 
--- Drinks, at a quarter each. Found by category where there is one, and by
--- name where the drinks live inside a general category, which is how KFC's
--- arrived. Bottles and cans only: a milkshake is a cup and travels like one.
+-- Drinks, at a quarter each. Matched narrowly on purpose. A first attempt
+-- that read the category name caught thirty-five micellar waters on the
+-- skincare shelf, two fruit salads filed under "Desserts & drinks", and
+-- water yam. So: food restaurants only, never the two grocery shelves,
+-- a named brand or a bottle size in the name, and nothing that is plainly
+-- a meal. Bottles and cans only; a milkshake is a cup and travels like one.
 update menu_items m
 set container_pct = 25
-where m.container_pct = 100
-  and (
-    exists (
-      select 1 from menu_categories c
-      where c.id = m.category_id and c.name ilike '%drink%'
-    )
-    or m.name ~* '\y(coca[ -]?cola|coke|pepsi|7 ?up|sprite|fanta|mirinda|teem|schweppes|monster|predator|komando|aquafina|eva water|water|5 ?alive|five alive|chivita|hollandia|malt|amstel|nescafe|milo)\y'
-  )
-  and m.name !~* '\y(shake|smoothie|parfait|cake|burger|meal|combo|deal|box|pizza|float)\y';
+from restaurants r
+where r.id = m.restaurant_id
+  and m.container_pct = 100
+  and r.kind = 'food'
+  and r.slug not in ('local-market','market-square')
+  and m.name ~* '\y(coca[ -]?cola|coke|pepsi|7 ?up|sprite|fanta|mirinda|teem|schweppes|monster|predator|komando|aquafina|eva|five alive|5 ?alive|chivita|hollandia|malt|nescafe|milo|mineral water|water still|water \(|water [0-9])\y'
+  and m.name !~* '\y(shake|smoothie|parfait|cake|burger|meal|combo|deal|box|pizza|float|salad|fries|wings|chicken|rice|yam|leaf|pack)\y';
