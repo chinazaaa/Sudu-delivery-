@@ -1605,6 +1605,48 @@ export async function setBatchStage(form: FormData): Promise<void> {
 }
 
 /** Restaurants are added and edited here, not only by running the seed file. */
+/**
+ * A name turned into the readable half of a link.
+ *
+ * Apostrophes go rather than becoming hyphens: Domino's Pizza is
+ * dominos-pizza, not domino-s-pizza. The same rule the migration used when
+ * it made them for the restaurants that were already here, so a restaurant
+ * added afterwards gets the kind of link people expect rather than a uuid.
+ */
+function slugFor(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/['\u2019`]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/**
+ * A slug nothing else has.
+ *
+ * Two restaurants called Local Market would collide on a unique index, and
+ * the second one would fail to save over a thing nobody asked about. It gets
+ * a number instead, exactly as the migration numbered its duplicates.
+ */
+async function freeSlug(name: string): Promise<string> {
+  const base = slugFor(name);
+  if (base === "") return "";
+
+  const { data } = await db()
+    .from("restaurants")
+    .select("slug")
+    .like("slug", `${base}%`);
+  const taken = new Set(
+    ((data ?? []) as { slug?: string | null }[]).map((one) => one.slug ?? "")
+  );
+
+  if (!taken.has(base)) return base;
+  for (let at = 2; at < 50; at += 1) {
+    if (!taken.has(`${base}-${at}`)) return `${base}-${at}`;
+  }
+  return "";
+}
+
 export async function addRestaurant(form: FormData): Promise<void> {
   await assertAdmin();
   const name = String(form.get("name") ?? "").trim();
@@ -1612,6 +1654,10 @@ export async function addRestaurant(form: FormData): Promise<void> {
 
   const row: Record<string, unknown> = {
     name,
+    // The readable half of its link, made once. Without this a restaurant
+    // added from here is only ever reachable as a uuid, which is not a thing
+    // anybody pastes into a group chat.
+    slug: await freeSlug(name),
     address: String(form.get("address") ?? "").trim(),
     closes_at: String(form.get("closes_at") ?? "").trim() || "21:00",
     active: true,
@@ -1630,6 +1676,10 @@ export async function addRestaurant(form: FormData): Promise<void> {
     delete row.area;
     ({ error } = await db().from("restaurants").insert(row));
   }
+  if (error) {
+    delete row.slug;
+    await db().from("restaurants").insert(row);
+  }
   revalidatePath("/admin", "layout");
   updateTag("menu");
   revalidatePath("/", "layout");
@@ -1638,10 +1688,27 @@ export async function addRestaurant(form: FormData): Promise<void> {
 export async function updateRestaurant(form: FormData): Promise<void> {
   await assertAdmin();
 
+  const id = String(form.get("restaurant_id"));
+  const name = String(form.get("name") ?? "").trim();
+
+  // Filled in only where it is missing, never changed: a restaurant added
+  // before this had none and was reachable only as a uuid, and one whose
+  // link has been sent out must keep working.
+  const { data: had } = await db()
+    .from("restaurants")
+    .select("slug")
+    .eq("id", id)
+    .maybeSingle();
+  const slug =
+    ((had as { slug?: string | null } | null)?.slug ?? "") === "" && name !== ""
+      ? await freeSlug(name)
+      : "";
+
   await db()
     .from("restaurants")
     .update({
-      name: String(form.get("name") ?? "").trim() || undefined,
+      name: name || undefined,
+      ...(slug !== "" ? { slug } : {}),
       address: String(form.get("address") ?? "").trim(),
       closes_at: String(form.get("closes_at") ?? "").trim() || undefined,
       logo_url:
@@ -1657,7 +1724,7 @@ export async function updateRestaurant(form: FormData): Promise<void> {
       // written for; anywhere else adds to every band and may be run only.
       area: String(form.get("area") ?? "").trim(),
     })
-    .eq("id", String(form.get("restaurant_id")));
+    .eq("id", id);
   revalidatePath("/admin", "layout");
   updateTag("menu");
   revalidatePath("/", "layout");
