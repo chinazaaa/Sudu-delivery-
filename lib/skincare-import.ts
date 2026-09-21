@@ -158,6 +158,85 @@ export function tidyCase(text: string): string {
     .join(" ");
 }
 
+/**
+ * A catalogue in whatever shape it arrived in.
+ *
+ * A shop platform exports a CSV; a page somebody scraped comes back as a
+ * JSON array. Both are a list of products with a name, a price and a
+ * picture, and which one it is is a fact about the file rather than
+ * anything the person importing it should have to say.
+ */
+export function parseCatalogue(text: string): Import {
+  const trimmed = text.trim();
+  return trimmed.startsWith("[") || trimmed.startsWith("{")
+    ? parseJson(trimmed)
+    : parseProducts(trimmed);
+}
+
+/**
+ * A JSON array of products.
+ *
+ * The names are read loosely, because every export calls them something
+ * slightly different: title or name, price or amount, image or image_url.
+ * Anything without a name and a price is not a product.
+ */
+function parseJson(text: string): Import {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return { products: [], skipped: 0 };
+  }
+
+  const rows = Array.isArray(raw)
+    ? raw
+    : Array.isArray((raw as { products?: unknown }).products)
+      ? ((raw as { products: unknown[] }).products)
+      : [];
+
+  const products: ImportedProduct[] = [];
+  let skipped = 0;
+  const seen = new Set<string>();
+
+  for (const row of rows as Record<string, unknown>[]) {
+    const pick = (...names: string[]) => {
+      for (const name of names) {
+        const value = row?.[name];
+        if (typeof value === "string" && value.trim() !== "") return value.trim();
+        if (typeof value === "number") return String(value);
+      }
+      return "";
+    };
+
+    const name = pick("title", "name", "product");
+    const price = priceOf(pick("original_price", "price", "current_price", "amount"));
+    if (name === "" || price <= 0) {
+      skipped += 1;
+      continue;
+    }
+    const key = name.toLowerCase();
+    if (seen.has(key)) {
+      skipped += 1;
+      continue;
+    }
+    seen.add(key);
+
+    const shelves = shelvesOf(pick("collections", "categories", "tags"));
+    products.push({
+      name,
+      price,
+      brand: pick("vendor", "brand"),
+      shelves,
+      category: shelves[0] ?? tidyCase(pick("category", "product_type", "type")),
+      imageFile: fileOf(pick("image_filename", "image_file", "filename")),
+      imageUrl: pick("image", "image_url", "image_src", "src"),
+      available: inStock(pick("stock_status", "stock", "availability")),
+    });
+  }
+
+  return { products: tidyShelves(products), skipped };
+}
+
 export function parseProducts(text: string): Import {
   const rows = rowsOf(text);
   if (rows.length === 0) return { products: [], skipped: 0 };
