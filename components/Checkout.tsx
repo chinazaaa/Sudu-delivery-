@@ -1162,30 +1162,27 @@ export default function Checkout({
                 : null
             }
             note="A car of its own is one order, one driver, one trip, so there is nobody to share the petrol with. A run carries everybody at once, which is why it costs less."
+          />
+        )}
+        {/* Outside the fold on purpose. The ladder is for somebody who asked
+            the question; this is money off for somebody who did not, and it
+            is no use to them behind a tap they have no reason to make. */}
+        {!shared && !promotion && sameDay && runInstead !== null && (
+          <button
+            type="button"
+            onClick={() => {
+              setDeliverAt("");
+              setBatchId(runInstead.id);
+            }}
+            className="mt-2 block w-full rounded-xl bg-brand-tint px-3 py-2 text-left font-semibold text-brand-dark"
           >
-            {runInstead !== null ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setDeliverAt("");
-                  setBatchId(runInstead.id);
-                }}
-                className="mt-2 w-full rounded-xl bg-brand-tint px-3 py-2 text-left font-semibold text-brand-dark"
-              >
-                {runInstead.label} instead is {naira(runInstead.fee)}
-                {runInstead.saving > 0 ? `, ${naira(runInstead.saving)} less` : ""}.
-                Tap to move onto it.
-              </button>
-            ) : (
-              /* Say that the cheaper way is shut rather than showing nothing.
-                 Silence reads as a missing button: somebody who has been told
-                 a run costs less goes looking for where to tap. */
-              <p className="mt-2 text-muted">
-                There is no run open to move onto right now. When one is, it
-                shows here and moving onto it is one tap.
-              </p>
-            )}
-          </FeeBands>
+            {runInstead.saving > 0
+              ? `Pay ${naira(runInstead.saving)} less: ${runInstead.label} is ${naira(runInstead.fee)}.`
+              : `${runInstead.label} is ${naira(runInstead.fee)}.`}{" "}
+            <span className="underline decoration-dotted underline-offset-4">
+              Tap to move onto it.
+            </span>
+          </button>
         )}
         <div className="flex justify-between border-t border-black/10 pt-2 text-lg font-extrabold">
           <span>{shared ? "Food so far" : "Total"}</span>
