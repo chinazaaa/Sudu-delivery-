@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { db } from "./supabase";
+import { pctOf } from "./containers";
 import { lagosInstant, lagosToday } from "./time";
 import { activeBands, safeSettings, type Settings } from "./settings";
 import { feeFor, parseBands, type Band } from "./fees";
@@ -24,6 +25,8 @@ export type SkincareProduct = {
   imageUrl: string;
   categoryId: string | null;
   available: boolean;
+  /** How much of the car it takes, as a percentage of one container. */
+  containerPct: number;
   /** Who makes it, which is the first thing anybody narrows by. */
   brand: string;
 };
@@ -327,6 +330,7 @@ function toProduct(one: MenuItem): SkincareProduct {
     price: one.price_food,
     imageUrl: one.image_url ?? "",
     categoryId: one.category_id ?? null,
+    containerPct: pctOf(one),
     available: one.available,
     brand: (one.brand ?? "").trim(),
   };

@@ -428,6 +428,24 @@ export default async function RestaurantAdmin({
                         ))}
                       </select>
                     </div>
+                    <div className="w-32">
+                      {/* Room in the car, not a count of lines. A bottle of
+                          Coke used to cost as much to carry as a pizza box. */}
+                      <label className="label">Room</label>
+                      <select
+                        name="container_pct"
+                        defaultValue={String(item.container_pct ?? 100)}
+                        className="field"
+                      >
+                        <option value="25">A drink · 4 make one</option>
+                        <option value="50">Half a container</option>
+                        <option value="100">One container</option>
+                        <option value="200">2 containers</option>
+                        <option value="300">3 containers</option>
+                        <option value="400">4 containers</option>
+                        <option value="600">6 containers</option>
+                      </select>
+                    </div>
                     <label className="flex items-center gap-2 pb-2 text-sm">
                       <input type="checkbox" name="available" defaultChecked={item.available} />
                       Available

@@ -679,25 +679,44 @@ export async function setBatchCapacity(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
 }
 
+/**
+ * How much of the car one item takes, read off a form.
+ *
+ * Typed as a percentage because that is how it is stored, and because "25"
+ * next to a bottle of Coke says more than "0.25" does. Anything unreadable
+ * leaves it a whole container rather than guessing.
+ */
+function containerFrom(raw: FormDataEntryValue | null): number {
+  const pct = Math.round(Number(String(raw ?? "").trim()));
+  return Number.isFinite(pct) && pct >= 0 && pct <= 10_000 ? pct : 100;
+}
+
 export async function updateMenuItem(form: FormData): Promise<void> {
   await assertAdmin();
   const price = Number(form.get("price_food"));
   if (!Number.isFinite(price) || price < 0) return;
 
-  await db()
-    .from("menu_items")
-    .update({
-      price_food: Math.round(price),
-      available: form.get("available") === "on",
-      name: String(form.get("name") ?? "").trim() || undefined,
-      description: String(form.get("description") ?? "").trim(),
-      // A new photo wins; otherwise whatever link is in the box stays.
-      image_url:
-        (await uploadImage(fileFrom(form, "photo"), "items")) ??
-        String(form.get("image_url") ?? "").trim(),
-      category_id: String(form.get("category_id") ?? "") || null,
-    })
-    .eq("id", String(form.get("item_id")));
+  const fields = {
+    price_food: Math.round(price),
+    available: form.get("available") === "on",
+    name: String(form.get("name") ?? "").trim() || undefined,
+    description: String(form.get("description") ?? "").trim(),
+    // A new photo wins; otherwise whatever link is in the box stays.
+    image_url:
+      (await uploadImage(fileFrom(form, "photo"), "items")) ??
+      String(form.get("image_url") ?? "").trim(),
+    category_id: String(form.get("category_id") ?? "") || null,
+    container_pct: containerFrom(form.get("container_pct")),
+  };
+
+  // Naming a column the database has not got refuses the whole statement, so
+  // a shop that has not run the migration yet saves everything but that one.
+  const id = String(form.get("item_id"));
+  const { error } = await db().from("menu_items").update(fields).eq("id", id);
+  if (error) {
+    const { container_pct: _dropped, ...rest } = fields;
+    await db().from("menu_items").update(rest).eq("id", id);
+  }
   revalidatePath("/admin", "layout");
   updateTag("menu");
   revalidatePath("/", "layout");

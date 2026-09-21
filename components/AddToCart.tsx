@@ -84,6 +84,7 @@ export default function AddToCart({
         imageUrl: item.imageUrl,
         unitPrice,
         choices: chosen.map((o) => o.name),
+        containerPct: item.containerPct,
       },
       qty,
       editing ? editing.forName : undefined

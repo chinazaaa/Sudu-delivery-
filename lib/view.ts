@@ -29,6 +29,8 @@ export type ItemView = {
   imageUrl: string;
   description: string;
   categoryId: string | null;
+  /** How much of the car it takes, as a percentage of one container. */
+  containerPct: number;
   /** Size, flavour, extras. An item with none of these adds in one tap. */
   groups: OptionGroupView[];
 };

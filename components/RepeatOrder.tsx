@@ -63,6 +63,7 @@ export default function RepeatOrder({
                 imageUrl: line.imageUrl,
                 unitPrice: line.unitPrice,
                 choices: line.choices,
+                containerPct: line.containerPct,
               },
               line.qty
             );

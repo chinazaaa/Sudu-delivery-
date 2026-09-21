@@ -68,6 +68,10 @@ export type MenuItem = {
   /** Every shelf it sits on, as "|Cleansers|Korean Skin Care|". A shop's own
    *  sections overlap, and one category_id can only hold the first. */
   shelves?: string;
+  /** How much of the car it takes, as a percentage of one container. A drink
+   *  is 25 and a three-pizza deal is 300. Undefined before the column exists,
+   *  which reads as a whole container and prices exactly as yesterday. */
+  container_pct?: number;
 };
 
 export type BatchStatus = "open" | "closed" | "delivered" | "cancelled";

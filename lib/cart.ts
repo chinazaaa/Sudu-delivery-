@@ -2,6 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 
+import { containersIn } from "./containers";
+
 export type CartLine = {
   /** Item plus the exact choices: a large pepperoni is its own line. */
   key: string;
@@ -17,6 +19,10 @@ export type CartLine = {
   qty: number;
   /** Who this is for in a group order. */
   forName: string;
+  /** How much of the car it takes, as a percentage of one container. Carried
+   *  on the line so the cart can price without asking the server again, and
+   *  absent on a cart saved before this existed, which reads as a whole one. */
+  containerPct?: number;
 };
 
 const KEY = "sudu_cart_v1";
@@ -286,7 +292,14 @@ export function useCart(): CartLine[] {
   );
 }
 
-export const countItems = (cart: CartLine[]) => cart.reduce((n, l) => n + l.qty, 0);
+/**
+ * How much of the car this cart fills, which is what delivery is priced on.
+ *
+ * Not a count of lines any more: a bottle of Coke is a quarter of a container
+ * and a restaurant's three-pizza deal is three. See lib/containers.
+ */
+export const countItems = (cart: CartLine[]) =>
+  containersIn(cart.map((l) => ({ qty: l.qty, container_pct: l.containerPct })));
 export const cartSubtotal = (cart: CartLine[]) =>
   cart.reduce((sum, l) => sum + l.unitPrice * l.qty, 0);
 

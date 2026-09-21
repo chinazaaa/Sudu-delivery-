@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+
+import { containersIn } from "../lib/containers";
 import { test } from "node:test";
 import { groupForCounter } from "../lib/admin";
 import { normalisePhone, formatPhone } from "../lib/phone";
@@ -1565,4 +1567,23 @@ test("a cart with a market and a restaurant in it pays the dearer measure", () =
   assert.equal(dearer(40000, 3), 4500);
   // A market shop on its own, under the line.
   assert.equal(dearer(9000, 2), 4000);
+});
+
+test("a drink is a quarter of a container, and three are free", () => {
+  const pizza = { qty: 4, container_pct: 100 };
+  assert.equal(containersIn([pizza, { qty: 3, container_pct: 25 }]), 4);
+  assert.equal(containersIn([pizza, { qty: 4, container_pct: 25 }]), 5);
+});
+
+test("a restaurant's own deal counts as the boxes it really is", () => {
+  assert.equal(containersIn([{ qty: 1, container_pct: 300 }]), 3);
+});
+
+test("an item with no room set is a whole container", () => {
+  assert.equal(containersIn([{ qty: 3 }]), 3);
+  assert.equal(containersIn([{ qty: 2, container_pct: null }]), 2);
+});
+
+test("a car still goes out for one bottle of water", () => {
+  assert.equal(containersIn([{ qty: 1, container_pct: 25 }]), 1);
 });

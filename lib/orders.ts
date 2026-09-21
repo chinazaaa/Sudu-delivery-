@@ -30,6 +30,7 @@ import { bandsFor, isSkincareBatch, skincareIn } from "./skincare";
 import { areaOfCart } from "./areas-server";
 import { feeForValue } from "./value-bands";
 import { realPromoter } from "./promoters";
+import { containersIn, pctOf } from "./containers";
 import { isExampleNumber, ordersLately, TOO_MANY } from "./guard";
 import { areasOfRun, runCovers } from "./areas";
 import { stageIndex } from "./stages";
@@ -551,7 +552,11 @@ const placesIn = (lines: PricedLine[]) => [
   ...new Set(lines.map((l) => l.item.restaurant_id)),
 ];
 
-const countItems = (lines: PricedLine[]) => lines.reduce((sum, l) => sum + l.qty, 0);
+// Room in the car, not lines on a receipt. A drink is a quarter of a
+// container and a restaurant's own multi-box deal is worth what it really
+// is. Read off the item, so the customer's cart cannot claim otherwise.
+const countItems = (lines: PricedLine[]) =>
+  containersIn(lines.map((l) => ({ qty: l.qty, container_pct: l.item.container_pct })));
 const countFood = (lines: PricedLine[]) =>
   lines.reduce((sum, l) => sum + l.unitPrice * l.qty, 0);
 
@@ -1305,6 +1310,9 @@ export type RepeatLine = {
   choices: string[];
   qty: number;
   forName: string;
+  /** Read off the item as it is today, not as it was when they ordered:
+   *  room in the car is a fact about the thing, not about the old order. */
+  containerPct: number;
 };
 
 /**
@@ -1392,6 +1400,7 @@ export async function repeatLines(order: FullOrder): Promise<RepeatResult> {
       choices: chosenHere.map((option: any) => option.name as string),
       qty: line.qty,
       forName: "",
+      containerPct: pctOf(item),
     });
   }
   return { lines: repeats, blocked };

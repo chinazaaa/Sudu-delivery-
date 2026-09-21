@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { db } from "./supabase";
+import { pctOf } from "./containers";
 import type { ItemView, MenuView, OptionGroupView } from "./view";
 import type {
   ItemOption,
@@ -60,6 +61,7 @@ async function readMenu(): Promise<MenuView[]> {
           imageUrl: i.image_url ?? "",
           description: i.description ?? "",
           categoryId: i.category_id ?? null,
+          containerPct: pctOf(i),
           groups: groupsByItem.get(i.id) ?? [],
         })
       ),
@@ -196,6 +198,7 @@ async function readMenuFor(ref: string): Promise<MenuView | null> {
         imageUrl: i.image_url ?? "",
         description: i.description ?? "",
         categoryId: i.category_id ?? null,
+          containerPct: pctOf(i),
         groups: groupsByItem.get(i.id) ?? [],
       })
     ),
