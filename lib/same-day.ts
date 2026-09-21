@@ -6,7 +6,7 @@ import {
   sameDayFee,
   type Band,
 } from "./fees";
-import { lagosInstant, lagosToday } from "./time";
+import { dayWord, lagosInstant, lagosToday } from "./time";
 import { TZ } from "./config";
 
 export type Slot = {
@@ -20,7 +20,9 @@ export type Slot = {
    *  prose without being read. */
   phrase: string;
   /** Which day it lands on, for grouping and for the wording. */
-  day: "today" | "tomorrow";
+  day: "today" | "tomorrow" | "later";
+  /** The date it lands, so a day further out than tomorrow can be named. */
+  date: string;
   urgent: boolean;
 };
 
@@ -54,7 +56,11 @@ export function deliverySlots(
     | ((weekday: number) => { first: number; last: number; off?: boolean }) = {
     first: FIRST_DELIVERY_HOUR,
     last: LAST_DELIVERY_HOUR,
-  }
+  },
+  /** How many days to reach, counting today. Two everywhere that asks "when
+   *  can I eat", because that is a question about now. A box is planned
+   *  rather than wanted, so it asks for the fortnight. */
+  days: number = 2
 ): Slot[] {
   // Either one pair for the whole week, or a pair per day. Saturday can open
   // at noon while a Wednesday starts at three, and tomorrow is a different
@@ -66,13 +72,19 @@ export function deliverySlots(
 
   const earliest = now.getTime() + DELIVERY_LEAD_HOURS * 3_600_000;
   const today = lagosToday(now);
-  const tomorrow = nextDay(today);
   const slots: Slot[] = [];
 
-  for (const [date, day] of [
-    [today, "today"],
-    [tomorrow, "tomorrow"],
-  ] as const) {
+  // Today, tomorrow, and then however many more were asked for. Only the
+  // first two get a word of their own: past that a date is clearer than
+  // counting days, and "in six days" is not how anybody says Saturday.
+  const dates: [string, Slot["day"]][] = [];
+  let date = today;
+  for (let i = 0; i < Math.max(1, days); i += 1) {
+    dates.push([date, i === 0 ? "today" : i === 1 ? "tomorrow" : "later"]);
+    date = nextDay(date);
+  }
+
+  for (const [date, day] of dates) {
     // The first window starts at opening, or at the first hour that is far
     // enough away, whichever is later. Walking a fixed grid instead would
     // throw away a perfectly deliverable afternoon: at one o'clock the noon
@@ -107,8 +119,9 @@ export function deliverySlots(
 
       const at = lagosInstant(date, Math.floor(start / 60), start % 60);
       const window = `between ${clockOf(Math.floor(start / 60), start % 60)} and ${clockOf(to, 0)}`;
-      const said = day === "today" ? window : `${window} tomorrow`;
+      const said = day === "today" ? window : `${window} ${dayWord(date, now)}`;
       slots.push({
+        date,
         at,
         label: said.charAt(0).toUpperCase() + said.slice(1),
         phrase: said,
