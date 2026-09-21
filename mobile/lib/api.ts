@@ -74,6 +74,42 @@ async function beacon(path: string, data: unknown): Promise<void> {
   }
 }
 
+export type BoxLineView = {
+  id: string;
+  name: string;
+  restaurant: string;
+  choices: string[];
+  qty: number;
+  total: number;
+  swaps: { name: string; restaurant: string; choices: string[]; delta: number }[];
+};
+
+export type BoxView = {
+  id: string;
+  name: string;
+  blurb: string;
+  serves: string;
+  imageUrl: string;
+  isExtra: boolean;
+  lines: BoxLineView[];
+  /** What the food comes to as the shop packed it. A swap moves it by its
+   *  own delta, which the app can do without asking again. */
+  food: number;
+  runFee: number;
+  carFee: number;
+};
+
+export type WhenOption = {
+  key: string;
+  runId: string;
+  at: string;
+  date: string;
+  day: string;
+  window: string;
+  onARun: boolean;
+  fee: number;
+};
+
 export type Item = {
   id: string;
   name: string;
@@ -416,6 +452,51 @@ export const api = {
       }[];
       blocked: { name: string; reason: string }[];
     }>("/again", token),
+  /** The occasions, with a price on each because a card without one is a
+   *  category and categories sell nothing. */
+  occasions: () =>
+    get<{
+      occasions: {
+        slug: string;
+        name: string;
+        blurb: string;
+        boxes: number;
+        from: number | null;
+        happensAt: string | null;
+        whenWord: string;
+      }[];
+    }>("/occasions"),
+  /** One occasion: every box drawn out, priced off today's menu by the shop,
+   *  and every car it could ride. The phone never works a price out. */
+  occasion: (slug: string) =>
+    get<{
+      occasion: {
+        slug: string;
+        name: string;
+        blurb: string;
+        happensAt: string | null;
+        whenWord: string;
+      };
+      boxes: BoxView[];
+      when: WhenOption[];
+      hostels: string[];
+      promoters: { code: string; name: string }[];
+      note: string;
+    }>(`/occasions/${slug}`),
+  orderBox: (data: {
+    occasion: string;
+    box: string;
+    when: string;
+    swaps: Record<string, number>;
+    name: string;
+    phone: string;
+    hostel: string;
+    paymentMethod: "transfer" | "card";
+    customerNote: string;
+    heardFrom: string;
+    giftName: string;
+    giftPhone: string;
+  }) => post<{ orderId: string; token: string | null }>("/box", data),
   /** Wipes everything that says who they are. Both stores require this to be
    *  reachable from inside the app, not only on the website. */
   deleteMe: (token: string) => post<{ ok: boolean; orders: number }>("/delete", {}, token),

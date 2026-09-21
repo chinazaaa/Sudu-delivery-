@@ -94,6 +94,9 @@ export default function Home() {
   // One car a week, on a Saturday. Empty when the shelf is switched off,
   // and then the app does not mention it at all.
   const [skincare, setSkincare] = useState("");
+  // What is packed and ready, said as the thing itself rather than as a
+  // category. The home screen is the only signpost this app has.
+  const [occasions, setOccasions] = useState("");
 
   useEffect(() => {
     void api
@@ -103,6 +106,25 @@ export default function Home() {
       })
       .catch(() => {
         /* The shelf is a door, not the shop. A closed one is no error. */
+      });
+
+    // Named by whatever is nearest, because "Match day, Saturday" is a
+    // reason to tap and "Occasions" is a filing cabinet.
+    void api
+      .occasions()
+      .then(({ occasions: some }) => {
+        if (some.length === 0) return;
+        setOccasions(
+          some.length === 1
+            ? `${some[0].name}. One price, delivery in it.`
+            : `${some
+                .slice(0, 2)
+                .map((one) => one.name)
+                .join(", ")} and more. One price, delivery in it.`
+        );
+      })
+      .catch(() => {
+        /* Also a door. */
       });
   }, []);
 
@@ -161,6 +183,26 @@ export default function Home() {
             <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink }}>
               Order now, get it {arriving}
             </Text>
+          </Pressable>
+        )}
+
+        {occasions !== "" && (
+          <Pressable
+            onPress={() => router.push("/occasions" as never)}
+            style={{
+              backgroundColor: T.paper,
+              borderRadius: T.radius,
+              padding: 14,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: "800", color: T.ink }}>Ordering for something?</Text>
+              <Text style={{ color: T.muted, marginTop: 2 }}>{occasions}</Text>
+            </View>
+            <Text style={{ color: T.brand, fontWeight: "800" }}>See</Text>
           </Pressable>
         )}
 

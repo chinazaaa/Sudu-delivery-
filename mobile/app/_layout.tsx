@@ -85,6 +85,10 @@ export default function Layout() {
         {/* The other half of the shop. Its own shelf, its own basket and its
             own day, so it is pushed over the tabs rather than living in
             them: nobody browses skincare and food in the same breath. */}
+        {/* Food somebody has already packed. Its own door rather than a
+            card in the menu, for the same reason skincare has one. */}
+        <Stack.Screen name="occasions/index" options={{ title: "Ordering for something" }} />
+        <Stack.Screen name="occasions/[slug]" options={{ title: "" }} />
         <Stack.Screen name="skincare" options={{ title: "Skincare" }} />
         <Stack.Screen name="skincare-checkout" options={{ title: "Checkout" }} />
         {/* A basket somebody was sent. sudu.store/c/<code> opens here rather
