@@ -399,7 +399,10 @@ export default function Checkout({
       ? sameDayFee(itemCount, soon.urgent, sameDayBands, urgentExtra)
       : 0;
 
-    if (shared || promotion || itemCount === 0) return null;
+    // Nothing to say where the fee does not come from the container ladder:
+    // this line compares one ladder with the other, and a market is priced
+    // by what the shopping comes to on either.
+    if (shared || promotion || itemCount === 0 || byValue.length > 0) return null;
 
     if (onARun) {
       // Already on the cheap way. Only worth saying a car exists at all.
