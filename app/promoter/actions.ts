@@ -112,33 +112,41 @@ export async function saveNudge(form: FormData): Promise<void> {
  * Their code does not move, so everyone they have brought stays theirs and
  * they sign in with the same name as before.
  */
-export async function changeMyPin(form: FormData): Promise<void> {
+export async function changeMyPin(
+  _prev: { done: string; error: string },
+  form: FormData
+): Promise<{ done: string; error: string }> {
   const code = await currentPromoter();
-  if (!code) return;
+  if (!code) return { done: "", error: "Sign in again and try that once more." };
 
   // The one they have now, first. Being signed in is proof of who they are
   // and not proof that they are still the one holding the phone: a page left
   // open on a laptop somebody walked away from is the whole of what this
-  // stops. It is checked by the same function the sign-in uses, so a wrong
-  // one fails the same way here as it does there.
+  // stops. Checked by the same function the sign-in uses, so a wrong one
+  // fails the same way here as it does there.
   const asked = await checkPromoterPin(code, String(form.get("old_pin") ?? ""));
   if (!asked.ok) {
-    throw new Error("That is not your current PIN. Nothing was changed.");
+    return { done: "", error: "That is not your current PIN. Nothing was changed." };
   }
 
   const pin = String(form.get("pin") ?? "").replace(/\D/g, "");
   if (pin.length !== 4) {
-    throw new Error("A PIN is four digits.");
+    return { done: "", error: "A PIN is four digits." };
   }
   // Four of the same, or straight up or down: the ones somebody picks
   // without thinking, and the ones anybody else guesses first.
   if (/^(\d)\1{3}$/.test(pin) || "0123456789".includes(pin) || "9876543210".includes(pin)) {
-    throw new Error("That one is too easy to guess. Pick four that are not in a row.");
+    return {
+      done: "",
+      error: "That one is too easy to guess. Pick four that are not in a row.",
+    };
   }
 
   const { error } = await db().from("promoters").update({ pin }).eq("code", code);
-  if (error) throw new Error(`Could not change that: ${error.message}`);
+  if (error) return { done: "", error: `Could not change that: ${error.message}` };
 
   revalidatePath("/promoter");
   revalidatePath("/admin", "layout");
+
+  return { done: `Changed. You sign in with ${pin} from now on.`, error: "" };
 }

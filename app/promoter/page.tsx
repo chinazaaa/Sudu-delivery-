@@ -8,7 +8,8 @@ import { fillNudge, whatsappTo, NUDGE_TOKENS } from "@/lib/messages";
 import { siteUrl } from "@/lib/admin-templates";
 import { hasNudgeColumn } from "@/lib/health";
 import SaveButton from "@/components/SaveButton";
-import { changeMyPin, confirmPayout, saveBank, saveNudge, signOut } from "./actions";
+import { confirmPayout, saveBank, saveNudge, signOut } from "./actions";
+import ChangePin from "@/components/ChangePin";
 
 export const dynamic = "force-dynamic";
 
@@ -314,46 +315,7 @@ export default async function PromoterPage() {
           on WhatsApp are four digits sitting in somebody's WhatsApp, and the
           person who has to live with that is the one whose earnings are
           behind it. */}
-      <form action={changeMyPin} className="card space-y-3">
-        <div>
-          <h2 className="font-bold">Your PIN</h2>
-          <p className="text-sm text-muted">
-            Four digits, with your code, is how you sign in here. Change it
-            whenever you like: your code stays the same, so everyone you have
-            brought stays yours. The one you have now is asked for first, in
-            case somebody else is looking at your screen.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="w-32">
-            <label className="label" htmlFor="old_pin">
-              PIN now
-            </label>
-            <input
-              id="old_pin"
-              name="old_pin"
-              inputMode="numeric"
-              maxLength={4}
-              placeholder="••••"
-              className="field tracking-widest"
-            />
-          </div>
-          <div className="w-32">
-            <label className="label" htmlFor="pin">
-              New PIN
-            </label>
-            <input
-              id="pin"
-              name="pin"
-              inputMode="numeric"
-              maxLength={4}
-              placeholder="••••"
-              className="field tracking-widest"
-            />
-          </div>
-          <SaveButton className="shrink-0">Change it</SaveButton>
-        </div>
-      </form>
+      <ChangePin code={earnings.code} />
 
       <p className="text-sm text-muted">
         Questions about a run?{" "}
