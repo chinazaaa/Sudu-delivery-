@@ -9,6 +9,7 @@ import { naira } from "@/lib/money";
 import { whatsappTo } from "@/lib/messages";
 import { siteUrl } from "@/lib/admin-templates";
 import { recordPayout, savePromoter } from "../actions";
+import CopyText from "@/components/CopyText";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,15 @@ export default async function PromotersAdmin() {
 
       {promoters.map((promoter) => {
         const earnings = perRun.get(promoter.code) ?? null;
+        const brief =
+          `Hi ${promoter.name || "there"}, you are promoting Sudu.\n\n` +
+          `You earn ${naira(promoter.rate)} on every order a customer you brought pays for, ` +
+          `for as long as they keep ordering.\n\n` +
+          `See what you have earned: ${url}/promoter\n` +
+          `Code: ${promoter.code}\n` +
+          `PIN: ${promoter.pin || "ask us"}\n\n` +
+          `Tell people to pick "${promoter.name || promoter.code}" at the checkout, ` +
+          `under "Where did you hear about us?". That is what puts them on your list.`;
         return (
         <section key={promoter.code} className="mb-5">
           <h2 className="mb-2 font-extrabold">
@@ -73,22 +83,39 @@ export default async function PromotersAdmin() {
                   {promoter.pin || "not set"}
                 </span>
               </span>
-              {promoter.phone && (
-                <a
-                  href={whatsappTo(
-                    promoter.phone,
-                    `Hi ${promoter.name}, you can see what you have earned here: ` +
-                      `${url}/promoter\n\n` +
-                      `Your code is ${promoter.code} and your PIN is ${promoter.pin}.`
-                  )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="chip border-black/10 bg-white hover:border-ink/30"
-                >
-                  Send their sign-in
-                </a>
-              )}
+              {/* Everything they need in one message: who they are to the
+                  shop, how to sign in, what they earn and how a customer
+                  says their name at the checkout. Written out here because
+                  half of it is useless on its own: a PIN with no code, or a
+                  code with no page to put it into. */}
+              <a
+                href={
+                  promoter.phone
+                    ? whatsappTo(promoter.phone, brief)
+                    : `https://wa.me/?text=${encodeURIComponent(brief)}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="chip border-black/10 bg-white hover:border-ink/30"
+              >
+                {promoter.phone ? "Send their details" : "Share their details"}
+              </a>
             </div>
+
+            {/* Their number is how the message finds them without picking a
+                chat, and it is worth having anyway. */}
+            {!promoter.phone && (
+              <p className="text-xs text-muted">
+                No number saved for them, so WhatsApp will ask which chat to
+                send it to. Put one in below and this goes straight to them.
+              </p>
+            )}
+
+            <CopyText
+              value={brief}
+              label="Copy their details"
+              className="px-3 py-2 text-sm"
+            />
 
             <form action={recordPayout} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="code" value={promoter.code} />
