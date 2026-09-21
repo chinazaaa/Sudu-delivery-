@@ -54,6 +54,15 @@ export default async function HomePage() {
     .map((line) => line.trim())
     .filter(Boolean);
 
+  const runViews = batches
+    .map(toBatchView)
+    .filter((one) => !one.closed && !one.full)
+    .map(runArrival);
+  // The one rule, asked once: a run going today, a car of its own today, a
+  // run tomorrow, tomorrow's first window. Worked out here so the clock is
+  // the shop's rather than the phone's.
+  const decided = nextArrival(runViews, slots, lagosToday());
+
   return (
     <Home
       menu={menu}
@@ -65,15 +74,22 @@ export default async function HomePage() {
       // other way of ordering uses: a run going today while it is taking
       // orders, a car of its own today, a run tomorrow, tomorrow's first
       // window. Worked out here so the clock is the shop's.
-      arriving={
-        nextArrival(
-          batches
-            .map(toBatchView)
-            .filter((one) => !one.closed && !one.full)
-            .map(runArrival),
-          slots,
-          lagosToday()
-        )?.said ?? ""
+      arriving={decided?.said ?? ""}
+      // The other way, for whoever the headline does not suit. Somebody who
+      // wants dinner tonight and somebody who wants it cheap both open this
+      // page, and one sentence naming a run five days out sends the first of
+      // them away. Worked out by asking the same rule twice, once with only
+      // runs and once with only cars, so the wording cannot drift from it.
+      alsoArriving={
+        (() => {
+          if (!decided) return null;
+          const other = decided.onARun
+            ? nextArrival([], slots, lagosToday())
+            : nextArrival(runViews, [], lagosToday());
+          return other && other.said !== decided.said
+            ? { said: other.said, sooner: decided.onARun }
+            : null;
+        })()
       }
       promos={promos}
       // One car a week, on a Saturday. Empty when that shelf is off, and then

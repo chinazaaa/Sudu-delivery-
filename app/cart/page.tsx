@@ -6,7 +6,7 @@ import { openRestaurants } from "@/lib/menu";
 import { hostelNames } from "@/lib/hostels";
 import { liveOffers } from "@/lib/coupons";
 import { openBatches } from "@/lib/batches";
-import { activeBands, hoursByDay, safeSettings } from "@/lib/settings";
+import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { toBatchView } from "@/lib/view";
 import { runArrival } from "@/lib/arrival";
@@ -69,6 +69,11 @@ export default async function CartPage({
       offers={await liveOffers()}
       nextRunId={batches[0]?.id ?? ""}
       bands={bands}
+      // The cart has to price the way the checkout will. Whatever is going
+      // soonest decides it, and when that is a car of its own the container
+      // ladder is the wrong list.
+      sameDayBands={(await sameDayPricing()).bands}
+      urgentExtra={(await sameDayPricing()).urgentExtra}
       areas={await allAreas()}
       areaOf={await areaOfEach()}
       valueBandsOf={await valueBandsOfEach()}

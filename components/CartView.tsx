@@ -4,7 +4,7 @@ import GroupLink, { PARTY_CHANGED, readGroup } from "./GroupLink";
 import Sheet from "./Sheet";
 import { useRouter } from "next/navigation";
 import type { Slot } from "@/lib/same-day";
-import type { ArrivalRun } from "@/lib/arrival";
+import { nextArrival, type ArrivalRun } from "@/lib/arrival";
 import { dearestArea, withExtra, type Area } from "@/lib/areas";
 import { ladderFor } from "@/lib/areas-shared";
 import { feeForValue, type ValueBand } from "@/lib/value-bands";
@@ -26,7 +26,7 @@ import {
   useCart,
   usePeople,
 } from "@/lib/cart";
-import { feeFor, type Band } from "@/lib/fees";
+import { feeFor, sameDayFee, type Band } from "@/lib/fees";
 import { nearMiss, pickOffer, type LiveOffer } from "@/lib/offers";
 import { naira } from "@/lib/money";
 import PayChoice from "./PayChoice";
@@ -39,6 +39,8 @@ export default function CartView({
   today = "",
   hostels = [],
   bands = [],
+  sameDayBands = [],
+  urgentExtra = 0,
   areas = [],
   areaOf = {},
   valueBandsOf = {},
@@ -59,6 +61,10 @@ export default function CartView({
   /** The delivery price list in force, so the saving shown is the real one.
    *  It is what Sangotedo costs; anywhere further adds to every band. */
   bands?: Band[];
+  /** The other price list, for a car of its own. Which one applies is not a
+   *  choice made here: it is whichever way the food is actually going. */
+  sameDayBands?: Band[];
+  urgentExtra?: number;
   /** The areas the shop delivers from, and which one each kitchen is in. */
   areas?: Area[];
   areaOf?: Record<string, string>;
@@ -436,10 +442,25 @@ export default function CartView({
     [...new Set(cart.map((line) => line.restaurantId))],
     valueBandsOf
   );
+  // Which way the food is actually going, by the same rule as everywhere
+  // else. With no run inside the days people can order ahead, the soonest
+  // thing is a car of its own, and quoting the run ladder here had the cart
+  // promising four thousand over a checkout that was going to charge six and
+  // a half. The cart says what the checkout will say.
+  const going = nextArrival(runs, slots, today);
+  const onItsOwn = going !== null && !going.onARun;
+  const soonSlot = onItsOwn ? slots.find((one) => one.at === going.at) ?? null : null;
+  const carFee =
+    soonSlot && sameDayBands.length > 0
+      ? sameDayFee(countItems(cart), soonSlot.urgent, sameDayBands, urgentExtra)
+      : 0;
+
   const alone = promotion
     ? promotion.fee
     : byValue.length > 0
       ? Math.max(feeForValue(cartSubtotal(cart), byValue), feeFor(countItems(cart), null, ladder))
+    : carFee > 0
+      ? carFee
     : ladder.length > 0
       ? feeFor(countItems(cart), null, ladder)
       : 0;

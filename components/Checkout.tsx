@@ -436,7 +436,7 @@ export default function Checkout({
       feeFor(itemCount + alreadyItems, null, bands) - alreadyCharged
     );
     const fee = sameDayFee(itemCount, soon.urgent, sameDayBands, urgentExtra);
-    return fee > runFee ? { fee, phrase: soon.phrase } : null;
+    return fee > runFee ? { fee, phrase: soon.phrase, at: soon.at } : null;
   })();
 
   // Naming friends to carry food for is a different thing from being in a
@@ -712,10 +712,14 @@ export default function Checkout({
         {carSooner !== null && (
           <button
             type="button"
-            onClick={() => setDeliverAt(sameDaySlots[0]?.at ?? "")}
-            className="text-left text-sm font-semibold text-brand"
+            onClick={() => setDeliverAt(carSooner.at)}
+            className="block w-full rounded-xl bg-brand-tint px-3 py-2 text-left text-sm font-semibold text-brand-dark"
           >
-            {`Need it sooner? A car of its own can be there ${carSooner.phrase}, for ${naira(carSooner.fee)}.`}
+            Need it sooner? A car of its own can be there {carSooner.phrase},
+            for {naira(carSooner.fee)}.{" "}
+            <span className="underline decoration-dotted underline-offset-4">
+              Tap for that instead.
+            </span>
           </button>
         )}
       </section>

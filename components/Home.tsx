@@ -16,6 +16,7 @@ import type { Slide } from "@/lib/slides";
 export default function Home({
   menu,
   arriving,
+  alsoArriving = null,
   skincare,
   slides,
   popularIds,
@@ -28,6 +29,9 @@ export default function Home({
    *  worked out on the server: a phone's own clock can be anything, and this
    *  is the same decision the checkout makes. Empty when nothing is going. */
   arriving: string;
+  /** The other way of getting it here, for whoever the headline does not
+   *  suit. Null when there is only one way. */
+  alsoArriving?: { said: string; sooner: boolean } | null;
   /** When the skincare car next goes, said in a line. Empty when that shelf
    *  is switched off, and then there is no door to it. */
   skincare: string;
@@ -114,7 +118,7 @@ export default function Home({
       {/* One sentence, and nothing else. Which run or which car it is has
           already been decided, by the same rule the checkout uses, so all
           that is left to say is when the food turns up. */}
-      {arriving !== "" && <ArrivalStrip said={arriving} />}
+      {arriving !== "" && <ArrivalStrip said={arriving} also={alsoArriving} />}
 
       {/* The other half of the shop. It is not a restaurant and it does not
           come today, so it is a door rather than a card in the row: one car a

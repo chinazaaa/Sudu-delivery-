@@ -76,6 +76,16 @@ export default async function RunsPage({
   const trips = await sameDayTrips().catch(() => []);
 
   const live = batches.filter((batch) => batch.status !== "cancelled");
+  // The nearest run a customer could actually reach. Runs exist weeks out so
+  // they can be planned, but only the ones closing inside the order horizon
+  // are offered, and a horizon shorter than the gap to the next run hides
+  // every run in the shop without saying so anywhere.
+  const soonestRun = live
+    .filter((batch) => batch.status === "open" && batch.kind !== "same_day")
+    .map((batch) => batch.run_date)
+    .sort()[0];
+  const daysAway = soonestRun ? coverDays(soonestRun) : null;
+  const hidden = daysAway !== null && daysAway > horizon;
   const orders = live.reduce((total, batch) => total + batch.orderCount, 0);
   const paid = live.reduce((total, batch) => total + batch.paidCount, 0);
   const profit = live.reduce((total, batch) => total + batch.profit, 0);
@@ -189,6 +199,30 @@ export default async function RunsPage({
           </Link>
         )}
       </div>
+
+      {/* A run that exists and a run somebody can order onto are two
+          different things, and the gap between them is one number in
+          settings. Worth saying out loud: from the shop floor everything
+          looks open, while the checkout quietly offers nobody a run. */}
+      {hidden && (
+        <div className="card mb-4 border-amber-300 bg-amber-50">
+          <h2 className="font-bold text-amber-900">
+            Nobody can order onto a run right now
+          </h2>
+          <p className="mt-0.5 text-sm text-amber-900/80">
+            The next run is {runDateLabel(soonestRun!)}, {daysAway} days away,
+            and customers only see runs closing in the next {horizon}. Until
+            that number is at least {daysAway}, the checkout offers a car of
+            its own and the dearer price that goes with it.
+          </p>
+          <Link
+            href="/admin/settings"
+            className="btn-primary mt-3 px-4 py-2.5 text-sm"
+          >
+            Change how far ahead people can order
+          </Link>
+        </div>
+      )}
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Runs listed" value={live.length} />
