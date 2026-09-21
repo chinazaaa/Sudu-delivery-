@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import Thumb from "@/components/Thumb";
 
 import { liveOccasions, boxesOf, isTimed } from "@/lib/boxes";
 import { cheapestBoxes } from "@/lib/box-view";
@@ -67,17 +67,12 @@ export default async function OccasionsPage() {
                     timed ? "ring-2 ring-brand/40" : ""
                   }`}
                 >
-                  {one.image_url !== "" && (
-                    <span className="relative w-28 shrink-0 bg-shell sm:w-36">
-                      <Image
-                        src={one.image_url}
-                        alt=""
-                        fill
-                        sizes="144px"
-                        className="object-cover"
-                      />
-                    </span>
-                  )}
+                  {/* Always something. An empty card is a line of text, and
+                      a tint made from the name is at least a shape a thumb
+                      can aim at. */}
+                  <span className="w-24 shrink-0 sm:w-32">
+                    <Thumb src={one.image_url} name={one.name} rounded="" />
+                  </span>
 
                   <span className="min-w-0 flex-1 p-4">
                     {timed && (

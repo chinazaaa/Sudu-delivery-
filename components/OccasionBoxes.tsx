@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -8,6 +8,7 @@ import { orderBox, type BoxOrderState } from "@/app/occasions/actions";
 import type { BoxView, WhenOption } from "@/lib/box-view";
 import { naira } from "@/lib/money";
 import { OPENED, TRAP } from "@/lib/guard";
+import Thumb from "./Thumb";
 
 /**
  * Picking a box and ordering it.
@@ -75,6 +76,16 @@ export default function OccasionBoxes({
   const [opened] = useState(() => Date.now());
 
   const box = meals.find((one) => one.id === picked) ?? null;
+  const rest = useRef<HTMLFormElement>(null);
+
+  // Picking a box moves you to what is in it, because the next thing to do
+  // is below the fold on every phone and hunting for it reads as nothing
+  // having happened. Only on opening one: closing it should leave the page
+  // where the thumb is.
+  useEffect(() => {
+    if (picked === "") return;
+    rest.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [picked]);
   const car = when.find((one) => one.key === going) ?? null;
 
   // An order made is a page they should be on, not a message on this one.
@@ -108,10 +119,15 @@ export default function OccasionBoxes({
             <button
               type="button"
               onClick={() => setPicked(one.id === picked ? "" : one.id)}
-              className={`w-full rounded-2xl border-2 p-4 text-left transition active:scale-[0.99] ${
+              className={`flex w-full items-stretch gap-3 overflow-hidden rounded-2xl border-2 text-left transition active:scale-[0.99] ${
                 one.id === picked ? "border-brand bg-brand-tint" : "border-black/10"
               }`}
             >
+              <span className="w-24 shrink-0 sm:w-28">
+                <Thumb src={one.imageUrl} name={one.name} rounded="" />
+              </span>
+
+              <span className="min-w-0 flex-1 p-4">
               <div className="flex items-baseline justify-between gap-3">
                 <span className="text-lg font-extrabold">{one.name}</span>
                 <span className="shrink-0 text-lg font-extrabold">
@@ -129,13 +145,14 @@ export default function OccasionBoxes({
               <span className="mt-1 block text-sm font-semibold text-brand">
                 Delivery included
               </span>
+              </span>
             </button>
           </li>
         ))}
       </ul>
 
       {box && !shut && (
-        <form action={act} className="space-y-4">
+        <form ref={rest} action={act} className="scroll-mt-24 space-y-4">
           <input type="hidden" name="occasion" value={slug} />
           <input type="hidden" name="box" value={box.id} />
           <input type="hidden" name={OPENED} value={String(opened)} />
