@@ -405,7 +405,7 @@ export default function Checkout({
       0,
       feeFor(itemCount + alreadyItems, null, bands) - alreadyCharged
     );
-    const soon = todaySlot ?? laterSlot;
+    const soon = sameDay ?? todaySlot ?? laterSlot;
     const soonFee = soon
       ? sameDayFee(itemCount, soon.urgent, sameDayBands, urgentExtra)
       : 0;
@@ -1119,7 +1119,7 @@ export default function Checkout({
         <div className="flex justify-between text-muted">
           <span>
             {sameDay
-              ? `Delivery ${sameDay.label}${sameDay.urgent ? " · urgent" : ""}`
+              ? `Delivery ${sameDay.phrase}${sameDay.urgent ? " · urgent" : ""}`
               : shared
               ? "Delivery"
               : alreadyCharged > 0
@@ -1159,7 +1159,7 @@ export default function Checkout({
             }
             note="A car of its own is one order, one driver, one trip, so there is nobody to share the petrol with. A run carries everybody at once, which is why it costs less."
           >
-            {waitingSaves !== null && !onARun && (
+            {waitingSaves !== null && !onARun ? (
               <button
                 type="button"
                 onClick={() => {
@@ -1171,6 +1171,14 @@ export default function Checkout({
                 {waitingSaves.label} instead is {naira(waitingSaves.instead)}.
                 Tap to move onto it and save {naira(waitingSaves.saving)}.
               </button>
+            ) : (
+              /* Say that the cheaper way is shut rather than showing nothing.
+                 Silence reads as a missing button: somebody who has been told
+                 a run costs less goes looking for where to tap. */
+              <p className="mt-2 text-muted">
+                There is no run open to move onto right now. When one is, it
+                shows here and moving onto it is one tap.
+              </p>
             )}
           </FeeBands>
         )}
