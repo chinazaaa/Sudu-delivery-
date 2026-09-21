@@ -386,8 +386,20 @@ export default function OccasionBoxes({
             </details>
 
             <div>
-              <label className="label" htmlFor="box_note">Anything we should know?</label>
-              <input id="box_note" name="note" placeholder="Optional" className="field" />
+              <label className="label" htmlFor="box_note">
+                Anything we should know? (optional)
+              </label>
+              {/* A box is four or five things, so the one note has to carry
+                  whatever any of them needs. "Optional" told nobody what to
+                  put there; an example does. */}
+              <textarea
+                id="box_note"
+                name="note"
+                rows={2}
+                maxLength={300}
+                placeholder="No pepper on the pizza, crunchy not spicy, call me when you are outside"
+                className="field"
+              />
             </div>
 
             {promoters.length > 0 && !me && (
