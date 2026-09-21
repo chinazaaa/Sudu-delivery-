@@ -23,6 +23,10 @@ export type Slot = {
   day: "today" | "tomorrow" | "later";
   /** The date it lands, so a day further out than tomorrow can be named. */
   date: string;
+  /** Just the hours, with no day on the end: "between 4pm and 6pm". For
+   *  anywhere the day is already said above it, so saying it twice would
+   *  be the page talking to itself. */
+  window: string;
   urgent: boolean;
 };
 
@@ -122,6 +126,7 @@ export function deliverySlots(
       const said = day === "today" ? window : `${window} ${dayWord(date, now)}`;
       slots.push({
         date,
+        window,
         at,
         label: said.charAt(0).toUpperCase() + said.slice(1),
         phrase: said,

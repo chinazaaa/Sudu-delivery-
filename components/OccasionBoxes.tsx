@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -50,6 +50,28 @@ export default function OccasionBoxes({
   const [picked, setPicked] = useState("");
   const [swaps, setSwaps] = useState<Record<string, number>>({});
   const [going, setGoing] = useState(when[0]?.key ?? "");
+  const [day, setDay] = useState(when[0]?.date ?? "");
+
+  // One entry per day that has anything going, in order, each carrying its
+  // own cars. Built here rather than on the server because it is a shape,
+  // not a fact, and the server already sent every fact it has.
+  const days = useMemo(() => {
+    const byDate = new Map<string, WhenOption[]>();
+    for (const one of when) {
+      byDate.set(one.date, [...(byDate.get(one.date) ?? []), one]);
+    }
+    return [...byDate.entries()].map(([date, options]) => ({
+      date,
+      options,
+      weekday: new Date(`${date}T12:00:00Z`).toLocaleDateString("en-NG", {
+        weekday: "short",
+      }),
+      short: new Date(`${date}T12:00:00Z`).toLocaleDateString("en-NG", {
+        day: "numeric",
+        month: "short",
+      }),
+    }));
+  }, [when]);
   const [opened] = useState(() => Date.now());
 
   const box = meals.find((one) => one.id === picked) ?? null;
@@ -199,8 +221,35 @@ export default function OccasionBoxes({
 
           <section className="card space-y-3">
             <h2 className="font-bold">When do you want it?</h2>
+
+            {/* A day, and then that day's cars. A fortnight laid out flat is
+                thirty rows and a thumb that never reaches the bottom, and
+                every row but two or three is about a day nobody wanted. */}
+            <div className="-mx-4 overflow-x-auto px-4">
+              <div className="flex gap-2 pb-1">
+                {days.map((one) => (
+                  <button
+                    key={one.date}
+                    type="button"
+                    onClick={() => {
+                      setDay(one.date);
+                      setGoing(one.options[0]?.key ?? "");
+                    }}
+                    className={`shrink-0 rounded-xl border px-3 py-2 text-center text-sm transition ${
+                      one.date === day
+                        ? "border-brand bg-brand-tint font-bold"
+                        : "border-black/10"
+                    }`}
+                  >
+                    <span className="block font-semibold">{one.weekday}</span>
+                    <span className="block text-xs text-muted">{one.short}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-1">
-              {when.map((one) => (
+              {(days.find((one) => one.date === day)?.options ?? []).map((one) => (
                 <label
                   key={one.key}
                   className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-sm ${
@@ -216,9 +265,11 @@ export default function OccasionBoxes({
                       onChange={() => setGoing(one.key)}
                     />
                     <span>
-                      <span className="font-semibold">{one.day}</span>
+                      <span className="font-semibold">{one.window}</span>
                       <span className="block text-muted">
-                        {one.window} · {one.onARun ? "on the run" : "a car of its own"}
+                        {one.onARun
+                          ? "On the run, shared with everybody else in the car"
+                          : "A car of its own"}
                       </span>
                     </span>
                   </span>

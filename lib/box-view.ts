@@ -192,7 +192,7 @@ export async function whenOptions(
     at: slot.at,
     date: slot.date,
     day: runDateLabel(slot.date),
-    window: slot.phrase.replace(/ (today|tomorrow|.*)$/, "") || slot.phrase,
+    window: slot.window,
     onARun: false,
     fee: box.car_fee,
   }));
