@@ -389,15 +389,21 @@ export default function OccasionBoxes({
               <label className="label" htmlFor="box_note">
                 Anything we should know? (optional)
               </label>
-              {/* A box is four or five things, so the one note has to carry
-                  whatever any of them needs. "Optional" told nobody what to
-                  put there; an example does. */}
+              {/* The example must not name food. This one field sits under
+                  every box there is, and "no pepper on the pizza" is
+                  nonsense above a chicken box. So the example is about the
+                  delivery, which is true of all of them, and the sentence
+                  above it says what the field is actually for. */}
+              <p className="mb-1 text-xs text-muted">
+                Use this to say if one or two small things should be
+                different. To change a whole item, use Swap above.
+              </p>
               <textarea
                 id="box_note"
                 name="note"
                 rows={2}
                 maxLength={300}
-                placeholder="No pepper on the pizza, crunchy not spicy, call me when you are outside"
+                placeholder="Room 12, call me when you are outside, go easy on the pepper"
                 className="field"
               />
             </div>
