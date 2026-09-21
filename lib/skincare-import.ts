@@ -238,7 +238,11 @@ function parseJson(text: string): Import {
 }
 
 export function parseProducts(text: string): Import {
-  const rows = rowsOf(text);
+  // A byte order mark rides at the front of anything a spreadsheet saved,
+  // and it sticks to the first column name: the header reads as "category"
+  // to a person and as something else to a comparison, so the whole column
+  // goes missing and every product lands uncategorised.
+  const rows = rowsOf(text.replace(/^\uFEFF/, ""));
   if (rows.length === 0) return { products: [], skipped: 0 };
 
   // Read by the names in the header rather than by position, because the next

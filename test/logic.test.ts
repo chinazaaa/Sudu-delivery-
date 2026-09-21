@@ -37,7 +37,7 @@ import { groupNames, lineKey as cartLineKey, reclaim } from "../lib/cart";
 import { renderEmail, renderText, type Block } from "../lib/email-html";
 import { deliverySlots, slotFee, slotsToday } from "../lib/same-day";
 import { nextArrival } from "../lib/arrival";
-import { parseProducts } from "../lib/skincare-import";
+import { parseCatalogue, parseProducts } from "../lib/skincare-import";
 import { nextDrop } from "../lib/skincare";
 
 /** A settings row with nothing filled in, for the template tests. */
@@ -1453,4 +1453,33 @@ test("skincare goes on one day a week, and ordering never stops", () => {
   // Saturday, an hour after it: the car has gone, so it is the week after.
   // Not a refusal, which is the point: the order is taken either way.
   assert.equal(nextDrop(settings, new Date("2026-09-26T09:00:00+01:00")).date, "2026-10-03");
+});
+
+test("a catalogue reads the same from a spreadsheet or a list", () => {
+  const csv = [
+    "﻿category,name,price,image_filename,image_url",
+    `Bread,Bokku Bread,"₦1,900",Bokku_Bread.png,https://example.test/bokku.png`,
+    `Protein,Red Guinea corn,Out of stock,corn.png,https://example.test/corn.png`,
+  ].join("\n");
+
+  const fromCsv = parseCatalogue(csv);
+  // The byte order mark a spreadsheet saves sticks to the first column name,
+  // so "category" read as something else and every product landed with no
+  // section at all.
+  assert.equal(fromCsv.products[0].category, "Bread");
+  assert.equal(fromCsv.products[0].price, 1900);
+  // An export writes "Out of stock" where the price goes. A product with no
+  // price is not one anybody can order, so it is left out and counted.
+  assert.equal(fromCsv.products.length, 1);
+  assert.equal(fromCsv.skipped, 1);
+
+  const fromJson = parseCatalogue(
+    JSON.stringify([
+      { category: "Bread", name: "Bokku Bread", price: "₦1,900", image: "https://example.test/bokku.png" },
+    ])
+  );
+  assert.equal(fromJson.products[0].name, "Bokku Bread");
+  assert.equal(fromJson.products[0].price, 1900);
+  assert.equal(fromJson.products[0].imageUrl, "https://example.test/bokku.png");
+  assert.equal(fromJson.products[0].category, "Bread");
 });

@@ -28,7 +28,11 @@ import {
 } from "@/lib/checkout-links";
 import { fileFrom, uploadImage } from "@/lib/uploads";
 import { parseMenuText } from "@/lib/menu-import";
-import { parseProducts, shelfText } from "@/lib/skincare-import";
+import {
+  parseCatalogue,
+  shelfText,
+  type ImportedProduct,
+} from "@/lib/skincare-import";
 import { skincareShelves } from "@/lib/skincare";
 import { areaText } from "@/lib/areas";
 import { newPin } from "@/lib/customer-auth";
@@ -2262,7 +2266,7 @@ export async function importSkincare(
       ? await file.text()
       : String(form.get("pasted") ?? "");
 
-  const { products, skipped } = parseProducts(text);
+  const { products, skipped } = parseCatalogue(text);
   if (products.length === 0) {
     return {
       done: "",
@@ -2305,6 +2309,45 @@ export async function importSkincare(
     shopId = data.id as string;
   }
 
+  const { added, changed, sections, error } = await putCatalogue(shopId, products);
+  if (error !== "") return { done: `${added} in, then it stopped.`, error };
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/skincare");
+
+  return { done: said(added, changed, sections, skipped), error: "" };
+}
+
+/**
+ * How an import went, in the words somebody running a shop would use.
+ *
+ * The skipped count is named rather than buried: a file where half the rows
+ * had no price is a file worth looking at again, and a silent import of the
+ * other half is how a menu ends up missing things nobody notices for a week.
+ */
+function said(added: number, changed: number, sections: number, skipped: number): string {
+  return (
+    `${added} new, ${changed} updated, ${sections} section${sections === 1 ? "" : "s"}` +
+    (skipped > 0
+      ? `. ${skipped} row${skipped === 1 ? " was" : "s were"} left out for having no ` +
+        "price: an export writes \"Out of stock\" where the price goes, and a " +
+        "product with no price is not one anybody can order."
+      : ".")
+  );
+}
+
+/**
+ * A catalogue put into one restaurant, safely to run again.
+ *
+ * What is already there by name keeps its id, its photograph and anything
+ * changed by hand; what comes in is the price, the section and whether the
+ * shop has it. Nothing is deleted, because a shorter file is a shorter file
+ * and not an instruction to empty a menu.
+ */
+async function putCatalogue(
+  shopId: string,
+  products: ImportedProduct[]
+): Promise<{ added: number; changed: number; sections: number; error: string }> {
   // The shelves, by name. Everything already there keeps its id so that
   // anything filed under it stays filed under it.
   const wantedSections = [
@@ -2383,7 +2426,9 @@ export async function importSkincare(
       const { error } = await db().from("menu_items").insert(fresh);
       if (error) {
         return {
-          done: `${added} in, then it stopped.`,
+          added,
+          changed,
+          sections: wantedSections.length,
           error: `${error.message}. Nothing after ${chunk[0].name} went in.`,
         };
       }
@@ -2415,7 +2460,9 @@ export async function importSkincare(
         );
       if (error) {
         return {
-          done: `${added} new and ${changed} updated, then it stopped.`,
+          added,
+          changed,
+          sections: wantedSections.length,
           error: `${error.message}. Nothing after ${chunk[0].name} was touched.`,
         };
       }
@@ -2423,15 +2470,8 @@ export async function importSkincare(
     }
   }
 
-  revalidatePath("/admin", "layout");
-  revalidatePath("/skincare");
 
-  return {
-    done:
-      `${added} new, ${changed} updated, ${wantedSections.length} sections` +
-      (skipped > 0 ? `, ${skipped} rows skipped for having no name or price.` : "."),
-    error: "",
-  };
+  return { added, changed, sections: wantedSections.length, error: "" };
 }
 
 /**
@@ -2538,4 +2578,47 @@ export async function saveSkincare(
     };
   }
   return { done: "Saved.", error: "" };
+}
+
+/**
+ * A catalogue into an ordinary restaurant.
+ *
+ * The same import the skincare shelf uses, pointed at a menu instead. Two
+ * hundred products from a market is not something anybody types in either,
+ * and the difference between a shelf and a menu is which restaurant row they
+ * are filed under, not how they arrive.
+ */
+export async function importCatalogue(
+  _prev: { done: string; error: string },
+  form: FormData
+): Promise<{ done: string; error: string }> {
+  await assertAdmin();
+
+  const shopId = String(form.get("restaurant_id") ?? "");
+  if (shopId === "") return { done: "", error: "No restaurant to put it in." };
+
+  const file = form.get("csv");
+  const text =
+    file instanceof File && file.size > 0
+      ? await file.text()
+      : String(form.get("pasted") ?? "");
+
+  const { products, skipped } = parseCatalogue(text);
+  if (products.length === 0) {
+    return {
+      done: "",
+      error:
+        "Nothing to import. It wants a name and a price on every row, and a " +
+        "header naming the columns: category, name, price, image_url.",
+    };
+  }
+
+  const { added, changed, sections, error } = await putCatalogue(shopId, products);
+  if (error !== "") return { done: `${added} in, then it stopped.`, error };
+
+  revalidatePath("/admin", "layout");
+  updateTag("menu");
+  revalidatePath("/", "layout");
+
+  return { done: said(added, changed, sections, skipped), error: "" };
 }

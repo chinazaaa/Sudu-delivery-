@@ -26,6 +26,7 @@ import {
 } from "../../actions";
 import type { MenuCategory, MenuItem, Restaurant } from "@/lib/types";
 import { allAreas } from "@/lib/areas-server";
+import ImportCatalogue from "@/components/admin/ImportCatalogue";
 
 export const dynamic = "force-dynamic";
 
@@ -285,7 +286,13 @@ export default async function RestaurantAdmin({
           </details>
         )}
 
-        <form action={addCategory} className="flex items-end gap-2">
+        <ImportCatalogue
+        restaurantId={restaurant.id}
+        items={(items ?? []).length}
+        photosHref={`/admin/menu/${restaurant.id}/photos`}
+      />
+
+      <form action={addCategory} className="flex items-end gap-2">
           <input type="hidden" name="restaurant_id" value={restaurant.id} />
           <div className="grow">
             <label className="label">Add category</label>
