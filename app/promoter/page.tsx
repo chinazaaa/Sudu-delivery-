@@ -8,7 +8,7 @@ import { fillNudge, whatsappTo, NUDGE_TOKENS } from "@/lib/messages";
 import { siteUrl } from "@/lib/admin-templates";
 import { hasNudgeColumn } from "@/lib/health";
 import SaveButton from "@/components/SaveButton";
-import { confirmPayout, saveBank, saveNudge, signOut } from "./actions";
+import { changeMyPin, confirmPayout, saveBank, saveNudge, signOut } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -308,6 +308,37 @@ export default async function PromoterPage() {
           </div>
         </div>
         <SaveButton>Save</SaveButton>
+      </form>
+
+      {/* Theirs to change, without asking anybody. Four digits handed over
+          on WhatsApp are four digits sitting in somebody's WhatsApp, and the
+          person who has to live with that is the one whose earnings are
+          behind it. */}
+      <form action={changeMyPin} className="card space-y-3">
+        <div>
+          <h2 className="font-bold">Your PIN</h2>
+          <p className="text-sm text-muted">
+            Four digits, with your code, is how you sign in here. Change it
+            whenever you like: your code stays the same, so everyone you have
+            brought stays yours.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="w-32">
+            <label className="label" htmlFor="pin">
+              New PIN
+            </label>
+            <input
+              id="pin"
+              name="pin"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="••••"
+              className="field tracking-widest"
+            />
+          </div>
+          <SaveButton className="shrink-0">Change it</SaveButton>
+        </div>
       </form>
 
       <p className="text-sm text-muted">

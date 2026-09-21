@@ -100,3 +100,35 @@ export async function saveNudge(form: FormData): Promise<void> {
 
   revalidatePath("/promoter");
 }
+
+/**
+ * A promoter changing their own PIN.
+ *
+ * Four digits somebody was handed on WhatsApp is four digits sitting in
+ * somebody's WhatsApp, and the one who has to live with that is the person
+ * whose earnings are behind it. Changing it is theirs to do, without asking
+ * anybody and without waiting.
+ *
+ * Their code does not move, so everyone they have brought stays theirs and
+ * they sign in with the same name as before.
+ */
+export async function changeMyPin(form: FormData): Promise<void> {
+  const code = await currentPromoter();
+  if (!code) return;
+
+  const pin = String(form.get("pin") ?? "").replace(/\D/g, "");
+  if (pin.length !== 4) {
+    throw new Error("A PIN is four digits.");
+  }
+  // Four of the same, or straight up or down: the ones somebody picks
+  // without thinking, and the ones anybody else guesses first.
+  if (/^(\d)\1{3}$/.test(pin) || "0123456789".includes(pin) || "9876543210".includes(pin)) {
+    throw new Error("That one is too easy to guess. Pick four that are not in a row.");
+  }
+
+  const { error } = await db().from("promoters").update({ pin }).eq("code", code);
+  if (error) throw new Error(`Could not change that: ${error.message}`);
+
+  revalidatePath("/promoter");
+  revalidatePath("/admin", "layout");
+}
