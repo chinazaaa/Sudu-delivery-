@@ -2,7 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
-import { api, naira, type GroupBoard } from "@/lib/api";
+import {
+  api,
+  ESTIMATE_NOTE,
+  lagosToday,
+  naira,
+  nextArrival,
+  type GroupBoard,
+} from "@/lib/api";
 import { cart, countItems, me, party, pastParties, useStored, type Party } from "@/lib/store";
 import { T } from "@/lib/theme";
 
@@ -41,11 +48,15 @@ export default function Group() {
   const runs = shop?.runs.filter((one) => !one.closed && !one.full) ?? [];
   const slots = shop?.sameDay?.slots ?? [];
 
+  // The car is not asked for any more. It is whatever is going soonest,
+  // worked out by the same rule as every other way of ordering, and a leader
+  // who had to pick one was being asked to price a fee ladder and a cut off
+  // before she could invite anybody.
+  const going = nextArrival(runs, slots, lagosToday());
+
   useEffect(() => {
-    if (when === "" && (slots[0] || runs[0])) {
-      setWhen(slots[0] ? slots[0].at : `run:${runs[0].id}`);
-    }
-  }, [slots, runs, when]);
+    if (going) setWhen(going.onARun ? `run:${going.runId}` : going.at);
+  }, [going?.runId, going?.at]);
 
   useEffect(() => {
     void me.read().then((saved) => setName((was) => was || saved.name.split(" ")[0]));
@@ -217,38 +228,25 @@ export default function Group() {
               style={field()}
             />
 
-            <Text style={{ color: T.muted, marginTop: 10, marginBottom: 4 }}>
-              When does it arrive?
-            </Text>
-            <View style={{ gap: 6 }}>
-              {[
-                ...slots.map((slot) => ({ value: slot.at, label: slot.label })),
-                ...runs.map((run) => ({ value: `run:${run.id}`, label: run.label })),
-              ].map((option) => {
-                const on = when === option.value;
-                return (
-                  <Pressable
-                    key={option.value}
-                    onPress={() => setWhen(option.value)}
-                    style={{
-                      borderRadius: 14,
-                      borderWidth: 1,
-                      borderColor: on ? T.brand : T.line,
-                      backgroundColor: on ? T.tint : T.paper,
-                      paddingHorizontal: 14,
-                      paddingVertical: 12,
-                    }}
-                  >
-                    <Text style={{ fontWeight: on ? "800" : "600", color: T.ink }}>
-                      {option.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <Text style={{ color: T.muted, fontSize: 12, marginTop: 6 }}>
-              You pick it once, for everybody. They see it when they join.
-            </Text>
+            {/* Said, not asked. The group goes on whatever is going soonest,
+                which is the same answer the checkout gives anybody ordering
+                alone. */}
+            {going && (
+              <View style={{ marginTop: 12 }}>
+                <Text style={{ color: T.muted, marginBottom: 2 }}>When it arrives</Text>
+                <Text style={{ fontWeight: "800", color: T.ink }}>
+                  Order now, get it {going.said}
+                </Text>
+                <Text style={{ color: T.muted, fontSize: 12, marginTop: 4 }}>
+                  {going.onARun
+                    ? "It rides the run going out then, which is why it costs less. Everybody who joins is told the same time."
+                    : "A car of your own, because no run is going in time for this. Everybody who joins is told the same time."}
+                </Text>
+                <Text style={{ color: T.muted, fontSize: 12, marginTop: 4 }}>
+                  {ESTIMATE_NOTE}
+                </Text>
+              </View>
+            )}
 
             {problem !== "" && (
               <Text style={{ color: T.brandDark, fontWeight: "700", marginTop: 8 }}>
@@ -258,7 +256,10 @@ export default function Group() {
 
             <Pressable
               onPress={start}
-              disabled={busy}
+              // Nothing going means no car to put a group in. Starting one
+              // would make a group with nowhere to go, which is worse than a
+              // button that waits.
+              disabled={busy || !going || name.trim().length < 2}
               style={{
                 marginTop: 12,
                 backgroundColor: T.brand,
