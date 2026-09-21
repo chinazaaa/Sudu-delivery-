@@ -179,6 +179,25 @@ export async function occasionBySlug(slug: string): Promise<Occasion | null> {
   return toOccasion(data as Record<string, unknown>);
 }
 
+/**
+ * Every live box across several occasions, in one go.
+ *
+ * The list page asked per occasion, which was nine round trips to London to
+ * draw nine cards. One query answers all of them and the page sorts them
+ * out itself.
+ */
+export async function boxesAcross(occasionIds: string[]): Promise<Box[]> {
+  if (occasionIds.length === 0) return [];
+  const { data, error } = await db()
+    .from("boxes")
+    .select("*")
+    .in("occasion_id", occasionIds)
+    .eq("active", true)
+    .order("sort_order", { ascending: true });
+  if (error) return [];
+  return (data ?? []).map((row) => toBox(row as Record<string, unknown>));
+}
+
 export async function boxesOf(occasionId: string): Promise<Box[]> {
   const { data, error } = await db()
     .from("boxes")

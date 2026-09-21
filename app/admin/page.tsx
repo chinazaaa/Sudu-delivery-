@@ -8,7 +8,7 @@ import { dashboard, orderFeed } from "@/lib/admin-data";
 import { abandonedCarts } from "@/lib/carts";
 import { safeSettings } from "@/lib/settings";
 import { diagnoseEmpty, keyKind } from "@/lib/health";
-import { ensureUpcomingBatches, closeExpiredBatches } from "@/lib/batches";
+import { tendBatches } from "@/lib/batches";
 import { BATCH_MINIMUM, SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
 import { clockLabel, runDateLabel } from "@/lib/time";
@@ -29,8 +29,9 @@ export default async function AdminHome() {
   let left: Awaited<ReturnType<typeof abandonedCarts>> = [];
 
   try {
-    await ensureUpcomingBatches();
-    await closeExpiredBatches();
+    // Forced: whoever is on this page has just changed something and
+    // is looking to see it.
+    await tendBatches(true);
     const settings = await safeSettings();
     [batches, stats, unpaid, today, left] = await Promise.all([
       batchOverview(),

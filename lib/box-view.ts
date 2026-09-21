@@ -1,5 +1,5 @@
 import { db } from "./supabase";
-import { priceLines } from "./orders";
+import { priceLines, type PricedLine } from "./orders";
 import { openBatches } from "./batches";
 import { deliverySlots, slotsWorthOffering, type Slot } from "./same-day";
 import { hoursByDay, safeSettings } from "./settings";
@@ -67,27 +67,59 @@ export type BoxView = {
  * anybody noticing.
  */
 export async function boxView(box: Box): Promise<BoxView | null> {
-  const wanted = cartOf(box);
-  const swapCarts = box.lines.flatMap((line) =>
-    line.swaps.map((swap) => ({
-      menu_item_id: swap.menu_item_id,
-      option_ids: swap.option_ids,
-      qty: 1,
-    }))
-  );
+  return (await boxViews([box]))[0] ?? null;
+}
 
-  // Everything in one go: the box as packed, and every alternative, so the
-  // page can price a swap without a round trip.
-  const priced = await priceLines([...wanted, ...swapCarts]);
-  if ("error" in priced) return null;
+/**
+ * Several boxes at once.
+ *
+ * One occasion is three boxes and each box used to cost three round trips
+ * to a database in London, which is nine on a page that draws three cards.
+ * Every box on a page is priced off the same menu, so they are asked for
+ * together and cut apart here.
+ */
+export async function boxViews(boxes: Box[]): Promise<BoxView[]> {
+  if (boxes.length === 0) return [];
+
+  const asked = boxes.map((box) => {
+    const wanted = cartOf(box);
+    const swapCarts = box.lines.flatMap((line) =>
+      line.swaps.map((swap) => ({
+        menu_item_id: swap.menu_item_id,
+        option_ids: swap.option_ids,
+        qty: 1,
+      }))
+    );
+    return { box, wanted, swapCarts };
+  });
+
+  const priced = await priceLines(asked.flatMap((one) => [...one.wanted, ...one.swapCarts]));
+  if ("error" in priced) return [];
 
   const names = await restaurantNames(
     priced.lines.map((one) => one.item.restaurant_id)
   );
 
-  const packed = priced.lines.slice(0, wanted.length);
-  const swapped = priced.lines.slice(wanted.length);
+  const views: BoxView[] = [];
+  let cursor = 0;
+  for (const { box, wanted, swapCarts } of asked) {
+    const packed = priced.lines.slice(cursor, cursor + wanted.length);
+    cursor += wanted.length;
+    const swapped = priced.lines.slice(cursor, cursor + swapCarts.length);
+    cursor += swapCarts.length;
 
+    const view = one(box, packed, swapped, names);
+    if (view) views.push(view);
+  }
+  return views;
+}
+
+function one(
+  box: Box,
+  packed: PricedLine[],
+  swapped: PricedLine[],
+  names: Map<string, string>
+): BoxView | null {
   let at = 0;
   const lines: BoxLineView[] = box.lines.map((line, index) => {
     const here = packed[index];

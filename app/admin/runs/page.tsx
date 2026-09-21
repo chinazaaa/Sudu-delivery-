@@ -7,7 +7,7 @@ import { openUntil } from "@/lib/batches";
 import { sameDayTrips } from "@/lib/admin";
 import { safeSettings } from "@/lib/settings";
 import { diagnoseEmpty, keyKind } from "@/lib/health";
-import { ensureUpcomingBatches, closeExpiredBatches, tidyEmptySameDay } from "@/lib/batches";
+import { tendBatches, tidyEmptySameDay } from "@/lib/batches";
 import {
   createBatch,
   deleteScheduleRun,
@@ -50,8 +50,9 @@ export default async function RunsPage({
   let batches: Awaited<ReturnType<typeof batchOverview>> = [];
 
   try {
-    await ensureUpcomingBatches();
-    await closeExpiredBatches();
+    // Forced: whoever is on this page has just changed something and
+    // is looking to see it.
+    await tendBatches(true);
     // Starting a group makes its car immediately, so every abandoned group
     // left one behind, closed and empty and impossible to delete. They go
     // here, the moment nobody is in them.

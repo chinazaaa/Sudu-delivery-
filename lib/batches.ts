@@ -29,6 +29,37 @@ export async function ensureUpcomingBatches(): Promise<void> {
 }
 
 /**
+ * The housekeeping that used to run on every page view.
+ *
+ * Opening three weeks of runs and closing whatever has expired are both
+ * writes, and they sat at the top of the one function the home page, the
+ * cart, the checkout and every box page all call. Four trips to a database
+ * in London before a single thing could be drawn, on every tap, and that is
+ * most of why the site felt slow.
+ *
+ * Nothing about them needs doing more than once a minute. A run that the
+ * schedule calls for is not more open for having been checked twice in the
+ * same second, and a cut-off that passed is still passed sixty seconds
+ * later: the query that reads the runs excludes an expired one anyway, so
+ * nobody is offered a car that has gone.
+ *
+ * The clock is per server, which means a cold start does the work again.
+ * That is the right way round: it is warm instances, the ones serving
+ * somebody tapping through the shop, that skip it.
+ */
+const TEND_EVERY = 60_000;
+let tendedAt = 0;
+
+export async function tendBatches(force = false): Promise<void> {
+  const now = Date.now();
+  if (!force && now - tendedAt < TEND_EVERY) return;
+  tendedAt = now;
+
+  await ensureUpcomingBatches();
+  await closeExpiredBatches();
+}
+
+/**
  * Opens every run the schedule calls for between two dates, inclusive. Runs
  * that already exist are left exactly as they are, so a cancelled run stays
  * cancelled and a run with orders on it is never rewritten.
@@ -255,8 +286,7 @@ export type OpenBatch = Batch & { order_count: number; full: boolean };
  * night cut-off is shown tomorrow, not a closed sign.
  */
 export async function openBatches(days?: number): Promise<OpenBatch[]> {
-  await ensureUpcomingBatches();
-  await closeExpiredBatches();
+  await tendBatches();
 
   // Runs exist three weeks out so they can be planned, but a customer is only
   // offered the near ones: food is not planned a fortnight ahead, and an order

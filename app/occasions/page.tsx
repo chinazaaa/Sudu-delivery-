@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { liveOccasions, boxesOf, isTimed } from "@/lib/boxes";
+import { liveOccasions, boxesAcross, isTimed } from "@/lib/boxes";
 import { cheapestBoxes } from "@/lib/box-view";
 import { naira } from "@/lib/money";
 import { whenLabel } from "@/lib/time";
@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function OccasionsPage() {
   const occasions = await liveOccasions();
-  const boxes = (await Promise.all(occasions.map((one) => boxesOf(one.id)))).flat();
+  const boxes = await boxesAcross(occasions.map((one) => one.id));
   const from = await cheapestBoxes(boxes);
 
   const counts = new Map<string, number>();

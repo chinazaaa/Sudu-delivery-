@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 
 import { boxesOf, isTimed, occasionBySlug } from "@/lib/boxes";
-import { boxView, whenOptions, type BoxView, type WhenOption } from "@/lib/box-view";
+import { boxViews, whenOptions, type BoxView, type WhenOption } from "@/lib/box-view";
 import { hostelNames } from "@/lib/hostels";
 import { currentCustomer, customerDetails } from "@/lib/customer-auth";
 import { safeSettings } from "@/lib/settings";
@@ -21,14 +21,6 @@ export const dynamic = "force-dynamic";
  * off today's menu, and every way it could get there. The page that follows
  * only has to let somebody point at one.
  */
-const safely = async (box: Parameters<typeof boxView>[0]) => {
-  try {
-    return await boxView(box);
-  } catch {
-    return null;
-  }
-};
-
 const cars = async (
   occasion: Parameters<typeof whenOptions>[0],
   boxes: Parameters<typeof whenOptions>[1][]
@@ -50,22 +42,24 @@ export default async function OccasionPage({
   if (!occasion || !occasion.active) notFound();
 
   const boxes = await boxesOf(occasion.id);
-
-  // Pricing a box reads the menu and reading the cars reads the runs, and
-  // both throw if the database so much as blinks. A throw here is the error
-  // boundary, which is a stranger's page where an offer should be, so the
-  // worst this may do is show fewer boxes or no times.
-  const views = (await Promise.all(boxes.map(safely))).filter(
-    (one): one is BoxView => one !== null
-  );
-
-  // Every box on one occasion rides the same cars, so this is asked once
-  // rather than per box. The fee on each row is the first box's; the page
-  // puts the right one on when somebody picks a box.
-  const when: WhenOption[] = await cars(occasion, boxes);
-
   const signedIn = await currentCustomer();
-  const settings = await safeSettings();
+
+  // Everything the page needs, asked for at once. Each of these is a trip
+  // to a database in London, and done one after another they were what made
+  // opening a box feel like waiting.
+  //
+  // Pricing reads the menu and the cars read the runs, and both throw if the
+  // database so much as blinks. A throw here is the error boundary, which is
+  // a stranger's page where an offer should be, so the worst any of this may
+  // do is show fewer boxes or no times.
+  const [views, when, hostels, promoters, me, settings] = await Promise.all([
+    boxViews(boxes).catch((): BoxView[] => []),
+    cars(occasion, boxes),
+    hostelNames().catch((): string[] => []),
+    namedPromoters().catch(() => [] as { code: string; name: string }[]),
+    signedIn ? customerDetails(signedIn).catch(() => null) : Promise.resolve(null),
+    safeSettings(),
+  ]);
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -97,12 +91,9 @@ export default async function OccasionPage({
           slug={occasion.slug}
           boxes={views}
           when={when}
-          hostels={await hostelNames()}
-          promoters={(await namedPromoters()).map((one) => ({
-            code: one.code,
-            name: one.name,
-          }))}
-          me={signedIn ? await customerDetails(signedIn) : null}
+          hostels={hostels}
+          promoters={promoters.map((one) => ({ code: one.code, name: one.name }))}
+          me={me}
           note={ESTIMATE_NOTE}
           /* A box with nothing going is not a dead end. There is always a
              next way to eat, and saying so is the difference between a shut
