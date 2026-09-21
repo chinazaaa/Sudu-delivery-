@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { carLabel } from "@/lib/view";
 import HelpLine from "@/components/HelpLine";
 import { groupView } from "@/lib/group-view";
 import { cookies } from "next/headers";
@@ -81,7 +82,7 @@ export default async function GroupPage({
   // beside it reads as a second option, and there is not one.
   const label = group.sameDay
     ? ""
-    : `${runDateLabel(group.batch.run_date)} · ${SLOT_LABEL[group.batch.slot]}`;
+    : carLabel(group.batch);
   // The short code, because this is the link that gets pasted into a chat.
   // The long one still opens the same page, so every link already sent
   // carries on working.

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { carLabel } from "@/lib/view";
 import { getOrder } from "@/lib/orders";
 import { narration } from "@/lib/messages";
 import { payableAccounts } from "@/lib/banks";
@@ -51,7 +52,7 @@ export async function GET(
         // A car of its own rather than a shared run, so the app can say when
         // it goes out instead of naming a run and a slot nobody chose.
         sameDay: order.batch.kind === "same_day",
-        label: `${runDateLabel(order.batch.run_date)} · ${SLOT_LABEL[order.batch.slot]}`,
+        label: carLabel(order.batch),
         cutOffISO: order.batch.cut_off_at,
         window: order.batch.delivery_window_text,
       },

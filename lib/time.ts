@@ -78,3 +78,37 @@ export function countdown(msRemaining: number): string {
   if (m > 0) return `${m}m ${String(s).padStart(2, "0")}s`;
   return `${s}s`;
 }
+
+/**
+ * How long ago something happened, said the way anybody would say it.
+ *
+ * A timestamp answers "when" and the thing actually being asked is "is this
+ * still worth chasing". Twenty minutes ago is somebody who might still be
+ * deciding; three days ago is not.
+ */
+export function agoLabel(iso: string, now: Date = new Date()): string {
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return "";
+
+  const minutes = Math.floor((now.getTime() - then) / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+/** "8:52am, Mon 21 Sep", for when the exact moment is what is wanted. */
+export function whenLabel(iso: string): string {
+  const when = new Date(iso);
+  if (Number.isNaN(when.getTime())) return "";
+  return `${clockLabel(iso)}, ${new Intl.DateTimeFormat("en-NG", {
+    timeZone: TZ,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(when)}`;
+}

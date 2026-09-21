@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { carLabel } from "./view";
 import {
   claimLeader,
   getSharedGroup,
@@ -1042,7 +1043,7 @@ async function announceOrder(args: {
 }): Promise<void> {
   try {
     const order = await getOrder(args.orderId);
-    const label = `${runDateLabel(args.batch.run_date)} · ${SLOT_LABEL[args.batch.slot]}`;
+    const label = carLabel(args.batch);
 
     // Straight to the order, because the point of the email is to go and do
     // something about it: send the message, paste the card link, mark it paid.
@@ -1067,7 +1068,12 @@ async function announceOrder(args: {
     }
 
     const blocks: Block[] = [
-      { kind: "text", text: `${args.name} just ordered for the ${label} run.` },
+      {
+        kind: "text",
+        // The label already says what kind of car it is, so the word "run"
+        // on the end of it invented one that was never on the schedule.
+        text: `${args.name} just ordered · ${label}.`,
+      },
       ...(link ? [{ kind: "button" as const, label: "Open the order", href: link }] : []),
       {
         kind: "rows",

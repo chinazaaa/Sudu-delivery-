@@ -1,5 +1,6 @@
-import { SLOT_LABEL } from "./config";
-import { clockLabel, dayWord } from "./time";
+import { SLOT_LABEL, type BatchSlot } from "./config";
+import { clockLabel, dayWord, runDateLabel } from "./time";
+import { aroundPhrase } from "./same-day";
 import type { OpenBatch } from "./batches";
 import type { Batch } from "./types";
 
@@ -97,4 +98,40 @@ export function toBatchView(batch: OpenBatch): BatchView {
     flashFee: batch.flash_fee,
     flashReason: batch.flash_fee_reason,
   };
+}
+
+/**
+ * What a car actually is, said the way somebody would say it.
+ *
+ * Every batch carries a slot because the column demands one, and a car going
+ * out for one person at a time they chose was being labelled by it: an order
+ * placed for four o'clock on a Monday read as "Monday, 21 Sept · night run",
+ * which is a run that does not exist and never did. Anybody reading that goes
+ * looking for a car that is not on the schedule.
+ *
+ * So the slot is only the answer for a run, which is the only kind of car it
+ * was ever about.
+ */
+export function carLabel(batch: {
+  kind?: string | null;
+  run_date: string;
+  slot: BatchSlot;
+  deliver_at?: string | null;
+  delivery_window_text?: string;
+}): string {
+  const kind = batch.kind ?? "run";
+
+  if (kind === "same_day") {
+    // The time it was asked for, which is the whole of what makes it its
+    // own car. Said as an estimate, because that is what it is.
+    return batch.deliver_at
+      ? `A car of its own · ${aroundPhrase(batch.deliver_at)}, ${runDateLabel(batch.run_date)}`
+      : `A car of its own · ${runDateLabel(batch.run_date)}`;
+  }
+
+  if (kind === "skincare") {
+    return `Skincare · ${runDateLabel(batch.run_date)}`;
+  }
+
+  return `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`;
 }

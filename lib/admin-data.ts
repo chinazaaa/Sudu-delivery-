@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { carLabel } from "./view";
 import { linesFor, type OrderLine } from "./orders";
 import { SLOT_LABEL } from "./config";
 import { shareRef } from "./money";
@@ -105,7 +106,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
       otherFee: siblings.reduce((sum, other) => sum + other.fee, 0),
       lines: lines.filter((line) => line.order_id === order.id),
       batchLabel: batch
-        ? `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`
+        ? carLabel(batch)
         : "Unknown run",
       batchStage: batch?.stage ?? "ordering",
       runDate: batch?.run_date ?? "",

@@ -7,6 +7,7 @@ import { getSettings } from "@/lib/settings";
 import { whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
+import { agoLabel, whenLabel } from "@/lib/time";
 import { closeCart, deleteCart, deleteClosedCarts, reopenCart } from "../actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import ActionButton from "@/components/admin/ActionButton";
@@ -117,6 +118,15 @@ export default async function CartsPage({
                 </div>
 
                 <p className="mt-2 text-sm text-ink/75">{cart.summary}</p>
+
+                {/* When they walked away. A timestamp answers "when" and the
+                    thing actually being asked is whether this is still worth
+                    chasing: twenty minutes ago is somebody who might still be
+                    deciding, three days ago is not. Both, because the exact
+                    moment is what you quote back to them. */}
+                <p className="mt-1 text-xs text-muted">
+                  Left behind {agoLabel(cart.updated_at)} · {whenLabel(cart.updated_at)}
+                </p>
 
                 {closed ? (
                   <div className="mt-3 flex flex-wrap items-center gap-2">

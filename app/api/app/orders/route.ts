@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { carLabel } from "@/lib/view";
 import { phoneFromToken } from "@/lib/customer-auth";
 import { ordersForPhone } from "@/lib/orders";
 import { shareRef } from "@/lib/money";
@@ -28,7 +29,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         payable: takesMoney(order.batch),
         total: order.total,
         items: order.lines.reduce((count, line) => count + line.qty, 0),
-        run: `${runDateLabel(order.batch.run_date)} · ${SLOT_LABEL[order.batch.slot]}`,
+        run: carLabel(order.batch),
       })),
     });
   } catch (error) {
