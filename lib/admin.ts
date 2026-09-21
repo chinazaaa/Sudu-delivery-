@@ -680,17 +680,33 @@ export async function promoterRows(): Promise<PromoterRow[]> {
   const { data: promoters } = await db().from("promoters").select("*").order("code");
   const { data: orders } = await db()
     .from("orders")
-    .select("status")
+    .select("status, customer_phone")
     .neq("status", "refunded");
   const { data: payouts } = await db()
     .from("promoter_payouts")
     .select("id, promoter_code, amount, note, paid_at, confirmed_at")
     .order("paid_at", { ascending: false });
 
-  // Only a paid order earns: an unpaid one never travelled.
-  const count = (orders ?? []).filter((o) => o.status !== "pending").length;
+  // Whose customer is whose. Every paid order in the shop used to count
+  // towards every promoter, so two of them would each be credited for the
+  // same sale, and the first one listed collected for work nobody did.
+  const { data: customers } = await db()
+    .from("customers")
+    .select("phone, promoter_code");
+  const broughtBy = new Map(
+    ((customers ?? []) as { phone: string; promoter_code?: string | null }[]).map((one) => [
+      one.phone,
+      one.promoter_code ?? "",
+    ])
+  );
 
   return ((promoters ?? []) as Promoter[]).map((p) => {
+    // Only a paid order earns: an unpaid one never travelled.
+    const count = (orders ?? []).filter(
+      (o) =>
+        o.status !== "pending" &&
+        broughtBy.get(o.customer_phone as string) === p.code
+    ).length;
     const earned = count * p.rate;
     const paidOut = (payouts ?? [])
       .filter((row) => row.promoter_code === p.code)

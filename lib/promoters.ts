@@ -123,10 +123,26 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
 
   const rate = promoter.rate as number;
 
-  const { data: orders } = await db()
+  // Their customers, and only theirs. Every paid order used to count
+  // towards whoever this page happened to read first, which is fine for one
+  // person marketing the whole shop and wrong the moment there are two: both
+  // would be credited for the same sale.
+  const { data: theirs } = await db()
+    .from("customers")
+    .select("phone")
+    .eq("promoter_code", promoter.code);
+  const mineOnly = new Set(
+    ((theirs ?? []) as { phone: string }[]).map((one) => one.phone)
+  );
+
+  const { data: everyOrder } = await db()
     .from("orders")
     .select("id, batch_id, status, customer_name, customer_phone, total")
     .neq("status", "refunded");
+
+  const orders = ((everyOrder ?? []) as { customer_phone: string }[]).filter((one) =>
+    mineOnly.has(one.customer_phone)
+  ) as typeof everyOrder;
 
   const batchIds = [...new Set((orders ?? []).map((o) => o.batch_id as string))];
   const { data: batches } = batchIds.length

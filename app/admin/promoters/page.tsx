@@ -15,17 +15,21 @@ export const dynamic = "force-dynamic";
 export default async function PromotersAdmin() {
   const schema = await promoterSchema();
   const promoters = schema.ok ? await promoterRows() : [];
-  const first = promoters[0] ?? null;
-  // Run by run, from the same place the promoter sees it, so the two agree.
-  const earnings = first && schema.ok ? await promoterEarnings(first.code) : null;
-  const promoter = promoters[0] ?? null;
+  // Run by run, from the same place each promoter sees it, so the two agree.
+  const perRun = new Map(
+    await Promise.all(
+      promoters.map(
+        async (one) => [one.code, await promoterEarnings(one.code)] as const
+      )
+    )
+  );
   const url = await siteUrl();
 
   return (
     <div>
       <PageHeader
         title="Promoter"
-        detail="The person whose job is getting people onto the site. Every order a customer pays for counts, at their rate."
+        detail="The people whose job is getting customers onto the site. A customer belongs to whoever brought them, for life, and every order they pay for counts at that promoter's rate."
       />
 
       {!schema.ok && (
@@ -37,21 +41,18 @@ export default async function PromotersAdmin() {
         </div>
       )}
 
-      {/* Commission counts every paid order, which is right for one person
-          marketing the whole shop and wrong the moment there are two: both
-          would be credited for the same sale. Said here rather than found in
-          a payout. */}
-      {promoters.length > 1 && (
-        <div className="mb-4">
-          <Diagnostic
-            title={`There are ${promoters.length} promoters, and commission is built for one`}
-            detail="Every paid order counts towards whoever is shown here, so two promoters would each be credited for the same sale. Only the first is shown below. Ask for commission to be split by customer before paying anybody."
-          />
-        </div>
-      )}
-
-      {promoter && (
-        <>
+      {promoters.map((promoter) => {
+        const earnings = perRun.get(promoter.code) ?? null;
+        return (
+        <section key={promoter.code} className="mb-5">
+          <h2 className="mb-2 font-extrabold">
+            {promoter.name || promoter.code}
+            {!promoter.active && (
+              <span className="ml-2 chip border-black/10 bg-shell text-xs">
+                Not being paid
+              </span>
+            )}
+          </h2>
           <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat label="Orders counted" value={promoter.orders} />
             <Stat label="Earned" value={promoter.earned} money />
@@ -215,11 +216,27 @@ export default async function PromotersAdmin() {
               </div>
             )}
           </section>
-        </>
+        </section>
+        );
+      })}
+
+      {promoters.length === 0 && (
+        <p className="card mb-4 text-sm text-muted">
+          Nobody is promoting yet. Whoever you add below appears at the
+          checkout, under &quot;Where did you hear about us?&quot;, and every
+          customer who names them is theirs for life.
+        </p>
       )}
 
+      {/* Blank, always, because it is for adding somebody. Editing one of
+          the people above is the same form with their code in it, which is
+          why saving with an existing code changes that promoter rather than
+          making a second one. */}
       <form action={savePromoter} className="card space-y-3">
-        <h2 className="font-bold">{promoter ? "Their details" : "Set up your promoter"}</h2>
+        <h2 className="font-bold">Add a promoter</h2>
+        <p className="text-sm text-muted">
+          Put an existing code in to change that one instead.
+        </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="label" htmlFor="code">Code</label>
@@ -227,7 +244,7 @@ export default async function PromotersAdmin() {
               id="code"
               name="code"
               required
-              defaultValue={promoter?.code}
+              
               placeholder="TOBI"
               className="field"
             />
@@ -237,11 +254,11 @@ export default async function PromotersAdmin() {
           </div>
           <div>
             <label className="label" htmlFor="name">Name</label>
-            <input id="name" name="name" defaultValue={promoter?.name} className="field" />
+            <input id="name" name="name"  className="field" />
           </div>
           <div>
             <label className="label" htmlFor="phone">Phone</label>
-            <input id="phone" name="phone" defaultValue={promoter?.phone} className="field" />
+            <input id="phone" name="phone"  className="field" />
           </div>
           <div>
             <label className="label" htmlFor="pin">PIN</label>
@@ -250,7 +267,7 @@ export default async function PromotersAdmin() {
               name="pin"
               inputMode="numeric"
               maxLength={4}
-              defaultValue={promoter?.pin}
+              
               placeholder="Made up for you"
               className="field"
             />
@@ -265,16 +282,16 @@ export default async function PromotersAdmin() {
               id="rate"
               name="rate"
               inputMode="numeric"
-              defaultValue={promoter?.rate ?? 500}
+              defaultValue={500}
               className="field"
             />
           </div>
         </div>
         <label className="flex items-center gap-2 text-sm font-semibold">
-          <input type="checkbox" name="active" defaultChecked={promoter?.active ?? true} />
+          <input type="checkbox" name="active" defaultChecked />
           Paying them at the moment
         </label>
-        <SaveButton>{promoter ? "Save" : "Set them up"}</SaveButton>
+        <SaveButton>Save them</SaveButton>
       </form>
     </div>
   );
