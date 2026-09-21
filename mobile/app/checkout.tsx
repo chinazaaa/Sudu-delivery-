@@ -226,7 +226,13 @@ export default function Checkout() {
   const byValue = valueLadderFor(shop, kitchens);
 
   const ladder = byValue.length > 0 && !picked
-    ? feeForValue(food, byValue) + area.runExtra
+    ? // Both measures, and the dearer wins: one car fetches all of it, so a
+      // pepper added to twelve pizzas cannot drop the whole order onto the
+      // market's ladder.
+      Math.max(
+        feeForValue(food, byValue),
+        feeFrom(items + adding.items, runBands, run?.flashFee ?? null)
+      ) + area.runExtra
     : picked
     ? sameDayFeeFor(items, picked.urgent, sameDayBands, shop?.sameDay?.urgentExtra ?? 0)
     : shop && run

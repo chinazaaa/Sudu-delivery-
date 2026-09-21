@@ -439,8 +439,7 @@ export default function CartView({
   const alone = promotion
     ? promotion.fee
     : byValue.length > 0
-      ? feeForValue(cartSubtotal(cart), byValue) +
-        dearestArea(areas, [...new Set(cart.map((line) => line.restaurantId))], areaOf).runExtra
+      ? Math.max(feeForValue(cartSubtotal(cart), byValue), feeFor(countItems(cart), null, ladder))
     : ladder.length > 0
       ? feeFor(countItems(cart), null, ladder)
       : 0;

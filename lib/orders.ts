@@ -407,8 +407,16 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
             (promotion && !sharedGroupId
               ? promotion.fee
               : where.valueBands.length > 0 && !sameDay && !party
-                ? feeForValue(countFood(priced.lines), where.valueBands) +
-                  where.dearest.runExtra
+                ? // Both measures, and the dearer wins. One car fetches all
+                  // of it, so a cart with a market and a restaurant in it is
+                  // as much work as the harder half: a pepper added to
+                  // twelve pizzas must not drop the whole order onto the
+                  // market's ladder, and twelve bags of shopping must not
+                  // price as one container.
+                  Math.max(
+                    feeForValue(countFood(priced.lines), where.valueBands),
+                    feeFor(countItems(priced.lines), batch.flash_fee, where.bands)
+                  ) + where.dearest.runExtra
                 : undefined),
           promotionCode: promotion?.coupon.code ?? null,
           sameDayFee: sameDay && !party

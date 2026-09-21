@@ -361,7 +361,14 @@ export default function Checkout({
     : shared
     ? 0
     : byValue.length > 0
-      ? feeForValue(subtotal, byValue) + area.runExtra
+      ? // Both measures, and the dearer wins: one car fetches all of it, so
+        // a pepper added to twelve pizzas cannot drop the whole order onto
+        // the market's ladder.
+        Math.max(
+          feeForValue(subtotal, byValue),
+          feeFor(itemCount + alreadyItems, selected?.flashFee ?? null, bands)
+        ) +
+        area.runExtra
       : Math.max(
           0,
           feeFor(itemCount + alreadyItems, selected?.flashFee ?? null, bands) - alreadyCharged

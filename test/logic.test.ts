@@ -10,6 +10,7 @@ import {
   isUrgent,
   nextBand,
   sameDayFee,
+  parseBands,
   splitFee,
   HEADLINE_FEE,
 } from "../lib/fees";
@@ -1535,4 +1536,33 @@ test("the things no person does", () => {
   assert.equal(isExampleNumber("0803 123 4567"), true);
   assert.equal(isExampleNumber("+2348031234567"), true);
   assert.equal(isExampleNumber("08123456789"), false);
+});
+
+test("a cart with a market and a restaurant in it pays the dearer measure", () => {
+  const market = parseValueBands(
+    JSON.stringify([
+      { upTo: 30000, fee: 4000 },
+      { upTo: null, fee: 4500 },
+    ])
+  );
+  const containers = parseBands(
+    JSON.stringify([
+      { maxItems: 4, fee: 4000 },
+      { maxItems: 7, fee: 6000 },
+      { maxItems: null, fee: 9000 },
+    ])
+  );
+
+  // One pepper on top of twelve pizzas. Priced by the market alone it would
+  // be four thousand, which is the whole of a twelve container run for the
+  // price of a bag of vegetables.
+  const dearer = (value: number, items: number) =>
+    Math.max(feeForValue(value, market), feeFor(items, null, containers));
+
+  assert.equal(dearer(20000, 13), 9000);
+  // And a boot full of shopping is not one container, whichever way it is
+  // counted: three bags of rice is three things and forty thousand naira.
+  assert.equal(dearer(40000, 3), 4500);
+  // A market shop on its own, under the line.
+  assert.equal(dearer(9000, 2), 4000);
 });
