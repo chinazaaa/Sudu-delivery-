@@ -10,7 +10,22 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { api, naira, sameDayFeeFor, type Shop, type Slot } from "@/lib/api";
+import {
+  api,
+  areasIn,
+  aroundPhrase,
+  canGoSameDay,
+  dearestArea,
+  ESTIMATE_NOTE,
+  lagosToday,
+  naira,
+  nextArrival,
+  runCovers,
+  sameDayFeeFor,
+  withExtra,
+  type Shop,
+  type Slot,
+} from "@/lib/api";
 import { cart, cartTotal, countItems, me, mine, people, useStored } from "@/lib/store";
 import KeepCart from "@/components/KeepCart";
 import { registerForPush } from "@/lib/push";
@@ -31,7 +46,6 @@ export default function Checkout() {
   const [runId, setRunId] = useState("");
   /** The time they picked. Empty means they are waiting for a run. */
   const [deliverAt, setDeliverAt] = useState("");
-  const [timesOpen, setTimesOpen] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [hostel, setHostel] = useState("");
@@ -58,11 +72,9 @@ export default function Checkout() {
       .shop(true)
       .then((next) => {
         setShop(next);
-        setRunId((was) => was || next.runs[0]?.id || "");
-        // A time is the offer: somebody who opened the app because they are
-        // hungry now should not have to find it behind a second tap. Runs are
-        // still there, and cheaper, for anybody who would rather wait.
-        setDeliverAt((was) => was || next.sameDay?.slots[0]?.at || "");
+        // Nothing is picked here. What is going soonest is worked out from
+        // the cart once both are known, below, because it depends on where
+        // the food is coming from.
       })
       .catch((problem: unknown) =>
         setError(problem instanceof Error ? problem.message : "Could not reach the shop.")
@@ -150,18 +162,64 @@ export default function Checkout() {
 
   const items = countItems(lines);
   const food = cartTotal(lines);
-  const run = shop?.runs.find((one) => one.id === runId) ?? null;
 
-  const slots = shop?.sameDay?.slots ?? [];
+  // Which kitchens this cart touches, and so how far the car has to go. It
+  // decides what delivery costs, whether a car of its own can go at all, and
+  // which runs can carry it: the same rule the server charges by, so the
+  // number on this screen is the number on the bill.
+  const kitchens = [
+    ...new Set(
+      lines.map(
+        (line) =>
+          shop?.menu.find((one) => one.items.some((item) => item.id === line.itemId))
+            ?.restaurant.id ?? ""
+      )
+    ),
+  ].filter(Boolean);
+  const cartAreas = areasIn(shop, kitchens);
+  const area = dearestArea(shop, kitchens);
+  const runBands = withExtra(shop?.bands ?? [], area.runExtra);
+  const sameDayBands = withExtra(shop?.sameDay?.bands ?? [], area.sameDayExtra);
+
+  const runsHere = (shop?.runs ?? []).filter(
+    (one) => !one.closed && !one.full && runCovers(one, cartAreas)
+  );
+  // One thing from a far area makes the whole order a run: a car cannot be
+  // in two places in three hours.
+  const slots = canGoSameDay(cartAreas) ? (shop?.sameDay?.slots ?? []) : [];
+
+  const far = cartAreas.filter((one) => one.id !== "");
+  const farNames = far.map((one) => one.name).join(" and ");
+  const noRunThere = far.length > 0 && runsHere.length === 0;
+
+  const run = runsHere.find((one) => one.id === runId) ?? null;
   const picked: Slot | null = slots.find((one) => one.at === deliverAt) ?? null;
+
+  // When it lands, worked out rather than asked for: a run going today, a
+  // car of its own today, a run tomorrow, else tomorrow's first window.
+  const going = nextArrival(runsHere, slots, lagosToday());
+  // Nobody picks, so the decision is applied: the car it goes in, or the
+  // time a car of its own is for. Written into state rather than only read,
+  // because it is what the order is placed with.
+  useEffect(() => {
+    if (!going) return;
+    setRunId(going.runId);
+    setDeliverAt(going.at);
+  }, [going?.runId, going?.at]);
+
+  const arriving = picked
+    ? `${aroundPhrase(picked.at)} ${picked.day}`
+    : run
+      ? `${run.deliveryWindow.charAt(0).toLowerCase()}${run.deliveryWindow.slice(1)} ${run.label.split(" · ")[0]}`
+      : (going?.said ?? "on the next run");
 
   // A picked time makes its own trip, so nothing is shared and there is no
   // earlier order on it to take off. A run is priced on everything travelling
   // for this number on it, less whatever the earlier order already paid.
   const ladder = picked
-    ? sameDayFeeFor(items, picked.urgent, shop?.sameDay?.bands ?? [], shop?.sameDay?.urgentExtra ?? 0)
+    ? sameDayFeeFor(items, picked.urgent, sameDayBands, shop?.sameDay?.urgentExtra ?? 0)
     : shop && run
-      ? Math.max(0, feeFrom(items + adding.items, shop.bands, run.flashFee) - adding.feeCharged)
+      ? Math.max(0, feeFrom(items + adding.items, runBands, run.flashFee) - adding.feeCharged)
       : 0;
 
   // What a promotion does to this cart, worked out by the shop because that
@@ -273,183 +331,45 @@ export default function Checkout() {
         value={food + fee}
         summary={lines.map((line) => `${line.qty}x ${line.name}`).join(", ")}
       />
-      <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 10 }}>
-        <Text style={{ fontWeight: "800", color: T.ink }}>
-          {slots.length > 0 ? "When do you want it?" : "Which run?"}
+      {/* Decided, not asked. A dropdown here made somebody know the fee
+          ladder, the cut off and the three hours it takes to fetch food and
+          drive it over before they could buy lunch, and the commonest answer
+          to it was the dear one twenty minutes before a run went to the same
+          block. */}
+      <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
+        <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink }}>
+          Order now, get it {arriving}
         </Text>
 
-        {slots.length > 0 && (
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            {(
-              [
-                [
-                  "today",
-                  slots[0].day === "today" ? "Today" : "Tomorrow",
-                  `from ${naira(sameDayFeeFor(1, false, shop.sameDay?.bands ?? [], 0))}`,
-                ],
-                ["run", "On a run", `from ${naira(shop.bands[0]?.fee ?? 4000)}`],
-              ] as const
-            ).map(([value, label, note]) => {
-              const on = value === "today" ? picked !== null : picked === null;
-              return (
-                <Pressable
-                  key={value}
-                  onPress={() => setDeliverAt(value === "today" ? slots[0].at : "")}
-                  style={{
-                    flex: 1,
-                    borderWidth: 1,
-                    borderColor: on ? T.brand : T.line,
-                    backgroundColor: on ? T.tint : T.paper,
-                    borderRadius: 12,
-                    padding: 12,
-                  }}
-                >
-                  <Text style={{ fontWeight: "800", color: T.ink }}>{label}</Text>
-                  <Text style={{ color: T.muted, marginTop: 2 }}>{note}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
+        <Text style={{ color: T.muted }}>
+          {picked
+            ? "A car of its own, because no run is going in time for this."
+            : "Everybody's food in one car, which is why it costs less."}
+        </Text>
+
+        {far.length > 0 && !noRunThere && (
+          <Text style={{ color: T.brandDark, fontWeight: "700" }}>
+            {farNames} rides a run, so everything here travels together on
+            that one. One delivery, not two.
+          </Text>
         )}
 
-        {picked ? (
-          <>
-            <Text style={{ color: T.muted, fontWeight: "700" }}>What time?</Text>
-            <Pressable
-              onPress={() => setTimesOpen(true)}
-              accessibilityRole="button"
-              accessibilityLabel={`Delivery time, ${picked.label}`}
-              style={{
-                borderWidth: 1,
-                borderColor: T.line,
-                borderRadius: 12,
-                paddingHorizontal: 12,
-                paddingVertical: 14,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              <Text style={{ flex: 1, fontSize: 16, color: T.ink }}>
-                {picked.label}
-                {picked.urgent ? " · urgent" : ""}
-              </Text>
-              <Ionicons name="chevron-down" size={18} color={T.muted} />
-            </Pressable>
-            {/* One line. The reasons behind the times are ours, not theirs:
-                they want to know when they can eat. */}
-            <Text style={{ color: T.muted }}>
-              {slots[0].day === "tomorrow"
-                ? `Past our delivery time. The soonest is ${slots[0].phrase ?? slots[0].label}.`
-                : picked.urgent
-                  ? "Under five hours, so this one is urgent. A later time is cheaper."
-                  : `The soonest is ${slots[0].phrase ?? slots[0].label}.`}
-            </Text>
+        {/* An estimate, and said to be one: four o'clock to the minute is a
+            promise nobody can keep in Lagos traffic. */}
+        <Text style={{ color: T.muted }}>{ESTIMATE_NOTE}</Text>
 
-            <Modal
-              visible={timesOpen}
-              animationType="slide"
-              transparent
-              onRequestClose={() => setTimesOpen(false)}
-            >
-              <View
-                style={{ flex: 1, backgroundColor: "rgba(20,17,15,0.45)", justifyContent: "flex-end" }}
-              >
-                <Pressable
-                  style={{ flex: 1 }}
-                  onPress={() => setTimesOpen(false)}
-                  accessibilityLabel="Close"
-                />
-                <View
-                  style={{
-                    backgroundColor: T.shell,
-                    borderTopLeftRadius: 24,
-                    borderTopRightRadius: 24,
-                    maxHeight: "70%",
-                    overflow: "hidden",
-                  }}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", padding: 14, gap: 8 }}>
-                    <Text style={{ flex: 1, fontWeight: "800", fontSize: 17, color: T.ink }}>
-                      What time?
-                    </Text>
-                    <Pressable onPress={() => setTimesOpen(false)} hitSlop={8} accessibilityLabel="Close">
-                      <Ionicons name="close" size={22} color={T.ink} />
-                    </Pressable>
-                  </View>
-                  <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
-                    {slots.map((slot) => (
-                      <Pressable
-                        key={slot.at}
-                        onPress={() => {
-                          setDeliverAt(slot.at);
-                          setTimesOpen(false);
-                        }}
-                        style={{
-                          paddingHorizontal: 16,
-                          paddingVertical: 14,
-                          borderTopWidth: 1,
-                          borderTopColor: T.line,
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            flex: 1,
-                            fontSize: 16,
-                            color: slot.at === deliverAt ? T.brand : T.ink,
-                            fontWeight: slot.at === deliverAt ? "800" : "400",
-                          }}
-                        >
-                          {slot.label}
-                          {slot.urgent ? " · urgent" : ""}
-                        </Text>
-                        <Text style={{ color: T.muted }}>
-                          {naira(
-                            sameDayFeeFor(
-                              items,
-                              slot.urgent,
-                              shop.sameDay?.bands ?? [],
-                              shop.sameDay?.urgentExtra ?? 0
-                            )
-                          )}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                </View>
-              </View>
-            </Modal>
-          </>
-        ) : (
-          <>
-            {shop.runs.map((one) => (
-              <Pressable
-                key={one.id}
-                onPress={() => setRunId(one.id)}
-                style={{
-                  borderWidth: 1,
-                  borderColor: one.id === runId ? T.brand : T.line,
-                  backgroundColor: one.id === runId ? T.tint : T.paper,
-                  borderRadius: 12,
-                  padding: 12,
-                }}
-              >
-                <Text style={{ fontWeight: "700", color: T.ink }}>{one.label}</Text>
-                <Text style={{ color: T.muted }}>{one.deliveryWindow}</Text>
-              </Pressable>
-            ))}
-            {shop.runs.length === 0 && (
-              <Text style={{ color: T.muted }}>No run is open right now. Try again later.</Text>
-            )}
-            {slots.length > 0 && (
-              <Text style={{ color: T.muted }}>
-                A run is everybody&apos;s food in one car, which is why it is cheaper.
-              </Text>
-            )}
-          </>
+        {noRunThere && (
+          <Text style={{ color: T.brandDark, fontWeight: "700" }}>
+            No run is going to {farNames} just now, and a car of its own
+            cannot get there and back in time. Take those out and the rest
+            can still come today.
+          </Text>
+        )}
+
+        {runsHere.length === 0 && far.length === 0 && slots.length === 0 && (
+          <Text style={{ color: T.muted }}>
+            Nothing is going just now. Try again shortly.
+          </Text>
         )}
       </View>
 

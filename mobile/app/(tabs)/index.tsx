@@ -11,7 +11,15 @@ import {
 } from "react-native";
 import { Link, useFocusEffect, useRouter } from "expo-router";
 import { useCallback } from "react";
-import { api, naira, type Item, type OrderView, type Shop } from "@/lib/api";
+import {
+  api,
+  lagosToday,
+  naira,
+  nextArrival,
+  type Item,
+  type OrderView,
+  type Shop,
+} from "@/lib/api";
 import { mine } from "@/lib/store";
 import { T } from "@/lib/theme";
 
@@ -80,10 +88,15 @@ export default function Home() {
     );
   }, [shop, query]);
 
-  const run = shop?.runs[0] ?? null;
-  // The soonest time we can actually hit. Null means the shop has picking a
-  // time switched off, and the run strip is the answer instead.
-  const soonest = shop?.sameDay?.slots[0] ?? null;
+  // When something ordered right now would land, by the one rule every way
+  // of ordering uses: a run going today while it is taking orders, a car of
+  // its own today, a run tomorrow, then tomorrow's first window.
+  const arriving =
+    nextArrival(
+      (shop?.runs ?? []).filter((one) => !one.closed && !one.full),
+      shop?.sameDay?.slots ?? [],
+      lagosToday()
+    )?.said ?? "";
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
@@ -114,12 +127,14 @@ export default function Home() {
           </Pressable>
         )}
 
-        {/* A time beats a run when there is one to offer: "by 3pm" is an
-            answer, "the afternoon run" is a thing somebody has to learn. The
-            run strip is still what a page says when there is no time left. */}
-        {soonest ? (
+        {/* One sentence, and nothing else. Which run or which car it is has
+            already been decided, by the same rule the checkout uses, so all
+            that is left to say is when the food turns up. The old strip said
+            "afternoon batch closes 2:45pm, in 1h 01m": four facts about how
+            the shop works and none about dinner. */}
+        {arriving !== "" && (
           <Pressable
-            onPress={() => router.push("/checkout")}
+            onPress={() => router.push("/(tabs)/cart")}
             style={{
               borderWidth: 2,
               borderColor: "rgba(255,90,31,0.3)",
@@ -128,35 +143,11 @@ export default function Home() {
               padding: 14,
             }}
           >
-            <Text
-              style={{
-                color: T.brandDark,
-                fontWeight: "800",
-                fontSize: 12,
-                letterSpacing: 0.5,
-                textTransform: "uppercase",
-              }}
-            >
-              {soonest.day === "today" ? "Want it today?" : "Past our delivery time"}
+            <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink }}>
+              Order now, get it {arriving}
             </Text>
-            <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink, marginTop: 2 }}>
-              Order now, get it by {soonest.label}
-            </Text>
-            {/* No price here. What it costs depends on how much somebody
-                orders, and a "from" beside a time reads as the price of the
-                time. The checkout prices it against the time they pick. */}
-            {soonest.day === "today" && (
-              <Text style={{ color: T.muted, marginTop: 2 }}>{hoursAway(soonest.at)} away.</Text>
-            )}
           </Pressable>
-        ) : run ? (
-          <View style={card()}>
-            <Text style={{ fontWeight: "800", fontSize: 16, color: T.ink }}>
-              {run.label} closes {clock(run.cutOffISO)}
-            </Text>
-            <Text style={{ color: T.muted, marginTop: 2 }}>{run.deliveryWindow}</Text>
-          </View>
-        ) : null}
+        )}
 
         {error !== "" && (
           <View style={[card(), { backgroundColor: "#fff4ed" }]}>
@@ -308,20 +299,6 @@ function statusLine(order: OrderView): string {
   if (order.stage === "collected") return "Food collected, heading over";
   if (order.stage === "ordering") return "Paid. Waiting for the run to close";
   return "Paid. We are at the restaurants";
-}
-
-/** "About 3 hours", for a time somebody is deciding whether to wait for. */
-function hoursAway(iso: string): string {
-  const hours = Math.round((new Date(iso).getTime() - Date.now()) / 3_600_000);
-  return `About ${hours} hour${hours === 1 ? "" : "s"}`;
-}
-
-function clock(iso: string): string {
-  try {
-    return new Date(iso).toLocaleTimeString("en-NG", { hour: "numeric", minute: "2-digit" });
-  } catch {
-    return "soon";
-  }
 }
 
 export function card() {

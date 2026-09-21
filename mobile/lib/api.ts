@@ -145,6 +145,12 @@ export type Run = {
   cutOffISO: string;
   deliveryWindow: string;
   flashFee: number | null;
+  /** The day it goes, so a run today can be told from one tomorrow without
+   *  reading the label. Older servers leave it out. */
+  runDate?: string;
+  /** Where this car goes beyond Sangotedo, as "|lekki|". It always passes
+   *  Sangotedo, so empty means there and nowhere else. */
+  areas?: string;
   /** Shut, or has as many orders as it can carry. Older servers leave both
    *  out, and then a run is offered and the order itself refuses it. */
   closed?: boolean;
@@ -179,6 +185,11 @@ export type Shop = {
     urgentExtra: number;
   };
   shop: { tagline: string; ribbon: string; whatsapp: string };
+  /** The areas the shop delivers from, beyond Sangotedo, and which one each
+   *  kitchen is in. Older servers send neither, and then everything is
+   *  Sangotedo and every price is what it always was. */
+  areas?: Area[];
+  areaOf?: Record<string, string>;
   /** What is on at each kitchen, by restaurant id: a few words for the card,
    *  a sentence for the top of its menu, and the list behind the button. */
   offers?: Record<
@@ -449,3 +460,157 @@ export function sameDayFeeFor(
 }
 
 export const naira = (amount: number) => "₦" + Math.round(amount).toLocaleString("en-NG");
+
+/**
+ * Where a restaurant is, and what that adds to a delivery.
+ *
+ * The same shape and the same rules as the website, because the fee quoted
+ * on a phone and the fee charged on the server have to be one number. The
+ * ladder says how much room an order takes, which does not change with the
+ * distance, so anywhere further out is the home ladder plus the petrol at
+ * every band.
+ */
+export type Area = {
+  id: string;
+  name: string;
+  runExtra: number;
+  sameDayExtra: number;
+  /** Whether a car of its own can go there. Three hours is its whole
+   *  promise, and an hour each way eats that before the kitchen starts. */
+  sameDay: boolean;
+};
+
+export const HOME: Area = {
+  id: "",
+  name: "Sangotedo",
+  runExtra: 0,
+  sameDayExtra: 0,
+  sameDay: true,
+};
+
+/** Every area a cart touches. */
+export function areasIn(shop: Shop | null, restaurantIds: string[]): Area[] {
+  const areas = shop?.areas ?? [];
+  const where = shop?.areaOf ?? {};
+  const ids = [...new Set(restaurantIds.map((id) => where[id] ?? ""))];
+  return ids.map((id) => areas.find((one) => one.id === id) ?? HOME);
+}
+
+/** The one that prices the order: the furthest thing in the cart, because
+ *  one car fetches all of it and the trip is as long as its longest leg. */
+export function dearestArea(shop: Shop | null, restaurantIds: string[]): Area {
+  return areasIn(shop, restaurantIds).reduce(
+    (worst, one) =>
+      one.runExtra + one.sameDayExtra > worst.runExtra + worst.sameDayExtra ? one : worst,
+    HOME
+  );
+}
+
+/** The ladder as that area charges it: every band up by the same amount. */
+export function withExtra(
+  bands: Shop["bands"],
+  extra: number
+): Shop["bands"] {
+  return extra <= 0 ? bands : bands.map((band) => ({ ...band, fee: band.fee + extra }));
+}
+
+/** Whether a car of its own can carry this cart at all. */
+export function canGoSameDay(areas: Area[]): boolean {
+  return areas.every((one) => one.sameDay);
+}
+
+/** Whether a run goes everywhere this cart needs it to. It always passes
+ *  Sangotedo; anywhere else was ticked when the run was made. */
+export function runCovers(run: Run, areas: Area[]): boolean {
+  const covered = [
+    "",
+    ...(run.areas ?? "")
+      .split("|")
+      .map((one) => one.trim())
+      .filter(Boolean),
+  ];
+  return areas.every((one) => covered.includes(one.id));
+}
+
+/**
+ * When an order placed now would land, decided rather than asked.
+ *
+ * The same order of preference as the website: a run going today while it is
+ * still taking orders, a car of its own today, a run tomorrow, then
+ * tomorrow's first window. There is one right answer, and the dropdown this
+ * replaced only made somebody find it.
+ */
+export function nextArrival(
+  runs: Run[],
+  slots: Slot[],
+  today: string
+): { runId: string; at: string; said: string; onARun: boolean } | null {
+  const onRun = (run: Run) => ({
+    runId: run.id,
+    at: "",
+    said: `${lower(run.deliveryWindow)} ${run.label.split(" · ")[0]}`,
+    onARun: true,
+  });
+  const onItsOwn = (slot: Slot) => ({
+    runId: "",
+    at: slot.at,
+    // A time, not the block the shop divides the day into: "around 4:30pm"
+    // is something somebody can plan an afternoon around.
+    said: `${aroundPhrase(slot.at)} ${slot.day}`,
+    onARun: false,
+  });
+
+  const runToday = runs.find((one) => one.runDate === today);
+  if (runToday) return onRun(runToday);
+
+  const slotToday = slots.find((one) => one.day === "today");
+  if (slotToday) return onItsOwn(slotToday);
+
+  const runLater = runs.find((one) => (one.runDate ?? "") > today);
+  if (runLater) return onRun(runLater);
+
+  const slotLater = slots.find((one) => one.day !== "today");
+  if (slotLater) return onItsOwn(slotLater);
+
+  return runs[0] ? onRun(runs[0]) : slots[0] ? onItsOwn(slots[0]) : null;
+}
+
+/** Said the same way on every screen, because it is the same promise. */
+export const ESTIMATE_NOTE =
+  "This is an estimate, not a time to the minute. Half an hour either way is normal, and you are called when the food is at your block.";
+
+function lower(text: string): string {
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
+/**
+ * The time a car of its own would get there, rounded up to the next half
+ * hour. Never down: rounding down names a time the food cannot be there by,
+ * which is the one thing an estimate must not do.
+ */
+export function aroundPhrase(at: string): string {
+  const when = new Date(at);
+  const hour = Number(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Africa/Lagos",
+      hour: "2-digit",
+      hour12: false,
+    }).format(when)
+  );
+  const minute = Number(
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Lagos", minute: "2-digit" }).format(
+      when
+    )
+  );
+  const rounded = Math.ceil((hour * 60 + minute) / 30) * 30;
+  const h = Math.floor(rounded / 60);
+  const m = rounded % 60;
+  const suffix = h >= 12 ? "pm" : "am";
+  const shown = h > 12 ? h - 12 : h;
+  return `around ${shown}${m === 0 ? "" : ":" + String(m).padStart(2, "0")}${suffix}`;
+}
+
+/** Today in Lagos, as the shop's clock has it. */
+export function lagosToday(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(now);
+}

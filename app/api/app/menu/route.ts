@@ -8,6 +8,7 @@ import { offerBadge, offerLine } from "@/lib/offers";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { serialiseBands } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
+import { allAreas, areaOfEach } from "@/lib/areas-server";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +89,12 @@ export async function GET(): Promise<NextResponse> {
         maxItems: Number.isFinite(band.maxItems) ? band.maxItems : null,
         fee: band.fee,
       })),
+      // Where each kitchen is, and what that adds. The app prices by the
+      // furthest thing in the cart exactly as the website does, because a
+      // fee quoted on a phone and charged on the server has to be one
+      // number. Empty means one area, and every price as it was.
+      areas: await allAreas(),
+      areaOf: await areaOfEach(),
       shop: {
         tagline: settings.tagline,
         ribbon: settings.ribbon_text,
