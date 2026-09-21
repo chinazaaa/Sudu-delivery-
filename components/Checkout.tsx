@@ -117,6 +117,18 @@ export default function Checkout({
     (b) => !b.closed && !b.full && runCovers(b.areas, cartAreas)
   );
 
+  // The things in this cart that are not from Sangotedo, and what holds
+  // them up. A car that goes to Lekki passes Sangotedo on the way back, so a
+  // mixed cart is fine the moment such a run exists: everything travels
+  // together and there is one fee. It is only when no run is going there
+  // that the two halves cannot be one order.
+  const far = cartAreas.filter((one) => one.id !== "");
+  const farNames = far.map((one) => one.name).join(" and ");
+  const farLines = cart.filter((line) =>
+    far.some((one) => one.id === (areaOf[line.restaurantId] ?? ""))
+  );
+  const noRunThere = far.length > 0 && openable.length === 0;
+
   // The soonest way to eat, the same rule as everywhere else: a run today, a
   // car of its own today, a run tomorrow, tomorrow's first window.
   const todayRun = openable.find((one) => one.runDate === today) ?? null;
@@ -627,6 +639,17 @@ export default function Checkout({
             : "A car of its own, because no run is going in time for this."}
         </p>
 
+        {/* Where the far half of a cart is concerned, the run is not a
+            cheaper option, it is the only one: a car cannot be in Lekki and
+            back in three hours. Said here rather than left to be worked out
+            from a list of runs that is quietly shorter than usual. */}
+        {far.length > 0 && !noRunThere && (
+          <p className="text-sm font-semibold text-brand-dark">
+            {farNames} rides a run, so everything here travels together on
+            that one. One delivery, not two.
+          </p>
+        )}
+
         {/* An estimate, and said to be one. A time to the minute is a promise
             nobody can keep in Lagos traffic, and arriving at 4:15 for a four
             o'clock is fine unless somebody was told four o'clock exactly. */}
@@ -1108,6 +1131,17 @@ export default function Checkout({
                   : `Pick the block ${unresolved[0].name}'s food goes to.`}
             </p>
           )}
+          {noRunThere && (
+            <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
+              {/* The way out is named, because "no run" on its own leaves
+                  somebody holding a cart with nothing to do about it. */}
+              No run is going to {farNames} just now, and a car of its own
+              cannot get there and back in time.{" "}
+              {farLines.length < cart.length
+                ? `Take ${farLines.length === 1 ? "that one" : "those"} out and the rest can still come today.`
+                : "Check back when the next one is up, or message us."}
+            </p>
+          )}
           {state.error && (
             <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
               {state.error}
@@ -1121,6 +1155,7 @@ export default function Checkout({
               // A group brings its own car, so an empty run list is not a
               // reason to lock the button: there may be no run open at all.
               (!batchId && party === "" && !sameDay) ||
+              noRunThere ||
               !splitReady ||
               unresolved.length > 0
             }
