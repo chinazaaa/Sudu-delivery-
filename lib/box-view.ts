@@ -150,11 +150,24 @@ export async function whenOptions(
 ): Promise<WhenOption[]> {
   const settings = await safeSettings();
 
-  const runs = (await openBatches(BOX_DAYS)).filter((one) => !one.full);
+  // Far enough to reach the thing itself. A fortnight is right for a games
+  // night nobody has dated yet, and wrong for a match three weeks out that
+  // already has a run under it: the horizon would hide the very car the
+  // occasion was pinned to.
+  const days = isTimed(occasion)
+    ? Math.max(
+        BOX_DAYS,
+        Math.ceil(
+          (new Date(occasion.happens_at ?? "").getTime() - now.getTime()) / 86_400_000
+        ) + 1
+      )
+    : BOX_DAYS;
+
+  const runs = (await openBatches(days)).filter((one) => !one.full);
   const slots =
     (settings.same_day_on || "") === "on"
       ? slotsWorthOffering(
-          deliverySlots(now, await hoursByDay(), BOX_DAYS),
+          deliverySlots(now, await hoursByDay(), days),
           runs.map((one) => ({
             run_date: one.run_date,
             window: one.delivery_window_text,
