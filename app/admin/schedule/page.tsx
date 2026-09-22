@@ -4,7 +4,7 @@ import SaveButton from "@/components/SaveButton";
 import ConfirmRemove from "@/components/admin/ConfirmRemove";
 import { openUntil } from "@/lib/batches";
 import { runSchedule, WEEKDAYS } from "@/lib/schedule";
-import { SLOT_LABEL } from "@/lib/config";
+import { DELIVERY_WINDOWS, SLOT_LABEL } from "@/lib/config";
 import { safeSettings } from "@/lib/settings";
 import { runDateLabel } from "@/lib/time";
 import ActionButton from "@/components/admin/ActionButton";
@@ -146,9 +146,19 @@ export default async function SchedulePage() {
                       id={`window-${run.id}`}
                       name="window_text"
                       defaultValue={run.window_text}
-                      placeholder="On campus ~2:00pm"
+                      placeholder={DELIVERY_WINDOWS[run.slot]}
                       className="field py-2 text-sm"
                     />
+                    {/* Left blank, runs fall back to a line written in code,
+                        which nobody can see from here. Say what it will be
+                        rather than letting a blank box look like no wording
+                        at all. */}
+                    {run.window_text.trim() === "" && (
+                      <p className="mt-1 text-xs text-brand-dark">
+                        Blank, so these runs will say &quot;
+                        {DELIVERY_WINDOWS[run.slot]}&quot;
+                      </p>
+                    )}
                   </div>
                   <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
                     Save
