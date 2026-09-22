@@ -16,9 +16,13 @@ import { sendParcel, type ParcelState } from "@/app/parcel/actions";
 export default function ParcelForm({
   routes,
   maxValue,
+  hostels,
 }: {
   routes: Route[];
   maxValue: number;
+  /** The blocks the shop delivers to, as the food checkout offers them.
+   *  Empty where the list is not set up, and then it is typed. */
+  hostels: string[];
 }) {
   const [state, action, busy] = useActionState<ParcelState, FormData>(sendParcel, {
     error: "",
@@ -86,6 +90,8 @@ export default function ParcelForm({
           <input
             id="item"
             name="item"
+            required
+            minLength={2}
             placeholder="A dress in a paper bag"
             className="field"
           />
@@ -101,6 +107,8 @@ export default function ParcelForm({
           <input
             id="shop"
             name="shop"
+            required
+            minLength={2}
             placeholder={toPau ? "Bella's Boutique" : "My sister, Ada"}
             className="field"
           />
@@ -110,14 +118,50 @@ export default function ParcelForm({
           <label className="label" htmlFor="address">
             {toPau ? "The address we are collecting from" : "The address we are delivering to"}
           </label>
-          <textarea id="address" name="address" rows={2} className="field" />
+          <textarea
+            id="address"
+            name="address"
+            required
+            minLength={6}
+            rows={2}
+            placeholder="Street, area, and anything that helps us find it"
+            className="field"
+          />
         </div>
 
         <div>
           <label className="label" htmlFor="hostel">
             {toPau ? "Which block are we bringing it to?" : "Which block are we collecting from?"}
           </label>
-          <input id="hostel" name="hostel" placeholder="Ikoyi Hall, room 12" className="field" />
+          {hostels.length > 0 ? (
+            <select id="hostel" name="hostel" required defaultValue="" className="field">
+              <option value="">Pick the block</option>
+              {hostels.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              id="hostel"
+              name="hostel"
+              required
+              placeholder="Ikoyi Hall"
+              className="field"
+            />
+          )}
+          <div className="mt-2">
+            <label className="label" htmlFor="room">
+              Room or landmark
+            </label>
+            <input
+              id="room"
+              name="room"
+              placeholder="Room 12, or the porter's desk"
+              className="field"
+            />
+          </div>
         </div>
 
         <div>
@@ -127,7 +171,9 @@ export default function ParcelForm({
           <input
             id="value"
             name="value"
+            required
             inputMode="numeric"
+            pattern="[0-9,₦ ]+"
             placeholder="15000"
             className="field"
           />
@@ -146,13 +192,29 @@ export default function ParcelForm({
             <label className="label" htmlFor="name">
               Your name
             </label>
-            <input id="name" name="name" className="field" />
+            <input
+              id="name"
+              name="name"
+              required
+              minLength={2}
+              autoComplete="name"
+              className="field"
+            />
           </div>
           <div>
             <label className="label" htmlFor="phone">
               Your number
             </label>
-            <input id="phone" name="phone" inputMode="tel" className="field" />
+            <input
+              id="phone"
+              name="phone"
+              required
+              type="tel"
+              inputMode="tel"
+              minLength={10}
+              autoComplete="tel"
+              className="field"
+            />
           </div>
         </div>
 
@@ -170,7 +232,13 @@ export default function ParcelForm({
             <label className="label" htmlFor="to_phone">
               Their number
             </label>
-            <input id="to_phone" name="to_phone" inputMode="tel" className="field" />
+            <input
+              id="to_phone"
+              name="to_phone"
+              type="tel"
+              inputMode="tel"
+              className="field"
+            />
           </div>
         </div>
 

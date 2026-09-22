@@ -22,6 +22,7 @@ export async function sendParcel(
     name: said("name"),
     phone: said("phone"),
     hostel: said("hostel"),
+    room: said("room"),
     routeId: said("route"),
     item: said("item"),
     shop: said("shop"),

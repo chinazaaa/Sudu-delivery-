@@ -11,6 +11,10 @@ export type ParcelInput = {
   /** The block on campus. One end of every route is PAU, and a block is the
    *  whole of what anybody needs there. */
   hostel: string;
+  /** The room or landmark inside that block, which the block alone does not
+   *  give: a bag at Ikoyi Hall is a bag at a building with four hundred
+   *  rooms. */
+  room: string;
   routeId: string;
   /** What it is, so the right parcel is collected. Not for the books. */
   item: string;
@@ -104,8 +108,10 @@ export async function placeParcel(input: ParcelInput): Promise<ParcelResult> {
     };
   }
 
-  const from = route.toPau ? address : `PAU, ${hostel}`;
-  const to = route.toPau ? `PAU, ${hostel}` : address;
+  const room = input.room.trim();
+  const campus = room ? `PAU, ${hostel}, ${room}` : `PAU, ${hostel}`;
+  const from = route.toPau ? address : campus;
+  const to = route.toPau ? campus : address;
 
   // A cap is the whole of the shop's protection here: if it is lost or broken
   // in the car that is the shop's problem, so the worst case has to stay

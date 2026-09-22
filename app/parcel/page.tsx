@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import ParcelForm from "@/components/ParcelForm";
 import { liveRoutes, parcels } from "@/lib/parcels";
+import { hostelNames } from "@/lib/hostels";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,10 @@ export const metadata: Metadata = {
 export default async function ParcelPage() {
   const setup = await parcels();
   const routes = liveRoutes(setup.routes);
+  // The same list the food and skincare checkouts use. A block typed by hand
+  // is misspelt every other order, and a parcel is one bag with one place to
+  // take it, so it matters more here than anywhere.
+  const hostels = await hostelNames();
 
   if (!setup.on || routes.length === 0) {
     return (
@@ -59,7 +64,7 @@ export default async function ParcelPage() {
         </ul>
       </section>
 
-      <ParcelForm routes={routes} maxValue={setup.maxValue} />
+      <ParcelForm routes={routes} maxValue={setup.maxValue} hostels={hostels} />
     </div>
   );
 }
