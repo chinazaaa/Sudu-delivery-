@@ -25,6 +25,7 @@ import { fillNote, narration, PAID_NOTE_DEFAULT } from "@/lib/messages";
 import {
   feeStory,
   getOrder,
+  isPaid,
   repeatLines,
   type FullOrder,
   type OrderLine,
@@ -374,9 +375,14 @@ export default async function OrderPage({
 
       {/* The car is the thing worth sharing: one delivery fee covers whatever
           is in it, so every friend who joins makes it cheaper for all of them.
-          Only while the run is still taking orders, and never on a refunded
-          one. */}
-      {canStillMove && order.status !== "refunded" && (
+          Only while the run is still taking orders.
+
+          And only before paying. Once the fee is charged it does not change,
+          and a friend joining afterwards pays only what their food adds, so
+          the saving belongs to them. Offering "between you there is one
+          delivery fee instead of one each" to somebody who has already paid
+          is promising them money back that is never coming. */}
+      {canStillMove && !isPaid(order.status) && order.status !== "refunded" && (
         <ShareDelivery
           url={`${site}/join/${order.shared_with ?? order.id}`}
           name={(order.for_name ?? order.customer_name).split(" ")[0]}
