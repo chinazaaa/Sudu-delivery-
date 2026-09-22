@@ -10,12 +10,14 @@ import { payableAccounts } from "@/lib/banks";
 import { siteUrl, toCard } from "@/lib/admin-templates";
 import ParcelPhotos from "@/components/admin/ParcelPhotos";
 import ParcelDay from "@/components/admin/ParcelDay";
+import StagePicker from "@/components/admin/StagePicker";
 import { photosFor } from "@/lib/parcel-photos";
 import { naira, shareRef } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { whatsappTo } from "@/lib/messages";
 import {
   addParcelPhoto,
+  setBatchStage,
   agreeParcelDay,
   markPaid,
   markDelivered,
@@ -168,6 +170,27 @@ async function orderPage(id: string, said: string) {
       {/* Only on a parcel. Nobody photographs a bag of jollof, and a button
           offered on every order is a button nobody presses on the one that
           needs it. */}
+      {/* A parcel has no run page to move it on from, because it is not a
+          run. Where it has got to is set here, which is the only page it
+          has. */}
+      {order.parcel_route && (
+        <section className="card mt-4 space-y-2">
+          <div>
+            <h2 className="font-bold">Where it has got to</h2>
+            <p className="text-sm text-muted">
+              What the sender sees on their own page, and what the driver has
+              done so far.
+            </p>
+          </div>
+          <StagePicker
+            batchId={order.batch.id}
+            stage={order.batch.stage}
+            action={setBatchStage}
+            parcel
+          />
+        </section>
+      )}
+
       {order.parcel_route && (
         <div className="mt-4">
           <ParcelDay

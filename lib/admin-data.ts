@@ -17,6 +17,9 @@ export type FeedOrder = Order & {
   otherItems: number;
   otherFee: number;
   batchLabel: string;
+  /** Which shop this order's trip belongs to: a run, a skincare drop, a car
+   *  of its own or a parcel. */
+  batchKind: string;
   runDate: string;
   deliveryWindow: string;
   slot: Batch["slot"];
@@ -124,6 +127,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
         ? carLabel(batch)
         : "Unknown run",
       batchStage: batch?.stage ?? "ordering",
+      batchKind: batch?.kind ?? "run",
       runDate: batch?.run_date ?? "",
       deliveryWindow: batch?.delivery_window_text ?? "",
       slot: batch?.slot ?? "afternoon",

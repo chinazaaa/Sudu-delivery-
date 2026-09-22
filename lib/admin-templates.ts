@@ -4,7 +4,8 @@ import {
   narration,
   template,
   whatsappTo,
-  TEMPLATE_LABEL,
+  templateLabel,
+  type Ordered,
   type TemplateKind,
 } from "./messages";
 import type { Settings } from "./settings";
@@ -120,6 +121,14 @@ export function toCard(
   /** The account the message quotes. The first on the list. */
   bank?: { bank_name: string; account_name: string; account_number: string } | null
 ): OrderCardData {
+  // Which of the three shops this order came from, for the one word that
+  // changes between them: food, order or parcel.
+  const what: Ordered = order.parcel_route
+    ? "parcel"
+    : order.batchKind === "skincare"
+      ? "order"
+      : "food";
+
   const write = (kind: TemplateKind) =>
     template({
       kind,
@@ -129,6 +138,7 @@ export function toCard(
       siteUrl: url,
       batchLabel: order.batchLabel,
       deliveryWindow: order.deliveryWindow,
+      what,
       bank,
     });
 
@@ -185,7 +195,7 @@ export function toCard(
     })),
     templates: kindsFor(order).map((kind) => ({
       kind,
-      label: TEMPLATE_LABEL[kind],
+      label: templateLabel(kind, what),
       href: whatsappTo(order.customer_phone, write(kind)),
     })),
   };

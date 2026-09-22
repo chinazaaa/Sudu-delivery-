@@ -28,6 +28,24 @@ export const TEMPLATE_LABEL: Record<TemplateKind, string> = {
   review: "Ask for a review",
 };
 
+/** What was ordered, in one word. The shop sells three things now. */
+export type Ordered = "food" | "order" | "parcel";
+
+/**
+ * The button's wording, which follows what was actually ordered.
+ *
+ * "Food is here" over somebody's cleanser, or over a dress being carried
+ * from Lekki, is the food shop's wording on an order that is not food.
+ */
+export function templateLabel(kind: TemplateKind, what: Ordered): string {
+  if (kind !== "ready") return TEMPLATE_LABEL[kind];
+  return what === "food"
+    ? "Food is here"
+    : what === "parcel"
+      ? "Parcel is here"
+      : "Order is here";
+}
+
 /** Which settings field holds the admin's own wording for each template. */
 export const TEMPLATE_FIELD: Record<TemplateKind, keyof Settings> = {
   confirmed: "msg_confirmed",
@@ -56,12 +74,12 @@ export const TEMPLATE_DEFAULT: Record<TemplateKind, string> = {
     "Open {site}/orders, put in your number and that PIN, and every order you " +
     "have placed is there.",
   ready:
-    "Hi {name}, your food is here. Bringing it to {hostel} now.",
+    "Hi {name}, your {thing} is here. Bringing it to {hostel} now.",
   late:
     "Hi {name}, the {batch} run is running a little behind.\n\n" +
-    "Your food is coming. I will message again when it is with you.",
+    "Your {thing} is coming. I will message again when it is with you.",
   review:
-    "Hi {name}, hope the food was good. If you have a second, say how it was " +
+    "Hi {name}, hope the {thing} was good. If you have a second, say how it was " +
     "on your order page: {link}\n\nIt takes one tap and it helps a lot.",
 };
 
@@ -73,6 +91,7 @@ export const TEMPLATE_TOKENS: { token: string; means: string }[] = [
   { token: "{batch}", means: "Wednesday night, and so on" },
   { token: "{total}", means: "what they owe" },
   { token: "{hostel}", means: "their hostel or block" },
+  { token: "{thing}", means: "food, order or parcel, whichever it is" },
   { token: "{window}", means: "when the run lands" },
   { token: "{link}", means: "their order page" },
   { token: "{site}", means: "the site address" },
@@ -171,6 +190,8 @@ export function template(args: {
   siteUrl: string;
   batchLabel: string;
   deliveryWindow: string;
+  /** What was ordered, for the one word that changes between the shops. */
+  what?: Ordered;
   /** The account to quote. Without one, the single account in settings. */
   bank?: { bank_name: string; account_name: string; account_number: string } | null;
 }): string {
@@ -202,6 +223,7 @@ export function template(args: {
     "{batch}": batchLabel,
     "{total}": naira(order.total),
     "{hostel}": order.hostel,
+    "{thing}": args.what ?? "food",
     "{window}": args.deliveryWindow,
     "{link}": `${siteUrl}/o/${shortRef(order)}`,
     "{site}": siteUrl,

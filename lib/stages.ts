@@ -32,3 +32,29 @@ export const STAGE_ACTION: Record<BatchStage, string> = {
 export function stageIndex(stage: BatchStage): number {
   return STAGES.indexOf(stage);
 }
+
+/**
+ * The same six steps, said the way a parcel goes.
+ *
+ * A parcel is not cooked and does not arrive at a hostel by the boot-load:
+ * "At the counter, food being cooked" on somebody's dress is the shop
+ * describing a trip that is not happening. The stages themselves are the
+ * same, because the run sheet, the timeline and the messages all read them.
+ */
+export const PARCEL_LABEL: Record<BatchStage, string> = {
+  ordering: "Waiting to be paid for",
+  closed: "Paid, waiting on the day",
+  at_counter: "Collected",
+  on_the_road: "On the road",
+  at_drop: "Nearly there",
+  handed_out: "Handed over",
+};
+
+export const PARCEL_ACTION: Record<BatchStage, string> = {
+  ordering: "Not paid yet",
+  closed: "Paid, not collected",
+  at_counter: "Collected it",
+  on_the_road: "On the road",
+  at_drop: "Nearly there",
+  handed_out: "Handed it over",
+};

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { STAGES, STAGE_ACTION, type BatchStage } from "@/lib/stages";
+import { PARCEL_ACTION, STAGES, STAGE_ACTION, type BatchStage } from "@/lib/stages";
 
 /**
  * Where the run has got to, at the top of the sheet. Moving a run on is the
@@ -15,10 +15,14 @@ export default function StagePicker({
   batchId,
   stage,
   action,
+  parcel = false,
 }: {
   batchId: string;
   stage: BatchStage;
   action: (form: FormData) => Promise<void>;
+  /** A parcel is not cooked and is handed to one person, so the same six
+   *  steps are said differently. */
+  parcel?: boolean;
 }) {
   const form = useRef<HTMLFormElement>(null);
 
@@ -26,7 +30,7 @@ export default function StagePicker({
     <form ref={form} action={action} className="flex w-full items-center gap-2 sm:w-auto">
       <input type="hidden" name="batch_id" value={batchId} />
       <label className="sr-only" htmlFor="stage">
-        Where the run is
+        {parcel ? "Where the parcel is" : "Where the run is"}
       </label>
       <select
         id="stage"
@@ -41,7 +45,7 @@ export default function StagePicker({
       >
         {STAGES.map((step) => (
           <option key={step} value={step}>
-            {STAGE_ACTION[step]}
+            {(parcel ? PARCEL_ACTION : STAGE_ACTION)[step]}
           </option>
         ))}
       </select>
