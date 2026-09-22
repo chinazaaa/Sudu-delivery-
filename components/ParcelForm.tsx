@@ -13,6 +13,14 @@ import { sendParcel, type ParcelState } from "@/app/parcel/actions";
  * on the route, so the form changes its two address questions as soon as the
  * route is picked rather than asking for both and hoping.
  */
+/** A number as the shop stores it: 234 and +234 are both 0. */
+function rawDigits(raw: string): string {
+  const digits = raw.replace(/[^\d+]/g, "").replace(/^\+/, "");
+  if (digits.startsWith("234")) return `0${digits.slice(3)}`;
+  if (digits.length === 10) return `0${digits}`;
+  return digits;
+}
+
 export default function ParcelForm({
   routes,
   maxValue,
@@ -65,6 +73,16 @@ export default function ParcelForm({
   const [worth, setWorth] = useState("");
   const value = Number(worth.replace(/[^\d]/g, "")) || 0;
   const tooDear = value > maxValue;
+
+  // The recipient is optional, but half of one is worse than none: a name
+  // with no number is a bag at a gate with nobody to call. Checked here as
+  // well as on the server, and with the same rule as the sender's number,
+  // because two number fields with one hint between them is the second one
+  // rejected for a reason nothing on the page explained.
+  const goodNumber = (raw: string) => /^0[789]\d{9}$/.test(rawDigits(raw));
+  const halfRecipient =
+    (said.to_name.trim() !== "" || said.to_phone.trim() !== "") &&
+    (said.to_name.trim() === "" || !goodNumber(said.to_phone));
 
   return (
     <form action={action} className="space-y-4">
@@ -307,9 +325,22 @@ export default function ParcelForm({
               onChange={put("to_phone")}
               type="tel"
               inputMode="tel"
-              className="field"
+              placeholder="0803 123 4567"
+              aria-invalid={halfRecipient}
+              className={`field ${halfRecipient ? "border-brand" : ""}`}
             />
           </div>
+          {halfRecipient ? (
+            <p className="text-xs font-semibold text-brand sm:col-span-2">
+              For somebody else we need both their name and a number that
+              works: eleven digits, starting 070, 080, 081, 090 or 091.
+              Leave both empty and it comes to you.
+            </p>
+          ) : (
+            <p className="text-xs text-muted sm:col-span-2">
+              Leave both empty and it comes to you.
+            </p>
+          )}
         </div>
 
         <div>
@@ -355,13 +386,15 @@ export default function ParcelForm({
 
       <button
         type="submit"
-        disabled={busy || tooDear}
+        disabled={busy || tooDear || halfRecipient}
         className="btn-primary w-full py-4 text-base"
       >
         {busy
           ? "Sending…"
           : tooDear
             ? `Over the ${naira(maxValue)} limit`
+            : halfRecipient
+              ? "Their name and number, or neither"
             : fee !== null
               ? `Send it · ${naira(fee)}`
               : "Send it"}
