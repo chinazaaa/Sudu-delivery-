@@ -61,6 +61,28 @@ export async function tendBatches(force = false): Promise<void> {
 }
 
 /**
+ * Dates and slots the opener passes over, because the run there was deleted
+ * on purpose.
+ *
+ * Tolerant of a database without the table: no skips is the right answer for
+ * one, and this runs on the path that opens the week, which must never be
+ * able to fail for the sake of a list of exceptions.
+ */
+export async function skippedRuns(from: string, to: string): Promise<Set<string>> {
+  const { data, error } = await db()
+    .from("run_skips")
+    .select("run_date, slot")
+    .gte("run_date", from)
+    .lte("run_date", to);
+  if (error) return new Set();
+  return new Set(
+    ((data ?? []) as { run_date: string; slot: string }[]).map(
+      (row) => `${row.run_date}|${row.slot}`
+    )
+  );
+}
+
+/**
  * Opens every run the schedule calls for between two dates, inclusive. Runs
  * that already exist are left exactly as they are, so a cancelled run stays
  * cancelled and a run with orders on it is never rewritten.
@@ -122,7 +144,16 @@ export async function openRunsBetween(from: string, to: string): Promise<number>
   // run's date and slot because the enum only knows the two. Asking the
   // database to infer a conflict it can no longer infer took the shop down, so
   // the decision is made here, where it can be read.
-  const missing = rows.filter((row) => !already.has(`${row.run_date}|${row.slot}`));
+  // Days deliberately taken off. Deleting an empty run used to be a fight
+  // nobody could win: this function opens every run the week calls for, so a
+  // deleted Friday was back within the minute. A skip is how "I do not want
+  // that one" survives the next page load.
+  const skipped = await skippedRuns(from, to);
+  const missing = rows.filter(
+    (row) =>
+      !already.has(`${row.run_date}|${row.slot}`) &&
+      !skipped.has(`${row.run_date}|${row.slot}`)
+  );
   if (missing.length === 0) return 0;
 
   const strip = (list: typeof rows) =>

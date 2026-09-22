@@ -563,10 +563,23 @@ export async function saveScheduleRun(form: FormData): Promise<void> {
  */
 export async function deleteScheduleRun(form: FormData): Promise<void> {
   await assertAdmin();
+
+  const weekday = Number(form.get("weekday"));
+  const slot = String(form.get("slot") ?? "");
+  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6 || !slot) {
+    throw new Error("Could not tell which day that was.");
+  }
+
+  // Removed by the day and the slot it is, rather than by a row id carried
+  // through the browser. The pair is what makes a schedule row unique, it is
+  // on the form either way, and a row id that arrived empty or malformed took
+  // the whole page down with "invalid input syntax for type uuid" instead of
+  // removing anything.
   const { error } = await db()
     .from("run_schedule")
     .delete()
-    .eq("id", String(form.get("schedule_id")));
+    .eq("weekday", weekday)
+    .eq("slot", slot);
   // Saying nothing is how a Remove button that removes nothing goes unnoticed.
   if (error) throw new Error(`Could not remove that day: ${error.message}`);
 
@@ -575,30 +588,32 @@ export async function deleteScheduleRun(form: FormData): Promise<void> {
   // turned out to mean. Only ones still to come, and only while nothing has
   // been ordered on them: a run somebody has paid into is never swept away by
   // an edit to the week.
-  const weekday = Number(form.get("weekday"));
-  const slot = String(form.get("slot") ?? "");
-  if (Number.isInteger(weekday) && slot) {
-    const { data: rows } = await db()
-      .from("batches")
-      .select("id, run_date")
-      .eq("slot", slot)
-      .gte("run_date", lagosToday());
+  const { data: rows } = await db()
+    .from("batches")
+    .select("id, run_date")
+    .eq("slot", slot)
+    // A same day car borrows a run's date and slot. It is somebody's own
+    // trip, asked for by hand, and has nothing to do with the week.
+    .eq("kind", "run")
+    .gte("run_date", lagosToday());
 
-    // Midday UTC, so the day cannot slip either side of midnight.
-    const sameDay = ((rows ?? []) as { id: string; run_date: string }[]).filter(
-      (row) => new Date(`${row.run_date}T12:00:00Z`).getUTCDay() === weekday
-    );
+  // Midday UTC, so the day cannot slip either side of midnight.
+  const sameDay = ((rows ?? []) as { id: string; run_date: string }[]).filter(
+    (row) => new Date(`${row.run_date}T12:00:00Z`).getUTCDay() === weekday
+  );
 
-    if (sameDay.length > 0) {
-      const ids = sameDay.map((row) => row.id);
-      const { data: taken } = await db()
-        .from("orders")
-        .select("batch_id")
-        .in("batch_id", ids);
-      const busy = new Set((taken ?? []).map((row) => row.batch_id as string));
-      const empty = ids.filter((id) => !busy.has(id));
-      if (empty.length > 0) await db().from("batches").delete().in("id", empty);
-    }
+  if (sameDay.length > 0) {
+    const ids = sameDay.map((row) => row.id);
+    // Cancelled and refunded orders are not a reason to keep a run standing.
+    const { data: taken } = await db()
+      .from("orders")
+      .select("batch_id")
+      .in("batch_id", ids)
+      .not("status", "in", NOT_ORDERS_SQL);
+    const busy = new Set((taken ?? []).map((row) => row.batch_id as string));
+    const empty = ids.filter((id) => !busy.has(id));
+    const failed = await removeBatches(empty);
+    if (failed) throw new Error(`The day went, but its runs did not: ${failed}`);
   }
 
   revalidatePath("/admin", "layout");
@@ -628,7 +643,13 @@ export async function generateRuns(form: FormData): Promise<void> {
   if (/^\d{4}-\d{2}$/.test(month)) {
     const [year, index] = month.split("-").map(Number);
     const last = new Date(Date.UTC(year, index, 0)).getUTCDate();
-    await openRunsBetween(`${month}-01`, `${month}-${String(last).padStart(2, "0")}`);
+    const from = `${month}-01`;
+    const to = `${month}-${String(last).padStart(2, "0")}`;
+    // Opening a month deliberately is how a day that was taken off comes
+    // back. The automatic opener leaves those exceptions alone; pressing this
+    // button says the week is what you want, all of it.
+    await db().from("run_skips").delete().gte("run_date", from).lte("run_date", to);
+    await openRunsBetween(from, to);
   } else {
     await ensureUpcomingBatches();
   }
@@ -649,6 +670,37 @@ async function orderCount(batchId: string): Promise<number> {
 }
 
 /**
+ * Lets go of everything that points at these runs, then deletes them.
+ *
+ * Nothing can be deleted while something holds it, and the delete fails
+ * outright rather than skipping what it cannot take, which is how deleting an
+ * empty run and removing a day both ended on an error page.
+ *
+ * What can let go of a run does: a checkout link outlives the run it was
+ * first pointed at, an occasion keeps its date and loses its car, and a payout
+ * is money and is never deleted to tidy a run away. What cannot let go is only
+ * ever a note about that one run, so it goes with it.
+ *
+ * Only ever called for runs with nothing live ordered into them.
+ */
+async function removeBatches(ids: string[]): Promise<string | null> {
+  if (ids.length === 0) return null;
+
+  await db().from("carts").delete().in("batch_id", ids);
+  await db().from("orders").delete().in("batch_id", ids);
+  for (const id of ids) await clearDeadGroups(id);
+
+  await db().from("checkout_links").update({ batch_id: null }).in("batch_id", ids);
+  await db().from("occasions").update({ batch_id: null }).in("batch_id", ids);
+  await db().from("promoter_payouts").update({ batch_id: null }).in("batch_id", ids);
+  await db().from("coupon_runs").delete().in("batch_id", ids);
+  await db().from("counter_spend").delete().in("batch_id", ids);
+
+  const { error } = await db().from("batches").delete().in("id", ids);
+  return error ? error.message : null;
+}
+
+/**
  * Removes a run entirely. Only ever an empty one: a run with orders on it is
  * somebody's dinner and a row in the books, so that is cancelled instead.
  */
@@ -663,53 +715,31 @@ export async function deleteRun(form: FormData): Promise<void> {
     .eq("id", id)
     .maybeSingle();
 
-  await db().from("carts").delete().eq("batch_id", id);
-  await db().from("orders").delete().eq("batch_id", id);
-  // A group that never became an order still points at this car, and a car
-  // cannot be deleted while anything points at it. That is why deleting one
-  // of these looked like it had worked and changed nothing.
-  await clearDeadGroups(id);
 
-  // Everything else that points at a run. A car cannot be deleted while any
-  // of these hold it, and the delete failed outright rather than skipping
-  // them, which is how deleting an empty run ended on an error page.
+  // A run the schedule still calls for used to come straight back: opening
+  // admin makes every run the week is supposed to have, and a deleted row is
+  // just a missing one. It was marked cancelled instead, which stopped it
+  // returning but left it on the page reading "cancelled" when what was
+  // wanted was gone.
   //
-  // What can let go of the run does: a checkout link outlives the run it was
-  // first pointed at, an occasion keeps its date and loses its car, and a
-  // payout is money and is never deleted to tidy a run away. What cannot let
-  // go is only ever a note about this run, so it goes with it.
-  await db().from("checkout_links").update({ batch_id: null }).eq("batch_id", id);
-  await db().from("occasions").update({ batch_id: null }).eq("batch_id", id);
-  await db().from("promoter_payouts").update({ batch_id: null }).eq("batch_id", id);
-  await db().from("coupon_runs").delete().eq("batch_id", id);
-  await db().from("counter_spend").delete().eq("batch_id", id);
-
-  // A run the schedule still calls for comes straight back: opening admin
-  // makes every run the week is supposed to have, and a deleted row is just a
-  // missing one. Deleting it again, and again, is the same fight every time.
-  //
-  // So a scheduled run is cancelled instead. Cancelled it still exists, which
-  // is what stops it being made again, and it takes no orders. To stop the day
-  // itself, turn the weekday off in the schedule.
-  const scheduled =
-    batch && batch.kind !== "same_day"
-      ? (await runSchedule(true)).some(
-          (entry) =>
-            entry.active &&
-            entry.slot === batch.slot &&
-            entry.weekday === new Date(`${batch.run_date}T12:00:00Z`).getUTCDay()
-        )
-      : false;
-
-  if (scheduled) {
-    await db().from("batches").update({ status: "cancelled" }).eq("id", id);
-  } else {
-    const { error } = await db().from("batches").delete().eq("id", id);
-    // Silence here is what made this a fight nobody could win: the page came
-    // back looking exactly as it did, with the run still on it and nothing
-    // anywhere saying why.
-    if (error) throw new Error(`Could not delete that run: ${error.message}`);
+  // Nothing has been ordered into it, so it goes. The date and slot are
+  // written down as a day taken off, which is what stops the opener making it
+  // again. Opening that month from the schedule clears those and brings it
+  // back.
+  if (batch && batch.kind !== "same_day") {
+    await db()
+      .from("run_skips")
+      .upsert(
+        { run_date: batch.run_date, slot: batch.slot },
+        { onConflict: "run_date,slot" }
+      );
   }
+
+  // Silence here is what made this a fight nobody could win: the page came
+  // back looking exactly as it did, with the run still on it and nothing
+  // anywhere saying why.
+  const failed = await removeBatches([id]);
+  if (failed) throw new Error(`Could not delete that run: ${failed}`);
 
   revalidatePath("/admin", "layout");
   revalidatePath("/");

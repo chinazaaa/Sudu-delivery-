@@ -1303,29 +1303,22 @@ export default async function BatchPage({
                     {empty && (
                       <form action={deleteRun} className="mt-4 border-t border-black/5 pt-3">
                         <input type="hidden" name="batch_id" value={batch.id} />
-                        <h3 className="font-bold">
-                          {onSchedule ? "Take this run off" : "Delete this run"}
-                        </h3>
+                        <h3 className="font-bold">Delete this run</h3>
                         <p className="mt-0.5 text-xs text-muted">
-                          {onSchedule ? (
+                          Nothing has been ordered into it, so it can go
+                          entirely. A run with orders on it is cancelled
+                          instead, never deleted.
+                          {onSchedule && (
                             <>
-                              Nothing has been ordered into it. Your schedule
-                              still has {WEEKDAYS[scheduleWeekday]}{" "}
-                              {SLOT_LABEL[batch.slot]} on it, so deleting it
-                              outright would only open it again next time admin
-                              loads. It will be marked not running instead,
-                              which takes it off the shop and keeps it off. To
-                              stop that day for good, pause it on the{" "}
+                              {" "}
+                              Your week still has {WEEKDAYS[scheduleWeekday]}{" "}
+                              {SLOT_LABEL[batch.slot]} on it, so this one date
+                              is noted as taken off and will not open itself
+                              again. To bring it back, open that month on the{" "}
                               <Link href="/admin/schedule" className="underline">
                                 schedule
-                              </Link>{" "}
-                              first, then come back here.
-                            </>
-                          ) : (
-                            <>
-                              Nothing has been ordered into it, so it can go
-                              entirely. A run with orders on it is cancelled
-                              instead, never deleted.
+                              </Link>
+                              .
                             </>
                           )}
                         </p>
@@ -1333,11 +1326,9 @@ export default async function BatchPage({
                           <ConfirmButton
                             tone="brand"
                             className="px-4 py-2 text-sm"
-                            confirm={
-                              onSchedule ? "Yes, take it off" : "Yes, delete it"
-                            }
+                            confirm="Yes, delete it"
                           >
-                            {onSchedule ? "Take this run off" : "Delete this run"}
+                            Delete this run
                           </ConfirmButton>
                         </span>
                       </form>

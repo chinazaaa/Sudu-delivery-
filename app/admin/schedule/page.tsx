@@ -227,15 +227,28 @@ export default async function SchedulePage() {
             />
           </div>
           <div className="sm:col-span-5">
-            <label className="label" htmlFor="schedule-window">
-              What customers are told
+            <label className="label" htmlFor="schedule-from">
+              These runs arrive between
             </label>
-            <input
-              id="schedule-window"
-              name="window_text"
-              placeholder="On campus ~2:00pm"
-              className="field py-2 text-sm"
-            />
+            <span className="flex items-center gap-2">
+              <input
+                id="schedule-from"
+                name="window_from"
+                type="time"
+                className="field w-32 py-2 text-sm"
+              />
+              <span className="text-sm text-muted">and</span>
+              <input
+                name="window_to"
+                type="time"
+                aria-label="Latest arrival"
+                className="field w-32 py-2 text-sm"
+              />
+            </span>
+            <p className="mt-1 text-xs text-muted">
+              Left empty, these runs say &quot;{DELIVERY_WINDOWS.afternoon}&quot;
+              in the afternoon and &quot;{DELIVERY_WINDOWS.night}&quot; at night.
+            </p>
           </div>
           <div className="sm:col-span-5">
             <SaveButton quiet>Add to the week</SaveButton>
@@ -260,7 +273,8 @@ export default async function SchedulePage() {
           <p className="text-xs text-muted">
             Opens every run your week calls for across that month. Runs already
             open are left exactly as they are, cancellations included, so this
-            is safe to press twice.
+            is safe to press twice. It also brings back any single run you
+            deleted inside that month.
           </p>
         </form>
       </section>
