@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { api, naira } from "@/lib/api";
+import { api, feeFor, lagosToday, naira, nextArrival, sameDayFeeFor } from "@/lib/api";
 import { cart, cartTotal, countItems, party, people, useStored, type Line } from "@/lib/store";
 import { T } from "@/lib/theme";
 
@@ -108,7 +108,28 @@ export default function Cart() {
   // Only where the ladder is what they would pay. Under an offer this number
   // is not what ordering alone costs, and the whole point of the line is that
   // the two figures are real.
-  const alone = shop && items > 0 && !offered ? feeFrom(items, shop.bands, null) : 0;
+  // Priced the way the food is actually going, not the way it usually goes.
+  // With no run inside the days people can order ahead, the soonest thing is
+  // a car of its own, and quoting the run ladder here had the cart promising
+  // four thousand over a checkout about to charge six and a half.
+  const decided = shop
+    ? nextArrival(
+        shop.runs.filter((one) => !one.closed && !one.full),
+        shop.sameDay?.slots ?? [],
+        lagosToday()
+      )
+    : null;
+  const soon =
+    decided && !decided.onARun
+      ? (shop?.sameDay?.slots ?? []).find((one) => one.at === decided.at) ?? null
+      : null;
+
+  const alone =
+    shop && items > 0 && !offered
+      ? soon && (shop.sameDay?.bands?.length ?? 0) > 0
+        ? sameDayFeeFor(items, soon.urgent, shop.sameDay!.bands, shop.sameDay!.urgentExtra ?? 0)
+        : feeFor(items, shop.bands, null)
+      : 0;
 
   // An offer this cart nearly has. From the inside, a qualifying dish with
   // something else beside it looks like the offer simply not working, so it

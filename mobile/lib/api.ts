@@ -74,6 +74,19 @@ async function beacon(path: string, data: unknown): Promise<void> {
   }
 }
 
+export type Product = {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl: string;
+  restaurantId: string;
+  restaurant: string;
+  slug: string;
+  categoryId: string | null;
+  category: string;
+};
+
 export type BoxLineView = {
   id: string;
   name: string;
@@ -452,6 +465,28 @@ export const api = {
       }[];
       blocked: { name: string; reason: string }[];
     }>("/again", token),
+  /** Everything the shop sells, a page at a time. The restaurants across
+   *  the top and their own categories under them. */
+  products: (asked: {
+    q?: string;
+    place?: string;
+    category?: string;
+    sort?: string;
+    page?: number;
+  }) => {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(asked)) {
+      if (value !== undefined && value !== "" && value !== 0) query.set(key, String(value));
+    }
+    const tail = query.toString();
+    return get<{
+      products: Product[];
+      total: number;
+      perPage: number;
+      places: { id: string; name: string }[];
+      categories: string[];
+    }>(`/products${tail ? `?${tail}` : ""}`);
+  },
   /** The occasions, with a price on each because a card without one is a
    *  category and categories sell nothing. */
   occasions: () =>

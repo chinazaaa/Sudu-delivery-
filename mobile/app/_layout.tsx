@@ -85,6 +85,10 @@ export default function Layout() {
         {/* The other half of the shop. Its own shelf, its own basket and its
             own day, so it is pushed over the tabs rather than living in
             them: nobody browses skincare and food in the same breath. */}
+        {/* Everything in one list, for whoever has decided what they want
+            to eat rather than where from. */}
+        <Stack.Screen name="products" options={{ title: "Everything on the menu" }} />
+
         {/* Food somebody has already packed. Its own door rather than a
             card in the menu, for the same reason skincare has one. */}
         <Stack.Screen name="occasions/index" options={{ title: "Ordering for something" }} />

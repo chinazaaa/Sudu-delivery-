@@ -52,7 +52,19 @@ export default function Group() {
   // worked out by the same rule as every other way of ordering, and a leader
   // who had to pick one was being asked to price a fee ladder and a cut off
   // before she could invite anybody.
-  const going = nextArrival(runs, slots, lagosToday());
+  const decided = nextArrival(runs, slots, lagosToday());
+
+  // The other way, asked of the same rule: once with only runs and once
+  // with only cars. A group of people who want dinner tonight should not
+  // have to give up on the group because the next run is Saturday.
+  const other = decided
+    ? decided.onARun
+      ? nextArrival([], slots, lagosToday())
+      : nextArrival(runs, [], lagosToday())
+    : null;
+  const swap = other !== null && other.said !== decided?.said;
+  const [takeOther, setTakeOther] = useState(false);
+  const going = swap && takeOther ? other : decided;
 
   useEffect(() => {
     if (going) setWhen(going.onARun ? `run:${going.runId}` : going.at);
@@ -245,6 +257,32 @@ export default function Group() {
                 <Text style={{ color: T.muted, fontSize: 12, marginTop: 4 }}>
                   {ESTIMATE_NOTE}
                 </Text>
+
+                {/* The other way, and a way to take it. Saying it without a
+                    tap would be telling somebody what they cannot have. The
+                    sentence words the one it would move to, so it stays true
+                    whichever way round it currently is. */}
+                {swap && (
+                  <Pressable
+                    onPress={() => setTakeOther((was) => !was)}
+                    style={{
+                      marginTop: 8,
+                      backgroundColor: T.shell,
+                      borderRadius: 12,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                    }}
+                  >
+                    <Text style={{ color: T.brandDark, fontWeight: "700", fontSize: 13 }}>
+                      {(takeOther ? decided : other)?.onARun
+                        ? `Rather pay less? A run gets it to you ${(takeOther ? decided : other)?.said}.`
+                        : `In a hurry? A car of its own can be there ${(takeOther ? decided : other)?.said}, for more.`}
+                      <Text style={{ textDecorationLine: "underline" }}>
+                        {" "}Tap to start the group on that instead.
+                      </Text>
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             )}
 

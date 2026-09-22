@@ -239,6 +239,50 @@ export default function Checkout() {
       ? Math.max(0, feeFrom(items + adding.items, runBands, run.flashFee) - adding.feeCharged)
       : 0;
 
+  /*
+   * The one alternative worth a sentence.
+   *
+   * Only where the fee comes from the container ladder on both sides: a
+   * market is priced by what the shopping comes to, and a promotion is a
+   * price rather than a ladder, so there is nothing to compare.
+   */
+  const otherWay = (() => {
+    if (byValue.length > 0 || items === 0) return null;
+
+    const runFee = run
+      ? Math.max(0, feeFrom(items + adding.items, runBands, run.flashFee) - adding.feeCharged)
+      : 0;
+
+    if (picked) {
+      // On a car of its own. Name the run whether or not it is cheaper: a
+      // run that prices level is still the answer to when else you could
+      // get this.
+      const soonest = runsHere[0];
+      if (!soonest) return null;
+      const fee = Math.max(
+        0,
+        feeFrom(items + adding.items, runBands, soonest.flashFee) - adding.feeCharged
+      );
+      const now = sameDayFeeFor(items, picked.urgent, sameDayBands, shop?.sameDay?.urgentExtra ?? 0);
+      return {
+        runId: soonest.id,
+        at: "",
+        said: `${soonest.deliveryWindow.charAt(0).toLowerCase()}${soonest.deliveryWindow.slice(1)} ${soonest.label.split(" · ")[0]}`,
+        fee,
+        saving: Math.max(0, now - fee),
+      };
+    }
+
+    // On a run. Only worth saying a car exists at all, and only when it
+    // costs more, because a cheaper one would already have been chosen.
+    const soon = slots[0];
+    if (!soon) return null;
+    const fee = sameDayFeeFor(items, soon.urgent, sameDayBands, shop?.sameDay?.urgentExtra ?? 0);
+    return fee > runFee
+      ? { runId: "", at: soon.at, said: `${aroundPhrase(soon.at)} ${soon.day}`, fee, saving: 0 }
+      : null;
+  })();
+
   // What a promotion does to this cart, worked out by the shop because that
   // is where the rules are. It prices delivery outright, so it wins over the
   // ladder and over the same day figure alike.
@@ -375,6 +419,38 @@ export default function Checkout() {
         {/* An estimate, and said to be one: four o'clock to the minute is a
             promise nobody can keep in Lagos traffic. */}
         <Text style={{ color: T.muted }}>{ESTIMATE_NOTE}</Text>
+
+        {/* The other way of getting it here, and a way to take it. A car of
+            its own can be two and a half thousand dearer than waiting for a
+            run, and nobody should pay that without being told there was
+            another way. It reads as a button because it is one: a sentence
+            people cannot tell is tappable is a sentence they never tap. */}
+        {otherWay && (
+          <Pressable
+            onPress={() => {
+              if (picked) {
+                setDeliverAt("");
+                setRunId(otherWay.runId);
+              } else {
+                setDeliverAt(otherWay.at);
+              }
+            }}
+            style={{
+              backgroundColor: T.tint,
+              borderRadius: 12,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+            }}
+          >
+            <Text style={{ color: T.brandDark, fontWeight: "700" }}>
+              {picked
+                ? `Rather pay less? ${otherWay.said} for ${naira(otherWay.fee)}` +
+                  (otherWay.saving > 0 ? `, ${naira(otherWay.saving)} less.` : ".")
+                : `Need it sooner? A car of its own can be there ${otherWay.said}, for ${naira(otherWay.fee)}.`}
+              <Text style={{ textDecorationLine: "underline" }}> Tap for that.</Text>
+            </Text>
+          </Pressable>
+        )}
 
         {noRunThere && (
           <Text style={{ color: T.brandDark, fontWeight: "700" }}>

@@ -128,12 +128,22 @@ export default function Home() {
       });
   }, []);
 
-  const arriving =
-    nextArrival(
-      (shop?.runs ?? []).filter((one) => !one.closed && !one.full),
-      shop?.sameDay?.slots ?? [],
-      lagosToday()
-    )?.said ?? "";
+  const runs = (shop?.runs ?? []).filter((one) => !one.closed && !one.full);
+  const slots = shop?.sameDay?.slots ?? [];
+  const decided = nextArrival(runs, slots, lagosToday());
+  const arriving = decided?.said ?? "";
+
+  // The other way, for whoever the headline does not suit. Somebody who
+  // wants dinner tonight and somebody who wants it cheap both open this,
+  // and one sentence naming a run five days out sends the first of them
+  // away. Asked of the same rule twice, once with only runs and once with
+  // only cars, so the wording cannot drift from it.
+  const other = decided
+    ? decided.onARun
+      ? nextArrival([], slots, lagosToday())
+      : nextArrival(runs, [], lagosToday())
+    : null;
+  const also = other && other.said !== decided?.said ? other : null;
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
@@ -171,18 +181,34 @@ export default function Home() {
             the shop works and none about dinner. */}
         {arriving !== "" && (
           <Pressable
-            onPress={() => router.push("/(tabs)/cart")}
+            /* It used to go to the cart, which is where somebody goes when
+               they have already chosen. This is the top of the page: they
+               have not. */
+            onPress={() => router.push("/products" as never)}
             style={{
               borderWidth: 2,
               borderColor: "rgba(255,90,31,0.3)",
               backgroundColor: T.tint,
               borderRadius: T.radius,
               padding: 14,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
             }}
           >
-            <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink }}>
-              Order now, get it {arriving}
-            </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink }}>
+                Order now, get it {arriving}
+              </Text>
+              {also && (
+                <Text style={{ color: T.ink, opacity: 0.75, marginTop: 4 }}>
+                  {decided?.onARun
+                    ? `In a hurry? A car of its own can be there ${also.said}, for more.`
+                    : `Rather pay less? A run gets it to you ${also.said}.`}
+                </Text>
+              )}
+            </View>
+            <Text style={{ color: T.brand, fontWeight: "800" }}>Browse</Text>
           </Pressable>
         )}
 
