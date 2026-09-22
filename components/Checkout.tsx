@@ -460,6 +460,17 @@ export default function Checkout({
       ? `${aroundPhrase(sameDay.at)} ${sameDay.day}`
       : "on the next run";
 
+  // The same arrival as a line of its own rather than the tail of a
+  // sentence: "Between 3:30pm and 5:30pm, Saturday, 26 Sept". Beside the
+  // delivery fee, where what the money buys is the question being asked.
+  const arrivingWhen = onARun
+    ? runNow
+      ? runArrival(runNow).when
+      : ""
+    : sameDay
+      ? `${aroundPhrase(sameDay.at).charAt(0).toUpperCase()}${aroundPhrase(sameDay.at).slice(1)} ${sameDay.day}`
+      : "";
+
   /*
    * Comparing one way of getting the food here with the other.
    *
@@ -1263,6 +1274,12 @@ export default function Checkout({
               : alreadyCharged > 0
                 ? `Delivery top-up (${itemCount + alreadyItems} items)`
                 : `Delivery (${itemCount} item${itemCount === 1 ? "" : "s"})`}
+            {/* When it lands, beside what it costs. The two decide each
+                other, and reading the total without the day meant scrolling
+                back up to find out what the money was buying. */}
+            {arrivingWhen !== "" && !noRunThere && (
+              <span className="block text-xs">{arrivingWhen}</span>
+            )}
           </span>
           <span>
             {shared && !sameDay
