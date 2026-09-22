@@ -182,6 +182,23 @@ export default function Checkout({
   const [batchId, setBatchId] = useState(
     adding?.batchId ?? decided?.runId ?? openable[0]?.id ?? ""
   );
+
+  // The run is picked once, when the page is drawn, and the cart can change
+  // after that. Adding something from Lekki to a cart that was going out
+  // tomorrow leaves tomorrow's run picked although it cannot carry it, so the
+  // page said "get it between 5pm and 7pm tomorrow" directly above "no run is
+  // going to Lekki/Ikoyi". Whenever the picked run cannot carry what is in
+  // the cart, it moves to one that can.
+  //
+  // Not while adding to an order already placed: that one is locked to its
+  // own run, which is the whole point of adding to it.
+  if (
+    adding === null &&
+    batchId !== "" &&
+    !openable.some((one) => one.id === batchId)
+  ) {
+    setBatchId(decided?.runId ?? openable[0]?.id ?? "");
+  }
   const [method, setMethod] = useState<"transfer" | "card">("transfer");
   const [mode, setMode] = useState<GroupMode>("one_payer");
   // Not asked: every friend has already said where their own food goes, and
@@ -716,23 +733,40 @@ export default function Checkout({
       <section className="card space-y-2">
         {/* Decided, not asked, and said the same way as the front page. A
             dropdown here asked somebody to know the fee ladder and the cut
-            off before they could buy lunch. */}
-        <h2 className="text-lg font-extrabold text-ink">Order now, get it {arriving}</h2>
+            off before they could buy lunch.
 
-        <p className="text-sm text-muted">
-          {onARun
-            ? "Everybody's food in one car, which is why it costs less."
-            : "A car of its own, because no run is going in time for this."}
-        </p>
+            Silent where nothing can carry the cart: there is no arrival to
+            promise, and the line under the basket already says what is
+            wrong and what to do about it. */}
+        {!noRunThere && (
+          <h2 className="text-lg font-extrabold text-ink">Order now, get it {arriving}</h2>
+        )}
+
+        {!noRunThere && (
+          <p className="text-sm text-muted">
+            {onARun
+              ? "Everybody's food in one car, which is why it costs less."
+              : "A car of its own, because no run is going in time for this."}
+          </p>
+        )}
 
         {/* Where the far half of a cart is concerned, the run is not a
             cheaper option, it is the only one: a car cannot be in Lekki and
             back in three hours. Said here rather than left to be worked out
             from a list of runs that is quietly shorter than usual. */}
+        {/* Why this cart behaves differently from a Sangotedo one, said
+            before somebody works it out from a shorter list of runs and a
+            dearer fee. Three facts, in the order they are asked about: why
+            there is no car of its own, why everything waits for the same
+            run, and why the delivery costs more. */}
         {far.length > 0 && !noRunThere && (
           <p className="text-sm font-semibold text-brand-dark">
-            {farNames} rides a run, so everything here travels together on
-            that one. One delivery, not two.
+            {farNames} only travels on a run, because a car of its own cannot
+            get there and back in time. Everything in this order rides that
+            same car, so it is one delivery fee and not two
+            {area.runExtra > 0
+              ? `, and that fee is ${naira(area.runExtra)} more than a Sangotedo one because it is a longer trip.`
+              : "."}
           </p>
         )}
 
