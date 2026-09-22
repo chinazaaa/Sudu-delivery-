@@ -50,7 +50,16 @@ export default async function AdminParcelsPage() {
         </p>
       )}
 
-      <form action={saveSettings} className="card mb-4 space-y-3">
+      {/* Keyed on what it is showing. React resets a form once its action
+          finishes, and an uncontrolled field goes back to the default it was
+          drawn with, so "On" saved and then read as "Off" until the page was
+          refreshed. A key that changes when the saved values change rebuilds
+          the fields around the new ones. */}
+      <form
+        key={`setup-${settings.parcel_on}-${setup.maxValue}-${settings.parcel_blurb}-${settings.parcel_terms}`}
+        action={saveSettings}
+        className="card mb-4 space-y-3"
+      >
         <h2 className="font-semibold">Carrying parcels</h2>
         <div>
           <label className="label" htmlFor="parcel_on">
@@ -120,7 +129,11 @@ export default async function AdminParcelsPage() {
         <SaveButton>Save</SaveButton>
       </form>
 
-      <form action={saveSettings} className="card space-y-3">
+      <form
+        key={`routes-${settings.parcel_routes}`}
+        action={saveSettings}
+        className="card space-y-3"
+      >
         <div>
           <h2 className="font-semibold">Routes and what they charge</h2>
           <p className="text-sm text-muted">
