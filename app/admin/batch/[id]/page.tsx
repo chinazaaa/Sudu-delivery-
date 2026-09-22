@@ -76,7 +76,10 @@ export default async function BatchPage({
   // handout, so is the run.
   const shopped = stageIndex(batch.stage) >= stageIndex("on_the_road");
   const finished = batch.stage === "handed_out";
-  const belowMinimum = summary.paidCount < summary.minimum;
+  // A run used to be judged against an eight order minimum. It is not the
+  // measure any more: one urgent same day order covers its own car. What
+  // matters is whether this run is actually losing money.
+  const losingMoney = summary.costs > 0 && summary.profit < 0;
 
   // Before a run is driven nobody has entered its fuel or driver, so profit
   // reads high at exactly the moment the decision to drive is made. What past
@@ -195,9 +198,11 @@ export default async function BatchPage({
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat
           label="Paid orders"
-          value={`${summary.paidCount}/${summary.minimum}`}
-          tone={belowMinimum ? "warn" : "good"}
-          hint={`${summary.unpaidCount} unpaid`}
+          value={`${summary.paidCount}`}
+          tone={summary.paidCount === 0 ? undefined : "good"}
+          hint={`${summary.paidCount + summary.unpaidCount} ordered${
+            summary.unpaidCount > 0 ? `, ${summary.unpaidCount} unpaid` : ""
+          }`}
         />
         <Stat label="Money collected" value={summary.gross} money />
         <Stat
@@ -301,10 +306,10 @@ export default async function BatchPage({
         </section>
       )}
 
-      {belowMinimum && (
+      {losingMoney && (
         <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Below the {summary.minimum}-order minimum. Cancel and refund in full, or
-          carry it. A short batch loses money the next one has to cover.
+          This run is {naira(Math.abs(summary.profit))} down after costs. Cancel
+          and refund in full, or carry it and make it back on the next one.
         </p>
       )}
 

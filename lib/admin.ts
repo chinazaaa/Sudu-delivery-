@@ -1,7 +1,6 @@
 import { db } from "./supabase";
 import { feeFor } from "./fees";
 import { activeBands } from "./settings";
-import { BATCH_MINIMUM } from "./config";
 import { getBatch } from "./batches";
 import { isGone, isPaid, NOT_ORDERS_SQL } from "./orders";
 import { groupShortfalls, refundsOwed, settleGroupFees, type GroupShortfall } from "./groups";
@@ -59,7 +58,6 @@ export type BatchSheet = {
   summary: {
     paidCount: number;
     unpaidCount: number;
-    minimum: number;
     gross: number;
     foodCost: number;
     /** What the menu prices came to, for comparison with what was paid. */
@@ -188,7 +186,6 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
     summary: {
       paidCount: paid.length,
       unpaidCount: unpaid.length,
-      minimum: BATCH_MINIMUM,
       gross: sum(paid, (o) => o.total),
       foodCost,
       /** What the menu said it would cost, so the saving can be shown. */

@@ -58,7 +58,7 @@ export function sheetAsText(sheet: BatchSheet, batchLabel: string): string {
 
   lines.push(
     "",
-    `${sheet.summary.paidCount} paid orders, minimum ${sheet.summary.minimum}`,
+    `${sheet.summary.paidCount} paid of ${sheet.summary.paidCount + sheet.summary.unpaidCount} orders`,
     `food ${naira(sheet.summary.foodCost)}, net ${naira(sheet.summary.net)} before fuel`
   );
   return lines.join("\n");

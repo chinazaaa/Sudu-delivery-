@@ -53,6 +53,9 @@ export type OrderCardData = {
   runStage: BatchStage;
   customerNote: string;
   adminNote: string;
+  /** The promoter whose customer this is, if anybody brought them. This is
+   *  what commission on a run is charged against. */
+  promoter: { code: string; name: string } | null;
   /** What they were told to type in the transfer. */
   narration: string;
   lines: OrderCardLine[];
@@ -111,6 +114,16 @@ export default function OrderCard({
           <p className="text-sm text-muted">
             {order.batchLabel} · {order.hostel} · {formatPhone(order.phone)}
           </p>
+          {order.promoter && (
+            <Link
+              href={`/admin/orders?status=all&promoter=${encodeURIComponent(
+                order.promoter.code
+              )}`}
+              className="text-sm font-semibold text-muted hover:text-brand"
+            >
+              Brought in by {order.promoter.name}
+            </Link>
+          )}
           {order.status !== "pending" && order.runStage !== "ordering" && (
             <p className="text-sm font-semibold text-muted">
               They are seeing: {STAGE_LABEL[order.runStage]}

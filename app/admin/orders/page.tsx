@@ -36,7 +36,12 @@ const TABS: { value: string; label: string }[] = [
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; batch?: string; q?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    batch?: string;
+    q?: string;
+    promoter?: string;
+  }>;
 }) {
   const query = await searchParams;
   const tab = TABS.some((item) => item.value === query.status)
@@ -51,6 +56,7 @@ export default async function OrdersPage({
       batchId: query.batch ?? null,
       paymentMethod: tab === "card" ? "card" : null,
       search: query.q,
+      promoter: query.promoter ?? null,
     }),
     batchOverview(),
     getSettings(),
@@ -58,6 +64,11 @@ export default async function OrdersPage({
   ]);
   // The account every payment message quotes: the first on the list.
   const bank = (await payableAccounts(settings))[0] ?? null;
+  // The promoter's name, when the list has been narrowed to one. Read off the
+  // orders themselves, so it costs nothing extra.
+  const promoterName = query.promoter
+    ? orders.find((order) => order.promoter?.code === query.promoter)?.promoter?.name ?? null
+    : null;
 
   const unpaidTotal = orders
     .filter((order) => order.status === "pending")
@@ -68,7 +79,13 @@ export default async function OrdersPage({
 
   const link = (next: Record<string, string | undefined>) => {
     const params = new URLSearchParams();
-    const merged = { status: tab, batch: query.batch, q: query.q, ...next };
+    const merged = {
+      status: tab,
+      batch: query.batch,
+      q: query.q,
+      promoter: query.promoter,
+      ...next,
+    };
     for (const [key, value] of Object.entries(merged)) {
       if (value) params.set(key, value);
     }
@@ -103,6 +120,20 @@ export default async function OrdersPage({
         />
       </div>
 
+      {/* Arrived here from a promoter. Say so plainly, and give one tap back
+          out of it, so a short list is never mistaken for a quiet week. */}
+      {query.promoter && (
+        <p className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl bg-brand-tint px-4 py-3 text-sm text-brand-dark">
+          <span className="font-semibold">
+            Only orders brought in by{" "}
+            {promoterName ?? query.promoter}
+          </span>
+          <Link href={link({ promoter: "" })} className="chip border-black/10 bg-white">
+            Show everyone
+          </Link>
+        </p>
+      )}
+
       <div className="no-scrollbar -mx-4 mb-3 flex gap-2 overflow-x-auto px-4">
         {TABS.map((item) => (
           <Link
@@ -121,6 +152,9 @@ export default async function OrdersPage({
 
       <form className="mb-4 flex flex-wrap gap-2" action="/admin/orders">
         <input type="hidden" name="status" value={tab} />
+        {query.promoter && (
+          <input type="hidden" name="promoter" value={query.promoter} />
+        )}
         <input
           name="q"
           defaultValue={query.q ?? ""}

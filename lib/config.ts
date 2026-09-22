@@ -3,9 +3,6 @@
 
 /** Delivery is banded by item count. See lib/fees.ts. */
 
-/** Orders below this and the batch loses money. Internal, never shown. */
-export const BATCH_MINIMUM = 8;
-
 /** Nigeria does not observe DST, so this is a fixed +01:00 all year. */
 export const TZ = "Africa/Lagos";
 

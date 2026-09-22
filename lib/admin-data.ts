@@ -24,6 +24,9 @@ export type FeedOrder = Order & {
   /** In a shared delivery that has not closed, so it has no fee yet and
    *  marking it paid would take the food money alone. */
   awaitingGroup: boolean;
+  /** Who brought this customer, so commission on a run has a name against
+   *  it rather than only a number. Null when nobody did. */
+  promoter: { code: string; name: string } | null;
 };
 
 export type OrderFilter = {
@@ -32,6 +35,8 @@ export type OrderFilter = {
   /** "card" narrows to the people waiting on a card link. */
   paymentMethod?: "transfer" | "card" | null;
   search?: string;
+  /** A promoter's code, to show only the orders they brought in. */
+  promoter?: string | null;
   limit?: number;
 };
 
@@ -76,6 +81,16 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
     );
   }
 
+  const promoters = await promoterMap(orders.map((o) => o.customer_phone));
+
+  // Narrowed here rather than in the query: whose promoter a customer is
+  // lives on the customer, not the order, so there is nothing to filter on
+  // in the orders table itself.
+  const wanted = filter.promoter?.trim();
+  if (wanted) {
+    orders = orders.filter((order) => promoters.get(order.customer_phone)?.code === wanted);
+  }
+
   const lines = await linesFor(orders.map((o) => o.id));
   const batches = await batchMap(orders.map((o) => o.batch_id));
   const pins = await pinMap(orders.map((o) => o.customer_phone));
@@ -114,8 +129,45 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
       slot: batch?.slot ?? "afternoon",
       pin: pins.get(order.customer_phone) ?? null,
       awaitingGroup: order.group_id ? stillOpen.has(order.group_id) : false,
+      promoter: promoters.get(order.customer_phone) ?? null,
     };
   });
+}
+
+/**
+ * Who brought each of these customers. Two reads rather than a join, because
+ * customers and promoters are separate tables with no foreign key between
+ * them: the code is written onto the customer as text.
+ *
+ * Tolerant throughout. A promoter's name is a nicety on an order card, and
+ * must never be able to take the orders list down.
+ */
+async function promoterMap(
+  phones: string[]
+): Promise<Map<string, { code: string; name: string }>> {
+  const unique = [...new Set(phones.filter(Boolean))];
+  const map = new Map<string, { code: string; name: string }>();
+  if (unique.length === 0) return map;
+
+  const [{ data: customers, error }, { data: promoters }] = await Promise.all([
+    db().from("customers").select("phone, promoter_code").in("phone", unique),
+    db().from("promoters").select("code, name"),
+  ]);
+  if (error) return map;
+
+  const names = new Map(
+    ((promoters ?? []) as { code: string; name: string }[]).map((one) => [
+      one.code,
+      one.name || one.code,
+    ])
+  );
+
+  for (const row of (customers ?? []) as { phone: string; promoter_code?: string | null }[]) {
+    const code = (row.promoter_code ?? "").trim();
+    if (!code) continue;
+    map.set(row.phone, { code, name: names.get(code) ?? code });
+  }
+  return map;
 }
 
 /** Shared deliveries among these groups that have not closed yet. */

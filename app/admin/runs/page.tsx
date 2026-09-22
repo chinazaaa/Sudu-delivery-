@@ -17,7 +17,7 @@ import {
 } from "../actions";
 import { runSchedule, WEEKDAYS } from "@/lib/schedule";
 import SaveButton from "@/components/SaveButton";
-import { BATCH_MINIMUM, SLOT_LABEL } from "@/lib/config";
+import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
 import { clockLabel, runDateLabel } from "@/lib/time";
 import ActionButton from "@/components/admin/ActionButton";
@@ -301,7 +301,6 @@ export default async function RunsPage({
             !past &&
             index > 0 &&
             new Date(batches[index - 1].cut_off_at).getTime() <= Date.now();
-          const short = batch.paidCount < BATCH_MINIMUM;
           const open = batch.status === "open";
           return (
             <li key={batch.id}>
@@ -351,12 +350,16 @@ export default async function RunsPage({
                 </div>
                 <div className="shrink-0 text-right">
                   <p
-                    className={`text-xl font-extrabold ${short ? "text-brand" : "text-mint"}`}
+                    className={`text-xl font-extrabold ${
+                      batch.paidCount === 0 ? "text-muted" : "text-mint"
+                    }`}
                   >
-                    {batch.paidCount}/{BATCH_MINIMUM}
+                    {batch.paidCount} paid
                   </p>
                   <p className="text-xs text-muted">
-                    {batch.orderCount - batch.paidCount} unpaid
+                    {batch.orderCount} ordered
+                    {batch.orderCount > batch.paidCount &&
+                      ` · ${batch.orderCount - batch.paidCount} unpaid`}
                   </p>
                   {batch.orderCount === 0 && (
                     <p className="mt-1 text-xs text-muted">Nothing ordered yet</p>

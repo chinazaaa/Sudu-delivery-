@@ -9,7 +9,7 @@ import { abandonedCarts } from "@/lib/carts";
 import { safeSettings } from "@/lib/settings";
 import { diagnoseEmpty, keyKind } from "@/lib/health";
 import { tendBatches } from "@/lib/batches";
-import { BATCH_MINIMUM, SLOT_LABEL } from "@/lib/config";
+import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
 import { clockLabel, runDateLabel } from "@/lib/time";
 
@@ -204,12 +204,17 @@ export default async function AdminHome() {
                           Closes {clockLabel(batch.cut_off_at)}
                         </span>
                       </span>
-                      <span
-                        className={`shrink-0 font-bold ${
-                          batch.paidCount < BATCH_MINIMUM ? "text-brand" : "text-mint"
-                        }`}
-                      >
-                        {batch.paidCount}/{BATCH_MINIMUM}
+                      <span className="shrink-0 text-right">
+                        <span
+                          className={`block font-bold ${
+                            batch.paidCount === 0 ? "text-muted" : "text-mint"
+                          }`}
+                        >
+                          {batch.paidCount} paid
+                        </span>
+                        <span className="block text-xs text-muted">
+                          {batch.orderCount} ordered
+                        </span>
                       </span>
                     </Link>
                   </li>

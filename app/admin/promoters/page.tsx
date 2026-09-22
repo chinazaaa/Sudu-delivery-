@@ -1,3 +1,4 @@
+import Link from "next/link";
 import SaveButton from "@/components/SaveButton";
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
@@ -170,6 +171,16 @@ export default async function PromotersAdmin({
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
+                {/* The orders behind the number. Commission is worked out per
+                    order, so the list has to be reachable from the figure. */}
+                <Link
+                  href={`/admin/orders?status=all&promoter=${encodeURIComponent(
+                    promoter.code
+                  )}`}
+                  className="chip border-black/10 bg-white hover:border-ink/30"
+                >
+                  See their orders
+                </Link>
                 <a
                   href={
                     promoter.phone

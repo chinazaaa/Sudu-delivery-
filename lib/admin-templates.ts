@@ -85,6 +85,7 @@ export function toCard(
         : null,
     groupSize: order.groupOrders.length,
     runStage: order.batchStage,
+    promoter: order.promoter ?? null,
     customerNote: order.customer_note ?? "",
     adminNote: order.admin_note ?? "",
     narration: narration(order, order.groupOrders),
