@@ -111,7 +111,15 @@ export type Batch = {
   settled_at: string | null;
 };
 
-export type OrderStatus = "pending" | "paid" | "refunded" | "delivered";
+/** "cancelled" is only ever an order nobody paid for: a test, a duplicate,
+ *  somebody who changed their mind before any money moved. Money that has
+ *  moved needs a refund, which is what "refunded" is for. */
+export type OrderStatus =
+  | "pending"
+  | "paid"
+  | "refunded"
+  | "delivered"
+  | "cancelled";
 
 export type Order = {
   id: string;

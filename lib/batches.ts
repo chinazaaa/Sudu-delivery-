@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { NOT_ORDERS_SQL } from "./orders";
 import { deliveryWindows, safeSettings } from "./settings";
 import { runSchedule } from "./schedule";
 import { RUN_HORIZON_DAYS, TZ } from "./config";
@@ -345,7 +346,7 @@ export async function orderCounts(batchIds: string[]): Promise<Map<string, numbe
     .from("orders")
     .select("batch_id")
     .in("batch_id", batchIds)
-    .neq("status", "refunded");
+    .not("status", "in", NOT_ORDERS_SQL);
   if (error) throw new Error(error.message);
 
   for (const row of data ?? []) {
@@ -416,6 +417,39 @@ export async function createSameDayBatch(args: {
   label: string;
 }): Promise<Batch | null> {
   const at = new Date(args.deliverAt);
+
+  /*
+   * One car, not one per order.
+   *
+   * Every same day order used to make its own batch, so two people asking
+   * for half past twelve made two cars on the run sheet for one trip
+   * somebody was going to drive once. Three of them today.
+   *
+   * A car of its own is still a car of its own as far as the price goes:
+   * each of those orders pays the same day fee, because each of them asked
+   * for a trip at a time nobody else had picked. What is shared is the
+   * driving, and the sheet should say what is driven.
+   *
+   * Only one still being shopped for. Past that the food has been bought
+   * and the car has gone, so a later order is genuinely a second trip. The
+   * cut off on these is set to the moment they are made, so the status is
+   * no use as a gate; the stage is what says where the car has got to.
+   */
+  const { data: already } = await db()
+    .from("batches")
+    .select("*")
+    .eq("kind", "same_day")
+    .eq("deliver_at", args.deliverAt)
+    .in("stage", ["ordering", "closed"])
+    .neq("status", "cancelled")
+    // Batches have no created_at, so the cut off is what orders them. On a
+    // same day car it is the moment the car was made, which is the same
+    // thing said another way.
+    .order("cut_off_at", { ascending: true })
+    .limit(1);
+
+  const sharing = (already ?? [])[0] as Batch | undefined;
+  if (sharing) return sharing;
 
   const { data, error } = await db()
     .from("batches")

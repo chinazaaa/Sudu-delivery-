@@ -166,6 +166,33 @@ export async function refundOrder(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
 }
 
+/**
+ * Calling off an order nobody paid for.
+ *
+ * A test, a duplicate, somebody who changed their mind before any money
+ * moved. Deleting it would take the row out of the books and leave a gap in
+ * the numbering nobody could explain later, so it is cancelled instead: it
+ * still exists and says what happened, and every count leaves it out.
+ *
+ * Refused the moment money has moved, whatever the form says, because that
+ * is a refund and a refund is somebody being given something back.
+ */
+export async function cancelOrder(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const id = String(form.get("order_id"));
+  const { data: order } = await db()
+    .from("orders")
+    .select("paid_at, status")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!order || order.paid_at || order.status !== "pending") return;
+
+  await db().from("orders").update({ status: "cancelled" }).eq("id", id);
+  revalidatePath("/admin", "layout");
+}
+
 export async function setBatchStatus(form: FormData): Promise<void> {
   await assertAdmin();
   await db()

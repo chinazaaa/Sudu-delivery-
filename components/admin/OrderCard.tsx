@@ -70,6 +70,7 @@ export default function OrderCard({
   markPaid,
   markDelivered,
   refund,
+  cancel,
   savePaymentLink,
   saveNote,
 }: {
@@ -77,6 +78,7 @@ export default function OrderCard({
   markPaid: (form: FormData) => Promise<void>;
   markDelivered: (form: FormData) => Promise<void>;
   refund: (form: FormData) => Promise<void>;
+  cancel: (form: FormData) => Promise<void>;
   savePaymentLink: (form: FormData) => Promise<void>;
   saveNote: (form: FormData) => Promise<void>;
 }) {
@@ -201,7 +203,7 @@ export default function OrderCard({
               Mark paid and message
             </ConfirmButton>
           </form>
-        ) : order.status === "paid" ? (
+        ) : order.status === "cancelled" ? null : order.status === "paid" ? (
           <form action={markDelivered}>
             <input type="hidden" name="order_id" value={order.id} />
             <ConfirmButton className="px-4 py-2 text-sm" confirm="Yes, delivered">
@@ -334,14 +336,25 @@ export default function OrderCard({
             >
               Open customer page
             </Link>
-            {order.status !== "refunded" && (
+            {/* Cancelling is for an order nobody paid for: a test, a
+                duplicate, somebody who changed their mind before any money
+                moved. Once money has moved it is a refund, which is a
+                different thing, so the two are never offered together. */}
+            {order.status === "pending" ? (
+              <form action={cancel}>
+                <input type="hidden" name="order_id" value={order.id} />
+                <ConfirmButton tone="brand" confirm="Yes, cancel it">
+                  Cancel this order
+                </ConfirmButton>
+              </form>
+            ) : order.status !== "refunded" && order.status !== "cancelled" ? (
               <form action={refund}>
                 <input type="hidden" name="order_id" value={order.id} />
                 <ConfirmButton tone="brand" confirm={`Yes, refund ${naira(order.total)}`}>
                   Refund
                 </ConfirmButton>
               </form>
-            )}
+            ) : null}
           </div>
         </div>
       )}
@@ -353,7 +366,7 @@ function StatusPill({ status }: { status: string }) {
   const tone =
     status === "pending"
       ? "bg-brand-tint text-brand-dark"
-      : status === "refunded"
+      : status === "refunded" || status === "cancelled"
         ? "bg-black/5 text-muted"
         : "bg-mint/10 text-mint";
   return (

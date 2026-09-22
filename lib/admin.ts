@@ -3,6 +3,7 @@ import { feeFor } from "./fees";
 import { activeBands } from "./settings";
 import { BATCH_MINIMUM } from "./config";
 import { getBatch } from "./batches";
+import { NOT_ORDERS_SQL } from "./orders";
 import { groupShortfalls, refundsOwed, settleGroupFees, type GroupShortfall } from "./groups";
 import { linesFor, type OrderLine } from "./orders";
 import type { Batch, Order, Promoter } from "./types";
@@ -97,7 +98,7 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
     .from("orders")
     .select("*")
     .eq("batch_id", batchId)
-    .neq("status", "refunded")
+    .not("status", "in", NOT_ORDERS_SQL)
     .order("customer_name", { ascending: true });
   if (error) throw new Error(error.message);
 
@@ -545,7 +546,8 @@ export async function batchOverview(window: "recent" | "all" = "recent"): Promis
   const { data: orders } = await db()
     .from("orders")
     .select("id, batch_id, status, total, subtotal_food")
-    .in("batch_id", rows.map((b) => b.id));
+    .in("batch_id", rows.map((b) => b.id))
+    .not("status", "in", NOT_ORDERS_SQL);
 
   const all = (orders ?? []) as Pick<
     Order,

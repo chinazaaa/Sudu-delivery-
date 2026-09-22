@@ -107,6 +107,17 @@ export type PlaceOrderInput = {
   closingGroup?: boolean;
 };
 
+/**
+ * Orders that are not really orders any more.
+ *
+ * Refunded money went back, and cancelled never left: neither is food
+ * anybody is buying, so neither belongs in a count, on a run sheet or in a
+ * day's takings. Kept in one place so that adding a third kind of gone is
+ * one edit rather than a hunt through twenty queries.
+ */
+export const NOT_ORDERS = ["refunded", "cancelled"] as const;
+export const NOT_ORDERS_SQL = `(${NOT_ORDERS.join(",")})`;
+
 export type PlaceOrderResult =
   | { ok: true; orderId: string; groupId?: string; sharedGroupId?: string }
   | { ok: false; error: string };

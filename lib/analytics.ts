@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { NOT_ORDERS_SQL } from "./orders";
 import { SLOT_LABEL } from "./config";
 import { runDateLabel } from "./time";
 
@@ -161,7 +162,8 @@ export async function funnel(days = 7): Promise<Funnel> {
     const { count } = await db()
       .from("orders")
       .select("id", { count: "exact", head: true })
-      .gte("created_at", since);
+      .gte("created_at", since)
+      .not("status", "in", NOT_ORDERS_SQL);
     orders = count ?? 0;
   } catch {
     /* As above. */
@@ -172,7 +174,8 @@ export async function funnel(days = 7): Promise<Funnel> {
       .from("orders")
       .select("id", { count: "exact", head: true })
       .gte("created_at", since)
-      .neq("status", "pending");
+      .neq("status", "pending")
+      .not("status", "in", NOT_ORDERS_SQL);
     paid = count ?? 0;
   } catch {
     /* As above. */
@@ -345,7 +348,8 @@ export async function shelfNumbers(days = 7): Promise<ShelfNumbers | null> {
     .from("orders")
     .select("id, batch_id, status, subtotal_food, fee")
     .in("batch_id", ids)
-    .gte("created_at", since);
+    .gte("created_at", since)
+    .not("status", "in", NOT_ORDERS_SQL);
 
   const rows = ((orders ?? []) as {
     id: string;
@@ -423,7 +427,7 @@ export async function boxNumbers(days = 28): Promise<BoxNumbers | null> {
     .select("box_id, subtotal_food, fee, paid_at")
     .gte("created_at", since)
     .not("box_id", "is", null)
-    .neq("status", "cancelled");
+    .not("status", "in", NOT_ORDERS_SQL);
 
   // The column is not there yet, which reads differently from nobody having
   // ordered a box.
