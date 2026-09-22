@@ -157,17 +157,32 @@ export default function Checkout({
       null
     );
   const goingThere = soonest(openable);
-  const goingSooner = soonest(
-    batches.filter(
-      (one) => !one.closed && !one.full && !openable.some((other) => other.id === one.id)
-    )
-  );
-  const farHoldsItUp =
-    far.length > 0 &&
-    farLines.length < cart.length &&
+
+  // What the rest of the cart could catch on its own, worked out the same way
+  // the shop works out every other arrival: a run today, a car of its own
+  // today, a run tomorrow, tomorrow's first window. Without the far food the
+  // cart is a Sangotedo one, so every open run can carry it and a car of its
+  // own is back on the table. Comparing runs alone named tomorrow night while
+  // a car could have been there this afternoon.
+  const usableRuns = batches.filter((one) => !one.closed && !one.full);
+  const withoutFar = nextArrival(usableRuns.map(runArrival), allSlots, today);
+  const withoutFarRun = withoutFar?.onARun
+    ? usableRuns.find((one) => one.id === withoutFar.runId) ?? null
+    : null;
+
+  // Sooner than waiting for the run that goes there. A car of its own counts
+  // only where one could go today: one tomorrow is no better than tomorrow's
+  // run, and offering it as if it were is how somebody pays for a car to save
+  // nothing.
+  const restCouldComeSooner =
     goingThere !== null &&
-    goingSooner !== null &&
-    goingSooner.runDate < goingThere.runDate;
+    withoutFar !== null &&
+    (withoutFar.onARun
+      ? withoutFarRun !== null && withoutFarRun.runDate < goingThere.runDate
+      : allSlots.some((one) => one.day === "today") && goingThere.runDate > today);
+
+  const farHoldsItUp =
+    far.length > 0 && farLines.length < cart.length && restCouldComeSooner;
 
   // The soonest way to eat, the same rule as everywhere else: a run today, a
   // car of its own today, a run tomorrow, tomorrow's first window.
@@ -773,14 +788,14 @@ export default function Checkout({
         {/* Which of the two it is worth doing is theirs to decide, so both
             are named: the day the far food can come, and the day the rest
             could have come without it. */}
-        {farHoldsItUp && goingThere && goingSooner && (
+        {farHoldsItUp && goingThere && withoutFar && (
           <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm text-brand-dark">
             <span className="font-semibold">
               {goingThere.label} is the next run going to {farNames}.
             </span>{" "}
             Stay on it and everything comes together at the {farNames} fee, or
             take {farLines.length === 1 ? "that one" : "those"} out and the
-            rest can come on {goingSooner.label}.
+            rest can come {withoutFar?.said}.
           </p>
         )}
 
@@ -1358,8 +1373,8 @@ export default function Checkout({
                   somebody holding a cart with nothing to do about it. */}
               No run is going to {farNames} just now, and a car of its own
               cannot get there and back in time.{" "}
-              {farLines.length < cart.length && goingSooner
-                ? `Take ${farLines.length === 1 ? "that one" : "those"} out and the rest can come on ${goingSooner.label}.`
+              {farLines.length < cart.length && withoutFar
+                ? `Take ${farLines.length === 1 ? "that one" : "those"} out and the rest can come ${withoutFar.said}.`
                 : farLines.length < cart.length
                   ? `Take ${farLines.length === 1 ? "that one" : "those"} out and the rest can still come.`
                   : "Check back when the next one is up, or message us."}
