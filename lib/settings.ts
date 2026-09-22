@@ -235,7 +235,7 @@ export async function sameDayPricing(): Promise<{ bands: Band[]; urgentExtra: nu
   const settings = await safeSettings();
   return {
     bands: settings.same_day_bands ? parseBands(settings.same_day_bands) : SAME_DAY_BANDS,
-    urgentExtra: Number(settings.same_day_urgent_extra) || URGENT_EXTRA,
+    urgentExtra: numberOr(settings.same_day_urgent_extra, URGENT_EXTRA),
   };
 }
 
@@ -246,10 +246,27 @@ export async function sameDayPricing(): Promise<{ bands: Band[]; urgentExtra: nu
  * is a change of mind rather than a deploy, and so nothing anywhere has to
  * say "after six" in words that would then be wrong.
  */
+/**
+ * A number out of a setting, where zero is an answer.
+ *
+ * `Number(x) || fallback` reads as "use the setting unless it is missing",
+ * and means "use the setting unless it is missing or zero". The surcharge
+ * for a car leaving within the hour was set to nothing and silently became
+ * two thousand again, so an order for one shawarma was charged eight and a
+ * half where the ladder said six and a half. Blank and nonsense fall back;
+ * zero is what somebody typed and is kept.
+ */
+export function numberOr(raw: unknown, fallback: number): number {
+  const text = String(raw ?? "").trim();
+  if (text === "") return fallback;
+  const value = Number(text);
+  return Number.isFinite(value) ? value : fallback;
+}
+
 export async function deliveryHours(): Promise<{ first: number; last: number }> {
   const settings = await safeSettings();
-  const first = Number(settings.same_day_first_hour) || FIRST_DELIVERY_HOUR;
-  const last = Number(settings.same_day_last_hour) || LAST_DELIVERY_HOUR;
+  const first = numberOr(settings.same_day_first_hour, FIRST_DELIVERY_HOUR);
+  const last = numberOr(settings.same_day_last_hour, LAST_DELIVERY_HOUR);
   return first < last ? { first, last } : { first: FIRST_DELIVERY_HOUR, last: LAST_DELIVERY_HOUR };
 }
 

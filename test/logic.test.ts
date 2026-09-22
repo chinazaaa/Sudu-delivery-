@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import { containersIn } from "../lib/containers";
+import { numberOr } from "../lib/settings";
 import { test } from "node:test";
 import { groupForCounter } from "../lib/admin";
 import { normalisePhone, formatPhone } from "../lib/phone";
@@ -1586,4 +1587,12 @@ test("an item with no room set is a whole container", () => {
 
 test("a car still goes out for one bottle of water", () => {
   assert.equal(containersIn([{ qty: 1, container_pct: 25 }]), 1);
+});
+
+test("a setting of zero is an answer, not a missing setting", () => {
+  assert.equal(numberOr("0", 2000), 0);
+  assert.equal(numberOr("", 2000), 2000);
+  assert.equal(numberOr(null, 2000), 2000);
+  assert.equal(numberOr("nonsense", 2000), 2000);
+  assert.equal(numberOr("1500", 2000), 1500);
 });
