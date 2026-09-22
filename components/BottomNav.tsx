@@ -31,7 +31,10 @@ export default function BottomNav() {
   if (path.startsWith("/admin")) return null;
 
   const tabs = [
-    { href: "/", label: "Menu", icon: HomeIcon },
+    // Everything there is, one list with filters, rather than the front
+    // page's pick of restaurants. "Menu" is what somebody presses when they
+    // want to see the lot, on this bar and in the header alike.
+    { href: "/products", label: "Menu", icon: HomeIcon },
     { href: "/orders", label: "Orders", icon: ListIcon },
     // In a group this is the group itself; out of one it is the page about
     // ordering together, which is where starting one lives along with the

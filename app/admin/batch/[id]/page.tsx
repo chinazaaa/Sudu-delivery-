@@ -121,7 +121,14 @@ export default async function BatchPage({
   const host = requestHeaders.get("host") ?? "";
   const proto = requestHeaders.get("x-forwarded-proto") ?? "https";
   const siteUrl = host ? `${proto}://${host}` : "";
-  const batchLabel = `${runDateLabel(batch.run_date)} ${SLOT_LABEL[batch.slot]}`;
+  // A skincare drop borrows a run's date and slot, so titled like one it was
+  // indistinguishable from the Saturday run: the areas ticked on it were
+  // ticked on the wrong car, and the food run they were meant for carried on
+  // going nowhere. It says what it is.
+  const batchLabel =
+    batch.kind === "skincare"
+      ? `Skincare drop · ${runDateLabel(batch.run_date)}`
+      : `${runDateLabel(batch.run_date)} ${SLOT_LABEL[batch.slot]}`;
 
   // The wording is whatever the admin has written in settings, so one edit
   // changes the message everywhere it is offered.
@@ -1099,7 +1106,9 @@ export default async function BatchPage({
                     {areas.length > 0 && (
                       <div className="space-y-2 rounded-2xl bg-shell p-3">
                         <input type="hidden" name="areas_set" value="1" />
-                        <p className="label mb-0">Where this car goes</p>
+                        <p className="label mb-0">
+                          Where this {batch.kind === "skincare" ? "drop" : "car"} goes
+                        </p>
                         <p className="text-xs text-muted">
                           It always passes Sangotedo. Tick anywhere else it is
                           going, and those restaurants can be ordered onto it.

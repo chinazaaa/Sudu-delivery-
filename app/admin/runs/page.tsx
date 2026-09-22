@@ -321,7 +321,12 @@ export default async function RunsPage({
                   <p className="font-bold">
                     {batch.kind === "same_day"
                       ? batch.delivery_window_text || "Same day car"
-                      : `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`}
+                      : batch.kind === "skincare"
+                        ? // A drop borrows a run's date and slot too, and
+                          // titled like one it is the run, as far as anybody
+                          // reading this list can tell.
+                          `Skincare drop · ${runDateLabel(batch.run_date)}`
+                        : `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`}
                   </p>
                   <p className="text-sm text-muted">
                     {batch.kind === "same_day"
@@ -337,6 +342,11 @@ export default async function RunsPage({
                     {batch.kind === "same_day" && (
                       <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-bold text-brand-dark">
                         Same day
+                      </span>
+                    )}
+                    {batch.kind === "skincare" && (
+                      <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-bold text-brand-dark">
+                        Skincare, not food
                       </span>
                     )}
                     <span
