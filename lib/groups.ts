@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { NOT_ORDERS_SQL } from "./orders";
 import { evenShare, feeFor, isUrgent, sameDayFee, splitFee } from "./fees";
 import { activeBands, sameDayPricing } from "./settings";
 import {
@@ -241,7 +242,7 @@ export async function groupOrders(groupId: string): Promise<Order[]> {
     .from("orders")
     .select("*")
     .eq("group_id", groupId)
-    .neq("status", "refunded")
+    .not("status", "in", NOT_ORDERS_SQL)
     .order("created_at");
   return (data ?? []) as Order[];
 }

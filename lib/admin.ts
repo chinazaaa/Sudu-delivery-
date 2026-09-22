@@ -428,7 +428,7 @@ export async function sameDayTrips(): Promise<SameDayTrip[]> {
     .from("orders")
     .select("id, batch_id, status, total")
     .in("batch_id", everyId)
-    .neq("status", "refunded");
+    .not("status", "in", NOT_ORDERS_SQL);
 
   const live = (orders ?? []) as {
     id: string;
@@ -494,7 +494,7 @@ export async function tripSheet(at: string): Promise<TripSheet | null> {
     .from("orders")
     .select("*")
     .in("batch_id", cluster.batchIds)
-    .neq("status", "refunded")
+    .not("status", "in", NOT_ORDERS_SQL)
     .order("customer_name");
 
   const orders = (data ?? []) as Order[];
@@ -683,7 +683,7 @@ export async function promoterRows(): Promise<PromoterRow[]> {
   const { data: orders } = await db()
     .from("orders")
     .select("status, customer_phone")
-    .neq("status", "refunded");
+    .not("status", "in", NOT_ORDERS_SQL);
   const { data: payouts } = await db()
     .from("promoter_payouts")
     .select("id, promoter_code, amount, note, paid_at, confirmed_at")
@@ -830,7 +830,7 @@ export async function shortfalls(batchId: string): Promise<Shortfall[]> {
       .from("orders")
       .select("id, customer_name, for_name, customer_phone, fee, total, status")
       .eq("group_id", group.id as string)
-      .neq("status", "refunded");
+      .not("status", "in", NOT_ORDERS_SQL);
 
     const orders = rows ?? [];
     if (orders.length === 0) continue;

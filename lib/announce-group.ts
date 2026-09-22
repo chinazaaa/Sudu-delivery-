@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { NOT_ORDERS_SQL } from "./orders";
 import { emailAdmins } from "./email";
 import { renderEmail, renderText, type Block } from "./email-html";
 import { siteUrl } from "./admin-templates";
@@ -32,7 +33,7 @@ export async function announceGroup(groupId: string): Promise<void> {
       .from("orders")
       .select("id, order_no, customer_name, customer_phone, subtotal_food, fee, total")
       .eq("group_id", groupId)
-      .neq("status", "refunded")
+      .not("status", "in", NOT_ORDERS_SQL)
       .order("created_at");
 
     const rows = orders ?? [];

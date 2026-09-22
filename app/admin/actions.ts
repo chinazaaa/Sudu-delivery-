@@ -19,7 +19,7 @@ import {
   openRunsBetween,
 } from "@/lib/batches";
 import { closeGroup } from "@/lib/groups";
-import { moveOrder } from "@/lib/orders";
+import { moveOrder, NOT_ORDERS_SQL } from "@/lib/orders";
 import { canTravel, groupCarts } from "@/lib/group-carts";
 import {
   deleteCheckoutLink,
@@ -584,7 +584,7 @@ async function orderCount(batchId: string): Promise<number> {
     .from("orders")
     .select("id", { count: "exact", head: true })
     .eq("batch_id", batchId)
-    .neq("status", "refunded");
+    .not("status", "in", NOT_ORDERS_SQL);
   return count ?? 0;
 }
 
@@ -1626,7 +1626,7 @@ export async function setBatchStage(form: FormData): Promise<void> {
           .select("customer_phone")
           .eq("batch_id", batchId)
           .neq("status", "pending")
-          .neq("status", "refunded");
+          .not("status", "in", NOT_ORDERS_SQL);
 
         const phones = [
           ...new Set(((data ?? []) as { customer_phone: string }[]).map((row) => row.customer_phone)),

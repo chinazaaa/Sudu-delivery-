@@ -1045,7 +1045,7 @@ export async function existingLoad(
     .select("*")
     .eq("batch_id", batchId)
     .eq("customer_phone", phone)
-    .neq("status", "refunded");
+    .not("status", "in", NOT_ORDERS_SQL);
 
   const orders = (data ?? []) as Order[];
   if (orders.length === 0) return { items: 0, feeCharged: 0, orders };
@@ -1096,7 +1096,7 @@ export async function deliveryLoad(
     .select("*")
     .eq("batch_id", batchId)
     .or(`id.eq.${rootId},shared_with.eq.${rootId}`)
-    .neq("status", "refunded");
+    .not("status", "in", NOT_ORDERS_SQL);
 
   const orders = (data ?? []) as Order[];
   if (orders.length === 0) return { items: 0, feeCharged: 0, orders };
@@ -1717,7 +1717,7 @@ export async function lastOrderForPhone(phone: string): Promise<FullOrder | null
     .from("orders")
     .select("id")
     .eq("customer_phone", phone)
-    .neq("status", "refunded")
+    .not("status", "in", NOT_ORDERS_SQL)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -1732,7 +1732,7 @@ export async function openOrderForPhone(
     .from("orders")
     .select("batch_id, batches!inner(status, cut_off_at)")
     .eq("customer_phone", phone)
-    .neq("status", "refunded")
+    .not("status", "in", NOT_ORDERS_SQL)
     .eq("batches.status", "open")
     .gt("batches.cut_off_at", new Date().toISOString())
     .order("created_at", { ascending: false })

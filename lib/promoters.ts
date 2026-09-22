@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { NOT_ORDERS_SQL } from "./orders";
 import { SLOT_LABEL, type BatchSlot } from "./config";
 import { runDateLabel } from "./time";
 import { NUDGE_DEFAULT } from "./messages";
@@ -138,7 +139,9 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
   const { data: everyOrder } = await db()
     .from("orders")
     .select("id, batch_id, status, customer_name, customer_phone, total")
-    .neq("status", "refunded");
+    // Refunded money went back and cancelled never left, so neither is a
+    // sale anybody brought in and neither earns a commission.
+    .not("status", "in", NOT_ORDERS_SQL);
 
   const orders = ((everyOrder ?? []) as { customer_phone: string }[]).filter((one) =>
     mineOnly.has(one.customer_phone)
