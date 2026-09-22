@@ -6,6 +6,7 @@ import { safeSettings } from "@/lib/settings";
 import Link from "next/link";
 import { liveRoutes, parcelsFrom, TERMS_DEFAULT } from "@/lib/parcels";
 import { parcelJobs } from "@/lib/parcel-jobs";
+import { PARCEL_ACTION } from "@/lib/stages";
 import { lagosToday, runDateLabel } from "@/lib/time";
 import { naira } from "@/lib/money";
 import { saveSettings } from "../actions";
@@ -34,6 +35,17 @@ export default async function AdminParcelsPage() {
     .filter((one) => one.goesOn !== "" && one.goesOn >= today)
     .sort((a, b) => a.goesOn.localeCompare(b.goesOn));
   const done = jobs.filter((one) => one.goesOn !== "" && one.goesOn < today);
+
+  // Grouped by the day they go, soonest first, and by route inside a day so
+  // the ones sharing a car sit together.
+  const byDay = [...new Map(coming.map((one) => [one.goesOn, [] as typeof coming])).entries()]
+    .map(([day]) => {
+      const mine = coming
+        .filter((one) => one.goesOn === day)
+        .sort((a, b) => a.route.localeCompare(b.route));
+      return [day, mine] as const;
+    })
+    .sort((a, b) => a[0].localeCompare(b[0]));
 
   const { count: waiting } = await db()
     .from("orders")
@@ -79,7 +91,25 @@ export default async function AdminParcelsPage() {
               today={today}
             />
           )}
-          {coming.length > 0 && <Pile title="Coming up" jobs={coming} today={today} />}
+          {/* By the day, because the day is the promise. Five parcels for
+              Saturday is one journey with five drops, and a flat list of
+              five is five chances to forget one. */}
+          {byDay.map(([day, ofThatDay]) => (
+            <Pile
+              key={day}
+              title={`${day === today ? "Today" : runDateLabel(day)} · ${
+                ofThatDay.length
+              } parcel${ofThatDay.length === 1 ? "" : "s"}${
+                ofThatDay.every((one) => one.stage === "handed_out")
+                  ? ", all handed over"
+                  : `, ${ofThatDay.filter((one) => one.stage !== "handed_out").length} still to do`
+              }`}
+              tone={day === today ? "warn" : undefined}
+              jobs={ofThatDay}
+              today={today}
+              showDay={false}
+            />
+          ))}
           {done.length > 0 && (
             <Pile title="Been and gone" jobs={done.slice(0, 10)} today={today} />
           )}
@@ -193,11 +223,15 @@ function Pile({
   jobs,
   today,
   tone,
+  showDay = true,
 }: {
   title: string;
   jobs: Awaited<ReturnType<typeof parcelJobs>>;
   today: string;
   tone?: "warn";
+  /** False where the heading is already the day, so each row says what it is
+   *  carrying instead of repeating the date five times. */
+  showDay?: boolean;
 }) {
   return (
     <div>
@@ -217,16 +251,19 @@ function Pile({
             >
               <span className="min-w-0">
                 <span className="block font-semibold">
-                  {job.goesOn === ""
-                    ? job.wantedOn
-                      ? `They asked for ${runDateLabel(job.wantedOn)}`
-                      : "No day asked for"
-                    : job.goesOn === today
-                      ? "Today"
-                      : runDateLabel(job.goesOn)}
+                  {showDay
+                    ? job.goesOn === ""
+                      ? job.wantedOn
+                        ? `They asked for ${runDateLabel(job.wantedOn)}`
+                        : "No day asked for"
+                      : job.goesOn === today
+                        ? "Today"
+                        : runDateLabel(job.goesOn)
+                    : job.route}
                 </span>
                 <span className="block text-muted">
-                  {job.name} · {job.route}
+                  {job.name}
+                  {showDay ? ` · ${job.route}` : ""}
                   {job.item ? ` · ${job.item}` : ""}
                 </span>
               </span>
@@ -240,11 +277,16 @@ function Pile({
                 </span>
                 {/* What is still missing, which on the day is the question. */}
                 <span className="block text-xs text-muted">
-                  {job.photos.collected === 0
-                    ? "No collection photo"
-                    : job.photos.handed === 0
-                      ? "No handover photo"
-                      : "Photographed both ends"}
+                  {PARCEL_ACTION[job.stage]}
+                  {job.stage !== "handed_out" &&
+                    (job.photos.collected === 0
+                      ? " · no photo yet"
+                      : job.photos.handed === 0
+                        ? " · collection photographed"
+                        : "")}
+                  {job.stage === "handed_out" && job.photos.handed === 0
+                    ? " · no handover photo"
+                    : ""}
                 </span>
               </span>
             </Link>

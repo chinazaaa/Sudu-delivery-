@@ -4,6 +4,7 @@ import { parseRoutes, routeById, type ParcelJob, type Route } from "./parcels";
 import { photosByOrder } from "./parcel-photos";
 import { safeSettings } from "./settings";
 import type { Order } from "./types";
+import type { BatchStage } from "./stages";
 
 /**
  * Every parcel that is still work, newest first.
@@ -29,12 +30,17 @@ export async function parcelJobs(): Promise<ParcelJob[]> {
   // and the stages read.
   const { data: batches } = await db()
     .from("batches")
-    .select("id, run_date, deliver_at")
+    .select("id, run_date, deliver_at, stage")
     .in("id", rows.map((one) => one.batch_id));
   const day = new Map(
-    ((batches ?? []) as { id: string; run_date: string; deliver_at: string | null }[]).map(
-      (one) => [one.id, one]
-    )
+    (
+      (batches ?? []) as {
+        id: string;
+        run_date: string;
+        deliver_at: string | null;
+        stage: BatchStage;
+      }[]
+    ).map((one) => [one.id, one])
   );
 
   const routes: Route[] = parseRoutes((await safeSettings()).parcel_routes);
@@ -58,6 +64,7 @@ export async function parcelJobs(): Promise<ParcelJob[]> {
       // is the day it was asked for, which is not a promise.
       goesOn: trip?.deliver_at ? trip.run_date : "",
       wantedOn: order.parcel_wanted_on ?? "",
+      stage: trip?.stage ?? "ordering",
       photos: {
         collected: shots.filter((one) => one.kind === "collected").length,
         handed: shots.filter((one) => one.kind === "handed").length,

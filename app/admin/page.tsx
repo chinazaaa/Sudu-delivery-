@@ -8,10 +8,11 @@ import { dashboard, orderFeed } from "@/lib/admin-data";
 import { abandonedCarts } from "@/lib/carts";
 import { safeSettings } from "@/lib/settings";
 import { diagnoseEmpty, keyKind } from "@/lib/health";
+import { parcelJobs } from "@/lib/parcel-jobs";
 import { tendBatches } from "@/lib/batches";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
-import { clockLabel, runDateLabel } from "@/lib/time";
+import { clockLabel, lagosToday, runDateLabel } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export default async function AdminHome() {
   let unpaid: Awaited<ReturnType<typeof orderFeed>> = [];
   let today: Awaited<ReturnType<typeof orderFeed>> = [];
   let left: Awaited<ReturnType<typeof abandonedCarts>> = [];
+  let parcelsToday: Awaited<ReturnType<typeof parcelJobs>> = [];
 
   try {
     // Forced: whoever is on this page has just changed something and
@@ -40,6 +42,11 @@ export default async function AdminHome() {
       orderFeed({ status: "all", limit: 8 }),
       abandonedCarts(settings.abandon_minutes || 45).catch(() => []),
     ]);
+    // Only the ones promised for today, which is the whole reason this is on
+    // the front page rather than on the parcels page alone.
+    const promised = await parcelJobs().catch(() => []);
+    parcelsToday = promised.filter((one) => one.goesOn === lagosToday());
+
     if (batches.length === 0) problem = await diagnoseEmpty();
   } catch (error) {
     problem =
@@ -68,6 +75,29 @@ export default async function AdminHome() {
           </Link>
         }
       />
+
+      {/* Parcels promised for today. A parcel is one person's bag on a day
+          you agreed with them, and five of them for a Saturday is five
+          chances to forget one. */}
+      {parcelsToday.length > 0 && (
+        <Link
+          href="/admin/parcels"
+          className="card mb-4 block border-brand/30 bg-brand-tint/40 hover:shadow-lift"
+        >
+          <p className="text-xs font-bold uppercase tracking-wide text-brand-dark">
+            Promised for today
+          </p>
+          <p className="mt-1 text-2xl font-extrabold">
+            {parcelsToday.length} parcel{parcelsToday.length === 1 ? "" : "s"}
+            {parcelsToday.filter((one) => one.stage !== "handed_out").length === 0
+              ? ", all handed over"
+              : `, ${parcelsToday.filter((one) => one.stage !== "handed_out").length} still to do`}
+          </p>
+          <p className="text-sm text-muted">
+            {parcelsToday.map((one) => one.route).slice(0, 3).join(", ")}
+          </p>
+        </Link>
+      )}
 
       {/* What landed while nobody was looking. The page refreshes itself, so
           this is the first thing seen on coming back to it. */}

@@ -1,4 +1,5 @@
 import { numberOr, safeSettings, type Settings } from "./settings";
+import type { BatchStage } from "./stages";
 
 /**
  * Carrying a parcel, which is not food.
@@ -204,5 +205,7 @@ export type ParcelJob = {
   goesOn: string;
   /** The day the sender asked for, which is what is being answered. */
   wantedOn: string;
+  /** Where it has got to, so a day's list says which are still to do. */
+  stage: BatchStage;
   photos: { collected: number; handed: number };
 };
