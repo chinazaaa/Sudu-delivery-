@@ -99,7 +99,12 @@ export async function openRunsBetween(from: string, to: string): Promise<number>
   // fail the whole insert and open no runs at all.
   const rows: Array<Omit<Batch, "id" | "transport_cost" | "settled_at">> = [];
 
-  for (let date = from; date <= to; date = addDays(date, 1)) {
+  // Never behind today. Opening "the rest of September" hands this the whole
+  // month, and a run opened for last Tuesday is a run nobody can use sitting
+  // in the list above the ones they can.
+  const start = from < lagosToday() ? lagosToday() : from;
+
+  for (let date = start; date <= to; date = addDays(date, 1)) {
     const weekday = weekdayOf(date);
     for (const run of schedule.filter((entry) => entry.weekday === weekday)) {
       const [hour, minute] = run.cut_off.split(":").map(Number);
@@ -130,11 +135,24 @@ export async function openRunsBetween(from: string, to: string): Promise<number>
   }
   if (rows.length === 0) return 0;
 
-  const existing = await db()
-    .from("batches")
-    .select("run_date, slot")
-    .gte("run_date", from)
-    .lte("run_date", to);
+  // What is already there, counting runs and nothing else. A same day car and
+  // a skincare drop both borrow a run's date and slot, so a Saturday with a
+  // drop on it looked like a Saturday that already had its run: pressing open
+  // did nothing, every time, and the only thing on the day was the drop.
+  //
+  // Falls back to counting everything when the database has not got `kind`
+  // yet, for the same reason every other read of it does.
+  const askExisting = (byKind: boolean) => {
+    const query = db()
+      .from("batches")
+      .select("run_date, slot")
+      .gte("run_date", from)
+      .lte("run_date", to);
+    return byKind ? query.eq("kind", "run") : query;
+  };
+  let existing = await askExisting(true);
+  if (existing.error) existing = await askExisting(false);
+
   const already = new Set(
     (existing.data ?? []).map((row) => `${row.run_date}|${row.slot}`)
   );
