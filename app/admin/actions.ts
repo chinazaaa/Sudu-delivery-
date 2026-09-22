@@ -2005,29 +2005,42 @@ export async function createBatch(form: FormData): Promise<void> {
   };
 
   // Found by hand rather than by ON CONFLICT, because (run_date, slot) is no
-  // longer unique across every batch: a same day car borrows a run's date and
-  // slot. Only a run is looked for, so editing Friday night never reaches
-  // somebody's three o'clock car.
+  // longer unique across every batch: a same day car and a skincare drop both
+  // borrow a run's date and slot.
+  //
+  // A run, and only a run. Excluding the car but not the drop meant making
+  // the Saturday run on a day with a drop on it quietly rewrote the drop
+  // instead, and no run appeared: the page came back with the skincare drop
+  // where the new run should have been. Taking the first rather than asking
+  // for exactly one, because a day can hold a run, a drop and a car at once,
+  // and "more than one row" is not a reason to refuse to edit a run.
   const findRun = (byKind: boolean) => {
     const query = db()
       .from("batches")
       .select("id")
       .eq("run_date", runDate)
-      .eq("slot", slot);
-    return byKind ? query.neq("kind", "same_day").maybeSingle() : query.maybeSingle();
+      .eq("slot", slot)
+      .order("cut_off_at")
+      .limit(1);
+    return byKind ? query.eq("kind", "run") : query;
   };
 
   // Falls back when the database has not got `kind` yet, for the same reason
   // every other read of it does: a column that is not there must not stop
   // somebody editing a run.
-  let { data: existingRun, error: findError } = await findRun(true);
-  if (findError) ({ data: existingRun } = await findRun(false));
+  let { data: found, error: findError } = await findRun(true);
+  if (findError) ({ data: found } = await findRun(false));
+  const existingRun = ((found ?? []) as { id: string }[])[0] ?? null;
 
   if (existingRun) {
-    await db().from("batches").update(fields).eq("id", existingRun.id as string);
+    await db().from("batches").update(fields).eq("id", existingRun.id);
   } else {
     await db().from("batches").insert(fields);
   }
+
+  // Making a day by hand is the plainest way of saying you want it, so it
+  // stops being a day that was taken off.
+  await db().from("run_skips").delete().eq("run_date", runDate).eq("slot", slot);
 
   revalidatePath("/admin", "layout");
   updateTag("menu");
