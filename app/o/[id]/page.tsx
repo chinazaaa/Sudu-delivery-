@@ -137,7 +137,16 @@ export default async function OrderPage({
   // not the answer to "why this much": printing it said 1 to 4 is ₦4,000
   // over a line reading ₦2,000, which reads as the page contradicting
   // itself.
+  // A parcel is not priced by the ladder at all: nothing is bought, and its
+  // fee comes from the route and the weight. Left alone it read "0 items
+  // travel together, which is the ₦4,000 band", which is the page explaining
+  // a rule that was never applied.
+  const isParcel = Boolean(order.parcel_route);
+  // Which end is campus, so "collect from" names a shop on one route and a
+  // block on the other.
+  const parcelToPau = (order.parcel_to ?? "").startsWith("PAU");
   const byLadder =
+    !isParcel &&
     order.fee === (fees.otherItems > 0 ? band.fee - fees.otherFee : band.fee);
   const shared = order.group_id !== null;
 
@@ -465,7 +474,30 @@ export default async function OrderPage({
           )}
         </div>
 
-        {drops.length > 1 ? (
+        {isParcel ? (
+          // What is being carried and where, which is the whole of a parcel.
+          // The list below is of things bought, and a parcel buys nothing.
+          <dl className="space-y-1 text-sm">
+            <Row label="What" value={order.parcel_item ?? ""} />
+            <Row
+              label={parcelToPau ? "Collect from" : "Collect at"}
+              value={order.parcel_shop ?? ""}
+            />
+            <Row label="At" value={order.parcel_from ?? ""} />
+            <Row label="Take to" value={order.parcel_to ?? ""} />
+            {order.parcel_kg ? (
+              <Row label="Weight" value={`Up to ${order.parcel_kg}kg`} />
+            ) : null}
+            {order.deliver_to_name && (
+              <Row
+                label="Handed to"
+                value={`${order.deliver_to_name}${
+                  order.deliver_to_phone ? ` · ${formatPhone(order.deliver_to_phone)}` : ""
+                }`}
+              />
+            )}
+          </dl>
+        ) : drops.length > 1 ? (
           <ul className="space-y-3">
             {drops.map((drop) => (
               <li key={drop.key} className="rounded-2xl border border-black/10 p-3">
@@ -568,15 +600,21 @@ export default async function OrderPage({
         )}
 
         <dl className="space-y-1 border-t border-black/10 pt-3 text-sm">
-          <Row
-            label={isSkincareBatch(order.batch) ? "Skincare" : "Food"}
-            value={naira(order.subtotal_food)}
-          />
+          {/* Nothing is bought on a parcel, so a "Food ₦0" line is a line
+              about something that never happened. */}
+          {!isParcel && (
+            <Row
+              label={isSkincareBatch(order.batch) ? "Skincare" : "Food"}
+              value={naira(order.subtotal_food)}
+            />
+          )}
           <Row
             label={
-              fees.otherItems > 0
-                ? `Delivery top-up (${allItems} items in this run)`
-                : `Delivery (${fees.items} item${fees.items === 1 ? "" : "s"})`
+              isParcel
+                ? "Carrying it"
+                : fees.otherItems > 0
+                  ? `Delivery top-up (${allItems} items in this run)`
+                  : `Delivery (${fees.items} item${fees.items === 1 ? "" : "s"})`
             }
             value={naira(order.fee)}
           />
@@ -601,7 +639,13 @@ export default async function OrderPage({
 
         {/* The arithmetic, in a line. Delivery is the thing people query. */}
         <p className="text-xs text-muted">
-          {byLadder ? (
+          {isParcel ? (
+            <>
+              One trip, yours alone, priced by where it goes and how heavy it
+              is. Nothing is bought on your behalf, so this is the whole of
+              it.
+            </>
+          ) : byLadder ? (
             <>
               {order.batch.flash_fee !== null && (
                 <>
