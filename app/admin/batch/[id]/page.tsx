@@ -169,6 +169,10 @@ export default async function BatchPage({
                 batchId={batch.id}
                 stage={batch.stage}
                 action={setBatchStage}
+                // Two parcels sharing a day land here, and "At the counter,
+                // food being cooked" over two bags is a kitchen nobody is
+                // standing in.
+                parcel={batch.kind === "parcel"}
               />
               <SendSheet
                 batchId={batch.id}
