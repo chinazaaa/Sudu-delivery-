@@ -82,7 +82,15 @@ export default async function RunsPage({
   // are offered, and a horizon shorter than the gap to the next run hides
   // every run in the shop without saying so anywhere.
   const soonestRun = live
-    .filter((batch) => batch.status === "open" && batch.kind !== "same_day")
+    // How far ahead the shop is open is a question about runs. A parcel is
+    // one person's trip and a car of its own is somebody's own order, and
+    // neither says anything about whether the week is set up.
+    .filter(
+      (batch) =>
+        batch.status === "open" &&
+        batch.kind !== "same_day" &&
+        batch.kind !== "parcel"
+    )
     .map((batch) => batch.run_date)
     .sort()[0];
   const daysAway = soonestRun ? coverDays(soonestRun) : null;
@@ -310,7 +318,11 @@ export default async function RunsPage({
                 </p>
               )}
               <Link
-                href={`/admin/batch/${batch.id}`}
+                href={
+                  batch.parcelOrderId
+                    ? `/admin/orders/${batch.parcelOrderId}`
+                    : `/admin/batch/${batch.id}`
+                }
                 className="card flex items-center justify-between gap-3 transition hover:border-brand/40 hover:shadow-lift"
               >
                 <div className="min-w-0">
@@ -326,12 +338,18 @@ export default async function RunsPage({
                           // titled like one it is the run, as far as anybody
                           // reading this list can tell.
                           `Skincare drop · ${runDateLabel(batch.run_date)}`
-                        : `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`}
+                        : batch.kind === "parcel"
+                          ? batch.delivery_window_text || "Parcel"
+                          : `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`}
                   </p>
                   <p className="text-sm text-muted">
                     {batch.kind === "same_day"
                       ? `One car, asked for on ${runDateLabel(batch.run_date)}`
-                      : `Closes ${clockLabel(batch.cut_off_at)} · ${batch.delivery_window_text}`}
+                      : batch.kind === "parcel"
+                        ? batch.deliver_at
+                          ? `Carrying it ${runDateLabel(batch.run_date)}`
+                          : "Waiting on a date from you"
+                        : `Closes ${clockLabel(batch.cut_off_at)} · ${batch.delivery_window_text}`}
                   </p>
                   <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     {batch.status === "cancelled" && (
@@ -347,6 +365,11 @@ export default async function RunsPage({
                     {batch.kind === "skincare" && (
                       <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-bold text-brand-dark">
                         Skincare, not food
+                      </span>
+                    )}
+                    {batch.kind === "parcel" && (
+                      <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-bold text-brand-dark">
+                        {batch.deliver_at ? "Parcel" : "Parcel · day not agreed"}
                       </span>
                     )}
                     <span

@@ -381,6 +381,9 @@ function sum<T>(rows: T[], pick: (row: T) => number): number {
 
 export type BatchRow = Batch & {
   orderCount: number;
+  /** The one order on a parcel's trip, so the list opens the order rather
+   *  than a run sheet for a car carrying one bag. */
+  parcelOrderId?: string;
   paidCount: number;
   /** Money in, less food, commission and the run's own costs. */
   profit: number;
@@ -588,11 +591,12 @@ export async function tripSheet(at: string): Promise<TripSheet | null> {
  * every run ever made, because a past run is still worth reading.
  */
 export async function batchOverview(window: "recent" | "all" = "recent"): Promise<BatchRow[]> {
-  // Parcels are not runs. Each one makes a batch of its own because an order
-  // has to belong to something, but it is one person's trip on a day nobody
-  // has agreed yet, and listing it here put a "run" in the week for every
-  // parcel anybody sent. They live on the Parcels page and in Orders.
-  let query = db().from("batches").select("*").neq("kind", "parcel");
+  // Parcels are in this list, because the list is what is being driven and a
+  // parcel is a trip somebody has to make. They are labelled as parcels and
+  // left out of how far ahead the shop is open, which is a question about
+  // runs: taking them out of the list altogether meant agreeing a day for one
+  // and then having nowhere that said so on the day.
+  let query = db().from("batches").select("*");
   if (window === "recent") {
     query = query
       .gte("run_date", new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10))
@@ -603,19 +607,7 @@ export async function batchOverview(window: "recent" | "all" = "recent"): Promis
     query = query.order("cut_off_at", { ascending: true }).limit(200);
   }
 
-  let { data: batches, error } = await query;
-  // A database without `kind` yet cannot hold a parcel, so the same list
-  // without that filter is the same list. Asked again rather than thrown,
-  // because this is the runs page and the dashboard.
-  if (error) {
-    const plain = db().from("batches").select("*");
-    ({ data: batches, error } =
-      window === "recent"
-        ? await plain
-            .gte("run_date", new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10))
-            .order("cut_off_at", { ascending: true })
-        : await plain.order("cut_off_at", { ascending: true }).limit(200));
-  }
+  const { data: batches, error } = await query;
   if (error) throw new Error(error.message);
 
   const rows = (batches ?? []) as Batch[];
@@ -653,6 +645,9 @@ export async function batchOverview(window: "recent" | "all" = "recent"): Promis
     return {
       ...b,
       orderCount: mine.length,
+      // A parcel's trip carries exactly one order, and that order's page is
+      // where the photographs, the day and the stage are.
+      ...(b.kind === "parcel" && mine[0] ? { parcelOrderId: mine[0].id } : {}),
       paidCount: paid.length,
       gross: sum(paid, (o) => o.total),
       profit: Math.round(

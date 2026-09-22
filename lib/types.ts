@@ -92,7 +92,7 @@ export type Batch = {
   /** A shared car, a car going out for one order, or the weekly skincare
    *  drop. It is what keeps the last two out of the list customers pick a
    *  run from. */
-  kind: "run" | "same_day" | "skincare";
+  kind: "run" | "same_day" | "skincare" | "parcel";
   /** Which areas this car goes to, beyond Sangotedo, as "|lekki|". */
   areas?: string;
   /** The time asked for. Only ever set on a same day delivery. */
