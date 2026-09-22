@@ -381,10 +381,16 @@ async function sameDayClusters(): Promise<
 
   const { data, error } = await db()
     .from("batches")
-    .select("id, deliver_at, delivery_window_text")
+    .select("id, deliver_at, delivery_window_text, stage")
     .eq("kind", "same_day")
     .not("deliver_at", "is", null)
     .gte("deliver_at", from)
+    // Only cars nobody has shopped for yet. This is a list of what to buy,
+    // and a car that has been to the counter, is on the road or has been
+    // handed out is not a decision any more: it showed this afternoon's
+    // deliveries, both already gone, and asked somebody to do something
+    // about them.
+    .in("stage", ["ordering", "closed"])
     .order("deliver_at");
 
   // A database without `kind` yet has no same day cars in it either.

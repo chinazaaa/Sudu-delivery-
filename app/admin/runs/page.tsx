@@ -118,11 +118,11 @@ export default async function RunsPage({
       {trips.length > 0 && (
         <section className="card mb-4 space-y-2">
           <div>
-            <h2 className="font-bold">Cars you can shop for in one go</h2>
+            <h2 className="font-bold">Still to buy for</h2>
             <p className="text-sm text-muted">
-              Same day cars going out within an hour and a half of each other.
-              Each is still its own car on the list below, with its own money;
-              this is only which of them you can buy for in one trip.
+              Same day cars nobody has been to the counter for yet. Ones within
+              an hour and a half of each other are one trip, so this is what to
+              buy in one go. They disappear from here once you set off.
             </p>
           </div>
           <ul className="divide-y divide-black/5">
