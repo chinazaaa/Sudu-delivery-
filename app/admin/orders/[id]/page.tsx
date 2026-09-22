@@ -153,6 +153,7 @@ async function orderPage(id: string, said: string) {
 
       {card && (
         <OrderCard
+          onList={false}
           order={toCard(card, settings, url, bank)}
           markPaid={markPaid}
           markDelivered={markDelivered}

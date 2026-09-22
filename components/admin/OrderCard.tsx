@@ -79,6 +79,7 @@ export type OrderCardData = {
  */
 export default function OrderCard({
   order,
+  onList = true,
   markPaid,
   markDelivered,
   refund,
@@ -88,6 +89,9 @@ export default function OrderCard({
   saveNote,
 }: {
   order: OrderCardData;
+  /** False on the order's own page, where a link to the page you are
+   *  already reading is noise. */
+  onList?: boolean;
   markPaid: (form: FormData) => Promise<void>;
   markDelivered: (form: FormData) => Promise<void>;
   refund: (form: FormData) => Promise<void>;
@@ -252,6 +256,19 @@ export default function OrderCard({
             {item.label}
           </a>
         ))}
+
+        {/* The way in. The order number at the top has always been a link,
+            but a number does not look like one, so the page that holds the
+            photographs, the run it is on and the notes was reachable only by
+            somebody who already knew it was there. */}
+        {onList && (
+          <Link
+            href={`/admin/orders/${order.id}`}
+            className="chip border-ink/20 bg-white font-bold hover:border-ink/40"
+          >
+            Open this order
+          </Link>
+        )}
 
         <button
           type="button"
