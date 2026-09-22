@@ -12,6 +12,7 @@ import ParcelPhotos from "@/components/admin/ParcelPhotos";
 import ParcelDay from "@/components/admin/ParcelDay";
 import StagePicker from "@/components/admin/StagePicker";
 import { photosFor } from "@/lib/parcel-photos";
+import { tripGoingOn } from "@/lib/parcel-jobs";
 import { naira, shareRef } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { whatsappTo } from "@/lib/messages";
@@ -33,7 +34,7 @@ import { openBatches } from "@/lib/batches";
 import { hoursByDay } from "@/lib/settings";
 import { deliverySlots } from "@/lib/same-day";
 import { toBatchView } from "@/lib/view";
-import { dayWord, lagosClock } from "@/lib/time";
+import { dayWord, lagosClock, runDateLabel } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -199,6 +200,11 @@ async function orderPage(id: string, said: string) {
             runDate={order.batch.run_date}
             cutOffTime={lagosClock(order.batch.cut_off_at)}
             agreed={Boolean(order.batch.deliver_at)}
+            joining={await (async () => {
+              // Said as a day somebody reads, not as 2026-09-26.
+              const day = await tripGoingOn(order.parcel_route!, order.batch.id);
+              return day === "" ? "" : runDateLabel(day);
+            })()}
             action={agreeParcelDay}
           />
         </div>

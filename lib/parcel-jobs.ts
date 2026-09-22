@@ -72,3 +72,38 @@ export async function parcelJobs(): Promise<ParcelJob[]> {
     };
   });
 }
+
+/**
+ * The day a parcel trip is already going on this route, if one is.
+ *
+ * So the panel can say, before anybody agrees anything, that agreeing that
+ * day puts this parcel on a car already going rather than sending a second
+ * one to the same place.
+ */
+export async function tripGoingOn(
+  route: string,
+  notThisBatch: string
+): Promise<string> {
+  const { data: trips } = await db()
+    .from("batches")
+    .select("id, run_date")
+    .eq("kind", "parcel")
+    .not("deliver_at", "is", null)
+    .in("stage", ["ordering", "closed"])
+    .gte("run_date", new Date().toISOString().slice(0, 10));
+
+  const rows = ((trips ?? []) as { id: string; run_date: string }[]).filter(
+    (one) => one.id !== notThisBatch
+  );
+  if (rows.length === 0) return "";
+
+  const { data: onThem } = await db()
+    .from("orders")
+    .select("batch_id, parcel_route")
+    .in("batch_id", rows.map((one) => one.id));
+
+  const match = ((onThem ?? []) as { batch_id: string; parcel_route: string | null }[]).find(
+    (one) => one.parcel_route === route
+  );
+  return rows.find((one) => one.id === match?.batch_id)?.run_date ?? "";
+}

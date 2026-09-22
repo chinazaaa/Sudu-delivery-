@@ -128,7 +128,11 @@ export default async function BatchPage({
   const batchLabel =
     batch.kind === "skincare"
       ? `Skincare drop · ${runDateLabel(batch.run_date)}`
-      : `${runDateLabel(batch.run_date)} ${SLOT_LABEL[batch.slot]}`;
+      : batch.kind === "parcel"
+        ? // Reachable once two parcels share a day and a route: one drive, so
+          // one trip, and this is the sheet for it.
+          `Parcels · ${runDateLabel(batch.run_date)}`
+        : `${runDateLabel(batch.run_date)} ${SLOT_LABEL[batch.slot]}`;
 
   // The wording is whatever the admin has written in settings, so one edit
   // changes the message everywhere it is offered.

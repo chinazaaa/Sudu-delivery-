@@ -3265,6 +3265,36 @@ export async function agreeParcelDay(
     ? time.split(":").map(Number)
     : [23, 59];
 
+  // Already going that day, on that route. One drive is one trip, so this
+  // parcel joins it rather than standing up a second car to the same place on
+  // the same day: agreeing three Saturday parcels used to make three trips,
+  // three rows in the week and three stages to move for one journey.
+  //
+  // Only a trip nothing has happened to yet. Once a car has been out and
+  // collected, putting another bag on it says it collected something it never
+  // saw.
+  const joined = await tripAlreadyGoing(
+    day,
+    String(order.parcel_route),
+    String(order.batch_id)
+  );
+
+  if (joined) {
+    const { error: moveError } = await db()
+      .from("orders")
+      .update({ batch_id: joined })
+      .eq("id", orderId);
+    if (moveError) {
+      return { done: "", error: `Could not add it to that trip: ${moveError.message}` };
+    }
+    // The trip it came from was only ever for this one parcel.
+    await db().from("batches").delete().eq("id", order.batch_id as string);
+
+    revalidatePath("/admin", "layout");
+    revalidatePath(`/o/${orderId}`);
+    return { done: "Added to that day's trip ✓", error: "" };
+  }
+
   const { error } = await db()
     .from("batches")
     .update({
@@ -3280,4 +3310,42 @@ export async function agreeParcelDay(
   revalidatePath("/admin", "layout");
   revalidatePath(`/o/${orderId}`);
   return { done: "Agreed ✓", error: "" };
+}
+
+/**
+ * A parcel trip already going that day on that route, if there is one.
+ *
+ * Matched on the route rather than on the window text, because the text is
+ * only ever written from the route and one of them could be edited by hand.
+ * Nothing that has already been out: a car that has collected cannot collect
+ * something it was never shown.
+ */
+async function tripAlreadyGoing(
+  day: string,
+  route: string,
+  notThisOne: string
+): Promise<string | null> {
+  const { data: trips } = await db()
+    .from("batches")
+    .select("id, stage")
+    .eq("kind", "parcel")
+    .eq("run_date", day)
+    .not("deliver_at", "is", null)
+    .in("stage", ["ordering", "closed"]);
+
+  const candidates = ((trips ?? []) as { id: string; stage: string }[])
+    .map((one) => one.id)
+    .filter((id) => id !== notThisOne);
+  if (candidates.length === 0) return null;
+
+  const { data: onThem } = await db()
+    .from("orders")
+    .select("batch_id, parcel_route, status")
+    .in("batch_id", candidates)
+    .not("status", "in", NOT_ORDERS_SQL);
+
+  const match = ((onThem ?? []) as { batch_id: string; parcel_route: string | null }[]).find(
+    (one) => one.parcel_route === route
+  );
+  return match?.batch_id ?? null;
 }

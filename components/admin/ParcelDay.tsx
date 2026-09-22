@@ -16,6 +16,7 @@ export default function ParcelDay({
   runDate,
   cutOffTime,
   agreed,
+  joining,
   action,
 }: {
   orderId: string;
@@ -24,6 +25,10 @@ export default function ParcelDay({
   runDate: string;
   cutOffTime: string;
   agreed: boolean;
+  /** The day a trip is already going on this route, if one is. Agreeing that
+   *  day puts this parcel on that trip rather than standing up a second car
+   *  to the same place. */
+  joining: string;
   action: (
     prev: { done: string; error: string },
     form: FormData
@@ -45,6 +50,15 @@ export default function ParcelDay({
           {agreed
             ? "Changing it here changes what they see."
             : "Until you set this, their page says the day is not agreed yet."}
+          {joining !== "" && (
+            <>
+              {" "}
+              <span className="font-semibold text-brand-dark">
+                A trip is already going that route on {joining}. Agreeing that
+                day puts this parcel on it, one drive rather than two.
+              </span>
+            </>
+          )}
         </p>
       </div>
 
