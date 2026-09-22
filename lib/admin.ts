@@ -647,7 +647,12 @@ export async function batchOverview(window: "recent" | "all" = "recent"): Promis
       orderCount: mine.length,
       // A parcel's trip carries exactly one order, and that order's page is
       // where the photographs, the day and the stage are.
-      ...(b.kind === "parcel" && mine[0] ? { parcelOrderId: mine[0].id } : {}),
+      //
+      // Only when there is exactly one. Nothing puts a second order on a
+      // parcel's trip today, but if anything ever did, opening the first and
+      // saying nothing about the second is how a bag gets left behind: the
+      // sheet lists them all, so that is where two would go.
+      ...(b.kind === "parcel" && mine.length === 1 ? { parcelOrderId: mine[0].id } : {}),
       paidCount: paid.length,
       gross: sum(paid, (o) => o.total),
       profit: Math.round(
