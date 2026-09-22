@@ -8,10 +8,16 @@ import { namedPromoters } from "@/lib/promoters";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * What WhatsApp reads out beside the card. Both ends named, because nobody
+ * is looking for a parcel service: they have a dress sitting in a shop in
+ * Lekki and want to know whether anybody goes that way.
+ */
 export const metadata: Metadata = {
-  title: "Send a parcel",
+  title: "Send a parcel · Sudu",
   description:
-    "Something collected and brought to campus, or taken from campus to where it needs to be.",
+    "Sangotedo, Lekki/Ikoyi, the mainland and Ikorodu, both ways to PAU. " +
+    "Collected sealed, handed over sealed, photographed at each end.",
 };
 
 export default async function ParcelPage() {
