@@ -86,6 +86,18 @@ export function toCard(
     groupSize: order.groupOrders.length,
     runStage: order.batchStage,
     promoter: order.promoter ?? null,
+    // A parcel carries no lines at all, so the card needs the trip itself.
+    parcel: order.parcel_route
+      ? {
+          route: order.parcel_route,
+          item: order.parcel_item ?? "",
+          shop: order.parcel_shop ?? "",
+          from: order.parcel_from ?? "",
+          to: order.parcel_to ?? "",
+          kg: order.parcel_kg ?? 0,
+          value: order.parcel_value ?? 0,
+        }
+      : null,
     customerNote: order.customer_note ?? "",
     adminNote: order.admin_note ?? "",
     narration: narration(order, order.groupOrders),

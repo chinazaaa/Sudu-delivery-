@@ -1,0 +1,65 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import ParcelForm from "@/components/ParcelForm";
+import { liveRoutes, parcels } from "@/lib/parcels";
+
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Send a parcel",
+  description:
+    "Something collected and brought to campus, or taken from campus to where it needs to be.",
+};
+
+export default async function ParcelPage() {
+  const setup = await parcels();
+  const routes = liveRoutes(setup.routes);
+
+  if (!setup.on || routes.length === 0) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4">
+        <section className="card space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight">Parcels</h1>
+          <p className="text-ink/75">
+            We are not carrying parcels just now.{" "}
+            <Link href="/" className="font-semibold text-brand">
+              The food is still going out
+            </Link>
+            .
+          </p>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-lg space-y-4">
+      <section className="card space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight">Send a parcel</h1>
+        <p className="text-ink/75">
+          {setup.blurb ||
+            "Something collected and brought to campus, or taken from campus to where it needs to be. It travels on its own trip, so you tell us where and we agree the day."}
+        </p>
+      </section>
+
+      {/* Said before the form rather than under it. Every line here is one of
+          the ways this goes wrong, and somebody who reads it afterwards has
+          already agreed to it. */}
+      <section className="card space-y-2">
+        <h2 className="font-bold">Before you send it</h2>
+        <ul className="space-y-1.5 text-sm text-ink/75">
+          {setup.terms.map((line) => (
+            <li key={line} className="flex gap-2">
+              <span aria-hidden className="text-brand">
+                •
+              </span>
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <ParcelForm routes={routes} maxValue={setup.maxValue} />
+    </div>
+  );
+}

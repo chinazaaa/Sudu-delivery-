@@ -118,6 +118,14 @@ export type Settings = {
   /** Which admin notifications to stop sending, by kind. Empty is all of
    *  them, which is what it has always been. */
   email_mute: string;
+  /** Carrying a parcel: on or off, the routes and their prices as JSON, the
+   *  most a parcel may be worth, and what the shop says before it takes one.
+   *  A parcel is its own trip, so it has no ladder and no run. */
+  parcel_on: string;
+  parcel_routes: string;
+  parcel_max_value: number;
+  parcel_blurb: string;
+  parcel_terms: string;
 };
 
 /** Every setting at its default, which is also what a missing row reads as. */
@@ -173,6 +181,11 @@ export const EMPTY: Settings = {
   skincare_promise: "",
   delivery_areas: "",
   email_mute: "",
+  parcel_on: "",
+  parcel_routes: "",
+  parcel_max_value: 50000,
+  parcel_blurb: "",
+  parcel_terms: "",
 };
 
 export async function getSettings(): Promise<Settings> {

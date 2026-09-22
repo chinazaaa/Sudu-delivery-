@@ -135,6 +135,16 @@ export type Order = {
    *  that has not had the migration run. */
   deliver_to_name?: string | null;
   deliver_to_phone?: string | null;
+  /** A parcel rather than food: which route it travels, what it is, where it
+   *  is collected from and taken to, the weight band it was priced in and
+   *  what the sender says it is worth. Null on every ordinary order. */
+  parcel_route?: string | null;
+  parcel_item?: string | null;
+  parcel_shop?: string | null;
+  parcel_value?: number | null;
+  parcel_kg?: number | null;
+  parcel_from?: string | null;
+  parcel_to?: string | null;
   subtotal_food: number;
   fee: number;
   discount: number;
