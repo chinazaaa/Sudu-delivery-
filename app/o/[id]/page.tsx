@@ -367,10 +367,29 @@ export default async function OrderPage({
 
       {paid && (
         <section className="card space-y-2">
-          <h2 className="font-bold">Where your food is</h2>
+          {/* A parcel is not food and a cleanser is not food either. The
+              heading and the line under it followed neither: "Where your food
+              is · We deliver to Amethyst Hall, parcel · sangotedo to pau" is
+              the food wording with a parcel's words dropped into it. */}
+          <h2 className="font-bold">
+            {isParcel
+              ? "Where your parcel is"
+              : isSkincareBatch(order.batch)
+                ? "Where your order is"
+                : "Where your food is"}
+          </h2>
           {order.status === "delivered" ? (
             <p className="text-sm text-ink/75">
-              Delivered. Thank you, and see you on the next run.
+              Delivered. Thank you
+              {isParcel ? "." : ", and see you on the next run."}
+            </p>
+          ) : isParcel ? (
+            <p className="text-sm text-ink/75">
+              {order.batch.deliver_at
+                ? `We carry it ${runDateLabel(order.batch.run_date)}. `
+                : "We will agree the day with you and it will show here. "}
+              You will be called when we are outside
+              {order.deliver_to_name ? `, and so will ${order.deliver_to_name}` : ""}.
             </p>
           ) : order.batch.stage === "ordering" ? (
             <p className="text-sm text-ink/75">
@@ -732,14 +751,28 @@ export default async function OrderPage({
         </section>
       )}
 
-      {paid && (
+      {/* Nothing to put back in a basket: a parcel buys nothing, and the
+          same parcel twice is a different parcel. It read "Nothing from this
+          order is on the menu today", which is true and beside the point. */}
+      {paid && !isParcel && (
         <section className="card space-y-2">
           <h2 className="font-bold">Want this again?</h2>
+          {/* Skincare goes out on a drop, not a run, and sits on a shelf
+              rather than a menu. The words followed food either way. */}
           <p className="text-sm text-muted">
             Back in your cart at today&apos;s prices, with your details already
-            filled in. You pick the run at checkout.
+            filled in. You pick the{" "}
+            {isSkincareBatch(order.batch) ? "drop" : "run"} at checkout.
           </p>
-          <RepeatOrder lines={repeat.lines} blocked={repeat.blocked} />
+          <RepeatOrder
+            lines={repeat.lines}
+            blocked={repeat.blocked}
+            nothingLeft={
+              isSkincareBatch(order.batch)
+                ? "Nothing from this order is on the shelf today."
+                : "Nothing from this order is on the menu today."
+            }
+          />
         </section>
       )}
 

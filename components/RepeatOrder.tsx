@@ -16,6 +16,7 @@ export default function RepeatOrder({
   label = "Order this again",
   goTo = "/cart",
   note,
+  nothingLeft = "Nothing from this order is on the menu today.",
 }: {
   lines: RepeatLine[];
   /** Items that cannot come back, each with the reason why. */
@@ -24,6 +25,9 @@ export default function RepeatOrder({
   /** Where to land: the cart to adjust it, or checkout to pick a run. */
   goTo?: "/cart" | "/checkout";
   note?: string;
+  /** What "there is nothing to put back" is called here. A cleanser is on a
+   *  shelf, not a menu. */
+  nothingLeft?: string;
 }) {
   const router = useRouter();
   const [done, setDone] = useState(false);
@@ -32,7 +36,7 @@ export default function RepeatOrder({
     return (
       <div className="text-sm text-muted">
         {blocked.length === 0 ? (
-          <p>Nothing from this order is on the menu today.</p>
+          <p>{nothingLeft}</p>
         ) : (
           <ul className="space-y-0.5">
             {blocked.map((item) => (

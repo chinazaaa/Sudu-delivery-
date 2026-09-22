@@ -187,3 +187,22 @@ export const PHOTO_LABEL: Record<ParcelPhoto["kind"], string> = {
   collected: "When we collected it",
   handed: "When we handed it over",
 };
+
+/** A parcel as the shop works it: who, what, where and when it goes. */
+export type ParcelJob = {
+  orderId: string;
+  orderNo: number | null;
+  name: string;
+  phone: string;
+  status: string;
+  route: string;
+  item: string;
+  from: string;
+  to: string;
+  total: number;
+  /** The day the shop agreed. Empty until somebody has agreed one. */
+  goesOn: string;
+  /** The day the sender asked for, which is what is being answered. */
+  wantedOn: string;
+  photos: { collected: number; handed: number };
+};

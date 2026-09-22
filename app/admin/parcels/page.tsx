@@ -3,7 +3,10 @@ import SaveButton from "@/components/SaveButton";
 import ParcelRoutes from "@/components/admin/ParcelRoutes";
 import { db } from "@/lib/supabase";
 import { safeSettings } from "@/lib/settings";
+import Link from "next/link";
 import { liveRoutes, parcelsFrom, TERMS_DEFAULT } from "@/lib/parcels";
+import { parcelJobs } from "@/lib/parcel-jobs";
+import { lagosToday, runDateLabel } from "@/lib/time";
 import { naira } from "@/lib/money";
 import { saveSettings } from "../actions";
 
@@ -21,6 +24,16 @@ export default async function AdminParcelsPage() {
   const settings = await safeSettings();
   const setup = parcelsFrom(settings);
   const live = liveRoutes(setup.routes);
+
+  const jobs = await parcelJobs();
+  const today = lagosToday();
+  // Three piles, because they are three different jobs: one needs a date
+  // agreed, one needs driving, one is history.
+  const needDate = jobs.filter((one) => one.goesOn === "");
+  const coming = jobs
+    .filter((one) => one.goesOn !== "" && one.goesOn >= today)
+    .sort((a, b) => a.goesOn.localeCompare(b.goesOn));
+  const done = jobs.filter((one) => one.goesOn !== "" && one.goesOn < today);
 
   const { count: waiting } = await db()
     .from("orders")
@@ -48,6 +61,29 @@ export default async function AdminParcelsPage() {
           {waiting} parcel{waiting === 1 ? "" : "s"} waiting to be paid for.
           They are in Orders like any other.
         </p>
+      )}
+
+      {/* The work, before the settings. A parcel is not in Runs, so without
+          this there was nothing anywhere saying "you agreed to carry this on
+          Friday", and the only thing stopping one being forgotten was
+          remembering it. */}
+      {jobs.length > 0 && (
+        <section className="card mb-4 space-y-3">
+          <h2 className="font-semibold">The parcels</h2>
+
+          {needDate.length > 0 && (
+            <Pile
+              title="Waiting on a date from you"
+              tone="warn"
+              jobs={needDate}
+              today={today}
+            />
+          )}
+          {coming.length > 0 && <Pile title="Coming up" jobs={coming} today={today} />}
+          {done.length > 0 && (
+            <Pile title="Been and gone" jobs={done.slice(0, 10)} today={today} />
+          )}
+        </section>
       )}
 
       {/* Keyed on what it is showing. React resets a form once its action
@@ -147,6 +183,74 @@ export default async function AdminParcelsPage() {
         <ParcelRoutes saved={setup.routes} />
         <SaveButton>Save the routes</SaveButton>
       </form>
+    </div>
+  );
+}
+
+/** One pile of parcels, with the day and what is still missing on each. */
+function Pile({
+  title,
+  jobs,
+  today,
+  tone,
+}: {
+  title: string;
+  jobs: Awaited<ReturnType<typeof parcelJobs>>;
+  today: string;
+  tone?: "warn";
+}) {
+  return (
+    <div>
+      <p
+        className={`text-sm font-bold ${
+          tone === "warn" ? "text-brand-dark" : "text-muted"
+        }`}
+      >
+        {title}
+      </p>
+      <ul className="mt-1.5 space-y-1.5">
+        {jobs.map((job) => (
+          <li key={job.orderId}>
+            <Link
+              href={`/admin/orders/${job.orderId}`}
+              className="flex flex-wrap items-baseline justify-between gap-2 rounded-xl border border-black/10 px-3 py-2 text-sm hover:border-ink/30"
+            >
+              <span className="min-w-0">
+                <span className="block font-semibold">
+                  {job.goesOn === ""
+                    ? job.wantedOn
+                      ? `They asked for ${runDateLabel(job.wantedOn)}`
+                      : "No day asked for"
+                    : job.goesOn === today
+                      ? "Today"
+                      : runDateLabel(job.goesOn)}
+                </span>
+                <span className="block text-muted">
+                  {job.name} · {job.route}
+                  {job.item ? ` · ${job.item}` : ""}
+                </span>
+              </span>
+              <span className="shrink-0 text-right">
+                <span
+                  className={`block font-bold ${
+                    job.status === "pending" ? "text-brand" : "text-mint"
+                  }`}
+                >
+                  {job.status === "pending" ? "Unpaid" : job.status}
+                </span>
+                {/* What is still missing, which on the day is the question. */}
+                <span className="block text-xs text-muted">
+                  {job.photos.collected === 0
+                    ? "No collection photo"
+                    : job.photos.handed === 0
+                      ? "No handover photo"
+                      : "Photographed both ends"}
+                </span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
