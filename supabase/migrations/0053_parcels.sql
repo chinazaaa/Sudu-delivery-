@@ -19,7 +19,10 @@ alter table orders
   add column if not exists parcel_from text,
   add column if not exists parcel_to text,
   -- The weight band it was priced in, not a weighed figure: "up to 3kg".
-  add column if not exists parcel_kg int;
+  add column if not exists parcel_kg int,
+  -- The day the sender asked for. Not a promise: the shop agrees it, and
+  -- until it does the parcel has no date at all.
+  add column if not exists parcel_wanted_on date;
 
 create index if not exists orders_parcel_idx on orders (parcel_route)
   where parcel_route is not null;

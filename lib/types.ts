@@ -145,6 +145,9 @@ export type Order = {
   parcel_kg?: number | null;
   parcel_from?: string | null;
   parcel_to?: string | null;
+  /** The day the sender asked for. The day it actually goes is on the batch,
+   *  and is only set once the shop has agreed it. */
+  parcel_wanted_on?: string | null;
   subtotal_food: number;
   fee: number;
   discount: number;

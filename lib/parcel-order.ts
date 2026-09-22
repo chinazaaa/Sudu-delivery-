@@ -1,6 +1,6 @@
 import { db } from "./supabase";
 import { isReturningCustomer } from "./orders";
-import { lagosToday } from "./time";
+import { lagosInstant, lagosToday } from "./time";
 import { normalisePhone } from "./phone";
 import { parcels, liveRoutes, routeById, feeFor, heaviest } from "./parcels";
 import { newPin } from "./customer-auth";
@@ -26,6 +26,9 @@ export type ParcelInput = {
   value: number;
   /** The weight band picked, as its upper bound in kilos. */
   kg: number;
+  /** The day they would like it, as "2026-09-30". A request, not a promise:
+   *  the shop agrees it afterwards. */
+  wantedOn: string;
   /** Who receives it, where that is not the person paying. */
   toName: string;
   toPhone: string;
@@ -140,14 +143,25 @@ export async function placeParcel(input: ParcelInput): Promise<ParcelResult> {
     };
   }
 
-  // Its own trip, on no particular day: the shop agrees that with them. Dated
-  // today so it sorts sensibly and can be moved in admin.
+  // The day they asked for. Today or later, because a parcel cannot be
+  // carried yesterday, and a fortnight is as far ahead as anything else here
+  // is planned.
+  const wanted = /^\d{4}-\d{2}-\d{2}$/.test(input.wantedOn) ? input.wantedOn : "";
+  if (wanted === "" || wanted < lagosToday()) {
+    return { ok: false, error: "Pick the day you would like it, today or later." };
+  }
+
+  // Its own trip, on the day they asked for, which is not yet a day anybody
+  // has agreed to: deliver_at is what says the shop has agreed, and it stays
+  // empty until somebody sets it.
   const { data: batch, error: batchError } = await db()
     .from("batches")
     .insert({
-      run_date: lagosToday(),
+      run_date: wanted,
       slot: "afternoon",
-      cut_off_at: new Date().toISOString(),
+      // The end of the day they asked for, so nothing reads as already
+      // closed. The real one is set when the day is agreed.
+      cut_off_at: lagosInstant(wanted, 23, 59),
       delivery_window_text: `Parcel · ${route.label}`,
       status: "open",
       capacity: null,
@@ -189,6 +203,7 @@ export async function placeParcel(input: ParcelInput): Promise<ParcelResult> {
       parcel_shop: shop,
       parcel_value: value,
       parcel_kg: kg,
+      parcel_wanted_on: wanted,
       parcel_from: from,
       parcel_to: to,
       ...(toName && toPhone ? { deliver_to_name: toName, deliver_to_phone: toPhone } : {}),

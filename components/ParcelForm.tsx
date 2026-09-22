@@ -25,12 +25,16 @@ export default function ParcelForm({
   routes,
   maxValue,
   hostels,
+  today,
 }: {
   routes: Route[];
   maxValue: number;
   /** The blocks the shop delivers to, as the food checkout offers them.
    *  Empty where the list is not set up, and then it is typed. */
   hostels: string[];
+  /** The shop's today, in Lagos, so a phone set to another day cannot offer
+   *  a date that is already gone here. */
+  today: string;
 }) {
   const [state, action, busy] = useActionState<ParcelState, FormData>(sendParcel, {
     error: "",
@@ -104,6 +108,25 @@ export default function ParcelForm({
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label className="label" htmlFor="wanted_on">
+            When would you like it?
+          </label>
+          <input
+            id="wanted_on"
+            name="wanted_on"
+            type="date"
+            required
+            min={today}
+            defaultValue={today}
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">
+            We will tell you on WhatsApp whether that day works. If it does
+            not, we will agree another one with you before anything moves.
+          </p>
         </div>
 
         <div>

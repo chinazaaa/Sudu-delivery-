@@ -29,6 +29,7 @@ export async function sendParcel(
     address: said("address"),
     value: Number(said("value").replace(/[^\d]/g, "")),
     kg: Number(said("kg")),
+    wantedOn: said("wanted_on"),
     toName: said("to_name"),
     toPhone: said("to_phone"),
     note: said("note"),

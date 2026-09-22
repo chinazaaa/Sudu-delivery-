@@ -304,13 +304,19 @@ export default function OrderCard({
           </ul>
 
           <dl className="space-y-1 text-sm text-muted">
-            <div className="flex justify-between">
-              <dt>Food</dt>
-              <dd>{naira(order.food)}</dd>
-            </div>
+            {/* Nothing is bought on a parcel, so "Food ₦0" is a line about
+                something that never happened. */}
+            {!order.parcel && (
+              <div className="flex justify-between">
+                <dt>Food</dt>
+                <dd>{naira(order.food)}</dd>
+              </div>
+            )}
             <div className="flex justify-between">
               <dt>
-                {order.joinedDelivery
+                {order.parcel
+                  ? "Carrying it"
+                  : order.joinedDelivery
                   ? "Delivery, sharing a car with a friend"
                   : order.otherItems > 0
                     ? `Delivery top-up (${order.otherItems} more item${

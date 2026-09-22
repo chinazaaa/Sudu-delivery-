@@ -3233,3 +3233,51 @@ export async function removeParcelPhoto(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
   if (photo?.order_id) revalidatePath(`/o/${photo.order_id as string}`);
 }
+
+/**
+ * The day a parcel actually goes, and when it has to be paid for by.
+ *
+ * A parcel is its own trip, so the sender asks for a day and the shop says
+ * whether that day works. Until somebody agrees it here the order says the
+ * day is not agreed yet, rather than promising the day it was placed.
+ */
+export async function agreeParcelDay(
+  _prev: { done: string; error: string },
+  form: FormData
+): Promise<{ done: string; error: string }> {
+  await assertAdmin();
+
+  const orderId = String(form.get("order_id") ?? "").trim();
+  const day = String(form.get("run_date") ?? "").trim();
+  const time = String(form.get("cut_off_time") ?? "").trim();
+  if (!orderId || !/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+    return { done: "", error: "Pick the day it goes." };
+  }
+
+  const { data: order } = await db()
+    .from("orders")
+    .select("batch_id, parcel_route")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order?.parcel_route) return { done: "", error: "That order is not a parcel." };
+
+  const [hour, minute] = /^\d{2}:\d{2}$/.test(time)
+    ? time.split(":").map(Number)
+    : [23, 59];
+
+  const { error } = await db()
+    .from("batches")
+    .update({
+      run_date: day,
+      cut_off_at: lagosInstant(day, hour, minute),
+      // Set is what says a day has been agreed. Empty is what the order page
+      // reads as "waiting on a date".
+      deliver_at: lagosInstant(day, 12, 0),
+    })
+    .eq("id", order.batch_id as string);
+  if (error) return { done: "", error: `Could not set that: ${error.message}` };
+
+  revalidatePath("/admin", "layout");
+  revalidatePath(`/o/${orderId}`);
+  return { done: "Agreed ✓", error: "" };
+}

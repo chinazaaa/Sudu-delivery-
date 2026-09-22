@@ -112,3 +112,18 @@ export function whenLabel(iso: string): string {
     month: "short",
   }).format(when)}`;
 }
+
+/**
+ * A timestamp as an <input type="time"> wants it, in Lagos time.
+ *
+ * The browser would read the instant in whoever's timezone is open, so a
+ * cut-off set for midnight in Lagos opened at eleven in London.
+ */
+export function lagosClock(iso: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(iso));
+}

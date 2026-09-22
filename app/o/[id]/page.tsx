@@ -209,7 +209,15 @@ export default async function OrderPage({
         <div className="mt-4 flex flex-wrap gap-2 text-sm font-semibold">
           <span className="rounded-full bg-white/20 px-3 py-1.5">{order.hostel}</span>
           <span className="rounded-full bg-white/20 px-3 py-1.5">
-            {expired
+            {isParcel
+              ? // A parcel has no cut off worth printing until the shop has
+                // agreed the day: it was created with one set to that moment,
+                // and showing it read "Closes 11:55pm" on an order placed at
+                // 11:55pm, which is a deadline that had already gone.
+                order.batch.deliver_at
+                ? `Going out ${runDateLabel(order.batch.run_date)}`
+                : "Day not agreed yet"
+              : expired
               ? "Closed"
               : order.batch.kind === "same_day"
                 ? // A car of its own: it was made for this order and goes out

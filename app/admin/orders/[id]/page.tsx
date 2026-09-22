@@ -9,12 +9,14 @@ import { getSettings } from "@/lib/settings";
 import { payableAccounts } from "@/lib/banks";
 import { siteUrl, toCard } from "@/lib/admin-templates";
 import ParcelPhotos from "@/components/admin/ParcelPhotos";
+import ParcelDay from "@/components/admin/ParcelDay";
 import { photosFor } from "@/lib/parcel-photos";
 import { naira, shareRef } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { whatsappTo } from "@/lib/messages";
 import {
   addParcelPhoto,
+  agreeParcelDay,
   markPaid,
   markDelivered,
   moveOrderToAnother,
@@ -29,7 +31,7 @@ import { openBatches } from "@/lib/batches";
 import { hoursByDay } from "@/lib/settings";
 import { deliverySlots } from "@/lib/same-day";
 import { toBatchView } from "@/lib/view";
-import { dayWord } from "@/lib/time";
+import { dayWord, lagosClock } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -165,6 +167,19 @@ async function orderPage(id: string, said: string) {
       {/* Only on a parcel. Nobody photographs a bag of jollof, and a button
           offered on every order is a button nobody presses on the one that
           needs it. */}
+      {order.parcel_route && (
+        <div className="mt-4">
+          <ParcelDay
+            orderId={order.id}
+            wantedOn={order.parcel_wanted_on ?? ""}
+            runDate={order.batch.run_date}
+            cutOffTime={lagosClock(order.batch.cut_off_at)}
+            agreed={Boolean(order.batch.deliver_at)}
+            action={agreeParcelDay}
+          />
+        </div>
+      )}
+
       {order.parcel_route && (
         <div className="mt-4">
           <ParcelPhotos

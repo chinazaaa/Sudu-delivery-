@@ -3,6 +3,7 @@ import Link from "next/link";
 import ParcelForm from "@/components/ParcelForm";
 import { liveRoutes, parcels } from "@/lib/parcels";
 import { hostelNames } from "@/lib/hostels";
+import { lagosToday } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +65,12 @@ export default async function ParcelPage() {
         </ul>
       </section>
 
-      <ParcelForm routes={routes} maxValue={setup.maxValue} hostels={hostels} />
+      <ParcelForm
+        routes={routes}
+        maxValue={setup.maxValue}
+        hostels={hostels}
+        today={lagosToday()}
+      />
     </div>
   );
 }

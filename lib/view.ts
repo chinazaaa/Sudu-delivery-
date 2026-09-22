@@ -135,5 +135,14 @@ export function carLabel(batch: {
     return `Skincare · ${runDateLabel(batch.run_date)}`;
   }
 
+  if (kind === "parcel") {
+    // A parcel has no day until the shop has agreed one, and the day it was
+    // placed is not that day: "today · afternoon" read as a promise to carry
+    // it this afternoon, which nobody had agreed to.
+    return batch.deliver_at
+      ? `Parcel · ${runDateLabel(batch.run_date)}`
+      : "Parcel · waiting on a date";
+  }
+
   return `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`;
 }
