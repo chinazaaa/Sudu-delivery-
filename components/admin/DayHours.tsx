@@ -38,6 +38,23 @@ export default function DayHours({
 }) {
   const [days, setDays] = useState<Record<string, DaySetting>>(saved);
 
+  // Saving resets the form's fields in the browser, which left every one of
+  // these selects showing its first option, seven in the morning, while the
+  // real values sat in state untouched. A refresh "fixed" it because the
+  // refresh built the selects again from scratch.
+  //
+  // So when what is stored changes, which is exactly when a save has gone
+  // through, the picks are taken from the server again and the list below is
+  // rebuilt. Compared by value, not by identity: the prop is a fresh object
+  // on every render, and comparing identity would throw away a half-finished
+  // edit each time the page re-rendered.
+  const stored = JSON.stringify(saved);
+  const [seen, setSeen] = useState(stored);
+  if (seen !== stored) {
+    setSeen(stored);
+    setDays(saved);
+  }
+
   // A value the list does not offer would leave the select showing its first
   // option, which is how three in the afternoon came back as seven in the
   // morning. Anything unrecognised falls back to the hours above.
@@ -67,7 +84,7 @@ export default function DayHours({
         value={Object.keys(days).length === 0 ? "" : JSON.stringify(days)}
       />
 
-      <ul className="space-y-2">
+      <ul key={stored} className="space-y-2">
         {DAYS.map((day) => {
           const own = days[String(day.weekday)];
           const off = own?.off ?? false;

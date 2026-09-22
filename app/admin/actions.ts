@@ -488,6 +488,23 @@ export async function saveScheduleRun(form: FormData): Promise<void> {
   if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) return;
   if (!/^\d{2}:\d{2}$/.test(cutOff)) return;
 
+  // When it lands, picked on a clock rather than typed as a sentence, and
+  // worded exactly as a run's own window is worded. Both left empty keeps the
+  // wording that is already stored: a row written before the clocks existed
+  // has wording and no times, and saving a cut-off must not wipe it.
+  const from = String(form.get("window_from") ?? "").trim();
+  const to = String(form.get("window_to") ?? "").trim();
+  const said = sayWindow(from, to);
+
+  const { data: before } = await db()
+    .from("run_schedule")
+    .select("window_text")
+    .eq("weekday", weekday)
+    .eq("slot", slot)
+    .maybeSingle();
+
+  const windowText = said || String(before?.window_text ?? "").trim();
+
   const { error } = await db()
     .from("run_schedule")
     .upsert(
@@ -495,7 +512,9 @@ export async function saveScheduleRun(form: FormData): Promise<void> {
         weekday,
         slot,
         cut_off: cutOff,
-        window_text: String(form.get("window_text") ?? "").trim(),
+        window_from: from || null,
+        window_to: to || null,
+        window_text: windowText,
         // Saving a time must not quietly bring a paused day back.
         active: form.get("active") !== "false",
       },
@@ -506,7 +525,6 @@ export async function saveScheduleRun(form: FormData): Promise<void> {
   // The runs already opened for that day follow the new time. Only ones still
   // to come, and only while nothing has been ordered on them: a run with
   // orders keeps the cut-off and the delivery time its customers were told.
-  const windowText = String(form.get("window_text") ?? "").trim();
   const { data: rows } = await db()
     .from("batches")
     .select("id, run_date")
@@ -651,6 +669,20 @@ export async function deleteRun(form: FormData): Promise<void> {
   // cannot be deleted while anything points at it. That is why deleting one
   // of these looked like it had worked and changed nothing.
   await clearDeadGroups(id);
+
+  // Everything else that points at a run. A car cannot be deleted while any
+  // of these hold it, and the delete failed outright rather than skipping
+  // them, which is how deleting an empty run ended on an error page.
+  //
+  // What can let go of the run does: a checkout link outlives the run it was
+  // first pointed at, an occasion keeps its date and loses its car, and a
+  // payout is money and is never deleted to tidy a run away. What cannot let
+  // go is only ever a note about this run, so it goes with it.
+  await db().from("checkout_links").update({ batch_id: null }).eq("batch_id", id);
+  await db().from("occasions").update({ batch_id: null }).eq("batch_id", id);
+  await db().from("promoter_payouts").update({ batch_id: null }).eq("batch_id", id);
+  await db().from("coupon_runs").delete().eq("batch_id", id);
+  await db().from("counter_spend").delete().eq("batch_id", id);
 
   // A run the schedule still calls for comes straight back: opening admin
   // makes every run the week is supposed to have, and a deleted row is just a

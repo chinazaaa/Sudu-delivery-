@@ -138,27 +138,37 @@ export default async function SchedulePage() {
                       className="field py-2 text-sm"
                     />
                   </div>
+                  {/* Two times on a clock, worded the same way a run's own
+                      window is worded, rather than a sentence typed twice and
+                      spelt two different ways. */}
                   <div className="grow">
-                    <label className="label" htmlFor={`window-${run.id}`}>
-                      What customers are told
+                    <label className="label" htmlFor={`from-${run.id}`}>
+                      These runs arrive between
                     </label>
-                    <input
-                      id={`window-${run.id}`}
-                      name="window_text"
-                      defaultValue={run.window_text}
-                      placeholder={DELIVERY_WINDOWS[run.slot]}
-                      className="field py-2 text-sm"
-                    />
-                    {/* Left blank, runs fall back to a line written in code,
-                        which nobody can see from here. Say what it will be
-                        rather than letting a blank box look like no wording
-                        at all. */}
-                    {run.window_text.trim() === "" && (
-                      <p className="mt-1 text-xs text-brand-dark">
-                        Blank, so these runs will say &quot;
-                        {DELIVERY_WINDOWS[run.slot]}&quot;
-                      </p>
-                    )}
+                    <span className="flex items-center gap-2">
+                      <input
+                        id={`from-${run.id}`}
+                        name="window_from"
+                        type="time"
+                        defaultValue={run.window_from}
+                        className="field w-32 py-2 text-sm"
+                      />
+                      <span className="text-sm text-muted">and</span>
+                      <input
+                        name="window_to"
+                        type="time"
+                        defaultValue={run.window_to}
+                        aria-label="Latest arrival"
+                        className="field w-32 py-2 text-sm"
+                      />
+                    </span>
+                    <p className="mt-1 text-xs text-muted">
+                      Customers are told:{" "}
+                      <span className="font-semibold">
+                        {run.window_text.trim() || DELIVERY_WINDOWS[run.slot]}
+                      </span>
+                      {run.window_text.trim() === "" && " (nothing set yet)"}
+                    </p>
                   </div>
                   <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
                     Save

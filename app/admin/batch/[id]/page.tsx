@@ -28,6 +28,7 @@ import { allAreas } from "@/lib/areas-server";
 import { areasOfRun } from "@/lib/areas";
 import { batchSheet, notPriced, stillOpen, typicalCosts, shortfalls } from "@/lib/admin";
 import { SLOT_LABEL } from "@/lib/config";
+import { runSchedule, WEEKDAYS } from "@/lib/schedule";
 import Link from "next/link";
 import { naira, orderRef, refsIn } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
@@ -72,6 +73,20 @@ export default async function BatchPage({
   // A run nobody has ordered into is still just a plan: it can be moved to
   // another day, or dropped altogether.
   const empty = summary.paidCount + summary.unpaidCount === 0;
+  // A run the schedule still calls for cannot actually be deleted: opening
+  // admin would make it again the moment it went. It is marked not running
+  // instead, which is what stops it coming back. The panel below has to say
+  // that, because a Delete button that leaves the run on the page reading
+  // "cancelled" looks broken.
+  const scheduleWeekday = new Date(`${batch.run_date}T12:00:00Z`).getUTCDay();
+  const onSchedule =
+    batch.kind !== "same_day" &&
+    (await runSchedule(true)).some(
+      (entry) =>
+        entry.active &&
+        entry.slot === batch.slot &&
+        entry.weekday === scheduleWeekday
+    );
   // Past the counter, the shopping is done and the list is history. Past the
   // handout, so is the run.
   const shopped = stageIndex(batch.stage) >= stageIndex("on_the_road");
@@ -1288,19 +1303,41 @@ export default async function BatchPage({
                     {empty && (
                       <form action={deleteRun} className="mt-4 border-t border-black/5 pt-3">
                         <input type="hidden" name="batch_id" value={batch.id} />
-                        <h3 className="font-bold">Delete this run</h3>
+                        <h3 className="font-bold">
+                          {onSchedule ? "Take this run off" : "Delete this run"}
+                        </h3>
                         <p className="mt-0.5 text-xs text-muted">
-                          Nothing has been ordered into it, so it can go
-                          entirely. A run with orders on it is cancelled
-                          instead, never deleted.
+                          {onSchedule ? (
+                            <>
+                              Nothing has been ordered into it. Your schedule
+                              still has {WEEKDAYS[scheduleWeekday]}{" "}
+                              {SLOT_LABEL[batch.slot]} on it, so deleting it
+                              outright would only open it again next time admin
+                              loads. It will be marked not running instead,
+                              which takes it off the shop and keeps it off. To
+                              stop that day for good, pause it on the{" "}
+                              <Link href="/admin/schedule" className="underline">
+                                schedule
+                              </Link>{" "}
+                              first, then come back here.
+                            </>
+                          ) : (
+                            <>
+                              Nothing has been ordered into it, so it can go
+                              entirely. A run with orders on it is cancelled
+                              instead, never deleted.
+                            </>
+                          )}
                         </p>
                         <span className="mt-2 block">
                           <ConfirmButton
                             tone="brand"
                             className="px-4 py-2 text-sm"
-                            confirm="Yes, delete it"
+                            confirm={
+                              onSchedule ? "Yes, take it off" : "Yes, delete it"
+                            }
                           >
-                            Delete this run
+                            {onSchedule ? "Take this run off" : "Delete this run"}
                           </ConfirmButton>
                         </span>
                       </form>

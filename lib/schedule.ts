@@ -7,6 +7,12 @@ export type ScheduledRun = {
   slot: BatchSlot;
   /** "11:30", Lagos time. */
   cut_off: string;
+  /** When the run lands, as two times on a clock. "15:00" and "18:00".
+   *  Empty on a row written before these existed, which has wording only. */
+  window_from: string;
+  window_to: string;
+  /** What customers read. Written from the two times above, and kept as its
+   *  own column because every message, page and card already reads it. */
   window_text: string;
   active: boolean;
 };
@@ -41,9 +47,12 @@ async function storedSchedule(includeHidden: boolean): Promise<ScheduledRun[] | 
     if (error) throw new Error(error.message);
 
     // Postgres hands back "11:30:00"; the time input and the parser want "11:30".
+    const clock = (raw: string | null | undefined) => (raw ?? "").slice(0, 5);
     return ((data ?? []) as ScheduledRun[]).map((row) => ({
       ...row,
-      cut_off: row.cut_off.slice(0, 5),
+      cut_off: clock(row.cut_off),
+      window_from: clock(row.window_from),
+      window_to: clock(row.window_to),
     }));
   } catch {
     return null;
@@ -72,6 +81,8 @@ export async function runSchedule(includeHidden = false): Promise<ScheduledRun[]
       cut_off: `${String(CUT_OFFS[slot].hour).padStart(2, "0")}:${String(
         CUT_OFFS[slot].minute
       ).padStart(2, "0")}`,
+      window_from: "",
+      window_to: "",
       window_text: DELIVERY_WINDOWS[slot],
       active: true,
     }))
