@@ -488,3 +488,93 @@ export async function boxNumbers(days = 28): Promise<BoxNumbers | null> {
       .map((one: any) => one.name as string),
   };
 }
+
+export type ParcelNumbers = {
+  sent: number;
+  paid: number;
+  money: number;
+  /** Still waiting on a day from the shop, which is work rather than money. */
+  waitingOnDay: number;
+  /** Carried and handed over, so the promise was kept. */
+  delivered: number;
+  /** Routes, busiest first, with what each brought in. */
+  routes: { route: string; sent: number; money: number }[];
+  /** Trips actually driven, against parcels carried: two parcels sharing a
+   *  car is the whole reason this is worth watching. */
+  trips: number;
+};
+
+/**
+ * Parcels, which are neither food nor a shelf.
+ *
+ * Kept apart from the rest because nothing is bought on one: every naira is
+ * the fee, so a parcel folded into "money in" against "food cost" reads as a
+ * run with a perfect margin and quietly flatters every other number.
+ */
+export async function parcelNumbers(days = 7): Promise<ParcelNumbers | null> {
+  const since = new Date(Date.now() - days * 86400_000).toISOString();
+
+  const { data: orders, error } = await db()
+    .from("orders")
+    .select("id, batch_id, status, fee, total, parcel_route")
+    .not("parcel_route", "is", null)
+    .gte("created_at", since);
+  // No column, no parcels, nothing to say.
+  if (error) return null;
+
+  const rows = ((orders ?? []) as {
+    id: string;
+    batch_id: string;
+    status: string;
+    fee: number;
+    total: number;
+    parcel_route: string | null;
+  }[]).filter((one) => !isGone(one.status));
+
+  if (rows.length === 0) {
+    return {
+      sent: 0,
+      paid: 0,
+      money: 0,
+      waitingOnDay: 0,
+      delivered: 0,
+      routes: [],
+      trips: 0,
+    };
+  }
+
+  const { data: trips } = await db()
+    .from("batches")
+    .select("id, deliver_at, stage")
+    .in("id", rows.map((one) => one.batch_id));
+  const trip = new Map(
+    ((trips ?? []) as { id: string; deliver_at: string | null; stage: string }[]).map(
+      (one) => [one.id, one]
+    )
+  );
+
+  const paid = rows.filter((one) => isPaid(one.status));
+  const byRoute = new Map<string, { sent: number; money: number }>();
+  for (const row of rows) {
+    const key = row.parcel_route ?? "";
+    const now = byRoute.get(key) ?? { sent: 0, money: 0 };
+    byRoute.set(key, {
+      sent: now.sent + 1,
+      money: now.money + (isPaid(row.status) ? row.total : 0),
+    });
+  }
+
+  return {
+    sent: rows.length,
+    paid: paid.length,
+    money: paid.reduce((total, one) => total + one.total, 0),
+    waitingOnDay: rows.filter((one) => !trip.get(one.batch_id)?.deliver_at).length,
+    delivered: rows.filter((one) => trip.get(one.batch_id)?.stage === "handed_out").length,
+    routes: [...byRoute.entries()]
+      .map(([route, one]) => ({ route, ...one }))
+      .sort((a, b) => b.sent - a.sent),
+    // The trips those parcels actually took, which is fewer than the parcels
+    // wherever two shared a car.
+    trips: new Set(rows.map((one) => one.batch_id)).size,
+  };
+}

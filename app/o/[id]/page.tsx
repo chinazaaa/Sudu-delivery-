@@ -154,9 +154,16 @@ export default async function OrderPage({
     order.fee === (fees.otherItems > 0 ? band.fee - fees.otherFee : band.fee);
   const shared = order.group_id !== null;
 
+  // A run that is not going out says so before anything else. Cancelled, it
+  // used to read "Paid and on the run", which is the one thing it is not.
+  const cancelledRun = order.batch.status === "cancelled";
   const status =
     order.status === "delivered"
       ? "Delivered"
+      : cancelledRun
+        ? isParcel
+          ? "This trip is not going out"
+          : "This run is not going out"
       : paid
         ? order.batch.stage === "ordering"
           ? "Paid and on the run"

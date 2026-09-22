@@ -238,10 +238,32 @@ export async function deleteOrder(form: FormData): Promise<void> {
 
 export async function setBatchStatus(form: FormData): Promise<void> {
   await assertAdmin();
-  await db()
+  const batchId = String(form.get("batch_id"));
+  const status = String(form.get("status"));
+  if (!batchId) return;
+
+  const { data: batch } = await db()
     .from("batches")
-    .update({ status: String(form.get("status")) })
-    .eq("id", String(form.get("batch_id")));
+    .select("stage")
+    .eq("id", batchId)
+    .maybeSingle();
+  const stage = (batch?.stage ?? "ordering") as BatchStage;
+
+  // A run that is not going out is not taking orders either. Only the status
+  // moved here, so a cancelled run went on saying "Ordering is open" on its
+  // own page and on every order that was already on it, which is the one
+  // sentence that could send somebody to pay for a car that is not going.
+  //
+  // Only where nothing has happened yet: a run cancelled after the shopping
+  // keeps where it actually got to, because that is the truth about it.
+  const patch: Record<string, string> = { status };
+  if (status === "cancelled" && stage === "ordering") patch.stage = "closed";
+  // Reopening puts it back where it was, for the same reason: a run taking
+  // orders again is a run whose orders are open.
+  if (status === "open" && stage === "closed") patch.stage = "ordering";
+  if (patch.stage) patch.stage_updated_at = new Date().toISOString();
+
+  await db().from("batches").update(patch).eq("id", batchId);
   revalidatePath("/admin", "layout");
 }
 

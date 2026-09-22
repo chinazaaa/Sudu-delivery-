@@ -2,7 +2,16 @@ import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import { naira } from "@/lib/money";
-import { boxNumbers, feedback, funnel, shelfNumbers, traffic } from "@/lib/analytics";
+import {
+  boxNumbers,
+  feedback,
+  funnel,
+  parcelNumbers,
+  shelfNumbers,
+  traffic,
+} from "@/lib/analytics";
+import { parseRoutes, routeById } from "@/lib/parcels";
+import { safeSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -17,14 +26,19 @@ export default async function AnalyticsPage({
   const days = RANGES.includes(asked as (typeof RANGES)[number]) ? asked : 7;
 
   // Null means nothing is counting yet. The rest of the page still works.
-  const [views, steps, said, shelf, boxes] = await Promise.all([
+  const [views, steps, said, shelf, boxes, parcels, settings] = await Promise.all([
     traffic(days),
     funnel(days),
     feedback(days),
     shelfNumbers(days),
     boxNumbers(days),
+    parcelNumbers(days),
+    safeSettings(),
   ]);
   const busiest = views ? Math.max(...views.perDay.map((day) => day.views), 1) : 1;
+  // A route is stored by its id, and the id is not what anybody calls it.
+  const routes = parseRoutes(settings.parcel_routes);
+  const routeLabel = (id: string) => routeById(routes, id)?.label ?? id;
 
   return (
     <div className="space-y-4">
@@ -174,6 +188,61 @@ export default async function AnalyticsPage({
                   >
                     <span className="min-w-0 truncate">{one.name}</span>
                     <span className="shrink-0 font-bold">{one.qty}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
+
+      {parcels && parcels.sent > 0 && (
+        <section className="card space-y-3">
+          <div>
+            <h2 className="font-bold">Parcels</h2>
+            <p className="text-sm text-muted">
+              Nothing is bought on a parcel, so every naira here is the fee.
+              These are also in the totals above, where they read as a run
+              with no food cost.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Stat
+              label="Sent"
+              value={parcels.sent}
+              hint={`${parcels.paid} paid · last ${days} days`}
+            />
+            <Stat label="Money in" value={parcels.money} money hint="Paid parcels" />
+            <Stat
+              label="Waiting on a day"
+              value={parcels.waitingOnDay}
+              tone={parcels.waitingOnDay > 0 ? "warn" : undefined}
+              hint="You have not agreed one"
+            />
+            <Stat
+              label="Handed over"
+              value={parcels.delivered}
+              hint={`${parcels.trips} trip${parcels.trips === 1 ? "" : "s"} driven`}
+            />
+          </div>
+
+          {parcels.routes.length > 0 && (
+            <div>
+              <p className="label mb-1">Which way they go</p>
+              <ul className="space-y-1">
+                {parcels.routes.map((one) => (
+                  <li
+                    key={one.route}
+                    className="flex items-center justify-between gap-3 rounded-xl bg-shell px-3 py-2 text-sm"
+                  >
+                    <span className="min-w-0 truncate">
+                      {routeLabel(one.route)}
+                    </span>
+                    <span className="shrink-0">
+                      <span className="font-bold">{one.sent}</span>
+                      <span className="text-muted"> · {naira(one.money)}</span>
+                    </span>
                   </li>
                 ))}
               </ul>
