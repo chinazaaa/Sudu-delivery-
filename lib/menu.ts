@@ -30,12 +30,27 @@ async function readMenu(): Promise<MenuView[]> {
   if (places.length === 0) return [];
 
   const ids = places.map((r) => r.id);
-  const [categories, items] = await Promise.all([
-    db().from("menu_categories").select("*").in("restaurant_id", ids).order("sort_order"),
-    db().from("menu_items").select("*").in("restaurant_id", ids).order("sort_order"),
+  const [categoryRows, menuItems] = await Promise.all([
+    everyRow<MenuCategory>((from, to) =>
+      db()
+        .from("menu_categories")
+        .select("*")
+        .in("restaurant_id", ids)
+        .order("sort_order")
+        .order("id")
+        .range(from, to)
+    ),
+    everyRow<MenuItem>((from, to) =>
+      db()
+        .from("menu_items")
+        .select("*")
+        .in("restaurant_id", ids)
+        .order("sort_order")
+        .order("id")
+        .range(from, to)
+    ),
   ]);
 
-  const menuItems = (items.data ?? []) as MenuItem[];
   const groupsByItem = await optionGroupsFor(menuItems.map((i) => i.id));
 
   return places.map((restaurant) => ({
@@ -47,7 +62,7 @@ async function readMenu(): Promise<MenuView[]> {
       bannerUrl: restaurant.banner_url ?? "",
       brandHex: restaurant.brand_hex ?? "",
     },
-    categories: ((categories.data ?? []) as MenuCategory[])
+    categories: categoryRows
       .filter((c) => c.restaurant_id === restaurant.id)
       .map((c) => ({ id: c.id, name: c.name })),
     items: menuItems
@@ -66,6 +81,37 @@ async function readMenu(): Promise<MenuView[]> {
         })
       ),
   }));
+}
+
+/** The most rows one request comes back with, whatever it was asked for. */
+const PAGE = 1000;
+
+/**
+ * Every row a query has, rather than the first thousand of them.
+ *
+ * The database answers with at most a thousand rows and says nothing about
+ * the rest, so a menu that grew past that came back short and silent: two
+ * hundred and thirty seven dishes were simply not on the shop, and opening
+ * one by its link was a 404 on a dish that plainly exists in admin.
+ *
+ * Ordered by id as well as by whatever the caller asked for, because rows
+ * that tie have no order of their own, and pages taken out of an order that
+ * is not total can repeat one row and lose another.
+ */
+async function everyRow<T>(
+  page: (from: number, to: number) => PromiseLike<{
+    data: unknown[] | null;
+    error: { message: string } | null;
+  }>
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let at = 0; ; at += PAGE) {
+    const { data, error } = await page(at, at + PAGE - 1);
+    if (error) throw new Error(error.message);
+    const batch = (data ?? []) as T[];
+    rows.push(...batch);
+    if (batch.length < PAGE) return rows;
+  }
 }
 
 /**
@@ -91,27 +137,40 @@ export async function optionGroupsFor(
   // returned no options at all, so a combo that must ask which drink came
   // through as a plain item at the wrong price. Ask in batches, and let a
   // real failure be a failure rather than an empty answer.
+  //
+  // Paged as well as batched. A hundred items can ask more than a thousand
+  // questions between them, and a hundred groups can hold two thousand
+  // choices, and the answer stops at a thousand without saying so: the dish
+  // arrives asking which sauce with half the sauces missing.
   const groupRows: OptionGroup[] = [];
   for (const batch of inBatches(itemIds)) {
-    const { data, error } = await db()
-      .from("item_option_groups")
-      .select("*")
-      .in("menu_item_id", batch)
-      .order("sort_order");
-    if (error) throw new Error(error.message);
-    groupRows.push(...((data ?? []) as OptionGroup[]));
+    groupRows.push(
+      ...(await everyRow<OptionGroup>((from, to) =>
+        db()
+          .from("item_option_groups")
+          .select("*")
+          .in("menu_item_id", batch)
+          .order("sort_order")
+          .order("id")
+          .range(from, to)
+      ))
+    );
   }
   if (groupRows.length === 0) return byItem;
 
   const optionRows: ItemOption[] = [];
   for (const batch of inBatches(groupRows.map((g) => g.id))) {
-    const { data, error } = await db()
-      .from("item_options")
-      .select("*")
-      .in("group_id", batch)
-      .order("sort_order");
-    if (error) throw new Error(error.message);
-    optionRows.push(...((data ?? []) as ItemOption[]));
+    optionRows.push(
+      ...(await everyRow<ItemOption>((from, to) =>
+        db()
+          .from("item_options")
+          .select("*")
+          .in("group_id", batch)
+          .order("sort_order")
+          .order("id")
+          .range(from, to)
+      ))
+    );
   }
 
   for (const group of groupRows) {
@@ -168,12 +227,27 @@ async function readMenuFor(ref: string): Promise<MenuView | null> {
   if ((restaurant.kind ?? "food") === "skincare") return null;
   const restaurantId = restaurant.id;
 
-  const [categories, items] = await Promise.all([
-    db().from("menu_categories").select("*").eq("restaurant_id", restaurantId).order("sort_order"),
-    db().from("menu_items").select("*").eq("restaurant_id", restaurantId).order("sort_order"),
+  const [categoryRows, menuItems] = await Promise.all([
+    everyRow<MenuCategory>((from, to) =>
+      db()
+        .from("menu_categories")
+        .select("*")
+        .eq("restaurant_id", restaurantId)
+        .order("sort_order")
+        .order("id")
+        .range(from, to)
+    ),
+    everyRow<MenuItem>((from, to) =>
+      db()
+        .from("menu_items")
+        .select("*")
+        .eq("restaurant_id", restaurantId)
+        .order("sort_order")
+        .order("id")
+        .range(from, to)
+    ),
   ]);
 
-  const menuItems = (items.data ?? []) as MenuItem[];
   const groupsByItem = await optionGroupsFor(menuItems.map((i) => i.id));
 
   return {
@@ -185,10 +259,7 @@ async function readMenuFor(ref: string): Promise<MenuView | null> {
       bannerUrl: restaurant.banner_url ?? "",
       brandHex: restaurant.brand_hex ?? "",
     },
-    categories: ((categories.data ?? []) as MenuCategory[]).map((c) => ({
-      id: c.id,
-      name: c.name,
-    })),
+    categories: categoryRows.map((c) => ({ id: c.id, name: c.name })),
     items: menuItems.map(
       (i): ItemView => ({
         id: i.id,
