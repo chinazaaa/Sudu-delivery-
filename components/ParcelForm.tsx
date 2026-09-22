@@ -38,6 +38,26 @@ export default function ParcelForm({
   const picked = bands.some((one) => one.upTo === kg) ? kg : bands[0]?.upTo ?? 0;
   const fee = route ? feeFor(route, picked) : null;
 
+  // React resets an uncontrolled form once its action finishes, which wiped
+  // every field each time the server refused something: a number typed
+  // slightly wrong cost somebody the whole form. They are held here instead,
+  // so a refusal leaves the answer on screen to be corrected.
+  const [said, setSaid] = useState({
+    item: "",
+    shop: "",
+    address: "",
+    hostel: "",
+    room: "",
+    name: "",
+    phone: "",
+    to_name: "",
+    to_phone: "",
+    note: "",
+  });
+  const put = (field: keyof typeof said) => (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => setSaid((all) => ({ ...all, [field]: event.target.value }));
+
   // Said as it is typed rather than after the whole form has been filled in
   // and sent. The cap is the shop's only protection on a parcel, so being
   // refused by it is the most likely reason this form fails, and finding
@@ -98,6 +118,8 @@ export default function ParcelForm({
           <input
             id="item"
             name="item"
+            value={said.item}
+            onChange={put("item")}
             required
             minLength={2}
             placeholder="A dress in a paper bag"
@@ -115,6 +137,8 @@ export default function ParcelForm({
           <input
             id="shop"
             name="shop"
+            value={said.shop}
+            onChange={put("shop")}
             required
             minLength={2}
             placeholder={toPau ? "Bella's Boutique" : "My sister, Ada"}
@@ -129,6 +153,8 @@ export default function ParcelForm({
           <textarea
             id="address"
             name="address"
+            value={said.address}
+            onChange={put("address")}
             required
             minLength={6}
             rows={2}
@@ -142,7 +168,14 @@ export default function ParcelForm({
             {toPau ? "Which block are we bringing it to?" : "Which block are we collecting from?"}
           </label>
           {hostels.length > 0 ? (
-            <select id="hostel" name="hostel" required defaultValue="" className="field">
+            <select
+              id="hostel"
+              name="hostel"
+              required
+              value={said.hostel}
+              onChange={put("hostel")}
+              className="field"
+            >
               <option value="">Pick the block</option>
               {hostels.map((name) => (
                 <option key={name} value={name}>
@@ -155,6 +188,8 @@ export default function ParcelForm({
               id="hostel"
               name="hostel"
               required
+              value={said.hostel}
+              onChange={put("hostel")}
               placeholder="Ikoyi Hall"
               className="field"
             />
@@ -166,6 +201,8 @@ export default function ParcelForm({
             <input
               id="room"
               name="room"
+              value={said.room}
+              onChange={put("room")}
               placeholder="Room 12, or the porter's desk"
               className="field"
             />
@@ -212,6 +249,8 @@ export default function ParcelForm({
             <input
               id="name"
               name="name"
+              value={said.name}
+              onChange={put("name")}
               required
               minLength={2}
               autoComplete="name"
@@ -225,13 +264,19 @@ export default function ParcelForm({
             <input
               id="phone"
               name="phone"
+              value={said.phone}
+              onChange={put("phone")}
               required
               type="tel"
               inputMode="tel"
               minLength={10}
               autoComplete="tel"
+              placeholder="0803 123 4567"
               className="field"
             />
+            <p className="mt-1 text-xs text-muted">
+              Eleven digits, starting 070, 080, 081, 090 or 091.
+            </p>
           </div>
         </div>
 
@@ -243,7 +288,13 @@ export default function ParcelForm({
             <label className="label" htmlFor="to_name">
               Who receives it? (if not you)
             </label>
-            <input id="to_name" name="to_name" className="field" />
+            <input
+              id="to_name"
+              name="to_name"
+              value={said.to_name}
+              onChange={put("to_name")}
+              className="field"
+            />
           </div>
           <div>
             <label className="label" htmlFor="to_phone">
@@ -252,6 +303,8 @@ export default function ParcelForm({
             <input
               id="to_phone"
               name="to_phone"
+              value={said.to_phone}
+              onChange={put("to_phone")}
               type="tel"
               inputMode="tel"
               className="field"
@@ -263,7 +316,14 @@ export default function ParcelForm({
           <label className="label" htmlFor="note">
             Anything else we should know?
           </label>
-          <textarea id="note" name="note" rows={2} className="field" />
+          <textarea
+            id="note"
+            name="note"
+            value={said.note}
+            onChange={put("note")}
+            rows={2}
+            className="field"
+          />
         </div>
       </div>
 
