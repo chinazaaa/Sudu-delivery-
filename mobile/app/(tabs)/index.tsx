@@ -97,6 +97,8 @@ export default function Home() {
   // What is packed and ready, said as the thing itself rather than as a
   // category. The home screen is the only signpost this app has.
   const [occasions, setOccasions] = useState("");
+  // Empty when parcels are off, and then the page does not mention them.
+  const [parcels, setParcels] = useState("");
 
   useEffect(() => {
     void api
@@ -106,6 +108,21 @@ export default function Home() {
       })
       .catch(() => {
         /* The shelf is a door, not the shop. A closed one is no error. */
+      });
+
+    // Named by where it goes rather than called "Parcels": nobody is looking
+    // for a parcel service, they have a dress sitting in a shop in Lekki.
+    void api
+      .parcels()
+      .then((setup) => {
+        if (!setup.on || setup.routes.length === 0) return;
+        const named = setup.routes.map((one) => one.label).slice(0, 2).join(", ");
+        setParcels(
+          `${named}${setup.routes.length > 2 ? " and more" : ""}. Its own trip, on a day we agree.`
+        );
+      })
+      .catch(() => {
+        /* Parcels are an extra. The menu is the page. */
       });
 
     // Named by whatever is nearest, because "Match day, Saturday" is a

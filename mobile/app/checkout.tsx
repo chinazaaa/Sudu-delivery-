@@ -196,6 +196,26 @@ export default function Checkout() {
   const farNames = far.map((one) => one.name).join(" and ");
   const noRunThere = far.length > 0 && runsHere.length === 0;
 
+  // What the rest of the cart could catch on its own. Without the far food it
+  // is a Sangotedo cart, so every open run can carry it and a car of its own
+  // is back on the table: counting runs alone named tomorrow night while a
+  // car could have been there this afternoon.
+  const farSooner = (() => {
+    if (far.length === 0) return "";
+    // Every run, not only the ones that can carry the far half: without that
+    // food the cart is a Sangotedo one and any of them will do.
+    const usable = (shop?.runs ?? []).filter((one) => !one.closed && !one.full);
+    const everySlot = shop?.sameDay?.slots ?? [];
+
+    const slotToday = everySlot.find((one) => one.day === "today");
+    const soonest = usable[0] ?? null;
+    // A car of its own counts only where one could go today: one tomorrow is
+    // no better than tomorrow's run, and offering it as if it were is how
+    // somebody pays for a car to save nothing.
+    if (slotToday && slotToday.phrase) return `${slotToday.phrase} today`;
+    return soonest ? soonest.label : "";
+  })();
+
   const run = runsHere.find((one) => one.id === runId) ?? null;
   const picked: Slot | null = slots.find((one) => one.at === deliverAt) ?? null;
 
@@ -409,10 +429,15 @@ export default function Checkout() {
             : "Everybody's food in one car, which is why it costs less."}
         </Text>
 
+        {/* One line, because three paragraphs about Lekki is three
+            paragraphs nobody reads. Why it waits for a run, and the way out
+            where waiting is the wrong trade. */}
         {far.length > 0 && !noRunThere && (
-          <Text style={{ color: T.brandDark, fontWeight: "700" }}>
-            {farNames} rides a run, so everything here travels together on
-            that one. One delivery, not two.
+          <Text style={{ color: T.brandDark }}>
+            <Text style={{ fontWeight: "700" }}>{farNames} goes out on a run only.</Text>
+            {farSooner !== ""
+              ? ` Take ${far.length === 1 ? "it" : "those"} out and the rest can come ${farSooner}.`
+              : " Everything here travels together, so there is one delivery fee."}
           </Text>
         )}
 
@@ -455,8 +480,8 @@ export default function Checkout() {
         {noRunThere && (
           <Text style={{ color: T.brandDark, fontWeight: "700" }}>
             No run is going to {farNames} just now, and a car of its own
-            cannot get there and back in time. Take those out and the rest
-            can still come today.
+            cannot get there and back in time. Take {far.length === 1 ? "it" : "those"}{" "}
+            out and the rest can come {farSooner || "on the next one"}.
           </Text>
         )}
 
@@ -667,6 +692,7 @@ export default function Checkout() {
 
       <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 6 }}>
         <Row label="Food" value={naira(food)} />
+
         <Row
           label={
             offered

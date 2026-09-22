@@ -1,4 +1,9 @@
 import { db } from "./supabase";
+import { emailAdmins } from "./email";
+import { renderEmail, renderText, type Block } from "./email-html";
+import { naira } from "./money";
+import { siteUrl } from "./admin-templates";
+import { safeSettings } from "./settings";
 import { isReturningCustomer } from "./orders";
 import { realPromoter } from "./promoters";
 import { lagosInstant, lagosToday } from "./time";
@@ -247,5 +252,91 @@ export async function placeParcel(input: ParcelInput): Promise<ParcelResult> {
     /* The parcel exists either way. */
   }
 
+  await announceParcel({
+    orderId: order.id as string,
+    name,
+    phone,
+    route: route.label,
+    item,
+    shop,
+    from,
+    to,
+    kg,
+    value,
+    fee,
+    wanted,
+    note: input.note.trim(),
+  });
+
   return { ok: true, orderId: order.id as string };
+}
+
+/**
+ * The email that says a parcel has come in.
+ *
+ * Every other order sends one and a parcel did not, so the first anybody knew
+ * of it was somebody happening to open admin. Its own wording rather than the
+ * food one: there are no lines to group by restaurant, and what is needed
+ * first is where to go, what to ask for and which day was asked for, because
+ * agreeing that day is the next thing somebody has to do.
+ */
+async function announceParcel(args: {
+  orderId: string;
+  name: string;
+  phone: string;
+  route: string;
+  item: string;
+  shop: string;
+  from: string;
+  to: string;
+  kg: number;
+  value: number;
+  fee: number;
+  wanted: string;
+  note: string;
+}): Promise<void> {
+  try {
+    const url = await siteUrl().catch(() => "");
+    const link = url ? `${url}/admin/orders/${args.orderId}` : "";
+    const title = `New parcel · ${args.name} · ${args.route} · ${naira(args.fee)}`;
+
+    const blocks: Block[] = [
+      {
+        kind: "text",
+        text: `${args.name} wants a parcel carried, ${args.route}. They asked for ${args.wanted}.`,
+      },
+      ...(link ? [{ kind: "button" as const, label: "Open the parcel", href: link }] : []),
+      {
+        kind: "rows",
+        rows: [
+          { label: "Total", value: `${naira(args.fee)} · unpaid` },
+          { label: "Day they asked for", value: args.wanted },
+          { label: "Collect", value: args.from },
+          { label: "From", value: args.shop },
+          { label: "What", value: args.item },
+          { label: "Take to", value: args.to },
+          { label: "Weight", value: `Up to ${args.kg}kg` },
+          { label: "Worth", value: naira(args.value) },
+          { label: "Number", value: args.phone },
+        ],
+      },
+      {
+        kind: "note",
+        text:
+          "Nothing happens until the day is agreed. Open it, say whether that " +
+          "day works, and their page stops saying the day is not agreed yet.",
+      },
+      ...(args.note ? [{ kind: "note" as const, text: `They asked: ${args.note}` }] : []),
+    ];
+
+    const tagline = (await safeSettings()).tagline || undefined;
+    await emailAdmins(
+      title,
+      renderText(title, blocks),
+      renderEmail(title, blocks, tagline),
+      "order"
+    );
+  } catch {
+    /* Never let a notification break a parcel that is already saved. */
+  }
 }

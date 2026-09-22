@@ -284,7 +284,27 @@ export type OrderView = {
   /** What they said about it last time, if they have answered. */
   rating?: number | null;
   feedback?: string;
-  run: { sameDay?: boolean; label: string; cutOffISO: string; window: string };
+  run: {
+    sameDay?: boolean;
+    label: string;
+    cutOffISO: string;
+    window: string;
+    /** Which shop it came from. Older servers leave it out, and then it is a
+     *  run, which is what everything was before the others existed. */
+    kind?: string;
+    /** A parcel has no day until the shop has agreed one. */
+    agreed?: boolean;
+  };
+  /** A parcel rather than food: what is carried and between where. Null on
+   *  every ordinary order. */
+  parcel?: {
+    route: string;
+    item: string;
+    shop: string;
+    from: string;
+    to: string;
+    kg: number;
+  } | null;
   lines: { name: string; restaurant: string; qty: number; choices: string[]; unitPrice: number }[];
   accounts: { bank: string; name: string; number: string }[];
 };
@@ -605,6 +625,57 @@ export const api = {
     note: string;
     paymentMethod: "transfer" | "card";
   }) => post<{ orderId: string; token: string | null }>("/skincare/order", order),
+
+  /**
+   * Carrying a parcel. What the shop carries and what it charges, and a post
+   * to send one.
+   *
+   * Every rule stays on the server: the phone draws the form and nothing
+   * else, so the value cap, the weight bands and what counts as a real route
+   * cannot be argued with from a phone somebody has taken apart.
+   */
+  parcels: () => get<ParcelSetup>("/parcel"),
+  sendParcel: (parcel: {
+    route: string;
+    kg: number;
+    wantedOn: string;
+    item: string;
+    shop: string;
+    address: string;
+    hostel: string;
+    room: string;
+    value: string;
+    name: string;
+    phone: string;
+    toName: string;
+    toPhone: string;
+    heardFrom: string;
+    note: string;
+    paymentMethod: "transfer" | "card";
+  }) => post<{ orderId: string }>("/parcel", parcel),
+};
+
+/** A route a parcel can travel, and what it costs by weight. */
+export type ParcelRoute = {
+  id: string;
+  label: string;
+  /** Which end is campus: one end is a block and the other is an address. */
+  toPau: boolean;
+  bands: { upTo: number; fee: number }[];
+};
+
+/** What the shop carries, and the rules it carries it under. */
+export type ParcelSetup = {
+  on: boolean;
+  blurb: string;
+  terms: string[];
+  maxValue: number;
+  /** The shop's today in Lagos, so a phone set to another day cannot offer a
+   *  date that has already gone here. */
+  today: string;
+  hostels: string[];
+  promoters: { code: string; name: string }[];
+  routes: ParcelRoute[];
 };
 
 /** A product on the skincare shelf. */

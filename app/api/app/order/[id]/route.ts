@@ -52,10 +52,27 @@ export async function GET(
         // A car of its own rather than a shared run, so the app can say when
         // it goes out instead of naming a run and a slot nobody chose.
         sameDay: order.batch.kind === "same_day",
+        // Which shop it came from, for the one word that changes between
+        // them: a parcel is not food and neither is a cleanser.
+        kind: order.batch.kind ?? "run",
+        // A parcel has no day until the shop has agreed one.
+        agreed: Boolean(order.batch.deliver_at),
         label: carLabel(order.batch),
         cutOffISO: order.batch.cut_off_at,
         window: order.batch.delivery_window_text,
       },
+      // A parcel buys nothing, so it has no lines at all: what it has is a
+      // trip, and without this the app shows a name and an empty list.
+      parcel: order.parcel_route
+        ? {
+            route: order.parcel_route,
+            item: order.parcel_item ?? "",
+            shop: order.parcel_shop ?? "",
+            from: order.parcel_from ?? "",
+            to: order.parcel_to ?? "",
+            kg: order.parcel_kg ?? 0,
+          }
+        : null,
       lines: order.lines.map((line) => ({
         name: line.name,
         restaurant: line.restaurant,

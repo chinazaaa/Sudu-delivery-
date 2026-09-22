@@ -30,6 +30,7 @@ const KNOWN = [
   /^\/skincare/,
   /^\/occasions/,
   /^\/products/,
+  /^\/parcel/,
   /^\/cart/,
   /^\/checkout/,
   /^\/group/,

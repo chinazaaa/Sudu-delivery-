@@ -53,6 +53,10 @@ export default function Order() {
 
   if (!order) return <ActivityIndicator color={T.brand} style={{ marginTop: 40 }} />;
 
+  // A parcel is not food. It buys nothing, it is not priced by the container
+  // ladder, and the same parcel twice is a different parcel.
+  const isParcel = order.run.kind === "parcel";
+
   const account = order.accounts[chosen] ?? order.accounts[0];
   const copy = async (value: string, what: string) => {
     await Clipboard.setStringAsync(value);
@@ -74,16 +78,23 @@ export default function Order() {
               : "This run has gone"}
         </Text>
         <Text style={{ color: "rgba(255,255,255,0.75)", marginTop: 4 }}>
-          {order.run.sameDay
-            ? `Going out ${order.run.window}`
-            : `${order.run.label} · ${order.run.window}`}
+          {/* A parcel has no slot anybody chose and, until the day is
+              agreed, no day either: the run label over it was a promise
+              nobody had made. */}
+          {isParcel
+            ? order.run.agreed
+              ? `${order.run.label} · ${order.run.window}`
+              : `${order.run.window} · day not agreed yet`
+            : order.run.sameDay
+              ? `Going out ${order.run.window}`
+              : `${order.run.label} · ${order.run.window}`}
         </Text>
       </View>
 
       {/* A run that has been shopped for cannot take money: paying into it
           now is a refund waiting to happen, so the details come off and the
           screen says so. */}
-      {order.status === "pending" && !order.payable && (
+      {!isParcel && order.status === "pending" && !order.payable && (
         <View style={{ backgroundColor: T.tint, borderRadius: T.radius, padding: 14, gap: 8 }}>
           <Text style={{ fontWeight: "800", color: T.ink }}>Do not pay this one</Text>
           <Text style={{ color: T.muted }}>
@@ -228,9 +239,28 @@ export default function Order() {
             </Text>
           </View>
         ))}
+        {isParcel && order.parcel && (
+          <View style={{ gap: 2 }}>
+            <Row label="What" value={order.parcel.item} />
+            <Row label="Collect" value={order.parcel.from} />
+            <Row label="From" value={order.parcel.shop} />
+            <Row label="Take to" value={order.parcel.to} />
+            {order.parcel.kg > 0 && (
+              <Row label="Weight" value={`Up to ${order.parcel.kg}kg`} />
+            )}
+          </View>
+        )}
+
         <View style={{ height: 1, backgroundColor: T.line, marginVertical: 4 }} />
-        <Row label="Food" value={naira(order.food)} />
-        <Row label="Delivery" value={naira(order.fee)} />
+        {/* Nothing is bought on a parcel, so "Food ₦0" is a line about
+            something that never happened. */}
+        {!isParcel && (
+          <Row
+            label={order.run.kind === "skincare" ? "Skincare" : "Food"}
+            value={naira(order.food)}
+          />
+        )}
+        <Row label={isParcel ? "Carrying it" : "Delivery"} value={naira(order.fee)} />
         {order.discount > 0 && (
           <Row
             label={order.couponCode ? `Code ${order.couponCode}` : "Discount"}
@@ -243,7 +273,9 @@ export default function Order() {
       {/* Until the run closes, anything else goes in the same delivery. The
           checkout works the fee out from what is already on this run, so this
           is only the way back to the menu. */}
-      {new Date(order.run.cutOffISO).getTime() > Date.now() && (
+      {/* Nothing to add to a parcel: it is one bag on one trip, and the
+          menu has nothing to do with it. */}
+      {!isParcel && new Date(order.run.cutOffISO).getTime() > Date.now() && (
         <Pressable
           onPress={() => router.push("/")}
           style={{
