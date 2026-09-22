@@ -776,37 +776,24 @@ export default function Checkout({
           </p>
         )}
 
-        {/* Where the far half of a cart is concerned, the run is not a
-            cheaper option, it is the only one: a car cannot be in Lekki and
-            back in three hours. Said here rather than left to be worked out
-            from a list of runs that is quietly shorter than usual. */}
-        {/* Why this cart behaves differently from a Sangotedo one, said
-            before somebody works it out from a shorter list of runs and a
-            dearer fee. Three facts, in the order they are asked about: why
-            there is no car of its own, why everything waits for the same
-            run, and why the delivery costs more. */}
+        {/* One line, because three paragraphs about Lekki is three
+            paragraphs nobody reads. Why it waits for a run, and the way out
+            if waiting is the wrong trade. Why the fee is higher belongs in
+            "Why this much?", which is where somebody asks it. */}
         {far.length > 0 && !noRunThere && (
-          <p className="text-sm font-semibold text-brand-dark">
-            {farNames} only travels on a run, because a car of its own cannot
-            get there and back in time. Everything in this order rides that
-            same car, so it is one delivery fee and not two
-            {area.runExtra > 0
-              ? `, and that fee is ${naira(area.runExtra)} more than a Sangotedo one because it is a longer trip.`
-              : "."}
-          </p>
-        )}
-
-        {/* Which of the two it is worth doing is theirs to decide, so both
-            are named: the day the far food can come, and the day the rest
-            could have come without it. */}
-        {farHoldsItUp && goingThere && withoutFar && (
-          <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm text-brand-dark">
-            <span className="font-semibold">
-              {goingThere.label} is the next run going to {farNames}.
-            </span>{" "}
-            Stay on it and everything comes together at the {farNames} fee, or
-            take {farLines.length === 1 ? "that one" : "those"} out and the
-            rest can come {withoutFar?.said}.
+          <p className="text-sm text-brand-dark">
+            <span className="font-semibold">{farNames} goes out on a run only.</span>{" "}
+            {farHoldsItUp && withoutFar ? (
+              <>
+                Take {farLines.length === 1 ? "it" : "those"} out and the rest
+                can come {withoutFar.said}.{" "}
+                <Link href="/cart" className="font-semibold underline">
+                  Change the cart
+                </Link>
+              </>
+            ) : (
+              "Everything here travels together, so there is one delivery fee."
+            )}
           </p>
         )}
 
@@ -1261,6 +1248,17 @@ export default function Checkout({
       </section>
 
       <section className="card space-y-1 text-sm">
+        {/* The way back. Everything above is about what this order costs and
+            when it lands, and the answer to both is often "take something
+            out", which needed the browser's back button to act on. */}
+        <div className="flex items-baseline justify-between">
+          <span className="font-bold text-ink">
+            {itemCount} item{itemCount === 1 ? "" : "s"}
+          </span>
+          <Link href="/cart" className="font-semibold text-brand">
+            Change the cart
+          </Link>
+        </div>
         <div className="flex justify-between text-muted">
           <span>Food</span>
           <span>{naira(subtotal)}</span>
