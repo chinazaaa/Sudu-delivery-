@@ -204,6 +204,8 @@ export async function placeParcel(input: ParcelInput): Promise<ParcelResult> {
       parcel_value: value,
       parcel_kg: kg,
       parcel_wanted_on: wanted,
+      parcel_address: address,
+      parcel_room: room,
       parcel_from: from,
       parcel_to: to,
       ...(toName && toPhone ? { deliver_to_name: toName, deliver_to_phone: toPhone } : {}),

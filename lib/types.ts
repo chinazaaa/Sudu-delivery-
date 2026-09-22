@@ -148,6 +148,11 @@ export type Order = {
   /** The day the sender asked for. The day it actually goes is on the batch,
    *  and is only set once the shop has agreed it. */
   parcel_wanted_on?: string | null;
+  /** The address and the room exactly as they were typed, so admin can show
+   *  the questions and their answers rather than a sentence built out of
+   *  them. */
+  parcel_address?: string | null;
+  parcel_room?: string | null;
   subtotal_food: number;
   fee: number;
   discount: number;

@@ -22,7 +22,12 @@ alter table orders
   add column if not exists parcel_kg int,
   -- The day the sender asked for. Not a promise: the shop agrees it, and
   -- until it does the parcel has no date at all.
-  add column if not exists parcel_wanted_on date;
+  add column if not exists parcel_wanted_on date,
+  -- The answers as they were given, kept beside the two composed addresses.
+  -- Admin lists the questions and what was typed into them, because a
+  -- summary is where a block turns into part of a street.
+  add column if not exists parcel_address text,
+  add column if not exists parcel_room text;
 
 create index if not exists orders_parcel_idx on orders (parcel_route)
   where parcel_route is not null;

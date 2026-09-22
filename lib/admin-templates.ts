@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { shareRef } from "./money";
+import { naira, shareRef } from "./money";
 import {
   narration,
   template,
@@ -8,6 +8,7 @@ import {
   type TemplateKind,
 } from "./messages";
 import type { Settings } from "./settings";
+import { parseRoutes, routeById } from "./parcels";
 import type { FeedOrder } from "./admin-data";
 import type { OrderCardData } from "@/components/admin/OrderCard";
 
@@ -35,6 +36,69 @@ function kindsFor(order: FeedOrder): TemplateKind[] {
 }
 
 /** Turns an order into everything the admin card needs, links included. */
+/**
+ * A parcel as a list of questions and answers, in the order the sender was
+ * asked them.
+ *
+ * Which end is campus decides half the wording, so the route is looked up
+ * rather than guessed: on "Lekki/Ikoyi to PAU" the address is where we
+ * collect, and on the way back it is where we deliver.
+ */
+function parcelAnswers(
+  order: FeedOrder,
+  settings: Settings
+): { route: string; answers: { question: string; answer: string }[] } | null {
+  if (!order.parcel_route) return null;
+
+  const route = routeById(parseRoutes(settings.parcel_routes), order.parcel_route);
+  const toPau = route?.toPau ?? (order.parcel_to ?? "").startsWith("PAU");
+
+  const answers = [
+    ["Where is it going?", route?.label ?? order.parcel_route],
+    ["When would they like it?", order.parcel_wanted_on ?? "They did not say"],
+    ["About how heavy is it?", order.parcel_kg ? `Up to ${order.parcel_kg}kg` : ""],
+    ["What are we carrying?", order.parcel_item ?? ""],
+    [
+      toPau
+        ? "Which shop or person are we collecting from?"
+        : "Who is it going to?",
+      order.parcel_shop ?? "",
+    ],
+    [
+      toPau ? "The address we are collecting from" : "The address we are delivering to",
+      order.parcel_address ?? "",
+    ],
+    [
+      toPau ? "Which block are we bringing it to?" : "Which block are we collecting from?",
+      order.hostel,
+    ],
+    ["Room or landmark", order.parcel_room ?? ""],
+    [
+      "Roughly what is it worth?",
+      order.parcel_value ? naira(order.parcel_value) : "",
+    ],
+    [
+      "Who receives it?",
+      order.deliver_to_name
+        ? `${order.deliver_to_name}${
+            order.deliver_to_phone ? ` · ${order.deliver_to_phone}` : ""
+          }`
+        : "Them",
+    ],
+    ["Anything else we should know?", order.customer_note],
+  ] as const;
+
+  return {
+    route: route?.label ?? order.parcel_route,
+    // An unanswered question is still worth showing: a blank where an
+    // address should be is the thing worth noticing.
+    answers: answers.map(([question, answer]) => ({
+      question,
+      answer: String(answer ?? "").trim() || "—",
+    })),
+  };
+}
+
 export function toCard(
   order: FeedOrder,
   settings: Settings,
@@ -87,17 +151,12 @@ export function toCard(
     runStage: order.batchStage,
     promoter: order.promoter ?? null,
     // A parcel carries no lines at all, so the card needs the trip itself.
-    parcel: order.parcel_route
-      ? {
-          route: order.parcel_route,
-          item: order.parcel_item ?? "",
-          shop: order.parcel_shop ?? "",
-          from: order.parcel_from ?? "",
-          to: order.parcel_to ?? "",
-          kg: order.parcel_kg ?? 0,
-          value: order.parcel_value ?? 0,
-        }
-      : null,
+    //
+    // The questions as they were asked, with what was typed into them.
+    // Summarising was how "Which block are we bringing it to?" and "Room or
+    // landmark" became one line called "Take to", and a block ended up
+    // reading as part of a street.
+    parcel: parcelAnswers(order, settings),
     customerNote: order.customer_note ?? "",
     adminNote: order.admin_note ?? "",
     narration: narration(order, order.groupOrders),

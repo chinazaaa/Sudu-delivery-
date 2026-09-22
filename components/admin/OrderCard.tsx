@@ -57,15 +57,13 @@ export type OrderCardData = {
    *  what commission on a run is charged against. */
   promoter: { code: string; name: string } | null;
   /** A parcel rather than food. It has no lines at all, so without this the
-   *  card is a name, a number and an empty list. */
+   *  card is a name, a number and an empty list.
+   *
+   *  The questions as the sender was asked them, with what they typed. Not a
+   *  summary: summarising is how a block became part of a street. */
   parcel: {
     route: string;
-    item: string;
-    shop: string;
-    from: string;
-    to: string;
-    kg: number;
-    value: number;
+    answers: { question: string; answer: string }[];
   } | null;
   /** What they were told to type in the transfer. */
   narration: string;
@@ -274,13 +272,13 @@ export default function OrderCard({
               is instead is where to go, what to ask for and what to hand
               over. Everything the trip needs, in the order it is needed. */}
           {order.parcel && (
-            <dl className="space-y-1 rounded-xl bg-shell p-3 text-sm">
-              <Row label="Collect" value={order.parcel.from} />
-              <Row label="From" value={order.parcel.shop} />
-              <Row label="What" value={order.parcel.item} />
-              <Row label="Take to" value={order.parcel.to} />
-              <Row label="Weight" value={`Up to ${order.parcel.kg}kg`} />
-              <Row label="Worth" value={naira(order.parcel.value)} />
+            <dl className="space-y-2 rounded-xl bg-shell p-3 text-sm">
+              {order.parcel.answers.map((one) => (
+                <div key={one.question}>
+                  <dt className="text-xs text-muted">{one.question}</dt>
+                  <dd className="font-semibold text-ink">{one.answer}</dd>
+                </div>
+              ))}
             </dl>
           )}
           <ul className="space-y-1 text-sm">
@@ -440,16 +438,5 @@ function StatusPill({ status }: { status: string }) {
     <span className={`mt-1 inline-block rounded-full px-2.5 py-1 text-xs font-bold ${tone}`}>
       {status === "pending" ? "Unpaid" : status}
     </span>
-  );
-}
-
-/** One fact about a parcel: what to do, and where. */
-function Row({ label, value }: { label: string; value: string }) {
-  if (!value) return null;
-  return (
-    <div className="flex justify-between gap-3">
-      <dt className="shrink-0 text-muted">{label}</dt>
-      <dd className="text-right font-semibold text-ink">{value}</dd>
-    </div>
   );
 }
