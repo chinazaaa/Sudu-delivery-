@@ -38,6 +38,14 @@ export default function ParcelForm({
   const picked = bands.some((one) => one.upTo === kg) ? kg : bands[0]?.upTo ?? 0;
   const fee = route ? feeFor(route, picked) : null;
 
+  // Said as it is typed rather than after the whole form has been filled in
+  // and sent. The cap is the shop's only protection on a parcel, so being
+  // refused by it is the most likely reason this form fails, and finding
+  // that out at the button is finding it out too late.
+  const [worth, setWorth] = useState("");
+  const value = Number(worth.replace(/[^\d]/g, "")) || 0;
+  const tooDear = value > maxValue;
+
   return (
     <form action={action} className="space-y-4">
       <div className="card space-y-3">
@@ -173,15 +181,24 @@ export default function ParcelForm({
             name="value"
             required
             inputMode="numeric"
-            pattern="[0-9,₦ ]+"
+            value={worth}
+            onChange={(event) => setWorth(event.target.value.replace(/[^\d]/g, ""))}
             placeholder="15000"
-            className="field"
+            aria-invalid={tooDear}
+            className={`field ${tooDear ? "border-brand" : ""}`}
           />
-          <p className="mt-1 text-xs text-muted">
-            Nothing over {naira(maxValue)}, and no phones, laptops, jewellery or
-            cash. If it is lost or damaged in the car it is on us, which is why
-            there is a limit.
-          </p>
+          {tooDear ? (
+            <p className="mt-1 text-xs font-semibold text-brand">
+              {naira(value)} is over the {naira(maxValue)} limit, so we cannot
+              carry it. Message us and we will talk it through.
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-muted">
+              Nothing over {naira(maxValue)}, and no phones, laptops, jewellery
+              or cash. If it is lost or damaged in the car it is on us, which is
+              why there is a limit.
+            </p>
+          )}
         </div>
       </div>
 
@@ -276,8 +293,18 @@ export default function ParcelForm({
         </p>
       )}
 
-      <button type="submit" disabled={busy} className="btn-primary w-full py-4 text-base">
-        {busy ? "Sending…" : fee !== null ? `Send it · ${naira(fee)}` : "Send it"}
+      <button
+        type="submit"
+        disabled={busy || tooDear}
+        className="btn-primary w-full py-4 text-base"
+      >
+        {busy
+          ? "Sending…"
+          : tooDear
+            ? `Over the ${naira(maxValue)} limit`
+            : fee !== null
+              ? `Send it · ${naira(fee)}`
+              : "Send it"}
       </button>
       <p className="text-center text-xs text-muted">
         We agree the day with you on WhatsApp once it is paid.
