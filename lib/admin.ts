@@ -588,7 +588,11 @@ export async function tripSheet(at: string): Promise<TripSheet | null> {
  * every run ever made, because a past run is still worth reading.
  */
 export async function batchOverview(window: "recent" | "all" = "recent"): Promise<BatchRow[]> {
-  let query = db().from("batches").select("*");
+  // Parcels are not runs. Each one makes a batch of its own because an order
+  // has to belong to something, but it is one person's trip on a day nobody
+  // has agreed yet, and listing it here put a "run" in the week for every
+  // parcel anybody sent. They live on the Parcels page and in Orders.
+  let query = db().from("batches").select("*").neq("kind", "parcel");
   if (window === "recent") {
     query = query
       .gte("run_date", new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10))
@@ -599,7 +603,19 @@ export async function batchOverview(window: "recent" | "all" = "recent"): Promis
     query = query.order("cut_off_at", { ascending: true }).limit(200);
   }
 
-  const { data: batches, error } = await query;
+  let { data: batches, error } = await query;
+  // A database without `kind` yet cannot hold a parcel, so the same list
+  // without that filter is the same list. Asked again rather than thrown,
+  // because this is the runs page and the dashboard.
+  if (error) {
+    const plain = db().from("batches").select("*");
+    ({ data: batches, error } =
+      window === "recent"
+        ? await plain
+            .gte("run_date", new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10))
+            .order("cut_off_at", { ascending: true })
+        : await plain.order("cut_off_at", { ascending: true }).limit(200));
+  }
   if (error) throw new Error(error.message);
 
   const rows = (batches ?? []) as Batch[];
