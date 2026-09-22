@@ -31,6 +31,7 @@ import { parseMenuText } from "@/lib/menu-import";
 import {
   parseCatalogue,
   shelfText,
+  type ImportedGroup,
   type ImportedProduct,
 } from "@/lib/skincare-import";
 import { skincareShelves } from "@/lib/skincare";
@@ -2553,13 +2554,13 @@ export async function importSkincare(
     shopId = data.id as string;
   }
 
-  const { added, changed, sections, error } = await putCatalogue(shopId, products);
+  const { added, changed, sections, choices, error } = await putCatalogue(shopId, products);
   if (error !== "") return { done: `${added} in, then it stopped.`, error };
 
   revalidatePath("/admin", "layout");
   revalidatePath("/skincare");
 
-  return { done: said(added, changed, sections, skipped), error: "" };
+  return { done: said(added, changed, sections, skipped, choices), error: "" };
 }
 
 /**
@@ -2569,9 +2570,16 @@ export async function importSkincare(
  * had no price is a file worth looking at again, and a silent import of the
  * other half is how a menu ends up missing things nobody notices for a week.
  */
-function said(added: number, changed: number, sections: number, skipped: number): string {
+function said(
+  added: number,
+  changed: number,
+  sections: number,
+  skipped: number,
+  choices = 0
+): string {
   return (
     `${added} new, ${changed} updated, ${sections} section${sections === 1 ? "" : "s"}` +
+    (choices > 0 ? `, ${choices} choice${choices === 1 ? "" : "s"} to pick from` : "") +
     (skipped > 0
       ? `. ${skipped} row${skipped === 1 ? " was" : "s were"} left out for having no ` +
         "price: an export writes \"Out of stock\" where the price goes, and a " +
@@ -2591,7 +2599,14 @@ function said(added: number, changed: number, sections: number, skipped: number)
 async function putCatalogue(
   shopId: string,
   products: ImportedProduct[]
-): Promise<{ added: number; changed: number; sections: number; error: string }> {
+): Promise<{
+  added: number;
+  changed: number;
+  sections: number;
+  /** How many choices were hung off the dishes, for the line it reports. */
+  choices: number;
+  error: string;
+}> {
   // The shelves, by name. Everything already there keeps its id so that
   // anything filed under it stays filed under it.
   const wantedSections = [
@@ -2622,25 +2637,51 @@ async function putCatalogue(
     }
   }
 
-  // What is already on the shelf, by name, so running this again changes
-  // prices rather than making a second copy of everything.
+  // What is already on the shelf, so running this again changes prices
+  // rather than making a second copy of everything.
+  //
+  // Matched on the name and the section together, because one kitchen sells
+  // the same dish as a plate and as a sharing tray at five times the price,
+  // and by name alone the second one overwrites the first. Where a name
+  // appears only once in the whole shop the section is not asked for, so a
+  // catalogue imported before this, or one whose sections have been tidied
+  // by hand since, still matches itself rather than arriving twice.
   const { data: already } = await db()
     .from("menu_items")
-    .select("id, name")
+    .select("id, name, category_id")
     .eq("restaurant_id", shopId);
-  const itemId = new Map(
-    ((already ?? []) as { id: string; name: string }[]).map((one) => [
-      one.name.toLowerCase(),
-      one.id,
-    ])
+  const rowsThere = (already ?? []) as {
+    id: string;
+    name: string;
+    category_id: string | null;
+  }[];
+
+  const byNameAndSection = new Map(
+    rowsThere.map((one) => [`${one.name.toLowerCase()}|${one.category_id ?? ""}`, one.id])
   );
+  const timesNamed = new Map<string, number>();
+  for (const one of rowsThere) {
+    const name = one.name.toLowerCase();
+    timesNamed.set(name, (timesNamed.get(name) ?? 0) + 1);
+  }
+  const byName = new Map(
+    rowsThere
+      .filter((one) => timesNamed.get(one.name.toLowerCase()) === 1)
+      .map((one) => [one.name.toLowerCase(), one.id])
+  );
+
+  const idOf = (name: string, categoryId: string | null): string | undefined =>
+    byNameAndSection.get(`${name.toLowerCase()}|${categoryId ?? ""}`) ??
+    byName.get(name.toLowerCase());
 
   const rows = products.map((one, index) => ({
     restaurant_id: shopId,
     category_id: one.category ? (sectionId.get(one.category) ?? null) : null,
     name: one.name,
     price_food: one.price,
-    description: "",
+    // What the menu says it is. Only ever written on the way in, so anything
+    // rewritten by hand afterwards survives the next import.
+    description: one.description,
     // The picture the export carried, so the shelf is not two thousand grey
     // boxes on the first day. Photographs uploaded later replace it.
     image_url: one.imageUrl,
@@ -2654,6 +2695,10 @@ async function putCatalogue(
     sort_order: index,
   }));
 
+  // The kitchen's questions, kept beside the rows so they can be written once
+  // the dishes have ids.
+  const askedOn = new Map(rows.map((row, index) => [row, products[index].options]));
+
   // In chunks, because a single insert of two thousand rows is one request
   // that either works or loses the lot, and this way a failure says which
   // part of the file it got to.
@@ -2661,20 +2706,39 @@ async function putCatalogue(
   let changed = 0;
   const SIZE = 200;
 
+  // Which dish each row became, so its options can be hung off it.
+  const landedOn = new Map<(typeof rows)[number], string>();
+
   for (let at = 0; at < rows.length; at += SIZE) {
     const chunk = rows.slice(at, at + SIZE);
-    const fresh = chunk.filter((row) => !itemId.has(row.name.toLowerCase()));
-    const known = chunk.filter((row) => itemId.has(row.name.toLowerCase()));
+    const fresh = chunk.filter((row) => idOf(row.name, row.category_id) === undefined);
+    const known = chunk.filter((row) => idOf(row.name, row.category_id) !== undefined);
+    for (const row of known) landedOn.set(row, idOf(row.name, row.category_id)!);
 
     if (fresh.length > 0) {
-      const { error } = await db().from("menu_items").insert(fresh);
+      const { data: made, error } = await db()
+        .from("menu_items")
+        .insert(fresh)
+        .select("id, name, category_id");
       if (error) {
         return {
           added,
           changed,
           sections: wantedSections.length,
+          choices: 0,
           error: `${error.message}. Nothing after ${chunk[0].name} went in.`,
         };
+      }
+      // Matched back by name and section, which is the pair that told them
+      // apart going in.
+      const fromInsert = new Map(
+        ((made ?? []) as { id: string; name: string; category_id: string | null }[]).map(
+          (one) => [`${one.name.toLowerCase()}|${one.category_id ?? ""}`, one.id]
+        )
+      );
+      for (const row of fresh) {
+        const id = fromInsert.get(`${row.name.toLowerCase()}|${row.category_id ?? ""}`);
+        if (id) landedOn.set(row, id);
       }
       added += fresh.length;
     }
@@ -2690,7 +2754,7 @@ async function putCatalogue(
         .from("menu_items")
         .upsert(
           known.map((row) => ({
-            id: itemId.get(row.name.toLowerCase())!,
+            id: landedOn.get(row)!,
             restaurant_id: row.restaurant_id,
             name: row.name,
             price_food: row.price_food,
@@ -2707,6 +2771,7 @@ async function putCatalogue(
           added,
           changed,
           sections: wantedSections.length,
+          choices: 0,
           error: `${error.message}. Nothing after ${chunk[0].name} was touched.`,
         };
       }
@@ -2714,8 +2779,107 @@ async function putCatalogue(
     }
   }
 
+  const picks = await putOptions(rows, askedOn, landedOn);
+  if (picks.error !== "") {
+    return { added, changed, sections: wantedSections.length, choices: 0, error: picks.error };
+  }
 
-  return { added, changed, sections: wantedSections.length, error: "" };
+  return {
+    added,
+    changed,
+    sections: wantedSections.length,
+    choices: picks.choices,
+    error: "",
+  };
+}
+
+/**
+ * The questions a dish asks, written under the dishes that have just landed.
+ *
+ * A restaurant export carries them and the shop cannot sell without them: a
+ * burrito bowl with no rice choice is a dish nobody can order the way they
+ * want it, and a spice level nobody was asked is an argument at the door.
+ *
+ * Only ever for a dish that has none. A second import must not wipe the
+ * groups somebody tidied by hand, and re-running this is how a price list is
+ * kept up to date, so it has to be safe to run every week.
+ */
+async function putOptions(
+  rows: { name: string; category_id: string | null }[],
+  askedOn: Map<(typeof rows)[number], ImportedGroup[]>,
+  landedOn: Map<(typeof rows)[number], string>
+): Promise<{ choices: number; error: string }> {
+  const wanted = rows
+    .map((row) => ({ id: landedOn.get(row), groups: askedOn.get(row) ?? [] }))
+    .filter((one): one is { id: string; groups: ImportedGroup[] } =>
+      Boolean(one.id) && one.groups.length > 0
+    );
+  if (wanted.length === 0) return { choices: 0, error: "" };
+
+  const { data: existing } = await db()
+    .from("item_option_groups")
+    .select("menu_item_id")
+    .in("menu_item_id", wanted.map((one) => one.id));
+  const answered = new Set(
+    ((existing ?? []) as { menu_item_id: string }[]).map((one) => one.menu_item_id)
+  );
+
+  const fresh = wanted.filter((one) => !answered.has(one.id));
+  if (fresh.length === 0) return { choices: 0, error: "" };
+
+  const groupRows = fresh.flatMap((one) =>
+    one.groups.map((group, index) => ({
+      menu_item_id: one.id,
+      name: group.name,
+      required: group.required,
+      max_select: group.max,
+      sort_order: index,
+    }))
+  );
+
+  const { data: madeGroups, error: groupError } = await db()
+    .from("item_option_groups")
+    .insert(groupRows)
+    .select("id, menu_item_id, name");
+  if (groupError) {
+    return { choices: 0, error: `The dishes went in, but their choices did not: ${groupError.message}` };
+  }
+
+  const groupId = new Map(
+    ((madeGroups ?? []) as { id: string; menu_item_id: string; name: string }[]).map((one) => [
+      `${one.menu_item_id}|${one.name}`,
+      one.id,
+    ])
+  );
+
+  const choiceRows = fresh.flatMap((one) =>
+    one.groups.flatMap((group) => {
+      const id = groupId.get(`${one.id}|${group.name}`);
+      if (!id) return [];
+      return group.choices.map((choice, index) => ({
+        group_id: id,
+        name: choice.name,
+        price_delta: choice.price,
+        available: choice.available,
+        sort_order: index,
+      }));
+    })
+  );
+  if (choiceRows.length === 0) return { choices: 0, error: "" };
+
+  // In chunks: a menu of sixty dishes carries fifteen hundred choices, which
+  // is not one request anybody should bet the import on.
+  const SIZE = 500;
+  for (let at = 0; at < choiceRows.length; at += SIZE) {
+    const { error } = await db()
+      .from("item_options")
+      .insert(choiceRows.slice(at, at + SIZE));
+    if (error) {
+      return { choices: 0, error: `The dishes went in, but their choices did not: ${error.message}` };
+    }
+  }
+
+  return { choices: choiceRows.length, error: "" };
 }
 
 /**
@@ -2857,14 +3021,14 @@ export async function importCatalogue(
     };
   }
 
-  const { added, changed, sections, error } = await putCatalogue(shopId, products);
+  const { added, changed, sections, choices, error } = await putCatalogue(shopId, products);
   if (error !== "") return { done: `${added} in, then it stopped.`, error };
 
   revalidatePath("/admin", "layout");
   updateTag("menu");
   revalidatePath("/", "layout");
 
-  return { done: said(added, changed, sections, skipped), error: "" };
+  return { done: said(added, changed, sections, skipped, choices), error: "" };
 }
 
 /**

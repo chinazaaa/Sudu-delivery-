@@ -28,6 +28,24 @@ export type ImportedProduct = {
    *  a product that cannot be bought is worse on the shelf than missing: it
    *  is an order somebody places and then has to be rung about. */
   available: boolean;
+  /** What the menu says it is. A restaurant export carries one and a shelf
+   *  of bare names tells a customer nothing. */
+  description: string;
+  /** The choices the kitchen asks for. A restaurant export writes one row
+   *  per choice, so a bowl with a rice option and a sauce option is six
+   *  rows of the same bowl, and reading only the first of them imports a
+   *  dish nobody can actually order. */
+  options: ImportedGroup[];
+};
+
+/** One question a dish asks: which rice, how spicy, anything extra. */
+export type ImportedGroup = {
+  name: string;
+  /** Whether it has to be answered before the dish goes in a basket. */
+  required: boolean;
+  /** How many may be picked. One is a choice; more than one is extras. */
+  max: number;
+  choices: { name: string; price: number; available: boolean }[];
 };
 
 export type Import = {
@@ -231,10 +249,29 @@ function parseJson(text: string): Import {
       imageFile: fileOf(pick("image_filename", "image_file", "filename")),
       imageUrl: pick("image", "image_url", "image_src", "src"),
       available: inStock(pick("stock_status", "stock", "availability")),
+      description: pick("description", "details"),
+      // A scraped page is a list of products, not a kitchen's questions.
+      options: [],
     });
   }
 
   return { products: tidyShelves(products), skipped };
+}
+
+/**
+ * A column heading as a name to look up.
+ *
+ * Everything that is not a letter or a number becomes an underscore, so
+ * "Price (NGN)" and "Price - NGN" and "price_ngn" are one name. Matching the
+ * heading as typed meant a restaurant export, which writes "Product Name" and
+ * "Price (NGN)", had no name column and no price column, so every row was
+ * skipped and the import brought in nothing at all.
+ */
+export function columnName(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
 export function parseProducts(text: string): Import {
@@ -248,7 +285,7 @@ export function parseProducts(text: string): Import {
   // Read by the names in the header rather than by position, because the next
   // export will have the columns in another order and a shop that imports
   // sideways is worse than one that refuses.
-  const header = readRow(rows[0]).map((one) => one.toLowerCase().replace(/\s+/g, "_"));
+  const header = readRow(rows[0]).map(columnName);
   const at = (...names: string[]) => {
     for (const name of names) {
       const found = header.indexOf(name);
@@ -258,21 +295,70 @@ export function parseProducts(text: string): Import {
   };
 
   const columns = {
-    name: at("title", "name", "product", "product_title"),
+    name: at("title", "name", "product", "product_title", "product_name", "item_name"),
     // The real price, not today's promotion. A sale price imported as the
     // price is a discount that never ends and a margin nobody decided on.
-    price: at("original_price", "price", "current_price", "amount", "cost"),
-    stock: at("stock_status", "stock", "availability", "available"),
+    // Named in full, so "discount_price_ngn" cannot answer to "price_ngn".
+    price: at("original_price", "price", "current_price", "amount", "cost", "price_ngn", "price_naira"),
+    stock: at("stock_status", "stock", "availability", "available", "in_stock"),
     brand: at("vendor", "brand", "make"),
     category: at("product_type", "type", "category", "section"),
-    file: at("image_filename", "image_file", "image", "filename"),
+    file: at("image_filename", "image_file", "image", "filename", "image_file_name"),
     shelves: at("collections", "collection", "tags", "categories"),
     url: at("image_url", "image_src", "src"),
+    description: at("description", "details", "about"),
+    // A restaurant export writes one row per choice, so these repeat the
+    // product on every row and carry the question it is answering.
+    group: at("option_group", "option_group_name", "modifier_group"),
+    groupType: at("option_group_type", "group_type", "option_type"),
+    min: at("min_selections", "min_select", "minimum_selections"),
+    max: at("max_selections", "max_select", "maximum_selections"),
+    option: at("option_name", "modifier_name", "option"),
+    optionPrice: at(
+      "option_price_ngn",
+      "option_extra_price_ngn",
+      "option_price",
+      "option_extra_price",
+      "modifier_price"
+    ),
+    optionStock: at("option_in_stock", "option_available", "option_stock"),
   };
 
   const products: ImportedProduct[] = [];
   let skipped = 0;
-  const seen = new Set<string>();
+  const seen = new Map<string, ImportedProduct>();
+
+  // The choice on this row, filed under the question it answers. A row with
+  // no option columns, or with the columns empty, is a plain product row.
+  const addOption = (product: ImportedProduct, cells: string[]) => {
+    const groupName = (cells[columns.group] ?? "").trim();
+    const choice = (cells[columns.option] ?? "").trim();
+    if (groupName === "" || choice === "") return;
+
+    let group = product.options.find((one) => one.name === groupName);
+    if (!group) {
+      const said = (cells[columns.groupType] ?? "").trim().toLowerCase();
+      const least = Number((cells[columns.min] ?? "").trim());
+      const most = Number((cells[columns.max] ?? "").trim());
+      group = {
+        name: groupName,
+        // What the export says, and only where it says nothing does the
+        // smallest number of choices stand in for it.
+        required: said === "" ? Number.isFinite(least) && least >= 1 : said.startsWith("required"),
+        max: Number.isFinite(most) && most >= 1 ? Math.round(most) : 1,
+        choices: [],
+      };
+      product.options.push(group);
+    }
+    // The same choice twice is once: an export repeats the whole group on
+    // every row of a product that has two of them.
+    if (group.choices.some((one) => one.name === choice)) return;
+    group.choices.push({
+      name: choice,
+      price: priceOf(cells[columns.optionPrice] ?? ""),
+      available: inStock(cells[columns.optionStock] ?? ""),
+    });
+  };
 
   for (const row of rows.slice(1)) {
     const cells = readRow(row);
@@ -287,14 +373,25 @@ export function parseProducts(text: string): Import {
       skipped += 1;
       continue;
     }
-    // The same product twice in one file is one product. An export that
-    // carries a row per picture would otherwise fill the shelf with copies.
-    const key = name.toLowerCase();
-    if (seen.has(key)) {
-      skipped += 1;
+    // The same product twice in one file is one product, and the second row
+    // of it is not a mistake: a restaurant export writes a row per choice, so
+    // a bowl with a rice option and a sauce option arrives six times. Those
+    // rows carry the rest of the dish, so they are read rather than counted
+    // as skipped, which is what made importing a menu report more rows thrown
+    // away than kept.
+    //
+    // Told apart by their section as well as their name, because a kitchen
+    // sells "Sweet and Sour Chicken" at six thousand two hundred as a plate
+    // and at thirty five thousand as a sharing tray. By name alone the shop
+    // kept whichever came first in the file and quietly lost the other, which
+    // is a dish on the menu at the wrong price.
+    const section = tidyCase(cells[columns.category] ?? "");
+    const key = `${name.toLowerCase()}|${section.toLowerCase()}`;
+    const already = seen.get(key);
+    if (already) {
+      addOption(already, cells);
       continue;
     }
-    seen.add(key);
 
     // The shop's own sections where it has them, and the platform's freeform
     // type only where it does not. The type field is whatever anybody typed
@@ -302,7 +399,7 @@ export function parseProducts(text: string): Import {
     // somebody put in the wrong box.
     const shelves = shelvesOf(cells[columns.shelves] ?? "");
 
-    products.push({
+    const product: ImportedProduct = {
       name,
       price,
       brand: (cells[columns.brand] ?? "").trim(),
@@ -310,14 +407,19 @@ export function parseProducts(text: string): Import {
       // The platform's own freeform type, kept only as the fallback for a
       // product no collection claims. It is whatever anybody typed into that
       // box over the years, which is why it is not the first choice.
-      category: tidyCase(cells[columns.category] ?? ""),
+      category: section,
       imageFile: fileOf(cells[columns.file] ?? ""),
       imageUrl: (cells[columns.url] ?? "").trim(),
       // Only "in stock" is in stock. A part-stocked product is one somebody
       // orders and then has to be rung about, which is worse than not having
       // seen it at all.
       available: inStock(cells[columns.stock] ?? ""),
-    });
+      description: (cells[columns.description] ?? "").trim(),
+      options: [],
+    };
+    addOption(product, cells);
+    seen.set(key, product);
+    products.push(product);
   }
 
   return { products: tidyShelves(products), skipped };

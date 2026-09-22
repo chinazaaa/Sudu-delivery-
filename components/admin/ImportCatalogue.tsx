@@ -48,9 +48,12 @@ export default function ImportCatalogue({
           />
           <p className="mt-1 text-xs text-muted">
             A spreadsheet or a JSON list, with a header naming its columns:
-            category, name, price, image_url. Anything with no name or no
-            price is left out and counted, because an export writes &quot;Out
-            of stock&quot; where the price goes.
+            a name, a price, a category and a picture. A restaurant export
+            works as it comes, headings and all, and its option groups come
+            in with it, so a dish that asks which rice or how spicy arrives
+            asking. Anything with no name or no price is left out and
+            counted, because an export writes &quot;Out of stock&quot; where
+            the price goes.
           </p>
         </div>
 

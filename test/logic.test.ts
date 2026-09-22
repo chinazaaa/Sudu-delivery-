@@ -1490,6 +1490,52 @@ test("a catalogue reads the same from a spreadsheet or a list", () => {
   assert.equal(fromJson.products[0].category, "Bread");
 });
 
+test("a restaurant menu comes in with the choices the kitchen asks for", () => {
+  // What a restaurant platform actually exports: "Product Name" rather than
+  // "name", "Price (NGN)" rather than "price", and one row per choice, so a
+  // dish with two questions arrives four times. Read by the heading as typed,
+  // this file had no name column and no price column, and every row of it was
+  // skipped: the import brought in nothing at all.
+  const csv = [
+    "﻿Category,Product Name,Description,Price (NGN),In Stock,Image Filename," +
+      "Option Group,Option Group Type,Min Selections,Max Selections,Option Name,Option Price (NGN)",
+    "Pasta,Asun Pasta,Spicy and creamy,11800,Yes,asun.png,Spice Level,Required,1,1,Mild,0",
+    "Pasta,Asun Pasta,Spicy and creamy,11800,Yes,asun.png,Spice Level,Required,1,1,Hot,0",
+    "Pasta,Asun Pasta,Spicy and creamy,11800,Yes,asun.png,Add Extra,Optional,0,2,Sausage,1700",
+    // The same dish sold as a sharing tray is a different dish at a different
+    // price. Told apart by name alone, the shop kept whichever came first in
+    // the file and put the other one on the menu at the wrong price.
+    "Trays,Asun Pasta,For the table,35000,Yes,asun-tray.png,,,,,,",
+  ].join("\n");
+
+  const { products, skipped } = parseCatalogue(csv);
+  assert.equal(skipped, 0);
+  assert.equal(products.length, 2);
+
+  const plate = products[0];
+  assert.equal(plate.name, "Asun Pasta");
+  assert.equal(plate.price, 11800);
+  assert.equal(plate.category, "Pasta");
+  assert.equal(plate.description, "Spicy and creamy");
+  assert.equal(plate.options.length, 2);
+
+  const spice = plate.options[0];
+  assert.equal(spice.name, "Spice Level");
+  assert.equal(spice.required, true);
+  assert.equal(spice.max, 1);
+  assert.deepEqual(spice.choices.map((one) => one.name), ["Mild", "Hot"]);
+
+  const extra = plate.options[1];
+  assert.equal(extra.required, false);
+  assert.equal(extra.max, 2);
+  assert.equal(extra.choices[0].price, 1700);
+
+  const tray = products[1];
+  assert.equal(tray.price, 35000);
+  assert.equal(tray.category, "Trays");
+  assert.equal(tray.options.length, 0);
+});
+
 test("a market is priced by what the shopping comes to", () => {
   // Eleven peppers and a bag of rice is one trip and two bags. The container
   // ladder reads it as eleven containers and charges nine thousand naira for
