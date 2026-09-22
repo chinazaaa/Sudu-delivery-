@@ -144,6 +144,7 @@ export default function Checkout({
   );
   const noRunThere = far.length > 0 && openable.length === 0;
 
+
   // The soonest run that can carry the far half of this cart, against the
   // soonest run there is at all. Where they are not the same day, the far
   // half is what is holding the order up, and saying so is the difference
@@ -237,6 +238,17 @@ export default function Checkout({
 
   const badPhone = Boolean(state.error?.toLowerCase().includes("phone"));
   const selected = batches.find((b) => b.id === batchId) ?? null;
+
+  // A month of Fridays is a wall, not a choice, so only the next few are
+  // offered. Counted out of the runs that can carry this cart rather than out
+  // of every run there is, which is what let the one run going to Lekki fall
+  // off the end of a list of four. Never without the one that is picked.
+  const shownRuns = [
+    ...openable.slice(0, 4),
+    ...openable.filter(
+      (one, index) => index >= 4 && one.id === batchId
+    ),
+  ];
   const itemCount = countItems(cart);
   const subtotal = cartSubtotal(cart);
 
@@ -585,7 +597,7 @@ export default function Checkout({
           disabled={adding !== null}
           aria-label="Delivery run"
         >
-          {openable.map((batch) => (
+          {shownRuns.map((batch) => (
             <option key={batch.id} value={batch.id}>
               {batch.label}
               {now !== null &&
@@ -1218,6 +1230,14 @@ export default function Checkout({
             itemCount={itemCount + alreadyItems}
             flashFee={selected?.flashFee ?? null}
             bands={bands}
+            // Where the cart reaches past Sangotedo the whole ladder is
+            // higher, and a ladder that is higher for no stated reason reads
+            // as the price having gone up. It is the trip that is longer.
+            note={
+              area.runExtra > 0
+                ? `${area.name} is a longer trip than Sangotedo, so every rung is ${naira(area.runExtra)} more. One fee for the whole order, however many restaurants are in it: it is the car, not the food, so it goes by how much room your order takes.`
+                : undefined
+            }
           />
         )}
         {/* The same question, and a sharper one, for a car of its own: this

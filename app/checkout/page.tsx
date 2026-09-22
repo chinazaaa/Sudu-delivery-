@@ -31,10 +31,15 @@ export default async function CheckoutPage({
     recentlyClosedBatch(),
   ]);
 
-  // The next few runs only. A month of Fridays is a wall, not a choice.
+  // Every run that is open, not the next few. Which of them can carry this
+  // cart depends on where its restaurants are, and only the browser knows
+  // what is in the cart, so cutting the list here cut off the Saturday run
+  // that was the one going to Lekki: the checkout said no run was going
+  // there while it sat fifth in a list of four. The page keeps the list
+  // short itself, out of the ones that can actually carry the order.
   const views = [
     ...(justClosed ? [toClosedBatchView(justClosed)] : []),
-    ...batches.slice(0, 4).map(toBatchView),
+    ...batches.map(toBatchView),
   ];
 
   // Arriving from "add to my order": same phone, same batch, so only the
