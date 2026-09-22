@@ -17,6 +17,7 @@ import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { nextArrival, runArrival } from "@/lib/arrival";
 import { offersByRestaurant } from "@/lib/coupons";
 import { dropLabel, nextDrop, skincareOn, skincareShop } from "@/lib/skincare";
+import { liveRoutes, parcelsFrom } from "@/lib/parcels";
 import { offerBadge } from "@/lib/offers";
 import { sweepGroups } from "@/lib/groups";
 
@@ -49,6 +50,9 @@ export default async function HomePage() {
           batches.map((one) => ({ run_date: one.run_date, window: one.delivery_window_text }))
         )
       : [];
+
+  // Read once: the tile names the routes, so it needs the whole set up.
+  const parcelSetup = parcelsFrom(settings);
 
   const lines = (settings.auto_lines || AUTO_LINES)
     .split("\n")
@@ -108,6 +112,19 @@ export default async function HomePage() {
       // The one signpost. Named by whatever is nearest, because "Match day,
       // Saturday" is a reason to tap and "Occasions" is a filing cabinet.
       occasions={occasionsLine}
+      // Something that is not food, carried on its own trip. Named by where
+      // it goes rather than called "Parcels", because nobody is looking for
+      // a parcel service: they have a dress sitting in a shop in Lekki.
+      parcels={
+        parcelSetup.on
+          ? `${liveRoutes(parcelSetup.routes)
+              .map((one) => one.label)
+              .slice(0, 2)
+              .join(", ")}${
+              liveRoutes(parcelSetup.routes).length > 2 ? " and more" : ""
+            }. Its own trip, on a day we agree.`
+          : ""
+      }
       // One car a week, on a Saturday. Empty when that shelf is off, and then
       // the page does not mention it at all.
       skincare={

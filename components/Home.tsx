@@ -17,6 +17,7 @@ export default function Home({
   menu,
   arriving,
   alsoArriving = null,
+  parcels,
   skincare,
   occasions = "",
   slides,
@@ -33,6 +34,9 @@ export default function Home({
   /** The other way of getting it here, for whoever the headline does not
    *  suit. Null when there is only one way. */
   alsoArriving?: { said: string; sooner: boolean } | null;
+  /** What the shop carries beyond food, said in a line. Empty when parcels
+   *  are off, or when no route is priced and ticked. */
+  parcels: string;
   /** When the skincare car next goes, said in a line. Empty when that shelf
    *  is switched off, and then there is no door to it. */
   skincare: string;
@@ -137,6 +141,22 @@ export default function Home({
             <span className="block text-sm text-muted">{occasions}</span>
           </span>
           <span className="shrink-0 text-sm font-extrabold text-brand">See</span>
+        </Link>
+      )}
+
+      {/* Above skincare because it is the newer thing and the one nobody
+          knows the shop does. Empty when parcels are off, and then the page
+          does not mention them at all. */}
+      {parcels !== "" && (
+        <Link
+          href="/parcel"
+          className="flex items-center justify-between gap-3 rounded-2xl bg-paper px-4 py-3 shadow-card transition active:scale-[0.99]"
+        >
+          <span>
+            <span className="block font-bold">Send a parcel</span>
+            <span className="block text-sm text-muted">{parcels}</span>
+          </span>
+          <span className="shrink-0 text-sm font-extrabold text-brand">Send</span>
         </Link>
       )}
 
