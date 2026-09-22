@@ -29,18 +29,28 @@ export default function ArrivalStrip({
 }) {
   return (
     <Link
-      href="/cart"
-      className="block rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-3 transition active:scale-[0.99]"
+      href="/products"
+      className="flex items-center gap-3 rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-3 transition active:scale-[0.99]"
     >
-      <p className="text-lg font-extrabold text-ink">Order now, get it {said}</p>
+      <span className="min-w-0 flex-1">
+        <span className="block text-lg font-extrabold text-ink">
+          Order now, get it {said}
+        </span>
 
-      {also && (
-        <p className="mt-1 text-sm text-ink/75">
-          {also.sooner
-            ? `In a hurry? A car of its own can be there ${also.said}, for more.`
-            : `Rather pay less? A run gets it to you ${also.said}.`}
-        </p>
-      )}
+        {also && (
+          <span className="mt-1 block text-sm text-ink/75">
+            {also.sooner
+              ? `In a hurry? A car of its own can be there ${also.said}, for more.`
+              : `Rather pay less? A run gets it to you ${also.said}.`}
+          </span>
+        )}
+      </span>
+
+      {/* It used to go to the cart, which is where somebody goes when they
+          have already chosen. This is the top of the page: they have not.
+          Every other card here says what tapping it does, and the one that
+          said nothing was the one about food. */}
+      <span className="shrink-0 text-sm font-extrabold text-brand">Browse</span>
     </Link>
   );
 }
