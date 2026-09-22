@@ -117,7 +117,10 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
 
         <nav className="hidden items-center gap-1 sm:flex">
           {[
-            ["/", "Menu"],
+            // Everything there is, one list with filters, rather than the
+            // front page's pick of restaurants. "Menu" is what somebody
+            // presses when they want to see the lot.
+            ["/products", "Menu"],
             ["/orders", "My orders"],
             ["/reorder", "Order again"],
           ].map(([href, label]) => (

@@ -14,6 +14,10 @@ export type ScheduledRun = {
   /** What customers read. Written from the two times above, and kept as its
    *  own column because every message, page and card already reads it. */
   window_text: string;
+  /** Where these runs go beyond Sangotedo, which they always pass. Empty is
+   *  Sangotedo only, and a restaurant anywhere else cannot be ordered onto
+   *  them. */
+  areas: string;
   active: boolean;
 };
 
@@ -51,6 +55,7 @@ async function storedSchedule(includeHidden: boolean): Promise<ScheduledRun[] | 
     return ((data ?? []) as ScheduledRun[]).map((row) => ({
       ...row,
       cut_off: clock(row.cut_off),
+      areas: row.areas ?? "",
       window_from: clock(row.window_from),
       window_to: clock(row.window_to),
     }));
@@ -84,6 +89,7 @@ export async function runSchedule(includeHidden = false): Promise<ScheduledRun[]
       window_from: "",
       window_to: "",
       window_text: DELIVERY_WINDOWS[slot],
+      areas: "",
       active: true,
     }))
   );

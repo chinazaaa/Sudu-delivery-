@@ -6,6 +6,8 @@ import { openUntil } from "@/lib/batches";
 import { runSchedule, WEEKDAYS } from "@/lib/schedule";
 import { DELIVERY_WINDOWS, SLOT_LABEL } from "@/lib/config";
 import { safeSettings } from "@/lib/settings";
+import { allAreas } from "@/lib/areas-server";
+import { areasOfRun } from "@/lib/areas";
 import { runDateLabel } from "@/lib/time";
 import ActionButton from "@/components/admin/ActionButton";
 import {
@@ -37,6 +39,7 @@ export default async function SchedulePage() {
   const until = await openUntil();
   const months = nextMonths(4);
   const horizon = (await safeSettings()).order_horizon_days || 7;
+  const areas = await allAreas();
 
   return (
     <div>
@@ -170,6 +173,37 @@ export default async function SchedulePage() {
                       {run.window_text.trim() === "" && " (nothing set yet)"}
                     </p>
                   </div>
+
+                  {/* Where these runs go. Said once here rather than ticked
+                      on every run after it opens: runs open weeks ahead by
+                      themselves, and a week that was missed is a restaurant
+                      nobody can order from with no sign of why. */}
+                  {areas.length > 0 && (
+                    <div className="basis-full rounded-xl bg-shell p-3">
+                      <input type="hidden" name="areas_set" value="1" />
+                      <p className="label mb-0">Where these runs go</p>
+                      <p className="mb-1 text-xs text-muted">
+                        They always pass Sangotedo. Tick anywhere else they go,
+                        and those restaurants can be ordered onto them.
+                      </p>
+                      <span className="flex flex-wrap gap-3">
+                        {areas.map((one) => (
+                          <label
+                            key={one.id}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              name="area"
+                              value={one.id}
+                              defaultChecked={areasOfRun(run.areas).includes(one.id)}
+                            />
+                            {one.name}
+                          </label>
+                        ))}
+                      </span>
+                    </div>
+                  )}
                   <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
                     Save
                   </SaveButton>
@@ -250,6 +284,23 @@ export default async function SchedulePage() {
               in the afternoon and &quot;{DELIVERY_WINDOWS.night}&quot; at night.
             </p>
           </div>
+          {areas.length > 0 && (
+            <div className="sm:col-span-5 rounded-xl bg-shell p-3">
+              <input type="hidden" name="areas_set" value="1" />
+              <p className="label mb-0">Where these runs go</p>
+              <p className="mb-1 text-xs text-muted">
+                They always pass Sangotedo. Tick anywhere else they go.
+              </p>
+              <span className="flex flex-wrap gap-3">
+                {areas.map((one) => (
+                  <label key={one.id} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="area" value={one.id} />
+                    {one.name}
+                  </label>
+                ))}
+              </span>
+            </div>
+          )}
           <div className="sm:col-span-5">
             <SaveButton quiet>Add to the week</SaveButton>
           </div>

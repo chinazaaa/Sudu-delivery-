@@ -108,6 +108,10 @@ export async function openRunsBetween(from: string, to: string): Promise<number>
         slot: run.slot,
         cut_off_at: lagosInstant(date, hour, minute),
         delivery_window_text: run.window_text || windows[run.slot],
+        // Where this weekday's runs go. Said once on the schedule rather
+        // than ticked on every run after it opens, which is how a Saturday
+        // that was always going to Lekki opened not going there.
+        areas: run.areas ?? "",
         status: "open",
         capacity: null,
         flash_fee: null,

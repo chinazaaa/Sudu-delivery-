@@ -144,6 +144,30 @@ export default function Checkout({
   );
   const noRunThere = far.length > 0 && openable.length === 0;
 
+  // The soonest run that can carry the far half of this cart, against the
+  // soonest run there is at all. Where they are not the same day, the far
+  // half is what is holding the order up, and saying so is the difference
+  // between a list of runs that is quietly shorter than usual and a choice
+  // somebody can actually make: wait for the one going there, or take that
+  // food out and eat sooner.
+  const soonest = (list: BatchView[]): BatchView | null =>
+    list.reduce<BatchView | null>(
+      (best, one) => (best === null || one.runDate < best.runDate ? one : best),
+      null
+    );
+  const goingThere = soonest(openable);
+  const goingSooner = soonest(
+    batches.filter(
+      (one) => !one.closed && !one.full && !openable.some((other) => other.id === one.id)
+    )
+  );
+  const farHoldsItUp =
+    far.length > 0 &&
+    farLines.length < cart.length &&
+    goingThere !== null &&
+    goingSooner !== null &&
+    goingSooner.runDate < goingThere.runDate;
+
   // The soonest way to eat, the same rule as everywhere else: a run today, a
   // car of its own today, a run tomorrow, tomorrow's first window.
   const todayRun = openable.find((one) => one.runDate === today) ?? null;
@@ -697,6 +721,20 @@ export default function Checkout({
           <p className="text-sm font-semibold text-brand-dark">
             {farNames} rides a run, so everything here travels together on
             that one. One delivery, not two.
+          </p>
+        )}
+
+        {/* Which of the two it is worth doing is theirs to decide, so both
+            are named: the day the far food can come, and the day the rest
+            could have come without it. */}
+        {farHoldsItUp && goingThere && goingSooner && (
+          <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm text-brand-dark">
+            <span className="font-semibold">
+              {goingThere.label} is the next run going to {farNames}.
+            </span>{" "}
+            Stay on it and everything comes together at the {farNames} fee, or
+            take {farLines.length === 1 ? "that one" : "those"} out and the
+            rest can come on {goingSooner.label}.
           </p>
         )}
 
@@ -1266,9 +1304,11 @@ export default function Checkout({
                   somebody holding a cart with nothing to do about it. */}
               No run is going to {farNames} just now, and a car of its own
               cannot get there and back in time.{" "}
-              {farLines.length < cart.length
-                ? `Take ${farLines.length === 1 ? "that one" : "those"} out and the rest can still come today.`
-                : "Check back when the next one is up, or message us."}
+              {farLines.length < cart.length && goingSooner
+                ? `Take ${farLines.length === 1 ? "that one" : "those"} out and the rest can come on ${goingSooner.label}.`
+                : farLines.length < cart.length
+                  ? `Take ${farLines.length === 1 ? "that one" : "those"} out and the rest can still come.`
+                  : "Check back when the next one is up, or message us."}
             </p>
           )}
           {state.error && (

@@ -506,6 +506,12 @@ export async function saveScheduleRun(form: FormData): Promise<void> {
 
   const windowText = said || String(before?.window_text ?? "").trim();
 
+  // Where these runs go beyond Sangotedo, which they always pass. Sent only
+  // by a form that shows the boxes, so adding a day from somewhere that does
+  // not ask cannot silently take Lekki off a Saturday.
+  const setsAreas = form.get("areas_set") !== null;
+  const areas = setsAreas ? areaText(form.getAll("area").map(String)) : null;
+
   const { error } = await db()
     .from("run_schedule")
     .upsert(
@@ -516,6 +522,7 @@ export async function saveScheduleRun(form: FormData): Promise<void> {
         window_from: from || null,
         window_to: to || null,
         window_text: windowText,
+        ...(areas === null ? {} : { areas }),
         // Saving a time must not quietly bring a paused day back.
         active: form.get("active") !== "false",
       },
@@ -530,6 +537,10 @@ export async function saveScheduleRun(form: FormData): Promise<void> {
     .from("batches")
     .select("id, run_date")
     .eq("slot", slot)
+    // A same day car borrows a run's date and slot, and is somebody's own
+    // trip asked for by hand. Editing the week must not rewrite the time
+    // they were told their car is coming.
+    .eq("kind", "run")
     .gte("run_date", lagosToday());
 
   // Midday UTC, so the day cannot slip either side of midnight.
@@ -539,7 +550,12 @@ export async function saveScheduleRun(form: FormData): Promise<void> {
 
   if (sameDay.length > 0) {
     const ids = sameDay.map((row) => row.id);
-    const { data: taken } = await db().from("orders").select("batch_id").in("batch_id", ids);
+    // Cancelled and refunded orders are not a reason to freeze a run's time.
+    const { data: taken } = await db()
+      .from("orders")
+      .select("batch_id")
+      .in("batch_id", ids)
+      .not("status", "in", NOT_ORDERS_SQL);
     const busy = new Set((taken ?? []).map((row) => row.batch_id as string));
     const [hour, minute] = cutOff.split(":").map(Number);
 
@@ -550,6 +566,7 @@ export async function saveScheduleRun(form: FormData): Promise<void> {
         .update({
           cut_off_at: lagosInstant(row.run_date, hour, minute),
           ...(windowText ? { delivery_window_text: windowText } : {}),
+          ...(areas === null ? {} : { areas }),
         })
         .eq("id", row.id);
     }
