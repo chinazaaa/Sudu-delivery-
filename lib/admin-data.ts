@@ -1,6 +1,6 @@
 import { db } from "./supabase";
 import { carLabel } from "./view";
-import { linesFor, type OrderLine } from "./orders";
+import { isGone, isPaid, linesFor, type OrderLine } from "./orders";
 import { SLOT_LABEL } from "./config";
 import { shareRef } from "./money";
 import { runDateLabel, weekdayLabel } from "./time";
@@ -89,7 +89,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
         other.id !== order.id &&
         other.batch_id === order.batch_id &&
         other.customer_phone === order.customer_phone &&
-        other.status !== "refunded"
+        !isGone(other.status)
     );
 
     return {
@@ -233,9 +233,9 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
 
   const rows = (data ?? []).map((row) => {
     const mine = (orders ?? []).filter(
-      (order) => order.customer_phone === row.phone && order.status !== "refunded"
+      (order) => order.customer_phone === row.phone && !isGone(order.status)
     );
-    const paid = mine.filter((order) => order.status !== "pending");
+    const paid = mine.filter((order) => isPaid(order.status));
     return {
       phone: row.phone as string,
       name: row.name as string,
@@ -288,8 +288,8 @@ export async function dashboard(days = 28): Promise<Dashboard> {
     .gte("created_at", since);
   if (error) throw new Error(error.message);
 
-  const orders = (data ?? []).filter((order) => order.status !== "refunded");
-  const paid = orders.filter((order) => order.status !== "pending");
+  const orders = (data ?? []).filter((order) => !isGone(order.status));
+  const paid = orders.filter((order) => isPaid(order.status));
 
   const lines = await linesFor(paid.map((order) => order.id as string));
   const counts = new Map<string, { name: string; restaurant: string; qty: number }>();

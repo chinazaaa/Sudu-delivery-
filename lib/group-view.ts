@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { isPaid } from "./orders";
 import { getSharedGroup, groupOrders, shareNow } from "./groups";
 import { cartValues, groupCarts, isReady, type GroupCart } from "./group-carts";
 import { getBatch } from "./batches";
@@ -137,7 +138,7 @@ export async function groupView(
     ? orders.map((order) => ({
         orderId: order.id,
         link: shortRef(order),
-        stage: (order.status !== "pending" ? "paid" : "unpaid") as Stage,
+        stage: (isPaid(order.status) ? "paid" : "unpaid") as Stage,
         // The seat this order came out of, which is how a member who did not
         // press close is still shown their own total rather than a list of
         // everybody's.
@@ -146,7 +147,7 @@ export async function groupView(
         items: countFor(order.id),
         food: order.subtotal_food,
         done: true,
-        paid: order.status !== "pending",
+        paid: isPaid(order.status),
         isLeader: group.leader_phone !== "" && order.customer_phone === group.leader_phone,
         summary: "",
         phone: "",

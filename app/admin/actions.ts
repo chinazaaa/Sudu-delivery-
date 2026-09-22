@@ -193,6 +193,48 @@ export async function cancelOrder(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
 }
 
+/**
+ * Taking an order off the books altogether.
+ *
+ * Cancelling is the ordinary answer and leaves a row that says what
+ * happened. This is for the ones that should never have existed: a test, a
+ * bot, a duplicate of a duplicate. It really is gone, and the numbering
+ * simply skips it.
+ *
+ * Only ever an order nobody paid for. Checked here rather than trusted from
+ * the form, because a delete is the one thing that cannot be undone by
+ * clicking something else.
+ */
+export async function deleteOrder(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const id = String(form.get("order_id"));
+  const { data: order } = await db()
+    .from("orders")
+    .select("paid_at, status, group_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!order || order.paid_at) return;
+  if (order.status !== "pending" && order.status !== "cancelled") return;
+
+  // Its lines go with it: order_items cascades on this delete.
+  await db().from("orders").delete().eq("id", id);
+
+  // A group with nothing left in it is a group that never happened.
+  if (order.group_id) {
+    const { count } = await db()
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("group_id", order.group_id as string);
+    if ((count ?? 0) === 0) {
+      await db().from("order_groups").delete().eq("id", order.group_id as string);
+    }
+  }
+
+  revalidatePath("/admin", "layout");
+}
+
 export async function setBatchStatus(form: FormData): Promise<void> {
   await assertAdmin();
   await db()

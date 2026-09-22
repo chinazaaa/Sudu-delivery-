@@ -3,7 +3,7 @@ import { feeFor } from "./fees";
 import { activeBands } from "./settings";
 import { BATCH_MINIMUM } from "./config";
 import { getBatch } from "./batches";
-import { NOT_ORDERS_SQL } from "./orders";
+import { isGone, isPaid, NOT_ORDERS_SQL } from "./orders";
 import { groupShortfalls, refundsOwed, settleGroupFees, type GroupShortfall } from "./groups";
 import { linesFor, type OrderLine } from "./orders";
 import type { Batch, Order, Promoter } from "./types";
@@ -117,7 +117,7 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   });
 
   // Unpaid orders do not travel, so they are not on the counter sheet either.
-  const paid = orders.filter((o) => o.status !== "pending");
+  const paid = orders.filter((o) => isPaid(o.status));
   const unpaid = orders.filter((o) => o.status === "pending");
   const paidIds = new Set(paid.map((o) => o.id));
 
@@ -446,7 +446,7 @@ export async function sameDayTrips(): Promise<SameDayTrip[]> {
 
   const trips = clusters.map((cluster) => {
     const mine = live.filter((one) => cluster.batchIds.includes(one.batch_id));
-    const paid = mine.filter((one) => one.status !== "pending");
+    const paid = mine.filter((one) => isPaid(one.status));
 
     return {
       at: cluster.at,
@@ -506,7 +506,7 @@ export async function tripSheet(at: string): Promise<TripSheet | null> {
   const withLines = (o: Order): HandoutOrder => ({ ...o, lines: byOrder.get(o.id) ?? [] });
 
   // Unpaid food is not bought, here as everywhere else.
-  const paid = orders.filter((o) => o.status !== "pending");
+  const paid = orders.filter((o) => isPaid(o.status));
   const paidIds = new Set(paid.map((o) => o.id));
 
   return {
@@ -559,18 +559,18 @@ export async function batchOverview(window: "recent" | "all" = "recent"): Promis
   // with the run's own sheet, which is the one that had been reconciled.
   const extra = await overMenu(rows, all);
   const commission = await commissionFor(
-    all.filter((o) => o.status !== "pending" && o.status !== "refunded") as Order[]
+    all.filter((o) => isPaid(o.status)) as Order[]
   );
   const paidEverywhere = all.filter(
-    (o) => o.status !== "pending" && o.status !== "refunded"
+    (o) => isPaid(o.status)
   ).length;
   // Commission is a flat rate per order, so sharing the total out by order
   // count gives each run its own share without a second query per run.
   const perOrderCommission = paidEverywhere === 0 ? 0 : commission / paidEverywhere;
 
   return rows.map((b) => {
-    const mine = all.filter((o) => o.batch_id === b.id && o.status !== "refunded");
-    const paid = mine.filter((o) => o.status !== "pending");
+    const mine = all.filter((o) => o.batch_id === b.id && !isGone(o.status));
+    const paid = mine.filter((o) => isPaid(o.status));
     const margin = sum(paid, (o) => o.total - o.subtotal_food);
     const costs = b.fuel_cost + b.driver_cost + (b.transport_cost ?? 0) + b.other_cost;
 
@@ -607,7 +607,7 @@ async function overMenu(
   if (batches.length === 0) return out;
 
   const paidIn = (batchId: string) =>
-    orders.filter((o) => o.batch_id === batchId && o.status !== "pending" && o.status !== "refunded");
+    orders.filter((o) => o.batch_id === batchId && isPaid(o.status));
   const menuOf = (batchId: string) => sum(paidIn(batchId), (o) => o.subtotal_food);
 
   // One figure for the whole shop, which is the older way and needs no lines.
@@ -630,7 +630,7 @@ async function overMenu(
 
   const reconciledIds = [...new Set(spend.map((row) => row.batch_id))];
   const wanted = orders.filter(
-    (o) => reconciledIds.includes(o.batch_id) && o.status !== "pending" && o.status !== "refunded"
+    (o) => reconciledIds.includes(o.batch_id) && isPaid(o.status)
   );
   const lines = await linesFor(wanted.map((o) => o.id));
   const batchOfOrder = new Map(wanted.map((o) => [o.id, o.batch_id]));
@@ -706,7 +706,7 @@ export async function promoterRows(): Promise<PromoterRow[]> {
     // Only a paid order earns: an unpaid one never travelled.
     const count = (orders ?? []).filter(
       (o) =>
-        o.status !== "pending" &&
+        isPaid(o.status) &&
         broughtBy.get(o.customer_phone as string) === p.code
     ).length;
     const earned = count * p.rate;
@@ -835,7 +835,7 @@ export async function shortfalls(batchId: string): Promise<Shortfall[]> {
     const orders = rows ?? [];
     if (orders.length === 0) continue;
 
-    const paid = orders.filter((one) => one.status !== "pending");
+    const paid = orders.filter((one) => isPaid(one.status));
     const unpaid = orders.filter((one) => one.status === "pending");
     if (unpaid.length === 0) continue;
 

@@ -1,5 +1,5 @@
 import { db } from "./supabase";
-import { NOT_ORDERS_SQL } from "./orders";
+import { isGone, isPaid, NOT_ORDERS_SQL } from "./orders";
 import { SLOT_LABEL } from "./config";
 import { runDateLabel } from "./time";
 
@@ -357,7 +357,7 @@ export async function shelfNumbers(days = 7): Promise<ShelfNumbers | null> {
     status: string;
     subtotal_food: number;
     fee: number;
-  }[]).filter((one) => one.status !== "refunded");
+  }[]).filter((one) => !isGone(one.status));
 
   // What people actually bought, so the next import knows what to keep in
   // stock. Only from the orders just counted, which keeps it to one query.
@@ -388,7 +388,7 @@ export async function shelfNumbers(days = 7): Promise<ShelfNumbers | null> {
 
   return {
     orders: rows.length,
-    paid: rows.filter((one) => one.status !== "pending").length,
+    paid: rows.filter((one) => isPaid(one.status)).length,
     food: rows.reduce((sum, one) => sum + one.subtotal_food, 0),
     delivery: rows.reduce((sum, one) => sum + one.fee, 0),
     // On the car that has not gone yet, whenever it was ordered.

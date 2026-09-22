@@ -14,6 +14,7 @@ import {
   cancelOrder,
   markPaid,
   markDelivered,
+  deleteOrder,
   refundOrder,
   savePaymentLink,
   saveOrderNote,
@@ -28,6 +29,7 @@ const TABS: { value: string; label: string }[] = [
   { value: "paid", label: "Paid" },
   { value: "delivered", label: "Delivered" },
   { value: "refunded", label: "Refunded" },
+  { value: "cancelled", label: "Cancelled" },
   { value: "all", label: "Everything" },
 ];
 
@@ -154,6 +156,7 @@ export default async function OrdersPage({
               markDelivered={markDelivered}
               refund={refundOrder}
               cancel={cancelOrder}
+              remove={deleteOrder}
               savePaymentLink={savePaymentLink}
               saveNote={saveOrderNote}
             />

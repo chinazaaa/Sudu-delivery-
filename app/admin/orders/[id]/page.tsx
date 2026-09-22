@@ -16,6 +16,7 @@ import {
   markDelivered,
   moveOrderToAnother,
   cancelOrder,
+  deleteOrder,
   refundOrder,
   savePaymentLink,
   saveOrderNote,
@@ -151,6 +152,7 @@ async function orderPage(id: string, said: string) {
           markDelivered={markDelivered}
           refund={refundOrder}
           cancel={cancelOrder}
+          remove={deleteOrder}
           savePaymentLink={savePaymentLink}
           saveNote={saveOrderNote}
         />

@@ -1,5 +1,5 @@
 import { db } from "./supabase";
-import { NOT_ORDERS_SQL } from "./orders";
+import { isGone, isPaid, NOT_ORDERS_SQL } from "./orders";
 import { SLOT_LABEL, type BatchSlot } from "./config";
 import { runDateLabel } from "./time";
 import { NUDGE_DEFAULT } from "./messages";
@@ -185,7 +185,7 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
 
   const runs: PromoterRun[] = ((batches ?? []) as any[]).map((batch) => {
     const mine = (orders ?? []).filter((o) => o.batch_id === batch.id);
-    const paidOrders = mine.filter((o) => o.status !== "pending").length;
+    const paidOrders = mine.filter((o) => isPaid(o.status)).length;
     return {
       batchId: batch.id as string,
       runDate: batch.run_date as string,

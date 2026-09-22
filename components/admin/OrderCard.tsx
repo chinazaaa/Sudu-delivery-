@@ -71,6 +71,7 @@ export default function OrderCard({
   markDelivered,
   refund,
   cancel,
+  remove,
   savePaymentLink,
   saveNote,
 }: {
@@ -79,6 +80,7 @@ export default function OrderCard({
   markDelivered: (form: FormData) => Promise<void>;
   refund: (form: FormData) => Promise<void>;
   cancel: (form: FormData) => Promise<void>;
+  remove: (form: FormData) => Promise<void>;
   savePaymentLink: (form: FormData) => Promise<void>;
   saveNote: (form: FormData) => Promise<void>;
 }) {
@@ -355,6 +357,19 @@ export default function OrderCard({
                 </ConfirmButton>
               </form>
             ) : null}
+
+            {/* For the ones that should never have existed: a test, a bot, a
+                duplicate of a duplicate. Cancelling leaves a row that says
+                what happened, which is right nearly always; this really is
+                gone. Never offered on an order anybody paid for. */}
+            {(order.status === "pending" || order.status === "cancelled") && (
+              <form action={remove}>
+                <input type="hidden" name="order_id" value={order.id} />
+                <ConfirmButton tone="brand" confirm="Yes, delete it for good">
+                  Delete
+                </ConfirmButton>
+              </form>
+            )}
           </div>
         </div>
       )}

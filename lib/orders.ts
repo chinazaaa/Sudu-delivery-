@@ -118,6 +118,20 @@ export type PlaceOrderInput = {
 export const NOT_ORDERS = ["refunded", "cancelled"] as const;
 export const NOT_ORDERS_SQL = `(${NOT_ORDERS.join(",")})`;
 
+/** Refunded or cancelled: not food anybody is buying. */
+export const isGone = (status: string): boolean =>
+  (NOT_ORDERS as readonly string[]).includes(status);
+
+/**
+ * Money that has actually arrived.
+ *
+ * Not simply "anything that is not pending", which is how a cancelled order
+ * came to be counted as paid: the dashboard said ten paid where three people
+ * had paid, and a run sheet said seven. Gone is gone before it is anything
+ * else.
+ */
+export const isPaid = (status: string): boolean => !isGone(status) && status !== "pending";
+
 export type PlaceOrderResult =
   | { ok: true; orderId: string; groupId?: string; sharedGroupId?: string }
   | { ok: false; error: string };
@@ -408,7 +422,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // ordinary order rather than failing the checkout.
   const joined = input.joinOrderId ? await rootOrder(input.joinOrderId) : null;
   const joinRootId =
-    joined && joined.batch_id === batch.id && joined.status !== "refunded"
+    joined && joined.batch_id === batch.id && !isGone(joined.status)
       ? joined.id
       : null;
 
@@ -1281,11 +1295,17 @@ export type MoveResult = { ok: true; orderId: string } | { ok: false; error: str
 export async function moveOrder(orderId: string, batchId: string): Promise<MoveResult> {
   const order = await getOrder(orderId);
   if (!order) return { ok: false, error: "That order no longer exists." };
-  if (order.status === "refunded") {
-    return { ok: false, error: "That order was refunded, so there is nothing to move." };
+  if (isGone(order.status)) {
+    return {
+      ok: false,
+      error:
+        order.status === "cancelled"
+          ? "That order was cancelled, so there is nothing to move."
+          : "That order was refunded, so there is nothing to move.",
+    };
   }
 
-  const paid = order.status !== "pending";
+  const paid = isPaid(order.status);
   if (paid && !isOrderable(order.batch)) {
     return {
       ok: false,
@@ -1307,7 +1327,7 @@ export async function moveOrder(orderId: string, batchId: string): Promise<MoveR
   const moving =
     order.group_id && order.shares.length > 1
       ? order.shares
-          .filter((share) => share.status !== "refunded")
+          .filter((share) => !isGone(share.status))
           .map((share) => share.id)
       : [orderId];
 
@@ -1319,7 +1339,7 @@ export async function moveOrder(orderId: string, batchId: string): Promise<MoveR
 
     // A paid order carries its money across untouched: nothing is re-charged
     // and nothing is refunded for changing which night it comes on.
-    if (one.status !== "pending") {
+    if (isPaid(one.status)) {
       await db().from("orders").update({ batch_id: batch.id }).eq("id", id);
       continue;
     }

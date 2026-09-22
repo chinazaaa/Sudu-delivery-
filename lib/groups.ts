@@ -1,5 +1,5 @@
 import { db } from "./supabase";
-import { NOT_ORDERS_SQL } from "./orders";
+import { isGone, isPaid, NOT_ORDERS_SQL } from "./orders";
 import { evenShare, feeFor, isUrgent, sameDayFee, splitFee } from "./fees";
 import { activeBands, sameDayPricing } from "./settings";
 import {
@@ -124,7 +124,7 @@ export async function groupShortfalls(batchId: string): Promise<GroupShortfall[]
 
   for (const row of groups ?? []) {
     const orders = await groupOrders(row.id as string);
-    const paid = orders.filter((one) => one.status !== "pending");
+    const paid = orders.filter((one) => isPaid(one.status));
     const missing = orders.filter((one) => one.status === "pending");
     if (paid.length === 0 || missing.length === 0) continue;
 
