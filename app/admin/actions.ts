@@ -2033,9 +2033,21 @@ export async function createBatch(form: FormData): Promise<void> {
   const existingRun = ((found ?? []) as { id: string }[])[0] ?? null;
 
   if (existingRun) {
+    // Where it goes is not touched here: it belongs to the run, and this form
+    // does not ask about it.
     await db().from("batches").update(fields).eq("id", existingRun.id);
   } else {
-    await db().from("batches").insert(fields);
+    // A run made by hand goes where that weekday's runs go. Without this it
+    // opened Sangotedo only however the schedule read, so a Saturday that
+    // always goes to Lekki made one by hand that did not, and three
+    // restaurants stayed unorderable with nothing on the page saying why.
+    const weekday = new Date(`${runDate}T12:00:00Z`).getUTCDay();
+    const forThatDay = (await runSchedule(true)).find(
+      (entry) => entry.weekday === weekday && entry.slot === slot
+    );
+    await db()
+      .from("batches")
+      .insert({ ...fields, areas: forThatDay?.areas ?? "" });
   }
 
   // Making a day by hand is the plainest way of saying you want it, so it
