@@ -4,6 +4,7 @@ import ParcelForm from "@/components/ParcelForm";
 import { liveRoutes, parcels } from "@/lib/parcels";
 import { hostelNames } from "@/lib/hostels";
 import { lagosToday } from "@/lib/time";
+import { namedPromoters } from "@/lib/promoters";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function ParcelPage() {
   // is misspelt every other order, and a parcel is one bag with one place to
   // take it, so it matters more here than anywhere.
   const hostels = await hostelNames();
+  const promoters = await namedPromoters();
 
   if (!setup.on || routes.length === 0) {
     return (
@@ -69,6 +71,7 @@ export default async function ParcelPage() {
         routes={routes}
         maxValue={setup.maxValue}
         hostels={hostels}
+        promoters={promoters}
         today={lagosToday()}
       />
     </div>

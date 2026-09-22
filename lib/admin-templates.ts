@@ -53,6 +53,20 @@ function parcelAnswers(
   const route = routeById(parseRoutes(settings.parcel_routes), order.parcel_route);
   const toPau = route?.toPau ?? (order.parcel_to ?? "").startsWith("PAU");
 
+  // A parcel sent before the answers were kept separately still has them,
+  // glued into the two ends of the trip: the off-campus end is the address,
+  // and the campus end is "PAU, <block>, <room>". Read back out rather than
+  // shown as a dash, because a dash says they left it empty and they did not.
+  const campusEnd = (toPau ? order.parcel_to : order.parcel_from) ?? "";
+  const offCampusEnd = (toPau ? order.parcel_from : order.parcel_to) ?? "";
+  const address = (order.parcel_address ?? "").trim() || offCampusEnd;
+  const room =
+    (order.parcel_room ?? "").trim() ||
+    campusEnd
+      .replace(/^PAU,\s*/i, "")
+      .replace(new RegExp(`^${order.hostel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")},?\\s*`, "i"), "")
+      .trim();
+
   const answers = [
     ["Where is it going?", route?.label ?? order.parcel_route],
     ["When would they like it?", order.parcel_wanted_on ?? "They did not say"],
@@ -66,13 +80,13 @@ function parcelAnswers(
     ],
     [
       toPau ? "The address we are collecting from" : "The address we are delivering to",
-      order.parcel_address ?? "",
+      address,
     ],
     [
       toPau ? "Which block are we bringing it to?" : "Which block are we collecting from?",
       order.hostel,
     ],
-    ["Room or landmark", order.parcel_room ?? ""],
+    ["Room or landmark", room],
     [
       "Roughly what is it worth?",
       order.parcel_value ? naira(order.parcel_value) : "",

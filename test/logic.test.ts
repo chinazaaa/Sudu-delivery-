@@ -1490,6 +1490,19 @@ test("a catalogue reads the same from a spreadsheet or a list", () => {
   assert.equal(fromJson.products[0].category, "Bread");
 });
 
+test("a countdown past a day is said in days", () => {
+  // "71h 52m" is a sum somebody has to do before they know whether that is
+  // tonight or the weekend, which is the opposite of what a countdown is for.
+  const hours = (n: number) => n * 3600 * 1000;
+  assert.equal(countdown(hours(71) + 52 * 60 * 1000), "2d 23h");
+  assert.equal(countdown(hours(48)), "2d");
+  assert.equal(countdown(hours(24)), "1d");
+  // Inside a day it stays as hours and minutes, which is what that is for.
+  assert.equal(countdown(hours(23) + 59 * 60 * 1000), "23h 59m");
+  assert.equal(countdown(90 * 1000), "1m 30s");
+  assert.equal(countdown(0), "now");
+});
+
 test("a restaurant menu comes in with the choices the kitchen asks for", () => {
   // What a restaurant platform actually exports: "Product Name" rather than
   // "name", "Price (NGN)" rather than "price", and one row per choice, so a

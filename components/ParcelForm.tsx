@@ -25,6 +25,7 @@ export default function ParcelForm({
   routes,
   maxValue,
   hostels,
+  promoters,
   today,
 }: {
   routes: Route[];
@@ -32,6 +33,10 @@ export default function ParcelForm({
   /** The blocks the shop delivers to, as the food checkout offers them.
    *  Empty where the list is not set up, and then it is typed. */
   hostels: string[];
+  /** Who brought them, asked once on a first order. A parcel can be
+   *  somebody's first order, and a promoter goes uncredited for every one
+   *  that never asks. */
+  promoters: { code: string; name: string }[];
   /** The shop's today, in Lagos, so a phone set to another day cannot offer
    *  a date that is already gone here. */
   today: string;
@@ -64,6 +69,7 @@ export default function ParcelForm({
     phone: "",
     to_name: "",
     to_phone: "",
+    heard_from: "",
     note: "",
   });
   const put = (field: keyof typeof said) => (
@@ -365,6 +371,28 @@ export default function ParcelForm({
             </p>
           )}
         </div>
+
+        {promoters.length > 0 && (
+          <div>
+            <label className="label" htmlFor="heard_from">
+              Where did you hear about us?
+            </label>
+            <select
+              id="heard_from"
+              name="heard_from"
+              value={said.heard_from}
+              onChange={put("heard_from")}
+              className="field"
+            >
+              <option value="">Somewhere else</option>
+              {promoters.map((one) => (
+                <option key={one.code} value={one.code}>
+                  {one.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <label className="label" htmlFor="note">

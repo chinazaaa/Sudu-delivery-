@@ -1,5 +1,6 @@
 import { db } from "./supabase";
 import { isReturningCustomer } from "./orders";
+import { realPromoter } from "./promoters";
 import { lagosInstant, lagosToday } from "./time";
 import { normalisePhone } from "./phone";
 import { parcels, liveRoutes, routeById, feeFor, heaviest } from "./parcels";
@@ -33,6 +34,9 @@ export type ParcelInput = {
   toName: string;
   toPhone: string;
   note: string;
+  /** Who brought them, on a first order. Their promoter for life, so it is
+   *  only ever written when they are new. */
+  heardFrom: string;
   paymentMethod: "transfer" | "card";
 };
 
@@ -224,9 +228,20 @@ export async function placeParcel(input: ParcelInput): Promise<ParcelResult> {
   // order like any other. Never at the cost of the parcel itself.
   try {
     if (!(await isReturningCustomer(phone))) {
+      // Checked against the promoters table rather than trusted: the code
+      // comes off a form, and a made-up one would pay commission to nobody
+      // for ever.
+      const code = input.heardFrom.trim();
+      const brought = code !== "" && (await realPromoter(code)) ? code : null;
       await db()
         .from("customers")
-        .insert({ phone, name, hostel, pin: newPin() });
+        .insert({
+          phone,
+          name,
+          hostel,
+          pin: newPin(),
+          ...(brought ? { promoter_code: brought } : {}),
+        });
     }
   } catch {
     /* The parcel exists either way. */

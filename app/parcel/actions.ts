@@ -33,6 +33,7 @@ export async function sendParcel(
     toName: said("to_name"),
     toPhone: said("to_phone"),
     note: said("note"),
+    heardFrom: said("heard_from"),
     paymentMethod: said("payment_method") === "card" ? "card" : "transfer",
   });
 

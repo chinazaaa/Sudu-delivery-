@@ -74,6 +74,14 @@ export function countdown(msRemaining: number): string {
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
+  // Past a day, in days. "71h 52m" is a sum somebody has to do before they
+  // know whether that is tonight or the weekend, which is the opposite of
+  // what a countdown is for.
+  if (h >= 24) {
+    const d = Math.floor(h / 24);
+    const rest = h % 24;
+    return rest === 0 ? `${d}d` : `${d}d ${rest}h`;
+  }
   if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m`;
   if (m > 0) return `${m}m ${String(s).padStart(2, "0")}s`;
   return `${s}s`;

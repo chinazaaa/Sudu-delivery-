@@ -77,7 +77,11 @@ export default async function OrderPage({
   // request that always comes back empty.
   const parcelPhotos = order.parcel_route ? await photosFor(order.id) : [];
 
+  // A parcel is its own trip on a day the shop agrees with the sender, so
+  // there is no other run to move it onto: offering one was offering to put
+  // somebody's dress on the Friday food car.
   const canStillMove =
+    !order.parcel_route &&
     order.batch.status === "open" &&
     order.batch.stage === "ordering" &&
     new Date(order.batch.cut_off_at).getTime() > Date.now();
@@ -203,7 +207,13 @@ export default async function OrderPage({
           {naira(order.total)}
         </h1>
         <p className="mt-1 text-sm text-white/85">
-          {order.customer_name} · {runLabel} · {order.batch.delivery_window_text}
+          {/* A parcel has no slot anybody chose and, until the day is agreed,
+              no day either: "Friday, 25 Sept · afternoon" was the run label
+              printed over a trip nobody had scheduled. */}
+          {order.customer_name} ·{" "}
+          {isParcel
+            ? order.batch.delivery_window_text
+            : `${runLabel} · ${order.batch.delivery_window_text}`}
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2 text-sm font-semibold">
@@ -404,7 +414,10 @@ export default async function OrderPage({
           the saving belongs to them. Offering "between you there is one
           delivery fee instead of one each" to somebody who has already paid
           is promising them money back that is never coming. */}
-      {canStillMove && !isPaid(order.status) && order.status !== "refunded" && (
+      {canStillMove &&
+        !isParcel &&
+        !isPaid(order.status) &&
+        order.status !== "refunded" && (
         <ShareDelivery
           url={`${site}/join/${order.shared_with ?? order.id}`}
           name={(order.for_name ?? order.customer_name).split(" ")[0]}
