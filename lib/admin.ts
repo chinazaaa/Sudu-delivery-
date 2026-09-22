@@ -359,7 +359,19 @@ export type SameDayTrip = {
  * the same chicken. Five hours is the span a single afternoon of buying
  * covers, which is how the shop actually works.
  */
-const ONE_TRIP_MINUTES = 5 * 60;
+/*
+ * How close together two cars have to be to be one walk to the counter.
+ *
+ * This was five hours, which put a noon delivery and a quarter to five in
+ * the same trip and called them one shopping. They are not: the noon food
+ * would sit in a warmer for most of the afternoon, and nobody reading the
+ * sheet believed it.
+ *
+ * An hour and a half is the honest figure. Long enough that half past
+ * twelve joins twelve, short enough that the food is still what somebody
+ * ordered when it arrives.
+ */
+const ONE_TRIP_MINUTES = 90;
 
 /** The cars going out, clustered into the trips somebody actually makes. */
 async function sameDayClusters(): Promise<

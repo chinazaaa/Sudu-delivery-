@@ -118,23 +118,24 @@ export default async function RunsPage({
       {trips.length > 0 && (
         <section className="card mb-4 space-y-2">
           <div>
-            <h2 className="font-bold">Same day, by the time asked for</h2>
+            <h2 className="font-bold">Cars you can shop for in one go</h2>
             <p className="text-sm text-muted">
-              Each of these is one person asking for a car, so each is its own
-              run below. Times within five hours of each other are one walk to
-              the counter, which is what these are.
+              Same day cars going out within an hour and a half of each other.
+              Each is still its own car on the list below, with its own money;
+              this is only which of them you can buy for in one trip.
             </p>
           </div>
           <ul className="divide-y divide-black/5">
             {trips.map((trip) => (
               <li key={trip.at} className="flex flex-wrap items-center justify-between gap-2 py-2">
                 <span className="min-w-0">
-                  <span className="font-bold">
-                    {trip.times.length > 1
-                      ? `${trip.times[0]} to ${trip.times[trip.times.length - 1]}`
-                      : trip.label}
-                  </span>
+                  {/* The earliest, because that is the one you cannot be
+                      late for. It used to read "X to Y", which looks like one
+                      long delivery window rather than two separate cars. */}
+                  <span className="font-bold">{trip.label}</span>
                   <span className="block text-xs text-muted">
+                    {trip.times.length > 1 &&
+                      `${trip.times.length} cars · `}
                     {trip.orders} {trip.orders === 1 ? "order" : "orders"} ·{" "}
                     {trip.items} item{trip.items === 1 ? "" : "s"} ·{" "}
                     {trip.paid} paid
