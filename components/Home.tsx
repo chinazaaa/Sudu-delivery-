@@ -13,6 +13,9 @@ import SplitPrompt from "./SplitPrompt";
 import type { ItemView, MenuView } from "@/lib/view";
 import type { Slide } from "@/lib/slides";
 
+/** Restaurants on the front page. The rest are one tap away, filtered. */
+const SHOWN = 6;
+
 export default function Home({
   menu,
   arriving,
@@ -119,59 +122,14 @@ export default function Home({
           The run strip is still the answer when there is no time to offer,
           because a page that says nothing about delivery is worse than one
           that says the wrong thing first. */}
+      {/* One sentence, and nothing else, and first. Most people never
+          scroll, so the first screen has to answer the only question a
+          hungry person has, which is when they can eat. */}
+      {arriving !== "" && <ArrivalStrip said={arriving} also={alsoArriving} />}
+
       {/* Above the restaurants, because by the time somebody is reading a
           menu they have already decided how they are ordering. */}
       <SplitPrompt />
-
-      {/* One sentence, and nothing else. Which run or which car it is has
-          already been decided, by the same rule the checkout uses, so all
-          that is left to say is when the food turns up. */}
-      {arriving !== "" && <ArrivalStrip said={arriving} also={alsoArriving} />}
-
-      {/* The other half of the shop. It is not a restaurant and it does not
-          come today, so it is a door rather than a card in the row: one car a
-          week, and the page behind this says which Saturday. */}
-      {occasions !== "" && (
-        <Link
-          href="/occasions"
-          className="flex items-center justify-between gap-3 rounded-2xl bg-paper px-4 py-3 shadow-card transition active:scale-[0.99]"
-        >
-          <span>
-            <span className="block font-bold">Ordering for something?</span>
-            <span className="block text-sm text-muted">{occasions}</span>
-          </span>
-          <span className="shrink-0 text-sm font-extrabold text-brand">See</span>
-        </Link>
-      )}
-
-      {/* Above skincare because it is the newer thing and the one nobody
-          knows the shop does. Empty when parcels are off, and then the page
-          does not mention them at all. */}
-      {parcels !== "" && (
-        <Link
-          href="/parcel"
-          className="flex items-center justify-between gap-3 rounded-2xl bg-paper px-4 py-3 shadow-card transition active:scale-[0.99]"
-        >
-          <span>
-            <span className="block font-bold">Send a parcel</span>
-            <span className="block text-sm text-muted">{parcels}</span>
-          </span>
-          <span className="shrink-0 text-sm font-extrabold text-brand">Send</span>
-        </Link>
-      )}
-
-      {skincare !== "" && (
-        <Link
-          href="/skincare"
-          className="flex items-center justify-between gap-3 rounded-2xl bg-paper px-4 py-3 shadow-card transition active:scale-[0.99]"
-        >
-          <span>
-            <span className="block font-bold">Skincare</span>
-            <span className="block text-sm text-muted">{skincare}</span>
-          </span>
-          <span className="shrink-0 text-sm font-extrabold text-brand">Shop</span>
-        </Link>
-      )}
 
       <div className="relative">
         <input
@@ -217,10 +175,75 @@ export default function Home({
         </section>
       ) : (
         <>
+          {/* Above the restaurants, because people come for jollof rather
+              than for a brand. Below fifteen banner cards it was the best
+              part of the page in the one place nobody scrolled to. */}
+          {popular.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="section-title">
+                {measured ? "Popular this week" : "From the menu"}
+              </h2>
+              {popular.map(({ item, place }) => (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  inCart={countFor(item.id)}
+                  onOpen={() => setOpen({ item, place })}
+                />
+              ))}
+            </section>
+          )}
+
+          {/* Everything the shop does that is not tonight's dinner, in one
+              row you swipe rather than doors stacked down the page.
+
+              Stacked, each new thing the shop started pushed the restaurants
+              further down: occasions, then parcels, then skincare, and the menu
+              began below three screens of doors. A row costs the same height
+              whether there are two of these or five. */}
+          <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+            <Door
+              href="/products"
+              title="Everything"
+              line="One list, filtered by restaurant and by kind"
+              action="Browse"
+            />
+            {occasions !== "" && (
+              <Door
+                href="/occasions"
+                title="Ordering for something?"
+                line={occasions}
+                action="See"
+              />
+            )}
+            {parcels !== "" && (
+              <Door href="/parcel" title="Send a parcel" line={parcels} action="Send" />
+            )}
+            {skincare !== "" && (
+              <Door href="/skincare" title="Skincare" line={skincare} action="Shop" />
+            )}
+            <Door
+              href="/group"
+              title="Ordering together?"
+              line="Everybody adds their own, one delivery between you"
+              action="Start"
+            />
+          </div>
+
           <section className="space-y-3">
-            <h2 className="section-title">Restaurants</h2>
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="section-title">Restaurants</h2>
+              {/* The full list lives on the browse page now, with filters.
+                  The front page is not the directory any more: fifteen tall
+                  cards were most of its height. */}
+              {menu.length > SHOWN && (
+                <Link href="/products" className="text-sm font-extrabold text-brand">
+                  All {menu.length}
+                </Link>
+              )}
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              {menu.map((place) => (
+              {menu.slice(0, SHOWN).map((place) => (
                 <Link
                   key={place.restaurant.id}
                   href={`/r/${place.restaurant.href}`}
@@ -264,6 +287,14 @@ export default function Home({
                 </Link>
               ))}
             </div>
+            {menu.length > SHOWN && (
+              <Link
+                href="/products"
+                className="block rounded-2xl bg-paper px-4 py-3 text-center text-sm font-extrabold text-brand shadow-card"
+              >
+                All {menu.length} restaurants, and everything they sell
+              </Link>
+            )}
           </section>
 
           <Carousel>
@@ -322,21 +353,6 @@ export default function Home({
 
 
 
-          {popular.length > 0 && (
-            <section className="space-y-3 pb-28">
-              <h2 className="section-title">
-                {measured ? "Popular this week" : "From the menu"}
-              </h2>
-              {popular.map(({ item, place }) => (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  inCart={countFor(item.id)}
-                  onOpen={() => setOpen({ item, place })}
-                />
-              ))}
-            </section>
-          )}
         </>
       )}
 
@@ -350,5 +366,36 @@ export default function Home({
 
       <CartBar />
     </div>
+  );
+}
+
+/**
+ * One thing the shop does, as a card in a row.
+ *
+ * Narrow enough that the next one shows at the edge, because a row that
+ * looks like it ends at the screen is a row nobody swipes.
+ */
+function Door({
+  href,
+  title,
+  line,
+  action,
+}: {
+  href: string;
+  title: string;
+  line: string;
+  action: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex w-56 shrink-0 flex-col justify-between rounded-2xl bg-paper p-4 shadow-card transition active:scale-[0.99]"
+    >
+      <span>
+        <span className="block font-bold leading-tight">{title}</span>
+        <span className="mt-1 block text-sm leading-snug text-muted">{line}</span>
+      </span>
+      <span className="mt-3 block text-sm font-extrabold text-brand">{action}</span>
+    </Link>
   );
 }
