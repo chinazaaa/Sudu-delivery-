@@ -292,10 +292,14 @@ export async function clearDeadGroups(batchId: string): Promise<void> {
  */
 export async function tidyEmptySameDay(): Promise<number> {
   try {
+    // A parcel's trip is made for one order too, and a parcel whose order
+    // never saved leaves the same thing behind: a trip for nothing, sitting
+    // in the week saying its day has not been agreed. Both are cleared the
+    // same way, because both are only ever a container for one order.
     const { data: cars } = await db()
       .from("batches")
       .select("id")
-      .eq("kind", "same_day")
+      .in("kind", ["same_day", "parcel"])
       .limit(200);
 
     const ids = (cars ?? []).map((row) => row.id as string);
