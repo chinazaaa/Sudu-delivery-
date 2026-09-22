@@ -39,14 +39,6 @@ export default async function RestaurantPage({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/40 to-transparent" />
 
-        <Link
-          href="/"
-          className="absolute left-4 top-4 grid size-9 place-items-center rounded-full bg-paper font-bold shadow-card"
-          aria-label="Back to all restaurants"
-        >
-          ←
-        </Link>
-
         <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 p-4 text-white">
           <span className="size-14 shrink-0 overflow-hidden rounded-2xl border-2 border-white/80">
             <Thumb

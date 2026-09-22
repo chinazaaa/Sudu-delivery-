@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
 import Mark from "./Mark";
 import { countItems, useCart } from "@/lib/cart";
 
@@ -20,21 +21,65 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
    * orders, or a restaurant, was thrown out of what they were doing. It goes
    * back where they came from, and only falls home when there is no back.
    *
-   * Which of those it is cannot be worked out beforehand. It used to ask
-   * whether the history had more than one entry, but that counts what is
-   * ahead as well as what is behind: somebody who opened a link from
-   * WhatsApp, went forward and came back has two entries and nothing behind
-   * them, so the arrow called back and the browser rightly did nothing.
+   * Which of those it is has to be counted, because neither guess works.
+   * Asking whether the history has more than one entry counts what is ahead
+   * as well as what is behind, so somebody who opened a link from WhatsApp,
+   * went forward and came back had two entries and nothing behind them.
+   * Going back and checking a moment later whether the address moved is
+   * worse: this router holds the address unchanged until the next page is
+   * ready, so a page that reads the database looks like a back that did
+   * nothing, and the arrow threw people home from the list they were on.
    *
-   * So it is tried rather than predicted. If the address has not moved a
-   * moment later, there was nothing to go back to, and home is the answer.
+   * So the pages of ours they have walked through are counted. Forward is
+   * one more, and a back or forward button is one fewer, which leaves zero
+   * meaning exactly one thing: whatever is behind this is not ours.
+   *
+   * Kept for the tab rather than the page, so a reload does not lose the
+   * trail and send somebody home from the middle of it.
    */
+  const DEPTH = "sudu_depth";
+  const depth = useRef(0);
+  const first = useRef(true);
+  const popped = useRef(false);
+
+  useEffect(() => {
+    try {
+      depth.current = Number(window.sessionStorage.getItem(DEPTH) ?? "0") || 0;
+    } catch {
+      /* Without storage it starts at nothing, which only means the first
+         back on a reloaded page goes home. */
+    }
+
+    const onPop = () => {
+      popped.current = true;
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+
+    if (popped.current) {
+      popped.current = false;
+      depth.current = Math.max(0, depth.current - 1);
+    } else {
+      depth.current += 1;
+    }
+
+    try {
+      window.sessionStorage.setItem(DEPTH, String(depth.current));
+    } catch {
+      /* A convenience, not the trail itself. */
+    }
+  }, [path]);
+
   const back = () => {
-    const from = window.location.pathname + window.location.search;
-    router.back();
-    window.setTimeout(() => {
-      if (window.location.pathname + window.location.search === from) router.push("/");
-    }, 400);
+    if (depth.current > 0) router.back();
+    else router.push("/");
   };
 
   if (path.startsWith("/admin")) return null;
