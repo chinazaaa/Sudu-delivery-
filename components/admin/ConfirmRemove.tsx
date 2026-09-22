@@ -10,8 +10,12 @@ import { useState } from "react";
 export default function ConfirmRemove({
   id,
   action,
+  field = "schedule_id",
 }: {
   id: string;
+  /** What the id is called on the form. A day off the week and a photograph
+   *  off a parcel are the same two taps and different names. */
+  field?: string;
   /** The server action, handed in rather than imported here. Reaching for it
    *  from inside the browser made a button whose failures went nowhere. */
   action: (form: FormData) => Promise<void>;
@@ -34,7 +38,7 @@ export default function ConfirmRemove({
     <span className="inline-flex items-center gap-1">
       <button
         type="submit"
-        name="schedule_id"
+        name={field}
         value={id}
         formAction={action}
         className="chip border-transparent bg-brand py-1.5 text-xs text-white"

@@ -8,6 +8,8 @@ import FeeBands from "@/components/FeeBands";
 import LiveOrder from "@/components/LiveOrder";
 import ExpiryNote from "@/components/ExpiryNote";
 import RateOrder from "@/components/RateOrder";
+import { PHOTO_LABEL } from "@/lib/parcels";
+import { photosFor } from "@/lib/parcel-photos";
 import StageTimeline from "@/components/StageTimeline";
 import ShareDelivery from "@/components/ShareDelivery";
 import ShareLink from "@/components/ShareLink";
@@ -71,6 +73,9 @@ export default async function OrderPage({
   // page must not show a total or ask for money. It sends them to the board
   // instead, which is where the thing they are waiting on is happening.
   const waitingOnGroup = await openGroupFor(order.id);
+  // Only a parcel has any, and asking for a parcel that is not one is a
+  // request that always comes back empty.
+  const parcelPhotos = order.parcel_route ? await photosFor(order.id) : [];
 
   const canStillMove =
     order.batch.status === "open" &&
@@ -389,6 +394,47 @@ export default async function OrderPage({
           closes={clockLabel(order.batch.cut_off_at)}
           what={isSkincareBatch(order.batch) ? "skincare" : "food"}
         />
+      )}
+
+      {/* What it looked like when we took it and when we gave it back. This
+          is the sender's evidence as much as ours, so it is on their page
+          rather than only in admin. Parcels only: there is nothing to
+          photograph about a bag of jollof. */}
+      {order.parcel_route && parcelPhotos.length > 0 && (
+        <section className="card space-y-3">
+          <div>
+            <h2 className="font-bold">Photographs</h2>
+            <p className="text-sm text-muted">
+              Taken when we collected it and when we handed it over.
+            </p>
+          </div>
+          {(["collected", "handed"] as const).map((kind) => {
+            const shown = parcelPhotos.filter((one) => one.kind === kind);
+            if (shown.length === 0) return null;
+            return (
+              <div key={kind}>
+                <p className="text-sm font-semibold">{PHOTO_LABEL[kind]}</p>
+                <ul className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {shown.map((photo) => (
+                    <li key={photo.id}>
+                      <a href={photo.url} target="_blank" rel="noopener noreferrer">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={photo.url}
+                          alt={photo.note || PHOTO_LABEL[kind]}
+                          className="aspect-square w-full rounded-xl object-cover"
+                        />
+                      </a>
+                      {photo.note && (
+                        <p className="mt-1 text-xs text-muted">{photo.note}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </section>
       )}
 
       {/* Asked only once the food has actually arrived, and only of somebody

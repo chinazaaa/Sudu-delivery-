@@ -3162,3 +3162,74 @@ export async function renamePromoter(
     error: "",
   };
 }
+
+/**
+ * A photograph of a parcel, taken at the counter or at the door.
+ *
+ * Five seconds each end kills the argument about whether it arrived damaged,
+ * which is the one argument this service cannot win without evidence. Only
+ * ever on a parcel: nobody photographs a bag of jollof, and offering it on
+ * every order would bury the button that matters.
+ */
+export async function addParcelPhoto(
+  _prev: { done: string; error: string },
+  form: FormData
+): Promise<{ done: string; error: string }> {
+  await assertAdmin();
+
+  const orderId = String(form.get("order_id") ?? "").trim();
+  const kind = String(form.get("kind") ?? "");
+  if (!orderId || (kind !== "collected" && kind !== "handed")) {
+    return { done: "", error: "Could not tell which parcel that was for." };
+  }
+
+  // Only on a parcel, checked here rather than trusted from the form.
+  const { data: order } = await db()
+    .from("orders")
+    .select("parcel_route")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order?.parcel_route) {
+    return { done: "", error: "That order is not a parcel." };
+  }
+
+  let url: string | null = null;
+  try {
+    url = await uploadImage(fileFrom(form, "photo"), "parcels");
+  } catch (problem) {
+    return { done: "", error: (problem as Error).message };
+  }
+  if (!url) {
+    return { done: "", error: "Pick a photograph. Under five megabytes, and an image." };
+  }
+
+  const { error } = await db().from("parcel_photos").insert({
+    order_id: orderId,
+    kind,
+    url,
+    note: String(form.get("note") ?? "").trim(),
+  });
+  if (error) return { done: "", error: `Could not save it: ${error.message}` };
+
+  revalidatePath("/admin", "layout");
+  revalidatePath(`/o/${orderId}`);
+  return { done: "Saved ✓", error: "" };
+}
+
+/** Removes one photograph. The wrong bag photographed is worse than none. */
+export async function removeParcelPhoto(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("photo_id") ?? "").trim();
+  if (!id) return;
+
+  const { data: photo } = await db()
+    .from("parcel_photos")
+    .select("order_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  await db().from("parcel_photos").delete().eq("id", id);
+
+  revalidatePath("/admin", "layout");
+  if (photo?.order_id) revalidatePath(`/o/${photo.order_id as string}`);
+}

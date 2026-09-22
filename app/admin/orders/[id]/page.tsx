@@ -8,10 +8,13 @@ import { getOrder } from "@/lib/orders";
 import { getSettings } from "@/lib/settings";
 import { payableAccounts } from "@/lib/banks";
 import { siteUrl, toCard } from "@/lib/admin-templates";
+import ParcelPhotos from "@/components/admin/ParcelPhotos";
+import { photosFor } from "@/lib/parcel-photos";
 import { naira, shareRef } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { whatsappTo } from "@/lib/messages";
 import {
+  addParcelPhoto,
   markPaid,
   markDelivered,
   moveOrderToAnother,
@@ -19,6 +22,7 @@ import {
   deleteOrder,
   refundOrder,
   savePaymentLink,
+  removeParcelPhoto,
   saveOrderNote,
 } from "../../actions";
 import { openBatches } from "@/lib/batches";
@@ -156,6 +160,20 @@ async function orderPage(id: string, said: string) {
           savePaymentLink={savePaymentLink}
           saveNote={saveOrderNote}
         />
+      )}
+
+      {/* Only on a parcel. Nobody photographs a bag of jollof, and a button
+          offered on every order is a button nobody presses on the one that
+          needs it. */}
+      {order.parcel_route && (
+        <div className="mt-4">
+          <ParcelPhotos
+            orderId={order.id}
+            photos={await photosFor(order.id)}
+            add={addParcelPhoto}
+            remove={removeParcelPhoto}
+          />
+        </div>
       )}
 
       {/* Somebody paid after the cut off, so the car they were on has gone

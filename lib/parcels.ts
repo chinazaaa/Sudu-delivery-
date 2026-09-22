@@ -173,3 +173,17 @@ export function liveRoutes(all: Route[]): Route[] {
 export function routeById(all: Route[], id: string): Route | null {
   return all.find((one) => one.id === id) ?? null;
 }
+
+/** A photograph of a parcel, at one of the two moments that matter. */
+export type ParcelPhoto = {
+  id: string;
+  kind: "collected" | "handed";
+  url: string;
+  note: string;
+  created_at: string;
+};
+
+export const PHOTO_LABEL: Record<ParcelPhoto["kind"], string> = {
+  collected: "When we collected it",
+  handed: "When we handed it over",
+};
