@@ -822,14 +822,23 @@ export default async function BatchPage({
                         value={`−${naira(group.expectedFoodTotal)}`}
                       />
                     ))}
-                    <Row
-                      label={
-                        summary.commission > 0
-                          ? "Promoter commission owed (worked out from the codes)"
-                          : "Promoter commission owed"
-                      }
-                      value={`−${naira(summary.commission)}`}
-                    />
+                    {/* One line per promoter, named. "Promoter commission
+                        owed, ₦500" with nobody against it is not something
+                        anybody can check, and for a while it was charging
+                        every run for orders nobody had introduced. */}
+                    {summary.commissionBy.length === 0 ? (
+                      <Row label="Promoter commission owed" value="—" />
+                    ) : (
+                      summary.commissionBy.map((one) => (
+                        <Row
+                          key={one.code}
+                          label={`${one.name} · ${one.orders} ${
+                            one.orders === 1 ? "order" : "orders"
+                          }`}
+                          value={`−${naira(one.amount)}`}
+                        />
+                      ))
+                    )}
                     {summary.reconciled.lines === 0 &&
                       batch.food_spend > 0 &&
                       batch.food_spend < summary.menuCost && (

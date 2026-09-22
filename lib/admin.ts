@@ -65,6 +65,8 @@ export type BatchSheet = {
     /** What the menu prices came to, for comparison with what was paid. */
     menuCost: number;
     commission: number;
+    /** Who earned it, so a number on a sheet has a name against it. */
+    commissionBy: Commission[];
     net: number;
     /** Fuel, driver and anything else bought on the night. */
     costs: number;
@@ -135,7 +137,7 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   // Money the customer handed back, which the shop is therefore not out.
   const gotBack = new Map(rows.map((row) => [row.line_key, row.recovered ?? 0]));
 
-  const commission = await commissionFor(paid);
+  const { total: commission, by: commissionBy } = await commissionFor(paid);
   const costs =
     batch.fuel_cost + batch.driver_cost + (batch.transport_cost ?? 0) + batch.other_cost;
 
@@ -192,6 +194,7 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
       /** What the menu said it would cost, so the saving can be shown. */
       menuCost,
       commission,
+      commissionBy,
       net: margin - commission,
       costs,
       profit: margin - commission - costs,
@@ -306,23 +309,73 @@ export function groupForCounter(lines: OrderLine[]): CounterGroup[] {
   });
 }
 
+export type Commission = {
+  code: string;
+  name: string;
+  orders: number;
+  amount: number;
+};
+
 /**
- * Commission on a run: every paid order, at the promoter's rate. There is one
- * promoter and they are the reason anybody is ordering, so it is not a matter
- * of which orders carried a code.
+ * Commission on a run, by whoever actually earned it.
+ *
+ * This used to take the first active promoter in alphabetical order and
+ * charge their rate against every paid order on the run, whether or not
+ * anybody had brought that customer. Written when there was one promoter and
+ * they were the reason anybody was ordering at all; with four of them it
+ * billed every run for orders nobody introduced, and always to the same
+ * person.
+ *
+ * Now an order earns for the promoter whose customer it is, at that
+ * promoter's own rate, and an order that came from nobody costs nothing.
+ * Returned broken down as well as totalled, because "promoter commission
+ * owed, ₦500" with no name on it is not something anybody can check.
  */
-async function commissionFor(orders: Order[]): Promise<number> {
-  if (orders.length === 0) return 0;
+async function commissionFor(
+  orders: Order[]
+): Promise<{ total: number; by: Commission[] }> {
+  if (orders.length === 0) return { total: 0, by: [] };
 
-  const { data } = await db()
-    .from("promoters")
-    .select("rate")
-    .eq("active", true)
-    .order("code")
-    .limit(1)
-    .maybeSingle();
+  const phones = [...new Set(orders.map((one) => one.customer_phone))];
+  const [{ data: customers }, { data: promoters }] = await Promise.all([
+    db().from("customers").select("phone, promoter_code").in("phone", phones),
+    db().from("promoters").select("code, name, rate"),
+  ]);
 
-  return orders.length * ((data?.rate as number) ?? 0);
+  const broughtBy = new Map(
+    ((customers ?? []) as { phone: string; promoter_code?: string | null }[]).map((one) => [
+      one.phone,
+      (one.promoter_code ?? "").trim(),
+    ])
+  );
+  const rates = new Map(
+    ((promoters ?? []) as { code: string; name: string; rate: number }[]).map((one) => [
+      one.code,
+      one,
+    ])
+  );
+
+  const tally = new Map<string, Commission>();
+  for (const order of orders) {
+    const code = broughtBy.get(order.customer_phone) ?? "";
+    const promoter = code ? rates.get(code) : undefined;
+    if (!promoter) continue;
+
+    const now = tally.get(code) ?? {
+      code,
+      name: promoter.name || code,
+      orders: 0,
+      amount: 0,
+    };
+    tally.set(code, {
+      ...now,
+      orders: now.orders + 1,
+      amount: now.amount + promoter.rate,
+    });
+  }
+
+  const by = [...tally.values()].sort((a, b) => b.amount - a.amount);
+  return { total: by.reduce((sum, one) => sum + one.amount, 0), by };
 }
 
 function sum<T>(rows: T[], pick: (row: T) => number): number {
@@ -351,14 +404,6 @@ export type SameDayTrip = {
   gross: number;
 };
 
-/**
- * How far apart two same day cars can be and still be one walk to the counter.
- *
- * Two o'clock and half past two is one trip to whoever is buying, and
- * splitting them into two shopping lists is two walks to Chicken Republic for
- * the same chicken. Five hours is the span a single afternoon of buying
- * covers, which is how the shop actually works.
- */
 /*
  * How close together two cars have to be to be one walk to the counter.
  *
@@ -576,15 +621,15 @@ export async function batchOverview(window: "recent" | "all" = "recent"): Promis
   // the list and the dashboard priced every run at the menu and disagreed
   // with the run's own sheet, which is the one that had been reconciled.
   const extra = await overMenu(rows, all);
-  const commission = await commissionFor(
-    all.filter((o) => isPaid(o.status)) as Order[]
-  );
-  const paidEverywhere = all.filter(
-    (o) => isPaid(o.status)
-  ).length;
-  // Commission is a flat rate per order, so sharing the total out by order
-  // count gives each run its own share without a second query per run.
-  const perOrderCommission = paidEverywhere === 0 ? 0 : commission / paidEverywhere;
+  // Per run rather than one total shared out by order count. Sharing was
+  // only ever right when every order earned the same for the same person;
+  // with four promoters on different rates, and orders that earn nobody
+  // anything, a run's share had little to do with what it actually owed.
+  const owed = new Map<string, number>();
+  for (const b of rows) {
+    const mine = all.filter((o) => o.batch_id === b.id && isPaid(o.status)) as Order[];
+    owed.set(b.id, (await commissionFor(mine)).total);
+  }
 
   return rows.map((b) => {
     const mine = all.filter((o) => o.batch_id === b.id && !isGone(o.status));
@@ -598,7 +643,7 @@ export async function batchOverview(window: "recent" | "all" = "recent"): Promis
       paidCount: paid.length,
       gross: sum(paid, (o) => o.total),
       profit: Math.round(
-        margin - (extra.get(b.id) ?? 0) - paid.length * perOrderCommission - costs
+        margin - (extra.get(b.id) ?? 0) - (owed.get(b.id) ?? 0) - costs
       ),
     };
   });
