@@ -1292,7 +1292,15 @@ export type MoveResult = { ok: true; orderId: string } | { ok: false; error: str
  * A split group moves together, since half a group on another night is
  * nobody's idea of a group order.
  */
-export async function moveOrder(orderId: string, batchId: string): Promise<MoveResult> {
+export async function moveOrder(
+  orderId: string,
+  batchId: string,
+  /** Admin moving it by hand. A customer may not move a paid order off a run
+   *  that has gone shopping, because the food is already bought; admin is the
+   *  person who bought it and is deciding to carry it on another car. Without
+   *  this the one section built for exactly that case refused every time. */
+  asAdmin = false
+): Promise<MoveResult> {
   const order = await getOrder(orderId);
   if (!order) return { ok: false, error: "That order no longer exists." };
   if (isGone(order.status)) {
@@ -1306,7 +1314,7 @@ export async function moveOrder(orderId: string, batchId: string): Promise<MoveR
   }
 
   const paid = isPaid(order.status);
-  if (paid && !isOrderable(order.batch)) {
+  if (!asAdmin && paid && !isOrderable(order.batch)) {
     return {
       ok: false,
       error:
@@ -1316,7 +1324,10 @@ export async function moveOrder(orderId: string, batchId: string): Promise<MoveR
   }
 
   const batch = await getBatch(batchId);
-  if (!batch || !isOrderable(batch)) {
+  if (!batch) return { ok: false, error: "That run no longer exists." };
+  // A closed run is closed to customers. Admin putting somebody on one is
+  // the whole point of moving an order by hand: the car it was on has gone.
+  if (!asAdmin && !isOrderable(batch)) {
     return { ok: false, error: "That run is not taking orders. Pick another." };
   }
 

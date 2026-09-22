@@ -167,7 +167,9 @@ async function orderPage(id: string, said: string) {
         <p className="text-sm text-muted">
           On {order.batch.delivery_window_text.toLowerCase()},{" "}
           {dayWord(order.batch.run_date)}. A paid order carries its money
-          across: nothing is charged again and nothing is refunded.
+          across: nothing is charged again and nothing is refunded. A run that
+          has already closed is here too, because moving an order by hand is
+          usually about a car that has gone.
         </p>
         {said !== "" && (
           <div className="space-y-2 rounded-xl bg-shell px-3 py-2">
@@ -210,6 +212,22 @@ async function orderPage(id: string, said: string) {
                   {one.deliveryWindow}, {one.label.split(" · ")[0]}
                 </option>
               ))}
+
+            {/* Closed ones too, because moving an order by hand is usually
+                about a car that has already gone. A customer cannot pick
+                these; the person who bought the food can. */}
+            {runs.map(toBatchView).some((one) => one.closed && one.id !== order.batch_id) && (
+              <optgroup label="Already closed">
+                {runs
+                  .map(toBatchView)
+                  .filter((one) => one.closed && one.id !== order.batch_id)
+                  .map((one) => (
+                    <option key={one.id} value={`run:${one.id}`}>
+                      {one.deliveryWindow}, {one.label.split(" · ")[0]}
+                    </option>
+                  ))}
+              </optgroup>
+            )}
             {slots.length > 0 && (
               <optgroup label="A car of its own">
                 {slots.map((slot) => (

@@ -2413,7 +2413,9 @@ export async function moveOrderToAnother(form: FormData): Promise<void> {
     batchId = car.id;
   }
 
-  const result = await moveOrder(orderId, batchId);
+  // By hand, so the rules that stop a customer moving themselves do not
+  // apply: this is the person who bought the food deciding where it goes.
+  const result = await moveOrder(orderId, batchId, true);
   revalidatePath("/admin", "layout");
   redirect(
     `/admin/orders/${orderId}?moved=${encodeURIComponent(
