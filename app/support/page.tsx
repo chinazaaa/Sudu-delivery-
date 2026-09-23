@@ -5,6 +5,7 @@ import { safeSettings, whatsappLink } from "@/lib/settings";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/support" },
   title: "Support",
   description: "How to reach a person at Sudu, and what to do when an order is wrong.",
 };

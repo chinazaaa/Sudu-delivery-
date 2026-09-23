@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -7,6 +8,35 @@ import Thumb from "@/components/Thumb";
 import ProductSearch from "@/components/ProductSearch";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * A title of its own, and a canonical that ignores the sorting.
+ *
+ * Every filter of this page is the same list in a different order, and each
+ * one competing with the others is how none of them rank. A search somebody
+ * typed is never a page worth indexing, so it says so.
+ */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Asked>;
+}): Promise<Metadata> {
+  const asked = await searchParams;
+  const here = new URLSearchParams();
+  if (asked.place) here.set("place", asked.place);
+  if (asked.category) here.set("category", asked.category);
+  const query = here.toString();
+
+  return {
+    title: "Every menu in one list",
+    description:
+      "KFC, Domino's, Chicken Republic and more from Sangotedo, delivered to " +
+      "Pan-Atlantic University. Search by dish, filter by restaurant, one " +
+      "delivery for the lot.",
+    alternates: { canonical: query === "" ? "/products" : `/products?${query}` },
+    robots: asked.q ? { index: false, follow: true } : undefined,
+  };
+}
 
 type Asked = {
   q?: string;

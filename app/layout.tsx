@@ -43,7 +43,10 @@ export const metadata: Metadata = {
     locale: "en_NG",
   },
   twitter: { card: "summary_large_image", title: "Sudu, your fav foods to PAU", description: BLURB },
-  alternates: { canonical: "/" },
+  // No canonical here on purpose. Next hands a layout's metadata down to
+  // every page under it, so one written here told Google that the menu, every
+  // restaurant and all four hundred dishes were copies of the front page, and
+  // a copy is a page it drops. Each page says its own, below.
 };
 
 /**
@@ -67,9 +70,48 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Read from the offer itself too: an automatic promotion has no code to
   // type, so nobody finds it unless the shop says it is on.
   const nudge = await offerNudge();
+
+  // Who this is, in the form a search engine reads rather than guesses. The
+  // shop is a delivery service for one campus, and saying so plainly is the
+  // difference between being a page about food and being the answer to
+  // "delivery to PAU".
+  const who = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": `${SITE.origin}/#shop`,
+    name: "Sudu",
+    url: SITE.origin,
+    logo: `${SITE.origin}/icon.svg`,
+    description: BLURB,
+    areaServed: [
+      { "@type": "Place", name: "Pan-Atlantic University, Lagos" },
+      { "@type": "Place", name: "Sangotedo, Lagos" },
+    ],
+    sameAs: instagram ? [instagram] : undefined,
+  };
+  const site = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    url: SITE.origin,
+    name: "Sudu",
+    publisher: { "@id": `${SITE.origin}/#shop` },
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${SITE.origin}/products?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  };
+
   return (
     <html lang="en">
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify([who, site]) }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link

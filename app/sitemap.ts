@@ -15,6 +15,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
   const home = [
     { url: site, changeFrequency: "daily" as const, priority: 1 },
+    // The two pages somebody searching for what we do would land on, and
+    // neither was listed.
+    { url: `${site}/products`, changeFrequency: "daily" as const, priority: 0.9 },
+    { url: `${site}/parcel`, changeFrequency: "weekly" as const, priority: 0.7 },
     // Both are public pages the stores point at, so they are worth finding.
     { url: `${site}/support`, changeFrequency: "monthly" as const, priority: 0.3 },
     { url: `${site}/privacy`, changeFrequency: "monthly" as const, priority: 0.3 },
@@ -25,7 +29,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return [
       ...home,
       ...menu.map((place) => ({
-        url: `${site}/r/${place.restaurant.id}`,
+        // The name, not the id: the id is a second address for the same
+        // page, and a sitemap that disagrees with every link on the site
+        // splits what each of them is worth.
+        url: `${site}/r/${place.restaurant.href}`,
         changeFrequency: "weekly" as const,
         priority: 0.8,
       })),

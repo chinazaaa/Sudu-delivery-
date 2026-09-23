@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { lagosToday } from "@/lib/time";
 import { liveOccasions } from "@/lib/boxes";
 import Home from "@/components/Home";
@@ -22,6 +23,9 @@ import { offerBadge } from "@/lib/offers";
 import { sweepGroups } from "@/lib/groups";
 
 export const dynamic = "force-dynamic";
+
+/** The front page is its own canonical, now that the layout says nothing. */
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 export default async function HomePage() {
   // Somebody opening the site is enough to close a group whose time is up, so

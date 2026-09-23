@@ -4,6 +4,7 @@ import { safeSettings } from "@/lib/settings";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/privacy" },
   title: "Privacy",
   description: "What Sudu keeps about you, why, and how to have it deleted.",
 };

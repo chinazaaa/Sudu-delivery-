@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import RestaurantMenu from "@/components/RestaurantMenu";
@@ -8,6 +9,38 @@ import { isSkincare } from "@/lib/skincare";
 import Deals from "@/components/Deals";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * This restaurant's own title, description and address.
+ *
+ * Every one of these pages used to be called "Sudu, your fav foods to PAU"
+ * and claim to be the front page, so a search for a restaurant by name had
+ * nothing of ours to find.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ restaurantId: string }>;
+}): Promise<Metadata> {
+  const { restaurantId } = await params;
+  const place = await menuViewFor(restaurantId);
+  if (!place) return {};
+
+  const name = place.restaurant.name;
+  const count = place.items.length;
+  return {
+    title: `${name} delivery to PAU`,
+    description:
+      `Order ${name} from Sangotedo to Pan-Atlantic University. ` +
+      `${count} thing${count === 1 ? "" : "s"} on the menu, one delivery ` +
+      `between everybody on the run.`,
+    alternates: { canonical: `/r/${place.restaurant.href}` },
+    openGraph: {
+      title: `${name} delivery to PAU`,
+      images: place.restaurant.bannerUrl ? [place.restaurant.bannerUrl] : undefined,
+    },
+  };
+}
 
 export default async function RestaurantPage({
   params,

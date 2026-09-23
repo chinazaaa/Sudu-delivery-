@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AddToCart from "@/components/AddToCart";
@@ -8,6 +9,33 @@ import { productNotes, safeSettings } from "@/lib/settings";
 import { naira } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
+
+/** The dish, the kitchen it comes from, and a canonical of its own. */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ itemId: string }>;
+}): Promise<Metadata> {
+  const { itemId } = await params;
+  const menu = await menuView();
+  const place = menu.find((m) => m.items.some((i) => i.id === itemId));
+  const item = place?.items.find((i) => i.id === itemId);
+  if (!place || !item) return {};
+
+  const said = item.description.trim();
+  return {
+    title: `${item.name} from ${place.restaurant.name}`,
+    description:
+      (said ? `${said} ` : "") +
+      `${item.name} from ${place.restaurant.name}, ${naira(item.price)}, ` +
+      `delivered to Pan-Atlantic University.`,
+    alternates: { canonical: `/p/${item.id}` },
+    openGraph: {
+      title: `${item.name} from ${place.restaurant.name}`,
+      images: item.imageUrl ? [item.imageUrl] : undefined,
+    },
+  };
+}
 
 export default async function ProductPage({
   params,
@@ -29,8 +57,33 @@ export default async function ProductPage({
   const alsoFrom = place.items.filter((i) => i.id !== item.id).slice(0, 6);
   const category = place.categories.find((c) => c.id === item.categoryId);
 
+  // What a search engine reads instead of guessing from the page. A price
+  // and a yes on availability are what put a dish in a shopping result at
+  // all, and both are already on this page for people.
+  const card = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: item.name,
+    description: item.description || undefined,
+    image: item.imageUrl || undefined,
+    brand: { "@type": "Brand", name: place.restaurant.name },
+    offers: {
+      "@type": "Offer",
+      price: item.price,
+      priceCurrency: "NGN",
+      availability: item.available
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+      seller: { "@type": "Organization", name: "Sudu" },
+    },
+  };
+
   return (
     <div className="space-y-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(card) }}
+      />
       <nav className="flex flex-wrap items-center gap-1 text-sm text-muted">
         <Link href="/" className="hover:text-ink">Menu</Link>
         <span>/</span>

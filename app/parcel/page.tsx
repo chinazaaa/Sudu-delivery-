@@ -14,7 +14,10 @@ export const dynamic = "force-dynamic";
  * Lekki and want to know whether anybody goes that way.
  */
 export const metadata: Metadata = {
-  title: "Send a parcel · Sudu",
+  // The shop's name is added by the layout. Written here as well, it came
+  // out as "Send a parcel · Sudu · Sudu".
+  title: "Send a parcel to or from PAU",
+  alternates: { canonical: "/parcel" },
   description:
     "Sangotedo, Lekki/Ikoyi, the mainland and Ikorodu, both ways to PAU. " +
     "Collected sealed, handed over sealed, photographed at each end.",
