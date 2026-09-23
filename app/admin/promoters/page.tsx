@@ -252,15 +252,25 @@ export default async function PromotersAdmin({
                   <div className="rounded-xl bg-shell p-3 text-sm">
                     <p className="font-bold">Send it here</p>
                     {promoter.bank_account_number ? (
-                      <p className="mt-1">
-                        <span className="block font-semibold">
-                          {promoter.bank_account_number}
-                        </span>
-                        <span className="block text-muted">
-                          {promoter.bank_account_name || promoter.name}
-                          {promoter.bank_name && ` · ${promoter.bank_name}`}
-                        </span>
-                      </p>
+                      <div className="mt-1 flex items-start justify-between gap-3">
+                        <p>
+                          <span className="block font-semibold">
+                            {promoter.bank_account_number}
+                          </span>
+                          <span className="block text-muted">
+                            {promoter.bank_account_name || promoter.name}
+                            {promoter.bank_name && ` · ${promoter.bank_name}`}
+                          </span>
+                        </p>
+                        {/* Ten digits read off one screen and typed into a
+                            banking app is where a payout goes to the wrong
+                            person. One tap instead. */}
+                        <CopyText
+                          value={promoter.bank_account_number}
+                          label="Copy"
+                          className="shrink-0 px-3 py-1.5 text-xs"
+                        />
+                      </div>
                     ) : (
                       <p className="mt-1 text-muted">
                         They have not filled their account details in yet. They
