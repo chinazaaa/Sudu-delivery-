@@ -189,6 +189,12 @@ export default function Home({
               line="One list, filtered by restaurant and by kind"
               action="Browse"
             />
+            {parcels !== "" && (
+              <Door href="/parcel" title="Send a parcel" line={parcels} action="Send" />
+            )}
+            {skincare !== "" && (
+              <Door href="/skincare" title="Skincare" line={skincare} action="Shop" />
+            )}
             {occasions !== "" && (
               <Door
                 href="/occasions"
@@ -196,12 +202,6 @@ export default function Home({
                 line={occasions}
                 action="See"
               />
-            )}
-            {parcels !== "" && (
-              <Door href="/parcel" title="Send a parcel" line={parcels} action="Send" />
-            )}
-            {skincare !== "" && (
-              <Door href="/skincare" title="Skincare" line={skincare} action="Shop" />
             )}
             <Door
               href="/group"
