@@ -175,25 +175,6 @@ export default function Home({
         </section>
       ) : (
         <>
-          {/* Above the restaurants, because people come for jollof rather
-              than for a brand. Below fifteen banner cards it was the best
-              part of the page in the one place nobody scrolled to. */}
-          {popular.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="section-title">
-                {measured ? "Popular this week" : "From the menu"}
-              </h2>
-              {popular.map(({ item, place }) => (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  inCart={countFor(item.id)}
-                  onOpen={() => setOpen({ item, place })}
-                />
-              ))}
-            </section>
-          )}
-
           {/* Everything the shop does that is not tonight's dinner, in one
               row you swipe rather than doors stacked down the page.
 
@@ -296,6 +277,26 @@ export default function Home({
               </Link>
             )}
           </section>
+
+          {/* Under the restaurants, because the first screen now answers
+              what the shop does and where the food comes from. Somebody who
+              has read that far has not decided on a brand, and this is the
+              list for them. */}
+          {popular.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="section-title">
+                {measured ? "Popular this week" : "From the menu"}
+              </h2>
+              {popular.map(({ item, place }) => (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  inCart={countFor(item.id)}
+                  onOpen={() => setOpen({ item, place })}
+                />
+              ))}
+            </section>
+          )}
 
           <Carousel>
             {(slides.length > 0
