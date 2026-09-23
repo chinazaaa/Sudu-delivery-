@@ -7,6 +7,7 @@ import { hostelNames } from "@/lib/hostels";
 import { liveRoutes, parcels } from "@/lib/parcels";
 import { dropLabel, nextDrop, skincareOn, skincarePromise } from "@/lib/skincare";
 import { safeSettings } from "@/lib/settings";
+import { parseAreas } from "@/lib/areas";
 import { naira } from "@/lib/money";
 
 /**
@@ -44,6 +45,12 @@ export default async function DeliveryToPauPage() {
   // The shelf is its own trip on its own day, so it is its own paragraph.
   // Switched off in admin, it is not on this page at all rather than being
   // advertised to somebody who would find a page that is not there.
+  // The kitchens that are not in Sangotedo, read from admin rather than
+  // written here: Lekki and Ikoyi are on the menu on the runs that go there,
+  // and a page that never mentions them is a page that hides half the shop.
+  const areas = parseAreas(settings.delivery_areas);
+  const areaNames = areas.map((one) => one.name);
+  const farthest = areas.reduce((most, one) => Math.max(most, one.runExtra), 0);
   const skincare = skincareOn(settings);
   const skincareDay = skincare ? dropLabel(nextDrop(settings).date) : "";
   const routes = liveRoutes(parcelSetup.routes);
@@ -80,8 +87,11 @@ export default async function DeliveryToPauPage() {
         (places.length > 0
           ? `, including ${places.slice(0, 6).map((one) => one.name).join(", ")}.`
           : ".") +
-        " That is the whole food run: everything is collected there and " +
-        "brought onto campus together.",
+        (areaNames.length > 0
+          ? ` ${areaNames.join(" and ")} as well, on the runs that go that way` +
+            (farthest > 0 ? `, which adds ${naira(farthest)} to the car.` : ".")
+          : "") +
+        " Everything on a run is collected and brought onto campus together.",
     },
     ...(skincare
       ? [
@@ -98,8 +108,10 @@ export default async function DeliveryToPauPage() {
     {
       q: "How do I pay?",
       a:
-        "Bank transfer. You get the account details at checkout and send the " +
-        "exact total, then the order is confirmed and goes on the next run.",
+        "Bank transfer or card. For a transfer you get the account details at " +
+        "checkout and send the exact total. For card, say so at checkout and " +
+        "we send you a payment link on WhatsApp. Either way the order is " +
+        "confirmed once it is paid, and goes on the run you picked.",
     },
     {
       q: "Can I send or receive a parcel at PAU?",
@@ -158,8 +170,11 @@ export default async function DeliveryToPauPage() {
         <p className="text-muted">
           Sudu has been running food onto the PAU campus since 2018. Restaurants
           around Sangotedo and Novare, collected together and brought in on one
-          car, handed to you at your block. Skincare and parcels go the same
-          way, each on its own trip.
+          car, handed to you at your block.
+          {areaNames.length > 0
+            ? ` ${areaNames.join(" and ")} too, on the runs that go that way.`
+            : ""}{" "}
+          Skincare and parcels go the same way, each on its own trip.
         </p>
         <div className="flex flex-wrap gap-2">
           <Link
@@ -257,6 +272,20 @@ export default async function DeliveryToPauPage() {
           <p>
             On campus, at the block you name at checkout:{" "}
             {hostels.join(", ")}.
+          </p>
+        </Section>
+      )}
+
+      {areaNames.length > 0 && (
+        <Section title={`${areaNames.join(" and ")} runs`}>
+          <p>
+            Not every run goes the same way. Most are Sangotedo and Novare, and
+            some go out to {areaNames.join(" and ")}, which is a longer drive
+            and a bigger fee
+            {farthest > 0 ? `, ${naira(farthest)} on top of the ladder above` : ""}.
+            The checkout only offers you a run that can actually fetch what is
+            in your cart, so you cannot end up waiting on a car that was never
+            going that way.
           </p>
         </Section>
       )}
