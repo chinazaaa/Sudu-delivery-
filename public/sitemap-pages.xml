@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A plain file, written by hand and served straight off disk.
+
+  The real sitemap is built from the database at /sitemap.xml and carries
+  every dish. This one exists so that a crawler which cannot fetch that one
+  still finds the pages that matter, and so a failure in Search Console tells
+  us which half is at fault: if this file fetches and the other does not, the
+  route is at fault; if neither does, nothing of ours is being reached at all.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://sudu.store/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://sudu.store/products</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://sudu.store/delivery-to-pau</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://sudu.store/parcel</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://sudu.store/skincare</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://sudu.store/support</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://sudu.store/privacy</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>
+</urlset>
