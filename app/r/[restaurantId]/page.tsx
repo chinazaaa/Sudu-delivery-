@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
 import RestaurantMenu from "@/components/RestaurantMenu";
 import Thumb from "@/components/Thumb";
 import { menuViewFor } from "@/lib/menu";
@@ -56,6 +56,18 @@ export default async function RestaurantPage({
   // here wanted the shelf, so they are sent to it rather than turned away.
   if (!place && (await isSkincare(restaurantId))) redirect("/skincare");
   if (!place) notFound();
+
+  // One page, one address. A restaurant answers to its id as well as its
+  // name, because every link ever pasted into a group chat says the id and
+  // none of them may break. A canonical tag asks a search engine to treat
+  // them as one page; this settles it before anybody has to be asked, and
+  // sends the old link to the address the rest of the site uses.
+  //
+  // Only when there is a name to send it to: without a slug the href is the
+  // id, and redirecting the id to itself is a loop.
+  if (place.restaurant.href !== restaurantId) {
+    permanentRedirect(`/r/${place.restaurant.href}`);
+  }
 
   // Everything on offer here, in one place somebody can look on purpose
   // rather than find by accident.
