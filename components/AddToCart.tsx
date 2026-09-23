@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { addLine, addPerson, setActivePerson, setQty as setCartQty, useCart, usePeople } from "@/lib/cart";
+import {
+  addLine,
+  addPerson,
+  lineKey,
+  setActivePerson,
+  setQty as setCartQty,
+  useCart,
+  usePeople,
+} from "@/lib/cart";
 import { useRouter } from "next/navigation";
 import { naira } from "@/lib/money";
 import type { ItemView } from "@/lib/view";
@@ -53,18 +61,49 @@ export default function AddToCart({
   const unitPrice = item.price + chosen.reduce((sum, o) => sum + o.priceDelta, 0);
   const missing = item.groups.filter((g) => g.required && (picked[g.id] ?? []).length === 0);
 
+  /**
+   * This exact thing, for this exact person, if it is already in the cart.
+   *
+   * The button used to add another one every time it was pressed and say so
+   * in a green line at the bottom of the page, which on a phone is off the
+   * screen. People pressed it three and four times without knowing, and found
+   * out at the checkout. Now the page says it is already there and the same
+   * plus and minus change how many, so pressing again cannot quietly stack.
+   *
+   * Keyed on the choices as well as the dish, so a large and a small are two
+   * different things, and on the name, so Naza having one does not stop
+   * somebody adding one for Kemi.
+   */
+  const already =
+    editing || missing.length > 0
+      ? null
+      : (lines.find((line) => line.key === lineKey(item.id, chosenIds, active)) ?? null);
+
+  // One stepper. It sets how many to add, or, when it is already in the cart,
+  // how many are in it.
+  const shownQty = already ? already.qty : qty;
+  function step(by: number) {
+    if (already) {
+      // Never to nothing: taking the last one out is the cart's job, where
+      // you can see what you are removing.
+      setCartQty(already.key, Math.max(1, already.qty + by));
+      return;
+    }
+    setQty((q) => Math.max(1, q + by));
+  }
+
   function toggle(groupId: string, optionId: string, maxSelect: number) {
     setAdded(0);
     setPicked((current) => {
-      const already = current[groupId] ?? [];
+      const ticked = current[groupId] ?? [];
       if (maxSelect === 1) return { ...current, [groupId]: [optionId] };
       return {
         ...current,
-        [groupId]: already.includes(optionId)
-          ? already.filter((id) => id !== optionId)
-          : already.length < maxSelect
-            ? [...already, optionId]
-            : already,
+        [groupId]: ticked.includes(optionId)
+          ? ticked.filter((id) => id !== optionId)
+          : ticked.length < maxSelect
+            ? [...ticked, optionId]
+            : ticked,
       };
     });
   }
@@ -145,16 +184,16 @@ export default function AddToCart({
         <div className="flex items-center gap-1 rounded-full border border-black/10 p-1">
           <button
             type="button"
-            onClick={() => setQty((q) => Math.max(1, q - 1))}
+            onClick={() => step(-1)}
             className="size-9 rounded-full text-lg leading-none hover:bg-black/5"
             aria-label="One less"
           >
             −
           </button>
-          <span className="w-7 text-center font-semibold">{qty}</span>
+          <span className="w-7 text-center font-semibold">{shownQty}</span>
           <button
             type="button"
-            onClick={() => setQty((q) => q + 1)}
+            onClick={() => step(1)}
             className="size-9 rounded-full text-lg leading-none hover:bg-black/5"
             aria-label="One more"
           >
@@ -164,7 +203,7 @@ export default function AddToCart({
 
         <button
           type="button"
-          disabled={!item.available || missing.length > 0}
+          disabled={!item.available || missing.length > 0 || already !== null}
           onClick={put}
           className="btn-primary flex-1 py-3"
         >
@@ -174,19 +213,36 @@ export default function AddToCart({
               ? `Choose ${missing[0].name.toLowerCase()}`
               : editing
                 ? `Save the change · ${naira(unitPrice * qty)}`
-                : `Add${active ? ` for ${active}` : ""} · ${naira(unitPrice * qty)}`}
+                : already
+                  ? `Already in the cart${active ? ` for ${active}` : ""}`
+                  : `Add${active ? ` for ${active}` : ""} · ${naira(unitPrice * qty)}`}
         </button>
       </div>
 
-      {added > 0 && (
-        <p className="flex items-center justify-between gap-2 rounded-xl bg-mint/10 px-3 py-2 text-sm font-semibold text-mint">
+      {/* Said here, beside the button, rather than at the foot of the page
+          where nobody on a phone was seeing it. */}
+      {already ? (
+        <p className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-xl bg-mint/10 px-3 py-2 text-sm font-semibold text-mint">
           <span>
-            {added} in your cart{active ? ` for ${active}` : ""}
+            {already.qty} in the cart{active ? ` for ${active}` : ""}. Use − and +
+            to change how many
+            {people.length > 0 ? ", or pick another name below" : ""}.
           </span>
           <Link href="/cart" className="underline">
             View cart
           </Link>
         </p>
+      ) : (
+        added > 0 && (
+          <p className="flex items-center justify-between gap-2 rounded-xl bg-mint/10 px-3 py-2 text-sm font-semibold text-mint">
+            <span>
+              {added} in your cart{active ? ` for ${active}` : ""}
+            </span>
+            <Link href="/cart" className="underline">
+              View cart
+            </Link>
+          </p>
+        )
       )}
 
       <div className="space-y-2">
