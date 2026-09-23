@@ -5,6 +5,8 @@ import { openRestaurants } from "@/lib/menu";
 import { activeBands } from "@/lib/settings";
 import { hostelNames } from "@/lib/hostels";
 import { liveRoutes, parcels } from "@/lib/parcels";
+import { dropLabel, nextDrop, skincareOn, skincarePromise } from "@/lib/skincare";
+import { safeSettings } from "@/lib/settings";
 import { naira } from "@/lib/money";
 
 /**
@@ -22,7 +24,7 @@ const TITLE = "Delivery to Pan-Atlantic University (PAU), Lagos";
 const BLURB =
   "Food delivered to Pan-Atlantic University from the restaurants around " +
   "Sangotedo and Novare Mall. One car, one delivery fee split between " +
-  "everybody on it, handed to you at your hostel. Parcels too.";
+  "everybody on it, handed to you at your hostel. Skincare and parcels too.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -32,12 +34,18 @@ export const metadata: Metadata = {
 };
 
 export default async function DeliveryToPauPage() {
-  const [places, bands, hostels, parcelSetup] = await Promise.all([
+  const [places, bands, hostels, parcelSetup, settings] = await Promise.all([
     openRestaurants(),
     activeBands(),
     hostelNames(),
     parcels(),
+    safeSettings(),
   ]);
+  // The shelf is its own trip on its own day, so it is its own paragraph.
+  // Switched off in admin, it is not on this page at all rather than being
+  // advertised to somebody who would find a page that is not there.
+  const skincare = skincareOn(settings);
+  const skincareDay = skincare ? dropLabel(nextDrop(settings).date) : "";
   const routes = liveRoutes(parcelSetup.routes);
   const cheapest = bands.length > 0 ? bands[0] : null;
 
@@ -63,16 +71,30 @@ export default async function DeliveryToPauPage() {
           "split between everybody who orders on the same run.",
     },
     {
-      q: "Where do you deliver from?",
+      // Food only. The other places we go are parcel routes, and naming them
+      // in the answer to a question about food reads as a menu we do not
+      // have. They are named under the parcel question, where they are true.
+      q: "Where do you deliver food from?",
       a:
         "Restaurants around Sangotedo and Novare Mall" +
         (places.length > 0
           ? `, including ${places.slice(0, 6).map((one) => one.name).join(", ")}.`
           : ".") +
-        (routes.length > 0
-          ? " Parcels also move between PAU and Lekki, Ikoyi, the mainland and Ikorodu."
-          : ""),
+        " That is the whole food run: everything is collected there and " +
+        "brought onto campus together.",
     },
+    ...(skincare
+      ? [
+          {
+            q: "Do you deliver skincare to PAU?",
+            a:
+              "Yes. Skincare is a separate shelf with its own basket and its " +
+              "own car" +
+              (skincareDay ? `, and it comes ${skincareDay}.` : ".") +
+              " Order any day and it arrives on the next drop.",
+          },
+        ]
+      : []),
     {
       q: "How do I pay?",
       a:
@@ -136,7 +158,8 @@ export default async function DeliveryToPauPage() {
         <p className="text-muted">
           Sudu has been running food onto the PAU campus since 2018. Restaurants
           around Sangotedo and Novare, collected together and brought in on one
-          car, handed to you at your block.
+          car, handed to you at your block. Skincare and parcels go the same
+          way, each on its own trip.
         </p>
         <div className="flex flex-wrap gap-2">
           <Link
@@ -145,6 +168,14 @@ export default async function DeliveryToPauPage() {
           >
             See the menu
           </Link>
+          {skincare && (
+            <Link
+              href="/skincare"
+              className="rounded-full bg-paper px-4 py-2.5 text-sm font-extrabold text-brand shadow-card"
+            >
+              Skincare
+            </Link>
+          )}
           {routes.length > 0 && (
             <Link
               href="/parcel"
@@ -226,6 +257,21 @@ export default async function DeliveryToPauPage() {
           <p>
             On campus, at the block you name at checkout:{" "}
             {hostels.join(", ")}.
+          </p>
+        </Section>
+      )}
+
+      {skincare && (
+        <Section title="Skincare to PAU">
+          <p>
+            {skincarePromise(settings)} It is a separate shelf with its own
+            basket and its own car, so it does not ride on the food run.
+            {skincareDay ? ` Order any day and it comes ${skincareDay}.` : ""}
+          </p>
+          <p>
+            <Link href="/skincare" className="font-extrabold text-brand">
+              See the skincare shelf
+            </Link>
           </p>
         </Section>
       )}
