@@ -587,19 +587,27 @@ export async function tripSheet(at: string): Promise<TripSheet | null> {
 
 /**
  * Batches with live counts and profit. The default window is the last few days
- * and everything ahead, which is what today needs; "all" reaches back through
+ * and everything ahead, which is what today needs; "month" reaches back four
+ * weeks, to match the dashboard's other figures; "all" reaches back through
  * every run ever made, because a past run is still worth reading.
  */
-export async function batchOverview(window: "recent" | "all" = "recent"): Promise<BatchRow[]> {
+export async function batchOverview(
+  window: "recent" | "month" | "all" = "recent"
+): Promise<BatchRow[]> {
   // Parcels are in this list, because the list is what is being driven and a
   // parcel is a trip somebody has to make. They are labelled as parcels and
   // left out of how far ahead the shop is open, which is a question about
   // runs: taking them out of the list altogether meant agreeing a day for one
   // and then having nowhere that said so on the day.
   let query = db().from("batches").select("*");
-  if (window === "recent") {
+  if (window === "recent" || window === "month") {
+    // Three days for the page that is about this week, twenty-eight for the
+    // dashboard, whose other figures are all four weeks: a profit summed
+    // over three days sitting beside money taken over four is two questions
+    // answered as if they were one.
+    const back = window === "month" ? 28 : 3;
     query = query
-      .gte("run_date", new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10))
+      .gte("run_date", new Date(Date.now() - back * 86400000).toISOString().slice(0, 10))
       .order("cut_off_at", { ascending: true });
   } else {
     // In date order, not newest first: a list that opens on October while

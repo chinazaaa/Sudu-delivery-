@@ -36,7 +36,8 @@ export default async function AdminHome() {
     await tendBatches(true);
     const settings = await safeSettings();
     [batches, stats, unpaid, today, left] = await Promise.all([
-      batchOverview(),
+      // Four weeks, the same stretch the money figures beside it cover.
+      batchOverview("month"),
       dashboard(),
       orderFeed({ status: "pending", limit: 6 }),
       orderFeed({ status: "all", limit: 8 }),
@@ -167,7 +168,7 @@ export default async function AdminHome() {
               value={profit}
               money
               tone={profit >= 0 ? "good" : "warn"}
-              hint="After food, commission and running costs"
+              hint="Last 28 days, after food, commission and costs"
             />
           </div>
 
