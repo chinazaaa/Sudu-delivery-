@@ -153,6 +153,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Link href="/privacy" className="underline">
                 Privacy
               </Link>
+              {/* Not in the header or the tab bar: it is written for somebody
+                  who has not found us yet. One link from a page that is
+                  crawled is what stops it being an orphan. */}
+              <Link href="/delivery-to-pau" className="underline">
+                Delivery to PAU
+              </Link>
               {settings.whatsapp_group_link && (
                 <a
                   href={settings.whatsapp_group_link}
