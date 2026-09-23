@@ -20,9 +20,9 @@ export const revalidate = 3600;
 
 const TITLE = "Delivery to Pan-Atlantic University (PAU), Lagos";
 const BLURB =
-  "Food, skincare and parcels delivered to Pan-Atlantic University from " +
-  "Sangotedo, Lekki, Ikoyi, the mainland and Ikorodu. One car, one delivery " +
-  "fee split between everybody on it, handed to you at your hostel.";
+  "Food delivered to Pan-Atlantic University from the restaurants around " +
+  "Sangotedo and Novare Mall. One car, one delivery fee split between " +
+  "everybody on it, handed to you at your hostel. Parcels too.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -101,8 +101,13 @@ export default async function DeliveryToPauPage() {
         areaServed: [
           { "@type": "Place", name: "Pan-Atlantic University, Ibeju-Lekki, Lagos" },
           { "@type": "Place", name: "Sangotedo, Lagos" },
-          { "@type": "Place", name: "Lekki, Lagos" },
-          { "@type": "Place", name: "Ikoyi, Lagos" },
+          // Only where a parcel actually goes. The food comes from Sangotedo.
+          ...(routes.length > 0
+            ? [
+                { "@type": "Place", name: "Lekki, Lagos" },
+                { "@type": "Place", name: "Ikoyi, Lagos" },
+              ]
+            : []),
         ],
         description: BLURB,
       },
@@ -131,7 +136,7 @@ export default async function DeliveryToPauPage() {
         <p className="text-muted">
           Sudu has been running food onto the PAU campus since 2018. Restaurants
           around Sangotedo and Novare, collected together and brought in on one
-          car, handed to you at your block. Skincare and parcels go the same way.
+          car, handed to you at your block.
         </p>
         <div className="flex flex-wrap gap-2">
           <Link
