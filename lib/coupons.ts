@@ -2,6 +2,8 @@ import {
   choiceCombinations,
   choiceLabels,
   choiceSets,
+  offerBadge,
+  offerLine,
   pickOffer,
   type LiveOffer,
   type OfferContext,
@@ -848,4 +850,108 @@ export async function menuChoices(): Promise<
   } catch {
     return [];
   }
+}
+
+/**
+ * One counter where a live promotion is on, with the link to its menu.
+ *
+ * Slug first, because that is what the rest of the site links with, falling
+ * back to the id so a restaurant without one is still reachable.
+ */
+async function placeLinks(ids: string[]): Promise<{ name: string; href: string }[]> {
+  if (ids.length === 0) return [];
+  try {
+    const { data, error } = await db()
+      .from("restaurants")
+      .select("id, name, slug")
+      .in("id", ids)
+      .eq("active", true);
+    // An older database has no slug column, and an offer people cannot see
+    // is worse than a link that carries a uuid.
+    if (error) {
+      const { data: plain } = await db()
+        .from("restaurants")
+        .select("id, name")
+        .in("id", ids)
+        .eq("active", true);
+      return (plain ?? []).map((row) => ({
+        name: row.name as string,
+        href: row.id as string,
+      }));
+    }
+    return (data ?? []).map((row) => ({
+      name: row.name as string,
+      href: (row.slug as string | null) || (row.id as string),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/** A promotion said the way somebody who has never seen this shop wants it. */
+export type Nudge = {
+  /** Only ever a key for remembering a dismissal. It is never shown: an
+   *  automatic offer has nothing to type and naming a code sends people
+   *  looking for a box that is not there. */
+  code: string;
+  /** "₦2,000 delivery", for the strong line. */
+  badge: string;
+  /** Where it is on: "Domino's Pizza", or two names joined. */
+  where: string;
+  /** The small print, in one sentence. */
+  detail: string;
+  /** Where to send somebody who wants it. One entry per counter, or a single
+   *  entry for the whole menu when the offer names no counter. */
+  go: { label: string; href: string }[];
+};
+
+/**
+ * The promotion worth interrupting somebody for, or nothing.
+ *
+ * Only automatic offers, because those are the ones that need announcing:
+ * nobody types them, so nobody finds them unless they are told. The wording
+ * is built from the offer itself rather than written anywhere, so an offer
+ * that is switched off in admin stops being announced in the same moment.
+ */
+export async function offerNudge(): Promise<Nudge | null> {
+  const offers = await liveOffers();
+  if (offers.length === 0) return null;
+
+  // The one with the lowest fee is the loudest thing on the shop today.
+  const offer = [...offers].sort((a, b) => a.fee - b.fee)[0];
+  const places = await placeLinks(offer.places);
+
+  // The offer names a counter that is switched off. Announcing it would send
+  // people to a page that is not there.
+  if (offer.places.length > 0 && places.length === 0) return null;
+
+  const names = places.map((place) => place.name);
+  const where =
+    names.length === 0
+      ? ""
+      : names.length === 1
+        ? names[0]
+        : `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
+
+  const detail = [
+    offerLine(offer),
+    offer.firstOrderOnly ? "First order only." : "",
+    "No code needed, it comes off at checkout.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return {
+    code: offer.code,
+    badge: offerBadge(offer),
+    where,
+    detail,
+    go:
+      places.length > 0
+        ? places.map((place) => ({
+            label: places.length === 1 ? `Order from ${place.name}` : place.name,
+            href: `/r/${place.href}`,
+          }))
+        : [{ label: "See the menu", href: "/products" }],
+  };
 }

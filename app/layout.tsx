@@ -3,10 +3,11 @@ import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 import Track from "@/components/Track";
 import Ribbon from "@/components/Ribbon";
+import OfferNudge from "@/components/OfferNudge";
 import GroupBar from "@/components/GroupBar";
 import GroupSync from "@/components/GroupSync";
 import SiteHeader from "@/components/SiteHeader";
-import { publicOffer } from "@/lib/coupons";
+import { offerNudge, publicOffer } from "@/lib/coupons";
 import { instagramLink, safeSettings } from "@/lib/settings";
 import "./globals.css";
 
@@ -63,6 +64,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const showFooter = settings.hide_footer !== "on";
   // Read from the code itself, so the strip cannot outlive the offer.
   const offer = await publicOffer(settings.offer_code);
+  // Read from the offer itself too: an automatic promotion has no code to
+  // type, so nobody finds it unless the shop says it is on.
+  const nudge = await offerNudge();
   return (
     <html lang="en">
       <body>
@@ -124,6 +128,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             cart. With it hidden, that space still has to be there. */}
         {!showFooter && <div aria-hidden className="pb-44 sm:pb-32" />}
         <BottomNav />
+        {/* A small card in the corner, once per offer, never over the cart
+            or the checkout. */}
+        <OfferNudge nudge={nudge} />
         {/* Counts a view after the page is up. Never in the way of anything. */}
         <Track />
       </body>
