@@ -22,6 +22,7 @@ import {
   withExtra,
   type Area,
 } from "@/lib/areas";
+import { runCarries } from "@/lib/run-places";
 import { offerShare, pickOffer, type LiveOffer } from "@/lib/offers";
 import { normalisePhone } from "@/lib/phone";
 import { OPENED, TRAP } from "@/lib/guard";
@@ -129,8 +130,22 @@ export default function Checkout({
   const sameDaySlots = canGoSameDay(cartAreas) ? allSlots : [];
 
   const openable = batches.filter(
-    (b) => !b.closed && !b.full && runCovers(b.areas, cartAreas)
+    (b) => !b.closed && !b.full && runCovers(b.areas, cartAreas) && runCarries(b.onlyPlaces, kitchens)
   );
+
+  // Runs that are open, going the right way, and stopping at counters this
+  // cart does not need. Some nights are one counter's run: the car queues at
+  // Domino's and fetches nothing else. Without a word about them the list of
+  // runs is simply shorter than it was yesterday and nobody knows why.
+  const wrongCounter = batches.filter(
+    (b) =>
+      !b.closed && !b.full && runCovers(b.areas, cartAreas) && !runCarries(b.onlyPlaces, kitchens)
+  );
+  const counterNames = [...new Set(cart.map((line) => line.restaurantName))];
+  const counterSaid =
+    counterNames.length === 1
+      ? counterNames[0]
+      : `${counterNames.slice(0, -1).join(", ")} and ${counterNames[counterNames.length - 1]}`;
 
   // The things in this cart that are not from Sangotedo, and what holds
   // them up. A car that goes to Lekki passes Sangotedo on the way back, so a
@@ -797,6 +812,22 @@ export default function Checkout({
           </p>
         )}
 
+        {/* A run kept to one counter, said before somebody wonders where the
+            usual runs went. The headline above already names when this cart
+            can actually come; this says why it is not sooner. */}
+        {wrongCounter.length > 0 && (
+          <p className="text-sm text-brand-dark">
+            <span className="font-semibold">
+              Not every run stops at {counterSaid}.
+            </span>{" "}
+            {openable.length > 0
+              ? `The next one that does is ${goingThere?.label ?? "the one below"}.`
+              : sameDaySlots.length > 0
+                ? "None of the runs coming up are, so this goes as a car of its own, at the time you pick below."
+                : "None of the runs coming up are."}
+          </p>
+        )}
+
         {/* An estimate, and said to be one. A time to the minute is a promise
             nobody can keep in Lagos traffic, and arriving at 4:15 for a four
             o'clock is fine unless somebody was told four o'clock exactly. */}
@@ -1393,6 +1424,16 @@ export default function Checkout({
                 : farLines.length < cart.length
                   ? `Take ${farLines.length === 1 ? "that one" : "those"} out and the rest can still come.`
                   : "Check back when the next one is up, or message us."}
+            </p>
+          )}
+          {/* Nothing coming up stops there and no car can go either. Said
+              here, beside the button, because this is the moment somebody
+              finds out they cannot buy what is in the basket. */}
+          {wrongCounter.length > 0 && openable.length === 0 && sameDaySlots.length === 0 && (
+            <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
+              No run coming up is stopping at {counterSaid}, and a car of its
+              own cannot go just now. Check back when the next run is up, or
+              take those things out of the cart.
             </p>
           )}
           {state.error && (

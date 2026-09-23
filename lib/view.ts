@@ -48,6 +48,8 @@ export type BatchView = {
   label: string;
   /** The areas this run covers, as "|lekki|". Empty is Sangotedo only. */
   areas: string;
+  /** The only counters this run stops at. Empty means all of them. */
+  onlyPlaces: string;
   /** The day it delivers, so a page can tell a run going today from one
    *  going tomorrow without reading the label. */
   runDate: string;
@@ -92,6 +94,9 @@ export function toBatchView(batch: OpenBatch): BatchView {
     // Lekki cannot carry a Lekki order, and the checkout has to know that
     // before somebody picks it rather than after.
     areas: batch.areas ?? "",
+    // A run kept to one or two counters. The checkout has to know before
+    // somebody picks it, the same as with the areas above.
+    onlyPlaces: batch.only_places ?? "",
     runDate: batch.run_date,
     cutOffISO: batch.cut_off_at,
     cutOffLabel: `${dayWord(batch.run_date)}, ${clockLabel(batch.cut_off_at)}`,

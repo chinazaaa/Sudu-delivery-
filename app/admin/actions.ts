@@ -36,6 +36,7 @@ import {
 } from "@/lib/skincare-import";
 import { skincareShelves } from "@/lib/skincare";
 import { areaText } from "@/lib/areas";
+import { placesText } from "@/lib/run-places";
 import { newPin } from "@/lib/customer-auth";
 import { namedPromoters, realPromoter } from "@/lib/promoters";
 import { pushDeal, pushToPhone } from "@/lib/push";
@@ -493,6 +494,13 @@ export async function updateRun(form: FormData): Promise<void> {
   // put one in a basket, so this is what the checkout checks against.
   if (form.get("areas_set") !== null) {
     patch.areas = areaText(form.getAll("area").map(String));
+  }
+
+  // The counters this one fetches from. Nothing ticked is every counter,
+  // which is what a run is unless somebody says otherwise: a night that is
+  // a Domino's run and nothing else is the exception, not the rule.
+  if (form.get("places_set") !== null) {
+    patch.only_places = placesText(form.getAll("place").map(String));
   }
 
   await db().from("batches").update(patch).eq("id", id);

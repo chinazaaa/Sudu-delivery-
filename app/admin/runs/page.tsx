@@ -16,6 +16,8 @@ import {
   toggleScheduleRun,
 } from "../actions";
 import { runSchedule, WEEKDAYS } from "@/lib/schedule";
+import { placesOfRun } from "@/lib/run-places";
+import { openRestaurants } from "@/lib/menu";
 import SaveButton from "@/components/SaveButton";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
@@ -45,6 +47,10 @@ export default async function RunsPage({
   const until = await openUntil();
   const window = query.show === "all" ? "all" : "recent";
   const horizon = (await safeSettings()).order_horizon_days || 7;
+  // Ids are what a run stores. Names are what the list has to say.
+  const counterNames = new Map(
+    (await openRestaurants()).map((one) => [one.id, one.name] as const)
+  );
 
   let problem: Awaited<ReturnType<typeof diagnoseEmpty>> | null = null;
   let batches: Awaited<ReturnType<typeof batchOverview>> = [];
@@ -370,6 +376,17 @@ export default async function RunsPage({
                     {batch.kind === "parcel" && (
                       <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-bold text-brand-dark">
                         {batch.deliver_at ? "Parcel" : "Parcel · day not agreed"}
+                      </span>
+                    )}
+                    {/* A run kept to one or two counters. Worth seeing from
+                        the list: it is the thing that explains why an order
+                        could not go on it. */}
+                    {batch.kind === "run" && placesOfRun(batch.only_places ?? "").length > 0 && (
+                      <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-bold text-brand-dark">
+                        {placesOfRun(batch.only_places ?? "")
+                          .map((id) => counterNames.get(id) ?? "one counter")
+                          .join(", ")}{" "}
+                        only
                       </span>
                     )}
                     <span

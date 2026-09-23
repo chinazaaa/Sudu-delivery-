@@ -26,6 +26,8 @@ import SendSheet from "@/components/admin/SendSheet";
 import { payableAccounts } from "@/lib/banks";
 import { allAreas } from "@/lib/areas-server";
 import { areasOfRun } from "@/lib/areas";
+import { placesOfRun } from "@/lib/run-places";
+import { openRestaurants } from "@/lib/menu";
 import { batchSheet, notPriced, stillOpen, typicalCosts, shortfalls } from "@/lib/admin";
 import { SLOT_LABEL } from "@/lib/config";
 import { runSchedule, WEEKDAYS } from "@/lib/schedule";
@@ -64,6 +66,9 @@ export default async function BatchPage({
 
   const { batch, counter, handout, unpaid, summary, refunds, groupsShort, pins } = sheet;
   const areas = await allAreas();
+  // For the run that is one counter's run. Read here rather than typed, so
+  // a restaurant added this morning is tickable this afternoon.
+  const counters = await openRestaurants();
 
   // One wording for a share, here and in the message the customer gets:
   // #1001a and #1001b, never #1001 on this screen and #1001a on theirs.
@@ -1135,6 +1140,36 @@ export default async function BatchPage({
                             {one.name}
                           </label>
                         ))}
+                      </div>
+                    )}
+
+                    {/* Runs only. A car of its own is fetching for one
+                        person, wherever they asked, and the skincare drop is
+                        its own shop. */}
+                    {batch.kind === "run" && counters.length > 0 && (
+                      <div className="space-y-2 rounded-2xl bg-shell p-3">
+                        <input type="hidden" name="places_set" value="1" />
+                        <p className="label mb-0">Which counters it stops at</p>
+                        <p className="text-xs text-muted">
+                          Leave every box empty and it fetches from anywhere,
+                          which is what a run normally is. Tick one or two to
+                          make this a run for those counters only: nobody can
+                          put anything else on it, and a cart with other food
+                          in it is offered the next run that does stop there.
+                        </p>
+                        <div className="grid gap-1 sm:grid-cols-2">
+                          {counters.map((one) => (
+                            <label key={one.id} className="flex items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                name="place"
+                                value={one.id}
+                                defaultChecked={placesOfRun(batch.only_places ?? "").includes(one.id)}
+                              />
+                              {one.name}
+                            </label>
+                          ))}
+                        </div>
                       </div>
                     )}
 

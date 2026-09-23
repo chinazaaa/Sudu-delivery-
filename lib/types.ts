@@ -95,6 +95,9 @@ export type Batch = {
   kind: "run" | "same_day" | "skincare" | "parcel";
   /** Which areas this car goes to, beyond Sangotedo, as "|lekki|". */
   areas?: string;
+  /** The only counters this run fetches from, as "|id|id|". Empty is every
+   *  one of them, which is what a run is unless somebody says otherwise. */
+  only_places?: string;
   /** The time asked for. Only ever set on a same day delivery. */
   deliver_at: string | null;
   /** What the run cost to make, typed in once it is done. */

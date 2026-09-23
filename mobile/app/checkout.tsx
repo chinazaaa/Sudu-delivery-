@@ -22,6 +22,7 @@ import {
   lagosToday,
   naira,
   nextArrival,
+  runCarries,
   runCovers,
   sameDayFeeFor,
   withExtra,
@@ -186,7 +187,7 @@ export default function Checkout() {
   const sameDayBands = withExtra(shop?.sameDay?.bands ?? [], area.sameDayExtra);
 
   const runsHere = (shop?.runs ?? []).filter(
-    (one) => !one.closed && !one.full && runCovers(one, cartAreas)
+    (one) => !one.closed && !one.full && runCovers(one, cartAreas) && runCarries(one, kitchens)
   );
   // One thing from a far area makes the whole order a run: a car cannot be
   // in two places in three hours.

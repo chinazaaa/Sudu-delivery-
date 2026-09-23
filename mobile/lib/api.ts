@@ -204,6 +204,9 @@ export type Run = {
   /** Where this car goes beyond Sangotedo, as "|lekki|". It always passes
    *  Sangotedo, so empty means there and nowhere else. */
   areas?: string;
+  /** The only counters this run stops at, as "|id|id|". Empty means all of
+   *  them, which is what a run is unless somebody says otherwise. */
+  onlyPlaces?: string;
   /** Shut, or has as many orders as it can carry. Older servers leave both
    *  out, and then a run is offered and the order itself refuses it. */
   closed?: boolean;
@@ -817,6 +820,22 @@ export function runCovers(run: Run, areas: Area[]): boolean {
       .filter(Boolean),
   ];
   return areas.every((one) => covered.includes(one.id));
+}
+
+/**
+ * Whether a run will fetch everything this cart draws on.
+ *
+ * Some nights are one counter's run: the car queues at Domino's and fetches
+ * nothing else. Empty is every counter, so a run from an older server, or one
+ * nobody has restricted, carries whatever it is given exactly as before.
+ */
+export function runCarries(run: Run, restaurantIds: string[]): boolean {
+  const only = (run.onlyPlaces ?? "")
+    .split("|")
+    .map((one) => one.trim())
+    .filter(Boolean);
+  if (only.length === 0) return true;
+  return restaurantIds.every((id) => only.includes(id));
 }
 
 /**

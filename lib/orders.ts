@@ -33,6 +33,7 @@ import { realPromoter } from "./promoters";
 import { containersIn, pctOf } from "./containers";
 import { isExampleNumber, ordersLately, TOO_MANY } from "./guard";
 import { areasOfRun, runCovers } from "./areas";
+import { runCarries } from "./run-places";
 import { stageIndex } from "./stages";
 import { deliverySlots, sameInstant, type Slot } from "./same-day";
 import { normalisePhone } from "./phone";
@@ -340,6 +341,21 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
       error:
         `That run is not going to ${missed?.name ?? "that area"}. ` +
         "Pick one that does, or take those things out.",
+    };
+  }
+  // Some runs are one counter's run: a car queuing at Domino's all evening
+  // is not also fetching from Chicken Republic. Runs only, because a car of
+  // its own goes wherever the person who paid for it asked.
+  if (
+    !sameDay &&
+    !isSkincareBatch(batch) &&
+    !runCarries(batch.only_places ?? "", placesIn(priced.lines))
+  ) {
+    return {
+      ok: false,
+      error:
+        "That run is not stopping at every restaurant in this cart. " +
+        "Pick one that is, or take those things out.",
     };
   }
   if (!sameDay && !party && !isOrderable(batch)) {
