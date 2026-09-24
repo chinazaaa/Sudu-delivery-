@@ -112,6 +112,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify([who, site]) }}
         />
+        {/* Safari on an iPhone draws its own thin bar from this, with Apple's
+            wording and a close button that means it. Nothing to design, and
+            nobody on a laptop or on Android ever sees it. */}
+        {settings.ios_app_id && (
+          <meta name="apple-itunes-app" content={`app-id=${settings.ios_app_id}`} />
+        )}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
@@ -159,6 +165,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Link href="/delivery-to-pau" className="underline">
                 Delivery to PAU
               </Link>
+
               {settings.whatsapp_group_link && (
                 <a
                   href={settings.whatsapp_group_link}
@@ -178,7 +185,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <BottomNav />
         {/* A small card in the corner, once per offer, never over the cart
             or the checkout. */}
-        <OfferNudge nudge={nudge} />
+        <OfferNudge nudge={nudge} appId={settings.ios_app_id} />
         {/* Counts a view after the page is up. Never in the way of anything. */}
         <Track />
       </body>

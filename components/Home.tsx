@@ -28,6 +28,7 @@ export default function Home({
   autoHeadline,
   autoLines,
   promos,
+  iosAppId = "",
 }: {
   menu: MenuView[];
   /** When something ordered right now would land, said as a sentence and
@@ -57,6 +58,8 @@ export default function Home({
    *  announces itself on the card of the food it is for, because the front
    *  page has quite enough on it already. */
   promos: Record<string, string>;
+  /** The App Store id, or empty where the shop has no app to mention. */
+  iosAppId?: string;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<{ item: ItemView; place: MenuView } | null>(null);
@@ -298,6 +301,25 @@ export default function Home({
             </section>
           )}
 
+          {/* One line, at the end, for somebody who has already read the
+              page. An app is worth mentioning and not worth interrupting
+              anybody over: Safari draws its own bar at the top for whoever
+              wants it, and this is for everybody else. */}
+          {iosAppId !== "" && (
+            <p className="pt-1 text-center text-sm text-muted">
+              On an iPhone?{" "}
+              <a
+                href={`https://apps.apple.com/app/id${iosAppId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-brand underline"
+              >
+                Sudu is on the App Store
+              </a>
+              .
+            </p>
+          )}
+
           <Carousel>
             {(slides.length > 0
               ? slides.map((slide) => ({
@@ -381,22 +403,38 @@ function Door({
   title,
   line,
   action,
+  away = false,
 }: {
   href: string;
   title: string;
   line: string;
   action: string;
+  /** Somewhere that is not this site. Link would try to route it. */
+  away?: boolean;
 }) {
-  return (
-    <Link
-      href={href}
-      className="flex w-56 shrink-0 flex-col justify-between rounded-2xl bg-paper p-4 shadow-card transition active:scale-[0.99]"
-    >
+  const look =
+    "flex w-56 shrink-0 flex-col justify-between rounded-2xl bg-paper p-4 shadow-card transition active:scale-[0.99]";
+  const inside = (
+    <>
       <span>
         <span className="block font-bold leading-tight">{title}</span>
         <span className="mt-1 block text-sm leading-snug text-muted">{line}</span>
       </span>
       <span className="mt-3 block text-sm font-extrabold text-brand">{action}</span>
+    </>
+  );
+
+  if (away) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={look}>
+        {inside}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={href} className={look}>
+      {inside}
     </Link>
   );
 }

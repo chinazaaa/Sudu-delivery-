@@ -243,6 +243,23 @@ export default async function SettingsAdmin() {
           />
         </div>
         <div>
+          <label className="label" htmlFor="ios_app_id">iPhone app, App Store id</label>
+          <input
+            id="ios_app_id"
+            name="ios_app_id"
+            inputMode="numeric"
+            defaultValue={settings.ios_app_id}
+            placeholder="6813707812"
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">
+            The digits from the App Store address. Safari on an iPhone then
+            offers the app in a thin bar of its own, which anybody can close
+            for good, and the footer gets a link. Empty this and the site says
+            nothing about an app.
+          </p>
+        </div>
+        <div>
           <label className="label" htmlFor="whatsapp_group_link">
             PAU WhatsApp group link
           </label>

@@ -30,6 +30,9 @@ export type Settings = {
   whatsapp_number: string;
   card_note: string;
   instagram_handle: string;
+  /** The App Store id, digits only. Empty means the site never mentions an
+   *  app: no bar in Safari, no link in the footer. */
+  ios_app_id: string;
   whatsapp_group_link: string;
   pitch_line: string;
   product_notes: string;
@@ -136,6 +139,7 @@ export const EMPTY: Settings = {
   whatsapp_number: "",
   card_note: "",
   instagram_handle: "",
+  ios_app_id: "",
   whatsapp_group_link: "",
   pitch_line: "",
   product_notes: "",

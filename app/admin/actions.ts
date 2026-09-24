@@ -1604,6 +1604,7 @@ const SETTING_FIELDS = [
   "whatsapp_number",
   "card_note",
   "instagram_handle",
+  "ios_app_id",
   "whatsapp_group_link",
   "pitch_line",
   "product_notes",

@@ -86,6 +86,7 @@ export default async function HomePage() {
 
   return (
     <Home
+      iosAppId={settings.ios_app_id}
       menu={menu}
       slides={slides}
       popularIds={popularIds}
