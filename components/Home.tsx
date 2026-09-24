@@ -212,6 +212,19 @@ export default function Home({
               line="Everybody adds their own, one delivery between you"
               action="Start"
             />
+            {/* Last in the row, which is near the top of the page and costs
+                no height at all: the row is already there and already
+                swiped. It was a line at the foot of the page, which is the
+                one place nobody reaches. */}
+            {iosAppId !== "" && (
+              <Door
+                href={`https://apps.apple.com/app/id${iosAppId}`}
+                title="On an iPhone?"
+                line="Sudu is on the App Store. Your orders and where they have got to."
+                action="Get the app"
+                away
+              />
+            )}
           </div>
 
           <section className="space-y-3">
@@ -299,25 +312,6 @@ export default function Home({
                 />
               ))}
             </section>
-          )}
-
-          {/* One line, at the end, for somebody who has already read the
-              page. An app is worth mentioning and not worth interrupting
-              anybody over: Safari draws its own bar at the top for whoever
-              wants it, and this is for everybody else. */}
-          {iosAppId !== "" && (
-            <p className="pt-1 text-center text-sm text-muted">
-              On an iPhone?{" "}
-              <a
-                href={`https://apps.apple.com/app/id${iosAppId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-bold text-brand underline"
-              >
-                Sudu is on the App Store
-              </a>
-              .
-            </p>
           )}
 
           <Carousel>
