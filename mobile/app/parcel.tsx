@@ -33,7 +33,9 @@ export default function Parcel() {
 
   const [routeId, setRouteId] = useState("");
   const [kg, setKg] = useState(0);
-  const [wantedOn, setWantedOn] = useState("");
+  // Today, as the website's date box does it. A day is always chosen, so
+  // nobody sends a parcel request that says nothing about when they want it.
+  const [wantedOn, setWantedOn] = useState(() => nextDays()[0].value);
   const [item, setItem] = useState("");
   const [shop, setShop] = useState("");
   const [address, setAddress] = useState("");
@@ -189,7 +191,13 @@ export default function Parcel() {
         />
 
         <Label text="When would you like it?" />
-        <Field value={wantedOn} onChangeText={setWantedOn} placeholder="2026-09-26" />
+        {/* Days to tap, not a date to type.
+            It was a plain box wanting 2026-09-26, and the column behind it
+            is a real date: anything else was thrown away without a word, so
+            somebody who wrote "next week thurs" told us nothing at all.
+            Lagos days, worked out here rather than from the phone's own
+            idea of midnight. */}
+        <Choices options={nextDays()} value={wantedOn} onPick={setWantedOn} />
         <Text style={{ color: T.muted, fontSize: 12, marginTop: 6 }}>
           We will tell you on WhatsApp whether that day works. If it does not,
           we will agree another one with you before anything moves.
@@ -374,6 +382,34 @@ function Label({ text }: { text: string }) {
 }
 
 /** A row of taps rather than a dropdown: a phone has no good select. */
+/**
+ * The next fortnight, as days somebody can tap.
+ *
+ * Lagos is an hour ahead of UTC and a phone can be set to anywhere, so the
+ * day is worked out against that offset rather than the device's clock.
+ * Otherwise somebody ordering at half past eleven at night is offered
+ * yesterday.
+ */
+function nextDays(): { value: string; label: string }[] {
+  const LAGOS = 60 * 60_000;
+  const out: { value: string; label: string }[] = [];
+  const now = new Date(Date.now() + LAGOS);
+  const start = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+
+  for (let i = 0; i < 14; i += 1) {
+    const day = new Date(start + i * 86400_000);
+    const value = day.toISOString().slice(0, 10);
+    const said = new Intl.DateTimeFormat("en-NG", {
+      timeZone: "UTC",
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    }).format(day);
+    out.push({ value, label: i === 0 ? `Today, ${said}` : i === 1 ? `Tomorrow, ${said}` : said });
+  }
+  return out;
+}
+
 function Choices({
   options,
   value,
