@@ -22,12 +22,15 @@ export default function PinForm({
   next,
   label = "See my orders",
   whatsapp = null,
+  start = "",
 }: {
   /** Where to land after signing in. Defaults to the order history. */
   next?: string;
   label?: string;
   /** The shop's WhatsApp number, for somebody who has lost their PIN. */
   whatsapp?: string | null;
+  /** A number to start with, for somebody who has already typed theirs. */
+  start?: string;
 } = {}) {
   const [state, action, pending] = useActionState<PinState, FormData>(signInWithPin, {
     error: null,
@@ -35,7 +38,7 @@ export default function PinForm({
 
   // Carried into the message, so nobody has to type their number twice and
   // we can find them without a conversation about it.
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(start);
 
   return (
     <form action={action} className="card space-y-3">

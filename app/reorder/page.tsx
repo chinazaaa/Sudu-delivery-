@@ -24,9 +24,15 @@ export default async function ReorderPage({
   // Signing in on the orders page is enough: nobody should have to type the
   // number they have already proved is theirs.
   const settings = await safeSettings();
+  // The number in the address is only ever a head start on the PIN box.
+  //
+  // It used to be trusted on its own: /reorder?phone=0803… handed back that
+  // person's name, their block and what they last ate, to anybody who could
+  // guess a number, and a classmate's number is not a secret. Who you are is
+  // proved by the PIN and nothing else, which is the rule everywhere else in
+  // this shop.
   const typed = normalisePhone((await searchParams).phone ?? "");
-  const phone = typed || (await currentCustomer());
-  const signedIn = !typed && phone !== null;
+  const phone = await currentCustomer();
   const previous = phone ? await lastOrderForPhone(phone) : null;
   // An order already in an open batch can be added to, rather than duplicated.
   const openOrder = phone ? await openOrderForPhone(phone) : null;
@@ -58,6 +64,7 @@ export default async function ReorderPage({
               next="/reorder"
               label="Bring back my last order"
               whatsapp={settings.whatsapp_number}
+              start={typed ?? ""}
             />
           </>
         )}
@@ -100,18 +107,14 @@ export default async function ReorderPage({
     <div className="space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Order again</h1>
-        {signedIn ? (
-          <form action={forgetMe}>
-            <input type="hidden" name="next" value="/reorder" />
-            <button className="text-sm text-muted hover:underline">
-              Not {previous.customer_name}?
-            </button>
-          </form>
-        ) : (
-          <Link href="/reorder" className="text-sm text-muted hover:underline">
-            Use another number
-          </Link>
-        )}
+        {/* Signed in is the only way to be here now, so there is one way
+            out of it: stop being this person. */}
+        <form action={forgetMe}>
+          <input type="hidden" name="next" value="/reorder" />
+          <button className="text-sm text-muted hover:underline">
+            Not {previous.customer_name}?
+          </button>
+        </form>
       </div>
 
       {openOrder && (
