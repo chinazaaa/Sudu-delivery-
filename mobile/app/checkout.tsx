@@ -197,6 +197,20 @@ export default function Checkout() {
   const farNames = far.map((one) => one.name).join(" and ");
   const noRunThere = far.length > 0 && runsHere.length === 0;
 
+  // Runs that are open, going the right way, and stopping at counters this
+  // cart does not need. Some nights are one counter's run: the car queues at
+  // Domino's and fetches nothing else. Hidden without a word, the list of
+  // runs is simply shorter than it was yesterday and nobody knows why.
+  const wrongCounter = (shop?.runs ?? []).filter(
+    (one) =>
+      !one.closed && !one.full && runCovers(one, cartAreas) && !runCarries(one, kitchens)
+  );
+  const counterNames = [...new Set(lines.map((line) => line.restaurant))];
+  const counterSaid =
+    counterNames.length === 1
+      ? counterNames[0]
+      : `${counterNames.slice(0, -1).join(", ")} and ${counterNames[counterNames.length - 1]}`;
+
   // What the rest of the cart could catch on its own. Without the far food it
   // is a Sangotedo cart, so every open run can carry it and a car of its own
   // is back on the table: counting runs alone named tomorrow night while a
@@ -439,6 +453,22 @@ export default function Checkout() {
             {farSooner !== ""
               ? ` Take ${far.length === 1 ? "it" : "those"} out and the rest can come ${farSooner}.`
               : " Everything here travels together, so there is one delivery fee."}
+          </Text>
+        )}
+
+        {/* A run kept to one counter, said before somebody wonders where the
+            usual runs went. The line above already names when this cart can
+            come; this says why it is not sooner. */}
+        {wrongCounter.length > 0 && (
+          <Text style={{ color: T.brandDark }}>
+            <Text style={{ fontWeight: "700" }}>
+              Not every run stops at {counterSaid}.
+            </Text>
+            {runsHere.length > 0
+              ? ` The next one that does is ${runsHere[0].label}.`
+              : slots.length > 0
+                ? " None of the runs coming up are, so this goes as a car of its own, at the time you pick below."
+                : " None of the runs coming up are."}
           </Text>
         )}
 
