@@ -9,6 +9,7 @@ import GroupSync from "@/components/GroupSync";
 import SiteHeader from "@/components/SiteHeader";
 import { offerNudge, publicOffer } from "@/lib/coupons";
 import { instagramLink, safeSettings } from "@/lib/settings";
+import { qrSvg } from "@/lib/qr";
 import "./globals.css";
 
 /**
@@ -70,6 +71,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Read from the offer itself too: an automatic promotion has no code to
   // type, so nobody finds it unless the shop says it is on.
   const nudge = await offerNudge();
+  // Drawn here because it is the same square for everybody and never
+  // changes. A laptop cannot install an app; it can hold up something a
+  // phone can read.
+  const appQr = settings.ios_app_id
+    ? await qrSvg(`https://apps.apple.com/app/id${settings.ios_app_id}`)
+    : "";
 
   // Who this is, in the form a search engine reads rather than guesses. The
   // shop is a delivery service for one campus, and saying so plainly is the
@@ -185,7 +192,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <BottomNav />
         {/* A small card in the corner, once per offer, never over the cart
             or the checkout. */}
-        <OfferNudge nudge={nudge} appId={settings.ios_app_id} />
+        <OfferNudge nudge={nudge} appId={settings.ios_app_id} appQr={appQr} />
         {/* Counts a view after the page is up. Never in the way of anything. */}
         <Track />
       </body>

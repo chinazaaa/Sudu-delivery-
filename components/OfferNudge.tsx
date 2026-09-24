@@ -33,16 +33,21 @@ const QUIET = ["/cart", "/checkout", "/admin", "/promoter", "/o/", "/orders", "/
 export default function OfferNudge({
   nudge,
   appId = "",
+  appQr = "",
 }: {
   nudge: Nudge | null;
   /** The App Store id. Empty means the shop has no app to mention. */
   appId?: string;
+  /** The App Store address as a square, for a screen that cannot install it. */
+  appQr?: string;
 }) {
   const path = usePathname();
   const [up, setUp] = useState(false);
   // Decided after mount: what to show depends on the phone, and the server
   // has no idea what anybody is holding.
   const [showing, setShowing] = useState<"offer" | "app" | null>(null);
+  // A screen that cannot install an app is offered the square instead.
+  const [onADesk, setOnADesk] = useState(false);
 
   const quiet = QUIET.some((start) => path === start || path.startsWith(start));
 
@@ -62,14 +67,25 @@ export default function OfferNudge({
     if (nudge && seen(OFFER_KEY) !== nudge.code) {
       next = "offer";
     } else if (appId !== "" && seen(APP_KEY) !== appId) {
-      // An iPhone, and not Safari: Safari draws Apple's own bar from the tag
-      // in the layout, and two asks on one screen is the thing we are trying
-      // not to be. Chrome, Firefox and the browser inside Instagram get no
-      // such bar, which is where most links are opened anyway.
       const ua = window.navigator.userAgent;
       const iPhone = /iPad|iPhone|iPod/.test(ua);
+      // No Android app yet, so an Android phone is told nothing: an App
+      // Store link is no use to somebody who cannot open it.
+      const android = /Android/.test(ua);
+      // Safari draws Apple's own bar from the tag in the layout, and two
+      // asks on one screen is the thing we are trying not to be. Chrome,
+      // Firefox and the browser inside Instagram get no such bar, which is
+      // where most links are opened anyway.
       const realSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|GSA/.test(ua);
-      if (iPhone && !realSafari) next = "app";
+
+      if (iPhone && !realSafari) {
+        next = "app";
+      } else if (!iPhone && !android && appQr !== "") {
+        // A laptop. It cannot install anything, so it holds up the square
+        // and the phone does the rest.
+        next = "app";
+        setOnADesk(true);
+      }
     }
     if (!next) return;
 
@@ -78,7 +94,7 @@ export default function OfferNudge({
     // something in the way of the page loading.
     const timer = window.setTimeout(() => setUp(true), 1200);
     return () => window.clearTimeout(timer);
-  }, [quiet, nudge, appId, path]);
+  }, [quiet, nudge, appId, appQr, path]);
 
   if (quiet || showing === null) return null;
 
@@ -137,8 +153,21 @@ export default function OfferNudge({
         <p className="mt-1 text-sm leading-snug text-muted">
           {showing === "offer"
             ? nudge?.detail
-            : "The same shop, on your home screen. Your orders and where they have got to, without signing in every time."}
+            : onADesk
+              ? "Point your phone's camera at this and it opens on the App Store."
+              : "The same shop, on your home screen. Your orders and where they have got to, without signing in every time."}
         </p>
+
+        {/* The square only on a screen that cannot install anything. On a
+            phone it would be asking somebody to photograph the thing they
+            are already holding. */}
+        {showing === "app" && onADesk && appQr !== "" && (
+          <div
+            className="mt-3 flex justify-center rounded-xl bg-shell p-3"
+            aria-hidden
+            dangerouslySetInnerHTML={{ __html: appQr }}
+          />
+        )}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {showing === "offer" ? (
@@ -160,7 +189,7 @@ export default function OfferNudge({
               onClick={close}
               className="rounded-full bg-brand px-3.5 py-2 text-sm font-extrabold text-white"
             >
-              Get the app
+              {onADesk ? "Open it here" : "Get the app"}
             </a>
           )}
           <button
