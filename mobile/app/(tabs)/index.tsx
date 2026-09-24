@@ -229,9 +229,14 @@ export default function Home() {
           </Pressable>
         )}
 
-        {occasions !== "" && (
+        {/* Nobody is looking for a parcel service. They have a dress sitting
+            in a shop in Lekki, so the line says both ends of the trip.
+
+            The line was being read from the shop and then never shown: the
+            door was built and left off the page. */}
+        {parcels !== "" && (
           <Pressable
-            onPress={() => router.push("/occasions" as never)}
+            onPress={() => router.push("/parcel" as never)}
             style={{
               backgroundColor: T.paper,
               borderRadius: T.radius,
@@ -242,10 +247,10 @@ export default function Home() {
             }}
           >
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: "800", color: T.ink }}>Ordering for something?</Text>
-              <Text style={{ color: T.muted, marginTop: 2 }}>{occasions}</Text>
+              <Text style={{ fontWeight: "800", color: T.ink }}>Send a parcel</Text>
+              <Text style={{ color: T.muted, marginTop: 2 }}>{parcels}</Text>
             </View>
-            <Text style={{ color: T.brand, fontWeight: "800" }}>See</Text>
+            <Text style={{ color: T.brand, fontWeight: "800" }}>Send</Text>
           </Pressable>
         )}
 
@@ -268,6 +273,26 @@ export default function Home() {
               <Text style={{ color: T.muted, marginTop: 2 }}>{skincare}</Text>
             </View>
             <Text style={{ color: T.brand, fontWeight: "800" }}>Shop</Text>
+          </Pressable>
+        )}
+
+        {occasions !== "" && (
+          <Pressable
+            onPress={() => router.push("/occasions" as never)}
+            style={{
+              backgroundColor: T.paper,
+              borderRadius: T.radius,
+              padding: 14,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: "800", color: T.ink }}>Ordering for something?</Text>
+              <Text style={{ color: T.muted, marginTop: 2 }}>{occasions}</Text>
+            </View>
+            <Text style={{ color: T.brand, fontWeight: "800" }}>See</Text>
           </Pressable>
         )}
 
