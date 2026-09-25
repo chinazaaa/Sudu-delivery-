@@ -26,14 +26,34 @@ async function tokensFor(phone: string): Promise<string[]> {
   }
 }
 
-/** Sends to a list of tokens. Expo takes a hundred at a time. */
+/** What Expo says about each message, one ticket per token, in order. */
+type Ticket = {
+  status?: string;
+  details?: { error?: string };
+};
+
+/**
+ * Sends to a list of tokens. Expo takes a hundred at a time.
+ *
+ * The count is what actually went, not what was posted. Expo answers 200 to
+ * a batch and then says per token whether it worked, so counting the batch
+ * meant a hundred failures read as a hundred sends: a deal that reached
+ * nobody looked exactly like one that reached everybody.
+ *
+ * A phone that has deleted the app comes back as DeviceNotRegistered, and
+ * that token is dropped. Apple and Google both stop accepting it, so keeping
+ * it only inflates the number on the admin page and slows every send after.
+ */
 export async function pushTo(tokens: string[], message: PushMessage): Promise<number> {
   const valid = tokens.filter((token) => token.startsWith("ExponentPushToken"));
   if (valid.length === 0) return 0;
 
   let sent = 0;
+  const gone: string[] = [];
+
   for (let at = 0; at < valid.length; at += 100) {
-    const batch = valid.slice(at, at + 100).map((to) => ({
+    const slice = valid.slice(at, at + 100);
+    const batch = slice.map((to) => ({
       to,
       title: message.title,
       body: message.body,
@@ -47,11 +67,38 @@ export async function pushTo(tokens: string[], message: PushMessage): Promise<nu
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(batch),
       });
-      if (response.ok) sent += batch.length;
+      if (!response.ok) continue;
+
+      const body = (await response.json()) as { data?: Ticket[] };
+      const tickets = body.data;
+      // An answer we cannot read is taken at its word rather than counted as
+      // a failure: the message did leave, and guessing the other way would
+      // have an admin resending something everybody already has.
+      if (!Array.isArray(tickets)) {
+        sent += slice.length;
+        continue;
+      }
+
+      tickets.forEach((ticket, index) => {
+        if (ticket?.status === "ok") {
+          sent += 1;
+          return;
+        }
+        if (ticket?.details?.error === "DeviceNotRegistered") gone.push(slice[index]);
+      });
     } catch {
       /* A provider having a bad minute is not this order's problem. */
     }
   }
+
+  if (gone.length > 0) {
+    try {
+      await db().from("push_devices").delete().in("token", gone);
+    } catch {
+      /* They will come back as gone next time, and go then. */
+    }
+  }
+
   return sent;
 }
 

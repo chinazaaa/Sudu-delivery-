@@ -22,12 +22,16 @@ export async function POST(request: Request): Promise<NextResponse> {
     const phone =
       phoneFromToken(request.headers.get("authorization")?.replace(/^Bearer /i, "") ?? null) ?? "";
 
+    // The number is only written when there is one. The app says hello on
+    // every launch now, and a launch before anybody has signed in carries no
+    // number: writing the empty string then would rub out the number a phone
+    // already had, and its owner would stop hearing about their own orders.
     await db()
       .from("push_devices")
       .upsert(
         {
           token,
-          phone,
+          ...(phone ? { phone } : {}),
           platform: String(body.platform ?? "").slice(0, 20),
           last_seen: new Date().toISOString(),
         },

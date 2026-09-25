@@ -76,6 +76,31 @@ export async function pushTokenIfAllowed(): Promise<string | null> {
   }
 }
 
+/**
+ * Says hello again, without ever asking anything.
+ *
+ * Run on every launch. A token is registered once, when somebody allows
+ * notifications, and never mentioned again: the row it wrote kept the date
+ * of that first day for ever, so there was no way to tell a phone that still
+ * has the app from one that deleted it the same evening. It also carries the
+ * signed-in number, which is how a notification about somebody's own order
+ * finds them, and a phone that allowed notifications before signing in had
+ * no number on it at all.
+ *
+ * Silent by design: it reads the permission rather than asking for it, so a
+ * launch never puts a box in front of anybody. The asking happens after a
+ * first order, which is where it belongs.
+ */
+export async function greetPush(token: string | null): Promise<void> {
+  try {
+    const push = await pushTokenIfAllowed();
+    if (!push) return;
+    await api.registerPush(push, Platform.OS, token);
+  } catch {
+    /* Saying hello is not worth a crash on start. */
+  }
+}
+
 export async function registerForPush(token: string | null): Promise<void> {
   try {
     if (!Device.isDevice) return;

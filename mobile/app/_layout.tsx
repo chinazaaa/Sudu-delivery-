@@ -6,6 +6,8 @@ import * as Linking from "expo-linking";
 import Track from "@/components/Track";
 import { BASE } from "@/lib/api";
 import { handledInApp, landingFor } from "@/lib/landing";
+import { greetPush } from "@/lib/push";
+import { me } from "@/lib/store";
 import { T } from "@/lib/theme";
 
 // A notification that lands while somebody is looking at the app should still
@@ -36,6 +38,14 @@ export const unstable_settings = { initialRouteName: "(tabs)" };
 
 export default function Layout() {
   const router = useRouter();
+
+  // Tells the shop this phone is still here, and which number it belongs to
+  // now. Nothing is ever asked for: a phone that has not allowed
+  // notifications is left alone, and one that allowed them before signing in
+  // gets its number attached the next time the app opens.
+  useEffect(() => {
+    void me.read().then((saved) => greetPush(saved.token));
+  }, []);
 
   // A notification that goes nowhere is a notification nobody taps twice. The
   // shop puts a path on the message; this is what follows it, both while the
