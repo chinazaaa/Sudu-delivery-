@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Linking, Pressable, Text, TextInput, View } from "react-native";
 import { api } from "@/lib/api";
 import { me } from "@/lib/store";
+import { greetPush } from "@/lib/push";
 import { T } from "@/lib/theme";
 
 /**
@@ -51,6 +52,13 @@ export default function SignIn({ onDone }: { onDone?: () => void }) {
         ...(result.hostel ? { hostel: result.hostel } : {}),
         ...(result.paymentMethod ? { paymentMethod: result.paymentMethod } : {}),
       });
+      // The phone this device belongs to, said straight away rather than on
+      // the next launch. A notification about somebody's own order is found
+      // by their number, so a phone that allowed notifications before
+      // signing in had nothing to find it by, and "your food is ready" went
+      // nowhere at all. Nothing is asked for here: it only speaks up when
+      // notifications are already allowed.
+      void greetPush(result.token);
       onDone?.();
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : "Could not sign you in.");
