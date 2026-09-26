@@ -23,11 +23,23 @@ export function abroadOn(settings: Settings): boolean {
   return settings.abroad_on === "on";
 }
 
+/**
+ * The least a rate can be before it is certainly a mistake.
+ *
+ * A converter asked about one naira answers 0.00057, and that number typed
+ * into a box asking the opposite question does not fail: it turns a
+ * seventeen thousand naira order into about thirty million pounds and shows
+ * it to a customer. No currency worth offering has ever been worth less
+ * than fifty naira, so anything under that is somebody having read the
+ * question backwards, and the safe answer is to say nothing at all.
+ */
+const SURELY_WRONG = 50;
+
 /** What the shop will honour, as naira to one of them. Zero means unset. */
 export function rateFor(settings: Settings, money: Money): number {
   const raw = money === "GBP" ? settings.gbp_rate : settings.usd_rate;
   const rate = Number(String(raw).replace(/[^\d.]/g, ""));
-  return Number.isFinite(rate) && rate > 0 ? rate : 0;
+  return Number.isFinite(rate) && rate >= SURELY_WRONG ? rate : 0;
 }
 
 /** The currencies worth offering: switched on, and with a rate behind them. */

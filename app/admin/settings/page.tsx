@@ -241,26 +241,38 @@ export default async function SettingsAdmin() {
           </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="label" htmlFor="gbp_rate">Naira to one pound</label>
+              <label className="label" htmlFor="gbp_rate">
+                £1 is how many naira?
+              </label>
               <input
                 id="gbp_rate"
                 name="gbp_rate"
                 inputMode="decimal"
                 defaultValue={settings.gbp_rate}
-                placeholder="2100"
+                placeholder="1800"
                 className="field"
               />
+              <p className="mt-1 text-xs text-muted">
+                A whole number in the thousands, like 1800. Not the 0.0005
+                that a converter shows for one naira, which is the same
+                thing upside down.
+              </p>
             </div>
             <div>
-              <label className="label" htmlFor="usd_rate">Naira to one dollar</label>
+              <label className="label" htmlFor="usd_rate">
+                $1 is how many naira?
+              </label>
               <input
                 id="usd_rate"
                 name="usd_rate"
                 inputMode="decimal"
                 defaultValue={settings.usd_rate}
-                placeholder="1650"
+                placeholder="1500"
                 className="field"
               />
+              <p className="mt-1 text-xs text-muted">
+                Again in the thousands, like 1500.
+              </p>
             </div>
           </div>
           <p className="mt-1 text-xs text-muted">
