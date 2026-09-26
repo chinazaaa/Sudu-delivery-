@@ -1,4 +1,6 @@
 import type { MetadataRoute } from "next";
+import { skincareFacets, skincareOn } from "@/lib/skincare";
+import { safeSettings } from "@/lib/settings";
 import { onTheMenu } from "@/lib/shelf";
 import { db } from "@/lib/supabase";
 
@@ -108,8 +110,35 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         () => [] as { slug: string; kind?: string }[]
       );
 
+    // The skincare shelf has no page per product: it is one page with
+    // filters on it. What it does have is a page per brand and per shelf,
+    // and "CeraVe, delivered in Lagos" is a thing people actually search
+    // for. Only the ones with enough on them to be worth landing on.
+    const facets = await skincareFacets().catch(() => ({ shelves: [], brands: [] }));
+    const skincare = skincareOn(await safeSettings())
+      ? [
+          ...facets.brands
+            .filter((one) => one.items >= 3)
+            .slice(0, 120)
+            .map((one) => ({
+              url: `${site}/skincare?brand=${encodeURIComponent(one.name)}`,
+              changeFrequency: "weekly" as const,
+              priority: 0.6,
+            })),
+          ...facets.shelves
+            .filter((one) => one.items >= 3)
+            .slice(0, 60)
+            .map((one) => ({
+              url: `${site}/skincare?shelf=${encodeURIComponent(one.name)}`,
+              changeFrequency: "weekly" as const,
+              priority: 0.6,
+            })),
+        ]
+      : [];
+
     return [
       ...home,
+      ...skincare,
       ...packed
         .filter((one) => one.slug)
         .map((one) => ({

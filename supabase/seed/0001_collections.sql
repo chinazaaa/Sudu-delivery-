@@ -171,3 +171,9 @@ from (values
 -- With it, how much of a car each thing takes, because the delivery ladder
 -- counts containers and a mattress is not one pizza box: mattress 800%,
 -- 25kg rice 600%, a carton of Indomie 400%, a bucket 300%, and so on.
+
+-- No deal in a box.
+--   The Krispy Kreme line in "Everything at once" is six assorted doughnuts
+--   at the ordinary price now, not a deal. A deal can be pulled on a
+--   Tuesday, and then the box is a promise the shop cannot keep. Ordinary
+--   menu prices move slowly and the box re-prices itself off them anyway.
