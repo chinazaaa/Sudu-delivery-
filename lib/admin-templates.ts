@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { repeatSaid } from "./box-day";
 import { abroadRoughly } from "./abroad";
 import { naira, shareRef } from "./money";
 import {
@@ -150,6 +151,12 @@ export function toCard(
     forName: order.for_name,
     phone: order.customer_phone,
     source: (order as { source?: string }).source ?? "",
+    repeats: repeatSaid(String((order as { repeat_every?: string }).repeat_every ?? "")),
+    // A box on a day of its own that nobody has agreed yet. Only a box: a
+    // food run has a day by definition.
+    dayToAgree:
+      order.batchKind === "box" &&
+      !(order as { wanted_on?: string | null }).wanted_on,
     payCurrency: (order as { pay_currency?: string }).pay_currency ?? "",
     payRoughly: abroadRoughly(order as { pay_currency?: string; total: number }, settings),
     hostel: order.hostel,

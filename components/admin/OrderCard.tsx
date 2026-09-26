@@ -62,6 +62,10 @@ export type OrderCardData = {
   /** Which front door it came through: "app", "web", or empty for the
    *  orders taken before the shop wrote it down. */
   source: string;
+  /** "Every month", where they asked for it again. Empty otherwise. */
+  repeats: string;
+  /** A box nobody has picked a day for yet. */
+  dayToAgree: boolean;
   /** The money the card link has to be made out in, where somebody abroad
    *  is paying. Empty is naira, which is nearly every order. */
   payCurrency: string;
@@ -158,6 +162,19 @@ export default function OrderCard({
           {order.source !== "" && (
             <span className="inline-block rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold text-muted">
               {order.source === "app" ? "From the app" : "From the website"}
+            </span>
+          )}
+          {/* Two things somebody scanning the list has to be able to see
+              without opening anything: that this one comes round again, and
+              that nobody has agreed a day for it yet. */}
+          {order.repeats !== "" && (
+            <span className="inline-block rounded-full bg-brand-tint px-2.5 py-1 text-xs font-extrabold text-brand-dark">
+              {order.repeats}
+            </span>
+          )}
+          {order.dayToAgree && (
+            <span className="inline-block rounded-full bg-amber-100 px-2.5 py-1 text-xs font-extrabold text-amber-900">
+              Day to agree
             </span>
           )}
           {order.promoter && (
