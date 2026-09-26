@@ -47,6 +47,18 @@ export type Box = {
   sort_order: number;
 };
 
+/**
+ * Which shelf a set of boxes sits on.
+ *
+ * An occasion is a date somebody is shopping for: a birthday, a match, a
+ * games night. It passes, and then it should not be on the page.
+ *
+ * A collection is a standing shelf: care packages, hostel packs, a restock.
+ * It is there all term, and calling it an occasion was the thing that made
+ * the word stop meaning anything.
+ */
+export type Shelf = "collection" | "occasion";
+
 export type Occasion = {
   id: string;
   slug: string;
@@ -56,6 +68,8 @@ export type Occasion = {
   /** Set means a time everybody shares, like a kick-off. Null means they
    *  pick a day from whatever is going. */
   happens_at: string | null;
+  /** Which of the two shelves it is on. */
+  kind: Shelf;
   /** What that time is called, so the copy reads like a person wrote it. */
   when_word: string;
   batch_id: string | null;
@@ -63,6 +77,11 @@ export type Occasion = {
   active: boolean;
   sort_order: number;
 };
+
+/** The ones on one shelf, in the order they were already in. */
+export function onShelf(all: Occasion[], kind: Shelf): Occasion[] {
+  return all.filter((one) => one.kind === kind);
+}
 
 /** Whether this occasion has a time of its own that everybody shares. */
 export function isTimed(occasion: Occasion): boolean {
@@ -126,6 +145,13 @@ const toOccasion = (row: Record<string, unknown>): Occasion => ({
   blurb: (row.blurb as string) ?? "",
   image_url: (row.image_url as string) ?? "",
   happens_at: (row.happens_at as string) ?? null,
+  /* A database that has not had the migration run yet has no column here,
+     and a clock of its own is the next best evidence of which it is. */
+  kind: row.kind === "occasion" || row.kind === "collection"
+    ? (row.kind as Shelf)
+    : row.happens_at
+      ? "occasion"
+      : "collection",
   when_word: (row.when_word as string) || "it starts",
   batch_id: (row.batch_id as string) ?? null,
   closes_at: (row.closes_at as string) ?? null,

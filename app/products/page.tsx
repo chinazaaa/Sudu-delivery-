@@ -88,9 +88,13 @@ export default async function ProductsPage({
   return (
     <div className="space-y-4 pb-10">
       <header className="space-y-1">
-        <h1 className="text-2xl font-extrabold">Everything on the menu</h1>
+        {/* Not "everything": the shop sells more than food now, and this is
+            the food door. Calling it everything while skincare, boxes and
+            parcels live behind their own cards was the one contradiction the
+            front page could not afford. */}
+        <h1 className="text-2xl font-extrabold">All the food, in one list</h1>
         <p className="text-sm text-muted">
-          Every restaurant in one list. One car carries all of it, so anything
+          Every restaurant together. One car carries all of it, so anything
           here can go in the same order.
         </p>
       </header>

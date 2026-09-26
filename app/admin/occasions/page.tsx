@@ -36,20 +36,24 @@ export default async function AdminOccasionsPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-4">
-        <h1 className="text-2xl font-extrabold">Occasions</h1>
+        <h1 className="text-2xl font-extrabold">Collections and occasions</h1>
         <p className="mt-0.5 text-sm text-muted">
-          Food you have packed already, at one price with delivery in it. They
-          are at{" "}
+          Boxes you have packed already, at one price with delivery in it. The
+          standing ones are at{" "}
+          <Link href="/collections" className="font-semibold text-brand">
+            /collections
+          </Link>{" "}
+          and the ones with a date on them at{" "}
           <Link href="/occasions" className="font-semibold text-brand">
             /occasions
           </Link>
-          , and the home page points at them.
+          . Each has its own card on the home page.
         </p>
       </div>
 
       <details className="card mb-4">
         <summary className="cursor-pointer font-bold text-brand">
-          Add an occasion
+          Add a collection or an occasion
         </summary>
         <div className="mt-3">
           <OccasionForm runs={runs} />
@@ -66,19 +70,25 @@ export default async function AdminOccasionsPage() {
                 <div>
                   <h2 className="text-lg font-extrabold">{row.name}</h2>
                   <p className="text-sm text-muted">
-                    /occasions/{row.slug} · {mine.length}{" "}
+                    /{row.kind === "occasion" ? "occasions" : "collections"}/
+                    {row.slug} · {mine.length}{" "}
                     {mine.length === 1 ? "box" : "boxes"}
                     {row.happens_at &&
                       ` · ${row.when_word} ${whenLabel(row.happens_at)}`}
                   </p>
                 </div>
-                <span
-                  className={`chip border-transparent text-xs font-semibold ${
-                    row.active ? "bg-mint/20" : "bg-black/5 text-muted"
-                  }`}
-                >
-                  {row.active ? "on" : "off"}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="chip border-transparent bg-black/5 text-xs font-semibold text-muted">
+                    {row.kind === "occasion" ? "occasion" : "collection"}
+                  </span>
+                  <span
+                    className={`chip border-transparent text-xs font-semibold ${
+                      row.active ? "bg-mint/20" : "bg-black/5 text-muted"
+                    }`}
+                  >
+                    {row.active ? "on" : "off"}
+                  </span>
+                </div>
               </div>
 
               <div className="mt-3 space-y-2">
@@ -121,7 +131,7 @@ export default async function AdminOccasionsPage() {
 
               <details className="mt-3">
                 <summary className="cursor-pointer text-sm font-semibold text-brand">
-                  Change this occasion
+                  Change this one
                 </summary>
                 <div className="mt-3">
                   <OccasionForm occasion={row} runs={runs} />
@@ -139,7 +149,8 @@ export default async function AdminOccasionsPage() {
 
         {occasions.length === 0 && (
           <p className="card text-sm text-muted">
-            Nothing yet. Add one above and it appears at /occasions.
+            Nothing yet. Add one above and it appears at /collections or
+            /occasions, whichever shelf you put it on.
           </p>
         )}
       </div>

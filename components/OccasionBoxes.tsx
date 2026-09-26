@@ -4,7 +4,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-import { orderBox, type BoxOrderState } from "@/app/occasions/actions";
+import { orderBox, type BoxOrderState } from "@/app/collections/actions";
 import type { BoxView, WhenOption } from "@/lib/box-view";
 import { naira } from "@/lib/money";
 import { OPENED, TRAP } from "@/lib/guard";

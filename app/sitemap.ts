@@ -46,6 +46,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${site}/products`, changeFrequency: "daily" as const, priority: 0.9 },
     { url: `${site}/parcel`, changeFrequency: "weekly" as const, priority: 0.7 },
     { url: `${site}/custom-order`, changeFrequency: "monthly" as const, priority: 0.7 },
+    // Two shelves of boxes, each its own page since a care package and a
+    // birthday are not the same search.
+    { url: `${site}/collections`, changeFrequency: "weekly" as const, priority: 0.7 },
+    { url: `${site}/occasions`, changeFrequency: "weekly" as const, priority: 0.7 },
     // Written for the search rather than for the shop, so it has to be
     // findable: nothing in the header or the tab bar points at it.
     { url: `${site}/delivery-to-pau`, changeFrequency: "monthly" as const, priority: 0.8 },

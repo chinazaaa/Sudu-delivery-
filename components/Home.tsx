@@ -20,6 +20,7 @@ export default function Home({
   parcels,
   skincare,
   occasions = "",
+  collections = "",
   slides,
   autoHeadline,
   autoLines,
@@ -40,9 +41,13 @@ export default function Home({
   /** When the skincare car next goes, said in a line. Empty when that shelf
    *  is switched off, and then there is no door to it. */
   skincare: string;
-  /** What is packed and ready, said in a line. The home page is the only
-   *  signpost this shop has, so anything not named here is unreachable. */
+  /** What is on for a day somebody is shopping for, said in a line. The
+   *  home page is the only signpost this shop has, so anything not named
+   *  here is unreachable. */
   occasions?: string;
+  /** The standing shelves, said the same way. A care package is not an
+   *  occasion, and one door holding both was a door nobody could name. */
+  collections?: string;
   /** Written in admin. Empty falls back to a slide per restaurant. */
   slides: Slide[];
   /** The wording for the slider the page builds when there are no slides. */
@@ -190,10 +195,18 @@ export default function Home({
             {skincare !== "" && (
               <Door href="/skincare" title="Skincare" line={skincare} action="Shop" />
             )}
+            {collections !== "" && (
+              <Door
+                href="/collections"
+                title="Collections"
+                line={collections}
+                action="See"
+              />
+            )}
             {occasions !== "" && (
               <Door
                 href="/occasions"
-                title="Boxes and gifts"
+                title="Occasions"
                 line={occasions}
                 action="See"
               />

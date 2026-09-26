@@ -27,6 +27,7 @@ export default function OccasionForm({
     image_url: string;
     active: boolean;
     sort_order: number;
+    kind?: string;
   };
   runs: { id: string; label: string }[];
 }) {
@@ -48,7 +49,7 @@ export default function OccasionForm({
           <label className="label">Name</label>
           <input name="name" defaultValue={occasion?.name} required className="field" />
           <p className="mt-1 text-xs text-muted">
-            What it says on the card. &quot;Games night&quot;, &quot;Liverpool v Man City&quot;.
+            What it says on the card. &quot;Care package&quot;, &quot;Liverpool v Man City&quot;.
           </p>
         </div>
         <div>
@@ -63,6 +64,27 @@ export default function OccasionForm({
             Left blank, it is made from the name. This is the link you send.
           </p>
         </div>
+      </div>
+
+      {/* Which shelf it stands on. A care package is not an occasion: it is
+          there all term, and an occasion is a date that passes and then has
+          to come off the page. The customer sees two doors, so this is the
+          one field that decides which one it is behind. */}
+      <div>
+        <label className="label">Which shelf</label>
+        <select
+          name="kind"
+          defaultValue={occasion?.kind === "occasion" ? "occasion" : "collection"}
+          className="field"
+        >
+          <option value="collection">Collection, there all term</option>
+          <option value="occasion">Occasion, a day people shop for</option>
+        </select>
+        <p className="mt-1 text-xs text-muted">
+          A care package, a hostel pack or a restock is a collection. A
+          birthday, a match or a games night is an occasion. Collections sit
+          at /collections and occasions at /occasions.
+        </p>
       </div>
 
       <div>

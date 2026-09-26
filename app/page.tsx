@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { lagosToday } from "@/lib/time";
-import { liveOccasions } from "@/lib/boxes";
+import { liveOccasions, onShelf } from "@/lib/boxes";
 import Home from "@/components/Home";
 import { openBatches } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
@@ -71,16 +71,22 @@ export default async function HomePage() {
   const decided = nextArrival(runViews, slots, lagosToday());
 
   // What is packed, said as the thing itself rather than as a category.
-  const occasions = await liveOccasions();
-  const occasionsLine =
-    occasions.length === 0
+  // Two shelves, named separately: an occasion has a date on it and a
+  // collection stands there all term, and one door holding both was a door
+  // that could only be called something like "boxes and gifts".
+  const packed = await liveOccasions();
+  const named = (some: { name: string }[]): string =>
+    some.length === 0
       ? ""
-      : occasions.length === 1
-        ? `${occasions[0].name}. One price, delivery in it.`
-        : `${occasions
+      : some.length === 1
+        ? `${some[0].name}. One price, delivery in it.`
+        : `${some
             .slice(0, 2)
             .map((one) => one.name)
             .join(", ")} and more. One price, delivery in it.`;
+
+  const occasionsLine = named(onShelf(packed, "occasion"));
+  const collectionsLine = named(onShelf(packed, "collection"));
 
   return (
     <Home
@@ -114,6 +120,9 @@ export default async function HomePage() {
       // The one signpost. Named by whatever is nearest, because "Match day,
       // Saturday" is a reason to tap and "Occasions" is a filing cabinet.
       occasions={occasionsLine}
+      // The standing shelves: care packages, hostel packs, a restock. Named
+      // by what is on them for the same reason.
+      collections={collectionsLine}
       // Something that is not food, carried on its own trip. Named by where
       // it goes rather than called "Parcels", because nobody is looking for
       // a parcel service: they have a dress sitting in a shop in Lekki.

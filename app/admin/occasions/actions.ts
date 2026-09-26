@@ -49,9 +49,16 @@ export async function saveOccasion(
       return { done: "", error: "Orders have to close before it starts, not after." };
     }
 
+    // Which shelf it stands on. Anything unrecognised is a collection,
+    // because a standing shelf that should have been an occasion is merely
+    // in the wrong place, while an occasion that should have been standing
+    // vanishes off the page the day it passes.
+    const kind = form.get("kind") === "occasion" ? "occasion" : "collection";
+
     const fields = {
       slug,
       name,
+      kind,
       blurb: String(form.get("blurb") ?? "").trim(),
       when_word: String(form.get("when_word") ?? "").trim() || "it starts",
       happens_at: happensAt,
@@ -79,7 +86,8 @@ export async function saveOccasion(
     }
 
     touch();
-    return { done: id ? "Saved." : `Added. It is at /occasions/${slug}.`, error: "" };
+    const where = kind === "occasion" ? "occasions" : "collections";
+    return { done: id ? "Saved." : `Added. It is at /${where}/${slug}.`, error: "" };
   } catch (problem) {
     return { done: "", error: said(problem) };
   }
@@ -156,6 +164,7 @@ export async function removeBox(form: FormData): Promise<void> {
 function touch(): void {
   revalidatePath("/admin", "layout");
   revalidatePath("/occasions", "layout");
+  revalidatePath("/collections", "layout");
   revalidatePath("/");
 }
 
