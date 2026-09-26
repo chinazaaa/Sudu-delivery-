@@ -257,28 +257,29 @@ async function orderPage(id: string, said: string) {
             <button className="btn-quiet px-4 py-2 text-sm">Set the day</button>
           </form>
 
-          {repeatEvery !== "" && (
-            <form
-              action={orderAgain}
-              className="flex flex-wrap items-end gap-2 border-t border-black/5 pt-3"
-            >
-              <input type="hidden" name="order_id" value={order.id} />
-              <label className="text-xs font-semibold text-muted">
-                Next one going on
-                <input
-                  type="date"
-                  name="run_date"
-                  className="field mt-0.5 w-44 py-1.5 text-sm"
-                />
-              </label>
-              <button className="btn-primary px-4 py-2 text-sm">
-                Raise the next one
-              </button>
-              <span className="text-xs text-muted">
-                Copies what is in it now, unpaid, ready to send.
-              </span>
-            </form>
-          )}
+          {/* Not only the ones that repeat. Somebody rings up wanting the
+              same care package as last month, and remaking it by hand is
+              twenty lines to get wrong. */}
+          <form
+            action={orderAgain}
+            className="flex flex-wrap items-end gap-2 border-t border-black/5 pt-3"
+          >
+            <input type="hidden" name="order_id" value={order.id} />
+            <label className="text-xs font-semibold text-muted">
+              {repeatEvery !== "" ? "Next one going on" : "Same again, going on"}
+              <input
+                type="date"
+                name="run_date"
+                className="field mt-0.5 w-44 py-1.5 text-sm"
+              />
+            </label>
+            <button className="btn-primary px-4 py-2 text-sm">
+              {repeatEvery !== "" ? "Raise the next one" : "Order this again"}
+            </button>
+            <span className="text-xs text-muted">
+              Copies what is in it now, unpaid, ready to send.
+            </span>
+          </form>
         </section>
       )}
 

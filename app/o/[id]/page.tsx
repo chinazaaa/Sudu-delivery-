@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { boxWhere } from "@/lib/boxes";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import ClearCart from "@/components/ClearCart";
@@ -62,6 +63,13 @@ export default async function OrderPage({
   const accounts = await payableAccounts(settings);
   const fees = await feeStory(order);
   const repeat = await repeatLines(order);
+  // The box it came off, where it was one. Null once the box or its shelf is
+  // gone, and then the ordinary repeat is still there.
+  const sameBox = (order as { box_id?: string | null }).box_id
+    ? await boxWhere(String((order as { box_id?: string | null }).box_id)).catch(
+        () => null
+      )
+    : null;
   // The runs it could be moved to, for an order whose own run has gone.
   const others = (await openBatches()).filter((run) => run.id !== order.batch_id);
   // An order can change nights right up until its run closes: unpaid because
@@ -787,7 +795,24 @@ export default async function OrderPage({
       {/* Nothing to put back in a basket: a parcel buys nothing, and the
           same parcel twice is a different parcel. It read "Nothing from this
           order is on the menu today", which is true and beside the point. */}
-      {paid && !isParcel && (
+      {/* A box is not a cart. Its price is the box's price with delivery
+          already in it, so putting its contents back in an ordinary cart
+          would charge the container ladder for a thing never priced that
+          way. Want it again means want the box again. */}
+      {paid && !isParcel && sameBox && (
+        <section className="card space-y-2">
+          <h2 className="font-bold">Want this again?</h2>
+          <p className="text-sm text-muted">
+            {sameBox.name}, at today&apos;s prices, with the same choices to
+            make. You pick the day at checkout.
+          </p>
+          <Link href={sameBox.href} className="btn-primary w-fit px-5">
+            Order it again
+          </Link>
+        </section>
+      )}
+
+      {paid && !isParcel && !sameBox && (
         <section className="card space-y-2">
           <h2 className="font-bold">Want this again?</h2>
           {/* Skincare goes out on a drop, not a run, and sits on a shelf

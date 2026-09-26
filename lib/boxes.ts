@@ -267,3 +267,36 @@ export function cartOf(box: Box, chosen: Record<string, number> = {}): CartLine[
     };
   });
 }
+
+/**
+ * Which shelf a box came off, and what it was called.
+ *
+ * An order that was a box is not a cart: its price is the box's price with
+ * delivery already in it, and throwing its contents back into an ordinary
+ * cart would charge the container ladder for a thing that was never priced
+ * that way. So "want this again" on a box has to go back to the box.
+ */
+export async function boxWhere(
+  boxId: string
+): Promise<{ name: string; href: string } | null> {
+  const { data: box } = await db()
+    .from("boxes")
+    .select("name, occasion_id, active")
+    .eq("id", boxId)
+    .maybeSingle();
+  const row = box as { name?: string; occasion_id?: string; active?: boolean } | null;
+  if (!row?.occasion_id || row.active === false) return null;
+
+  const { data: shelf } = await db()
+    .from("occasions")
+    .select("slug, kind, active")
+    .eq("id", row.occasion_id)
+    .maybeSingle();
+  const on = shelf as { slug?: string; kind?: string; active?: boolean } | null;
+  if (!on?.slug || on.active === false) return null;
+
+  return {
+    name: row.name ?? "that box",
+    href: `/${on.kind === "occasion" ? "occasions" : "collections"}/${on.slug}`,
+  };
+}
