@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { onTheMenu } from "./shelf";
 import { db } from "./supabase";
 import { pctOf } from "./containers";
 import type { ItemView, MenuView, OptionGroupView } from "./view";
@@ -24,8 +25,8 @@ async function readMenu(): Promise<MenuView[]> {
   // under the restaurants would bury the food. Filtered here rather than in
   // the query, because a database that has not had the migration yet has no
   // kind column and naming one errors the whole statement.
-  const places = ((restaurants ?? []) as Restaurant[]).filter(
-    (one) => (one.kind ?? "food") !== "skincare"
+  const places = ((restaurants ?? []) as Restaurant[]).filter((one) =>
+    onTheMenu(one.kind)
   );
   if (places.length === 0) return [];
 
@@ -224,7 +225,9 @@ async function readMenuFor(ref: string): Promise<MenuView | null> {
   // The skincare shelf is not a restaurant page. Two thousand products with
   // a food cart under them is how a cleanser ends up on the afternoon run,
   // priced by the food ladder, arriving on a day nobody said.
-  if ((restaurant.kind ?? "food") === "skincare") return null;
+  // Our own shelf is not a restaurant page either: it is the cupboard the
+  // boxes are packed out of, and it has no front door.
+  if (!onTheMenu(restaurant.kind)) return null;
   const restaurantId = restaurant.id;
 
   const [categoryRows, menuItems] = await Promise.all([
@@ -302,7 +305,7 @@ export async function openRestaurants(): Promise<
     return (data ?? [])
       // The skincare shelf is not a restaurant somebody forgot the drinks
       // from. It has its own page, its own basket and its own day.
-      .filter((one) => (one.kind ?? "food") !== "skincare")
+      .filter((one) => onTheMenu(one.kind))
       .map((one) => ({
         id: one.id,
         name: one.name,

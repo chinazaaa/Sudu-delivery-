@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { lagosToday } from "@/lib/time";
 import { boxesAcross, liveOccasions, onShelf } from "@/lib/boxes";
+import { readDoors, type DoorKey } from "@/lib/home-doors";
+import type { Bucket } from "@/components/Home";
 import { cheapestBoxes } from "@/lib/box-view";
 import { naira } from "@/lib/money";
 import Home from "@/components/Home";
@@ -15,16 +17,21 @@ import {
 import { toBatchView } from "@/lib/view";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { nextArrival, runArrival } from "@/lib/arrival";
-import { offersByRestaurant } from "@/lib/coupons";
 import { dropLabel, nextDrop, skincareOn, skincareShop } from "@/lib/skincare";
 import { liveRoutes, parcelsFrom } from "@/lib/parcels";
-import { offerBadge } from "@/lib/offers";
 import { sweepGroups } from "@/lib/groups";
 
 export const dynamic = "force-dynamic";
 
 /** The front page is its own canonical, now that the layout says nothing. */
 export const metadata: Metadata = { alternates: { canonical: "/" } };
+
+/**
+ * How many collections and occasions the front page names before it stops
+ * naming them. Six is three rows on a phone, which is as much as anybody
+ * scrolls past the food.
+ */
+const MOST_SHELVES = 6;
 
 export default async function HomePage() {
   // Somebody opening the site is enough to close a group whose time is up, so
@@ -38,13 +45,6 @@ export default async function HomePage() {
     safeSettings(),
     activeBands(),
   ]);
-  // An offer says itself on the card of the restaurant it belongs to. The
-  // home page has enough on it without a strip for every deal.
-  const offers = await offersByRestaurant();
-  const promos = Object.fromEntries(
-    [...offers.entries()].map(([id, offer]) => [id, offerBadge(offer)])
-  );
-
   const slots =
     settings.same_day_on === "on"
       ? slotsWorthOffering(
@@ -109,6 +109,84 @@ export default async function HomePage() {
   // and there is rarely more than one at a time.
   const shelves = [...doorsFor("collection"), ...doorsFor("occasion")];
 
+  // The parcel line names where it goes rather than calling itself a parcel
+  // service, because nobody is looking for a parcel service: they have a
+  // dress sitting in a shop in Lekki.
+  const parcelLine = parcelSetup.on
+    ? `${liveRoutes(parcelSetup.routes)
+        .map((one) => one.label)
+        .slice(0, 2)
+        .join(", ")}${
+        liveRoutes(parcelSetup.routes).length > 2 ? " and more" : ""
+      }. Its own trip, on a day we agree.`
+    : "";
+
+  // One car a week, on a Saturday. Empty when that shelf is off, and then the
+  // page does not mention it at all.
+  const skincareLine =
+    skincareOn(settings) && (await skincareShop())
+      ? `Order any day. It comes ${dropLabel(nextDrop(settings).date)}.`
+      : "";
+
+  // Every door there is, keyed, so the order can be a setting rather than the
+  // order somebody typed them in. A door with nothing behind it is not a
+  // door: it would be a card that opens on an apology.
+  const door: Record<DoorKey, Bucket[]> = {
+    food: [
+      {
+        href: "/products",
+        title: "Food",
+        line: "Every restaurant in one list",
+        action: "Browse",
+      },
+    ],
+    // Capped, because this list only grows and a front page that is forty
+    // cards is a catalogue again. The rest are one door.
+    shelves: [
+      ...shelves.slice(0, MOST_SHELVES),
+      ...(shelves.length > MOST_SHELVES
+        ? [
+            {
+              href: "/collections",
+              title: "Everything else packed",
+              line: `${shelves.length - MOST_SHELVES} more, all at one price with delivery in it`,
+              action: "See",
+            },
+          ]
+        : []),
+    ],
+    parcel:
+      parcelLine === ""
+        ? []
+        : [{ href: "/parcel", title: "Send a parcel", line: parcelLine, action: "Send" }],
+    skincare:
+      skincareLine === ""
+        ? []
+        : [{ href: "/skincare", title: "Skincare", line: skincareLine, action: "Shop" }],
+    custom: [
+      {
+        href: "/custom-order",
+        title: "Can't find it?",
+        line: "Tell us what you are looking for and we will get it for you",
+        action: "Ask us",
+      },
+    ],
+    group: [
+      {
+        href: "/group",
+        title: "Ordering together?",
+        line: "Everybody adds their own, one delivery between you",
+        action: "Start",
+      },
+    ],
+  };
+
+  // The order, and what is switched off, both come from admin. Promoting
+  // parcels for a week should not be a deploy.
+  const buckets = readDoors(settings.home_order)
+    .filter((row) => row.on)
+    .flatMap((row) => door[row.key]);
+
   return (
     <Home
       iosAppId={settings.ios_app_id}
@@ -135,31 +213,7 @@ export default async function HomePage() {
             : null;
         })()
       }
-      promos={promos}
-      // Every collection and every occasion by its own name, with a price,
-      // because "Care package, from ₦20,000" is a reason to tap and
-      // "Collections" is a filing cabinet.
-      shelves={shelves}
-      // Something that is not food, carried on its own trip. Named by where
-      // it goes rather than called "Parcels", because nobody is looking for
-      // a parcel service: they have a dress sitting in a shop in Lekki.
-      parcels={
-        parcelSetup.on
-          ? `${liveRoutes(parcelSetup.routes)
-              .map((one) => one.label)
-              .slice(0, 2)
-              .join(", ")}${
-              liveRoutes(parcelSetup.routes).length > 2 ? " and more" : ""
-            }. Its own trip, on a day we agree.`
-          : ""
-      }
-      // One car a week, on a Saturday. Empty when that shelf is off, and then
-      // the page does not mention it at all.
-      skincare={
-        skincareOn(settings) && (await skincareShop())
-          ? `Order any day. It comes ${dropLabel(nextDrop(settings).date)}.`
-          : ""
-      }
+      buckets={buckets}
     />
   );
 }

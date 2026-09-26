@@ -109,6 +109,9 @@ export type Settings = {
    */
   auto_headline: string;
   auto_lines: string;
+  /** The order of the buckets on the front page, and which of them are off.
+   *  Empty means the order the shop shipped with. */
+  home_order: string;
   /** The skincare shop: on or off, what delivery costs on one of its orders,
    *  which day the car goes and when it stops taking orders that morning. */
   skincare_on: string;
@@ -185,6 +188,7 @@ export const EMPTY: Settings = {
   offer_code: "",
   auto_headline: "",
   auto_lines: "",
+  home_order: "",
   skincare_on: "",
   skincare_fee: 0,
   skincare_day: 6,

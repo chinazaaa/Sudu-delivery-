@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { onTheMenu } from "./shelf";
 import { pctOf } from "./containers";
 import type { MenuItem } from "./types";
 
@@ -56,7 +57,7 @@ async function foodPlaces(): Promise<{ id: string; name: string; slug: string }[
     .order("sort_order", { ascending: true });
 
   return ((data ?? []) as any[])
-    .filter((one) => one.kind !== "skincare" && one.active !== false)
+    .filter((one) => onTheMenu(one.kind) && one.active !== false)
     .map((one) => ({
       id: one.id as string,
       name: one.name as string,

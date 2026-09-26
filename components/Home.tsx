@@ -13,15 +13,8 @@ import SplitPrompt from "./SplitPrompt";
 import type { ItemView, MenuView } from "@/lib/view";
 import type { Slide } from "@/lib/slides";
 
-/**
- * How many named shelves the front page will carry before it stops naming
- * them. Six is three rows on a phone, which is as much as anybody scrolls
- * past the food.
- */
-const MOST = 6;
-
 /** One way into the shop: a card in the grid, and a slide in the slider. */
-type Bucket = {
+export type Bucket = {
   href: string;
   title: string;
   line: string;
@@ -32,11 +25,8 @@ export default function Home({
   menu,
   arriving,
   alsoArriving = null,
-  parcels,
-  skincare,
-  shelves = [],
+  buckets,
   slides,
-  promos,
   iosAppId = "",
 }: {
   menu: MenuView[];
@@ -47,23 +37,13 @@ export default function Home({
   /** The other way of getting it here, for whoever the headline does not
    *  suit. Null when there is only one way. */
   alsoArriving?: { said: string; sooner: boolean } | null;
-  /** What the shop carries beyond food, said in a line. Empty when parcels
-   *  are off, or when no route is priced and ticked. */
-  parcels: string;
-  /** When the skincare car next goes, said in a line. Empty when that shelf
-   *  is switched off, and then there is no door to it. */
-  skincare: string;
-  /** Every collection and every occasion, each as its own card by its own
-   *  name. The home page is the only signpost this shop has and the only
-   *  place it advertises: a door saying "Collections" is a filing cabinet,
-   *  and nobody opens a filing cabinet to find out we do care packages. */
-  shelves?: Bucket[];
+  /** Every way into the shop, in the order admin put them in: the grid, and
+   *  the slider under it. Worked out on the server, because which of them
+   *  are on, what each says and what order they go in are all the shop's
+   *  business and none of the phone's. */
+  buckets: Bucket[];
   /** Written in admin. Empty falls back to a slide per restaurant. */
   slides: Slide[];
-  /** A promotion on a restaurant, in a few words, keyed by its id. An offer
-   *  announces itself on the card of the food it is for, because the front
-   *  page has quite enough on it already. */
-  promos: Record<string, string>;
   /** The App Store id, or empty where the shop has no app to mention. */
   iosAppId?: string;
 }) {
@@ -73,54 +53,6 @@ export default function Home({
 
   const countFor = (itemId: string) =>
     cart.filter((l) => l.itemId === itemId).reduce((n, l) => n + l.qty, 0);
-
-  // Every way in, in one list, because the grid and the slider under it are
-  // the same seven things and two copies of that list is two copies that
-  // drift. A bucket with nothing in it is not a door: an empty line is how
-  // the shop says that shelf is switched off.
-  const buckets: Bucket[] = useMemo(
-    () =>
-      [
-        {
-          href: "/products",
-          title: "Food",
-          line: "Every restaurant in one list",
-          action: "Browse",
-        },
-        parcels !== ""
-          ? { href: "/parcel", title: "Send a parcel", line: parcels, action: "Send" }
-          : null,
-        skincare !== ""
-          ? { href: "/skincare", title: "Skincare", line: skincare, action: "Shop" }
-          : null,
-        // Named one by one, in the middle: after the three things the shop
-        // always does, before the two ways of asking for something it does
-        // not. Capped, because this list only ever grows and a front page
-        // that is forty cards is a catalogue again. The rest are a door.
-        ...shelves.slice(0, MOST),
-        shelves.length > MOST
-          ? {
-              href: "/collections",
-              title: "Everything else packed",
-              line: `${shelves.length - MOST} more, all at one price with delivery in it`,
-              action: "See",
-            }
-          : null,
-        {
-          href: "/custom-order",
-          title: "Can't find it?",
-          line: "Tell us what you are looking for and we will get it for you",
-          action: "Ask us",
-        },
-        {
-          href: "/group",
-          title: "Ordering together?",
-          line: "Everybody adds their own, one delivery between you",
-          action: "Start",
-        },
-      ].filter((one): one is Bucket => one !== null),
-    [parcels, skincare, shelves]
-  );
 
   const found = useMemo(() => {
     const needle = query.trim().toLowerCase();

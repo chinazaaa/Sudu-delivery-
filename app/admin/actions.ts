@@ -1697,6 +1697,7 @@ const SETTING_FIELDS = [
   "offer_code",
   "auto_headline",
   "auto_lines",
+  "home_order",
   "parcel_on",
   "parcel_routes",
   "parcel_max_value",

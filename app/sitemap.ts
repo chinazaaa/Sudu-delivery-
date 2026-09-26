@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { onTheMenu } from "@/lib/shelf";
 import { db } from "@/lib/supabase";
 
 /**
@@ -75,7 +76,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (error) ({ data: shops, error } = await read("id, slug"));
     if (error) ({ data: shops } = await read("id"));
 
-    const food = (shops ?? []).filter((one) => (one.kind ?? "food") !== "skincare");
+    const food = (shops ?? []).filter((one) => onTheMenu(one.kind));
     if (food.length === 0) return home;
 
     const ids = food.map((one) => one.id);

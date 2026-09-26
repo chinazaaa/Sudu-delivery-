@@ -1,5 +1,6 @@
 import PageHeader from "@/components/admin/PageHeader";
 import SaveButton from "@/components/SaveButton";
+import HomeDoors from "@/components/admin/HomeDoors";
 import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import Reorder from "@/components/admin/Reorder";
@@ -34,6 +35,22 @@ export default async function HomeAdmin() {
           className="field"
         />
         <SaveButton>Save</SaveButton>
+      </form>
+
+      {/* The front page is the only signpost this shop has, and which thing
+          leads it is a weekly decision rather than a deploy. */}
+      <form action={saveSettings} className="card mb-4 space-y-3">
+        <div>
+          <h2 className="font-bold">The front page, in order</h2>
+          <p className="text-sm text-muted">
+            The cards under the two banners, top to bottom. Move the one you
+            are pushing this week to the top. Hidden keeps its place and comes
+            back where it was.
+          </p>
+        </div>
+        <HomeDoors saved={settings.home_order}>
+          <SaveButton>Save the order</SaveButton>
+        </HomeDoors>
       </form>
 
       {/* The automatic slider used to be a slide per restaurant, with words
