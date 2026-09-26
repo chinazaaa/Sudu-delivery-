@@ -148,6 +148,7 @@ export function toCard(
     name: order.customer_name,
     forName: order.for_name,
     phone: order.customer_phone,
+    source: (order as { source?: string }).source ?? "",
     hostel: order.hostel,
     batchLabel: order.batchLabel,
     status: order.status,

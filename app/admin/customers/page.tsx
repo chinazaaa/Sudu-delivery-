@@ -152,6 +152,18 @@ export default async function CustomersPage({
                     <p className="text-xs text-muted">
                       {row.orders} order{row.orders === 1 ? "" : "s"}
                     </p>
+                    {/* Which door they come through, over everything they
+                        have ordered. Nothing is said for somebody whose
+                        orders all predate the shop writing it down. */}
+                    {row.uses !== "" && (
+                      <p className="text-xs text-muted">
+                        {row.uses === "app"
+                          ? "Mostly the app"
+                          : row.uses === "web"
+                            ? "Mostly the website"
+                            : "App and website"}
+                      </p>
+                    )}
                   </div>
                 </div>
 

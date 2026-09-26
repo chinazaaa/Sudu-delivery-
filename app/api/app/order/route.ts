@@ -38,6 +38,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const result = await placeOrder({
+      source: "app",
       batchId: String(body.batchId ?? ""),
       // Same day from a phone is the same trip as from the web: placeOrder
       // checks the time against the real clock and makes the batch itself.

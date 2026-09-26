@@ -56,6 +56,9 @@ export type OrderCardData = {
   /** The promoter whose customer this is, if anybody brought them. This is
    *  what commission on a run is charged against. */
   promoter: { code: string; name: string } | null;
+  /** Which front door it came through: "app", "web", or empty for the
+   *  orders taken before the shop wrote it down. */
+  source: string;
   /** A parcel rather than food. It has no lines at all, so without this the
    *  card is a name, a number and an empty list.
    *
@@ -130,6 +133,15 @@ export default function OrderCard({
           {order.parcel && (
             <span className="mt-1 inline-block rounded-full bg-brand-tint px-2.5 py-1 text-xs font-bold text-brand-dark">
               Parcel · {order.parcel.route}
+            </span>
+          )}
+          {/* Which front door. Beside the promoter, because both answer the
+              same sort of question: where did this order actually come
+              from. Silent on the older orders, which never recorded it, and
+              a guess would be worse than nothing. */}
+          {order.source !== "" && (
+            <span className="inline-block rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold text-muted">
+              {order.source === "app" ? "From the app" : "From the website"}
             </span>
           )}
           {order.promoter && (

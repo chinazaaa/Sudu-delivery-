@@ -68,6 +68,7 @@ export async function submitOrder(
   if (inGroup) redirect(`/g/${inGroup}`);
 
   const result = await placeOrder({
+    source: "web",
     batchId: String(form.get("batch_id") ?? ""),
     name: String(form.get("name") ?? ""),
     phone: String(form.get("phone") ?? ""),
@@ -115,6 +116,7 @@ export async function submitReorder(
   if (!previous) return { error: "No previous order found for that number." };
 
   const result = await placeOrder({
+    source: "web",
     batchId: String(form.get("batch_id") ?? ""),
     name: previous.customer_name,
     phone,
@@ -368,6 +370,7 @@ export async function orderFromLink(input: {
   }
 
   const result = await placeOrder({
+    source: "web",
     batchId: going.runId,
     deliverAt: going.at || undefined,
     name: input.name,
@@ -496,6 +499,7 @@ export async function placeSkincareOrder(input: {
   }
 
   const result = await placeOrder({
+    source: "web",
     batchId: car.id,
     name: input.name,
     phone: input.phone,

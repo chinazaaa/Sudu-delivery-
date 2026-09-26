@@ -368,8 +368,19 @@ export default function Home({
             ))}
           </Carousel>
 
-
-
+          {/* What this shop is, in the plainest words there are.
+              At the foot on purpose: somebody who is here already knows, and
+              the top of the page is for getting them fed. It is here for the
+              ones who are not here yet, and for whatever is reading the page
+              on their behalf, which needs the relationship between Sudu, PAU
+              and its students said outright rather than inferred from a list
+              of restaurants. */}
+          <p className="pt-2 text-center text-sm leading-relaxed text-muted">
+            Sudu delivers food, groceries, skincare and parcels to
+            Pan-Atlantic University students. Order from your favourite
+            restaurants around Sangotedo and Novare and get your order
+            delivered directly to your PAU hostel.
+          </p>
         </>
       )}
 

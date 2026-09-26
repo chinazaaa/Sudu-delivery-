@@ -66,6 +66,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const giftPhone = String(body.giftPhone ?? "").trim();
 
     const result = await placeOrder({
+      source: "app",
       batchId: going.runId,
       deliverAt: going.at || undefined,
       name: String(body.name ?? ""),

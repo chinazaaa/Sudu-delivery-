@@ -165,12 +165,24 @@ export default async function DeliveryToPauPage() {
 
       <header className="space-y-3">
         <h1 className="text-3xl font-extrabold leading-tight">
-          Delivery to Pan-Atlantic University
+          Food and delivery to Pan-Atlantic University (PAU)
         </h1>
+
+        {/* The relationship said outright, in the first thing under the
+            heading: who we are, who it is for, where from, where to. A list
+            of restaurants leaves all four to be inferred, and something
+            reading the page on somebody's behalf should not have to infer
+            any of them. */}
+        <p className="text-ink/90">
+          Sudu is a delivery service for Pan-Atlantic University students.
+          Order from your favourite restaurants around Sangotedo and Novare
+          and have your food delivered directly to your PAU hostel.
+        </p>
+
         <p className="text-muted">
-          Sudu has been running food onto the PAU campus since 2018. Restaurants
-          around Sangotedo and Novare, collected together and brought in on one
-          car, handed to you at your block.
+          Sudu has been running food onto the PAU campus since 2018.
+          Everything is collected together and brought in on one car, handed
+          to you at your block.
           {areaNames.length > 0
             ? ` ${areaNames.join(" and ")} too, on the runs that go that way.`
             : ""}{" "}
@@ -222,6 +234,17 @@ export default async function DeliveryToPauPage() {
             ))}
           </ul>
         )}
+      </Section>
+
+      <Section title="Why PAU students use Sudu">
+        <ul className="list-inside list-disc space-y-1">
+          <li>Several restaurants in one order</li>
+          <li>One shared delivery run, so the fee splits between everybody on it</li>
+          <li>Delivered to your PAU block, not to a gate</li>
+          {skincare && <li>Food, skincare and parcels, all to campus</li>}
+          {!skincare && routes.length > 0 && <li>Food and parcels, both to campus</li>}
+          <li>Running onto this campus since 2018</li>
+        </ul>
       </Section>
 
       <Section title="How it works">

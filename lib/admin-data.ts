@@ -30,6 +30,8 @@ export type FeedOrder = Order & {
   /** Who brought this customer, so commission on a run has a name against
    *  it rather than only a number. Null when nobody did. */
   promoter: { code: string; name: string } | null;
+  /** The app or the website. Empty on orders taken before it was recorded. */
+  source: string;
 };
 
 export type OrderFilter = {
@@ -134,6 +136,9 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
       pin: pins.get(order.customer_phone) ?? null,
       awaitingGroup: order.group_id ? stillOpen.has(order.group_id) : false,
       promoter: promoters.get(order.customer_phone) ?? null,
+      // Older orders have no column and no answer, which reads as empty and
+      // is simply not shown.
+      source: (order as { source?: string }).source ?? "",
     };
   });
 }
@@ -264,7 +269,28 @@ export type CustomerRow = {
   /** Who brought them, if anybody. Written once on a first order and never
    *  touched again, which is what makes a promoter's commission lifetime. */
   promoterCode: string | null;
+  /** Which front door they use, over all their orders: "app", "web",
+   *  "mixed", or empty where none of their orders recorded it. Worth
+   *  knowing before pushing an app at somebody who already has it, or
+   *  sending a link to somebody who never opens the website. */
+  uses: "app" | "web" | "mixed" | "";
 };
+
+/**
+ * Which door somebody comes through, over everything they have ordered.
+ *
+ * A clear majority is named, a genuine split is called mixed. Two thirds is
+ * the line: half and half is mixed, and three orders to one is not.
+ */
+function doorFor(sources: string[]): "app" | "web" | "mixed" | "" {
+  const said = sources.filter((one) => one === "app" || one === "web");
+  if (said.length === 0) return "";
+  const app = said.filter((one) => one === "app").length;
+  const web = said.length - app;
+  if (app >= said.length * 2 / 3) return "app";
+  if (web >= said.length * 2 / 3) return "web";
+  return "mixed";
+}
 
 /** The customer book: who they are, what they have spent, and their PIN. */
 export async function customerRows(search?: string): Promise<CustomerRow[]> {
@@ -283,9 +309,14 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
     : full;
   if (error) throw new Error(error.message);
 
-  const { data: orders } = await db()
+  // Asked for with the column, and again without it, so a database that has
+  // not had the migration still shows the book.
+  const asked = await db()
     .from("orders")
-    .select("customer_phone, total, status, created_at");
+    .select("customer_phone, total, status, created_at, source");
+  const { data: orders } = asked.error
+    ? await db().from("orders").select("customer_phone, total, status, created_at")
+    : asked;
 
   const rows = (data ?? []).map((row) => {
     const mine = (orders ?? []).filter(
@@ -303,6 +334,7 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
         : "transfer") as "transfer" | "card",
       promoterCode: ((row as { promoter_code?: string | null }).promoter_code ?? null),
       orders: mine.length,
+      uses: doorFor(mine.map((order) => String((order as { source?: string }).source ?? ""))),
       spend: paid.reduce((total, order) => total + (order.total as number), 0),
       lastOrder:
         mine.map((order) => order.created_at as string).sort().at(-1) ?? null,
