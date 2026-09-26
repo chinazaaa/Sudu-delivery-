@@ -162,9 +162,29 @@ export default function Home({
             {found.length} result{found.length === 1 ? "" : "s"}
           </h2>
           {found.length === 0 ? (
-            <p className="text-muted">
-              Nothing matches that. Try a shorter word, like chicken or pizza.
-            </p>
+            <div className="space-y-3">
+              <p className="text-muted">
+                Nothing matches that. Try a shorter word, like chicken or pizza.
+              </p>
+              {/* The best moment there is to offer this: somebody has just
+                  told us exactly what they want and we have just told them
+                  we do not have it. */}
+              <Link
+                href="/custom-order"
+                className="block rounded-2xl bg-paper p-4 shadow-card"
+              >
+                <span className="block font-bold">
+                  Still can&apos;t find it?
+                </span>
+                <span className="mt-1 block text-sm leading-snug text-muted">
+                  Tell us what you are looking for and we will find it, price
+                  it, and bring it to your block.
+                </span>
+                <span className="mt-2 block text-sm font-extrabold text-brand">
+                  Ask us to get it
+                </span>
+              </Link>
+            </div>
           ) : (
             found.map(({ item, place }) => (
               <ItemRow

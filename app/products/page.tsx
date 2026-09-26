@@ -129,6 +129,21 @@ export default async function ProductsPage({
         </Row>
       )}
 
+      {/* Somebody has just told us what they want and been told we do not
+          have it. There is no better moment to offer to go and find it. */}
+      {total === 0 && (
+        <Link href="/custom-order" className="block rounded-2xl bg-paper p-4 shadow-card">
+          <span className="block font-bold">Still can&apos;t find it?</span>
+          <span className="mt-1 block text-sm leading-snug text-muted">
+            Tell us what you are looking for and we will find it, price it, and
+            bring it to your block.
+          </span>
+          <span className="mt-2 block text-sm font-extrabold text-brand">
+            Ask us to get it
+          </span>
+        </Link>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted">
           {total === 0

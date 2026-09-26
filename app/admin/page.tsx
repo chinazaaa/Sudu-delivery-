@@ -8,6 +8,7 @@ import { dashboard, orderFeed } from "@/lib/admin-data";
 import { abandonedCarts } from "@/lib/carts";
 import { safeSettings } from "@/lib/settings";
 import { diagnoseEmpty, keyKind } from "@/lib/health";
+import { newRequests } from "@/lib/requests";
 import { parcelJobs } from "@/lib/parcel-jobs";
 import { tendBatches } from "@/lib/batches";
 import { SLOT_LABEL } from "@/lib/config";
@@ -78,6 +79,9 @@ export default async function AdminHome() {
     .sort((a, b) => a.run_date.localeCompare(b.run_date))[0];
   const profit = batches.reduce((total, batch) => total + batch.profit, 0);
   const unpaidValue = unpaid.reduce((total, order) => total + order.total, 0);
+  // Somebody asking for something we do not stock, waiting on an answer.
+  // It arrives by email too, and an inbox is where things go to be missed.
+  const asked = await newRequests().catch(() => 0);
 
   return (
     <div>
@@ -186,6 +190,16 @@ export default async function AdminHome() {
               hint="Last 28 days, after food, commission and costs"
             />
           </div>
+
+          {asked > 0 && (
+            <Link
+              href="/admin/requests"
+              className="mt-4 block rounded-2xl bg-brand-tint px-4 py-3 text-sm font-bold text-brand-dark"
+            >
+              {asked} {asked === 1 ? "person has" : "people have"} asked for
+              something we do not carry. Price it and tell them.
+            </Link>
+          )}
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <section className="card">

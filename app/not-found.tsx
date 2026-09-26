@@ -23,6 +23,16 @@ export default function NotFound() {
           My orders
         </Link>
       </p>
+
+      {/* The other reading of a page that is not here: not a dead link, but
+          a thing we do not carry. Somebody who followed a link to something
+          that is gone is exactly who to offer this to. */}
+      <p className="mt-2 text-sm text-muted">
+        Looking for something we do not have?{" "}
+        <Link href="/custom-order" className="font-semibold text-brand underline">
+          Ask us to get it
+        </Link>
+      </p>
     </div>
   );
 }

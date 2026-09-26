@@ -108,3 +108,16 @@ export async function requestList(): Promise<CustomRequest[]> {
     return [];
   }
 }
+
+/** How many are still waiting on somebody, for the badge on the dashboard. */
+export async function newRequests(): Promise<number> {
+  try {
+    const { count } = await db()
+      .from("custom_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "new");
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
