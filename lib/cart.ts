@@ -311,3 +311,39 @@ export const toServerLines = (cart: CartLine[]) =>
     option_ids: l.optionIds,
     for_name: l.forName || null,
   }));
+
+/**
+ * Puts a basket back in step with the menu.
+ *
+ * A line keeps the price it had when it went in. That is right for an order
+ * already placed and wrong for a basket left open: a cart saved while the
+ * menu was half imported showed nothing at all, and the first true number
+ * anybody saw was at the checkout, which is a bad place to be surprised.
+ *
+ * Only what is known is touched. A dish that is no longer on the menu is
+ * left exactly as it is rather than being silently zeroed, because a price
+ * we cannot check is not the same as a price of nothing.
+ */
+export function reprice(
+  itemPrice: Record<string, number>,
+  optionDelta: Record<string, number>
+): void {
+  load();
+  if (lines.length === 0) return;
+
+  let moved = false;
+  const next = lines.map((line) => {
+    const base = itemPrice[line.itemId];
+    if (base === undefined) return line;
+
+    const now =
+      base +
+      line.optionIds.reduce((sum, id) => sum + (optionDelta[id] ?? 0), 0);
+    if (now === line.unitPrice) return line;
+
+    moved = true;
+    return { ...line, unitPrice: now };
+  });
+
+  if (moved) save(next);
+}

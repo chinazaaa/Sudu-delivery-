@@ -2,7 +2,8 @@ import CartView from "@/components/CartView";
 import ShelfNote from "@/components/ShelfNote";
 import { allAreas, areaOfEach, valueBandsOfEach } from "@/lib/areas-server";
 import { dropLabel, nextDrop, skincareOn } from "@/lib/skincare";
-import { openRestaurants } from "@/lib/menu";
+import { livePrices, openRestaurants } from "@/lib/menu";
+import Reprice from "@/components/Reprice";
 import { hostelNames } from "@/lib/hostels";
 import { liveOffers } from "@/lib/coupons";
 import { openBatches } from "@/lib/batches";
@@ -48,8 +49,13 @@ export default async function CartPage({
     activeBands(),
   ]);
 
+  // What everything costs now, so a basket left open for a week is put back
+  // in step before anybody reads a number off it.
+  const prices = await livePrices();
+
   return (
     <div className="space-y-4">
+      <Reprice itemPrice={prices.item} optionDelta={prices.option} />
       {/* The other basket, which is its own order on its own day. Kept in
           sight here, because one you can only see from the shelf is one
           somebody leaves behind. */}

@@ -10,6 +10,12 @@ export default function CartBar() {
   const count = countItems(cart);
   if (count === 0) return null;
 
+  // A basket keeps the price a thing had when it went in, so one saved while
+  // a menu was half imported can still say nothing at all. The cart page puts
+  // that right; until somebody opens it, a bar reading ₦0 looks either broken
+  // or free, and both are worse than a bar that simply does not say.
+  const subtotal = cartSubtotal(cart);
+
   return (
     <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 p-3 sm:bottom-0">
       <Link
@@ -25,7 +31,9 @@ export default function CartBar() {
             Delivery added at checkout
           </span>
         </span>
-        <span className="shrink-0 font-bold">{naira(cartSubtotal(cart))}</span>
+        {subtotal > 0 && (
+          <span className="shrink-0 font-bold">{naira(subtotal)}</span>
+        )}
       </Link>
     </div>
   );

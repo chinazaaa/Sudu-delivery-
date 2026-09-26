@@ -331,3 +331,47 @@ export const menuViewFor = unstable_cache(readMenuFor, ["menu-view-for"], {
   revalidate: 60,
   tags: ["menu"],
 });
+
+/**
+ * What everything costs right now, by id.
+ *
+ * A cart keeps the price a thing had when it went in, which is the right
+ * way round for an order already placed and the wrong way round for a
+ * basket somebody left open for a week. A cart saved while a menu was
+ * half imported still showed nothing at all, and the first honest number
+ * anybody saw was at the checkout, where the server prices it properly.
+ *
+ * Two small maps rather than the whole menu: ids and numbers, a few
+ * kilobytes, enough to put a stale basket right before anybody is
+ * surprised by it.
+ */
+async function readPrices(): Promise<{
+  item: Record<string, number>;
+  option: Record<string, number>;
+}> {
+  const item: Record<string, number> = {};
+  const option: Record<string, number> = {};
+
+  try {
+    const items = await everyRow<{ id: string; price_food: number }>((from, to) =>
+      db().from("menu_items").select("id, price_food").order("id").range(from, to)
+    );
+    for (const one of items) item[one.id] = one.price_food ?? 0;
+
+    const options = await everyRow<{ id: string; price_delta: number }>((from, to) =>
+      db().from("item_options").select("id, price_delta").order("id").range(from, to)
+    );
+    for (const one of options) option[one.id] = one.price_delta ?? 0;
+  } catch {
+    // A cart that cannot be checked is left exactly as it is. The server
+    // prices the order either way, so nobody is charged the wrong thing.
+    return { item: {}, option: {} };
+  }
+
+  return { item, option };
+}
+
+export const livePrices = unstable_cache(readPrices, ["live-prices"], {
+  revalidate: 60,
+  tags: ["menu"],
+});
