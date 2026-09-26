@@ -174,20 +174,25 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
     .eq("promoter_code", promoter.code)
     .order("paid_at", { ascending: false });
 
-  // Carts filled in and never paid for. The same list admin calls Left
-  // behind: the promoter is the one who knows these people, so they are the
-  // one who can ask.
+  // Carts filled in and never paid for, and only ever this promoter's own.
+  //
+  // The list was everybody's. Seven promoters opened their page and saw the
+  // same stranger's cart, seven of them messaged her, and not one of them
+  // had ever met her. A cart from somebody who has never ordered belongs to
+  // nobody yet, and handing it out is handing out a stranger's number.
   const settings = await safeSettings();
   const carts: AbandonedCart[] = (
     await abandonedCarts(settings.abandon_minutes || 45).catch(() => [])
-  ).map((cart) => ({
-    id: cart.id,
-    name: cart.name,
-    phone: cart.phone,
-    items: cart.items,
-    value: cart.value,
-    summary: cart.summary,
-  }));
+  )
+    .filter((cart) => mineOnly.has(cart.phone))
+    .map((cart) => ({
+      id: cart.id,
+      name: cart.name,
+      phone: cart.phone,
+      items: cart.items,
+      value: cart.value,
+      summary: cart.summary,
+    }));
 
   const paidPerRun = new Map<string, number>();
   for (const row of (payoutRows ?? []) as any[]) {
