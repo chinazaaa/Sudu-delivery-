@@ -11,13 +11,49 @@ import Constants from "expo-constants";
 export const BASE =
   (Constants.expoConfig?.extra as { api?: string } | undefined)?.api ?? "https://sudu.store";
 
+/**
+ * What a customer is told when the request never leaves the phone.
+ *
+ * A failed fetch arrives as whatever the platform felt like saying, and iOS
+ * says things like "UnexpectedException: A server with the specified hostname
+ * could not be found (at ExpoModulesCore/Promise.swift:56)". Somebody on
+ * campus wifi with a login page they have not signed into saw that, on the
+ * front page of a shop, where a sentence would have done.
+ */
+const NO_REACH = "No connection. Check your internet and pull down to try again.";
+
+/** Like fetch, but a broken connection is a sentence rather than a stack. */
+async function reach(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch {
+    throw new Error(NO_REACH);
+  }
+}
+
+/**
+ * The body, or a sentence.
+ *
+ * A wifi login page answers every request with its own HTML and a cheerful
+ * 200, so reading it as JSON throws somewhere nobody expected. That is the
+ * same problem as no connection at all, and reads better said that way.
+ */
+async function body<T>(response: Response): Promise<T & { error?: string }> {
+  try {
+    return (await response.json()) as T & { error?: string };
+  } catch {
+    if (!response.ok) throw new Error("The shop is having a moment. Try again shortly.");
+    throw new Error(NO_REACH);
+  }
+}
+
 async function get<T>(path: string, token?: string | null): Promise<T> {
-  const response = await fetch(`${BASE}/api/app${path}`, {
+  const response = await reach(`${BASE}/api/app${path}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
-  const body = (await response.json()) as T & { error?: string };
-  if (!response.ok) throw new Error(body.error ?? "Something went wrong.");
-  return body;
+  const said = await body<T>(response);
+  if (!response.ok) throw new Error(said.error ?? "Something went wrong.");
+  return said;
 }
 
 /**
@@ -30,7 +66,7 @@ async function party<T>(
   seat: string | null,
   data?: unknown
 ): Promise<T> {
-  const response = await fetch(`${BASE}/api/party${path}`, {
+  const response = await reach(`${BASE}/api/party${path}`, {
     method: data === undefined ? "GET" : "POST",
     headers: {
       ...(data === undefined ? {} : { "Content-Type": "application/json" }),
@@ -38,13 +74,13 @@ async function party<T>(
     },
     ...(data === undefined ? {} : { body: JSON.stringify(data) }),
   });
-  const body = (await response.json()) as T & { error?: string };
-  if (!response.ok) throw new Error(body.error ?? "Something went wrong.");
-  return body;
+  const said = await body<T>(response);
+  if (!response.ok) throw new Error(said.error ?? "Something went wrong.");
+  return said;
 }
 
 async function post<T>(path: string, data: unknown, token?: string | null): Promise<T> {
-  const response = await fetch(`${BASE}/api/app${path}`, {
+  const response = await reach(`${BASE}/api/app${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -52,9 +88,9 @@ async function post<T>(path: string, data: unknown, token?: string | null): Prom
     },
     body: JSON.stringify(data),
   });
-  const body = (await response.json()) as T & { error?: string };
-  if (!response.ok) throw new Error(body.error ?? "Something went wrong.");
-  return body;
+  const said = await body<T>(response);
+  if (!response.ok) throw new Error(said.error ?? "Something went wrong.");
+  return said;
 }
 
 /**
