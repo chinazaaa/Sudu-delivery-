@@ -1,0 +1,147 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Sudu A5 flyer</title>
+<style>
+  /* A5 with 3mm bleed: trim is 148x210, so the sheet is 154x216 and the
+     colour runs off every edge. Nothing that must survive the guillotine
+     sits closer than 12mm to the trim line. */
+  @page { size: 154mm 216mm; margin: 0; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  html, body { width:154mm; height:216mm; overflow:hidden; }
+  body { display:flex; flex-direction:column; }
+  body { font-family:"DejaVu Sans", sans-serif; color:#14110f; background:#fff1ea; }
+
+  /* Full bleed, so it runs past the trim on three sides. */
+  .hood { flex:none; background:#ff5a1f; color:#fff; padding:17mm 15mm 13mm; }
+  .mark { display:flex; align-items:center; gap:3.5mm; }
+  .mark svg { width:12mm; height:12mm; }
+  .name { font-size:25pt; font-weight:bold; letter-spacing:-0.5pt; line-height:1; }
+  .tag { font-size:8pt; color:#ffe0d2; margin-top:0.8mm; }
+  h1 { font-size:19pt; line-height:1.18; margin-top:5mm; letter-spacing:-0.3pt; }
+  .sub { font-size:9pt; color:#ffe0d2; margin-top:2.5mm; }
+
+  .tiles { flex:none; display:flex; gap:2.5mm; padding:0 15mm; margin-top:-7mm; }
+  .tile { flex:1; background:#fff; border-radius:3mm; padding:2.5mm 1mm 2mm; text-align:center;
+          box-shadow:0 1mm 3mm rgba(20,17,15,0.10); }
+  .tile svg { width:13mm; height:13mm; }
+  .tile b { display:block; font-size:7pt; margin-top:0.5mm; }
+
+  /* Takes up the slack, so the foot sits on the foot of the page. */
+  .body { padding:6mm 15mm 0; flex:1; }
+  .rows { display:flex; flex-direction:column; gap:2.6mm; }
+  .row { display:flex; align-items:baseline; gap:2.5mm; }
+  .row b { font-size:9.5pt; white-space:nowrap; }
+  .row i { font-style:normal; flex:1; font-size:8pt; color:#6b6360;
+           border-bottom:0.3mm dotted rgba(20,17,15,0.25); transform:translateY(-0.8mm); }
+  .row em { font-style:normal; font-size:9pt; font-weight:bold; color:#ff5a1f; white-space:nowrap; }
+
+  .steps { margin-top:5mm; display:flex; gap:2.5mm; }
+  .step { flex:1; background:#fff; border-radius:3mm; padding:3mm 3mm 3.5mm; }
+  .step u { display:block; text-decoration:none; font-size:8pt; font-weight:bold; color:#ff5a1f; }
+  .step b { display:block; font-size:9pt; margin-top:0.8mm; }
+  .step span { display:block; font-size:7.5pt; color:#6b6360; margin-top:0.5mm; line-height:1.35; }
+
+  .band { margin-top:4mm; background:#14110f; color:#fff; border-radius:3mm; padding:3.5mm 4mm; text-align:center; }
+  .band b { font-size:10pt; display:block; }
+  .band span { font-size:8pt; color:#bdb5b1; }
+
+  /* Pushed to the foot of the page by the flow, so there is never a band of
+     dead paper under it. */
+  /* flex:none matters. Without it the footer is a flex item like any other,
+     the body above it grows, and the footer is shrunk until its last line is
+     sliced in half. That is what "it is still cut" was. */
+  .foot { flex:none; margin:4mm 15mm 14mm; display:flex; align-items:center; gap:4.5mm; }
+  .qr { width:28mm; height:28mm; background:#fff; padding:1.2mm; border-radius:2mm; flex:none; }
+  .qr img { width:100%; height:100%; display:block; }
+  .site { font-size:19pt; font-weight:bold; letter-spacing:-0.3pt; line-height:1; }
+  .line { font-size:8.5pt; color:#6b6360; margin-top:1.8mm; line-height:1.5; }
+  .line b { color:#14110f; }
+</style>
+
+<div class="hood">
+  <div class="mark">
+    <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+      <rect width="512" height="512" rx="116" fill="#fff"/>
+      <path d="M116 180h280l-27 248a44 44 0 0 1-44 39H187a44 44 0 0 1-44-39z" fill="#ff5a1f"/>
+      <path d="M196 180v-26a60 60 0 0 1 120 0v26" fill="none" stroke="#14110f" stroke-width="28" stroke-linecap="round"/>
+      <path d="M316 272C316 240 202 240 202 294C202 338 316 330 316 372C316 426 202 426 202 392"
+            fill="none" stroke="#fff" stroke-width="34" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <div class="name">Sudu</div>
+      <div class="tag">Delivery to Pan-Atlantic University</div>
+    </div>
+  </div>
+  <h1>Food, foodstuff and<br>everything else, carried<br>to your block.</h1>
+  <p class="sub">Order any day. Pick the day it arrives.</p>
+</div>
+
+<div class="tiles">
+  <div class="tile">
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <path d="M32 6 58 52a3 3 0 0 1-3 4H9a3 3 0 0 1-3-4z" fill="#ffd9c7"/>
+      <path d="M32 6 46 30H18z" fill="#ffb088"/>
+      <circle cx="26" cy="38" r="4" fill="#ff5a1f"/><circle cx="40" cy="42" r="4" fill="#ff5a1f"/>
+      <circle cx="32" cy="22" r="3" fill="#ff5a1f"/><circle cx="19" cy="48" r="3" fill="#ff5a1f"/>
+      <circle cx="45" cy="50" r="3" fill="#ff5a1f"/>
+    </svg>
+    <b>Restaurants</b>
+  </div>
+  <div class="tile">
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 30h44l-4 22a5 5 0 0 1-5 4H19a5 5 0 0 1-5-4z" fill="#ffb088"/>
+      <path d="M8 22h48l-2 9H10z" fill="#ff5a1f"/>
+      <path d="M22 30h6l-2 26h-3zM38 30h6l-1 26h-3z" fill="#ffd9c7" opacity=".7"/>
+      <path d="M20 22c2-8 8-12 12-12s10 4 12 12" fill="none" stroke="#14110f" stroke-width="3.5" stroke-linecap="round"/>
+    </svg>
+    <b>Market</b>
+  </div>
+  <div class="tile">
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <rect x="8" y="24" width="48" height="32" rx="3" fill="#ffb088"/>
+      <rect x="6" y="16" width="52" height="12" rx="3" fill="#ff5a1f"/>
+      <rect x="28" y="16" width="8" height="40" fill="#fff1ea"/>
+      <path d="M32 16c-6-10-16-4-10 2 3 3 7 1 10-2zM32 16c6-10 16-4 10 2-3 3-7 1-10-2z" fill="#14110f"/>
+    </svg>
+    <b>Boxes</b>
+  </div>
+  <div class="tile">
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="18" width="24" height="38" rx="5" fill="#ffb088"/>
+      <rect x="20" y="30" width="24" height="14" rx="1" fill="#fff"/>
+      <rect x="26" y="8" width="12" height="12" rx="3" fill="#ff5a1f"/>
+      <circle cx="32" cy="50" r="3" fill="#ff5a1f"/>
+    </svg>
+    <b>Skincare</b>
+  </div>
+</div>
+
+<div class="body">
+  <div class="rows">
+    <div class="row"><b>14 kitchens, 1,081 dishes</b><i></i><em>from &#8358;4,000 delivery</em></div>
+    <div class="row"><b>326 things from the market</b><i></i><em>&#8358;3,000 delivery</em></div>
+    <div class="row"><b>Boxes, packed and ready</b><i></i><em>from &#8358;15,496</em></div>
+    <div class="row"><b>2,103 skincare products</b><i></i><em>one drop a week</em></div>
+    <div class="row"><b>Parcels, Sangotedo to PAU</b><i></i><em>its own trip</em></div>
+  </div>
+
+  <div class="steps">
+    <div class="step"><u>1</u><b>Pick it</b><span>On the site or the app, any day of the week.</span></div>
+    <div class="step"><u>2</u><b>Say when</b><span>Choose the day, or let us tell you the soonest.</span></div>
+    <div class="step"><u>3</u><b>Pay and wait</b><span>Transfer or card. It comes to your block.</span></div>
+  </div>
+
+  <div class="band">
+    <b>Ordering with friends? One delivery between you.</b>
+    <span>Everybody adds their own. Parents abroad pay by card in pounds or dollars.</span>
+  </div>
+</div>
+
+<div class="foot">
+  <div class="qr"><img src="qr-whatsapp.png" alt="Message Sudu on WhatsApp"></div>
+  <div>
+    <div class="site">Scan to order</div>
+    <div class="line">It opens a WhatsApp message to us, already written.<br>
+      Or go to <b>sudu.store</b> &middot; the app is on the App Store</div>
+  </div>
+</div>
