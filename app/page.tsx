@@ -7,8 +7,6 @@ import { menuView } from "@/lib/menu";
 import { listSlides } from "@/lib/slides";
 import {
   activeBands,
-  AUTO_HEADLINE,
-  AUTO_LINES,
   safeSettings,
   hoursByDay,
 } from "@/lib/settings";
@@ -56,11 +54,6 @@ export default async function HomePage() {
   // Read once: the tile names the routes, so it needs the whole set up.
   const parcelSetup = parcelsFrom(settings);
 
-  const lines = (settings.auto_lines || AUTO_LINES)
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
   const runViews = batches
     .map(toBatchView)
     .filter((one) => !one.closed && !one.full)
@@ -93,8 +86,6 @@ export default async function HomePage() {
       iosAppId={settings.ios_app_id}
       menu={menu}
       slides={slides}
-      autoHeadline={settings.auto_headline || AUTO_HEADLINE}
-      autoLines={lines.length > 0 ? lines : [""]}
       // When something ordered right now would land, by the one rule every
       // other way of ordering uses: a run going today while it is taking
       // orders, a car of its own today, a run tomorrow, tomorrow's first

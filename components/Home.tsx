@@ -13,6 +13,14 @@ import SplitPrompt from "./SplitPrompt";
 import type { ItemView, MenuView } from "@/lib/view";
 import type { Slide } from "@/lib/slides";
 
+/** One way into the shop: a card in the grid, and a slide in the slider. */
+type Bucket = {
+  href: string;
+  title: string;
+  line: string;
+  action: string;
+};
+
 export default function Home({
   menu,
   arriving,
@@ -22,8 +30,6 @@ export default function Home({
   occasions = "",
   collections = "",
   slides,
-  autoHeadline,
-  autoLines,
   promos,
   iosAppId = "",
 }: {
@@ -50,9 +56,6 @@ export default function Home({
   collections?: string;
   /** Written in admin. Empty falls back to a slide per restaurant. */
   slides: Slide[];
-  /** The wording for the slider the page builds when there are no slides. */
-  autoHeadline: string;
-  autoLines: string[];
   /** A promotion on a restaurant, in a few words, keyed by its id. An offer
    *  announces itself on the card of the food it is for, because the front
    *  page has quite enough on it already. */
@@ -66,6 +69,47 @@ export default function Home({
 
   const countFor = (itemId: string) =>
     cart.filter((l) => l.itemId === itemId).reduce((n, l) => n + l.qty, 0);
+
+  // Every way in, in one list, because the grid and the slider under it are
+  // the same seven things and two copies of that list is two copies that
+  // drift. A bucket with nothing in it is not a door: an empty line is how
+  // the shop says that shelf is switched off.
+  const buckets: Bucket[] = useMemo(
+    () =>
+      [
+        {
+          href: "/products",
+          title: "Food",
+          line: "Every restaurant in one list",
+          action: "Browse",
+        },
+        parcels !== ""
+          ? { href: "/parcel", title: "Send a parcel", line: parcels, action: "Send" }
+          : null,
+        skincare !== ""
+          ? { href: "/skincare", title: "Skincare", line: skincare, action: "Shop" }
+          : null,
+        collections !== ""
+          ? { href: "/collections", title: "Collections", line: collections, action: "See" }
+          : null,
+        occasions !== ""
+          ? { href: "/occasions", title: "Occasions", line: occasions, action: "See" }
+          : null,
+        {
+          href: "/custom-order",
+          title: "Can't find it?",
+          line: "Tell us what you are looking for and we will get it for you",
+          action: "Ask us",
+        },
+        {
+          href: "/group",
+          title: "Ordering together?",
+          line: "Everybody adds their own, one delivery between you",
+          action: "Start",
+        },
+      ].filter((one): one is Bucket => one !== null),
+    [parcels, skincare, collections, occasions]
+  );
 
   const found = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -183,46 +227,15 @@ export default function Home({
               began below three screens of doors. A row costs the same height
               whether there are two of these or five. */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <Door
-              href="/products"
-              title="Food"
-              line="Every restaurant in one list"
-              action="Browse"
-            />
-            {parcels !== "" && (
-              <Door href="/parcel" title="Send a parcel" line={parcels} action="Send" />
-            )}
-            {skincare !== "" && (
-              <Door href="/skincare" title="Skincare" line={skincare} action="Shop" />
-            )}
-            {collections !== "" && (
+            {buckets.map((one) => (
               <Door
-                href="/collections"
-                title="Collections"
-                line={collections}
-                action="See"
+                key={one.href}
+                href={one.href}
+                title={one.title}
+                line={one.line}
+                action={one.action}
               />
-            )}
-            {occasions !== "" && (
-              <Door
-                href="/occasions"
-                title="Occasions"
-                line={occasions}
-                action="See"
-              />
-            )}
-            <Door
-              href="/custom-order"
-              title="Can't find it?"
-              line="Tell us what you are looking for and we will get it for you"
-              action="Ask us"
-            />
-            <Door
-              href="/group"
-              title="Ordering together?"
-              line="Everybody adds their own, one delivery between you"
-              action="Start"
-            />
+            ))}
           </div>
 
           {/* Not a bucket: it is not a thing the shop sells, and standing it
@@ -253,14 +266,20 @@ export default function Home({
                   href: slide.link_url,
                   linkText: slide.link_text || "See the menu",
                 }))
-              : menu.map((place, index) => ({
-                  key: place.restaurant.id,
-                  image: place.restaurant.bannerUrl,
-                  name: place.restaurant.name,
-                  headline: autoHeadline.replace("{restaurant}", place.restaurant.name),
-                  body: autoLines[index % autoLines.length] ?? "",
-                  href: `/r/${place.restaurant.href}`,
-                  linkText: "See the menu",
+              : /* A slide a restaurant was the front page saying the shop is
+                   a list of restaurants, which it stopped being. The slider
+                   says the same seven things the grid does, big, for whoever
+                   reads a picture before they read a card. Written in admin
+                   still wins: a slide somebody wrote is always better than
+                   one the page made up. */
+                buckets.map((one) => ({
+                  key: one.href,
+                  image: "",
+                  name: one.title,
+                  headline: one.title,
+                  body: one.line,
+                  href: one.href,
+                  linkText: one.action,
                 }))
             ).map((slide) => (
               <div key={slide.key} className="relative h-52 sm:h-72 lg:h-80">
