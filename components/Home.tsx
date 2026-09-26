@@ -29,6 +29,7 @@ export default function Home({
   arriving,
   alsoArriving = null,
   buckets,
+  packs = [],
   slides,
   iosAppId = "",
 }: {
@@ -45,6 +46,9 @@ export default function Home({
    *  are on, what each says and what order they go in are all the shop's
    *  business and none of the phone's. */
   buckets: Bucket[];
+  /** Every packed box by name, so a search for "care" finds the care
+   *  package. The menu alone would say nothing matches. */
+  packs?: { title: string; line: string; href: string }[];
   /** Written in admin. Empty falls back to a slide per restaurant. */
   slides: Slide[];
   /** The App Store id, or empty where the shop has no app to mention. */
@@ -71,6 +75,32 @@ export default function Home({
         .map((item) => ({ item, place }))
     );
   }, [menu, query]);
+
+  // The rest of the shop, searched too. Somebody typing "parcel" or "care"
+  // is not asking the menu a question, and a search that only reads the menu
+  // answers them with "nothing matches that", which is a lie.
+  const elsewhere = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (needle.length < 2) return [];
+    const hay = [
+      ...buckets.map((one) => ({
+        title: one.title,
+        line: one.line,
+        href: one.href,
+      })),
+      ...packs,
+    ];
+    const seen = new Set<string>();
+    return hay.filter((one) => {
+      const key = `${one.title}|${one.href}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return (
+        one.title.toLowerCase().includes(needle) ||
+        one.line.toLowerCase().includes(needle)
+      );
+    });
+  }, [buckets, packs, query]);
 
   if (menu.length === 0) {
     return (
@@ -125,14 +155,45 @@ export default function Home({
 
       {found ? (
         <section className="space-y-3 pb-28">
+          {/* What the shop has, before what the kitchens have. Somebody
+              searching "care" wants the care package, and burying it under
+              forty dishes is the same as not having it. */}
+          {elsewhere.length > 0 && (
+            <ul className="space-y-2">
+              {elsewhere.map((one) => (
+                <li key={`${one.title}|${one.href}`}>
+                  <Link
+                    href={one.href}
+                    className="flex items-center justify-between gap-3 rounded-2xl bg-paper p-3.5 shadow-card"
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-bold leading-tight">
+                        {one.title}
+                      </span>
+                      <span className="mt-0.5 line-clamp-1 block text-sm text-muted">
+                        {one.line}
+                      </span>
+                    </span>
+                    <span aria-hidden className="shrink-0 text-muted">
+                      ›
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+
           <h2 className="section-title">
-            {found.length} result{found.length === 1 ? "" : "s"}
+            {found.length} result{found.length === 1 ? "" : "s"} on the menu
           </h2>
           {found.length === 0 ? (
             <div className="space-y-3">
-              <p className="text-muted">
-                Nothing matches that. Try a shorter word, like chicken or pizza.
-              </p>
+              {elsewhere.length === 0 && (
+                <p className="text-muted">
+                  Nothing matches that. Try a shorter word, like chicken or
+                  pizza.
+                </p>
+              )}
               {/* The best moment there is to offer this: somebody has just
                   told us exactly what they want and we have just told them
                   we do not have it. */}

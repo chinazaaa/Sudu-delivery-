@@ -485,8 +485,9 @@ function PromoterForm({
             className="field"
           />
           <p className="mt-1 text-xs text-muted">
-            A care package is not a wrap. Any packed box counts: collections,
-            occasions, gifts.
+            What they earn when the order is a packed box: a care package, a
+            hostel pack, a gift, a food box. Ordinary food, skincare, parcels
+            and ordering together all pay the rate on the left.
           </p>
         </div>
       </div>

@@ -125,3 +125,54 @@ export async function markCustomPending(orderId: string): Promise<void> {
     /* A shop without the column yet simply has no provisional orders. */
   }
 }
+
+/**
+ * Everybody who asked for something again.
+ *
+ * Not a subscription: nothing charges itself, and nothing should. It is a
+ * list of people who said "send this every month", and the shop's job is to
+ * notice when it is time and raise the next one.
+ *
+ * Newest first, and the ones already raised again are still here: somebody
+ * who has had four care packages is the most valuable person on the list,
+ * not somebody to hide.
+ */
+export type Repeating = {
+  id: string;
+  ref: string;
+  name: string;
+  phone: string;
+  hostel: string;
+  every: string;
+  note: string;
+  total: number;
+  status: string;
+  placedOn: string;
+  wantedOn: string | null;
+};
+
+export async function repeatingOrders(): Promise<Repeating[]> {
+  const { data, error } = await db()
+    .from("orders")
+    .select(
+      "id, order_no, customer_name, customer_phone, hostel, repeat_every, repeat_note, total, status, created_at, wanted_on"
+    )
+    .neq("repeat_every", "")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) return [];
+
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    id: String(row.id ?? ""),
+    ref: row.order_no ? `#${row.order_no}` : String(row.id ?? "").slice(0, 6),
+    name: String(row.customer_name ?? ""),
+    phone: String(row.customer_phone ?? ""),
+    hostel: String(row.hostel ?? ""),
+    every: String(row.repeat_every ?? ""),
+    note: String(row.repeat_note ?? ""),
+    total: Number(row.total ?? 0),
+    status: String(row.status ?? ""),
+    placedOn: String(row.created_at ?? ""),
+    wantedOn: (row.wanted_on as string) ?? null,
+  }));
+}

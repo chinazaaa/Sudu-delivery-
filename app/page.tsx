@@ -96,11 +96,15 @@ export default async function HomePage() {
       .filter((one) => (boxCount.get(one.id) ?? 0) > 0)
       .map((one) => {
         const price = from.get(one.id);
-        const said = price !== undefined ? `From ${naira(price)}, delivery in.` : "";
+        // The price and nothing else. The name says what it is and the card
+        // is not the place to explain it: two lines of blurb made every card
+        // a paragraph and the grid twice as tall.
+        const said =
+          price !== undefined ? `From ${naira(price)}, delivery in` : one.blurb;
         return {
           href: `/${kind === "occasion" ? "occasions" : "collections"}/${one.slug}`,
           title: one.name,
-          line: one.blurb !== "" ? `${one.blurb}${said ? ` ${said}` : ""}` : said,
+          line: said,
           action: "See",
           // Its own picture where it has one, the shelf's where it does not.
           image:
@@ -112,6 +116,25 @@ export default async function HomePage() {
   // Collections stand all term, so they lead. An occasion is the urgent one
   // and there is rarely more than one at a time.
   const shelves = [...doorsFor("collection"), ...doorsFor("occasion")];
+
+  // Everything packed, by name, so the search can find it. Somebody typing
+  // "care" means the care package, and a search that only reads the menu
+  // tells them the shop has never heard of it.
+  const byId = new Map(packed.map((one) => [one.id, one]));
+  const packs = packedBoxes
+    .filter((box) => !box.is_extra)
+    .flatMap((box) => {
+      const shelf = byId.get(box.occasion_id);
+      if (!shelf) return [];
+      const where = shelf.kind === "occasion" ? "occasions" : "collections";
+      return [
+        {
+          title: box.name,
+          line: `${shelf.name}${box.serves ? ` · ${box.serves}` : ""}`,
+          href: `/${where}/${shelf.slug}`,
+        },
+      ];
+    });
 
   // The parcel line names where it goes rather than calling itself a parcel
   // service, because nobody is looking for a parcel service: they have a
@@ -238,6 +261,9 @@ export default async function HomePage() {
         })()
       }
       buckets={buckets}
+      // The boxes by name, so a search for "care" finds the care package
+      // rather than reporting that nothing matches.
+      packs={packs}
     />
   );
 }
