@@ -203,6 +203,7 @@ async function orderPage(id: string, said: string) {
           }
           total={order.total}
           note={order.customer_note ?? ""}
+          status={order.status}
           setQty={setLineQty}
           swapLine={swapOrderLine}
           addLine={addOrderLine}

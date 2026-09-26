@@ -120,6 +120,11 @@ export default function OrderCard({
 
   return (
     <article className="card space-y-3">
+      {/* On the order's own page the header, the stat row and the editor
+          have already said who this is and what it comes to. Saying it a
+          fourth time is what makes the page read as four cards about
+          nothing. Here it is only the things to do. */}
+      {onList && (
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate font-bold">
@@ -212,6 +217,7 @@ export default function OrderCard({
           <StatusPill status={order.status} />
         </div>
       </div>
+      )}
 
       {order.customerNote && (
         <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm text-brand-dark">

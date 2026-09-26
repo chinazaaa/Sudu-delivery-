@@ -29,6 +29,7 @@ export default function OrderEditor({
   charged,
   total,
   note,
+  status,
   setQty,
   swapLine,
   addLine,
@@ -48,6 +49,10 @@ export default function OrderEditor({
   pending: boolean;
   charged: number | null;
   total: number;
+  /** Delivered, cancelled and refunded orders are history. Changing one
+   *  changes a thing that already happened, so the controls are not there
+   *  to be pressed by accident. */
+  status: string;
   /** What the customer asked for in their own words, if anything. */
   note: string;
   setQty: (form: FormData) => void;
@@ -60,7 +65,7 @@ export default function OrderEditor({
 }) {
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
-  const [open, setOpen] = useState("");
+  const [showing, setShowing] = useState("");
 
   const needle = query.trim().toLowerCase();
   const found =
@@ -74,20 +79,20 @@ export default function OrderEditor({
           )
           .slice(0, 8);
 
-  const count = lines.reduce((sum, line) => sum + line.qty, 0);
+  // An order that has been delivered, cancelled or given back is history.
+  // Editing it edits something that already happened, and the buttons being
+  // there at all is an invitation to do it by accident.
+  const open = status === "pending" || status === "paid";
 
   return (
     <section className="card mt-4 space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-extrabold">What is in it</h2>
-          <p className="text-sm text-muted">
-            {lines.length} line{lines.length === 1 ? "" : "s"} · {count} thing
-            {count === 1 ? "" : "s"}. Change it to whatever was agreed; the
-            collection everybody else buys is untouched.
-          </p>
-        </div>
-        <span className="shrink-0 text-lg font-extrabold">{naira(total)}</span>
+        <h2 className="text-lg font-extrabold">What is in it</h2>
+        {!open && (
+          <span className="chip border-transparent bg-black/5 text-xs font-bold text-muted">
+            {status} · not editable
+          </span>
+        )}
       </div>
 
       {/* What they asked for, at the top and in their own words. It was a
@@ -135,7 +140,7 @@ export default function OrderEditor({
           const each =
             line.unit_price_at_order +
             line.options.reduce((sum, one) => sum + one.delta, 0);
-          const showing = open === line.id;
+          const isOpen = open && showing === line.id;
 
           return (
             <li key={line.id} className="py-3 first:pt-0">
@@ -162,6 +167,7 @@ export default function OrderEditor({
                               {naira(Math.abs(one.delta))}
                             </span>
                           )}
+                          {open && (
                           <form action={removeOption}>
                             <input
                               type="hidden"
@@ -175,6 +181,7 @@ export default function OrderEditor({
                               ×
                             </button>
                           </form>
+                          )}
                         </span>
                       ))}
                     </div>
@@ -189,17 +196,19 @@ export default function OrderEditor({
 
                 <div className="shrink-0 text-right">
                   <p className="font-extrabold">{naira(line.qty * each)}</p>
-                  <button
-                    type="button"
-                    onClick={() => setOpen(showing ? "" : line.id)}
-                    className="text-sm font-bold text-brand"
-                  >
-                    {showing ? "Done" : "Change"}
-                  </button>
+                  {open && (
+                    <button
+                      type="button"
+                      onClick={() => setShowing(isOpen ? "" : line.id)}
+                      className="text-sm font-bold text-brand"
+                    >
+                      {isOpen ? "Done" : "Change"}
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {showing && (
+              {isOpen && (
                 <div className="mt-3 space-y-3 rounded-xl bg-shell p-3">
                   <form action={setQty} className="flex flex-wrap items-end gap-2">
                     <input type="hidden" name="line_id" value={line.id} />
@@ -249,7 +258,7 @@ export default function OrderEditor({
 
       {/* Folded away, because most orders never gain a line and a search box
           standing open on every one of them is a box in the way. */}
-      {adding ? (
+      {!open ? null : adding ? (
         <div className="rounded-xl border border-dashed border-black/15 p-3">
           <div className="flex items-baseline justify-between gap-2">
             <p className="label">Add something</p>
