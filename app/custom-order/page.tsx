@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import HelpLine from "@/components/HelpLine";
 
 import AskForm from "@/components/AskForm";
 import { hostelNames } from "@/lib/hostels";
@@ -42,9 +43,8 @@ export default async function CustomOrderPage({
           Can&apos;t find what you need?
         </h1>
         <p className="text-muted">
-          Tell Sudu what you are looking for. We will find it and deliver it to
-          your PAU hostel. Anything, not only food: a charger, a cake from a
-          bakery that is not on here, something from a shop in town.
+          Anything, not only food. Tell us what you want and we bring it to
+          your block.
         </p>
       </header>
 
@@ -52,8 +52,8 @@ export default async function CustomOrderPage({
         <div className="card space-y-2">
           <p className="font-bold text-mint">We have it.</p>
           <p className="text-sm text-muted">
-            Somebody will look for it and message you on WhatsApp with what it
-            costs, delivery included. Nothing is bought until you say yes.
+            We will message you on WhatsApp with the price. Nothing is bought
+            until you say yes.
           </p>
         </div>
       ) : (
@@ -64,29 +64,34 @@ export default async function CustomOrderPage({
           nobody works out on their own that a hem taken up is a thing you
           can ask a delivery shop for. A service is as orderable as it is
           named, and these are the ones asked for most. */}
-      <section className="card space-y-2 text-sm">
-        <p className="font-bold">Things people ask us for</p>
-        <ul className="grid gap-1 text-muted sm:grid-cols-2">
-          <li>Tailoring: a hem taken up, a dress altered, an outfit sewn</li>
-          <li>Laundry and dry cleaning, picked up and brought back</li>
-          <li>A cake from a bakery that is not on here</li>
-          <li>Chargers, power banks, extension sockets, bulbs</li>
-          <li>Hair, lashes, nails, a braider who comes to you</li>
-          <li>Printing, binding and photocopies</li>
-          <li>Medicine and anything else from a pharmacy</li>
-          <li>Something waiting for you in a shop in Lekki or on the Island</li>
-        </ul>
-      </section>
+      {/* Named, not explained. A service is as orderable as it is named,
+          and nobody works out on their own that a hem taken up is a thing
+          you can ask a delivery shop for. Chips, because a list of eight
+          sentences is a list nobody finishes. */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          "Tailoring",
+          "Laundry",
+          "A cake",
+          "Chargers",
+          "Hair and nails",
+          "Printing",
+          "Pharmacy",
+          "A shop in Lekki",
+        ].map((one) => (
+          <span key={one} className="chip text-sm text-muted">
+            {one}
+          </span>
+        ))}
+      </div>
 
-      <section className="card space-y-2 text-sm">
-        <p className="font-bold">How it works</p>
-        <ol className="list-inside list-decimal space-y-1 text-muted">
-          <li>You say what you want, roughly is fine.</li>
-          <li>We find it and send you the price, with delivery in it.</li>
-          <li>You say yes or no. Nothing is bought until you do.</li>
-          <li>It comes to your block on the next run that suits.</li>
-        </ol>
-      </section>
+      <p className="text-center text-sm text-muted">
+        We find it, send you the price, and buy nothing until you say yes.
+      </p>
+      <HelpLine
+        number={settings.whatsapp_number}
+        about="something I asked for"
+      />
     </div>
   );
 }

@@ -428,9 +428,7 @@ export default function OccasionBoxes({
                   />
                 </div>
                 <p className="text-xs text-muted sm:col-span-2">
-                  Nothing charges itself. We set the next one up and message
-                  you to pay, with whatever changes you made last time already
-                  in it.
+                  Nothing charges itself. We message you each time to pay.
                 </p>
               </div>
             )}
@@ -546,10 +544,8 @@ export default function OccasionBoxes({
               <label className="label sr-only" htmlFor="box_note">
                 What you want changed
               </label>
-              <p className="mb-1.5 text-xs leading-relaxed text-ink/75">
-                The box says what is in it, not which one. Say here if you want
-                a flavour, a size, a colour, or something written on it. To
-                change a whole item, use Swap above.
+              <p className="mb-1.5 text-xs text-ink/75">
+                A flavour, a size, a colour, something written on it.
               </p>
               <textarea
                 id="box_note"
@@ -566,13 +562,10 @@ export default function OccasionBoxes({
               <label className="mt-2 flex items-start gap-2 text-sm">
                 <input type="checkbox" name="custom" className="mt-0.5" />
                 <span>
-                  <span className="font-bold">
-                    Tick this if what you wrote changes what is in it.
-                  </span>{" "}
+                  <span className="font-bold">This changes what is in it.</span>{" "}
                   <span className="text-ink/75">
-                    Then the total here is not the final one. We work out what
-                    the change costs, message you on WhatsApp, and your order
-                    page updates before you pay a naira of it.
+                    Then the price is not final. We message you with the new
+                    one before you pay.
                   </span>
                 </span>
               </label>

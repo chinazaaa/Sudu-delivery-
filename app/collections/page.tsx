@@ -1,4 +1,6 @@
 import BoxShelf from "@/components/BoxShelf";
+import { safeSettings } from "@/lib/settings";
+import HelpLine from "@/components/HelpLine";
 
 export const dynamic = "force-dynamic";
 
@@ -17,15 +19,20 @@ export const metadata = {
  * they are there all term, and nothing about them expires. That is the whole
  * reason there are two of these pages and not one.
  */
-export default function CollectionsPage() {
+export default async function CollectionsPage() {
+  const settings = await safeSettings();
+
   return (
-    <BoxShelf
+    <div className="space-y-4">
+      <BoxShelf
       kind="collection"
       base="/collections"
       title="Boxes already put together"
       blurb="Care packages, hostel packs, restocks. One price with delivery in it, and nothing to decide but when you want it."
       empty="No collections are packed just now."
-      other={{ href: "/occasions", said: "See what is on for an occasion" }}
-    />
+        other={{ href: "/occasions", said: "See what is on for an occasion" }}
+      />
+      <HelpLine number={settings.whatsapp_number} about="a box" />
+    </div>
   );
 }

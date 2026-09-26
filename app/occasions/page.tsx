@@ -1,4 +1,6 @@
 import BoxShelf from "@/components/BoxShelf";
+import { safeSettings } from "@/lib/settings";
+import HelpLine from "@/components/HelpLine";
 
 export const dynamic = "force-dynamic";
 
@@ -17,15 +19,20 @@ export const metadata = {
  * week: the page has to be able to drop them, which is exactly what a
  * collection must never do. Same boxes, same cards, two shelves.
  */
-export default function OccasionsPage() {
+export default async function OccasionsPage() {
+  const settings = await safeSettings();
+
   return (
-    <BoxShelf
+    <div className="space-y-4">
+      <BoxShelf
       kind="occasion"
       base="/occasions"
       title="Food for a room full of people"
       blurb="A birthday, a match, a games night. Already worked out, one price with delivery in it, and nothing to decide but when you want it."
       empty="Nothing is on just now."
-      other={{ href: "/collections", said: "See the collections" }}
-    />
+        other={{ href: "/collections", said: "See the collections" }}
+      />
+      <HelpLine number={settings.whatsapp_number} about="a box" />
+    </div>
   );
 }

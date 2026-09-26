@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import HelpLine from "@/components/HelpLine";
 import { safeSettings } from "@/lib/settings";
 import { dropLabel, nextDrop, skincareBands, skincareOn, skincarePromise, skincareShop } from "@/lib/skincare";
 import { hostelNames } from "@/lib/hostels";
@@ -20,7 +21,8 @@ export default async function SkincareCheckoutPage() {
   const signedIn = await currentCustomer();
 
   return (
-    <ShelfCheckout
+    <>
+      <ShelfCheckout
       bands={skincareBands(settings)}
       when={dropLabel(drop.date)}
       window={settings.skincare_window}
@@ -32,6 +34,8 @@ export default async function SkincareCheckoutPage() {
         name: one.name,
       }))}
       me={signedIn ? await customerDetails(signedIn) : null}
-    />
+      />
+      <HelpLine number={settings.whatsapp_number} about="a skincare order" />
+    </>
   );
 }

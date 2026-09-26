@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { safeSettings } from "@/lib/settings";
+import HelpLine from "@/components/HelpLine";
 import Link from "next/link";
 import ParcelForm from "@/components/ParcelForm";
 import { liveRoutes, parcels } from "@/lib/parcels";
@@ -25,6 +27,7 @@ export const metadata: Metadata = {
 
 export default async function ParcelPage() {
   const setup = await parcels();
+  const settings = await safeSettings();
   const routes = liveRoutes(setup.routes);
   // The same list the food and skincare checkouts use. A block typed by hand
   // is misspelt every other order, and a parcel is one bag with one place to
@@ -83,6 +86,7 @@ export default async function ParcelPage() {
         promoters={promoters}
         today={lagosToday()}
       />
+      <HelpLine number={settings.whatsapp_number} about="a parcel" page="Parcel" />
     </div>
   );
 }

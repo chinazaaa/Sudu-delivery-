@@ -1,4 +1,5 @@
 import { lagosToday } from "@/lib/time";
+import HelpLine from "@/components/HelpLine";
 import { cookies } from "next/headers";
 import {
   activeBands,
@@ -76,7 +77,8 @@ export default async function CheckoutPage({
   }));
 
   return (
-    <Checkout
+    <>
+      <Checkout
       monies={monies}
       batches={views}
       today={lagosToday()}
@@ -115,6 +117,11 @@ export default async function CheckoutPage({
       // Asked on the one form a first order has to pass through. Whoever
       // they name is theirs for life, so there is no second chance at it.
       promoters={await namedPromoters()}
-    />
+      />
+      {/* Every page somebody can get stuck on has the same way out, so
+          nothing needs a paragraph explaining itself: if it is not clear,
+          they message us and we answer. */}
+      <HelpLine number={settings.whatsapp_number} about="my order" page="Checkout" />
+    </>
   );
 }

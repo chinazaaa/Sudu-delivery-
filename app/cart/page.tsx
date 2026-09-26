@@ -1,4 +1,5 @@
 import CartView from "@/components/CartView";
+import HelpLine from "@/components/HelpLine";
 import ShelfNote from "@/components/ShelfNote";
 import { allAreas, areaOfEach, valueBandsOfEach } from "@/lib/areas-server";
 import { dropLabel, nextDrop, skincareOn } from "@/lib/skincare";
@@ -85,6 +86,7 @@ export default async function CartPage({
       valueBandsOf={await valueBandsOfEach()}
         startGroup={startGroup}
       />
+      <HelpLine number={settings.whatsapp_number} about="my cart" page="Cart" />
     </div>
   );
 }
