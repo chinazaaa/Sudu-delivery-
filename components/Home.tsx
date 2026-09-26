@@ -207,6 +207,12 @@ export default function Home({
               />
             )}
             <Door
+              href="/custom-order"
+              title="Can't find it?"
+              line="Tell us what you are looking for and we will get it for you"
+              action="Ask us"
+            />
+            <Door
               href="/group"
               title="Ordering together?"
               line="Everybody adds their own, one delivery between you"
