@@ -35,6 +35,7 @@ import {
 import { formatPhone } from "@/lib/phone";
 import { STAGE_LABEL } from "@/lib/stages";
 import { clockLabel, dayLabel, dayWord, runDateLabel, weekdayLabel } from "@/lib/time";
+import { repeatSaid } from "@/lib/box-day";
 import {
   activeBands,
   externalUrl,
@@ -213,6 +214,19 @@ export default async function OrderPage({
         <h1 className="mt-1 text-2xl font-extrabold leading-tight sm:text-3xl">
           {naira(order.total)}
         </h1>
+        {/* A box on a day of its own. Said here because it is the answer to
+            the only question they have: when. */}
+        {order.batch.kind === "box" && (
+          <p className="mt-1 text-sm font-semibold text-white/90">
+            {(order as { wanted_on?: string | null }).wanted_on
+              ? `For ${dayWord(String((order as { wanted_on?: string | null }).wanted_on))}`
+              : "We are agreeing a day with you"}
+            {(order as { repeat_every?: string }).repeat_every
+              ? ` · ${repeatSaid(String((order as { repeat_every?: string }).repeat_every)).toLowerCase()}`
+              : ""}
+          </p>
+        )}
+
         {/* They asked for something to be different, so this number is not
             the one yet. Said here, on the number itself, rather than in a
             line further down that nobody reads: a price that is going to

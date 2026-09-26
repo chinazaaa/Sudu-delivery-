@@ -8,6 +8,7 @@ import { orderBox, type BoxOrderState } from "@/app/collections/actions";
 import type { BoxView, WhenOption } from "@/lib/box-view";
 import { naira } from "@/lib/money";
 import { OPENED, TRAP } from "@/lib/guard";
+import { STANDARD_DAYS } from "@/lib/box-day";
 
 /**
  * Picking a box and ordering it.
@@ -24,6 +25,9 @@ export default function OccasionBoxes({
   slug,
   boxes,
   when,
+  timed,
+  soonest,
+  latest,
   hostels,
   promoters,
   me,
@@ -33,6 +37,13 @@ export default function OccasionBoxes({
   slug: string;
   boxes: BoxView[];
   when: WhenOption[];
+  /** A thing with a whistle: a match, a kick-off. Those pick a real car out
+   *  of the ones the shop is driving. Everything else picks a date. */
+  timed: boolean;
+  /** The soonest day a box can be packed for, and the furthest ahead worth
+   *  planning. Both worked out on the server: the clock is the shop's. */
+  soonest: string;
+  latest: string;
   hostels: string[];
   promoters: { code: string; name: string }[];
   me: { name: string; hostel: string; paymentMethod: "transfer" | "card" } | null;
@@ -51,6 +62,14 @@ export default function OccasionBoxes({
   const [swaps, setSwaps] = useState<Record<string, number>>({});
   const [going, setGoing] = useState(when[0]?.key ?? "");
   const [day, setDay] = useState(when[0]?.date ?? "");
+  const [wantedOn, setWantedOn] = useState(soonest);
+  const [anyDay, setAnyDay] = useState(false);
+  const [again, setAgain] = useState(false);
+
+  // Sooner than the shop can find it, buy it and pack it, so it costs what a
+  // car of its own costs. Worked out from dates the server sent, because a
+  // phone's clock is anybody's guess.
+  const rush = !anyDay && wantedOn !== "" && wantedOn < soonest;
 
   // One entry per day that has anything going, in order, each carrying its
   // own cars. Built here rather than on the server because it is a shape,
@@ -249,64 +268,172 @@ export default function OccasionBoxes({
           <section className="card space-y-3">
             <h2 className="font-bold">When do you want it?</h2>
 
-            {/* A day, and then that day's cars. A fortnight laid out flat is
-                thirty rows and a thumb that never reaches the bottom, and
-                every row but two or three is about a day nobody wanted. */}
-            <div className="-mx-4 overflow-x-auto px-4">
-              <div className="flex gap-2 pb-1">
-                {days.map((one) => (
-                  <button
-                    key={one.date}
-                    type="button"
-                    onClick={() => {
-                      setDay(one.date);
-                      setGoing(one.options[0]?.key ?? "");
-                    }}
-                    className={`shrink-0 rounded-xl border px-3 py-2 text-center text-sm transition ${
-                      one.date === day
-                        ? "border-brand bg-brand-tint font-bold"
-                        : "border-black/10"
-                    }`}
-                  >
-                    <span className="block font-semibold">{one.weekday}</span>
-                    <span className="block text-xs text-muted">{one.short}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Two models, and only ever one on screen.
+                A match has a whistle, so it needs the real cars the shop is
+                driving before it. A care package has to be found, bought and
+                packed, so it needs a date and nothing else. Showing a
+                fortnight of runs on a care package was thirty rows about days
+                nobody asked for. */}
+            {timed ? (
+              <>
+                <div className="-mx-4 overflow-x-auto px-4">
+                  <div className="flex gap-2 pb-1">
+                    {days.map((one) => (
+                      <button
+                        key={one.date}
+                        type="button"
+                        onClick={() => {
+                          setDay(one.date);
+                          setGoing(one.options[0]?.key ?? "");
+                        }}
+                        className={`shrink-0 rounded-xl border px-3 py-2 text-center text-sm transition ${
+                          one.date === day
+                            ? "border-brand bg-brand-tint font-bold"
+                            : "border-black/10"
+                        }`}
+                      >
+                        <span className="block font-semibold">{one.weekday}</span>
+                        <span className="block text-xs text-muted">{one.short}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            <div className="space-y-1">
-              {(days.find((one) => one.date === day)?.options ?? []).map((one) => (
+                <div className="space-y-1">
+                  {(days.find((one) => one.date === day)?.options ?? []).map((one) => (
+                    <label
+                      key={one.key}
+                      className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-sm ${
+                        one.key === going ? "border-brand bg-brand-tint" : "border-black/10"
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="when"
+                          value={one.key}
+                          checked={one.key === going}
+                          onChange={() => setGoing(one.key)}
+                        />
+                        <span>
+                          <span className="font-semibold">{one.window}</span>
+                          <span className="block text-muted">
+                            {one.onARun ? "On the run" : "A car of its own"}
+                          </span>
+                        </span>
+                      </span>
+                      <span className="shrink-0 font-semibold">
+                        {naira(
+                          box.food +
+                            (one.onARun ? box.runFee : box.carFee) +
+                            moved(box, swaps)
+                        )}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-muted">{note}</p>
+              </>
+            ) : (
+              <>
+                <input type="hidden" name="when" value={anyDay ? "anytime" : `day:${wantedOn}`} />
+
                 <label
-                  key={one.key}
-                  className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-sm ${
-                    one.key === going ? "border-brand bg-brand-tint" : "border-black/10"
+                  className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 ${
+                    anyDay ? "border-black/10" : "border-brand bg-brand-tint"
                   }`}
                 >
-                  <span className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="when"
-                      value={one.key}
-                      checked={one.key === going}
-                      onChange={() => setGoing(one.key)}
-                    />
-                    <span>
-                      <span className="font-semibold">{one.window}</span>
-                      <span className="block text-muted">
-                        {one.onARun
-                          ? "On the run, shared with everybody else in the car"
-                          : "A car of its own"}
-                      </span>
-                    </span>
-                  </span>
-                  <span className="shrink-0 font-semibold">
-                    {naira(box.food + (one.onARun ? box.runFee : box.carFee) + moved(box, swaps))}
-                  </span>
+                  <span className="text-sm font-semibold">On a day I pick</span>
+                  <input
+                    type="date"
+                    value={wantedOn}
+                    min={soonest}
+                    max={latest}
+                    onChange={(event) => {
+                      setWantedOn(event.target.value);
+                      setAnyDay(false);
+                    }}
+                    onFocus={() => setAnyDay(false)}
+                    className="field w-44 py-1.5 text-sm"
+                  />
                 </label>
-              ))}
-            </div>
-            <p className="text-xs text-muted">{note}</p>
+
+                <label
+                  className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm ${
+                    anyDay ? "border-brand bg-brand-tint" : "border-black/10"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={anyDay}
+                    onChange={(event) => setAnyDay(event.target.checked)}
+                  />
+                  <span className="font-semibold">Any day is fine, tell me</span>
+                </label>
+
+                {/* One line, and it changes as they pick. A price that only
+                    appears at the end is a price that feels like a catch. */}
+                <p className="text-sm">
+                  <span className="font-extrabold">
+                    {naira(box.food + (rush ? box.carFee : box.runFee) + moved(box, swaps))}
+                  </span>{" "}
+                  <span className="text-muted">
+                    {anyDay
+                      ? "delivery in. We message you to agree the day."
+                      : rush
+                        ? `delivery in. Sooner than ${STANDARD_DAYS} days, so it is the rush price.`
+                        : "delivery in."}
+                  </span>
+                </p>
+              </>
+            )}
+          </section>
+
+          {/* One tick. Everything it needs only appears once it is ticked,
+              because a frequency nobody asked for is a field in the way. */}
+          <section className="card space-y-3">
+            <label className="flex items-center gap-2 text-sm font-semibold">
+              <input
+                type="checkbox"
+                checked={again}
+                onChange={(event) => setAgain(event.target.checked)}
+              />
+              Send this again, every so often
+            </label>
+
+            {again && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="label" htmlFor="box_repeat">How often</label>
+                  <select
+                    id="box_repeat"
+                    name="repeat"
+                    defaultValue="monthly"
+                    className="field"
+                  >
+                    <option value="weekly">Every week</option>
+                    <option value="fortnightly">Every two weeks</option>
+                    <option value="monthly">Every month</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="label" htmlFor="box_repeat_note">
+                    When suits (optional)
+                  </label>
+                  <input
+                    id="box_repeat_note"
+                    name="repeat_note"
+                    placeholder="Last Saturday of the month"
+                    className="field"
+                  />
+                </div>
+                <p className="text-xs text-muted sm:col-span-2">
+                  Nothing charges itself. We set the next one up and message
+                  you to pay, with whatever changes you made last time already
+                  in it.
+                </p>
+              </div>
+            )}
           </section>
 
           <section className="card space-y-3">

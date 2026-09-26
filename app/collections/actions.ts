@@ -5,6 +5,9 @@ import { revalidatePath } from "next/cache";
 import { boxById, cartOf, occasionBySlug } from "@/lib/boxes";
 import { markCustomPending } from "@/lib/order-edit";
 import { whenOptions } from "@/lib/box-view";
+import { furthest, isUrgent, readRepeat, tripForBox } from "@/lib/box-day";
+import { lagosToday } from "@/lib/time";
+import { db } from "@/lib/supabase";
 import { placeOrder } from "@/lib/orders";
 import { orderLinkId } from "@/lib/orders";
 import { OPENED, sprung, tooFast, TRAP } from "@/lib/guard";
@@ -55,18 +58,62 @@ async function order(form: FormData): Promise<BoxOrderState> {
     return { error: "That box is not on any more." };
   }
 
-  // Which of the ways of getting it here they picked, matched against the
-  // list the shop would offer right now. A page left open all afternoon is
-  // still showing this morning's cars.
-  const options = await whenOptions(occasion, box);
-  const going = options.find((one) => one.key === String(form.get("when") ?? ""));
-  if (!going) {
-    return {
-      error:
-        options.length === 0
-          ? "Nothing can get there in time now."
-          : "That time has gone. Pick another one.",
+  const asked = String(form.get("when") ?? "");
+
+  // A day of their own, or no day at all.
+  //
+  // A box is sourced, packed and then carried, so unlike food it does not
+  // have to ride tonight's run. "day:2026-10-04" is a date they picked;
+  // "anytime" is them saying any day suits and we will agree one. Either
+  // way it travels on a trip of its own, made here.
+  //
+  // What it costs to carry is decided here and not on the form: two clear
+  // days is the standard fee, sooner than that is the urgent one, and a page
+  // left open overnight cannot talk us into yesterday's price.
+  let going: {
+    runId: string;
+    at: string;
+    fee: number;
+    wanted: string;
+  } | null = null;
+
+  if (asked === "anytime" || asked.startsWith("day:")) {
+    const wanted = asked.startsWith("day:") ? asked.slice(4) : "";
+    if (wanted !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(wanted)) {
+      return { error: "Pick the day you would like it." };
+    }
+    if (wanted !== "" && (wanted < lagosToday() || wanted > furthest())) {
+      return { error: "Pick a day between today and three weeks from now." };
+    }
+
+    const urgent = wanted !== "" && isUrgent(wanted);
+    const trip = await tripForBox(
+      wanted,
+      wanted === "" ? `${occasion.name} · day to agree` : `${occasion.name} · ${box.name}`
+    );
+    if (!trip) return { error: "Could not start that one. Try again in a moment." };
+
+    going = {
+      runId: trip.id,
+      at: "",
+      fee: urgent ? box.car_fee : box.run_fee,
+      wanted,
     };
+  } else {
+    // Which of the ways of getting it here they picked, matched against the
+    // list the shop would offer right now. A page left open all afternoon is
+    // still showing this morning's cars.
+    const options = await whenOptions(occasion, box);
+    const picked = options.find((one) => one.key === asked);
+    if (!picked) {
+      return {
+        error:
+          options.length === 0
+            ? "Nothing can get there in time now."
+            : "That time has gone. Pick another one.",
+      };
+    }
+    going = { runId: picked.runId, at: picked.at, fee: picked.fee, wanted: picked.date };
   }
 
   const result = await placeOrder({
@@ -97,6 +144,25 @@ async function order(form: FormData): Promise<BoxOrderState> {
   // page is provisional from here until somebody agrees what it comes to.
   if (form.get("custom") === "on") {
     await markCustomPending(result.orderId).catch(() => {});
+  }
+
+  // The day they asked for, and whether they want it again. Written after
+  // the order rather than through it, because neither of these decides a
+  // price and neither is worth failing an order over.
+  const repeat = readRepeat(form.get("repeat"));
+  const note = String(form.get("repeat_note") ?? "").trim().slice(0, 120);
+  if (going.wanted !== "" || repeat !== "") {
+    await db()
+      .from("orders")
+      .update({
+        ...(going.wanted !== "" ? { wanted_on: going.wanted } : {}),
+        ...(repeat !== "" ? { repeat_every: repeat, repeat_note: note } : {}),
+      })
+      .eq("id", result.orderId)
+      .then(
+        () => undefined,
+        () => undefined
+      );
   }
 
   // The order exists from here on, so nothing after it may fail loudly. A

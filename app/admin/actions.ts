@@ -40,6 +40,7 @@ import { placesText } from "@/lib/run-places";
 import { newPin } from "@/lib/customer-auth";
 import { recordDeletion } from "@/lib/deletions";
 import { orderOfLine, orderOfOption, retotal } from "@/lib/order-edit";
+import { tripForBox } from "@/lib/box-day";
 import { naira, orderRef } from "@/lib/money";
 import { namedPromoters, realPromoter } from "@/lib/promoters";
 import { pushDeal, pushToPhone } from "@/lib/push";
@@ -405,6 +406,141 @@ export async function settleCustom(form: FormData): Promise<void> {
   await db().from("orders").update({ custom_pending: false }).eq("id", orderId);
   revalidatePath("/admin", "layout");
   revalidatePath("/o", "layout");
+}
+
+/**
+ * Agreeing the day a box goes.
+ *
+ * Somebody said any day was fine, or asked for one we cannot do. This is
+ * where the day becomes real: their page stops saying we are agreeing one
+ * and names it.
+ */
+export async function setBoxDay(form: FormData): Promise<void> {
+  await assertAdmin();
+  const orderId = String(form.get("order_id") ?? "");
+  const day = String(form.get("run_date") ?? "").trim();
+  if (orderId === "" || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
+
+  const { data: order } = await db()
+    .from("orders")
+    .select("batch_id")
+    .eq("id", orderId)
+    .maybeSingle();
+  const batchId = (order as { batch_id?: string } | null)?.batch_id ?? "";
+  if (batchId === "") return;
+
+  await db()
+    .from("batches")
+    .update({ run_date: day, cut_off_at: lagosInstant(day, 23, 59) })
+    .eq("id", batchId)
+    .eq("kind", "box");
+
+  await db().from("orders").update({ wanted_on: day }).eq("id", orderId);
+  revalidatePath("/admin", "layout");
+  revalidatePath("/o", "layout");
+}
+
+/**
+ * The next one in a repeat, raised by hand.
+ *
+ * Nothing here charges itself and nothing here should: a shop that takes
+ * money on a schedule is a shop that takes money for a box nobody checked.
+ * So this makes the next order, unpaid, and hands back a link to send them.
+ *
+ * Copied from what the order finally became rather than what was first
+ * ordered. If it was changed to barbecue beef in a chat six weeks ago, the
+ * next one is barbecue beef, or somebody goes and buys the wrong thing.
+ */
+export async function orderAgain(form: FormData): Promise<void> {
+  await assertAdmin();
+  const orderId = String(form.get("order_id") ?? "");
+  const day = String(form.get("run_date") ?? "").trim();
+  if (orderId === "") return;
+
+  const { data: old } = await db()
+    .from("orders")
+    .select("*")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!old) return;
+
+  const was = old as Record<string, unknown>;
+  const wanted = /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : "";
+
+  const trip = await tripForBox(
+    wanted,
+    `Repeat · ${String(was.customer_name ?? "")}`.slice(0, 60)
+  );
+  if (!trip) return;
+
+  const { data: made, error } = await db()
+    .from("orders")
+    .insert({
+      batch_id: trip.id,
+      customer_phone: was.customer_phone,
+      customer_name: was.customer_name,
+      hostel: was.hostel,
+      subtotal_food: was.subtotal_food,
+      fee: was.fee,
+      discount: 0,
+      total: Number(was.subtotal_food ?? 0) + Number(was.fee ?? 0),
+      status: "pending",
+      payment_method: was.payment_method,
+      customer_note: was.customer_note,
+      box_id: was.box_id,
+      deliver_to_name: was.deliver_to_name,
+      deliver_to_phone: was.deliver_to_phone,
+      promoter_code: was.promoter_code,
+      repeat_every: was.repeat_every,
+      repeat_note: was.repeat_note,
+      ...(wanted !== "" ? { wanted_on: wanted } : {}),
+    })
+    .select("id")
+    .single();
+  if (error || !made) return;
+
+  // The lines as they stand today, choices and all, including anything
+  // agreed in a chat and typed in afterwards.
+  const { data: lines } = await db()
+    .from("order_items")
+    .select("id, menu_item_id, qty, unit_price_at_order, for_name")
+    .eq("order_id", orderId);
+
+  for (const line of (lines ?? []) as Record<string, unknown>[]) {
+    const { data: copy } = await db()
+      .from("order_items")
+      .insert({
+        order_id: made.id,
+        menu_item_id: line.menu_item_id,
+        qty: line.qty,
+        unit_price_at_order: line.unit_price_at_order,
+        for_name: line.for_name,
+      })
+      .select("id")
+      .single();
+    if (!copy) continue;
+
+    const { data: chose } = await db()
+      .from("order_item_options")
+      .select("option_id, name_at_order, price_delta_at_order")
+      .eq("order_item_id", line.id as string);
+
+    const carried = (chose ?? []) as Record<string, unknown>[];
+    if (carried.length > 0) {
+      await db().from("order_item_options").insert(
+        carried.map((one) => ({
+          order_item_id: copy.id,
+          option_id: one.option_id,
+          name_at_order: one.name_at_order,
+          price_delta_at_order: one.price_delta_at_order,
+        }))
+      );
+    }
+  }
+
+  await retotal(made.id as string);
+  revalidatePath("/admin", "layout");
+  redirect(`/admin/orders/${made.id as string}`);
 }
 
 export async function setBatchStatus(form: FormData): Promise<void> {

@@ -92,7 +92,10 @@ export type Batch = {
   /** A shared car, a car going out for one order, or the weekly skincare
    *  drop. It is what keeps the last two out of the list customers pick a
    *  run from. */
-  kind: "run" | "same_day" | "skincare" | "parcel";
+  /** "box" is a collection on a day of its own: found, packed and then
+   *  carried, which is nothing like tonight's food run, and never offered
+   *  to somebody ordering dinner. */
+  kind: "run" | "same_day" | "skincare" | "parcel" | "box";
   /** Which areas this car goes to, beyond Sangotedo, as "|lekki|". */
   areas?: string;
   /** The only counters this run fetches from, as "|id|id|". Empty is every

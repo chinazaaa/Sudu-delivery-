@@ -2,6 +2,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 
 import { boxesOf, isTimed, occasionBySlug, type Shelf } from "@/lib/boxes";
+import { furthest, soonestStandard } from "@/lib/box-day";
 import { boxViews, whenOptions, type BoxView, type WhenOption } from "@/lib/box-view";
 import { hostelNames } from "@/lib/hostels";
 import { currentCustomer, customerDetails } from "@/lib/customer-auth";
@@ -103,14 +104,19 @@ export default async function BoxDetail({
           slug={occasion.slug}
           boxes={views}
           when={when}
+          /* A thing with a whistle picks a real car. Everything else picks a
+             date, because a care package is found, bought and packed before
+             anybody drives it anywhere. */
+          timed={isTimed(occasion)}
+          soonest={soonestStandard()}
+          latest={furthest()}
           hostels={hostels}
           promoters={promoters.map((one) => ({ code: one.code, name: one.name }))}
           me={me}
           note={ESTIMATE_NOTE}
-          /* A box with nothing going is not a dead end. There is always a
-             next way to eat, and saying so is the difference between a shut
-             door and a later one. */
-          shut={when.length === 0}
+          /* Only a thing with a whistle can run out of ways to arrive. A
+             collection always has one: pick a day, or let us agree one. */
+          shut={isTimed(occasion) && when.length === 0}
         />
       )}
 

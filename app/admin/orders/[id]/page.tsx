@@ -29,6 +29,8 @@ import {
   savePaymentLink,
   removeParcelPhoto,
   saveOrderNote,
+  setBoxDay,
+  orderAgain,
   setLineQty,
   addOrderLine,
   addLineOption,
@@ -37,6 +39,7 @@ import {
 } from "../../actions";
 import OrderEditor from "@/components/admin/OrderEditor";
 import { linesToEdit } from "@/lib/order-edit";
+import { repeatSaid } from "@/lib/box-day";
 import { foodCatalogue } from "@/lib/box-admin";
 import { openBatches } from "@/lib/batches";
 import { hoursByDay } from "@/lib/settings";
@@ -97,6 +100,10 @@ async function orderPage(id: string, said: string) {
     // Everything sellable, ours and the restaurants', for adding a line.
     foodCatalogue().catch(() => []),
   ]);
+
+  const boxDay = String((order as { wanted_on?: string | null }).wanted_on ?? "");
+  const repeatEvery = String((order as { repeat_every?: string }).repeat_every ?? "");
+  const repeatNote = String((order as { repeat_note?: string }).repeat_note ?? "");
 
   const catalogue = shops.flatMap((shop) =>
     shop.items.map((item) => ({
@@ -195,6 +202,61 @@ async function orderPage(id: string, said: string) {
           savePaymentLink={savePaymentLink}
           saveNote={saveOrderNote}
         />
+      )}
+
+      {/* A collection on a day of its own. Two things the shop has to be
+          able to do by hand: agree the day, and raise the next one. */}
+      {order.batch.kind === "box" && (
+        <section className="card mt-4 space-y-3">
+          <div>
+            <h2 className="font-bold">The day it goes</h2>
+            <p className="text-sm text-muted">
+              {boxDay
+                ? `They asked for ${dayWord(boxDay)}.`
+                : "They said any day is fine. Agree one and their page will say it."}
+              {repeatEvery
+                ? ` ${repeatSaid(repeatEvery)}${repeatNote ? `, ${repeatNote}` : ""}.`
+                : ""}
+            </p>
+          </div>
+
+          <form action={setBoxDay} className="flex flex-wrap items-end gap-2">
+            <input type="hidden" name="order_id" value={order.id} />
+            <label className="text-xs font-semibold text-muted">
+              Going on
+              <input
+                type="date"
+                name="run_date"
+                defaultValue={boxDay || order.batch.run_date}
+                className="field mt-0.5 w-44 py-1.5 text-sm"
+              />
+            </label>
+            <button className="btn-quiet px-4 py-2 text-sm">Set the day</button>
+          </form>
+
+          {repeatEvery !== "" && (
+            <form
+              action={orderAgain}
+              className="flex flex-wrap items-end gap-2 border-t border-black/5 pt-3"
+            >
+              <input type="hidden" name="order_id" value={order.id} />
+              <label className="text-xs font-semibold text-muted">
+                Next one going on
+                <input
+                  type="date"
+                  name="run_date"
+                  className="field mt-0.5 w-44 py-1.5 text-sm"
+                />
+              </label>
+              <button className="btn-primary px-4 py-2 text-sm">
+                Raise the next one
+              </button>
+              <span className="text-xs text-muted">
+                Copies what is in it now, unpaid, ready to send.
+              </span>
+            </form>
+          )}
+        </section>
       )}
 
       {/* Not on a parcel: there are no lines in it to change. */}
