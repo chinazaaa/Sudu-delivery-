@@ -1296,8 +1296,9 @@ export default function Checkout({
               Is somebody abroad paying for this?
             </p>
             <p className="mt-0.5 text-xs text-muted">
-              We send them a card link in their own money. The amount is
-              worked out at our rate, so it is close rather than exact.
+              We send you a card link in their money, and you pass it on to
+              them. The order is still {naira(total)}; the amount on the link
+              is worked out at our rate, so it is close rather than exact.
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <button
@@ -1426,6 +1427,23 @@ export default function Checkout({
           <span>{shared ? "Food so far" : "Total"}</span>
           <span>{naira(total)}</span>
         </div>
+        {/* The order is in naira and stays in naira: that is what is owed and
+            what the books are kept in. Picking pounds changes what the card
+            link is made out for, and without saying so here the button looks
+            like it did nothing at all. */}
+        {method === "card" &&
+          money !== "" &&
+          (() => {
+            const picked = monies.find((one) => one.code === money);
+            if (!picked || picked.rate <= 0) return null;
+            return (
+              <p className="text-xs text-muted">
+                The card link will be for about {picked.symbol}
+                {(Math.ceil((total / picked.rate) * 10) / 10).toFixed(2)}, which
+                is this same {naira(total)} at our rate.
+              </p>
+            );
+          })()}
         {shared && (
           <p className="text-xs text-muted">
             One delivery fee for the whole car, split evenly between everybody in
