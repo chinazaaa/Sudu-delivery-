@@ -7,6 +7,7 @@ import {
   Text,
   TextInput,
   View,
+  type ViewProps,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
@@ -26,6 +27,27 @@ export default function OccasionScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const scroller = useRef<ScrollView>(null);
+  /**
+   * Where the form starts, and whether we owe it a scroll.
+   *
+   * Picking a box used to scroll to a flat 240 pixels, which was the right
+   * answer for exactly one box on exactly one phone. These cards list
+   * everything in them, so the first one can run six hundred pixels on its
+   * own and the third one starts past two thousand. A fixed number left you
+   * somewhere in the middle of the packing list, and picking a box read as
+   * nothing having happened.
+   *
+   * So the form says where it is when it lays out, and we go there.
+   */
+  const formTop = useRef(0);
+  const owedScroll = useRef(false);
+
+  /** Go to the form, once, whenever we know where it is. */
+  const toTheForm = () => {
+    if (!owedScroll.current || formTop.current <= 0) return;
+    owedScroll.current = false;
+    scroller.current?.scrollTo({ y: Math.max(0, formTop.current - 12), animated: true });
+  };
 
   const [data, setData] = useState<Awaited<ReturnType<typeof api.occasion>> | null>(null);
   const [error, setError] = useState("");
@@ -53,6 +75,8 @@ export default function OccasionScreen() {
   const [wantedOn, setWantedOn] = useState("");
   const [again, setAgain] = useState(false);
   const [howOften, setHowOften] = useState("monthly");
+  /** "Last Saturday of the month". Optional, and it decides no price. */
+  const [whenSuits, setWhenSuits] = useState("");
   const [money, setMoney] = useState("");
   const [problem, setProblem] = useState("");
 
@@ -164,6 +188,7 @@ export default function OccasionScreen() {
         paymentMethod: pays,
         payCurrency: pays === "card" ? money : "",
         repeat: again ? howOften : "",
+        repeatNote: again ? whenSuits.trim() : "",
         customerNote: note,
         heardFrom: heard,
         giftName: gifting ? giftName : "",
@@ -213,7 +238,13 @@ export default function OccasionScreen() {
             // Picking a box moves you to what is in it, because the next
             // thing to do is below the fold on every phone and hunting for
             // it reads as nothing having happened.
-            if (next !== "") setTimeout(() => scroller.current?.scrollTo({ y: 240, animated: true }), 50);
+            if (next !== "") {
+              owedScroll.current = true;
+              // Whichever comes first wins and the flag stops the other: the
+              // form laying out for the first time, or, where it is already
+              // on screen because they swapped one box for another, this.
+              setTimeout(toTheForm, 80);
+            }
           }}
           style={{
             backgroundColor: one.id === picked ? T.tint : T.paper,
@@ -253,7 +284,15 @@ export default function OccasionScreen() {
 
       {box && (data.when.length > 0 || !(data.day?.timed ?? true)) && (
         <>
-          <Card>
+          {/* The first card of the form says where the form begins, in the
+              scroll view's own coordinates, so picking a box lands on it
+              rather than near it. */}
+          <Card
+            onLayout={(event) => {
+              formTop.current = event.nativeEvent.layout.y;
+              toTheForm();
+            }}
+          >
             <Heading>What is in it</Heading>
             {box.lines.map((line) => {
               const pick = swaps[line.id];
@@ -520,9 +559,21 @@ export default function OccasionScreen() {
             )}
 
             {again && (
-              <Text style={{ color: T.muted, fontSize: 12, marginTop: 8 }}>
-                Nothing charges itself. We message you each time to pay.
-              </Text>
+              <>
+                {/* The website asks this and the app did not, so somebody
+                    who wanted it on the last Saturday of the month had
+                    nowhere to say so. The placeholder is the answer most
+                    people mean. */}
+                <Field
+                  label="When suits (optional)"
+                  value={whenSuits}
+                  onChange={setWhenSuits}
+                  placeholder="Last Saturday of the month"
+                />
+                <Text style={{ color: T.muted, fontSize: 12, marginTop: 8 }}>
+                  Nothing charges itself. We message you each time to pay.
+                </Text>
+              </>
             )}
           </Card>
 
@@ -619,6 +670,15 @@ export default function OccasionScreen() {
                       }}
                     >
                       <Text style={{ color: T.ink, fontWeight: "600" }}>{one.label}</Text>
+                      {/* What the link will actually say. A chip reading
+                          "Pounds" and nothing else leaves a mother in London
+                          with no idea what she is about to be asked for. */}
+                      {"rate" in one && one.rate > 0 && (
+                        <Text style={{ color: T.muted, fontSize: 12 }}>
+                          about {one.symbol}
+                          {(Math.ceil((priceOf(box) / one.rate) * 10) / 10).toFixed(2)}
+                        </Text>
+                      )}
                     </Pressable>
                   ))}
                 </View>
@@ -680,8 +740,20 @@ export default function OccasionScreen() {
   );
 }
 
-const Card = ({ children }: { children: React.ReactNode }) => (
-  <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 16 }}>{children}</View>
+const Card = ({
+  children,
+  onLayout,
+}: {
+  children: React.ReactNode;
+  /** Only the first card of the form uses this, to say where it starts. */
+  onLayout?: ViewProps["onLayout"];
+}) => (
+  <View
+    onLayout={onLayout}
+    style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 16 }}
+  >
+    {children}
+  </View>
 );
 
 const Heading = ({ children }: { children: React.ReactNode }) => (

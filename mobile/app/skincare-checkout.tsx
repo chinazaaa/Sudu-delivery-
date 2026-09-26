@@ -314,6 +314,15 @@ export default function SkincareCheckout() {
                 }}
               >
                 <Text style={{ color: T.ink, fontWeight: "600" }}>{one.label}</Text>
+                {/* What the link will actually say. A chip reading "Pounds"
+                    and nothing else leaves whoever is paying with no idea
+                    what they are about to be asked for. */}
+                {"rate" in one && one.rate > 0 && (
+                  <Text style={{ color: T.muted, fontSize: 12 }}>
+                    about {one.symbol}
+                    {(Math.ceil(((food + fee) / one.rate) * 10) / 10).toFixed(2)}
+                  </Text>
+                )}
               </Pressable>
             ))}
           </View>

@@ -25,6 +25,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       lines?: CartLine[];
       coupon?: string;
       paymentMethod?: string;
+      /** "GBP" or "USD" on a card, where somebody abroad is paying. */
+      payCurrency?: string;
       customerNote?: string;
       heardFrom?: string;
       groupMode?: string;
@@ -53,6 +55,14 @@ export async function POST(request: Request): Promise<NextResponse> {
       groupMode:
         body.groupMode === "one_payer" || body.groupMode === "split" ? body.groupMode : null,
       paymentMethod: body.paymentMethod === "card" ? "card" : "transfer",
+      // Only a card link can be made out in anybody else's money, and only
+      // in one the shop actually offers. Read here rather than trusted: a
+      // phone can say a currency, it cannot choose one.
+      payCurrency:
+        body.paymentMethod === "card" &&
+        (body.payCurrency === "GBP" || body.payCurrency === "USD")
+          ? body.payCurrency
+          : undefined,
       collectMode: body.collectMode === "each" ? "each" : "leader",
       people: (Array.isArray(body.people) ? body.people : []).map((person) => ({
         name: String(person.name ?? "").trim(),

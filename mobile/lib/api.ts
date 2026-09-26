@@ -280,6 +280,9 @@ export type Shop = {
   /** Who somebody could say they heard about the shop from. Empty means
    *  nobody is promoting, and the question is not worth asking. */
   promoters?: { code: string; name: string }[];
+  /** The currencies a card link can be made out in, for somebody abroad
+   *  paying. Older servers send none, and then the question is not asked. */
+  monies?: { code: string; label: string; symbol: string; rate: number }[];
   /** The areas the shop delivers from, beyond Sangotedo, and which one each
    *  kitchen is in. Older servers send neither, and then everything is
    *  Sangotedo and every price is what it always was. */
@@ -490,6 +493,8 @@ export const api = {
     coupon?: string;
     paymentMethod: "transfer" | "card";
     customerNote?: string;
+    /** Whose money the card link is made out in. Naira unless they say. */
+    payCurrency?: string;
     /** Who they say they heard about the shop from, as a promoter's code.
      *  Written once, on a first order, and theirs for life after that. */
     heardFrom?: string;

@@ -10,6 +10,7 @@ import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { serialiseBands } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
 import { allAreas, areaOfEach, valueBandsOfEach } from "@/lib/areas-server";
+import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
 
 export const dynamic = "force-dynamic";
 
@@ -104,6 +105,16 @@ export async function GET(): Promise<NextResponse> {
       // Who somebody could say they heard about the shop from. Empty means
       // nobody is promoting, and then the question is not worth asking.
       promoters: await namedPromoters(),
+      // Whose money a card link can be made out in. The website's food
+      // checkout has asked this all along and the app's never did, so a
+      // parent in London reached the last screen and was shown a naira
+      // figure and nothing they could pay it with.
+      monies: moniesOn(settings).map((code) => ({
+        code,
+        label: code === "GBP" ? "Pounds" : "Dollars",
+        symbol: SYMBOL[code],
+        rate: rateFor(settings, code),
+      })),
       shop: {
         tagline: settings.tagline,
         ribbon: settings.ribbon_text,

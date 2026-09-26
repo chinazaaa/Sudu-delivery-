@@ -56,6 +56,9 @@ export default function Checkout() {
   const [method, setMethod] = useState<"transfer" | "card">("transfer");
   /** Who they say they heard about us from. Empty is "somewhere else". */
   const [heardFrom, setHeardFrom] = useState("");
+  /** Whose money a card link is made out in. Empty is naira, which is
+   *  almost everybody, so it stays the default. */
+  const [money, setMoney] = useState("");
   const [code, setCode] = useState("");
   const [applied, setApplied] = useState<{ code: string; discount: number; label: string } | null>(null);
   const [codeError, setCodeError] = useState("");
@@ -388,6 +391,9 @@ export default function Checkout() {
   // A promotion is the price, so it wins over the ladder and over the same
   // day figure alike, exactly as the order itself settles it.
   const fee = offered ? offered.fee : ladder;
+  /** What the order comes to: the number the Total row shows, and the one a
+   *  card link abroad is worked out from. */
+  const owed = Math.max(0, food + fee - (applied?.discount ?? 0));
 
   const place = async () => {
     setError("");
@@ -406,6 +412,7 @@ export default function Checkout() {
           for_name: line.forName || null,
         })),
         paymentMethod: method,
+        payCurrency: method === "card" ? money : "",
         heardFrom,
         coupon: applied?.code ?? "",
         groupMode: sharing.length > 0 ? mode : null,
@@ -540,6 +547,49 @@ export default function Checkout() {
           </Text>
         )}
       </View>
+
+      {/* What the order comes to, for the card link's rough conversion: the
+          same number the Total row shows. */}
+      {/* A parent in London cannot make a Nigerian transfer. The website has
+          asked this on its food checkout all along and the app never did, so
+          whoever was paying reached the last screen and found a naira figure
+          and an account number they could not use. */}
+      {method === "card" && (shop.monies ?? []).length > 0 && (
+        <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
+          <Text style={{ fontWeight: "800", color: T.ink }}>
+            Is somebody abroad paying?
+          </Text>
+          <Text style={{ color: T.muted, fontSize: 12 }}>
+            We send a card link in their money. The order is still {naira(owed)};
+            the amount on the link is worked out at our rate, so it is close
+            rather than exact.
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {[{ code: "", label: "No, naira" }, ...(shop.monies ?? [])].map((one) => (
+              <Pressable
+                key={one.code || "naira"}
+                onPress={() => setMoney(one.code)}
+                style={{
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: money === one.code ? T.brand : T.line,
+                  backgroundColor: money === one.code ? T.tint : T.paper,
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                }}
+              >
+                <Text style={{ color: T.ink, fontWeight: "600" }}>{one.label}</Text>
+                {"rate" in one && one.rate > 0 && (
+                  <Text style={{ color: T.muted, fontSize: 12 }}>
+                    about {one.symbol}
+                    {(Math.ceil((owed / one.rate) * 10) / 10).toFixed(2)}
+                  </Text>
+                )}
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
 
       {(shop.promoters ?? []).length > 0 && (
         <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
@@ -754,7 +804,7 @@ export default function Checkout() {
         />
         {applied && <Row label={`Code ${applied.code}`} value={`−${naira(applied.discount)}`} />}
         <View style={{ height: 1, backgroundColor: T.line, marginVertical: 4 }} />
-        <Row label="Total" value={naira(Math.max(0, food + fee - (applied?.discount ?? 0)))} strong />
+        <Row label="Total" value={naira(owed)} strong />
 
         {nearly && (
           <Text style={{ color: T.brandDark, fontSize: 13, fontWeight: "700" }}>
