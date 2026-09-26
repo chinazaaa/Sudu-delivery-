@@ -13,6 +13,13 @@ import SplitPrompt from "./SplitPrompt";
 import type { ItemView, MenuView } from "@/lib/view";
 import type { Slide } from "@/lib/slides";
 
+/**
+ * How many named shelves the front page will carry before it stops naming
+ * them. Six is three rows on a phone, which is as much as anybody scrolls
+ * past the food.
+ */
+const MOST = 6;
+
 /** One way into the shop: a card in the grid, and a slide in the slider. */
 type Bucket = {
   href: string;
@@ -27,8 +34,7 @@ export default function Home({
   alsoArriving = null,
   parcels,
   skincare,
-  occasions = "",
-  collections = "",
+  shelves = [],
   slides,
   promos,
   iosAppId = "",
@@ -47,13 +53,11 @@ export default function Home({
   /** When the skincare car next goes, said in a line. Empty when that shelf
    *  is switched off, and then there is no door to it. */
   skincare: string;
-  /** What is on for a day somebody is shopping for, said in a line. The
-   *  home page is the only signpost this shop has, so anything not named
-   *  here is unreachable. */
-  occasions?: string;
-  /** The standing shelves, said the same way. A care package is not an
-   *  occasion, and one door holding both was a door nobody could name. */
-  collections?: string;
+  /** Every collection and every occasion, each as its own card by its own
+   *  name. The home page is the only signpost this shop has and the only
+   *  place it advertises: a door saying "Collections" is a filing cabinet,
+   *  and nobody opens a filing cabinet to find out we do care packages. */
+  shelves?: Bucket[];
   /** Written in admin. Empty falls back to a slide per restaurant. */
   slides: Slide[];
   /** A promotion on a restaurant, in a few words, keyed by its id. An offer
@@ -89,11 +93,18 @@ export default function Home({
         skincare !== ""
           ? { href: "/skincare", title: "Skincare", line: skincare, action: "Shop" }
           : null,
-        collections !== ""
-          ? { href: "/collections", title: "Collections", line: collections, action: "See" }
-          : null,
-        occasions !== ""
-          ? { href: "/occasions", title: "Occasions", line: occasions, action: "See" }
+        // Named one by one, in the middle: after the three things the shop
+        // always does, before the two ways of asking for something it does
+        // not. Capped, because this list only ever grows and a front page
+        // that is forty cards is a catalogue again. The rest are a door.
+        ...shelves.slice(0, MOST),
+        shelves.length > MOST
+          ? {
+              href: "/collections",
+              title: "Everything else packed",
+              line: `${shelves.length - MOST} more, all at one price with delivery in it`,
+              action: "See",
+            }
           : null,
         {
           href: "/custom-order",
@@ -108,7 +119,7 @@ export default function Home({
           action: "Start",
         },
       ].filter((one): one is Bucket => one !== null),
-    [parcels, skincare, collections, occasions]
+    [parcels, skincare, shelves]
   );
 
   const found = useMemo(() => {

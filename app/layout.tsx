@@ -175,6 +175,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Link href="/about" className="underline">
                 About
               </Link>
+              {/* The front page names each shelf rather than the word, so
+                  these two lists would otherwise be reachable only from
+                  inside one of them. One link from a crawled page is what
+                  stops a page being an orphan. */}
+              <Link href="/collections" className="underline">
+                Collections
+              </Link>
+              <Link href="/occasions" className="underline">
+                Occasions
+              </Link>
 
               {settings.whatsapp_group_link && (
                 <a

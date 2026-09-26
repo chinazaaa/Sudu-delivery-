@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { lagosToday } from "@/lib/time";
-import { liveOccasions, onShelf } from "@/lib/boxes";
+import { boxesAcross, liveOccasions, onShelf } from "@/lib/boxes";
+import { cheapestBoxes } from "@/lib/box-view";
+import { naira } from "@/lib/money";
 import Home from "@/components/Home";
 import { openBatches } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
@@ -67,19 +69,45 @@ export default async function HomePage() {
   // Two shelves, named separately: an occasion has a date on it and a
   // collection stands there all term, and one door holding both was a door
   // that could only be called something like "boxes and gifts".
+  // Every shelf as its own card, by name, rather than one door saying
+  // "Collections". Nobody opens a filing cabinet: a front page is where you
+  // advertise, and somebody who never knew we do a care package will only
+  // find out if the words "Care package" are on the page they landed on.
+  //
+  // With a price, because a name is a category and a name with a price is an
+  // offer. Two more queries to say "from ₦20,000, delivery in", which is the
+  // sentence that gets the tap.
   const packed = await liveOccasions();
-  const named = (some: { name: string }[]): string =>
-    some.length === 0
-      ? ""
-      : some.length === 1
-        ? `${some[0].name}. One price, delivery in it.`
-        : `${some
-            .slice(0, 2)
-            .map((one) => one.name)
-            .join(", ")} and more. One price, delivery in it.`;
+  const packedBoxes = await boxesAcross(packed.map((one) => one.id));
+  const from = await cheapestBoxes(packedBoxes).catch(
+    () => new Map<string, number>()
+  );
 
-  const occasionsLine = named(onShelf(packed, "occasion"));
-  const collectionsLine = named(onShelf(packed, "collection"));
+  const boxCount = new Map<string, number>();
+  for (const box of packedBoxes) {
+    if (box.is_extra) continue;
+    boxCount.set(box.occasion_id, (boxCount.get(box.occasion_id) ?? 0) + 1);
+  }
+
+  const doorsFor = (kind: "collection" | "occasion") =>
+    onShelf(packed, kind)
+      // A shelf with nothing on it is not a door. It would be a card that
+      // opens on an apology.
+      .filter((one) => (boxCount.get(one.id) ?? 0) > 0)
+      .map((one) => {
+        const price = from.get(one.id);
+        const said = price !== undefined ? `From ${naira(price)}, delivery in.` : "";
+        return {
+          href: `/${kind === "occasion" ? "occasions" : "collections"}/${one.slug}`,
+          title: one.name,
+          line: one.blurb !== "" ? `${one.blurb}${said ? ` ${said}` : ""}` : said,
+          action: "See",
+        };
+      });
+
+  // Collections stand all term, so they lead. An occasion is the urgent one
+  // and there is rarely more than one at a time.
+  const shelves = [...doorsFor("collection"), ...doorsFor("occasion")];
 
   return (
     <Home
@@ -108,12 +136,10 @@ export default async function HomePage() {
         })()
       }
       promos={promos}
-      // The one signpost. Named by whatever is nearest, because "Match day,
-      // Saturday" is a reason to tap and "Occasions" is a filing cabinet.
-      occasions={occasionsLine}
-      // The standing shelves: care packages, hostel packs, a restock. Named
-      // by what is on them for the same reason.
-      collections={collectionsLine}
+      // Every collection and every occasion by its own name, with a price,
+      // because "Care package, from ₦20,000" is a reason to tap and
+      // "Collections" is a filing cabinet.
+      shelves={shelves}
       // Something that is not food, carried on its own trip. Named by where
       // it goes rather than called "Parcels", because nobody is looking for
       // a parcel service: they have a dress sitting in a shop in Lekki.
