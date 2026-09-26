@@ -109,3 +109,24 @@ from (values
   ('1a70a7dc-2fb4-4768-aa38-25ef758eb640','c7b8b305-9e4a-4f75-80bf-e8821fb53edc','Flowers and a note','Roses, a card, and chocolate to go with them.','One person',array['f6be6e51-d9a9-4ee7-9f19-38df1046f1a3','e1b73749-95ce-4a38-ba68-ad431d70f64b','36ba800a-4acd-4f28-995e-a9dbae607131'],array[1,1,1]),
   ('e7620f4c-191a-4d16-a722-2c401654805b','c7b8b305-9e4a-4f75-80bf-e8821fb53edc','The big one','An eight inch cake, roses, chocolate, a candle, a bear and balloons.','A birthday, done properly',array['211f36e7-83cc-468a-a699-77394892041b','f6be6e51-d9a9-4ee7-9f19-38df1046f1a3','36ba800a-4acd-4f28-995e-a9dbae607131','bac88127-fb38-41dd-8c85-688f346b73d0','1a256940-9671-49b1-a103-cf89d51c1aa3','b68f4be2-ccf3-433a-8d6f-36ef11a6b614','e1b73749-95ce-4a38-ba68-ad431d70f64b'],array[1,1,1,1,1,1,1])
 ) as b(id,occ,name,blurb,serves,items,qtys) on conflict (id) do nothing;
+
+-- Later the same day: the pot and the frying pan came off.
+--
+-- PAU hostels have pots. Selling somebody a pot they already have is the
+-- fastest way to make a box look like it was written by somebody who has
+-- never been in the building, and one wrong line is enough to lose the
+-- whole box. Both are switched off rather than deleted, because a product
+-- that turns out to be wanted after all should come back, not be retyped.
+--
+-- In their place, eight things a hostel room does want, and two boxes that
+-- make sense: somewhere to eat and drink from, and something for the night
+-- the power goes.
+--
+-- Run by hand against the live shop; written down here so it is known.
+--   Added: rechargeable lamp, rechargeable fan, power bank, mug, food
+--   flask, laundry basket, pegs, iron.
+--   Kitchen corner became "Eating and drinking corner": kettle, flask,
+--   mugs, plates, cutlery, food flask, sponges, washing-up liquid.
+--   New: "Light and power": lamp, fan, power bank, extension, two bulbs.
+--   "Everything for a first year" lost the pot and gained the lamp, the
+--   laundry basket and the mugs.
