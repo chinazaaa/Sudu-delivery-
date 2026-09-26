@@ -277,14 +277,33 @@ export default async function DeliveryToPauPage() {
       </Section>
 
       <Section title="Why PAU students use Sudu">
-        <ul className="list-inside list-disc space-y-1">
-          <li>Several restaurants in one order</li>
-          <li>One shared delivery run, so the fee splits between everybody on it</li>
-          <li>Delivered to your PAU block, not to a gate</li>
-          {skincare && <li>Food, skincare and parcels, all to campus</li>}
-          {!skincare && routes.length > 0 && <li>Food and parcels, both to campus</li>}
-          <li>Running onto this campus since 2018</li>
-        </ul>
+        <dl className="space-y-3">
+          <Reason title="Several restaurants, one delivery">
+            Order from more than one kitchen on the same run instead of
+            arranging a delivery from each of them.
+          </Reason>
+          <Reason title="Delivered to your PAU hostel">
+            It is brought onto campus and handed over at the block you named,
+            not left at a gate for you to go and find.
+          </Reason>
+          <Reason title="Ordering together">
+            Start a shared delivery, send the link, and everybody adds their
+            own food. One fee, split between all of you.
+          </Reason>
+          {(skincare || routes.length > 0) && (
+            <Reason title="More than food">
+              {skincare && routes.length > 0
+                ? "Skincare has its own shelf and its own day, and parcels move both ways between campus and town."
+                : skincare
+                  ? "Skincare has its own shelf and its own day."
+                  : "Parcels move both ways between campus and town."}
+            </Reason>
+          )}
+          <Reason title="Here since 2018">
+            Sudu has been running onto this campus for years, and won PAU&apos;s
+            entrepreneurship award in 2021.
+          </Reason>
+        </dl>
       </Section>
 
       <Section title="How it works">
@@ -420,6 +439,16 @@ export default async function DeliveryToPauPage() {
         </Link>
       </p>
     </article>
+  );
+}
+
+/** One reason, said as a heading and a sentence rather than a bullet. */
+function Reason({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="font-bold">{title}</dt>
+      <dd className="text-muted">{children}</dd>
+    </div>
   );
 }
 

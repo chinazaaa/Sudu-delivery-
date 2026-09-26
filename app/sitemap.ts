@@ -48,6 +48,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Written for the search rather than for the shop, so it has to be
     // findable: nothing in the header or the tab bar points at it.
     { url: `${site}/delivery-to-pau`, changeFrequency: "monthly" as const, priority: 0.8 },
+    // Who the shop is, for anybody asking that rather than asking for food.
+    { url: `${site}/about`, changeFrequency: "monthly" as const, priority: 0.6 },
     // Both are public pages the stores point at, so they are worth finding.
     { url: `${site}/support`, changeFrequency: "monthly" as const, priority: 0.3 },
     { url: `${site}/privacy`, changeFrequency: "monthly" as const, priority: 0.3 },

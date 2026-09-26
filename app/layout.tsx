@@ -172,6 +172,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Link href="/delivery-to-pau" className="underline">
                 Delivery to PAU
               </Link>
+              <Link href="/about" className="underline">
+                About
+              </Link>
 
               {settings.whatsapp_group_link && (
                 <a
