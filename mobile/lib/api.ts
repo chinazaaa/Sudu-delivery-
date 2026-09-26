@@ -528,6 +528,14 @@ export const api = {
         containerPct?: number;
       }[];
       blocked: { name: string; reason: string }[];
+      /** The box it came off, where it was one. A box is not a cart: its
+       *  price has delivery in it already, so wanting it again means going
+       *  back to the box rather than tipping its contents into a basket.
+       *  Null on an ordinary order, and on older servers. */
+      box?: { name: string; slug: string } | null;
+      /** What they asked for last time and how they paid, so the form comes
+       *  up filled in. */
+      carry?: { note: string; method: "transfer" | "card" } | null;
     }>("/again", token),
   /** Everything the shop sells, a page at a time. The restaurants across
    *  the top and their own categories under them. */

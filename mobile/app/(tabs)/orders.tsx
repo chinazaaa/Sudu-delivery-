@@ -63,9 +63,28 @@ export default function Orders() {
     setNote("");
     try {
       const result = await api.again(saved.token);
+
+      // A box is not a cart. Its price is the box's price with delivery
+      // already in it, so tipping its contents into an ordinary basket
+      // would charge the container ladder for a thing never priced that
+      // way. Wanting it again means wanting the box again, which is what
+      // the website does too.
+      if (result.box) {
+        router.push(`/occasions/${result.box.slug}` as never);
+        return;
+      }
+
       if (result.lines.length === 0) {
         setNote("Nothing from your last order is on sale today.");
         return;
+      }
+
+      // How they paid last time, carried across, so the checkout comes up
+      // filled in. Their name, number and block are already kept on the
+      // phone, so this is the last of it. (The note is not carried: this
+      // checkout has nowhere to put one yet.)
+      if (result.carry) {
+        await me.save({ paymentMethod: result.carry.method }).catch(() => undefined);
       }
 
       for (const line of result.lines) {

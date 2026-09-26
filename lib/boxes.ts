@@ -278,7 +278,7 @@ export function cartOf(box: Box, chosen: Record<string, number> = {}): CartLine[
  */
 export async function boxWhere(
   boxId: string
-): Promise<{ name: string; href: string } | null> {
+): Promise<{ name: string; href: string; slug: string } | null> {
   const { data: box } = await db()
     .from("boxes")
     .select("name, occasion_id, active")
@@ -298,5 +298,8 @@ export async function boxWhere(
   return {
     name: row.name ?? "that box",
     href: `/${on.kind === "occasion" ? "occasions" : "collections"}/${on.slug}`,
+    // The app files both kinds under one route, so it wants the slug on its
+    // own rather than the website's two-worded path.
+    slug: on.slug,
   };
 }
