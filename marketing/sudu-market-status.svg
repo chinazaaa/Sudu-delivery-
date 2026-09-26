@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+<rect width="1080" height="1920" fill="#fff1ea"/>
+
+  <g transform="translate(488 272) scale(0.203125)">
+    <rect width="512" height="512" rx="116" fill="#fff1ea"/>
+    <path d="M116 180h280l-27 248a44 44 0 0 1-44 39H187a44 44 0 0 1-44-39z" fill="#ff5a1f"/>
+    <path d="M196 180v-26a60 60 0 0 1 120 0v26" fill="none" stroke="#14110f" stroke-width="28" stroke-linecap="round"/>
+    <path d="M316 272C316 240 202 240 202 294C202 338 316 330 316 372C316 426 202 426 202 392"
+          fill="none" stroke="#fff1ea" stroke-width="34" stroke-linecap="round"/>
+  </g>
+
+<text x="540" y="436" font-family="DejaVu Sans" font-size="56" font-weight="bold" fill="#14110f" text-anchor="middle">Sudu</text>
+<text x="540" y="480" font-family="DejaVu Sans" font-size="26" font-weight="normal" fill="#6b6360" text-anchor="middle">The market, carried to your block</text>
+<rect x="56" y="564" width="968" height="252" rx="40" fill="#ff5a1f"/>
+<text x="540" y="632" font-family="DejaVu Sans" font-size="42" font-weight="bold" fill="#ffffff" text-anchor="middle">However many bags.</text>
+<text x="540" y="720" font-family="DejaVu Sans" font-size="78" font-weight="bold" fill="#ffffff" text-anchor="middle">₦3,000 delivery.</text>
+<text x="540" y="772" font-family="DejaVu Sans" font-size="24" font-weight="normal" fill="#ffe6da" text-anchor="middle">Up to ₦30,000 of shopping, one flat fee.</text>
+<text x="540" y="870" font-family="DejaVu Sans" font-size="38" font-weight="bold" fill="#14110f" text-anchor="middle">326 things from the market</text>
+<text x="104" y="952" font-family="DejaVu Sans" font-size="27" font-weight="normal" fill="#14110f" text-anchor="start">Golden Penny noodles</text>
+<text x="976" y="952" font-family="DejaVu Sans" font-size="27" font-weight="bold" fill="#ff5a1f" text-anchor="end">₦300</text>
+<text x="104" y="1016" font-family="DejaVu Sans" font-size="27" font-weight="normal" fill="#14110f" text-anchor="start">Ijebu garri, a derica</text>
+<text x="976" y="1016" font-family="DejaVu Sans" font-size="27" font-weight="bold" fill="#ff5a1f" text-anchor="end">₦800</text>
+<text x="104" y="1080" font-family="DejaVu Sans" font-size="27" font-weight="normal" fill="#14110f" text-anchor="start">Rice, half derica</text>
+<text x="976" y="1080" font-family="DejaVu Sans" font-size="27" font-weight="bold" fill="#ff5a1f" text-anchor="end">₦1,150</text>
+<text x="104" y="1144" font-family="DejaVu Sans" font-size="27" font-weight="normal" fill="#14110f" text-anchor="start">Palm oil, half bottle</text>
+<text x="976" y="1144" font-family="DejaVu Sans" font-size="27" font-weight="bold" fill="#ff5a1f" text-anchor="end">₦1,200</text>
+<rect x="56" y="1218" width="968" height="308" rx="36" fill="#ffffff"/>
+<text x="540" y="1270" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#14110f" text-anchor="middle">Or a pack, already shopped for</text>
+<text x="100" y="1324" font-family="DejaVu Sans" font-size="28" font-weight="bold" fill="#14110f" text-anchor="start">Restocks</text>
+<text x="100" y="1352" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#6b6360" text-anchor="start">The things that run out</text>
+<text x="980" y="1336" font-family="DejaVu Sans" font-size="27" font-weight="bold" fill="#ff5a1f" text-anchor="end">from ₦19,150</text>
+<text x="100" y="1402" font-family="DejaVu Sans" font-size="28" font-weight="bold" fill="#14110f" text-anchor="start">Keeping clean</text>
+<text x="100" y="1430" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#6b6360" text-anchor="start">The whole cupboard</text>
+<text x="980" y="1414" font-family="DejaVu Sans" font-size="27" font-weight="bold" fill="#ff5a1f" text-anchor="end">from ₦24,900</text>
+<text x="100" y="1480" font-family="DejaVu Sans" font-size="28" font-weight="bold" fill="#14110f" text-anchor="start">Monthly foodstuff</text>
+<text x="100" y="1508" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#6b6360" text-anchor="start">A month of cooking</text>
+<text x="980" y="1492" font-family="DejaVu Sans" font-size="27" font-weight="bold" fill="#ff5a1f" text-anchor="end">from ₦27,750</text>
+<text x="540" y="1588" font-family="DejaVu Sans" font-size="54" font-weight="bold" fill="#14110f" text-anchor="middle">sudu.store</text>
+<text x="540" y="1634" font-family="DejaVu Sans" font-size="26" font-weight="normal" fill="#6b6360" text-anchor="middle">On the App Store · WhatsApp +234 903 217 5147</text>
+</svg>
