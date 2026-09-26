@@ -64,27 +64,6 @@ export default async function CustomOrderPage({
           nobody works out on their own that a hem taken up is a thing you
           can ask a delivery shop for. A service is as orderable as it is
           named, and these are the ones asked for most. */}
-      {/* Named, not explained. A service is as orderable as it is named,
-          and nobody works out on their own that a hem taken up is a thing
-          you can ask a delivery shop for. Chips, because a list of eight
-          sentences is a list nobody finishes. */}
-      <div className="flex flex-wrap gap-2">
-        {[
-          "Tailoring",
-          "Laundry",
-          "A cake",
-          "Chargers",
-          "Hair and nails",
-          "Printing",
-          "Pharmacy",
-          "A shop in Lekki",
-        ].map((one) => (
-          <span key={one} className="chip text-sm text-muted">
-            {one}
-          </span>
-        ))}
-      </div>
-
       <p className="text-center text-sm text-muted">
         We find it, send you the price, and buy nothing until you say yes.
       </p>

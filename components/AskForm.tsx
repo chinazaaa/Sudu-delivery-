@@ -100,6 +100,35 @@ export default function AskForm({
           <p className="mt-1 text-xs text-muted">
             The more exact the better. Colour, size, make, anything you know.
           </p>
+
+          {/* Tap one and it writes itself into the box above. They were sat
+              further down the page looking like buttons and doing nothing,
+              which is the worst a chip can be: it says the shop does these
+              and then ignores the finger. */}
+          <div className="mt-2 flex flex-wrap gap-2">
+            {[
+              "Tailoring: ",
+              "Laundry: ",
+              "A cake: ",
+              "A charger: ",
+              "Hair or nails: ",
+              "Printing: ",
+              "From a pharmacy: ",
+              "From a shop in Lekki: ",
+            ].map((one) => (
+              <button
+                key={one}
+                type="button"
+                onClick={() => {
+                  setWanted(one);
+                  document.getElementById("wanted")?.focus();
+                }}
+                className="chip text-sm text-muted"
+              >
+                {one.replace(/: $/, "")}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
