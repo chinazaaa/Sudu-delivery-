@@ -142,73 +142,70 @@ export default function OrderCard({
           <p className="text-sm text-muted">
             {order.batchLabel} · {order.hostel} · {formatPhone(order.phone)}
           </p>
-          {order.parcel && (
-            <span className="mt-1 inline-block rounded-full bg-brand-tint px-2.5 py-1 text-xs font-bold text-brand-dark">
-              Parcel · {order.parcel.route}
-            </span>
-          )}
-          {/* Which front door. Beside the promoter, because both answer the
-              same sort of question: where did this order actually come
-              from. Silent on the older orders, which never recorded it, and
-              a guess would be worse than nothing. */}
-          {/* Before the link is made, not after: a Stripe link in the wrong
-              currency is a payment that has to be sent back. */}
-          {order.payCurrency !== "" && (
-            <span className="inline-block rounded-full bg-brand px-2.5 py-1 text-xs font-extrabold text-white">
-              Card link in {order.payCurrency}
-              {order.payRoughly ? ` · ${order.payRoughly}` : ""}
-            </span>
-          )}
-          {order.source !== "" && (
-            <span className="inline-block rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold text-muted">
-              {order.source === "app" ? "From the app" : "From the website"}
-            </span>
-          )}
-          {/* Two things somebody scanning the list has to be able to see
-              without opening anything: that this one comes round again, and
-              that nobody has agreed a day for it yet. */}
-          {order.repeats !== "" && (
-            <span className="inline-block rounded-full bg-brand-tint px-2.5 py-1 text-xs font-extrabold text-brand-dark">
-              {order.repeats}
-            </span>
-          )}
-          {order.dayToAgree && (
-            <span className="inline-block rounded-full bg-amber-100 px-2.5 py-1 text-xs font-extrabold text-amber-900">
-              Day to agree
-            </span>
-          )}
-          {order.promoter && (
-            <Link
-              href={`/admin/orders?status=all&promoter=${encodeURIComponent(
-                order.promoter.code
-              )}`}
-              className="text-sm font-semibold text-muted hover:text-brand"
+          {/* Everything that used to be six stacked lines, as one wrapped
+              row of chips. A card in a list is scanned, not read: the eye
+              wants the name, the money and the state of it, and the rest is
+              detail that should take up the space detail deserves. */}
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {order.parcel && (
+              <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-bold text-brand-dark">
+                Parcel · {order.parcel.route}
+              </span>
+            )}
+            {/* Before the link is made, not after: a Stripe link in the
+                wrong currency is a payment that has to be sent back. */}
+            {order.payCurrency !== "" && (
+              <span className="rounded-full bg-brand px-2.5 py-1 text-xs font-extrabold text-white">
+                Card link in {order.payCurrency}
+                {order.payRoughly ? ` · ${order.payRoughly}` : ""}
+              </span>
+            )}
+            <span
+              className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                order.paymentMethod !== "card"
+                  ? "bg-black/5 text-muted"
+                  : order.paymentLink
+                    ? "bg-mint/10 text-mint"
+                    : "bg-amber-100 text-amber-800"
+              }`}
             >
-              Brought in by {order.promoter.name}
-            </Link>
-          )}
-          {order.status !== "pending" && order.runStage !== "ordering" && (
-            <p className="text-sm font-semibold text-muted">
-              They are seeing: {STAGE_LABEL[order.runStage]}
-            </p>
-          )}
-          {/* How they said they would pay is the first thing you need when
-              chasing an unpaid order. */}
-          <span
-            className={`mt-1 inline-block rounded-full px-2.5 py-1 text-xs font-bold ${
-              order.paymentMethod !== "card"
-                ? "bg-black/5 text-muted"
+              {order.paymentMethod !== "card"
+                ? "Transfer"
                 : order.paymentLink
-                  ? "bg-mint/10 text-mint"
-                  : "bg-amber-100 text-amber-800"
-            }`}
-          >
-            {order.paymentMethod !== "card"
-              ? "Paying by transfer"
-              : order.paymentLink
-                ? "Card link saved"
-                : "Wants a card link"}
-          </span>
+                  ? "Card link saved"
+                  : "Wants a card link"}
+            </span>
+            {order.repeats !== "" && (
+              <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-extrabold text-brand-dark">
+                {order.repeats}
+              </span>
+            )}
+            {order.dayToAgree && (
+              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-extrabold text-amber-900">
+                Day to agree
+              </span>
+            )}
+            {order.status !== "pending" && order.runStage !== "ordering" && (
+              <span className="rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold text-muted">
+                They see: {STAGE_LABEL[order.runStage]}
+              </span>
+            )}
+            {order.source !== "" && (
+              <span className="rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold text-muted">
+                {order.source === "app" ? "App" : "Website"}
+              </span>
+            )}
+            {order.promoter && (
+              <Link
+                href={`/admin/orders?status=all&promoter=${encodeURIComponent(
+                  order.promoter.code
+                )}`}
+                className="rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold text-muted hover:text-brand"
+              >
+                Via {order.promoter.name}
+              </Link>
+            )}
+          </div>
         </div>
         <div className="text-right">
           <p className="font-extrabold">{naira(order.total)}</p>
@@ -347,15 +344,22 @@ export default function OrderCard({
               controls to change them. Two lists of the same twenty things is
               how somebody edits the one that is not editable. */}
           {onList && (
-          <ul className="space-y-1 text-sm">
+          <ul className="space-y-2 text-sm">
             {order.lines.map((line) => (
               <li key={line.id} className="flex justify-between gap-3">
-                <span>
-                  {line.qty}× {line.name}
+                <span className="min-w-0">
+                  <span className="font-semibold">
+                    <span className="text-muted">{line.qty} ×</span> {line.name}
+                  </span>
+                  {/* The choices under the name, not trailed after it. On a
+                      pizza they are the only thing telling two lines apart,
+                      and run into one sentence they are unreadable. */}
                   {line.choices.length > 0 && (
-                    <span className="text-muted"> · {line.choices.join(", ")}</span>
+                    <span className="mt-0.5 block text-xs text-muted">
+                      {line.choices.join(" · ")}
+                    </span>
                   )}
-                  <span className="text-muted"> · {line.restaurant}</span>
+                  <span className="block text-xs text-muted">{line.restaurant}</span>
                   {(line.for_name || order.lines.some((l) => l.for_name)) && (
                     <span className="text-muted">
                       {" "}· for {line.for_name ?? order.name}
