@@ -108,6 +108,7 @@ export default async function BoxDetail({
              date, because a care package is found, bought and packed before
              anybody drives it anywhere. */
           timed={isTimed(occasion)}
+          hint={occasion.custom_hint}
           soonest={soonestStandard()}
           latest={furthest()}
           hostels={hostels}

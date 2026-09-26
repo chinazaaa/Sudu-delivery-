@@ -26,6 +26,7 @@ export default function OccasionBoxes({
   boxes,
   when,
   timed,
+  hint = "",
   soonest,
   latest,
   hostels,
@@ -40,6 +41,9 @@ export default function OccasionBoxes({
   /** A thing with a whistle: a match, a kick-off. Those pick a real car out
    *  of the ones the shop is driving. Everything else picks a date. */
   timed: boolean;
+  /** What to suggest in the "want it changed?" box, in the words of this
+   *  shelf. Empty falls back to something true of every box. */
+  hint?: string;
   /** The soonest day a box can be packed for, and the furthest ahead worth
    *  planning. Both worked out on the server: the clock is the shop's. */
   soonest: string;
@@ -565,7 +569,9 @@ export default function OccasionBoxes({
                 name="note"
                 rows={3}
                 maxLength={500}
-                placeholder="Vanilla cake, 12 inches, write Happy Birthday Ada. Red roses if you have them. Room 12, call me when you are outside."
+                placeholder={
+                  hint || "Say what you would like different about it"
+                }
                 className="field"
               />
               {/* Said out loud and ticked, rather than guessed from whether

@@ -70,6 +70,9 @@ export type Occasion = {
   happens_at: string | null;
   /** Which of the two shelves it is on. */
   kind: Shelf;
+  /** The example in the "want it changed?" box. One example cannot serve a
+   *  cake and a bucket, so each shelf carries its own. */
+  custom_hint: string;
   /** What that time is called, so the copy reads like a person wrote it. */
   when_word: string;
   batch_id: string | null;
@@ -152,6 +155,7 @@ const toOccasion = (row: Record<string, unknown>): Occasion => ({
     : row.happens_at
       ? "occasion"
       : "collection",
+  custom_hint: (row.custom_hint as string) ?? "",
   when_word: (row.when_word as string) || "it starts",
   batch_id: (row.batch_id as string) ?? null,
   closes_at: (row.closes_at as string) ?? null,

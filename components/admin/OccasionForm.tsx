@@ -28,6 +28,7 @@ export default function OccasionForm({
     active: boolean;
     sort_order: number;
     kind?: string;
+    custom_hint?: string;
   };
   runs: { id: string; label: string }[];
 }) {
@@ -84,6 +85,22 @@ export default function OccasionForm({
           A care package, a hostel pack or a restock is a collection. A
           birthday, a match or a games night is an occasion. Collections sit
           at /collections and occasions at /occasions.
+        </p>
+      </div>
+
+      {/* The example in the "want it changed?" box on this shelf. One
+          example cannot serve a cake and a bucket. */}
+      <div>
+        <label className="label">What they might want changed</label>
+        <input
+          name="custom_hint"
+          defaultValue={occasion?.custom_hint ?? ""}
+          placeholder="Vanilla, 12 inches, write Happy Birthday Ada"
+          className="field"
+        />
+        <p className="mt-1 text-xs text-muted">
+          The greyed-out example in the box where they ask for changes. Blank
+          gives them a plain one.
         </p>
       </div>
 
