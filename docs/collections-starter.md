@@ -150,6 +150,13 @@ bulb · padlock · broom · dustpan · mop · student mattress
 **Gifting**
 assorted chocolate · Pringles and crisps · sweets · a card · a candle
 
+Send each one with **where you saw it**, not only the price. Every product
+now carries a source that only we see: a shop, a phone number, a link, what
+it cost there. It rides through onto the order, so when somebody buys a
+birthday box the line says "Get it: Tasty Bakes, Sangotedo, 0803 123 4567,
+was ₦9,500" on the order itself. That is the difference between a box we can
+sell and a box we can fulfil.
+
 Send it in any form, a photo of a handwritten list is fine, and I will load
 the whole lot as products and build every box on this sheet in one go. Each
 one becomes browsable on its own as well, so somebody who only wants a toilet
