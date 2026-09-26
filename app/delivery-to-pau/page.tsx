@@ -205,7 +205,7 @@ export default async function DeliveryToPauPage() {
 
       <header className="space-y-3">
         <h1 className="text-3xl font-extrabold leading-tight">
-          Food and delivery to Pan-Atlantic University (PAU)
+          Food delivery to Pan-Atlantic University (PAU)
         </h1>
 
         {/* The relationship said outright, in the first thing under the
@@ -214,9 +214,10 @@ export default async function DeliveryToPauPage() {
             reading the page on somebody's behalf should not have to infer
             any of them. */}
         <p className="text-ink/90">
-          Sudu is a delivery service for Pan-Atlantic University students.
-          Order from your favourite restaurants around Sangotedo and Novare
-          and have your food delivered directly to your PAU hostel.
+          Sudu is a food delivery service for Pan-Atlantic University (PAU)
+          students in Lagos. Order from your favourite restaurants around
+          Sangotedo and Novare and have your food delivered directly to your
+          PAU hostel.
         </p>
 
         <p className="text-muted">
