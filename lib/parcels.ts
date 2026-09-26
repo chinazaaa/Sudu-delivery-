@@ -171,6 +171,37 @@ export function liveRoutes(all: Route[]): Route[] {
   return all.filter((one) => one.on && one.bands.length > 0);
 }
 
+/**
+ * The places the shop carries to and from, each named once.
+ *
+ * The front page used to list the first two routes and then say "and more",
+ * which on the real list reads "Sangotedo to PAU, PAU to Sangotedo and
+ * more": the same town twice, and the impression that Sangotedo is all we
+ * do. It is four places, each way, Lekki to Ikorodu.
+ *
+ * A route is named for where it is not PAU, so both directions of the same
+ * road collapse into one place.
+ */
+export function placesServed(all: Route[]): string[] {
+  const seen: string[] = [];
+  for (const route of liveRoutes(all)) {
+    const place = route.label
+      .replace(/\s*to\s+PAU\s*$/i, "")
+      .replace(/^\s*PAU\s+to\s*/i, "")
+      .trim();
+    if (place !== "" && !seen.includes(place)) seen.push(place);
+  }
+  return seen;
+}
+
+/** Those places as a sentence: "A, B and C". */
+export function placesSaid(all: Route[]): string {
+  const places = placesServed(all);
+  if (places.length === 0) return "";
+  if (places.length === 1) return places[0];
+  return `${places.slice(0, -1).join(", ")} and ${places[places.length - 1]}`;
+}
+
 export function routeById(all: Route[], id: string): Route | null {
   return all.find((one) => one.id === id) ?? null;
 }

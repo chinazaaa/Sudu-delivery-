@@ -121,10 +121,24 @@ export default function Home() {
       .parcels()
       .then((setup) => {
         if (!setup.on || setup.routes.length === 0) return;
-        const named = setup.routes.map((one) => one.label).slice(0, 2).join(", ");
-        setParcels(
-          `${named}${setup.routes.length > 2 ? " and more" : ""}. Its own trip, on a day we agree.`
-        );
+        // The places, not the first two routes. Listing routes read
+        // "Sangotedo to PAU, PAU to Sangotedo and more", which names one
+        // town twice and makes a service covering Lekki to Ikorodu look
+        // like a Sangotedo errand. A route is named for where it is not
+        // PAU, so both directions of one road collapse into one place.
+        const places: string[] = [];
+        for (const route of setup.routes) {
+          const place = route.label
+            .replace(/\s*to\s+PAU\s*$/i, "")
+            .replace(/^\s*PAU\s+to\s*/i, "")
+            .trim();
+          if (place !== "" && !places.includes(place)) places.push(place);
+        }
+        const named =
+          places.length > 1
+            ? `${places.slice(0, -1).join(", ")} and ${places[places.length - 1]}`
+            : places[0] ?? "";
+        setParcels(`${named}, to PAU and back. Its own trip, on a day we agree.`);
       })
       .catch(() => {
         /* Parcels are an extra. The menu is the page. */

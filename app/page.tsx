@@ -19,7 +19,7 @@ import { toBatchView } from "@/lib/view";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { nextArrival, runArrival } from "@/lib/arrival";
 import { dropLabel, nextDrop, skincareOn, skincareShop } from "@/lib/skincare";
-import { liveRoutes, parcelsFrom } from "@/lib/parcels";
+import { placesSaid, parcelsFrom } from "@/lib/parcels";
 import { sweepGroups } from "@/lib/groups";
 
 export const dynamic = "force-dynamic";
@@ -147,13 +147,11 @@ export default async function HomePage() {
   // The parcel line names where it goes rather than calling itself a parcel
   // service, because nobody is looking for a parcel service: they have a
   // dress sitting in a shop in Lekki.
+  // The places, not the first two routes. Listing routes read "Sangotedo to
+  // PAU, PAU to Sangotedo and more", which names one town twice and makes a
+  // service covering Lekki to Ikorodu look like a Sangotedo errand.
   const parcelLine = parcelSetup.on
-    ? `${liveRoutes(parcelSetup.routes)
-        .map((one) => one.label)
-        .slice(0, 2)
-        .join(", ")}${
-        liveRoutes(parcelSetup.routes).length > 2 ? " and more" : ""
-      }. Its own trip, on a day we agree.`
+    ? `${placesSaid(parcelSetup.routes)}, to PAU and back. Its own trip, on a day we agree.`
     : "";
 
   // One car a week, on a Saturday. Empty when that shelf is off, and then the
