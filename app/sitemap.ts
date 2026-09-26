@@ -89,8 +89,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .range(from, to)
     );
 
+    // Every collection and every occasion. Each is a real page with its own
+    // boxes, its own price and its own share card, and none of them was
+    // listed: they were reachable only by tapping through the front page.
+    const packed = await db()
+      .from("occasions")
+      .select("slug, kind, active")
+      .eq("active", true)
+      .order("slug")
+      .overrideTypes<{ slug: string; kind?: string; active: boolean }[]>()
+      .then(
+        (answer) => answer.data ?? [],
+        () => [] as { slug: string; kind?: string }[]
+      );
+
     return [
       ...home,
+      ...packed
+        .filter((one) => one.slug)
+        .map((one) => ({
+          url: `${site}/${one.kind === "occasion" ? "occasions" : "collections"}/${one.slug}`,
+          changeFrequency: "weekly" as const,
+          priority: 0.7,
+        })),
       ...food.map((one) => ({
         // The name, not the id: the id is a second address for the same page,
         // and a sitemap that disagrees with every link on the site splits
