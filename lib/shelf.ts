@@ -16,8 +16,17 @@
 /** Our own shelf: real products, priced, sold only inside a box. */
 export const OWN = "own";
 
-/** Whether a shelf is one the food side of the shop shows. */
+/**
+ * Whether a shelf is one the food side of the shop shows.
+ *
+ * Our own shelf is on it. It was hidden while it held nothing but the parts
+ * boxes are packed from, and the moment it held a bucket, a towel and a box
+ * of chocolate that was a shop with the lights off: real products, real
+ * prices, and no way for anybody to buy one on its own.
+ *
+ * Skincare stays out, because it is not a different shelf of the same shop.
+ * It has its own basket, its own car and its own day.
+ */
 export function onTheMenu(kind: string | null | undefined): boolean {
-  const it = kind ?? "food";
-  return it !== "skincare" && it !== OWN;
+  return (kind ?? "food") !== "skincare";
 }

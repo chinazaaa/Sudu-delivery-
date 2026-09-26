@@ -159,3 +159,15 @@ from (values
 --   advert for them, and the price on it is a price we cannot honour.
 --   Swapped for Krispy Kreme's Bbn deal, ₦11,500, which takes the box from
 --   ₦67,299 to ₦57,699 on a run.
+
+-- And the shelf opened its doors.
+--   update restaurants set name = 'Sudu Shop', slug = 'sudu-shop' where kind = 'own';
+-- It was hidden while it held nothing but the parts boxes are packed from.
+-- The moment it held a bucket, a towel and a box of chocolate, hiding it was
+-- a shop with the lights off. It is at /r/sudu-shop, its products are in the
+-- food list and in the sitemap, and anything on it can go in an ordinary
+-- cart.
+--
+-- With it, how much of a car each thing takes, because the delivery ladder
+-- counts containers and a mattress is not one pizza box: mattress 800%,
+-- 25kg rice 600%, a carton of Indomie 400%, a bucket 300%, and so on.
