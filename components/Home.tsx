@@ -13,9 +13,6 @@ import SplitPrompt from "./SplitPrompt";
 import type { ItemView, MenuView } from "@/lib/view";
 import type { Slide } from "@/lib/slides";
 
-/** Restaurants on the front page. The rest are one tap away, filtered. */
-const SHOWN = 6;
-
 export default function Home({
   menu,
   arriving,
@@ -24,7 +21,6 @@ export default function Home({
   skincare,
   occasions = "",
   slides,
-  popularIds,
   autoHeadline,
   autoLines,
   promos,
@@ -49,8 +45,6 @@ export default function Home({
   occasions?: string;
   /** Written in admin. Empty falls back to a slide per restaurant. */
   slides: Slide[];
-  /** Menu item ids, most bought first. Empty until people have ordered. */
-  popularIds: string[];
   /** The wording for the slider the page builds when there are no slides. */
   autoHeadline: string;
   autoLines: string[];
@@ -82,28 +76,6 @@ export default function Home({
         .map((item) => ({ item, place }))
     );
   }, [menu, query]);
-
-  // What people actually bought, in that order. Until there is enough of
-  // that, a few things from each menu, which is not the same claim.
-  const { popular, measured } = useMemo(() => {
-    const everything = menu.flatMap((place) =>
-      place.items.filter((i) => i.available).map((item) => ({ item, place }))
-    );
-
-    const rank = new Map(popularIds.map((id, index) => [id, index]));
-    const bought = everything
-      .filter(({ item }) => rank.has(item.id))
-      .sort((a, b) => (rank.get(a.item.id) ?? 0) - (rank.get(b.item.id) ?? 0));
-
-    if (bought.length >= 3) return { popular: bought, measured: true };
-
-    return {
-      popular: menu.flatMap((place) =>
-        place.items.filter((i) => i.available).slice(0, 3).map((item) => ({ item, place }))
-      ),
-      measured: false,
-    };
-  }, [menu, popularIds]);
 
   if (menu.length === 0) {
     return (
@@ -257,93 +229,6 @@ export default function Home({
             </p>
           )}
 
-          <section className="space-y-3">
-            <div className="flex items-baseline justify-between gap-3">
-              <h2 className="section-title">Restaurants</h2>
-              {/* The full list lives on the browse page now, with filters.
-                  The front page is not the directory any more: fifteen tall
-                  cards were most of its height. */}
-              {menu.length > SHOWN && (
-                <Link href="/products" className="text-sm font-extrabold text-brand">
-                  All {menu.length}
-                </Link>
-              )}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {menu.slice(0, SHOWN).map((place) => (
-                <Link
-                  key={place.restaurant.id}
-                  href={`/r/${place.restaurant.href}`}
-                  className="group overflow-hidden rounded-2xl bg-paper shadow-card transition active:scale-[0.99]"
-                >
-                  <span className="block h-36 sm:h-40">
-                    <Thumb
-                      src={place.restaurant.bannerUrl || place.restaurant.logoUrl}
-                      name={place.restaurant.name}
-                      rounded="rounded-none"
-                      variant={place.restaurant.bannerUrl ? "tile" : "banner"}
-                    />
-                  </span>
-                  <span className="flex items-center gap-3 p-4">
-                    <span className="size-12 shrink-0 overflow-hidden rounded-xl">
-                      <Thumb
-                        src={place.restaurant.logoUrl}
-                        name={place.restaurant.name}
-                        rounded="rounded-none"
-                      />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-lg font-extrabold">
-                        {place.restaurant.name}
-                      </span>
-                      {/* The price rather than a tease. "Promo inside" makes
-                          somebody tap to find out whether it is worth
-                          anything, and the number is the reason to tap. */}
-                      {promos[place.restaurant.id] ? (
-                        <span className="mt-0.5 inline-flex items-center rounded-full bg-brand px-2.5 py-0.5 text-xs font-extrabold text-white">
-                          {promos[place.restaurant.id]}
-                        </span>
-                      ) : (
-                        <span className="block text-sm text-muted">
-                          {place.items.length} item{place.items.length === 1 ? "" : "s"} on
-                          the menu
-                        </span>
-                      )}
-                    </span>
-                  </span>
-                </Link>
-              ))}
-            </div>
-            {menu.length > SHOWN && (
-              <Link
-                href="/products"
-                className="block rounded-2xl bg-paper px-4 py-3 text-center text-sm font-extrabold text-brand shadow-card"
-              >
-                All {menu.length} restaurants, and everything they sell
-              </Link>
-            )}
-          </section>
-
-          {/* Under the restaurants, because the first screen now answers
-              what the shop does and where the food comes from. Somebody who
-              has read that far has not decided on a brand, and this is the
-              list for them. */}
-          {popular.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="section-title">
-                {measured ? "Popular this week" : "From the menu"}
-              </h2>
-              {popular.map(({ item, place }) => (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  inCart={countFor(item.id)}
-                  onOpen={() => setOpen({ item, place })}
-                />
-              ))}
-            </section>
-          )}
-
           <Carousel>
             {(slides.length > 0
               ? slides.map((slide) => ({
@@ -448,11 +333,11 @@ function Door({
   away?: boolean;
 }) {
   const look =
-    "flex h-full flex-col justify-between rounded-2xl bg-paper p-4 shadow-card transition active:scale-[0.99]";
+    "flex h-full min-h-32 flex-col justify-between rounded-2xl bg-paper p-4 shadow-card transition active:scale-[0.99]";
   const inside = (
     <>
       <span>
-        <span className="block font-bold leading-tight">{title}</span>
+        <span className="block text-lg font-extrabold leading-tight">{title}</span>
         <span className="mt-1 block text-sm leading-snug text-muted">{line}</span>
       </span>
       <span className="mt-3 block text-sm font-extrabold text-brand">{action}</span>

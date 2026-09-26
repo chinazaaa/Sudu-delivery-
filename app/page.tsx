@@ -5,7 +5,6 @@ import Home from "@/components/Home";
 import { openBatches } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
 import { listSlides } from "@/lib/slides";
-import { popularItemIds } from "@/lib/popular";
 import {
   activeBands,
   AUTO_HEADLINE,
@@ -32,12 +31,11 @@ export default async function HomePage() {
   // a car does not sit open because everybody in it put their phone away.
   sweepGroups();
 
-  const [menu, batches, slides, settings, popularIds, bands] = await Promise.all([
+  const [menu, batches, slides, settings, bands] = await Promise.all([
     menuView(),
     openBatches(),
     listSlides(),
     safeSettings(),
-    popularItemIds(),
     activeBands(),
   ]);
   // An offer says itself on the card of the restaurant it belongs to. The
@@ -89,7 +87,6 @@ export default async function HomePage() {
       iosAppId={settings.ios_app_id}
       menu={menu}
       slides={slides}
-      popularIds={popularIds}
       autoHeadline={settings.auto_headline || AUTO_HEADLINE}
       autoLines={lines.length > 0 ? lines : [""]}
       // When something ordered right now would land, by the one rule every
