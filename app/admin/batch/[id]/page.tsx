@@ -365,6 +365,34 @@ export default async function BatchPage({
                   </p>
                 )}
 
+                {counter.map((group, index) => (
+                  <section key={group.restaurant} className="card">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3 className="text-lg font-extrabold">
+                        <span className="mr-2 text-muted">Stop {index + 1}</span>
+                        {group.restaurant}
+                      </h3>
+                      <span className="shrink-0 font-bold">
+                        {naira(group.expectedFoodTotal)}
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <Checklist
+                        id={`counter-${batch.id}-${group.restaurant}`}
+                        label="bought"
+                        done={shopped}
+                        items={group.lines.map((line) => ({
+                          key: `${line.name}|${line.choices.join("|")}`,
+                          text: `${line.qty}× ${line.name}`,
+                          detail:
+                            line.choices.length > 0
+                              ? line.choices.join(", ")
+                              : undefined,
+                        }))}
+                      />
+                    </div>
+                  </section>
+                ))}
                 <section className="card">
                   <h2 className="font-bold">What you pay, stop by stop</h2>
                   <p className="text-sm text-muted">
@@ -391,55 +419,17 @@ export default async function BatchPage({
                   </ul>
                 </section>
 
-                {batch.kind === "same_day" && batch.stage === "ordering" && (
-                  <section className="card space-y-3">
-                    <div>
-                      <h2 className="font-bold">Move this car</h2>
-                      <p className="text-sm text-muted">
-                        Ring them, ask whether another window suits, and put it
-                        here. A car moved into a window somebody else already
-                        asked for becomes one trip with theirs, which is one
-                        walk to the counter instead of two. Nobody is told by
-                        this: the agreement happened on the phone.
-                      </p>
-                    </div>
-                    <form action={moveSameDayCar} className="flex flex-wrap items-end gap-2">
-                      <input type="hidden" name="batch_id" value={batch.id} />
-                      <div className="min-w-0 flex-1">
-                        <label className="label" htmlFor="deliver_at">
-                          Which window instead?
-                        </label>
-                        <select id="deliver_at" name="deliver_at" className="field">
-                          {windows.map((slot) => (
-                            <option key={slot.at} value={slot.at}>
-                              {slot.label}
-                              {slot.at === batch.deliver_at && " · where it is now"}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <SaveButton quiet>Move it</SaveButton>
-                    </form>
-                    {windows.length === 0 && (
-                      <p className="text-sm text-muted">
-                        Nothing else can be reached today.
-                      </p>
-                    )}
-                  </section>
-                )}
-
                 {counter.length > 0 && (
-                  <section className="card space-y-3">
-                    <div>
-                      <h2 className="font-bold">What it actually cost</h2>
-                      <p className="text-sm text-muted">
-                        Only the ones that were different. Most of a run is
-                        exactly the menu price, so nothing is listed until you
-                        say otherwise: pick the thing whose price moved and type
-                        what you really handed over.
-                      </p>
-                    </div>
-
+                  <details className="card">
+                    <summary className="cursor-pointer font-bold text-brand">
+                      What it actually cost
+                    </summary>
+                    <p className="mt-1 text-sm text-muted">
+                      Only the ones that were different. Most of a run is
+                      exactly the menu price, so nothing is listed until you
+                      say otherwise.
+                    </p>
+                    <div className="mt-3 space-y-3">
                     {/* The books for the run, once anything has been typed:
                         what the menu said against what the counters took, so
                         the end of the day is one line rather than a scroll
@@ -653,37 +643,47 @@ export default async function BatchPage({
                       sees changes, and nobody is charged anything different.
                       Clearing a figure puts that line back to the menu price.
                     </p>
+                    </div>
+                  </details>
+                )}
+
+                {batch.kind === "same_day" && batch.stage === "ordering" && (
+                  <section className="card space-y-3">
+                    <div>
+                      <h2 className="font-bold">Move this car</h2>
+                      <p className="text-sm text-muted">
+                        Ring them, ask whether another window suits, and put it
+                        here. A car moved into a window somebody else already
+                        asked for becomes one trip with theirs, which is one
+                        walk to the counter instead of two. Nobody is told by
+                        this: the agreement happened on the phone.
+                      </p>
+                    </div>
+                    <form action={moveSameDayCar} className="flex flex-wrap items-end gap-2">
+                      <input type="hidden" name="batch_id" value={batch.id} />
+                      <div className="min-w-0 flex-1">
+                        <label className="label" htmlFor="deliver_at">
+                          Which window instead?
+                        </label>
+                        <select id="deliver_at" name="deliver_at" className="field">
+                          {windows.map((slot) => (
+                            <option key={slot.at} value={slot.at}>
+                              {slot.label}
+                              {slot.at === batch.deliver_at && " · where it is now"}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <SaveButton quiet>Move it</SaveButton>
+                    </form>
+                    {windows.length === 0 && (
+                      <p className="text-sm text-muted">
+                        Nothing else can be reached today.
+                      </p>
+                    )}
                   </section>
                 )}
 
-                {counter.map((group, index) => (
-                  <section key={group.restaurant} className="card">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <h3 className="text-lg font-extrabold">
-                        <span className="mr-2 text-muted">Stop {index + 1}</span>
-                        {group.restaurant}
-                      </h3>
-                      <span className="shrink-0 font-bold">
-                        {naira(group.expectedFoodTotal)}
-                      </span>
-                    </div>
-                    <div className="mt-2">
-                      <Checklist
-                        id={`counter-${batch.id}-${group.restaurant}`}
-                        label="bought"
-                        done={shopped}
-                        items={group.lines.map((line) => ({
-                          key: `${line.name}|${line.choices.join("|")}`,
-                          text: `${line.qty}× ${line.name}`,
-                          detail:
-                            line.choices.length > 0
-                              ? line.choices.join(", ")
-                              : undefined,
-                        }))}
-                      />
-                    </div>
-                  </section>
-                ))}
               </>
             ),
           },

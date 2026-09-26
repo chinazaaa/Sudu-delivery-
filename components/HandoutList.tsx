@@ -66,23 +66,27 @@ export default function HandoutList({
                 <div
                   className={`px-3 py-2 ${handedOut ? "text-muted line-through" : ""}`}
                 >
-                  <span className="flex items-baseline justify-between gap-2">
-                    <span className="font-semibold">
-                      <span className="text-muted">
-                        {entry.orders.map((order) => order.ref).join(" ")}{" "}
-                      </span>
-                      {entry.name}
+                  {/* Read at a gate, one-handed, in the dark. The block is
+                      where you are standing and the name is who you are
+                      looking for, so those two are the big type and
+                      everything else gets out of their way. */}
+                  <span className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="text-base font-extrabold">{entry.name}</span>
+                    <span className="chip border-transparent bg-black/5 text-xs font-bold text-ink">
+                      {entry.hostel}
                     </span>
-                    <span className="text-xs text-muted">{entry.hostel}</span>
                   </span>
-                  <span className="mt-1 block space-y-0.5 text-sm">
+                  <span className="mt-1.5 block space-y-1 text-sm">
                     {entry.items.map((item) => (
-                      <span key={item} className="block">
+                      <span key={item} className="block leading-snug">
                         {item}
                       </span>
                     ))}
                   </span>
-                  <span className="text-xs text-muted">{entry.phone}</span>
+                  <span className="mt-1.5 block text-xs text-muted">
+                    {entry.orders.map((order) => order.ref).join(" ")} ·{" "}
+                    {entry.phone}
+                  </span>
                 </div>
               </div>
 
