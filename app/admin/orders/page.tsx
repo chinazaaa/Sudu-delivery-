@@ -41,6 +41,7 @@ export default async function OrdersPage({
     batch?: string;
     q?: string;
     promoter?: string;
+    deleted?: string;
   }>;
 }) {
   const query = await searchParams;
@@ -99,6 +100,15 @@ export default async function OrdersPage({
         title="Orders"
         detail="Every order ever placed, whatever run it belongs to."
       />
+
+      {/* Said here rather than on the order's own page, because that page is
+          the one thing that no longer exists. */}
+      {query.deleted && (
+        <p className="card mb-4 border-mint/40 bg-mint/10 text-sm font-semibold text-mint">
+          {query.deleted} is deleted. It is in the deletions log with who did
+          it, and everything it held is written down there.
+        </p>
+      )}
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Stat label="Showing" value={orders.length} />

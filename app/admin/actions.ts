@@ -259,6 +259,13 @@ export async function deleteOrder(form: FormData): Promise<void> {
   }
 
   revalidatePath("/admin", "layout");
+
+  // Deleting from the order's own page left you standing on the page of an
+  // order that no longer exists, which renders as a 404 telling a shop owner
+  // their link is old. Say it is done, and go back to the list.
+  redirect(`/admin/orders?deleted=${encodeURIComponent(
+    orderRef(order as { order_no: number | null; id: string })
+  )}`);
 }
 
 export async function setBatchStatus(form: FormData): Promise<void> {
@@ -940,15 +947,21 @@ export async function updateMenuItem(form: FormData): Promise<void> {
       String(form.get("image_url") ?? "").trim(),
     category_id: String(form.get("category_id") ?? "") || null,
     container_pct: containerFrom(form.get("container_pct")),
+    // Where to go and get it, for us, never for the customer.
+    source: String(form.get("source") ?? "").trim(),
   };
 
   // Naming a column the database has not got refuses the whole statement, so
   // a shop that has not run the migration yet saves everything but that one.
   const id = String(form.get("item_id"));
-  const { error } = await db().from("menu_items").update(fields).eq("id", id);
+  let { error } = await db().from("menu_items").update(fields).eq("id", id);
   if (error) {
-    const { container_pct: _dropped, ...rest } = fields;
-    await db().from("menu_items").update(rest).eq("id", id);
+    const { source: _noSource, ...withoutSource } = fields;
+    ({ error } = await db().from("menu_items").update(withoutSource).eq("id", id));
+    if (error) {
+      const { container_pct: _dropped, ...rest } = withoutSource;
+      await db().from("menu_items").update(rest).eq("id", id);
+    }
   }
   revalidatePath("/admin", "layout");
   updateTag("menu");

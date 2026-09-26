@@ -460,6 +460,19 @@ export default async function RestaurantAdmin({
                       className="field"
                     />
                   </div>
+                  {/* The back of the product, never the front. Half of what a
+                      collection holds is not on anybody's menu, and when the
+                      order comes in whoever packs it needs to know where that
+                      cake or those flowers came from. */}
+                  <div>
+                    <label className="label">Where to get it (only we see this)</label>
+                    <input
+                      name="source"
+                      defaultValue={(item as { source?: string }).source ?? ""}
+                      placeholder="Tasty Bakes, Sangotedo · 0803 123 4567 · was ₦9,500"
+                      className="field"
+                    />
+                  </div>
                   <div>
                     <label className="label">Photo</label>
                     <input name="photo" type="file" accept="image/*" className="field" />
