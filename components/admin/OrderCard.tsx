@@ -59,6 +59,11 @@ export type OrderCardData = {
   /** Which front door it came through: "app", "web", or empty for the
    *  orders taken before the shop wrote it down. */
   source: string;
+  /** The money the card link has to be made out in, where somebody abroad
+   *  is paying. Empty is naira, which is nearly every order. */
+  payCurrency: string;
+  /** That total in their money, as the shop's own rate works it out. */
+  payRoughly: string;
   /** A parcel rather than food. It has no lines at all, so without this the
    *  card is a name, a number and an empty list.
    *
@@ -139,6 +144,14 @@ export default function OrderCard({
               same sort of question: where did this order actually come
               from. Silent on the older orders, which never recorded it, and
               a guess would be worse than nothing. */}
+          {/* Before the link is made, not after: a Stripe link in the wrong
+              currency is a payment that has to be sent back. */}
+          {order.payCurrency !== "" && (
+            <span className="inline-block rounded-full bg-brand px-2.5 py-1 text-xs font-extrabold text-white">
+              Card link in {order.payCurrency}
+              {order.payRoughly ? ` · ${order.payRoughly}` : ""}
+            </span>
+          )}
           {order.source !== "" && (
             <span className="inline-block rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold text-muted">
               {order.source === "app" ? "From the app" : "From the website"}

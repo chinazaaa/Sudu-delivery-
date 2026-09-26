@@ -13,6 +13,7 @@ import Checkout, { type AddingTo } from "@/components/Checkout";
 import { openBatches, recentlyClosedBatch } from "@/lib/batches";
 import { existingLoad } from "@/lib/orders";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
+import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
 import { normalisePhone } from "@/lib/phone";
 import { allAreas, areaOfEach, valueBandsOfEach } from "@/lib/areas-server";
 import { toBatchView, toClosedBatchView } from "@/lib/view";
@@ -63,8 +64,20 @@ export default async function CheckoutPage({
     }
   }
 
+  // Somebody abroad paying by card, where the shop has switched it on and
+  // set a rate it will honour. Worked out here so the checkout is handed
+  // figures rather than settings.
+  const settings = await safeSettings();
+  const monies = moniesOn(settings).map((code) => ({
+    code,
+    label: code === "GBP" ? "Pounds" : "Dollars",
+    symbol: SYMBOL[code],
+    rate: rateFor(settings, code),
+  }));
+
   return (
     <Checkout
+      monies={monies}
       batches={views}
       today={lagosToday()}
       adding={adding}

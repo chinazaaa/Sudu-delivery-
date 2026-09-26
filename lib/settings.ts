@@ -33,6 +33,13 @@ export type Settings = {
   /** The App Store id, digits only. Empty means the site never mentions an
    *  app: no bar in Safari, no link in the footer. */
   ios_app_id: string;
+  /** "on" where somebody abroad can choose to pay in pounds or dollars.
+   *  The card link is a Stripe one, sent by hand as every card link is. */
+  abroad_on: string;
+  /** Naira to one pound and to one dollar, as the shop will honour them.
+   *  Empty shows no figure at all rather than a wrong one. */
+  gbp_rate: string;
+  usd_rate: string;
   whatsapp_group_link: string;
   pitch_line: string;
   product_notes: string;
@@ -140,6 +147,9 @@ export const EMPTY: Settings = {
   card_note: "",
   instagram_handle: "",
   ios_app_id: "",
+  abroad_on: "",
+  gbp_rate: "",
+  usd_rate: "",
   whatsapp_group_link: "",
   pitch_line: "",
   product_notes: "",

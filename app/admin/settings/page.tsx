@@ -223,6 +223,53 @@ export default async function SettingsAdmin() {
           />
         </div>
 
+        <div className="rounded-2xl bg-shell p-3">
+          <label className="flex items-center gap-2 text-sm font-bold">
+            <input
+              type="checkbox"
+              name="abroad_on"
+              value="on"
+              defaultChecked={settings.abroad_on === "on"}
+            />
+            Somebody abroad can pay by card
+          </label>
+          <p className="mt-1 text-xs text-muted">
+            A parent or a sibling who cannot make a Nigerian transfer. The
+            checkout asks, under the card option, and the order says which
+            money to make the Stripe link out in. A currency with no rate
+            below is not offered at all.
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="gbp_rate">Naira to one pound</label>
+              <input
+                id="gbp_rate"
+                name="gbp_rate"
+                inputMode="decimal"
+                defaultValue={settings.gbp_rate}
+                placeholder="2100"
+                className="field"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="usd_rate">Naira to one dollar</label>
+              <input
+                id="usd_rate"
+                name="usd_rate"
+                inputMode="decimal"
+                defaultValue={settings.usd_rate}
+                placeholder="1650"
+                className="field"
+              />
+            </div>
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            Your rate, not today&apos;s market rate, and the one you are willing
+            to honour. It is only ever shown as &quot;about&quot;, and rounded up,
+            because it moves between somebody reading it and paying it.
+          </p>
+        </div>
+
         <SaveButton>Save</SaveButton>
       </form>
 

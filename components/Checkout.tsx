@@ -78,6 +78,7 @@ export default function Checkout({
   offers,
   hostels,
   promoters,
+  monies = [],
 }: {
   batches: BatchView[];
   /** Today in Lagos, from the shop's clock: it decides whether a run going
@@ -103,6 +104,9 @@ export default function Checkout({
   /** Promotions on today. The same rule that prices the order judges them
    *  here, so what is quoted is what is charged. */
   offers: LiveOffer[];
+  /** The currencies somebody abroad can be sent a card link in. Empty
+   *  unless the shop has switched it on and set a rate. */
+  monies?: { code: string; label: string; symbol: string; rate: number }[];
   /** The blocks the admin delivers to. Empty means anything typed is allowed. */
   hostels: string[];
   /** Who somebody could say they heard about the shop from. Empty means
@@ -230,6 +234,10 @@ export default function Checkout({
     setBatchId(decided?.runId ?? openable[0]?.id ?? "");
   }
   const [method, setMethod] = useState<"transfer" | "card">("transfer");
+  // Empty is naira, which is nearly every order. Cleared whenever somebody
+  // goes back to a transfer, so a currency cannot ride along on an order
+  // that is not being paid by card at all.
+  const [money, setMoney] = useState("");
   const [mode, setMode] = useState<GroupMode>("one_payer");
   // Not asked: every friend has already said where their own food goes, and
   // asking again in different words got a different answer half the time.
@@ -728,6 +736,7 @@ export default function Checkout({
       <input type="hidden" name="batch_id" value={batchId} />
       <input type="hidden" name="group_mode" value={groupOn ? mode : ""} />
       <input type="hidden" name="payment_method" value={method} />
+      <input type="hidden" name="pay_currency" value={method === "card" ? money : ""} />
       <input type="hidden" name="collect_mode" value={collect} />
       <input type="hidden" name="join_order_id" value={joining?.id ?? ""} />
       <input type="hidden" name="party_id" value={party} />
@@ -1276,6 +1285,47 @@ export default function Checkout({
             </button>
           ))}
         </div>
+
+        {/* Only under the card, because that is what it is: the same link
+            sent on WhatsApp, made out in their money. A parent in London
+            cannot make a Nigerian transfer, and this is all they need from
+            us. */}
+        {method === "card" && monies.length > 0 && (
+          <div className="rounded-xl bg-shell p-3">
+            <p className="text-sm font-bold text-ink">
+              Is somebody abroad paying for this?
+            </p>
+            <p className="mt-0.5 text-xs text-muted">
+              We send them a card link in their own money. The amount is
+              worked out at our rate, so it is close rather than exact.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setMoney("")}
+                className={`chip ${money === "" ? "border-ink bg-ink text-white" : "border-black/10 bg-white"}`}
+              >
+                No, naira
+              </button>
+              {monies.map((one) => (
+                <button
+                  key={one.code}
+                  type="button"
+                  onClick={() => setMoney(one.code)}
+                  className={`chip ${money === one.code ? "border-brand bg-brand text-white" : "border-black/10 bg-white"}`}
+                >
+                  {one.label}
+                  {one.rate > 0 && (
+                    <span className={money === one.code ? "text-white/75" : "text-muted"}>
+                      about {one.symbol}
+                      {(Math.ceil((total / one.rate) * 10) / 10).toFixed(2)}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="card space-y-1 text-sm">

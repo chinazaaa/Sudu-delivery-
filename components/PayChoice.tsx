@@ -10,9 +10,17 @@
 export default function PayChoice({
   value,
   onChange,
+  monies = [],
+  money = "",
+  onMoney,
 }: {
   value: "transfer" | "card";
   onChange: (value: "transfer" | "card") => void;
+  /** The currencies somebody abroad can pay in, where the shop offers it.
+   *  Empty, which it is nearly everywhere, and none of this appears. */
+  monies?: { code: string; label: string; roughly: string }[];
+  money?: string;
+  onMoney?: (next: string) => void;
 }) {
   return (
     <div className="space-y-2">
@@ -51,6 +59,46 @@ export default function PayChoice({
           </button>
         ))}
       </div>
+
+      {/* Only under the card, because that is what it is: the same link sent
+          on WhatsApp, made out in their money instead of ours. A parent in
+          London cannot make a Nigerian transfer, and this is the whole of
+          what they need from us. */}
+      {value === "card" && monies.length > 0 && onMoney && (
+        <div className="rounded-xl bg-shell p-3">
+          <p className="text-sm font-bold text-ink">
+            Is somebody abroad paying for this?
+          </p>
+          <p className="mt-0.5 text-xs text-muted">
+            We will send them a card link in their own money. The amount is
+            worked out at our rate, so it is close rather than exact.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onMoney("")}
+              className={`chip ${money === "" ? "border-ink bg-ink text-white" : "border-black/10 bg-white"}`}
+            >
+              No, naira
+            </button>
+            {monies.map((one) => (
+              <button
+                key={one.code}
+                type="button"
+                onClick={() => onMoney(one.code)}
+                className={`chip ${money === one.code ? "border-brand bg-brand text-white" : "border-black/10 bg-white"}`}
+              >
+                {one.label}
+                {one.roughly && (
+                  <span className={money === one.code ? "text-white/75" : "text-muted"}>
+                    {one.roughly}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

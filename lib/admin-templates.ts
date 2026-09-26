@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { abroadRoughly } from "./abroad";
 import { naira, shareRef } from "./money";
 import {
   narration,
@@ -149,6 +150,8 @@ export function toCard(
     forName: order.for_name,
     phone: order.customer_phone,
     source: (order as { source?: string }).source ?? "",
+    payCurrency: (order as { pay_currency?: string }).pay_currency ?? "",
+    payRoughly: abroadRoughly(order as { pay_currency?: string; total: number }, settings),
     hostel: order.hostel,
     batchLabel: order.batchLabel,
     status: order.status,

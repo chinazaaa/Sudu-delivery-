@@ -77,6 +77,16 @@ export async function submitOrder(
     coupon: String(form.get("coupon") ?? "").trim(),
     groupMode: mode === "one_payer" || mode === "split" ? mode : null,
     paymentMethod: String(form.get("payment_method") ?? "") === "card" ? "card" : "transfer",
+    // Only ever GBP or USD, and only on a card: a transfer is naira, and a
+    // currency riding along on one would have somebody sent a Stripe link
+    // for an order they are paying into a Nigerian account.
+    payCurrency:
+      String(form.get("payment_method") ?? "") === "card"
+        ? ((): "GBP" | "USD" | undefined => {
+            const said = String(form.get("pay_currency") ?? "").toUpperCase();
+            return said === "GBP" || said === "USD" ? said : undefined;
+          })()
+        : undefined,
     collectMode: String(form.get("collect_mode") ?? "") === "each" ? "each" : "leader",
     people: parsePeople(form.get("people")),
     customerNote: String(form.get("customer_note") ?? "").trim().slice(0, 300),

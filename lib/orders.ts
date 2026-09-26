@@ -57,6 +57,9 @@ export type PlaceOrderInput = {
   /** Which front door this came through: "app" or "web". Left out by
    *  anything older, which reads as unknown rather than as a guess. */
   source?: "app" | "web";
+  /** Somebody abroad is paying by card, in their money. Left out for the
+   *  naira that nearly every order is paid in. */
+  payCurrency?: "GBP" | "USD";
   /** Present when one person is carting for several (addendum §2). */
   groupMode?: GroupMode | null;
   /** Transfer, or a card link sent by hand over WhatsApp. */
@@ -486,6 +489,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           lines: priced.lines,
           coupon: coupon?.ok ? coupon : null,
           source: input.source,
+          payCurrency: input.payCurrency,
           joinRootId: sameDay ? null : joinRootId,
           sharedGroupId,
           gift,
@@ -668,6 +672,8 @@ async function placeSingleOrder(args: {
   customerNote: string;
   /** Which front door it came through. */
   source?: "app" | "web";
+  /** The money a card link will be made out in. */
+  payCurrency?: "GBP" | "USD";
   /** The delivery being joined, already resolved back to the order that
    *  started it. */
   joinRootId: string | null;
@@ -761,6 +767,7 @@ async function placeSingleOrder(args: {
     payment_method: args.paymentMethod,
     customer_note: args.customerNote,
     source: args.source,
+    pay_currency: args.payCurrency,
     shared_with: args.joinRootId,
     lines,
   });
@@ -996,6 +1003,8 @@ async function insertOrder(args: {
   customer_note: string;
   /** Which front door it came through. */
   source?: "app" | "web";
+  /** The money a card link will be made out in. */
+  pay_currency?: "GBP" | "USD";
   /** The order whose delivery this one is joining, if any. */
   shared_with?: string | null;
   lines: PricedLine[];
@@ -1025,6 +1034,7 @@ async function insertOrder(args: {
         : {}),
       ...(args.box_id ? { box_id: args.box_id } : {}),
       ...(args.source ? { source: args.source } : {}),
+      ...(args.pay_currency ? { pay_currency: args.pay_currency } : {}),
     })
     .select("id")
     .single();
@@ -1033,8 +1043,14 @@ async function insertOrder(args: {
   // a shop that has not run the migration yet takes the order anyway and
   // simply does not know it was a gift. Losing an order over it would be far
   // worse than losing the label.
-  if (error && (args.gift || args.box_id || args.source)) {
-    return insertOrder({ ...args, gift: null, box_id: null, source: undefined });
+  if (error && (args.gift || args.box_id || args.source || args.pay_currency)) {
+    return insertOrder({
+      ...args,
+      gift: null,
+      box_id: null,
+      source: undefined,
+      pay_currency: undefined,
+    });
   }
   if (error || !order) return null;
 
