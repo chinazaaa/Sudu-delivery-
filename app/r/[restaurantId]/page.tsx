@@ -73,8 +73,73 @@ export default async function RestaurantPage({
   // rather than find by accident.
   const deals = await dealsAt(place.restaurant.id, place.restaurant.name);
 
+  // What they sell, in their own words: the menu's own sections, lower
+  // cased, up to four. Read from the menu so it can never describe a
+  // kitchen that has changed what it does.
+  const kinds = place.categories
+    .map((one) => one.name.trim().toLowerCase())
+    .filter(Boolean)
+    .slice(0, 4);
+  const sections =
+    kinds.length > 1
+      ? `Choose from ${kinds.slice(0, -1).join(", ")} and ${kinds[kinds.length - 1]}.`
+      : kinds.length === 1
+        ? `Choose from the ${kinds[0]}.`
+        : "";
+
+  // Who is who, said in the form a machine reads.
+  //
+  // The restaurant is the restaurant and Sudu is the courier: marking this
+  // page as a Sudu restaurant would claim we cook, and marking the courier
+  // as the seller of a pizza would claim Domino's drives to campus. Both are
+  // wrong in ways that are hard to undo once they are believed.
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
+  const here = `${site}/r/${place.restaurant.href}`;
+  const structured = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Restaurant",
+        "@id": `${here}#restaurant`,
+        name: place.restaurant.name,
+        image: place.restaurant.bannerUrl || place.restaurant.logoUrl || undefined,
+        url: here,
+        servesCuisine: kinds.length > 0 ? kinds : undefined,
+      },
+      {
+        // The trip itself, which is the part that is ours.
+        "@type": "Service",
+        name: `${place.restaurant.name} delivery to Pan-Atlantic University`,
+        serviceType: "Food delivery",
+        provider: { "@type": "Organization", name: "Sudu", url: site },
+        areaServed: {
+          "@type": "Place",
+          name: "Pan-Atlantic University, Ibeju-Lekki, Lagos",
+        },
+        about: { "@id": `${here}#restaurant` },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Sudu", item: site },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Every menu",
+            item: `${site}/products`,
+          },
+          { "@type": "ListItem", position: 3, name: place.restaurant.name, item: here },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="space-y-5">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
+      />
       <div className="relative -mx-4 h-52 overflow-hidden sm:mx-0 sm:h-64 sm:rounded-2xl">
         <Thumb
           src={place.restaurant.bannerUrl}
@@ -93,8 +158,13 @@ export default async function RestaurantPage({
             />
           </span>
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-extrabold sm:text-3xl">
-              {place.restaurant.name}
+            {/* The name and what this page is: a search for "does KFC
+                deliver to PAU" should find a heading that answers it,
+                rather than a heading that only says KFC. Clamped to two
+                lines, because a long restaurant name plus the rest is more
+                than one line on a phone. */}
+            <h1 className="line-clamp-2 text-2xl font-extrabold sm:text-3xl">
+              {place.restaurant.name} delivery to PAU
             </h1>
             <p className="text-sm text-white/75">
               {place.items.length} item{place.items.length === 1 ? "" : "s"} on
@@ -111,6 +181,18 @@ export default async function RestaurantPage({
           actually chosen. */}
 
       <RestaurantMenu place={place} />
+
+      {/* Under the menu, on purpose. The relationship between a restaurant,
+          this shop and the campus is the thing people search for, and a list
+          of dishes leaves all of it to be guessed at, so it has to be
+          somewhere on the page. But nobody arrived here to read a paragraph
+          about delivery: they came for the food, and the food goes first. */}
+      <p className="text-sm leading-relaxed text-muted">
+        Order {place.restaurant.name} through Sudu and have it delivered to
+        your Pan-Atlantic University hostel. {sections}{" "}
+        You can add things from other restaurants to the same order, and the
+        one delivery is shared between everybody on the run.
+      </p>
     </div>
   );
 }

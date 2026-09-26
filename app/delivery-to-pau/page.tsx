@@ -78,6 +78,46 @@ export default async function DeliveryToPauPage() {
           "split between everybody who orders on the same run.",
     },
     {
+      q: "What restaurants deliver to PAU?",
+      a:
+        places.length > 0
+          ? `Through Sudu: ${places.map((one) => one.name).join(", ")}. ` +
+            "They are collected together and brought onto campus on one car, " +
+            "so an order can draw on more than one of them."
+          : "The list is on the menu page, and everything on it comes to campus.",
+    },
+    ...places.slice(0, 2).map((one) => ({
+      // The question as somebody would type it, one per counter, for the two
+      // best known. Asking "can I order KFC to PAU" should find the answer
+      // rather than a page that merely contains the word KFC.
+      q: `Can I order ${one.name} to PAU?`,
+      a:
+        `Yes. ${one.name} is on Sudu, and it comes to your hostel on the ` +
+        "next run. You can put things from other restaurants in the same " +
+        "order and pay one delivery between you.",
+    })),
+    {
+      q: "Can I order from more than one restaurant at once?",
+      a:
+        "Yes. One car fetches all of it, so a cart with two kitchens in it " +
+        "is one delivery and one fee rather than two.",
+    },
+    {
+      q: "Can I split the delivery with friends?",
+      a:
+        "Yes. Start a shared delivery, send the link, and everybody adds " +
+        "their own food. The fee splits between everybody in it, and each " +
+        "bag is labelled with its owner's name.",
+    },
+    ...(hostels.length > 0
+      ? [
+          {
+            q: "Which PAU hostels does Sudu deliver to?",
+            a: `${hostels.join(", ")}. You pick your block at checkout.`,
+          },
+        ]
+      : []),
+    {
       // Food only. The other places we go are parcel routes, and naming them
       // in the answer to a question about food reads as a menu we do not
       // have. They are named under the parcel question, where they are true.
@@ -291,11 +331,22 @@ export default async function DeliveryToPauPage() {
       </Section>
 
       {hostels.length > 0 && (
-        <Section title="Where we hand it over">
+        <Section title="PAU hostels and blocks we deliver to">
           <p>
-            On campus, at the block you name at checkout:{" "}
-            {hostels.join(", ")}.
+            On campus, at the block you name at checkout. Somebody wondering
+            whether we come to theirs should be able to find it here rather
+            than having to ask.
           </p>
+          <ul className="flex flex-wrap gap-2 pt-1">
+            {hostels.map((one) => (
+              <li
+                key={one}
+                className="rounded-full bg-paper px-3 py-1.5 text-sm font-semibold shadow-card"
+              >
+                {one}
+              </li>
+            ))}
+          </ul>
         </Section>
       )}
 
