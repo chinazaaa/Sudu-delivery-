@@ -506,17 +506,21 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
             (promotion && !sharedGroupId
               ? promotion.fee
               : where.valueBands.length > 0 && !sameDay && !party
-                ? // A cart that is nothing but market shopping is charged
-                  // by what the shopping comes to, full stop. Mix a
-                  // restaurant into it and the dearer of the two measures
-                  // comes back: a pepper added to twelve pizzas must not
-                  // drop the whole order onto the market's ladder.
-                  feeAcross(
-                    countFood(priced.lines),
-                    feeFor(countItems(priced.lines), batch.flash_fee, where.bands),
-                    where.valueBands,
-                    where.allByValue
-                  ) + where.dearest.runExtra
+                ? // Two errands, two fees. The market half pays by what the
+                  // shopping comes to and the restaurant half by how much of
+                  // the car it fills, and the bill is the two added. Neither
+                  // half can underpay for the other.
+                  feeAcross({
+                    marketFood: countFood(
+                      onlyFrom(priced.lines, where.byValueKitchens, true)
+                    ),
+                    restaurantFee: feeOfHalf(
+                      onlyFrom(priced.lines, where.byValueKitchens, false),
+                      batch.flash_fee,
+                      where.bands
+                    ),
+                    bands: where.valueBands,
+                  }) + where.dearest.runExtra
                 : undefined),
           promotionCode: promotion?.coupon.code ?? null,
           sameDayFee: sameDay && !party
@@ -657,6 +661,22 @@ const countItems = (lines: PricedLine[]) =>
   containersIn(lines.map((l) => ({ qty: l.qty, container_pct: l.item.container_pct })));
 const countFood = (lines: PricedLine[]) =>
   lines.reduce((sum, l) => sum + l.unitPrice * l.qty, 0);
+
+/** One half of a mixed cart: the market lines, or everything else. */
+const onlyFrom = (lines: PricedLine[], byValue: string[], want: boolean) =>
+  lines.filter((l) => byValue.includes(l.item.restaurant_id) === want);
+
+/**
+ * The container fee for a half of a cart, or nothing where that half is
+ * empty.
+ *
+ * Asked separately because the container count floors at one: a car still
+ * has to go even if all anybody wanted was a Coke. That floor is right for a
+ * cart and wrong for half of one, where no lines must mean no fee rather
+ * than the price of a single container nobody ordered.
+ */
+const feeOfHalf = (lines: PricedLine[], flash: number | null, bands: Band[]) =>
+  lines.length === 0 ? 0 : feeFor(countItems(lines), flash, bands);
 
 async function placeSingleOrder(args: {
   batch: Batch;

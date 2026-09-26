@@ -75,24 +75,33 @@ export function bandRange(
 /**
  * What a cart is charged where a value ladder is in play.
  *
- * Both measures used to be taken and the dearer kept, which sounds fair and
- * quietly made the value ladder dead letter: its top band is ₦4,000 and the
- * container ladder starts at ₦4,000, so the container fee always won and a
- * market shop of twelve bags billed at twelve thousand naira to carry. That
- * is the number the bands exist to prevent.
+ * Two errands, two fees, added together. It used to take both measures and
+ * keep the dearer, which sounds fair and did two wrong things at once. The
+ * value ladder became dead letter, because its top band is ₦4,000 and the
+ * container ladder starts at ₦4,000, so the container fee won every time and
+ * twelve bags of market shopping billed at twelve thousand naira to carry.
+ * And a cart with both in it fell off a cliff: shopping that costs ₦4,000 to
+ * bring on its own cost ₦26,000 the moment a pizza joined it, which is a
+ * price nobody pays. They place two orders instead, and they are right to.
  *
- * So: a cart that is nothing but market shopping is charged by value alone,
- * which is what the shelf promises. The moment a restaurant is in it the
- * dearer of the two comes back, because a pepper added to twelve pizzas must
- * not drop the whole order onto the market's ladder.
+ * So the market half pays by what the shopping comes to and the restaurant
+ * half pays by how much of the car it fills, and the bill is the two of them
+ * added. Neither half can underpay for the other, and it is one sentence to
+ * a customer: one fee for the shopping, one for the food.
  */
-export function feeAcross(
-  food: number,
-  containerFee: number,
-  bands: ValueBand[],
-  allByValue: boolean
-): number {
-  if (bands.length === 0) return containerFee;
-  const byValue = feeForValue(food, bands);
-  return allByValue ? byValue : Math.max(byValue, containerFee);
+export function feeAcross(args: {
+  /** What the market half of the cart comes to, in naira. Zero where there
+   *  is no market half. */
+  marketFood: number;
+  /** The container fee for the restaurant half, already laddered. Zero where
+   *  there is no restaurant half. */
+  restaurantFee: number;
+  /** The value ladder the market half is charged by. */
+  bands: ValueBand[];
+}): number {
+  const market =
+    args.bands.length > 0 && args.marketFood > 0
+      ? feeForValue(args.marketFood, args.bands)
+      : 0;
+  return market + args.restaurantFee;
 }

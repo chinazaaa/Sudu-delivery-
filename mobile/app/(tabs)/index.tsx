@@ -100,7 +100,7 @@ export default function Home() {
   // "Ordering for something?" is a filing cabinet, and nobody opens a filing
   // cabinet to find out the shop does care packages.
   const [shelves, setShelves] = useState<
-    { slug: string; name: string; from: number | null; kind: string }[]
+    { slug: string; name: string; from: number | null; kind: string; image: string }[]
   >([]);
   // Empty when parcels are off, and then the page does not mention them.
   const [parcels, setParcels] = useState("");
@@ -139,6 +139,7 @@ export default function Home() {
             name: one.name,
             from: one.from,
             kind: one.kind ?? "collection",
+            image: one.image ?? "",
           }))
         );
       })
@@ -293,12 +294,19 @@ export default function Home() {
               gap: 10,
             }}
           >
+            {one.image !== "" && (
+              <Image
+                source={{ uri: one.image }}
+                style={{ width: 48, height: 48, borderRadius: 10 }}
+                resizeMode="contain"
+              />
+            )}
             <View style={{ flex: 1 }}>
               <Text style={{ fontWeight: "800", color: T.ink }}>{one.name}</Text>
               <Text style={{ color: T.muted, marginTop: 2 }}>
                 {one.from === null
                   ? "One price, delivery in it"
-                  : `From ${naira(one.from)}, delivery in`}
+                  : `From ${naira(one.from)}, delivery in it`}
               </Text>
             </View>
             <Text style={{ color: T.brand, fontWeight: "800" }}>See</Text>

@@ -1040,30 +1040,25 @@ export function feeForValue(value: number, bands: ValueBand[]): number {
 
 const last = (bands: ValueBand[]) => bands[bands.length - 1]?.fee ?? 0;
 
-/** Whether every kitchen in the cart prices by what the shopping comes to. */
-export function allByValue(shop: Shop | null, restaurantIds: string[]): boolean {
-  const byKitchen = shop?.valueBandsOf ?? {};
-  return (
-    restaurantIds.length > 0 &&
-    restaurantIds.every((id) => (byKitchen[id] ?? []).length > 0)
-  );
+/** Whether this kitchen prices by what the shopping comes to. */
+export function pricesByValue(shop: Shop | null, restaurantId: string): boolean {
+  return ((shop?.valueBandsOf ?? {})[restaurantId] ?? []).length > 0;
 }
 
 /**
  * What a cart is charged where a value ladder is in play.
  *
- * Nothing but market shopping is charged by what the shopping comes to. Mix
- * a restaurant into it and the dearer of the two measures comes back, so a
- * pepper added to twelve pizzas cannot drop the whole order onto the
- * market's ladder. The same sentence the server bills by.
+ * Two errands, two fees, added together: the market half pays by what the
+ * shopping comes to and the restaurant half by how much of the car it fills.
+ * The same sentence the server bills by, so the number on the screen is the
+ * number on the bill.
  */
-export function feeAcross(
-  food: number,
-  containerFee: number,
-  bands: ValueBand[],
-  marketOnly: boolean
-): number {
-  if (bands.length === 0) return containerFee;
-  const byValue = feeForValue(food, bands);
-  return marketOnly ? byValue : Math.max(byValue, containerFee);
+export function feeAcross(args: {
+  marketFood: number;
+  restaurantFee: number;
+  bands: ValueBand[];
+}): number {
+  const market =
+    args.bands.length > 0 && args.marketFood > 0 ? feeForValue(args.marketFood, args.bands) : 0;
+  return market + args.restaurantFee;
 }

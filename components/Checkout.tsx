@@ -29,7 +29,7 @@ import { OPENED, TRAP } from "@/lib/guard";
 import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
 import { feeAcross, type ValueBand } from "@/lib/value-bands";
-import { allByValue, ladderFor } from "@/lib/areas-shared";
+import { ladderFor, pricesByValue } from "@/lib/areas-shared";
 import CouponBox from "@/components/CouponBox";
 import { clearJoin, readJoin } from "@/components/JoinDelivery";
 import GroupLink, {
@@ -128,7 +128,10 @@ export default function Checkout({
   // many things it is. A market trip is one trip and two bags, and the
   // container ladder would call eleven peppers eleven containers.
   const byValue = ladderFor(kitchens, valueBandsOf);
-  const marketOnly = allByValue(kitchens, valueBandsOf);
+  // Two errands, two fees: the market half by what the shopping comes to,
+  // the restaurant half by how much of the car it fills.
+  const marketHalf = cart.filter((line) => pricesByValue(line.restaurantId, valueBandsOf));
+  const restHalf = cart.filter((line) => !pricesByValue(line.restaurantId, valueBandsOf));
   const sameDayBands = withExtra(baseSameDayBands, area.sameDayExtra);
   // One thing from a far area makes the whole order a run: a car cannot be
   // in two places in three hours.
@@ -468,12 +471,20 @@ export default function Checkout({
         // to. Mix a restaurant in and the dearer of the two measures comes
         // back, so a pepper added to twelve pizzas cannot drop the whole
         // order onto the market's ladder.
-        feeAcross(
-          subtotal,
-          feeFor(itemCount + alreadyItems, selected?.flashFee ?? null, bands),
-          byValue,
-          marketOnly
-        ) +
+        feeAcross({
+          marketFood: cartSubtotal(marketHalf),
+          // The container count floors at one, which is right for a cart and
+          // wrong for half of one: no restaurant lines must mean no
+          // restaurant fee, not the price of a container nobody ordered.
+          restaurantFee: (() => {
+            const containers =
+              (restHalf.length === 0 ? 0 : countItems(restHalf)) + alreadyItems;
+            return containers === 0
+              ? 0
+              : feeFor(containers, selected?.flashFee ?? null, bands);
+          })(),
+          bands: byValue,
+        }) +
         area.runExtra
       : Math.max(
           0,

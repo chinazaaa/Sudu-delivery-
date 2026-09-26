@@ -5,6 +5,20 @@ import { cheapestBoxes } from "@/lib/box-view";
 
 export const dynamic = "force-dynamic";
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
+
+/** The cover for a shelf, as a PNG the phone can actually draw. */
+function cover(imageUrl: string, kind: string): string {
+  const named = (imageUrl || "").trim();
+  // Anything already hosted elsewhere is somebody's own photograph and is
+  // left alone. Only our own drawings have a PNG beside them.
+  if (named.startsWith("http")) return named;
+  const file = named.startsWith("/covers/")
+    ? named.replace(/\.svg$/, ".png")
+    : `/covers/${kind === "occasion" ? "occasions" : "collections"}.png`;
+  return `${SITE}${file}`;
+}
+
 /**
  * The occasions, for the app's list.
  *
@@ -38,7 +52,12 @@ export async function GET(): Promise<NextResponse> {
           // Which shelf, so the app can name them the way the site does
           // rather than filing everything under one word.
           kind: one.kind,
-          image: one.image_url,
+          // A picture, as a PNG on an absolute address. The website draws
+          // these as SVG, which a phone cannot render without a library it
+          // would need a new build from Apple to carry, and a shelf of grey
+          // text is not worth a fortnight of review. Where a shelf has no
+          // picture of its own it borrows its shelf's.
+          image: cover(one.image_url, one.kind),
         })),
     });
   } catch (error) {

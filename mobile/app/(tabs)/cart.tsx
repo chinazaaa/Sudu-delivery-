@@ -3,13 +3,13 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
-  allByValue,
   api,
   feeAcross,
   feeFor,
   lagosToday,
   naira,
   nextArrival,
+  pricesByValue,
   sameDayFeeFor,
   valueLadderFor,
 } from "@/lib/api";
@@ -124,6 +124,9 @@ export default function Cart() {
   // four thousand over a checkout about to charge six and a half.
   // Which kitchens this cart touches, found the same way the checkout finds
   // them: a line carries the counter's name, not its id.
+  const kitchenOf = (line: { itemId: string }) =>
+    shop?.menu.find((one) => one.items.some((item) => item.id === line.itemId))
+      ?.restaurant.id ?? "";
   const kitchensIn = [
     ...new Set(
       lines.map(
@@ -149,14 +152,18 @@ export default function Cart() {
     shop && items > 0 && !offered
       ? soon && (shop.sameDay?.bands?.length ?? 0) > 0
         ? sameDayFeeFor(items, soon.urgent, shop.sameDay!.bands, shop.sameDay!.urgentExtra ?? 0)
-        : // A market cart is charged by what the shopping comes to, and the
-          // cart has to say what the checkout will say.
-          feeAcross(
-            food,
-            feeFor(items, shop.bands, null),
-            valueLadderFor(shop, kitchensIn),
-            allByValue(shop, kitchensIn)
-          )
+        : // Two errands, two fees, and the cart has to say what the checkout
+          // will say.
+          feeAcross({
+            marketFood: cartTotal(
+              lines.filter((line) => pricesByValue(shop, kitchenOf(line)))
+            ),
+            restaurantFee: (() => {
+              const rest = lines.filter((line) => !pricesByValue(shop, kitchenOf(line)));
+              return rest.length === 0 ? 0 : feeFor(countItems(rest), shop.bands, null);
+            })(),
+            bands: valueLadderFor(shop, kitchensIn),
+          })
       : 0;
 
   // An offer this cart nearly has. From the inside, a qualifying dish with

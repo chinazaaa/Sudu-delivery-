@@ -13,8 +13,8 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   api,
   areasIn,
-  allByValue,
   feeAcross,
+  pricesByValue,
   valueLadderFor,
   aroundPhrase,
   canGoSameDay,
@@ -183,6 +183,14 @@ export default function Checkout() {
     ),
   ].filter(Boolean);
   const cartAreas = areasIn(shop, kitchens);
+
+  // Two errands, two fees: the market half of the cart pays by what the
+  // shopping comes to, the restaurant half by how much of the car it fills.
+  const kitchenOf = (line: { itemId: string }) =>
+    shop?.menu.find((one) => one.items.some((item) => item.id === line.itemId))
+      ?.restaurant.id ?? "";
+  const marketHalf = lines.filter((line) => pricesByValue(shop, kitchenOf(line)));
+  const restHalf = lines.filter((line) => !pricesByValue(shop, kitchenOf(line)));
   const area = dearestArea(shop, kitchens);
   const runBands = withExtra(shop?.bands ?? [], area.runExtra);
   const sameDayBands = withExtra(shop?.sameDay?.bands ?? [], area.sameDayExtra);
@@ -266,12 +274,18 @@ export default function Checkout() {
       // to. Mix a restaurant in and the dearer of the two measures comes
       // back, so a pepper added to twelve pizzas cannot drop the whole
       // order onto the market's ladder.
-      feeAcross(
-        food,
-        feeFrom(items + adding.items, runBands, run?.flashFee ?? null),
-        byValue,
-        allByValue(shop, kitchens)
-      ) + area.runExtra
+      feeAcross({
+        marketFood: cartTotal(marketHalf),
+        // The container count floors at one, which is right for a cart and
+        // wrong for half of one: no restaurant lines must mean no restaurant
+        // fee, not the price of a container nobody ordered.
+        restaurantFee: (() => {
+          const containers =
+            (restHalf.length === 0 ? 0 : countItems(restHalf)) + adding.items;
+          return containers === 0 ? 0 : feeFrom(containers, runBands, run?.flashFee ?? null);
+        })(),
+        bands: byValue,
+      }) + area.runExtra
     : picked
     ? sameDayFeeFor(items, picked.urgent, sameDayBands, shop?.sameDay?.urgentExtra ?? 0)
     : shop && run

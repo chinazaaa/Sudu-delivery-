@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -14,6 +14,9 @@ type Row = {
   from: number | null;
   happensAt: string | null;
   whenWord: string;
+  /** The shelf's cover, as a PNG on an absolute address. Empty where the
+   *  shop has not drawn one. */
+  image?: string;
 };
 
 /**
@@ -88,6 +91,13 @@ export default function OccasionsScreen() {
             borderColor: row.happensAt ? "rgba(255,90,31,0.4)" : "transparent",
           }}
         >
+          {(row.image ?? "") !== "" && (
+            <Image
+              source={{ uri: row.image }}
+              style={{ width: 56, height: 56, borderRadius: 12 }}
+              resizeMode="contain"
+            />
+          )}
           <View style={{ flex: 1 }}>
             {row.happensAt && (
               <Text
@@ -109,7 +119,7 @@ export default function OccasionsScreen() {
             {row.from !== null && (
               <Text style={{ marginTop: 8, fontWeight: "700", color: T.brandDark }}>
                 {row.boxes === 1 ? "One box" : `${row.boxes} boxes`} from {naira(row.from)}
-                <Text style={{ fontWeight: "600" }}> · delivery in</Text>
+                <Text style={{ fontWeight: "600" }}> · delivery in it</Text>
               </Text>
             )}
           </View>
