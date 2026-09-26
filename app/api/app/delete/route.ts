@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/supabase";
+import { recordDeletion } from "@/lib/deletions";
 import { phoneFromToken } from "@/lib/customer-auth";
 
 export const dynamic = "force-dynamic";
@@ -82,7 +83,24 @@ export async function POST(request: Request): Promise<NextResponse> {
     await db().from("group_members").update({ phone: "", hostel: "", name: "Deleted" }).eq("phone", phone);
     await db().from("carts").delete().eq("phone", phone);
     await db().from("push_devices").delete().eq("phone", phone);
+    const { data: person } = await db()
+      .from("customers")
+      .select("*")
+      .eq("phone", phone)
+      .maybeSingle();
     await db().from("customers").delete().eq("phone", phone);
+
+    // Said plainly, because "an order changed name to Deleted overnight" is
+    // the kind of thing that looks like a bug at six in the morning.
+    await recordDeletion({
+      kind: "account",
+      label: `${String(person?.name ?? "Somebody")} · ${phone}`,
+      who: "customer",
+      detail:
+        `Closed their account in the app. ${rows.length} past order` +
+        `${rows.length === 1 ? "" : "s"} kept, with the name taken off.`,
+      body: person ?? { phone },
+    });
 
     return NextResponse.json({ ok: true, orders: rows.length });
   } catch {

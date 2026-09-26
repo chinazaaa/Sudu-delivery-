@@ -428,8 +428,14 @@ export default function OrderCard({
             {/* For the ones that should never have existed: a test, a bot, a
                 duplicate of a duplicate. Cancelling leaves a row that says
                 what happened, which is right nearly always; this really is
-                gone. Never offered on an order anybody paid for. */}
-            {(order.status === "pending" || order.status === "cancelled") && (
+                gone. Never offered on an order anybody paid for.
+
+                Cancelled ones only. A live order is somebody waiting for
+                food, and going from waiting to gone in one press is how an
+                order disappeared overnight with nobody able to say what had
+                become of it. Cancel first: that is the decision, and this is
+                only the tidying up afterwards. */}
+            {order.status === "cancelled" && (
               <form action={remove}>
                 <input type="hidden" name="order_id" value={order.id} />
                 <ConfirmButton tone="brand" confirm="Yes, delete it for good">

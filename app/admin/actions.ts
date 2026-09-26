@@ -38,6 +38,8 @@ import { skincareShelves } from "@/lib/skincare";
 import { areaText } from "@/lib/areas";
 import { placesText } from "@/lib/run-places";
 import { newPin } from "@/lib/customer-auth";
+import { recordDeletion } from "@/lib/deletions";
+import { naira, orderRef } from "@/lib/money";
 import { namedPromoters, realPromoter } from "@/lib/promoters";
 import { pushDeal, pushToPhone } from "@/lib/push";
 
@@ -211,17 +213,39 @@ export async function deleteOrder(form: FormData): Promise<void> {
   await assertAdmin();
 
   const id = String(form.get("order_id"));
+  // Everything, not the three columns the check needs: what is written down
+  // has to be enough to put the order back, and a deleted row cannot be
+  // asked for afterwards.
   const { data: order } = await db()
     .from("orders")
-    .select("paid_at, status, group_id")
+    .select("*")
     .eq("id", id)
     .maybeSingle();
 
   if (!order || order.paid_at) return;
-  if (order.status !== "pending" && order.status !== "cancelled") return;
+  // Cancel it first. A live order is somebody waiting for food, and going
+  // from waiting to gone in one press is how #1019 disappeared overnight
+  // with nobody able to say what had happened to it. Cancelling is the
+  // decision; deleting is only tidying up afterwards.
+  if (order.status !== "cancelled") return;
+
+  // The lines and the choices on them, so what is written down is the whole
+  // order rather than its heading. They cascade away with it.
+  const { data: lines } = await db()
+    .from("order_items")
+    .select("*, order_item_options(*)")
+    .eq("order_id", id);
 
   // Its lines go with it: order_items cascades on this delete.
   await db().from("orders").delete().eq("id", id);
+
+  await recordDeletion({
+    kind: "order",
+    label: `${orderRef(order as { order_no: number | null; id: string })} · ${order.customer_name} · ${naira(order.total as number)}`,
+    who: "admin",
+    detail: "Admin, order page",
+    body: { order, lines: lines ?? [] },
+  });
 
   // A group with nothing left in it is a group that never happened.
   if (order.group_id) {
@@ -735,7 +759,25 @@ async function removeBatches(ids: string[]): Promise<string | null> {
   if (ids.length === 0) return null;
 
   await db().from("carts").delete().in("batch_id", ids);
+
+  // Runs are only ever deleted when nothing live is on them, so this should
+  // find nothing. It is written down when it does not, because "should" is
+  // how an order leaves without anybody knowing: the callers check, and a
+  // check somewhere else is not a guarantee here.
+  const { data: doomed } = await db()
+    .from("orders")
+    .select("*")
+    .in("batch_id", ids);
   await db().from("orders").delete().in("batch_id", ids);
+  for (const order of (doomed ?? []) as Record<string, unknown>[]) {
+    await recordDeletion({
+      kind: "order",
+      label: `${orderRef(order as { order_no: number | null; id: string })} · ${String(order.customer_name ?? "")} · ${naira(Number(order.total ?? 0))}`,
+      who: "admin",
+      detail: "Went with the run it was on",
+      body: order,
+    });
+  }
   for (const id of ids) await clearDeadGroups(id);
 
   await db().from("checkout_links").update({ batch_id: null }).in("batch_id", ids);
@@ -744,7 +786,19 @@ async function removeBatches(ids: string[]): Promise<string | null> {
   await db().from("coupon_runs").delete().in("batch_id", ids);
   await db().from("counter_spend").delete().in("batch_id", ids);
 
+  const { data: runs } = await db().from("batches").select("*").in("id", ids);
   const { error } = await db().from("batches").delete().in("id", ids);
+  if (!error) {
+    for (const run of (runs ?? []) as Record<string, unknown>[]) {
+      await recordDeletion({
+        kind: "run",
+        label: `${String(run.run_date ?? "")} · ${String(run.slot ?? "")}`,
+        who: "admin",
+        detail: "Admin, runs page",
+        body: run,
+      });
+    }
+  }
   return error ? error.message : null;
 }
 
