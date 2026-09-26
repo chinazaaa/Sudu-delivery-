@@ -172,6 +172,19 @@ export default function Home({
               further down: occasions, then parcels, then skincare, and the menu
               began below three screens of doors. A row costs the same height
               whether there are two of these or five. */}
+          {/* A line over the grid, and the way to the whole shelf on the
+              right of it. The grid only names six collections, and somebody
+              who wants the seventh should not have to guess there is one. */}
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="section-title">What can we bring you?</h2>
+            <Link
+              href="/collections"
+              className="shrink-0 text-sm font-extrabold text-brand"
+            >
+              All collections →
+            </Link>
+          </div>
+
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {buckets.map((one) => (
               <Door
@@ -261,6 +274,28 @@ export default function Home({
               </div>
             ))}
           </Carousel>
+
+          {/* The same doors again, as words, for whoever got to the bottom
+              without tapping one. Cheap to add and it is the last thing
+              between them and leaving. */}
+          <p className="pt-2 text-center text-sm">
+            <span className="text-muted">Looking for something? </span>
+            {[
+              { href: "/products", said: "Food" },
+              { href: "/collections", said: "Collections" },
+              { href: "/occasions", said: "Occasions" },
+              { href: "/skincare", said: "Skincare" },
+              { href: "/parcel", said: "Parcels" },
+              { href: "/custom-order", said: "Anything else" },
+            ].map((one, at) => (
+              <span key={one.href}>
+                {at > 0 && <span className="text-muted"> · </span>}
+                <Link href={one.href} className="font-bold text-brand">
+                  {one.said}
+                </Link>
+              </span>
+            ))}
+          </p>
 
           {/* What this shop is, in the plainest words there are.
               At the foot on purpose: somebody who is here already knows, and
