@@ -106,6 +106,7 @@ function line(over: Partial<OrderLine>): OrderLine {
     choices: [],
     name: "Wrap meal",
     restaurant: "KFC Novare",
+    source: "",
     ...over,
   };
 }

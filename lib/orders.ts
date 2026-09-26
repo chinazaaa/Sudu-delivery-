@@ -1671,6 +1671,9 @@ async function bindCustomer(args: {
 export type OrderLine = OrderItem & {
   name: string;
   restaurant: string;
+  /** Where whoever packs this goes to get it. Admin only, and empty for
+   *  everything a restaurant makes, which is most of it. */
+  source: string;
   /** "Large", "Pepperoni". What she reads out at the counter. */
   choices: string[];
 };
@@ -1765,10 +1768,21 @@ export async function sharesFor(groupId: string | null): Promise<GroupShare[]> {
 /** Order lines with the item and restaurant names joined on. */
 export async function linesFor(orderIds: string[]): Promise<OrderLine[]> {
   if (orderIds.length === 0) return [];
-  const { data, error } = await db()
-    .from("order_items")
-    .select("*, menu_items(name, restaurants(name)), order_item_options(name_at_order)")
-    .in("order_id", orderIds);
+  const ask = (columns: string) =>
+    db().from("order_items").select(columns).in("order_id", orderIds);
+
+  // Where to get it comes back with the line, because the moment anybody
+  // needs it is the moment they are looking at the order. Asked for
+  // defensively: a database without that column yet refuses the whole
+  // statement, and an order list is not a thing that may go blank.
+  let { data, error } = await ask(
+    "*, menu_items(name, source, restaurants(name)), order_item_options(name_at_order)"
+  );
+  if (error) {
+    ({ data, error } = await ask(
+      "*, menu_items(name, restaurants(name)), order_item_options(name_at_order)"
+    ));
+  }
   if (error) throw new Error(error.message);
 
   return (data ?? []).map((row: any) => ({
@@ -1781,6 +1795,7 @@ export async function linesFor(orderIds: string[]): Promise<OrderLine[]> {
     for_name: row.for_name,
     name: row.menu_items?.name ?? "(removed item)",
     restaurant: row.menu_items?.restaurants?.name ?? "Unknown",
+    source: row.menu_items?.source ?? "",
   }));
 }
 

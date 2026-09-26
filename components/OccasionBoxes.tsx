@@ -402,28 +402,42 @@ export default function OccasionBoxes({
               </div>
             </details>
 
-            <div>
-              <label className="label" htmlFor="box_note">
-                Anything we should know? (optional)
+            {/* A box is written at a high level on purpose: "a cake", "a
+                flower". Everything below that level is where somebody's own
+                birthday lives, and a box that cannot hold "vanilla, twelve
+                inches, write Happy Birthday Ada on it" is a box they will
+                not buy.
+
+                Nothing here is priced automatically, and it must not be:
+                twelve inches is not eight inches. So it says plainly that a
+                change can cost more and that we will say how much on
+                WhatsApp before anybody pays a naira of it. */}
+            <fieldset className="rounded-xl border border-brand/25 bg-brand-tint/40 p-3">
+              <legend className="px-1 text-sm font-extrabold">
+                Want it changed?
+              </legend>
+              <label className="label sr-only" htmlFor="box_note">
+                What you want changed
               </label>
-              {/* The example must not name food. This one field sits under
-                  every box there is, and "no pepper on the pizza" is
-                  nonsense above a chicken box. So the example is about the
-                  delivery, which is true of all of them, and the sentence
-                  above it says what the field is actually for. */}
-              <p className="mb-1 text-xs text-muted">
-                Use this to say if one or two small things should be
-                different. To change a whole item, use Swap above.
+              <p className="mb-1.5 text-xs leading-relaxed text-ink/75">
+                The box says what is in it, not which one. Say here if you want
+                a flavour, a size, a colour, or something written on it. To
+                change a whole item, use Swap above.
               </p>
               <textarea
                 id="box_note"
                 name="note"
-                rows={2}
-                maxLength={300}
-                placeholder="Room 12, call me when you are outside, go easy on the pepper"
+                rows={3}
+                maxLength={500}
+                placeholder="Vanilla cake, 12 inches, write Happy Birthday Ada. Red roses if you have them. Room 12, call me when you are outside."
                 className="field"
               />
-            </div>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                Some changes cost more. Nothing is charged for them here: we
+                message you on WhatsApp with what it comes to, and you decide
+                before anything is bought.
+              </p>
+            </fieldset>
 
             {promoters.length > 0 && !me && (
               <div>

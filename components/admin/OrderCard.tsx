@@ -16,6 +16,9 @@ export type OrderCardLine = {
   choices: string[];
   for_name: string | null;
   unit_price_at_order: number;
+  /** Where to go and get it, where it is one of ours rather than a
+   *  restaurant's. Empty for nearly every line. */
+  source?: string;
 };
 
 export type OrderCardData = {
@@ -335,6 +338,15 @@ export default function OrderCard({
                   {(line.for_name || order.lines.some((l) => l.for_name)) && (
                     <span className="text-muted">
                       {" "}· for {line.for_name ?? order.name}
+                    </span>
+                  )}
+                  {/* Where to go and get it, for the things no restaurant
+                      makes: a cake, flowers, a bucket. The moment anybody
+                      needs this is the moment they are looking at the
+                      order. */}
+                  {(line.source ?? "") !== "" && (
+                    <span className="mt-0.5 block text-xs font-semibold text-brand-dark">
+                      Get it: {line.source}
                     </span>
                   )}
                 </span>
