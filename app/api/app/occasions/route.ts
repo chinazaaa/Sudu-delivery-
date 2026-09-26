@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { boxesAcross, isTimed, liveOccasions } from "@/lib/boxes";
 import { cheapestBoxes } from "@/lib/box-view";
+import { shelfPhotos } from "@/lib/shelf-photo";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,9 @@ export async function GET(): Promise<NextResponse> {
     const occasions = await liveOccasions();
     const boxes = await boxesAcross(occasions.map((one) => one.id));
     const from = await cheapestBoxes(boxes);
+    // A photograph of the best thing on each shelf. The drawing is the
+    // fallback, not the first choice.
+    const photo = await shelfPhotos(boxes).catch(() => ({} as Record<string, string>));
 
     const counts = new Map<string, number>();
     for (const box of boxes) {
@@ -52,12 +56,12 @@ export async function GET(): Promise<NextResponse> {
           // Which shelf, so the app can name them the way the site does
           // rather than filing everything under one word.
           kind: one.kind,
-          // A picture, as a PNG on an absolute address. The website draws
-          // these as SVG, which a phone cannot render without a library it
-          // would need a new build from Apple to carry, and a shelf of grey
-          // text is not worth a fortnight of review. Where a shelf has no
-          // picture of its own it borrows its shelf's.
-          image: cover(one.image_url, one.kind),
+          // The food on the shelf, photographed. Where nothing on it has
+          // been photographed, our own drawing, as a PNG on an absolute
+          // address: the website draws these as SVG, which a phone cannot
+          // render without a library it would need a new build from Apple
+          // to carry, and a fortnight of review is a lot for a picture.
+          image: photo[one.id] || cover(one.image_url, one.kind),
         })),
     });
   } catch (error) {

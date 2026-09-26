@@ -94,8 +94,8 @@ export default function OccasionsScreen() {
           {(row.image ?? "") !== "" && (
             <Image
               source={{ uri: row.image }}
-              style={{ width: 56, height: 56, borderRadius: 12 }}
-              resizeMode="contain"
+              style={{ width: 64, height: 64, borderRadius: 12 }}
+              resizeMode="cover"
             />
           )}
           <View style={{ flex: 1 }}>

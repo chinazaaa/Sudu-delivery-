@@ -297,8 +297,11 @@ export default function Home() {
             {one.image !== "" && (
               <Image
                 source={{ uri: one.image }}
-                style={{ width: 48, height: 48, borderRadius: 10 }}
-                resizeMode="contain"
+                style={{ width: 64, height: 64, borderRadius: 12 }}
+                // Cover, because these are photographs of food now. Contain
+                // would letterbox a wide shot of a pizza inside a square and
+                // leave two grey bars where the appetite should be.
+                resizeMode="cover"
               />
             )}
             <View style={{ flex: 1 }}>

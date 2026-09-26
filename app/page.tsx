@@ -5,6 +5,7 @@ import { readDoors, type DoorKey } from "@/lib/home-doors";
 import type { Bucket } from "@/components/Home";
 import { cheapestBoxes } from "@/lib/box-view";
 import { naira } from "@/lib/money";
+import { shelfPhotos } from "@/lib/shelf-photo";
 import Home from "@/components/Home";
 import { openBatches } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
@@ -82,6 +83,11 @@ export default async function HomePage() {
   const from = await cheapestBoxes(packedBoxes).catch(
     () => new Map<string, number>()
   );
+  // A photograph of the best thing on each shelf, because a line drawing
+  // beside a card carrying an actual pizza reads as unfinished.
+  const photo = await shelfPhotos(packedBoxes).catch(
+    () => ({}) as Record<string, string>
+  );
 
   const boxCount = new Map<string, number>();
   for (const box of packedBoxes) {
@@ -106,8 +112,10 @@ export default async function HomePage() {
           title: one.name,
           line: said,
           action: "See",
-          // Its own picture where it has one, the shelf's where it does not.
+          // The food on it, then its own drawing, then its shelf's. A
+          // photograph of the pepperoni beats a drawing of a bucket.
           image:
+            photo[one.id] ||
             one.image_url ||
             `/covers/${kind === "occasion" ? "occasions" : "collections"}.svg`,
         };
