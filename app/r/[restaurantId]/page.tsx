@@ -119,6 +119,40 @@ export default async function RestaurantPage({
         about: { "@id": `${here}#restaurant` },
       },
       {
+        // The menu itself, readable. Each dish is a Product with a price in
+        // naira and whether it can be had today, made by the restaurant and
+        // sold by us, which is the same shape the dish's own page uses.
+        //
+        // Capped, because a market with two hundred and seventy lines would
+        // be a hundred kilobytes of JSON on a page somebody is trying to
+        // read on a phone, and the dishes each have a page of their own in
+        // the sitemap anyway.
+        "@type": "ItemList",
+        name: `${place.restaurant.name} menu`,
+        numberOfItems: place.items.length,
+        itemListElement: place.items.slice(0, 60).map((item, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          item: {
+            "@type": "Product",
+            name: item.name,
+            description: item.description || undefined,
+            image: item.imageUrl || undefined,
+            url: `${site}/p/${item.id}`,
+            brand: { "@type": "Brand", name: place.restaurant.name },
+            offers: {
+              "@type": "Offer",
+              price: item.price,
+              priceCurrency: "NGN",
+              availability: item.available
+                ? "https://schema.org/InStock"
+                : "https://schema.org/OutOfStock",
+              seller: { "@type": "Organization", name: "Sudu" },
+            },
+          },
+        })),
+      },
+      {
         "@type": "BreadcrumbList",
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Sudu", item: site },
