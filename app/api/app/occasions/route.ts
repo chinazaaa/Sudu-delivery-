@@ -35,6 +35,10 @@ export async function GET(): Promise<NextResponse> {
           from: from.get(one.id) ?? null,
           happensAt: isTimed(one) ? one.happens_at : null,
           whenWord: one.when_word,
+          // Which shelf, so the app can name them the way the site does
+          // rather than filing everything under one word.
+          kind: one.kind,
+          image: one.image_url,
         })),
     });
   } catch (error) {

@@ -558,6 +558,10 @@ export const api = {
         from: number | null;
         happensAt: string | null;
         whenWord: string;
+        /** Which shelf it is on, so the app names them the way the site
+         *  does rather than filing everything under one word. */
+        kind?: "collection" | "occasion";
+        image?: string;
       }[];
     }>("/occasions"),
   /** One occasion: every box drawn out, priced off today's menu by the shop,
@@ -570,9 +574,17 @@ export const api = {
         blurb: string;
         happensAt: string | null;
         whenWord: string;
+        kind?: "collection" | "occasion";
+        image?: string;
+        /** The example in the changes box, in this shelf's own words. */
+        hint?: string;
       };
       boxes: BoxView[];
       when: WhenOption[];
+      /** The dates a box can be asked for. A collection is asked for on a
+       *  day rather than put on a run, and a phone's clock is anybody's. */
+      day?: { soonest: string; latest: string; timed: boolean };
+      monies?: { code: string; label: string; symbol: string; rate: number }[];
       hostels: string[];
       promoters: { code: string; name: string }[];
       note: string;
@@ -586,6 +598,11 @@ export const api = {
     phone: string;
     hostel: string;
     paymentMethod: "transfer" | "card";
+    /** Whose money the card link is made out in. Naira unless they say. */
+    payCurrency?: string;
+    /** "weekly", "fortnightly" or "monthly", where they want it again. */
+    repeat?: string;
+    repeatNote?: string;
     customerNote: string;
     heardFrom: string;
     giftName: string;

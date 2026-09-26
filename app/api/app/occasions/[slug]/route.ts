@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { furthest, soonestStandard } from "@/lib/box-day";
+import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
+import { safeSettings } from "@/lib/settings";
 
 import { boxesOf, isTimed, occasionBySlug } from "@/lib/boxes";
 import { boxViews, whenOptions } from "@/lib/box-view";
@@ -30,6 +33,7 @@ export async function GET(
     // rather than per box.
     const cars = boxes.length > 0 ? whenOptions(occasion, boxes[0]) : Promise.resolve([]);
 
+    const settings = await safeSettings();
     const [views, when, hostels, promoters] = await Promise.all([
       boxViews(boxes).catch(() => []),
       cars.catch(() => []),
@@ -44,7 +48,27 @@ export async function GET(
         blurb: occasion.blurb,
         happensAt: isTimed(occasion) ? occasion.happens_at : null,
         whenWord: occasion.when_word,
+        kind: occasion.kind,
+        image: occasion.image_url,
+        // The example in the changes box, in this shelf's own words.
+        hint: occasion.custom_hint,
       },
+      // A collection is asked for on a day rather than put on a run, so the
+      // phone needs the same two dates the website works out on the server:
+      // the soonest it can be packed for, and as far ahead as anything is
+      // planned. A phone's own clock is anybody's guess.
+      day: {
+        soonest: soonestStandard(),
+        latest: furthest(),
+        timed: isTimed(occasion),
+      },
+      // What a card link can be made out in, for somebody abroad paying.
+      monies: moniesOn(settings).map((code) => ({
+        code,
+        label: code === "GBP" ? "Pounds" : "Dollars",
+        symbol: SYMBOL[code],
+        rate: rateFor(settings, code),
+      })),
       boxes: views.filter((one) => !one.isExtra),
       when,
       hostels,

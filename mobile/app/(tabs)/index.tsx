@@ -96,7 +96,12 @@ export default function Home() {
   const [skincare, setSkincare] = useState("");
   // What is packed and ready, said as the thing itself rather than as a
   // category. The home screen is the only signpost this app has.
-  const [occasions, setOccasions] = useState("");
+  // Every shelf by its own name, with its own price. A door saying
+  // "Ordering for something?" is a filing cabinet, and nobody opens a filing
+  // cabinet to find out the shop does care packages.
+  const [shelves, setShelves] = useState<
+    { slug: string; name: string; from: number | null; kind: string }[]
+  >([]);
   // Empty when parcels are off, and then the page does not mention them.
   const [parcels, setParcels] = useState("");
 
@@ -125,19 +130,16 @@ export default function Home() {
         /* Parcels are an extra. The menu is the page. */
       });
 
-    // Named by whatever is nearest, because "Match day, Saturday" is a
-    // reason to tap and "Occasions" is a filing cabinet.
     void api
       .occasions()
       .then(({ occasions: some }) => {
-        if (some.length === 0) return;
-        setOccasions(
-          some.length === 1
-            ? `${some[0].name}. One price, delivery in it.`
-            : `${some
-                .slice(0, 2)
-                .map((one) => one.name)
-                .join(", ")} and more. One price, delivery in it.`
+        setShelves(
+          some.slice(0, 8).map((one) => ({
+            slug: one.slug,
+            name: one.name,
+            from: one.from,
+            kind: one.kind ?? "collection",
+          }))
         );
       })
       .catch(() => {
@@ -276,9 +278,12 @@ export default function Home() {
           </Pressable>
         )}
 
-        {occasions !== "" && (
+        {/* One card each, by name, with the price on it. "Care package,
+            from ₦23,400" is a reason to tap. */}
+        {shelves.map((one) => (
           <Pressable
-            onPress={() => router.push("/occasions" as never)}
+            key={one.slug}
+            onPress={() => router.push(`/occasions/${one.slug}` as never)}
             style={{
               backgroundColor: T.paper,
               borderRadius: T.radius,
@@ -289,12 +294,16 @@ export default function Home() {
             }}
           >
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: "800", color: T.ink }}>Ordering for something?</Text>
-              <Text style={{ color: T.muted, marginTop: 2 }}>{occasions}</Text>
+              <Text style={{ fontWeight: "800", color: T.ink }}>{one.name}</Text>
+              <Text style={{ color: T.muted, marginTop: 2 }}>
+                {one.from === null
+                  ? "One price, delivery in it"
+                  : `From ${naira(one.from)}, delivery in`}
+              </Text>
             </View>
             <Text style={{ color: T.brand, fontWeight: "800" }}>See</Text>
           </Pressable>
-        )}
+        ))}
 
         {error !== "" && (
           <View style={[card(), { backgroundColor: "#fff4ed" }]}>
