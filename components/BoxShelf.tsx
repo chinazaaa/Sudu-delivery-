@@ -3,6 +3,7 @@ import Link from "next/link";
 import { liveOccasions, boxesAcross, isTimed, onShelf, type Shelf } from "@/lib/boxes";
 import { cheapestBoxes } from "@/lib/box-view";
 import { naira } from "@/lib/money";
+import Thumb from "./Thumb";
 import { whenLabel } from "@/lib/time";
 
 /**
@@ -80,6 +81,17 @@ export default async function BoxShelf({
                     timed ? "ring-2 ring-brand/40" : ""
                   }`}
                 >
+                  {/* A picture, because a shelf of text reads as a list of
+                      links rather than a shop. */}
+                  <span className="block w-24 shrink-0 self-stretch sm:w-32">
+                    <Thumb
+                      src={one.image_url}
+                      name={one.name}
+                      rounded=""
+                      variant="banner"
+                    />
+                  </span>
+
                   <span className="min-w-0 flex-1 p-4">
                     {timed && (
                       <span className="mb-1 inline-block rounded-full bg-brand px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white">

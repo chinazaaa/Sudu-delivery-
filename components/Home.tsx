@@ -19,6 +19,9 @@ export type Bucket = {
   title: string;
   line: string;
   action: string;
+  /** The picture on the card and on the slide. A shop with no pictures reads
+   *  as a list of links, whatever is behind them. */
+  image?: string;
 };
 
 export default function Home({
@@ -177,6 +180,7 @@ export default function Home({
                 title={one.title}
                 line={one.line}
                 action={one.action}
+                image={one.image ?? ""}
               />
             ))}
           </div>
@@ -217,7 +221,7 @@ export default function Home({
                    one the page made up. */
                 buckets.map((one) => ({
                   key: one.href,
-                  image: "",
+                  image: one.image ?? "",
                   name: one.title,
                   headline: one.title,
                   body: one.line,
@@ -298,24 +302,32 @@ function Door({
   title,
   line,
   action,
+  image = "",
   away = false,
 }: {
   href: string;
   title: string;
   line: string;
   action: string;
+  /** The picture at the top of the card. Empty falls back to a tint. */
+  image?: string;
   /** Somewhere that is not this site. Link would try to route it. */
   away?: boolean;
 }) {
   const look =
-    "flex h-full min-h-32 flex-col justify-between rounded-2xl bg-paper p-4 shadow-card transition active:scale-[0.99]";
+    "flex h-full flex-col overflow-hidden rounded-2xl bg-paper shadow-card transition active:scale-[0.99]";
   const inside = (
     <>
-      <span>
-        <span className="block text-lg font-extrabold leading-tight">{title}</span>
-        <span className="mt-1 block text-sm leading-snug text-muted">{line}</span>
+      <span className="block aspect-[16/10]">
+        <Thumb src={image} name={title} rounded="" variant="banner" />
       </span>
-      <span className="mt-3 block text-sm font-extrabold text-brand">{action}</span>
+      <span className="flex flex-1 flex-col justify-between p-3.5">
+        <span>
+          <span className="block font-extrabold leading-tight">{title}</span>
+          <span className="mt-0.5 block text-sm leading-snug text-muted">{line}</span>
+        </span>
+        <span className="mt-2 block text-sm font-extrabold text-brand">{action}</span>
+      </span>
     </>
   );
 

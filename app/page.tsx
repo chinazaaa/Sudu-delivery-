@@ -102,6 +102,10 @@ export default async function HomePage() {
           title: one.name,
           line: one.blurb !== "" ? `${one.blurb}${said ? ` ${said}` : ""}` : said,
           action: "See",
+          // Its own picture where it has one, the shelf's where it does not.
+          image:
+            one.image_url ||
+            `/covers/${kind === "occasion" ? "occasions" : "collections"}.svg`,
         };
       });
 
@@ -135,6 +139,7 @@ export default async function HomePage() {
     food: [
       {
         href: "/products",
+        image: "/covers/food.svg",
         title: "Food",
         line: "Every restaurant in one list",
         action: "Browse",
@@ -148,6 +153,7 @@ export default async function HomePage() {
         ? [
             {
               href: "/collections",
+              image: "/covers/collections.svg",
               title: "Everything else packed",
               line: `${shelves.length - MOST_SHELVES} more, all at one price with delivery in it`,
               action: "See",
@@ -158,14 +164,31 @@ export default async function HomePage() {
     parcel:
       parcelLine === ""
         ? []
-        : [{ href: "/parcel", title: "Send a parcel", line: parcelLine, action: "Send" }],
+        : [
+            {
+              href: "/parcel",
+              image: "/covers/parcel.svg",
+              title: "Send a parcel",
+              line: parcelLine,
+              action: "Send",
+            },
+          ],
     skincare:
       skincareLine === ""
         ? []
-        : [{ href: "/skincare", title: "Skincare", line: skincareLine, action: "Shop" }],
+        : [
+            {
+              href: "/skincare",
+              image: "/covers/skincare.svg",
+              title: "Skincare",
+              line: skincareLine,
+              action: "Shop",
+            },
+          ],
     custom: [
       {
         href: "/custom-order",
+        image: "/covers/custom.svg",
         title: "Can't find it?",
         line: "Tell us what you are looking for and we will get it for you",
         action: "Ask us",
@@ -174,6 +197,7 @@ export default async function HomePage() {
     group: [
       {
         href: "/group",
+        image: "/covers/group.svg",
         title: "Ordering together?",
         line: "Everybody adds their own, one delivery between you",
         action: "Start",

@@ -145,3 +145,11 @@ from (values
 --   Pizza night, for two      ₦23,599 on a run
 --   Friday night, for four    ₦43,299
 --   Everything at once        ₦67,299
+
+-- Covers.
+--   update occasions set image_url = '/covers/' || slug || '.svg'
+--   where kind = 'collection';
+-- Drawn rather than photographed, and kept in public/covers. A set of stock
+-- photos of other people's food is a lie about what is in the box, and eight
+-- photos taken by eight people in eight kitchens looks like a car boot sale.
+-- A photo of the real thing beats both: upload one in admin and it wins.

@@ -150,10 +150,23 @@ export default function OccasionBoxes({
               {one.serves !== "" && (
                 <span className="block text-sm text-muted">{one.serves}</span>
               )}
-              <span className="mt-1 block text-sm text-ink/75">
-                {one.lines
-                  .map((line) => `${line.qty > 1 ? `${line.qty} × ` : ""}${line.name}`)
-                  .join(" · ")}
+              {/* A list, in columns. Twenty things separated by dots is a
+                  paragraph, and nobody reads a paragraph to find out whether
+                  the milk is in it. */}
+              <span className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 text-sm text-ink/75 sm:grid-cols-3">
+                {one.lines.map((line) => (
+                  <span key={line.id} className="flex gap-1.5">
+                    <span aria-hidden className="text-brand">
+                      •
+                    </span>
+                    <span className="min-w-0">
+                      {line.qty > 1 && (
+                        <span className="font-semibold">{line.qty} × </span>
+                      )}
+                      {line.name}
+                    </span>
+                  </span>
+                ))}
               </span>
               <span className="mt-1 block text-sm font-semibold text-brand">
                 Delivery included
