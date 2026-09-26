@@ -13,7 +13,17 @@ import ChangePin from "@/components/ChangePin";
 
 export const dynamic = "force-dynamic";
 
-export default async function PromoterPage() {
+export default async function PromoterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  // Three short pages rather than one long one. Everything a promoter needs
+  // was true and on the screen at once, which is the same as none of it
+  // being on the screen: nobody reads a page, they look for the one number
+  // they came for.
+  const asked = (await searchParams).tab ?? "";
+  const tab = asked === "chase" || asked === "you" ? asked : "money";
   const code = await currentPromoter();
   const earnings = code ? await promoterEarnings(code) : null;
   // Links inside a message have to be absolute, so they come from the request.
@@ -46,6 +56,31 @@ export default async function PromoterPage() {
         </form>
       </div>
 
+      <nav className="flex gap-2">
+        {[
+          { key: "money", label: "Earnings" },
+          {
+            key: "chase",
+            label: `To chase${
+              earnings.chase.length + earnings.carts.length > 0
+                ? ` (${earnings.chase.length + earnings.carts.length})`
+                : ""
+            }`,
+          },
+          { key: "you", label: "You" },
+        ].map((one) => (
+          <Link
+            key={one.key}
+            href={one.key === "money" ? "/promoter" : `/promoter?tab=${one.key}`}
+            className={`chip text-sm ${
+              tab === one.key ? "border-brand bg-brand-tint font-bold text-brand-dark" : ""
+            }`}
+          >
+            {one.label}
+          </Link>
+        ))}
+      </nav>
+
       <section className="rounded-3xl bg-gradient-to-br from-brand to-brand-dark p-5 text-white">
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/75">
           Still to come to you
@@ -53,8 +88,8 @@ export default async function PromoterPage() {
         <p className="mt-1 text-3xl font-extrabold">{naira(earnings.owed)}</p>
         <p className="mt-1 text-sm text-white/85">
           {naira(earnings.earned)} earned, {naira(earnings.paid)} already paid
-          out to you. {naira(earnings.rate)} for every order a customer pays
-          for.
+          out. {naira(earnings.rate)} an order, {naira(earnings.boxRate)} on a
+          box.
         </p>
         {earnings.waiting > 0 ? (
           <p className="mt-3 rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold">
@@ -68,7 +103,13 @@ export default async function PromoterPage() {
         )}
       </section>
 
-      {earnings.chase.length > 0 && (
+      {tab === "chase" && earnings.chase.length + earnings.carts.length === 0 && (
+        <p className="card text-sm text-muted">
+          Nothing to chase. Everybody who ordered has paid.
+        </p>
+      )}
+
+      {tab === "chase" && earnings.chase.length > 0 && (
         <section className="card space-y-2 border-amber-300 bg-amber-50">
           <div>
             <h2 className="font-bold">Ordered but not paid for</h2>
@@ -112,7 +153,7 @@ export default async function PromoterPage() {
         </section>
       )}
 
-      {earnings.carts.length > 0 && (
+      {tab === "chase" && earnings.carts.length > 0 && (
         <section className="card space-y-2">
           <div>
             <h2 className="font-bold">Filled a cart and stopped</h2>
@@ -158,7 +199,7 @@ export default async function PromoterPage() {
         </section>
       )}
 
-      {earnings.runs.length === 0 ? (
+      {tab === "money" && (earnings.runs.length === 0 ? (
         <p className="card text-sm text-muted">
           Nothing yet. Every order a customer pays for counts for you, so this
           fills up as the next run does.
@@ -207,15 +248,13 @@ export default async function PromoterPage() {
             ))}
           </ul>
           <p className="text-xs text-muted">
-            {naira(earnings.rate)} an order, {naira(earnings.boxRate)} on a box
-            or a collection. An order counts once the customer has paid for
-            it: one that never got paid never travelled. Paid out is the separate thing, and
-            means your money has been sent.
+            An order counts once it is paid for. Paid out means your money has
+            been sent.
           </p>
         </section>
-      )}
+      ))}
 
-      {earnings.payouts.length > 0 && (
+      {tab === "money" && earnings.payouts.length > 0 && (
         <section className="card space-y-2">
           <h2 className="font-bold">Paid out to you</h2>
           <ul className="divide-y divide-black/5 text-sm">
@@ -258,7 +297,7 @@ export default async function PromoterPage() {
         </section>
       )}
 
-      {canEditNudge && (
+      {tab === "you" && canEditNudge && (
       <form action={saveNudge} className="card space-y-3">
         <div>
           <h2 className="font-bold">What your nudge says</h2>
@@ -281,6 +320,8 @@ export default async function PromoterPage() {
       </form>
       )}
 
+      {tab === "you" && (
+      <>
       <form action={saveBank} className="card space-y-3">
         <div>
           <h2 className="font-bold">Where your money goes</h2>
@@ -328,6 +369,8 @@ export default async function PromoterPage() {
           person who has to live with that is the one whose earnings are
           behind it. */}
       <ChangePin code={earnings.code} />
+      </>
+      )}
 
       <p className="text-sm text-muted">
         Questions about a run?{" "}
