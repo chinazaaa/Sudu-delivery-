@@ -81,25 +81,48 @@ export default async function PromoterPage({
         ))}
       </nav>
 
+      {/* Three numbers, each labelled, rather than one big one that needs
+          reading twice. A promoter who has been paid everything sees a zero
+          in the biggest type on the page and reads it as "you have nothing",
+          when what it means is "we owe you nothing, and here is the ₦1,500
+          you have already had". */}
       <section className="rounded-3xl bg-gradient-to-br from-brand to-brand-dark p-5 text-white">
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/75">
-          Still to come to you
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.1em] text-white/70">
+              Earned
+            </p>
+            <p className="mt-0.5 text-2xl font-extrabold leading-tight">
+              {naira(earnings.earned)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.1em] text-white/70">
+              Paid to you
+            </p>
+            <p className="mt-0.5 text-2xl font-extrabold leading-tight">
+              {naira(earnings.paid)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.1em] text-white/70">
+              Still to come
+            </p>
+            <p className="mt-0.5 text-2xl font-extrabold leading-tight">
+              {naira(earnings.owed)}
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-3 rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold">
+          {earnings.waiting > 0
+            ? `${naira(earnings.waiting)} more if the ${earnings.chase.length} unpaid order${
+                earnings.chase.length === 1 ? "" : "s"
+              } get paid.`
+            : earnings.owed > 0
+              ? "Paid out on the next payday."
+              : "You are all paid up. Every new order adds to this."}
         </p>
-        <p className="mt-1 text-3xl font-extrabold">{naira(earnings.owed)}</p>
-        <p className="mt-1 text-sm text-white/85">
-          {naira(earnings.earned)} earned, {naira(earnings.paid)} already paid
-          out to you.
-        </p>
-        {earnings.waiting > 0 ? (
-          <p className="mt-3 rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold">
-            {naira(earnings.waiting)} more if the {earnings.chase.length} unpaid
-            order{earnings.chase.length === 1 ? "" : "s"} below get paid.
-          </p>
-        ) : (
-          <p className="mt-3 rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold">
-            Every order a customer pays for counts for you.
-          </p>
-        )}
       </section>
 
       {/* What they earn, said as two numbers rather than a clause in a
