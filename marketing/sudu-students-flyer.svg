@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+<rect width="1080" height="1350" fill="#fff1ea"/>
+
+  <g transform="translate(488 40) scale(0.203125)">
+    <rect width="512" height="512" rx="116" fill="#fff1ea"/>
+    <path d="M116 180h280l-27 248a44 44 0 0 1-44 39H187a44 44 0 0 1-44-39z" fill="#ff5a1f"/>
+    <path d="M196 180v-26a60 60 0 0 1 120 0v26" fill="none" stroke="#14110f" stroke-width="28" stroke-linecap="round"/>
+    <path d="M316 272C316 240 202 240 202 294C202 338 316 330 316 372C316 426 202 426 202 392"
+          fill="none" stroke="#fff1ea" stroke-width="34" stroke-linecap="round"/>
+  </g>
+
+<text x="540" y="204" font-family="DejaVu Sans" font-size="56" font-weight="bold" fill="#14110f" text-anchor="middle">Sudu</text>
+<text x="540" y="248" font-family="DejaVu Sans" font-size="26" font-weight="normal" fill="#6b6360" text-anchor="middle">Food to PAU, any block</text>
+<rect x="56" y="340" width="968" height="292" rx="40" fill="#ff5a1f"/>
+<text x="540" y="412" font-family="DejaVu Sans" font-size="50" font-weight="bold" fill="#ffffff" text-anchor="middle">Order together.</text>
+<text x="540" y="516" font-family="DejaVu Sans" font-size="84" font-weight="bold" fill="#ffffff" text-anchor="middle">₦1,000 each.</text>
+<text x="540" y="568" font-family="DejaVu Sans" font-size="25" font-weight="normal" fill="#ffe6da" text-anchor="middle">Delivery is ₦4,000 for up to four things.</text>
+<text x="540" y="604" font-family="DejaVu Sans" font-size="25" font-weight="normal" fill="#ffe6da" text-anchor="middle">Four of you on one order, and that is it split.</text>
+<text x="540" y="692" font-family="DejaVu Sans" font-size="40" font-weight="bold" fill="#14110f" text-anchor="middle">14 kitchens. 1,081 dishes.</text>
+<text x="540" y="736" font-family="DejaVu Sans" font-size="25" font-weight="normal" fill="#6b6360" text-anchor="middle">Everybody adds their own. One delivery between you.</text>
+<rect x="56" y="788" width="968" height="372" rx="36" fill="#ffffff"/>
+<text x="540" y="840" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#14110f" text-anchor="middle">Or a box, already packed</text>
+<text x="100" y="908" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#14110f" text-anchor="start">All-nighter</text>
+<text x="980" y="908" font-family="DejaVu Sans" font-size="29" font-weight="bold" fill="#ff5a1f" text-anchor="end">from ₦15,496</text>
+<text x="100" y="982" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#14110f" text-anchor="start">Just us two</text>
+<text x="980" y="982" font-family="DejaVu Sans" font-size="29" font-weight="bold" fill="#ff5a1f" text-anchor="end">from ₦18,495</text>
+<text x="100" y="1056" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#14110f" text-anchor="start">Movie night</text>
+<text x="980" y="1056" font-family="DejaVu Sans" font-size="29" font-weight="bold" fill="#ff5a1f" text-anchor="end">from ₦18,500</text>
+<text x="100" y="1130" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#14110f" text-anchor="start">Games night</text>
+<text x="980" y="1130" font-family="DejaVu Sans" font-size="29" font-weight="bold" fill="#ff5a1f" text-anchor="end">from ₦32,900</text>
+<text x="540" y="1200" font-family="DejaVu Sans" font-size="25" font-weight="normal" fill="#6b6360" text-anchor="middle">Skincare too: 2,103 products, one drop a week.</text>
+<text x="540" y="1272" font-family="DejaVu Sans" font-size="54" font-weight="bold" fill="#14110f" text-anchor="middle">sudu.store</text>
+<text x="540" y="1318" font-family="DejaVu Sans" font-size="26" font-weight="normal" fill="#6b6360" text-anchor="middle">On the App Store · WhatsApp +234 903 217 5147</text>
+</svg>
