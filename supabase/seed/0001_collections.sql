@@ -153,3 +153,9 @@ from (values
 -- photos of other people's food is a lie about what is in the box, and eight
 -- photos taken by eight people in eight kitchens looks like a car boot sale.
 -- A photo of the real thing beats both: upload one in admin and it wins.
+
+-- The Chowdeck exclusive came out of "Everything at once".
+--   A box on our own site advertising another delivery company's deal is an
+--   advert for them, and the price on it is a price we cannot honour.
+--   Swapped for Krispy Kreme's Bbn deal, ₦11,500, which takes the box from
+--   ₦67,299 to ₦57,699 on a run.
