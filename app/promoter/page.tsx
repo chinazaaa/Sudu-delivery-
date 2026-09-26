@@ -88,8 +88,7 @@ export default async function PromoterPage({
         <p className="mt-1 text-3xl font-extrabold">{naira(earnings.owed)}</p>
         <p className="mt-1 text-sm text-white/85">
           {naira(earnings.earned)} earned, {naira(earnings.paid)} already paid
-          out. {naira(earnings.rate)} an order, {naira(earnings.boxRate)} on a
-          box.
+          out to you.
         </p>
         {earnings.waiting > 0 ? (
           <p className="mt-3 rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold">
@@ -102,6 +101,41 @@ export default async function PromoterPage({
           </p>
         )}
       </section>
+
+      {/* What they earn, said as two numbers rather than a clause in a
+          sentence. A promoter who cannot tell you their own rate has not
+          been told it. */}
+      {tab === "money" && (
+        <section className="card space-y-2">
+          <h2 className="font-bold">What you earn</h2>
+          <div className="flex items-baseline justify-between gap-3 border-b border-black/5 pb-2">
+            <span className="text-sm">
+              <span className="block font-semibold">Food, skincare, parcels</span>
+              <span className="block text-muted">
+                Including when they order together
+              </span>
+            </span>
+            <span className="shrink-0 text-lg font-extrabold">
+              {naira(earnings.rate)}
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-sm">
+              <span className="block font-semibold">Any packed box</span>
+              <span className="block text-muted">
+                Care packages, hostel packs, gifts, food boxes
+              </span>
+            </span>
+            <span className="shrink-0 text-lg font-extrabold text-brand">
+              {naira(earnings.boxRate)}
+            </span>
+          </div>
+          <p className="text-xs text-muted">
+            Per order, every time they order, for as long as they keep
+            ordering. It counts the moment they pay.
+          </p>
+        </section>
+      )}
 
       {tab === "chase" && earnings.chase.length + earnings.carts.length === 0 && (
         <p className="card text-sm text-muted">
