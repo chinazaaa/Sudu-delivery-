@@ -12,7 +12,7 @@ import { parcelJobs } from "@/lib/parcel-jobs";
 import { tendBatches } from "@/lib/batches";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
-import { addDays, clockLabel, lagosToday, runDateLabel } from "@/lib/time";
+import { clockLabel, lagosToday, runDateLabel } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +64,10 @@ export default async function AdminHome() {
   // What is actually happening. A list of every run for the next three weeks
   // is a planning document, and this page is about today: the question in
   // the morning is whether a car is going, not what Sunday week looks like.
-  const tomorrow = addDays(lagosToday(), 1);
+  // Midday UTC, so the day cannot slip either side of midnight.
+  const tomorrow = new Date(new Date(`${lagosToday()}T12:00:00Z`).getTime() + 86400000)
+    .toISOString()
+    .slice(0, 10);
   const soon = open.filter(
     (batch) => batch.run_date === lagosToday() || batch.run_date === tomorrow
   );
