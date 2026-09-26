@@ -60,6 +60,24 @@ export default async function CustomOrderPage({
         <AskForm hostels={hostels} whatsapp={settings.whatsapp_number || null} />
       )}
 
+      {/* Naming them is the whole job. "Anything" reads as nothing, and
+          nobody works out on their own that a hem taken up is a thing you
+          can ask a delivery shop for. A service is as orderable as it is
+          named, and these are the ones asked for most. */}
+      <section className="card space-y-2 text-sm">
+        <p className="font-bold">Things people ask us for</p>
+        <ul className="grid gap-1 text-muted sm:grid-cols-2">
+          <li>Tailoring: a hem taken up, a dress altered, an outfit sewn</li>
+          <li>Laundry and dry cleaning, picked up and brought back</li>
+          <li>A cake from a bakery that is not on here</li>
+          <li>Chargers, power banks, extension sockets, bulbs</li>
+          <li>Hair, lashes, nails, a braider who comes to you</li>
+          <li>Printing, binding and photocopies</li>
+          <li>Medicine and anything else from a pharmacy</li>
+          <li>Something waiting for you in a shop in Lekki or on the Island</li>
+        </ul>
+      </section>
+
       <section className="card space-y-2 text-sm">
         <p className="font-bold">How it works</p>
         <ol className="list-inside list-decimal space-y-1 text-muted">
