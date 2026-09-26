@@ -8,6 +8,7 @@ import { orderBox, type BoxOrderState } from "@/app/collections/actions";
 import type { BoxView, WhenOption } from "@/lib/box-view";
 import { naira } from "@/lib/money";
 import { OPENED, TRAP } from "@/lib/guard";
+import AbroadMoney, { type Money } from "./AbroadMoney";
 import { STANDARD_DAYS } from "@/lib/box-day";
 
 /**
@@ -27,6 +28,7 @@ export default function OccasionBoxes({
   when,
   timed,
   hint = "",
+  monies = [],
   soonest,
   latest,
   hostels,
@@ -44,6 +46,9 @@ export default function OccasionBoxes({
   /** What to suggest in the "want it changed?" box, in the words of this
    *  shelf. Empty falls back to something true of every box. */
   hint?: string;
+  /** The currencies a card link can be made out in, where somebody abroad is
+   *  paying. Empty where that is switched off. */
+  monies?: Money[];
   /** The soonest day a box can be packed for, and the furthest ahead worth
    *  planning. Both worked out on the server: the clock is the shop's. */
   soonest: string;
@@ -69,6 +74,8 @@ export default function OccasionBoxes({
   const [wantedOn, setWantedOn] = useState(soonest);
   const [anyDay, setAnyDay] = useState(false);
   const [again, setAgain] = useState(false);
+  const [pay, setPay] = useState<"transfer" | "card">(me?.paymentMethod ?? "transfer");
+  const [money, setMoney] = useState("");
 
   // Sooner than the shop can find it, buy it and pack it, so it costs what a
   // car of its own costs. Worked out from dates the server sent, because a
@@ -510,7 +517,8 @@ export default function OccasionBoxes({
                     type="radio"
                     name="payment"
                     value={value}
-                    defaultChecked={(me?.paymentMethod ?? "transfer") === value}
+                    checked={pay === value}
+                    onChange={() => setPay(value)}
                     className="sr-only"
                   />
                   <span className="block font-bold">{title}</span>
@@ -518,6 +526,20 @@ export default function OccasionBoxes({
                 </label>
               ))}
             </div>
+
+            {/* A mother in London cannot make a Nigerian transfer, and a
+                care package is exactly the thing she is buying. */}
+            {pay === "card" && (
+              <>
+                <input type="hidden" name="pay_currency" value={money} />
+                <AbroadMoney
+                  monies={monies}
+                  value={money}
+                  onChange={setMoney}
+                  total={box ? priceOf(box) : 0}
+                />
+              </>
+            )}
 
             {/* Buying it for somebody else. Folded away, because most
                 orders are for whoever is typing and an extra pair of
@@ -574,20 +596,11 @@ export default function OccasionBoxes({
                 }
                 className="field"
               />
-              {/* Said out loud and ticked, rather than guessed from whether
-                  they typed anything: "room 12, call me outside" is not a
-                  change to the price, and an order quietly marked provisional
-                  over it would be a number nobody trusts. */}
-              <label className="mt-2 flex items-start gap-2 text-sm">
-                <input type="checkbox" name="custom" className="mt-0.5" />
-                <span>
-                  <span className="font-bold">This changes what is in it.</span>{" "}
-                  <span className="text-ink/75">
-                    Then the price is not final. We message you with the new
-                    one before you pay.
-                  </span>
-                </span>
-              </label>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                Anything you write here can change the price. Nothing extra is
+                charged now: we work it out, message you on WhatsApp, and your
+                order page updates before you pay.
+              </p>
             </fieldset>
 
             {promoters.length > 0 && !me && (

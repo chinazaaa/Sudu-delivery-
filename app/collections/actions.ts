@@ -124,6 +124,16 @@ async function order(form: FormData): Promise<BoxOrderState> {
     hostel: String(form.get("hostel") ?? ""),
     lines: cartOf(box, swapsFrom(form)),
     paymentMethod: form.get("payment") === "card" ? "card" : "transfer",
+    // Only ever on a card: a transfer is naira, and a currency riding along
+    // on one would send somebody a Stripe link for an order they are paying
+    // into a Nigerian account.
+    payCurrency:
+      form.get("payment") === "card"
+        ? ((): "GBP" | "USD" | undefined => {
+            const said = String(form.get("pay_currency") ?? "").toUpperCase();
+            return said === "GBP" || said === "USD" ? said : undefined;
+          })()
+        : undefined,
     customerNote: String(form.get("note") ?? ""),
     heardFrom: String(form.get("heard_from") ?? ""),
     // Buying it for somebody else. Their name and number, so the driver
@@ -140,9 +150,13 @@ async function order(form: FormData): Promise<BoxOrderState> {
 
   if (!result.ok) return { error: result.error };
 
-  // They have asked for something to be different, so the number on their
-  // page is provisional from here until somebody agrees what it comes to.
-  if (form.get("custom") === "on") {
+  // Anything written in the changes box makes the price provisional.
+  //
+  // It used to need a tick as well, which put the whole thing on somebody
+  // remembering to tick it: they ask for a twelve inch cake, forget the box,
+  // and the order says a price we never agreed. Flagging one that turns out
+  // to need nothing costs a press in admin. Missing one costs the argument.
+  if (String(form.get("note") ?? "").trim() !== "") {
     await markCustomPending(result.orderId).catch(() => {});
   }
 

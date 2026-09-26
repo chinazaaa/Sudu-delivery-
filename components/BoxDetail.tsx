@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { boxesOf, isTimed, occasionBySlug, type Shelf } from "@/lib/boxes";
 import { furthest, soonestStandard } from "@/lib/box-day";
+import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
 import { boxViews, whenOptions, type BoxView, type WhenOption } from "@/lib/box-view";
 import { hostelNames } from "@/lib/hostels";
 import { currentCustomer, customerDetails } from "@/lib/customer-auth";
@@ -109,6 +110,12 @@ export default async function BoxDetail({
              anybody drives it anywhere. */
           timed={isTimed(occasion)}
           hint={occasion.custom_hint}
+          monies={moniesOn(settings).map((code) => ({
+            code,
+            label: code === "GBP" ? "Pounds" : "Dollars",
+            symbol: SYMBOL[code],
+            rate: rateFor(settings, code),
+          }))}
           soonest={soonestStandard()}
           latest={furthest()}
           hostels={hostels}

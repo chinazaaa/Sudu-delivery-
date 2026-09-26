@@ -4,6 +4,7 @@ import { boxById, cartOf, occasionBySlug } from "@/lib/boxes";
 import { whenOptions } from "@/lib/box-view";
 import { orderLinkId, placeOrder } from "@/lib/orders";
 import { tokenFor } from "@/lib/customer-auth";
+import { markCustomPending } from "@/lib/order-edit";
 import { normalisePhone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
@@ -85,6 +86,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
 
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+
+    // The same rule the website follows: a change written down is a price
+    // not yet agreed, whichever door the order came through.
+    if (String(body.customerNote ?? "").trim() !== "") {
+      await markCustomPending(result.orderId).catch(() => {});
+    }
 
     const phone = normalisePhone(String(body.phone ?? ""));
     return NextResponse.json({

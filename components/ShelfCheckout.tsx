@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Empty from "./Empty";
 import PayChoice from "./PayChoice";
+import AbroadMoney, { type Money } from "./AbroadMoney";
 import Thumb from "./Thumb";
 import { naira } from "@/lib/money";
 import FeeBands from "./FeeBands";
@@ -28,6 +29,7 @@ export default function ShelfCheckout({
   promise,
   hostels,
   promoters = [],
+  monies = [],
   me,
 }: {
   /** The skincare ladder: it is the car, not the cream, so it goes by how
@@ -46,6 +48,8 @@ export default function ShelfCheckout({
   /** Whose name to offer, so a skincare order counts for whoever brought it
    *  in. Empty where nobody is promoting. */
   promoters?: { code: string; name: string }[];
+  /** The currencies a card link can be made out in. Empty where off. */
+  monies?: Money[];
   me: { name: string; hostel: string; paymentMethod: "transfer" | "card" } | null;
 }) {
   const router = useRouter();
@@ -63,6 +67,7 @@ export default function ShelfCheckout({
   const [address, setAddress] = useState("");
   const [note, setNote] = useState("");
   const [heardFrom, setHeardFrom] = useState("");
+  const [money, setMoney] = useState("");
   const [method, setMethod] = useState<"transfer" | "card">(me?.paymentMethod ?? "transfer");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
@@ -102,6 +107,7 @@ export default function ShelfCheckout({
         hostel: inPau ? hostel : address,
         note,
         heardFrom,
+        payCurrency: method === "card" && (money === "GBP" || money === "USD") ? money : undefined,
         paymentMethod: method,
       });
       if (!result.ok) {
@@ -292,6 +298,15 @@ export default function ShelfCheckout({
         )}
 
         <PayChoice value={method} onChange={setMethod} />
+
+        {method === "card" && (
+          <AbroadMoney
+            monies={monies}
+            value={money}
+            onChange={setMoney}
+            total={food + fee}
+          />
+        )}
       </section>
 
       <section className="card space-y-1 text-sm">
