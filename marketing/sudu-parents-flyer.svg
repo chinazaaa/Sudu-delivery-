@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+<rect width="1080" height="1350" fill="#fff1ea"/>
+
+  <g transform="translate(64 56) scale(0.1875)">
+    <rect width="512" height="512" rx="116" fill="#fff1ea"/>
+    <path d="M116 180h280l-27 248a44 44 0 0 1-44 39H187a44 44 0 0 1-44-39z" fill="#ff5a1f"/>
+    <path d="M196 180v-26a60 60 0 0 1 120 0v26" fill="none" stroke="#14110f" stroke-width="28" stroke-linecap="round"/>
+    <path d="M316 272C316 240 202 240 202 294C202 338 316 330 316 372C316 426 202 426 202 392"
+          fill="none" stroke="#fff1ea" stroke-width="34" stroke-linecap="round"/>
+  </g>
+
+<text x="176" y="126" font-family="DejaVu Sans" font-size="58" font-weight="bold" fill="#14110f" text-anchor="start" letter-spacing="0">Sudu</text>
+<text x="64" y="196" font-family="DejaVu Sans" font-size="26" font-weight="normal" fill="#6b6360" text-anchor="start" letter-spacing="0">Delivery to Pan-Atlantic University</text>
+<text x="64" y="276" font-family="DejaVu Sans" font-size="66" font-weight="bold" fill="#14110f" text-anchor="start" letter-spacing="0">You can’t drive to PAU</text>
+<text x="64" y="346" font-family="DejaVu Sans" font-size="66" font-weight="bold" fill="#14110f" text-anchor="start" letter-spacing="0">every other weekend.</text>
+<text x="64" y="402" font-family="DejaVu Sans" font-size="29" font-weight="normal" fill="#6b6360" text-anchor="start" letter-spacing="0">Send a box instead. We pack it here and</text>
+<text x="64" y="438" font-family="DejaVu Sans" font-size="29" font-weight="normal" fill="#6b6360" text-anchor="start" letter-spacing="0">carry it to their block.</text>
+<rect x="48" y="486" width="984" height="564" rx="32" fill="#ffffff"/>
+<text x="88" y="548" font-family="DejaVu Sans" font-size="32" font-weight="bold" fill="#14110f" text-anchor="start" letter-spacing="0">Restocks</text>
+<text x="88" y="580" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#6b6360" text-anchor="start" letter-spacing="0">Noodles, milk, cereal, the things that run out</text>
+<text x="992" y="560" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#ff5a1f" text-anchor="end" letter-spacing="0">from ₦19,150</text>
+<text x="88" y="636" font-family="DejaVu Sans" font-size="32" font-weight="bold" fill="#14110f" text-anchor="start" letter-spacing="0">Study and exam</text>
+<text x="88" y="668" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#6b6360" text-anchor="start" letter-spacing="0">Snacks and drinks for a week of finals</text>
+<text x="992" y="648" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#ff5a1f" text-anchor="end" letter-spacing="0">from ₦21,700</text>
+<text x="88" y="724" font-family="DejaVu Sans" font-size="32" font-weight="bold" fill="#14110f" text-anchor="start" letter-spacing="0">Care packages</text>
+<text x="88" y="756" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#6b6360" text-anchor="start" letter-spacing="0">Food from home, packed and carried to their block</text>
+<text x="992" y="736" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#ff5a1f" text-anchor="end" letter-spacing="0">from ₦23,400</text>
+<text x="88" y="812" font-family="DejaVu Sans" font-size="32" font-weight="bold" fill="#14110f" text-anchor="start" letter-spacing="0">Monthly foodstuff</text>
+<text x="88" y="844" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#6b6360" text-anchor="start" letter-spacing="0">Rice, indomie, oil, tomatoes. A month of cooking</text>
+<text x="992" y="824" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#ff5a1f" text-anchor="end" letter-spacing="0">from ₦27,750</text>
+<text x="88" y="900" font-family="DejaVu Sans" font-size="32" font-weight="bold" fill="#14110f" text-anchor="start" letter-spacing="0">Keeping clean</text>
+<text x="88" y="932" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#6b6360" text-anchor="start" letter-spacing="0">Detergent, soap, bucket, the whole cupboard</text>
+<text x="992" y="912" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#ff5a1f" text-anchor="end" letter-spacing="0">from ₦24,900</text>
+<text x="88" y="988" font-family="DejaVu Sans" font-size="32" font-weight="bold" fill="#14110f" text-anchor="start" letter-spacing="0">Hostel packs</text>
+<text x="88" y="1020" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#6b6360" text-anchor="start" letter-spacing="0">Everything a first year needs, one delivery</text>
+<text x="992" y="1000" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#ff5a1f" text-anchor="end" letter-spacing="0">from ₦38,500</text>
+<rect x="48" y="1068" width="984" height="118" rx="28" fill="#ff5a1f"/>
+<text x="540" y="1112" font-family="DejaVu Sans" font-size="31" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="0">Delivery is included in every price</text>
+<text x="540" y="1146" font-family="DejaVu Sans" font-size="22" font-weight="normal" fill="#ffe6da" text-anchor="middle" letter-spacing="0">Order any day, and pick the day it arrives.</text>
+<text x="540" y="1174" font-family="DejaVu Sans" font-size="22" font-weight="normal" fill="#ffe6da" text-anchor="middle" letter-spacing="0">Paying from abroad? A card link in pounds or dollars.</text>
+<text x="540" y="1250" font-family="DejaVu Sans" font-size="54" font-weight="bold" fill="#14110f" text-anchor="middle" letter-spacing="0">sudu.store</text>
+<text x="540" y="1296" font-family="DejaVu Sans" font-size="29" font-weight="normal" fill="#6b6360" text-anchor="middle" letter-spacing="0">WhatsApp +234 903 217 5147</text>
+</svg>
