@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import PayChoice from "./PayChoice";
+import AbroadMoney, { type Money } from "./AbroadMoney";
 import { naira } from "@/lib/money";
 import { feeFor, type Route } from "@/lib/parcels";
 import { sendParcel, type ParcelState } from "@/app/parcel/actions";
@@ -23,6 +25,7 @@ function rawDigits(raw: string): string {
 
 export default function ParcelForm({
   routes,
+  monies = [],
   maxValue,
   hostels,
   promoters,
@@ -30,6 +33,8 @@ export default function ParcelForm({
 }: {
   routes: Route[];
   maxValue: number;
+  /** The currencies a card link can be made out in. Empty where off. */
+  monies?: Money[];
   /** The blocks the shop delivers to, as the food checkout offers them.
    *  Empty where the list is not set up, and then it is typed. */
   hostels: string[];
@@ -41,6 +46,8 @@ export default function ParcelForm({
    *  a date that is already gone here. */
   today: string;
 }) {
+  const [method, setMethod] = useState<"transfer" | "card">("transfer");
+  const [money, setMoney] = useState("");
   const [state, action, busy] = useActionState<ParcelState, FormData>(sendParcel, {
     error: "",
   });
@@ -426,6 +433,28 @@ export default function ParcelForm({
             One trip, yours alone. Nothing is bought on your behalf, so this is
             the whole of it.
           </p>
+        </div>
+      )}
+
+      {/* How they are paying. A parcel was transfer only, which is fine for
+          a student on campus and no use at all to the sister in London
+          sending something home. */}
+      {route && fee !== null && (
+        <div className="card space-y-3">
+          <p className="label">How are you paying?</p>
+          <PayChoice value={method} onChange={setMethod} />
+          <input type="hidden" name="payment_method" value={method} />
+          {method === "card" && (
+            <>
+              <input type="hidden" name="pay_currency" value={money} />
+              <AbroadMoney
+                monies={monies}
+                value={money}
+                onChange={setMoney}
+                total={fee}
+              />
+            </>
+          )}
         </div>
       )}
 

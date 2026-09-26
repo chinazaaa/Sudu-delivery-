@@ -43,6 +43,8 @@ export type ParcelInput = {
    *  only ever written when they are new. */
   heardFrom: string;
   paymentMethod: "transfer" | "card";
+  /** Whose money the card link is made out in. Naira unless they say. */
+  payCurrency?: "GBP" | "USD";
 };
 
 export type ParcelResult =
@@ -206,6 +208,9 @@ export async function placeParcel(input: ParcelInput): Promise<ParcelResult> {
       total: fee,
       status: "pending",
       payment_method: input.paymentMethod,
+      ...(input.paymentMethod === "card" && input.payCurrency
+        ? { pay_currency: input.payCurrency }
+        : {}),
       customer_note: input.note.trim(),
       parcel_route: route.id,
       parcel_item: item,

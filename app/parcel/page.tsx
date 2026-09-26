@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
 import { safeSettings } from "@/lib/settings";
 import HelpLine from "@/components/HelpLine";
 import Link from "next/link";
@@ -84,6 +85,12 @@ export default async function ParcelPage() {
         maxValue={setup.maxValue}
         hostels={hostels}
         promoters={promoters}
+        monies={moniesOn(settings).map((code) => ({
+          code,
+          label: code === "GBP" ? "Pounds" : "Dollars",
+          symbol: SYMBOL[code],
+          rate: rateFor(settings, code),
+        }))}
         today={lagosToday()}
       />
       <HelpLine number={settings.whatsapp_number} about="a parcel" page="Parcel" />

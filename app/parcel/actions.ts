@@ -35,6 +35,15 @@ export async function sendParcel(
     note: said("note"),
     heardFrom: said("heard_from"),
     paymentMethod: said("payment_method") === "card" ? "card" : "transfer",
+    // Only ever on a card. A transfer is naira into a Nigerian account, and
+    // a currency riding along on one is a Stripe link nobody asked for.
+    payCurrency:
+      said("payment_method") === "card"
+        ? ((): "GBP" | "USD" | undefined => {
+            const money = said("pay_currency").toUpperCase();
+            return money === "GBP" || money === "USD" ? money : undefined;
+          })()
+        : undefined,
   });
 
   if (!result.ok) return { error: result.error };
