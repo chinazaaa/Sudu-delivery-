@@ -77,13 +77,13 @@ export default async function BoxShelf({
                   href={`${base}/${one.slug}`}
                   /* A timed one is the urgent one and should not look like
                      the standing ones beside it. */
-                  className={`flex items-stretch gap-3 overflow-hidden rounded-2xl bg-paper text-left shadow-card transition active:scale-[0.99] ${
+                  className={`flex items-center gap-3 overflow-hidden rounded-2xl bg-paper text-left shadow-card transition active:scale-[0.99] ${
                     timed ? "ring-2 ring-brand/40" : ""
                   }`}
                 >
                   {/* A picture, because a shelf of text reads as a list of
                       links rather than a shop. */}
-                  <span className="block w-24 shrink-0 self-stretch sm:w-32">
+                  <span className="block aspect-square w-24 shrink-0 self-center sm:w-28">
                     <Thumb
                       src={one.image_url}
                       name={one.name}

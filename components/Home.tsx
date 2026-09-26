@@ -324,7 +324,11 @@ function Door({
       <span className="flex flex-1 flex-col justify-between p-3.5">
         <span>
           <span className="block font-extrabold leading-tight">{title}</span>
-          <span className="mt-0.5 block text-sm leading-snug text-muted">{line}</span>
+          {/* Two lines, whatever it says, so a row of cards is a row and
+              not a staircase. */}
+          <span className="mt-0.5 line-clamp-2 block text-sm leading-snug text-muted">
+            {line}
+          </span>
         </span>
         <span className="mt-2 block text-sm font-extrabold text-brand">{action}</span>
       </span>
