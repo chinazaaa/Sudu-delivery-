@@ -1912,14 +1912,23 @@ export async function savePromoter(form: FormData): Promise<void> {
 
   const typedPin = String(form.get("pin") ?? "").replace(/\D/g, "").slice(0, 4);
 
-  const { error } = await db().from("promoters").upsert({
+  const row = {
     code,
     name: String(form.get("name") ?? "").trim(),
     phone: String(form.get("phone") ?? "").trim(),
     rate: Math.round(Number(form.get("rate")) || 500),
+    // A box is a different sale from a wrap, so it pays differently.
+    box_rate: Math.round(Number(form.get("box_rate")) || 1000),
     active: form.get("active") === "on",
     pin: typedPin || (existing?.pin as string) || newPin(),
-  });
+  };
+
+  let { error } = await db().from("promoters").upsert(row);
+  // A shop that has not had the box rate migration yet still saves the rest.
+  if (error) {
+    const { box_rate: _noBoxRate, ...older } = row;
+    ({ error } = await db().from("promoters").upsert(older));
+  }
 
   // A save that quietly does nothing is worse than one that fails loudly:
   // the form comes back empty and reads as the data being wiped.

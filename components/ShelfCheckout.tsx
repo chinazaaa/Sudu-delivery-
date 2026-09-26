@@ -27,6 +27,7 @@ export default function ShelfCheckout({
   cutOff,
   promise,
   hostels,
+  promoters = [],
   me,
 }: {
   /** The skincare ladder: it is the car, not the cream, so it goes by how
@@ -42,6 +43,9 @@ export default function ShelfCheckout({
    *  because this is the screen where the money changes hands. */
   promise: string;
   hostels: string[];
+  /** Whose name to offer, so a skincare order counts for whoever brought it
+   *  in. Empty where nobody is promoting. */
+  promoters?: { code: string; name: string }[];
   me: { name: string; hostel: string; paymentMethod: "transfer" | "card" } | null;
 }) {
   const router = useRouter();
@@ -58,6 +62,7 @@ export default function ShelfCheckout({
   const [inPau, setInPau] = useState(true);
   const [address, setAddress] = useState("");
   const [note, setNote] = useState("");
+  const [heardFrom, setHeardFrom] = useState("");
   const [method, setMethod] = useState<"transfer" | "card">(me?.paymentMethod ?? "transfer");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
@@ -96,6 +101,7 @@ export default function ShelfCheckout({
         phone,
         hostel: inPau ? hostel : address,
         note,
+        heardFrom,
         paymentMethod: method,
       });
       if (!result.ok) {
@@ -264,6 +270,26 @@ export default function ShelfCheckout({
           aria-label="Anything we should know"
           className="field"
         />
+
+        {/* The one question that pays somebody. It was on the food checkout
+            and on a parcel and nowhere else, so every skincare order a
+            promoter brought in counted for nobody. */}
+        {promoters.length > 0 && (
+          <select
+            value={heardFrom}
+            onChange={(event) => setHeardFrom(event.target.value)}
+            aria-label="Where did you hear about us?"
+            className="field"
+          >
+            <option value="">Where did you hear about us?</option>
+            {promoters.map((one) => (
+              <option key={one.code} value={one.code}>
+                {one.name}
+              </option>
+            ))}
+            <option value="other">Somewhere else</option>
+          </select>
+        )}
 
         <PayChoice value={method} onChange={setMethod} />
       </section>

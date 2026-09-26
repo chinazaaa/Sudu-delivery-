@@ -125,7 +125,8 @@ export default async function PromotersAdmin({
           const brief =
             `Hi ${promoter.name || "there"}, you are promoting Sudu.\n\n` +
             `You earn ${naira(promoter.rate)} on every order a customer you brought pays ` +
-            `for, for as long as they keep ordering.\n\n` +
+            `for, and ${naira((promoter as { box_rate?: number }).box_rate ?? 1000)} when ` +
+            `it is a box or a collection, for as long as they keep ordering.\n\n` +
             `See what you have earned: ${url}/promoter\n` +
             `Code: ${promoter.code}\n` +
             `PIN: ${promoter.pin || "ask us"}\n\n` +
@@ -149,7 +150,8 @@ export default async function PromotersAdmin({
                     <span className="font-bold tracking-wider">
                       {promoter.pin || "not set"}
                     </span>{" "}
-                    · {naira(promoter.rate)} an order
+                    · {naira(promoter.rate)} an order,{" "}
+                    {naira((promoter as { box_rate?: number }).box_rate ?? 1000)} a box
                   </p>
                 </div>
 
@@ -396,6 +398,7 @@ function PromoterForm({
     phone: string;
     pin?: string;
     rate: number;
+    box_rate?: number;
     active: boolean;
   };
 }) {
@@ -469,6 +472,22 @@ function PromoterForm({
             defaultValue={promoter?.rate ?? 500}
             className="field"
           />
+        </div>
+        <div>
+          <label className="label" htmlFor={`box_rate${at}`}>
+            Per box or collection
+          </label>
+          <input
+            id={`box_rate${at}`}
+            name="box_rate"
+            inputMode="numeric"
+            defaultValue={(promoter as { box_rate?: number } | undefined)?.box_rate ?? 1000}
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">
+            A care package is not a wrap. Any packed box counts: collections,
+            occasions, gifts.
+          </p>
         </div>
       </div>
       <label className="flex items-center gap-2 text-sm font-semibold">

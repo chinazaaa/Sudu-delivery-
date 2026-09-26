@@ -478,6 +478,8 @@ export async function placeSkincareOrder(input: {
   phone: string;
   hostel: string;
   note: string;
+  /** Whoever sent them, so the order counts for somebody. */
+  heardFrom?: string;
   paymentMethod: "transfer" | "card";
 }): Promise<{ ok: true; orderId: string } | { ok: false; error: string }> {
   const settings = await safeSettings();
@@ -517,6 +519,7 @@ export async function placeSkincareOrder(input: {
     lines,
     paymentMethod: input.paymentMethod,
     customerNote: input.note,
+    heardFrom: input.heardFrom ?? "",
     // Priced by the skincare ladder, which is its own: it is the car, not
     // the cream, so it goes by how much room the order takes.
     fixedFee: skincareFee(

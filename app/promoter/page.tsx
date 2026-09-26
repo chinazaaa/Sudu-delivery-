@@ -173,8 +173,19 @@ export default async function PromoterPage() {
                   <span className="block font-semibold">{run.label}</span>
                   <span className="block text-sm text-muted">
                     {run.orders} order{run.orders === 1 ? "" : "s"} counted
+                    {run.boxes > 0 &&
+                      ` · ${run.boxes} box${run.boxes === 1 ? "" : "es"}`}
                     {run.unpaid > 0 && ` · ${run.unpaid} still waiting on the customer`}
                   </span>
+                  {/* Who they were. Somebody who brought two people in
+                      should be able to see that it was two people, and
+                      which two. First names only: they brought them in,
+                      they did not get given a phone book. */}
+                  {run.people.length > 0 && (
+                    <span className="mt-0.5 block text-sm text-brand-dark">
+                      {run.people.join(", ")}
+                    </span>
+                  )}
                 </span>
                 <span className="shrink-0 text-right">
                   <span className="block font-bold">{naira(run.earned)}</span>
@@ -196,8 +207,9 @@ export default async function PromoterPage() {
             ))}
           </ul>
           <p className="text-xs text-muted">
-            An order counts once the customer has paid for it: one that never
-            got paid never travelled. Paid out is the separate thing, and
+            {naira(earnings.rate)} an order, {naira(earnings.boxRate)} on a box
+            or a collection. An order counts once the customer has paid for
+            it: one that never got paid never travelled. Paid out is the separate thing, and
             means your money has been sent.
           </p>
         </section>

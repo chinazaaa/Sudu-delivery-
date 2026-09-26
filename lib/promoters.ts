@@ -33,7 +33,13 @@ export type PromoterRun = {
   orders: number;
   /** Orders placed but not paid for. They earn nothing until they are. */
   unpaid: number;
+  /** How many of the paid ones were a box, which is worth more to bring in. */
+  boxes: number;
   earned: number;
+  /** Who ordered, by first name. Somebody who brought two people in should
+   *  be able to see that it was two people, and which two. First names
+   *  only: they brought them in, they do not own their phone book. */
+  people: string[];
   /** What has been handed over against this run in particular. */
   paidOut: number;
 };
@@ -61,6 +67,9 @@ export type PromoterEarnings = {
   code: string;
   name: string;
   rate: number;
+  /** What a collection, an occasion or any other packed box is worth. A
+   *  ₦500 wrap and a ₦80,000 care package are not the same sale. */
+  boxRate: number;
   /** Their own wording for a nudge, or the one everybody starts with. */
   nudge: string;
   /** Where their money goes. Kept by them, read by you. */
@@ -123,6 +132,9 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
   if (!promoter) return null;
 
   const rate = promoter.rate as number;
+  // Older shops have no column for it, and a promoter earning the ordinary
+  // rate on a box is better than a page that will not load.
+  const boxRate = Number((promoter as { box_rate?: number }).box_rate ?? rate) || rate;
 
   // Their customers, and only theirs. Every paid order used to count
   // towards whoever this page happened to read first, which is fine for one
@@ -138,7 +150,7 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
 
   const { data: everyOrder } = await db()
     .from("orders")
-    .select("id, batch_id, status, customer_name, customer_phone, total")
+    .select("id, batch_id, status, customer_name, customer_phone, total, box_id")
     // Refunded money went back and cancelled never left, so neither is a
     // sale anybody brought in and neither earns a commission.
     .not("status", "in", NOT_ORDERS_SQL);
@@ -185,15 +197,20 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
 
   const runs: PromoterRun[] = ((batches ?? []) as any[]).map((batch) => {
     const mine = (orders ?? []).filter((o) => o.batch_id === batch.id);
-    const paidOrders = mine.filter((o) => isPaid(o.status)).length;
+    const paid = mine.filter((o) => isPaid(o.status));
+    // A box is a box whichever shelf it came off: a collection, an occasion,
+    // a gift. The order says which box it was, and that is the whole test.
+    const boxes = paid.filter((o) => Boolean((o as { box_id?: string | null }).box_id));
     return {
       batchId: batch.id as string,
       runDate: batch.run_date as string,
       slot: batch.slot as BatchSlot,
       label: `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot as BatchSlot]}`,
-      orders: paidOrders,
-      unpaid: mine.length - paidOrders,
-      earned: paidOrders * rate,
+      orders: paid.length,
+      unpaid: mine.length - paid.length,
+      boxes: boxes.length,
+      earned: (paid.length - boxes.length) * rate + boxes.length * boxRate,
+      people: paid.map((o) => firstName(String(o.customer_name ?? ""))).filter(Boolean),
       paidOut: paidPerRun.get(batch.id as string) ?? 0,
     };
   });
@@ -241,6 +258,7 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
     code: promoter.code as string,
     name: promoter.name as string,
     rate,
+    boxRate,
     nudge: ((promoter.nudge_template as string) || "").trim() || NUDGE_DEFAULT,
     bank: {
       name: (promoter.bank_name as string) ?? "",
@@ -287,4 +305,15 @@ export async function realPromoter(code: string): Promise<boolean> {
     .eq("active", true)
     .maybeSingle();
   return Boolean(data);
+}
+
+/**
+ * The name somebody would be called out loud.
+ *
+ * A promoter asking who ordered is asking whether their two friends came
+ * through. They do not need a surname or a number to know that, and handing
+ * one over would be handing out somebody else's details for nothing.
+ */
+function firstName(full: string): string {
+  return full.trim().split(/\s+/)[0] ?? "";
 }

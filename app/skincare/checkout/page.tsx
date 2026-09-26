@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { safeSettings } from "@/lib/settings";
 import { dropLabel, nextDrop, skincareBands, skincareOn, skincarePromise, skincareShop } from "@/lib/skincare";
 import { hostelNames } from "@/lib/hostels";
+import { namedPromoters } from "@/lib/promoters";
 import { currentCustomer, customerDetails } from "@/lib/customer-auth";
 import { clockOf } from "@/lib/same-day";
 import { cutOffTime } from "@/lib/skincare";
@@ -26,6 +27,10 @@ export default async function SkincareCheckoutPage() {
       cutOff={clockOf(hour, minute)}
       promise={skincarePromise(settings)}
       hostels={await hostelNames()}
+      promoters={(await namedPromoters().catch(() => [])).map((one) => ({
+        code: one.code,
+        name: one.name,
+      }))}
       me={signedIn ? await customerDetails(signedIn) : null}
     />
   );
