@@ -46,6 +46,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // neither was listed.
     { url: `${site}/products`, changeFrequency: "daily" as const, priority: 0.9 },
     { url: `${site}/parcel`, changeFrequency: "weekly" as const, priority: 0.7 },
+    // Two whole shelves of the shop that were never listed at all: the one
+    // with two thousand products on it, and the one that makes delivery
+    // cheap enough to bother with.
+    { url: `${site}/skincare`, changeFrequency: "weekly" as const, priority: 0.8 },
+    { url: `${site}/group`, changeFrequency: "monthly" as const, priority: 0.6 },
     { url: `${site}/custom-order`, changeFrequency: "monthly" as const, priority: 0.7 },
     // Two shelves of boxes, each its own page since a care package and a
     // birthday are not the same search.
