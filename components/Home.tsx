@@ -315,23 +315,24 @@ function Door({
   away?: boolean;
 }) {
   const look =
-    "flex h-full flex-col overflow-hidden rounded-2xl bg-paper shadow-card transition active:scale-[0.99]";
+    "flex h-full flex-col rounded-2xl bg-paper p-3.5 shadow-card transition active:scale-[0.99]";
+
+  // A badge, not a billboard. A picture the size of the card is a card you
+  // scroll past two of, and the whole point of the grid is that the ways in
+  // fit on one screen. Small enough to be a mark, big enough to tell the
+  // buckets apart at a glance.
   const inside = (
     <>
-      <span className="block aspect-[16/10]">
-        <Thumb src={image} name={title} rounded="" variant="banner" />
-      </span>
-      <span className="flex flex-1 flex-col justify-between p-3.5">
-        <span>
-          <span className="block font-extrabold leading-tight">{title}</span>
-          {/* Two lines, whatever it says, so a row of cards is a row and
-              not a staircase. */}
-          <span className="mt-0.5 line-clamp-2 block text-sm leading-snug text-muted">
-            {line}
-          </span>
+      <span className="flex items-center gap-2.5">
+        <span className="block size-11 shrink-0 overflow-hidden rounded-xl">
+          <Thumb src={image} name={title} rounded="" variant="banner" />
         </span>
-        <span className="mt-2 block text-sm font-extrabold text-brand">{action}</span>
+        <span className="min-w-0 font-extrabold leading-tight">{title}</span>
       </span>
+      <span className="mt-2 line-clamp-2 block text-sm leading-snug text-muted">
+        {line}
+      </span>
+      <span className="mt-auto pt-2 text-sm font-extrabold text-brand">{action}</span>
     </>
   );
 
