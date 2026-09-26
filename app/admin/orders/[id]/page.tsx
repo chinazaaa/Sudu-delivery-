@@ -190,6 +190,26 @@ async function orderPage(id: string, said: string) {
         />
       </div>
 
+      {/* Not on a parcel: there are no lines in it to change. */}
+      {!order.parcel_route && (
+        <OrderEditor
+          orderId={order.id}
+          lines={editable}
+          catalogue={catalogue}
+          pending={Boolean((order as { custom_pending?: boolean }).custom_pending)}
+          charged={
+            (order as { charged?: number | null }).charged ?? null
+          }
+          total={order.total}
+          note={order.customer_note ?? ""}
+          setQty={setLineQty}
+          addLine={addOrderLine}
+          addOption={addLineOption}
+          removeOption={removeLineOption}
+          settle={settleCustom}
+        />
+      )}
+
       {card && (
         <OrderCard
           onList={false}
@@ -257,25 +277,6 @@ async function orderPage(id: string, said: string) {
             </form>
           )}
         </section>
-      )}
-
-      {/* Not on a parcel: there are no lines in it to change. */}
-      {!order.parcel_route && (
-        <OrderEditor
-          orderId={order.id}
-          lines={editable}
-          catalogue={catalogue}
-          pending={Boolean((order as { custom_pending?: boolean }).custom_pending)}
-          charged={
-            (order as { charged?: number | null }).charged ?? null
-          }
-          total={order.total}
-          setQty={setLineQty}
-          addLine={addOrderLine}
-          addOption={addLineOption}
-          removeOption={removeLineOption}
-          settle={settleCustom}
-        />
       )}
 
       {/* Only on a parcel. Nobody photographs a bag of jollof, and a button

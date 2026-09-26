@@ -6,20 +6,20 @@ import { naira } from "@/lib/money";
 import type { EditedLine } from "@/lib/order-edit";
 
 /**
- * What is actually in one order, changed by hand.
+ * What is actually in one order, and how to change it.
  *
- * A collection is sold high level on purpose: "a cake", "a flower". The
- * conversation on WhatsApp is where it becomes a twelve inch vanilla cake, or
- * a card instead of the flower, and after that conversation the order has to
- * say the agreed thing. Otherwise somebody reads "flower" off the run sheet
- * and delivers a flower to a person who asked for a card.
+ * This is the screen somebody stands in front of holding a phone with a
+ * customer on it saying they want spaghetti instead of pasta. So the list
+ * reads first and the controls come second: every line is one row you can
+ * scan, and the way to change it is one button on that row.
  *
- * Options are typed rather than picked. A shop that has to have thought of
- * every variant in advance is a shop that can never say yes to anything, and
- * the ones agreed in a chat belong to that order alone.
+ * The first version put two forms under every line, always open. Twenty
+ * lines meant forty forms, and finding the one that said "pasta" meant
+ * scrolling past everything else twice.
  *
- * Every change is its own small form, posted to the server on the spot. No
- * draft state to lose, and nothing that needs saving twice.
+ * Options are typed as well as picked. A shop that has to have thought of
+ * every variant in advance can never say yes to anything, and the ones
+ * agreed in a chat belong to that order alone.
  */
 export default function OrderEditor({
   orderId,
@@ -28,6 +28,7 @@ export default function OrderEditor({
   pending,
   charged,
   total,
+  note,
   setQty,
   addLine,
   addOption,
@@ -36,7 +37,6 @@ export default function OrderEditor({
 }: {
   orderId: string;
   lines: EditedLine[];
-  /** Everything sellable, ours and the restaurants', for adding a line. */
   catalogue: {
     id: string;
     name: string;
@@ -44,11 +44,11 @@ export default function OrderEditor({
     price: number;
     options: { name: string; delta: number }[];
   }[];
-  /** Whether the customer said the price is not settled yet. */
   pending: boolean;
-  /** What was taken when it was marked paid, where it has been. */
   charged: number | null;
   total: number;
+  /** What the customer asked for in their own words, if anything. */
+  note: string;
   setQty: (form: FormData) => void;
   addLine: (form: FormData) => void;
   addOption: (form: FormData) => void;
@@ -56,6 +56,8 @@ export default function OrderEditor({
   settle: (form: FormData) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [open, setOpen] = useState("");
 
   const needle = query.trim().toLowerCase();
   const found =
@@ -69,25 +71,40 @@ export default function OrderEditor({
           )
           .slice(0, 8);
 
+  const count = lines.reduce((sum, line) => sum + line.qty, 0);
+
   return (
     <section className="card mt-4 space-y-4">
-      <div>
-        <h2 className="font-bold">What is in it</h2>
-        <p className="text-sm text-muted">
-          Change this order to whatever was agreed. The collection everybody
-          else buys is untouched, and the customer sees this the moment you
-          change it.
-        </p>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-extrabold">What is in it</h2>
+          <p className="text-sm text-muted">
+            {lines.length} line{lines.length === 1 ? "" : "s"} · {count} thing
+            {count === 1 ? "" : "s"}. Change it to whatever was agreed; the
+            collection everybody else buys is untouched.
+          </p>
+        </div>
+        <span className="shrink-0 text-lg font-extrabold">{naira(total)}</span>
       </div>
 
-      {pending && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">
-          <p className="font-bold">
-            They said this one needs changing, so the price is not settled.
+      {/* What they asked for, at the top and in their own words. It was a
+          line inside another card further down, which is where a "no
+          pepper" goes to die. */}
+      {note !== "" && (
+        <div className="rounded-xl border-l-4 border-brand bg-brand-tint px-3 py-2.5">
+          <p className="text-xs font-bold uppercase tracking-wide text-brand-dark">
+            They asked
           </p>
-          <p className="mt-1 text-muted">
-            Their page says so too. Make the changes, then say the price is
-            agreed and it stops saying it.
+          <p className="mt-0.5 font-semibold text-ink">{note}</p>
+        </div>
+      )}
+
+      {pending && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-3">
+          <p className="font-bold">The price is not settled.</p>
+          <p className="mt-0.5 text-sm text-muted">
+            They asked for a change, and their own page says so. Make the
+            changes, then say the price is agreed.
           </p>
           <form action={settle} className="mt-2">
             <input type="hidden" name="order_id" value={orderId} />
@@ -99,145 +116,199 @@ export default function OrderEditor({
       )}
 
       {charged !== null && charged !== total && (
-        <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
+        <p className="rounded-xl bg-shell px-3 py-2 text-sm font-semibold">
           They paid {naira(charged)}. It now comes to {naira(total)}:{" "}
-          {total > charged
-            ? `${naira(total - charged)} still to collect.`
-            : `${naira(charged - total)} to give back.`}
+          <span className={total > charged ? "text-red-700" : "text-mint"}>
+            {total > charged
+              ? `${naira(total - charged)} still to collect`
+              : `${naira(charged - total)} to give back`}
+          </span>
+          .
         </p>
       )}
 
-      <ul className="space-y-3">
+      <ul className="divide-y divide-black/5">
         {lines.map((line) => {
           const each =
             line.unit_price_at_order +
             line.options.reduce((sum, one) => sum + one.delta, 0);
+          const showing = open === line.id;
 
           return (
-            <li key={line.id} className="rounded-xl border border-black/10 p-3">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="font-bold">{line.name}</span>
-                <span className="font-extrabold">{naira(line.qty * each)}</span>
+            <li key={line.id} className="py-3 first:pt-0">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-bold leading-tight">
+                    <span className="text-muted">{line.qty} ×</span> {line.name}
+                  </p>
+
+                  {/* Every choice as its own chip. Run together in a
+                      sentence, "12 inches" and "vanilla" read as one thing
+                      nobody can pick apart at a counter. */}
+                  {line.options.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {line.options.map((one) => (
+                        <span
+                          key={one.id}
+                          className="inline-flex items-center gap-1 rounded-full bg-shell px-2 py-0.5 text-xs font-semibold"
+                        >
+                          {one.name}
+                          {one.delta !== 0 && (
+                            <span className="text-muted">
+                              {one.delta > 0 ? "+" : "−"}
+                              {naira(Math.abs(one.delta))}
+                            </span>
+                          )}
+                          <form action={removeOption}>
+                            <input
+                              type="hidden"
+                              name="option_row_id"
+                              value={one.id}
+                            />
+                            <button
+                              aria-label={`Take off ${one.name}`}
+                              className="text-muted hover:text-red-700"
+                            >
+                              ×
+                            </button>
+                          </form>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {line.source !== "" && (
+                    <p className="mt-1 text-xs font-semibold text-brand-dark">
+                      Get it: {line.source}
+                    </p>
+                  )}
+                </div>
+
+                <div className="shrink-0 text-right">
+                  <p className="font-extrabold">{naira(line.qty * each)}</p>
+                  <button
+                    type="button"
+                    onClick={() => setOpen(showing ? "" : line.id)}
+                    className="text-sm font-bold text-brand"
+                  >
+                    {showing ? "Done" : "Change"}
+                  </button>
+                </div>
               </div>
 
-              {line.source !== "" && (
-                <p className="mt-0.5 text-xs font-semibold text-brand-dark">
-                  Get it: {line.source}
-                </p>
-              )}
+              {showing && (
+                <div className="mt-3 space-y-3 rounded-xl bg-shell p-3">
+                  <form action={setQty} className="flex flex-wrap items-end gap-2">
+                    <input type="hidden" name="line_id" value={line.id} />
+                    <label className="text-xs font-semibold text-muted">
+                      How many
+                      <input
+                        name="qty"
+                        inputMode="numeric"
+                        defaultValue={line.qty}
+                        className="field mt-0.5 w-20 bg-white py-1.5 text-sm"
+                      />
+                    </label>
+                    <label className="text-xs font-semibold text-muted">
+                      Each
+                      <input
+                        name="unit_price"
+                        inputMode="numeric"
+                        defaultValue={line.unit_price_at_order}
+                        className="field mt-0.5 w-28 bg-white py-1.5 text-sm"
+                      />
+                    </label>
+                    <button className="btn-quiet bg-white px-3 py-2 text-sm">
+                      Save
+                    </button>
+                    <span className="text-xs text-muted">0 takes it off</span>
+                  </form>
 
-              {line.options.length > 0 && (
-                <ul className="mt-2 space-y-1">
-                  {line.options.map((one) => (
-                    <li key={one.id} className="flex items-center gap-2 text-sm">
-                      <span className="min-w-0 flex-1">
-                        {one.name}
-                        {one.delta !== 0 && (
-                          <span className="text-muted">
-                            {" "}
-                            · {one.delta > 0 ? "+" : "−"}
-                            {naira(Math.abs(one.delta))}
-                          </span>
-                        )}
-                      </span>
-                      <form action={removeOption}>
-                        <input type="hidden" name="option_row_id" value={one.id} />
-                        <button className="text-xs font-semibold text-red-700">
-                          Remove
-                        </button>
-                      </form>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <form action={setQty} className="mt-2 flex flex-wrap items-end gap-2">
-                <input type="hidden" name="line_id" value={line.id} />
-                <label className="text-xs font-semibold text-muted">
-                  How many
-                  <input
-                    name="qty"
-                    inputMode="numeric"
-                    defaultValue={line.qty}
-                    className="field mt-0.5 w-20 py-1.5 text-sm"
+                  <ChoiceForm
+                    lineId={line.id}
+                    real={
+                      catalogue.find((one) => one.id === line.menu_item_id)
+                        ?.options ?? []
+                    }
+                    add={addOption}
                   />
-                </label>
-                <label className="text-xs font-semibold text-muted">
-                  Each
-                  <input
-                    name="unit_price"
-                    inputMode="numeric"
-                    defaultValue={line.unit_price_at_order}
-                    className="field mt-0.5 w-28 py-1.5 text-sm"
-                  />
-                </label>
-                <button className="btn-quiet px-3 py-2 text-sm">Save</button>
-                <span className="text-xs text-muted">Nothing of it, 0, takes it off.</span>
-              </form>
-
-              <ChoiceForm
-                lineId={line.id}
-                real={
-                  catalogue.find((one) => one.id === line.menu_item_id)?.options ?? []
-                }
-                add={addOption}
-              />
+                </div>
+              )}
             </li>
           );
         })}
       </ul>
 
-      {/* Adding a product rather than describing one, so the customer's own
-          page reads as the thing they agreed to and the run sheet sends
-          somebody to the right shop. */}
-      <div className="rounded-xl border border-dashed border-black/15 p-3">
-        <p className="label mb-1">Add something to this order</p>
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search a card, a cake, a flower, anything on the menu"
-          className="field py-2 text-sm"
-        />
-        {needle.length >= 2 && found.length === 0 && (
-          <p className="mt-2 text-sm text-muted">
-            Nothing matches. Add it as a product first, on the Restaurants
-            screen under Sudu, and it will be here.
-          </p>
-        )}
-        <ul className="mt-2 space-y-1">
-          {found.map((one) => (
-            <li key={one.id}>
-              <form action={addLine} className="flex flex-wrap items-end gap-2">
-                <input type="hidden" name="order_id" value={orderId} />
-                <input type="hidden" name="menu_item_id" value={one.id} />
-                <span className="min-w-40 grow text-sm">
-                  <span className="font-semibold">{one.name}</span>
-                  <span className="text-muted"> · {one.shop}</span>
-                </span>
-                <label className="text-xs font-semibold text-muted">
-                  How many
-                  <input
-                    name="qty"
-                    inputMode="numeric"
-                    defaultValue={1}
-                    className="field mt-0.5 w-16 py-1.5 text-sm"
-                  />
-                </label>
-                <label className="text-xs font-semibold text-muted">
-                  Each
-                  <input
-                    name="unit_price"
-                    inputMode="numeric"
-                    defaultValue={one.price}
-                    className="field mt-0.5 w-28 py-1.5 text-sm"
-                  />
-                </label>
-                <button className="btn-quiet px-3 py-2 text-sm">Add it</button>
-              </form>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {/* Folded away, because most orders never gain a line and a search box
+          standing open on every one of them is a box in the way. */}
+      {adding ? (
+        <div className="rounded-xl border border-dashed border-black/15 p-3">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="label">Add something</p>
+            <button
+              type="button"
+              onClick={() => setAdding(false)}
+              className="text-sm font-semibold text-muted"
+            >
+              Cancel
+            </button>
+          </div>
+          <input
+            autoFocus
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Spaghetti, a cake, a card, anything on the menu"
+            className="field mt-1 py-2 text-sm"
+          />
+          {needle.length >= 2 && found.length === 0 && (
+            <p className="mt-2 text-sm text-muted">
+              Nothing matches. Add it as a product first, on Restaurants under
+              Sudu, and it will be here.
+            </p>
+          )}
+          <ul className="mt-2 space-y-1">
+            {found.map((one) => (
+              <li key={one.id}>
+                <form action={addLine} className="flex flex-wrap items-end gap-2">
+                  <input type="hidden" name="order_id" value={orderId} />
+                  <input type="hidden" name="menu_item_id" value={one.id} />
+                  <span className="min-w-40 grow text-sm">
+                    <span className="font-semibold">{one.name}</span>
+                    <span className="text-muted"> · {one.shop}</span>
+                  </span>
+                  <label className="text-xs font-semibold text-muted">
+                    How many
+                    <input
+                      name="qty"
+                      inputMode="numeric"
+                      defaultValue={1}
+                      className="field mt-0.5 w-16 py-1.5 text-sm"
+                    />
+                  </label>
+                  <label className="text-xs font-semibold text-muted">
+                    Each
+                    <input
+                      name="unit_price"
+                      inputMode="numeric"
+                      defaultValue={one.price}
+                      className="field mt-0.5 w-28 py-1.5 text-sm"
+                    />
+                  </label>
+                  <button className="btn-quiet px-3 py-2 text-sm">Add it</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="btn-quiet w-full py-2.5 text-sm"
+        >
+          Add something to this order
+        </button>
+      )}
     </section>
   );
 }
@@ -248,10 +319,7 @@ export default function OrderEditor({
  * Two kinds of change land here and both matter. Hand tossed to thin crust
  * is a choice the menu already has, and picking it should not mean typing it
  * and its price again. Twelve inches with her name on it is a choice no menu
- * has and no menu should: a shop that has to have thought of every variant in
- * advance can never say yes to anything.
- *
- * So the list fills the boxes in, and the boxes can still be typed over.
+ * has and no menu should.
  */
 function ChoiceForm({
   lineId,
@@ -272,7 +340,7 @@ function ChoiceForm({
         setName("");
         setDelta("");
       }}
-      className="mt-2 space-y-2"
+      className="space-y-2 border-t border-black/5 pt-3"
     >
       <input type="hidden" name="line_id" value={lineId} />
 
@@ -285,9 +353,9 @@ function ChoiceForm({
             setName(picked.name);
             setDelta(String(picked.delta));
           }}
-          className="field py-1.5 text-sm"
+          className="field bg-white py-1.5 text-sm"
         >
-          <option value="">Pick one it already has…</option>
+          <option value="">Pick a choice it already has…</option>
           {real.map((one, at) => (
             <option key={`${one.name}-${at}`} value={at}>
               {one.name}
@@ -304,8 +372,8 @@ function ChoiceForm({
             name="name"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="12 inches · thin crust · write Happy Birthday Ada"
-            className="field mt-0.5 py-1.5 text-sm"
+            placeholder="Thin crust · 12 inches · write Happy Birthday Ada"
+            className="field mt-0.5 bg-white py-1.5 text-sm"
           />
         </label>
         <label className="text-xs font-semibold text-muted">
@@ -316,14 +384,12 @@ function ChoiceForm({
             onChange={(event) => setDelta(event.target.value)}
             inputMode="numeric"
             placeholder="4000"
-            className="field mt-0.5 w-28 py-1.5 text-sm"
+            className="field mt-0.5 w-28 bg-white py-1.5 text-sm"
           />
         </label>
-        <button className="btn-quiet px-3 py-2 text-sm">Add</button>
+        <button className="btn-quiet bg-white px-3 py-2 text-sm">Add</button>
       </div>
-      <p className="text-xs text-muted">
-        Minus works: agreeing something smaller takes money off.
-      </p>
+      <p className="text-xs text-muted">Minus works: −2000 takes money off.</p>
     </form>
   );
 }

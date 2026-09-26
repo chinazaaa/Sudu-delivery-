@@ -343,6 +343,10 @@ export default function OrderCard({
               ))}
             </dl>
           )}
+          {/* On the order's own page the editor below lists these, with the
+              controls to change them. Two lists of the same twenty things is
+              how somebody edits the one that is not editable. */}
+          {onList && (
           <ul className="space-y-1 text-sm">
             {order.lines.map((line) => (
               <li key={line.id} className="flex justify-between gap-3">
@@ -371,6 +375,7 @@ export default function OrderCard({
               </li>
             ))}
           </ul>
+          )}
 
           <dl className="space-y-1 text-sm text-muted">
             {/* Nothing is bought on a parcel, so "Food ₦0" is a line about
