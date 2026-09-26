@@ -28,7 +28,7 @@ import { runDateLabel, weekdayLabel } from "./time";
 import { createSameDayBatch, getBatch, isOrderable, orderCounts } from "./batches";
 import { bandsFor, isSkincareBatch, skincareIn } from "./skincare";
 import { areaOfCart } from "./areas-server";
-import { feeForValue } from "./value-bands";
+import { feeAcross } from "./value-bands";
 import { realPromoter } from "./promoters";
 import { containersIn, pctOf } from "./containers";
 import { isExampleNumber, ordersLately, TOO_MANY } from "./guard";
@@ -506,15 +506,16 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
             (promotion && !sharedGroupId
               ? promotion.fee
               : where.valueBands.length > 0 && !sameDay && !party
-                ? // Both measures, and the dearer wins. One car fetches all
-                  // of it, so a cart with a market and a restaurant in it is
-                  // as much work as the harder half: a pepper added to
-                  // twelve pizzas must not drop the whole order onto the
-                  // market's ladder, and twelve bags of shopping must not
-                  // price as one container.
-                  Math.max(
-                    feeForValue(countFood(priced.lines), where.valueBands),
-                    feeFor(countItems(priced.lines), batch.flash_fee, where.bands)
+                ? // A cart that is nothing but market shopping is charged
+                  // by what the shopping comes to, full stop. Mix a
+                  // restaurant into it and the dearer of the two measures
+                  // comes back: a pepper added to twelve pizzas must not
+                  // drop the whole order onto the market's ladder.
+                  feeAcross(
+                    countFood(priced.lines),
+                    feeFor(countItems(priced.lines), batch.flash_fee, where.bands),
+                    where.valueBands,
+                    where.allByValue
                   ) + where.dearest.runExtra
                 : undefined),
           promotionCode: promotion?.coupon.code ?? null,

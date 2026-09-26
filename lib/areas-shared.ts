@@ -22,3 +22,19 @@ export function ladderFor(
 }
 
 const top = (bands: ValueBand[]) => bands[bands.length - 1]?.fee ?? 0;
+
+/**
+ * Whether every kitchen in the cart prices by what the shopping comes to.
+ *
+ * An empty cart is not a market: nothing in it means nothing to charge by
+ * value, and the ordinary ladder answers.
+ */
+export function allByValue(
+  restaurantIds: string[],
+  byKitchen: Record<string, ValueBand[]>
+): boolean {
+  return (
+    restaurantIds.length > 0 &&
+    restaurantIds.every((id) => (byKitchen[id] ?? []).length > 0)
+  );
+}

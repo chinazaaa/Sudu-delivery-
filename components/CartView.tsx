@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import type { Slot } from "@/lib/same-day";
 import { nextArrival, type ArrivalRun } from "@/lib/arrival";
 import { dearestArea, withExtra, type Area } from "@/lib/areas";
-import { ladderFor } from "@/lib/areas-shared";
-import { feeForValue, type ValueBand } from "@/lib/value-bands";
+import { allByValue, ladderFor } from "@/lib/areas-shared";
+import { feeAcross, type ValueBand } from "@/lib/value-bands";
 
 import Link from "next/link";
 import Empty from "@/components/Empty";
@@ -438,10 +438,10 @@ export default function CartView({
     bands,
     dearestArea(areas, [...new Set(cart.map((line) => line.restaurantId))], areaOf).runExtra
   );
-  const byValue = ladderFor(
-    [...new Set(cart.map((line) => line.restaurantId))],
-    valueBandsOf
-  );
+  const kitchensIn = [...new Set(cart.map((line) => line.restaurantId))];
+  const byValue = ladderFor(kitchensIn, valueBandsOf);
+  // Nothing but market shopping is charged by what the shopping comes to.
+  const marketOnly = allByValue(kitchensIn, valueBandsOf);
   // Which way the food is actually going, by the same rule as everywhere
   // else. With no run inside the days people can order ahead, the soonest
   // thing is a car of its own, and quoting the run ladder here had the cart
@@ -458,7 +458,12 @@ export default function CartView({
   const alone = promotion
     ? promotion.fee
     : byValue.length > 0
-      ? Math.max(feeForValue(cartSubtotal(cart), byValue), feeFor(countItems(cart), null, ladder))
+      ? feeAcross(
+          cartSubtotal(cart),
+          feeFor(countItems(cart), null, ladder),
+          byValue,
+          marketOnly
+        )
     : carFee > 0
       ? carFee
     : ladder.length > 0

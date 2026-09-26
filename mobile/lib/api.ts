@@ -1039,3 +1039,31 @@ export function feeForValue(value: number, bands: ValueBand[]): number {
 }
 
 const last = (bands: ValueBand[]) => bands[bands.length - 1]?.fee ?? 0;
+
+/** Whether every kitchen in the cart prices by what the shopping comes to. */
+export function allByValue(shop: Shop | null, restaurantIds: string[]): boolean {
+  const byKitchen = shop?.valueBandsOf ?? {};
+  return (
+    restaurantIds.length > 0 &&
+    restaurantIds.every((id) => (byKitchen[id] ?? []).length > 0)
+  );
+}
+
+/**
+ * What a cart is charged where a value ladder is in play.
+ *
+ * Nothing but market shopping is charged by what the shopping comes to. Mix
+ * a restaurant into it and the dearer of the two measures comes back, so a
+ * pepper added to twelve pizzas cannot drop the whole order onto the
+ * market's ladder. The same sentence the server bills by.
+ */
+export function feeAcross(
+  food: number,
+  containerFee: number,
+  bands: ValueBand[],
+  marketOnly: boolean
+): number {
+  if (bands.length === 0) return containerFee;
+  const byValue = feeForValue(food, bands);
+  return marketOnly ? byValue : Math.max(byValue, containerFee);
+}

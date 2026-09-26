@@ -40,6 +40,9 @@ export type CartArea = {
   /** Where a kitchen prices by what the shopping comes to rather than by how
    *  many things it is, its ladder. Empty is the ordinary one. */
   valueBands: ValueBand[];
+  /** Whether every kitchen in the cart is one of those, which is what lets
+   *  the value ladder answer on its own. */
+  allByValue: boolean;
 };
 
 /**
@@ -62,6 +65,7 @@ export async function areaOfCart(restaurantIds: string[]): Promise<CartArea> {
 
   return {
     valueBands: await valueLadder(restaurantIds),
+    allByValue: await everyoneByValue(restaurantIds),
     dearest,
     all,
     sameDay: canGoSameDay(all),
@@ -107,6 +111,31 @@ export async function valueLadder(restaurantIds: string[]): Promise<ValueBand[]>
 }
 
 const top = (bands: ValueBand[]) => bands[bands.length - 1]?.fee ?? 0;
+
+/**
+ * Whether every kitchen in the cart prices by what the shopping comes to.
+ *
+ * Asked of the database rather than of the cart, for the same reason the
+ * ladder is: a phone saying "this is all market shopping" is a phone asking
+ * for the cheaper fee.
+ */
+export async function everyoneByValue(restaurantIds: string[]): Promise<boolean> {
+  if (restaurantIds.length === 0) return false;
+
+  const { data, error } = await db()
+    .from("restaurants")
+    .select("id, value_bands")
+    .in("id", restaurantIds);
+  // Before the migration there is no column, and nobody prices by value.
+  if (error) return false;
+
+  const byValue = new Set(
+    ((data ?? []) as { id: string; value_bands?: string }[])
+      .filter((one) => parseValueBands(one.value_bands).length > 0)
+      .map((one) => one.id)
+  );
+  return restaurantIds.every((id) => byValue.has(id));
+}
 
 /**
  * Every kitchen that prices by what the shopping comes to, by id.

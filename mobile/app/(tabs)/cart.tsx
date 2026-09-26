@@ -2,7 +2,17 @@ import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { api, feeFor, lagosToday, naira, nextArrival, sameDayFeeFor } from "@/lib/api";
+import {
+  allByValue,
+  api,
+  feeAcross,
+  feeFor,
+  lagosToday,
+  naira,
+  nextArrival,
+  sameDayFeeFor,
+  valueLadderFor,
+} from "@/lib/api";
 import { cart, cartTotal, countItems, party, people, useStored, type Line } from "@/lib/store";
 import { T } from "@/lib/theme";
 
@@ -112,6 +122,17 @@ export default function Cart() {
   // With no run inside the days people can order ahead, the soonest thing is
   // a car of its own, and quoting the run ladder here had the cart promising
   // four thousand over a checkout about to charge six and a half.
+  // Which kitchens this cart touches, found the same way the checkout finds
+  // them: a line carries the counter's name, not its id.
+  const kitchensIn = [
+    ...new Set(
+      lines.map(
+        (line) =>
+          shop?.menu.find((one) => one.items.some((item) => item.id === line.itemId))
+            ?.restaurant.id ?? ""
+      )
+    ),
+  ].filter(Boolean);
   const decided = shop
     ? nextArrival(
         shop.runs.filter((one) => !one.closed && !one.full),
@@ -128,7 +149,14 @@ export default function Cart() {
     shop && items > 0 && !offered
       ? soon && (shop.sameDay?.bands?.length ?? 0) > 0
         ? sameDayFeeFor(items, soon.urgent, shop.sameDay!.bands, shop.sameDay!.urgentExtra ?? 0)
-        : feeFor(items, shop.bands, null)
+        : // A market cart is charged by what the shopping comes to, and the
+          // cart has to say what the checkout will say.
+          feeAcross(
+            food,
+            feeFor(items, shop.bands, null),
+            valueLadderFor(shop, kitchensIn),
+            allByValue(shop, kitchensIn)
+          )
       : 0;
 
   // An offer this cart nearly has. From the inside, a qualifying dish with

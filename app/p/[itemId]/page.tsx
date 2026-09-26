@@ -5,10 +5,32 @@ import AddToCart from "@/components/AddToCart";
 
 import Thumb from "@/components/Thumb";
 import { menuView } from "@/lib/menu";
+import { parseBands } from "@/lib/fees";
+import { valueBandsOfEach } from "@/lib/areas-server";
 import { productNotes, safeSettings } from "@/lib/settings";
 import { naira } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * What this thing is, in a sentence, for anywhere a sentence is needed.
+ *
+ * Most of the menu has no description of its own: a kitchen sends a price
+ * list, not copy. Search Console counts that as a product card missing its
+ * description, and the honest fix is not to invent one but to say the true
+ * things we already know, in the order a person would say them.
+ */
+function saidAbout(
+  item: { name: string; description: string; price: number },
+  restaurant: string
+): string {
+  const said = item.description.trim();
+  return (
+    (said ? `${said} ` : "") +
+    `${item.name} from ${restaurant}, ${naira(item.price)}, ` +
+    `delivered to Pan-Atlantic University.`
+  );
+}
 
 /** The dish, the kitchen it comes from, and a canonical of its own. */
 export async function generateMetadata({
@@ -22,13 +44,9 @@ export async function generateMetadata({
   const item = place?.items.find((i) => i.id === itemId);
   if (!place || !item) return {};
 
-  const said = item.description.trim();
   return {
     title: `${item.name} from ${place.restaurant.name}`,
-    description:
-      (said ? `${said} ` : "") +
-      `${item.name} from ${place.restaurant.name}, ${naira(item.price)}, ` +
-      `delivered to Pan-Atlantic University.`,
+    description: saidAbout(item, place.restaurant.name),
     alternates: { canonical: `/p/${item.id}` },
     openGraph: {
       title: `${item.name} from ${place.restaurant.name}`,
@@ -48,7 +66,11 @@ export default async function ProductPage({
 }) {
   const { itemId } = await params;
   const editingKey = (await searchParams).line ?? "";
-  const [menu, settings] = await Promise.all([menuView(), safeSettings()]);
+  const [menu, settings, valueBandsOf] = await Promise.all([
+    menuView(),
+    safeSettings(),
+    valueBandsOfEach(),
+  ]);
 
   const place = menu.find((m) => m.items.some((i) => i.id === itemId));
   const item = place?.items.find((i) => i.id === itemId);
@@ -60,11 +82,18 @@ export default async function ProductPage({
   // What a search engine reads instead of guessing from the page. A price
   // and a yes on availability are what put a dish in a shopping result at
   // all, and both are already on this page for people.
+  // What delivery costs, said as a range because it honestly is one: it is
+  // charged per order rather than per thing, and a counter that prices by
+  // what the shopping comes to has a ladder of its own. The cheapest and the
+  // dearest rung are both true, and saying only one of them would not be.
+  const ladder = valueBandsOf[place.restaurant.id] ?? parseBands(settings.fee_bands);
+  const fees = ladder.map((band) => band.fee).filter((fee) => fee > 0);
+
   const card = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: item.name,
-    description: item.description || undefined,
+    description: saidAbout(item, place.restaurant.name),
     image: item.imageUrl || undefined,
     brand: { "@type": "Brand", name: place.restaurant.name },
     offers: {
@@ -75,6 +104,35 @@ export default async function ProductPage({
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
       seller: { "@type": "Organization", name: "Sudu" },
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingRate: {
+          "@type": "MonetaryAmount",
+          currency: "NGN",
+          minValue: fees.length > 0 ? Math.min(...fees) : 0,
+          maxValue: fees.length > 0 ? Math.max(...fees) : 0,
+        },
+        shippingDestination: {
+          "@type": "DefinedRegion",
+          addressCountry: "NG",
+          addressRegion: "Lagos",
+        },
+        deliveryTime: {
+          "@type": "ShippingDeliveryTime",
+          handlingTime: {
+            "@type": "QuantitativeValue",
+            minValue: 0,
+            maxValue: 1,
+            unitCode: "DAY",
+          },
+          transitTime: {
+            "@type": "QuantitativeValue",
+            minValue: 0,
+            maxValue: 2,
+            unitCode: "DAY",
+          },
+        },
+      },
     },
   };
 

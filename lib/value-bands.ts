@@ -71,3 +71,28 @@ export function bandRange(
 ): { from: number; upTo: number } {
   return { from: at === 0 ? 0 : bands[at - 1].upTo + 1, upTo: bands[at].upTo };
 }
+
+/**
+ * What a cart is charged where a value ladder is in play.
+ *
+ * Both measures used to be taken and the dearer kept, which sounds fair and
+ * quietly made the value ladder dead letter: its top band is ₦4,000 and the
+ * container ladder starts at ₦4,000, so the container fee always won and a
+ * market shop of twelve bags billed at twelve thousand naira to carry. That
+ * is the number the bands exist to prevent.
+ *
+ * So: a cart that is nothing but market shopping is charged by value alone,
+ * which is what the shelf promises. The moment a restaurant is in it the
+ * dearer of the two comes back, because a pepper added to twelve pizzas must
+ * not drop the whole order onto the market's ladder.
+ */
+export function feeAcross(
+  food: number,
+  containerFee: number,
+  bands: ValueBand[],
+  allByValue: boolean
+): number {
+  if (bands.length === 0) return containerFee;
+  const byValue = feeForValue(food, bands);
+  return allByValue ? byValue : Math.max(byValue, containerFee);
+}

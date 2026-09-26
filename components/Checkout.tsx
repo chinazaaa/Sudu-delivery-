@@ -28,8 +28,8 @@ import { normalisePhone } from "@/lib/phone";
 import { OPENED, TRAP } from "@/lib/guard";
 import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
-import { feeForValue, type ValueBand } from "@/lib/value-bands";
-import { ladderFor } from "@/lib/areas-shared";
+import { feeAcross, type ValueBand } from "@/lib/value-bands";
+import { allByValue, ladderFor } from "@/lib/areas-shared";
 import CouponBox from "@/components/CouponBox";
 import { clearJoin, readJoin } from "@/components/JoinDelivery";
 import GroupLink, {
@@ -128,6 +128,7 @@ export default function Checkout({
   // many things it is. A market trip is one trip and two bags, and the
   // container ladder would call eleven peppers eleven containers.
   const byValue = ladderFor(kitchens, valueBandsOf);
+  const marketOnly = allByValue(kitchens, valueBandsOf);
   const sameDayBands = withExtra(baseSameDayBands, area.sameDayExtra);
   // One thing from a far area makes the whole order a run: a car cannot be
   // in two places in three hours.
@@ -463,12 +464,15 @@ export default function Checkout({
     : shared
     ? 0
     : byValue.length > 0
-      ? // Both measures, and the dearer wins: one car fetches all of it, so
-        // a pepper added to twelve pizzas cannot drop the whole order onto
-        // the market's ladder.
-        Math.max(
-          feeForValue(subtotal, byValue),
-          feeFor(itemCount + alreadyItems, selected?.flashFee ?? null, bands)
+      ? // Nothing but market shopping is charged by what the shopping comes
+        // to. Mix a restaurant in and the dearer of the two measures comes
+        // back, so a pepper added to twelve pizzas cannot drop the whole
+        // order onto the market's ladder.
+        feeAcross(
+          subtotal,
+          feeFor(itemCount + alreadyItems, selected?.flashFee ?? null, bands),
+          byValue,
+          marketOnly
         ) +
         area.runExtra
       : Math.max(
