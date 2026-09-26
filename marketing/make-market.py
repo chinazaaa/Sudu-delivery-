@@ -8,9 +8,10 @@ would cook if the market were not a trip they have to make.
 
 The one number here is the flat fee. Market shopping is charged by what
 the shopping comes to, not by how many things it is, so a full cart and a
-bag of rice cost the same to bring. That only became true today, and it is
-the whole argument: nobody adds a fourth thing to a basket if the fourth
-thing raises the delivery.
+bag of rice cost the same to bring: one flat four thousand, whatever is in
+it. That only became true today, and it is the whole argument, because
+nobody adds a fourth thing to a basket if the fourth thing raises the
+delivery.
 
 Real items at real prices underneath it, because "we sell foodstuff" is a
 claim and "Ijebu garri, a derica, N800" is a receipt.
@@ -81,8 +82,8 @@ def draw(W, H, top_safe, bottom_safe, out_path, tight=False):
     y = top_safe + 292
     out.append('<rect x="56" y="%d" width="%d" height="252" rx="40" fill="%s"/>' % (y, W - 112, ORANGE))
     out.append(text(mid, y + 68, "However many bags.", 42, "bold", "#ffffff", "middle"))
-    out.append(text(mid, y + 156, naira(3000) + " delivery.", 78, "bold", "#ffffff", "middle"))
-    out.append(text(mid, y + 208, "Up to " + naira(30000) + " of shopping, one flat fee.", 24, "normal", CREAM, "middle"))
+    out.append(text(mid, y + 156, naira(4000) + " delivery.", 78, "bold", "#ffffff", "middle"))
+    out.append(text(mid, y + 208, "One flat fee, whatever the shopping comes to.", 24, "normal", CREAM, "middle"))
 
     # The receipt. A claim proves nothing; six real prices do.
     y2 = y + after_hero
