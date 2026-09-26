@@ -16,6 +16,7 @@ export default function RepeatOrder({
   label = "Order this again",
   goTo = "/cart",
   note,
+  carry,
   nothingLeft = "Nothing from this order is on the menu today.",
 }: {
   lines: RepeatLine[];
@@ -25,6 +26,9 @@ export default function RepeatOrder({
   /** Where to land: the cart to adjust it, or checkout to pick a run. */
   goTo?: "/cart" | "/checkout";
   note?: string;
+  /** What they said last time and how they paid, carried into the checkout
+   *  so the only thing left to do is press the button. */
+  carry?: { note: string; method: "transfer" | "card" };
   /** What "there is nothing to put back" is called here. A cleanser is on a
    *  shelf, not a menu. */
   nothingLeft?: string;
@@ -71,6 +75,22 @@ export default function RepeatOrder({
               },
               line.qty
             );
+          }
+          // Everything the checkout can fill in for them. Their name,
+          // number and block are already kept on this device; what was not
+          // carried was what they asked for last time and how they paid,
+          // which is the difference between one press and filling a form
+          // in again.
+          if (carry) {
+            try {
+              const saved = JSON.parse(localStorage.getItem("sudu_me_v1") ?? "{}");
+              localStorage.setItem(
+                "sudu_me_v1",
+                JSON.stringify({ ...saved, method: carry.method, note: carry.note })
+              );
+            } catch {
+              /* Storage blocked. They type it again, as before. */
+            }
           }
           setDone(true);
           router.push(goTo);

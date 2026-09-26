@@ -825,6 +825,13 @@ export default async function OrderPage({
           <RepeatOrder
             lines={repeat.lines}
             blocked={repeat.blocked}
+            // What they asked for last time and how they paid, so the
+            // checkout comes up filled in and the only thing left is the
+            // button.
+            carry={{
+              note: order.customer_note ?? "",
+              method: order.payment_method === "card" ? "card" : "transfer",
+            }}
             nothingLeft={
               isSkincareBatch(order.batch)
                 ? "Nothing from this order is on the shelf today."

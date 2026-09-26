@@ -250,6 +250,7 @@ export default function Checkout({
   const [phone, setPhone] = useState(adding?.phone ?? "");
   const [hostel, setHostel] = useState(adding?.hostel ?? "");
   const [filled, setFilled] = useState(false);
+  const [note, setNote] = useState("");
   // Set once, when the page is drawn, rather than read at submit: what
   // matters is how long it was open.
   const [openedAt] = useState(() => Date.now());
@@ -266,6 +267,16 @@ export default function Checkout({
       if (saved?.phone) setPhone((current) => current || saved.phone);
       if (saved?.hostel) setHostel((current) => current || saved.hostel);
       if (saved?.method === "card" || saved?.method === "transfer") setMethod(saved.method);
+      // Carried over by "want this again". Taken out once it is used, so it
+      // does not haunt an order three weeks later that has nothing to do
+      // with it.
+      if (typeof saved?.note === "string" && saved.note !== "") {
+        setNote(saved.note);
+        localStorage.setItem(
+          "sudu_me_v1",
+          JSON.stringify({ ...saved, note: "" })
+        );
+      }
     } catch {
       /* Nothing saved, or storage is blocked. The fields simply start empty. */
     }
@@ -1255,6 +1266,8 @@ export default function Checkout({
             name="customer_note"
             rows={2}
             maxLength={300}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
             placeholder="No pepper, call me when you are outside, room 12"
             className="field"
           />
