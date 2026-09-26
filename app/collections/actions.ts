@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { boxById, cartOf, occasionBySlug } from "@/lib/boxes";
+import { markCustomPending } from "@/lib/order-edit";
 import { whenOptions } from "@/lib/box-view";
 import { placeOrder } from "@/lib/orders";
 import { orderLinkId } from "@/lib/orders";
@@ -91,6 +92,12 @@ async function order(form: FormData): Promise<BoxOrderState> {
   });
 
   if (!result.ok) return { error: result.error };
+
+  // They have asked for something to be different, so the number on their
+  // page is provisional from here until somebody agrees what it comes to.
+  if (form.get("custom") === "on") {
+    await markCustomPending(result.orderId).catch(() => {});
+  }
 
   // The order exists from here on, so nothing after it may fail loudly. A
   // short code that cannot be read is a nicer address, not a condition of

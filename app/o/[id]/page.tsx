@@ -213,6 +213,18 @@ export default async function OrderPage({
         <h1 className="mt-1 text-2xl font-extrabold leading-tight sm:text-3xl">
           {naira(order.total)}
         </h1>
+        {/* They asked for something to be different, so this number is not
+            the one yet. Said here, on the number itself, rather than in a
+            line further down that nobody reads: a price that is going to
+            move and does not say so is the one that costs you the
+            customer. */}
+        {(order as { custom_pending?: boolean }).custom_pending && (
+          <p className="mt-1 rounded-xl bg-white/20 px-3 py-2 text-sm font-semibold">
+            Not the final price. You asked for a change, so we are working out
+            what it comes to and will message you on WhatsApp. This page
+            updates before you pay.
+          </p>
+        )}
         <p className="mt-1 text-sm text-white/85">
           {/* A parcel has no slot anybody chose and, until the day is agreed,
               no day either: "Friday, 25 Sept · afternoon" was the run label

@@ -432,11 +432,23 @@ export default function OccasionBoxes({
                 placeholder="Vanilla cake, 12 inches, write Happy Birthday Ada. Red roses if you have them. Room 12, call me when you are outside."
                 className="field"
               />
-              <p className="mt-1.5 text-xs leading-relaxed text-muted">
-                Some changes cost more. Nothing is charged for them here: we
-                message you on WhatsApp with what it comes to, and you decide
-                before anything is bought.
-              </p>
+              {/* Said out loud and ticked, rather than guessed from whether
+                  they typed anything: "room 12, call me outside" is not a
+                  change to the price, and an order quietly marked provisional
+                  over it would be a number nobody trusts. */}
+              <label className="mt-2 flex items-start gap-2 text-sm">
+                <input type="checkbox" name="custom" className="mt-0.5" />
+                <span>
+                  <span className="font-bold">
+                    Tick this if what you wrote changes what is in it.
+                  </span>{" "}
+                  <span className="text-ink/75">
+                    Then the total here is not the final one. We work out what
+                    the change costs, message you on WhatsApp, and your order
+                    page updates before you pay a naira of it.
+                  </span>
+                </span>
+              </label>
             </fieldset>
 
             {promoters.length > 0 && !me && (

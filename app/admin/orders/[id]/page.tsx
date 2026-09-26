@@ -29,7 +29,15 @@ import {
   savePaymentLink,
   removeParcelPhoto,
   saveOrderNote,
+  setLineQty,
+  addOrderLine,
+  addLineOption,
+  removeLineOption,
+  settleCustom,
 } from "../../actions";
+import OrderEditor from "@/components/admin/OrderEditor";
+import { linesToEdit } from "@/lib/order-edit";
+import { foodCatalogue } from "@/lib/box-admin";
 import { openBatches } from "@/lib/batches";
 import { hoursByDay } from "@/lib/settings";
 import { deliverySlots } from "@/lib/same-day";
@@ -79,12 +87,33 @@ export default async function AdminOrderPage({
 
 async function orderPage(id: string, said: string) {
 
-  const [order, settings, url, runs] = await Promise.all([
+  const [order, settings, url, runs, editable, shops] = await Promise.all([
     getOrder(id),
     getSettings(),
     siteUrl(),
     openBatches(),
+    // What is actually in it, so it can be changed to whatever was agreed.
+    linesToEdit(id),
+    // Everything sellable, ours and the restaurants', for adding a line.
+    foodCatalogue().catch(() => []),
   ]);
+
+  const catalogue = shops.flatMap((shop) =>
+    shop.items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      shop: shop.name,
+      price: item.price,
+      // The choices this item really has, so changing hand tossed to thin
+      // crust is picking the one that exists rather than typing it again.
+      options: item.groups.flatMap((group) =>
+        group.options.map((one) => ({
+          name: `${group.name}: ${one.name}`,
+          delta: one.delta,
+        }))
+      ),
+    }))
+  );
 
   // Where this one could go instead, soonest first: a run still taking
   // orders, or a window of its own, which makes its car when it is picked.
@@ -165,6 +194,25 @@ async function orderPage(id: string, said: string) {
           remove={deleteOrder}
           savePaymentLink={savePaymentLink}
           saveNote={saveOrderNote}
+        />
+      )}
+
+      {/* Not on a parcel: there are no lines in it to change. */}
+      {!order.parcel_route && (
+        <OrderEditor
+          orderId={order.id}
+          lines={editable}
+          catalogue={catalogue}
+          pending={Boolean((order as { custom_pending?: boolean }).custom_pending)}
+          charged={
+            (order as { charged?: number | null }).charged ?? null
+          }
+          total={order.total}
+          setQty={setLineQty}
+          addLine={addOrderLine}
+          addOption={addLineOption}
+          removeOption={removeLineOption}
+          settle={settleCustom}
         />
       )}
 

@@ -39,6 +39,7 @@ import { areaText } from "@/lib/areas";
 import { placesText } from "@/lib/run-places";
 import { newPin } from "@/lib/customer-auth";
 import { recordDeletion } from "@/lib/deletions";
+import { orderOfLine, orderOfOption, retotal } from "@/lib/order-edit";
 import { naira, orderRef } from "@/lib/money";
 import { namedPromoters, realPromoter } from "@/lib/promoters";
 import { pushDeal, pushToPhone } from "@/lib/push";
@@ -69,6 +70,12 @@ export async function logout(): Promise<void> {
  * narration. This is replaced by a Paystack webhook once reconciliation stops
  * being trivial (brief §13), which is why payment_ref exists from day one.
  */
+/** What an order comes to right now, for writing down what was taken. */
+async function orderTotal(id: string): Promise<number> {
+  const { data } = await db().from("orders").select("total").eq("id", id).maybeSingle();
+  return Number((data as { total?: number } | null)?.total ?? 0);
+}
+
 export async function markPaid(form: FormData): Promise<void> {
   await assertAdmin();
   const id = String(form.get("order_id"));
@@ -82,6 +89,15 @@ export async function markPaid(form: FormData): Promise<void> {
       payment_ref: ref || null,
     })
     .eq("id", id);
+
+  // What was actually taken, so an order edited afterwards can still say who
+  // owes whom. Separate from the update above: a database without the column
+  // yet must still be able to mark an order paid.
+  void db()
+    .from("orders")
+    .update({ charged: await orderTotal(id) })
+    .eq("id", id)
+    .then(() => undefined, () => undefined);
 
   // If they have the app, tell them. Not awaited by anything that matters,
   // and a failure here leaves the order paid all the same.
@@ -266,6 +282,129 @@ export async function deleteOrder(form: FormData): Promise<void> {
   redirect(`/admin/orders?deleted=${encodeURIComponent(
     orderRef(order as { order_no: number | null; id: string })
   )}`);
+}
+
+/**
+ * Changing what is in an order after it was placed.
+ *
+ * A box says "a cake" and the conversation says twelve inches, vanilla, with
+ * something written on it. Somebody has to be able to make the order say
+ * that, or the order and the agreement drift apart and the wrong thing gets
+ * delivered on the strength of a page nobody updated.
+ *
+ * All of these edit this one order. The collection everybody else buys is
+ * untouched, which is the whole point of doing it here.
+ */
+export async function setLineQty(form: FormData): Promise<void> {
+  await assertAdmin();
+  const lineId = String(form.get("line_id") ?? "");
+  if (lineId === "") return;
+
+  const orderId = await orderOfLine(lineId);
+  if (orderId === "") return;
+
+  const qty = Math.round(Number(String(form.get("qty") ?? "")));
+  if (!Number.isFinite(qty) || qty < 0 || qty > 99) return;
+
+  // Nothing of it left is not a line. Its options go with it.
+  if (qty === 0) {
+    await db().from("order_item_options").delete().eq("order_item_id", lineId);
+    await db().from("order_items").delete().eq("id", lineId);
+  } else {
+    const fields: Record<string, number> = { qty };
+    const price = Math.round(Number(String(form.get("unit_price") ?? "")));
+    if (Number.isFinite(price) && price >= 0) fields.unit_price_at_order = price;
+    await db().from("order_items").update(fields).eq("id", lineId);
+  }
+
+  await retotal(orderId);
+  revalidatePath("/admin", "layout");
+}
+
+export async function addOrderLine(form: FormData): Promise<void> {
+  await assertAdmin();
+  const orderId = String(form.get("order_id") ?? "");
+  const itemId = String(form.get("menu_item_id") ?? "");
+  if (orderId === "" || itemId === "") return;
+
+  const qty = Math.round(Number(String(form.get("qty") ?? "1"))) || 1;
+
+  // Today's price unless somebody types one. A thing agreed on WhatsApp is
+  // often not the price on the shelf, which is the reason the box is high
+  // level in the first place.
+  const typed = Math.round(Number(String(form.get("unit_price") ?? "")));
+  let price = Number.isFinite(typed) && typed >= 0 ? typed : -1;
+  if (price < 0) {
+    const { data } = await db()
+      .from("menu_items")
+      .select("price_food")
+      .eq("id", itemId)
+      .maybeSingle();
+    price = Number((data as { price_food?: number } | null)?.price_food ?? 0);
+  }
+
+  await db().from("order_items").insert({
+    order_id: orderId,
+    menu_item_id: itemId,
+    qty: Math.min(99, Math.max(1, qty)),
+    unit_price_at_order: price,
+  });
+
+  await retotal(orderId);
+  revalidatePath("/admin", "layout");
+}
+
+/**
+ * A choice made up for this one order.
+ *
+ * Twelve inches, in red, with her name on it. None of that is on any menu
+ * and none of it should be: a shop that has to have thought of every option
+ * in advance is a shop that can never say yes to anything. So the name and
+ * what it adds are typed, and they belong to this line alone.
+ */
+export async function addLineOption(form: FormData): Promise<void> {
+  await assertAdmin();
+  const lineId = String(form.get("line_id") ?? "");
+  const name = String(form.get("name") ?? "").trim();
+  if (lineId === "" || name === "") return;
+
+  const orderId = await orderOfLine(lineId);
+  if (orderId === "") return;
+
+  // Negative on purpose: agreeing something smaller should be able to take
+  // money off, not only put it on.
+  const delta = Math.round(Number(String(form.get("delta") ?? "0")));
+
+  await db().from("order_item_options").insert({
+    order_item_id: lineId,
+    option_id: null,
+    name_at_order: name.slice(0, 120),
+    price_delta_at_order: Number.isFinite(delta) ? delta : 0,
+  });
+
+  await retotal(orderId);
+  revalidatePath("/admin", "layout");
+}
+
+export async function removeLineOption(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("option_row_id") ?? "");
+  if (id === "") return;
+
+  const orderId = await orderOfOption(id);
+  await db().from("order_item_options").delete().eq("id", id);
+  if (orderId !== "") await retotal(orderId);
+  revalidatePath("/admin", "layout");
+}
+
+/** The price is agreed. The order stops saying it might still move. */
+export async function settleCustom(form: FormData): Promise<void> {
+  await assertAdmin();
+  const orderId = String(form.get("order_id") ?? "");
+  if (orderId === "") return;
+  await db().from("orders").update({ custom_pending: false }).eq("id", orderId);
+  revalidatePath("/admin", "layout");
+  revalidatePath("/o", "layout");
 }
 
 export async function setBatchStatus(form: FormData): Promise<void> {
