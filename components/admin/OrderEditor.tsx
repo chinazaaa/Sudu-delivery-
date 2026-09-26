@@ -30,6 +30,7 @@ export default function OrderEditor({
   total,
   note,
   setQty,
+  swapLine,
   addLine,
   addOption,
   removeOption,
@@ -50,6 +51,8 @@ export default function OrderEditor({
   /** What the customer asked for in their own words, if anything. */
   note: string;
   setQty: (form: FormData) => void;
+  /** Same line, different product: two rice, but the ten kilo one. */
+  swapLine: (form: FormData) => void;
   addLine: (form: FormData) => void;
   addOption: (form: FormData) => void;
   removeOption: (form: FormData) => void;
@@ -224,6 +227,11 @@ export default function OrderEditor({
                     <span className="text-xs text-muted">0 takes it off</span>
                   </form>
 
+                  {/* "Two rice, but the ten kilo one" is not a quantity
+                      and not a new line: it is this line, a different
+                      product. */}
+                  <SwapForm lineId={line.id} catalogue={catalogue} swap={swapLine} />
+
                   <ChoiceForm
                     lineId={line.id}
                     real={
@@ -391,5 +399,77 @@ function ChoiceForm({
       </div>
       <p className="text-xs text-muted">Minus works: −2000 takes money off.</p>
     </form>
+  );
+}
+
+/**
+ * Making one line a different product.
+ *
+ * Kept next to the quantity because that is where somebody is already
+ * standing when the customer says "actually, the bigger bag". Everything
+ * else on the line, its choices included, stays as it is.
+ */
+function SwapForm({
+  lineId,
+  catalogue,
+  swap,
+}: {
+  lineId: string;
+  catalogue: { id: string; name: string; shop: string; price: number }[];
+  swap: (form: FormData) => void;
+}) {
+  const [query, setQuery] = useState("");
+
+  const needle = query.trim().toLowerCase();
+  const found =
+    needle.length < 2
+      ? []
+      : catalogue
+          .filter(
+            (one) =>
+              one.name.toLowerCase().includes(needle) ||
+              one.shop.toLowerCase().includes(needle)
+          )
+          .slice(0, 6);
+
+  return (
+    <div className="border-t border-black/5 pt-3">
+      <label className="text-xs font-semibold text-muted">
+        Make it something else
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Rice 10kg, spaghetti, a bigger cake"
+          className="field mt-0.5 bg-white py-1.5 text-sm"
+        />
+      </label>
+
+      <ul className="mt-2 space-y-1">
+        {found.map((one) => (
+          <li key={one.id}>
+            <form action={swap} className="flex flex-wrap items-end gap-2">
+              <input type="hidden" name="line_id" value={lineId} />
+              <input type="hidden" name="menu_item_id" value={one.id} />
+              <span className="min-w-40 grow text-sm">
+                <span className="font-semibold">{one.name}</span>
+                <span className="text-muted"> · {one.shop}</span>
+              </span>
+              <label className="text-xs font-semibold text-muted">
+                Each
+                <input
+                  name="unit_price"
+                  inputMode="numeric"
+                  defaultValue={one.price}
+                  className="field mt-0.5 w-28 bg-white py-1.5 text-sm"
+                />
+              </label>
+              <button className="btn-quiet bg-white px-3 py-2 text-sm">
+                Make it this
+              </button>
+            </form>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

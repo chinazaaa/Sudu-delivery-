@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { namedPromoters } from "@/lib/promoters";
+import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
 import { hostelNames } from "@/lib/hostels";
 import { safeSettings } from "@/lib/settings";
 import { serialiseBands } from "@/lib/fees";
@@ -59,6 +61,19 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({
       on: true,
       name: shop.name,
+      // The question that pays somebody, and the currencies a card link can
+      // be made out in. Both were on the website's skincare checkout and
+      // missing from the app's, so every order it took counted for nobody.
+      promoters: (await namedPromoters().catch(() => [])).map((one) => ({
+        code: one.code,
+        name: one.name,
+      })),
+      monies: moniesOn(settings).map((code) => ({
+        code,
+        label: code === "GBP" ? "Pounds" : "Dollars",
+        symbol: SYMBOL[code],
+        rate: rateFor(settings, code),
+      })),
       // The whole promise in four words, and the one line that says why the
       // products are real, which is the thing people are right to ask.
       when: dropLabel(drop.date),

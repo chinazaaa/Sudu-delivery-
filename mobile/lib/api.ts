@@ -680,6 +680,10 @@ export const api = {
     hostel: string;
     note: string;
     paymentMethod: "transfer" | "card";
+    /** Whoever sent them, so the order counts for somebody. */
+    heardFrom?: string;
+    /** Whose money the card link is made out in. Naira unless they say. */
+    payCurrency?: string;
   }) => post<{ orderId: string; token: string | null }>("/skincare/order", order),
 
   /**
@@ -770,6 +774,11 @@ export type Shelf = {
   page?: number;
   shelves?: { name: string; items: number }[];
   brands?: { name: string; items: number }[];
+  /** Whose name to offer at the checkout, so a skincare order counts for
+   *  whoever brought them in. */
+  promoters?: { code: string; name: string }[];
+  /** The currencies a card link can be made out in, for somebody abroad. */
+  monies?: { code: string; label: string; symbol: string; rate: number }[];
 };
 
 /** Delivery is priced by how many containers travel, exactly as on the web. */

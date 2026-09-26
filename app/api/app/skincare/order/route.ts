@@ -21,6 +21,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       hostel?: string;
       note?: string;
       paymentMethod?: string;
+      heardFrom?: string;
+      payCurrency?: string;
     };
 
     const result = await placeSkincareOrder({
@@ -33,6 +35,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       hostel: String(body.hostel ?? ""),
       note: String(body.note ?? "").slice(0, 300),
       paymentMethod: body.paymentMethod === "card" ? "card" : "transfer",
+      heardFrom: String(body.heardFrom ?? "").trim(),
+      payCurrency:
+        body.paymentMethod === "card" &&
+        (body.payCurrency === "GBP" || body.payCurrency === "USD")
+          ? body.payCurrency
+          : undefined,
     });
 
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });

@@ -38,6 +38,8 @@ export default function SkincareCheckout() {
   const [inPau, setInPau] = useState(true);
   const [address, setAddress] = useState("");
   const [note, setNote] = useState("");
+  const [heard, setHeard] = useState("");
+  const [money, setMoney] = useState("");
   const [method, setMethod] = useState<"transfer" | "card">("transfer");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -73,6 +75,8 @@ export default function SkincareCheckout() {
         phone,
         hostel: goesTo,
         note,
+        heardFrom: heard,
+        payCurrency: method === "card" ? money : "",
         paymentMethod: method,
       });
       await me.save({ name, phone, hostel: inPau ? hostel : saved.hostel, token: result.token });
@@ -258,6 +262,63 @@ export default function SkincareCheckout() {
           ))}
         </View>
       </View>
+
+      {/* The question that pays somebody, and the money a card link is made
+          out in. Both were on the website and missing here, so every order
+          the app took counted for nobody. */}
+      {(data?.promoters ?? []).length > 0 && (
+        <View style={card()}>
+          <Text style={{ color: T.muted, fontSize: 12 }}>
+            Where did you hear about us?
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+            {[{ code: "", name: "Somewhere else" }, ...(data?.promoters ?? [])].map(
+              (one) => (
+                <Pressable
+                  key={one.code || "nobody"}
+                  onPress={() => setHeard(one.code)}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: heard === one.code ? T.brand : T.line,
+                    backgroundColor: heard === one.code ? T.tint : T.paper,
+                  }}
+                >
+                  <Text style={{ color: T.ink, fontWeight: "600" }}>{one.name}</Text>
+                </Pressable>
+              )
+            )}
+          </View>
+        </View>
+      )}
+
+      {method === "card" && (data?.monies ?? []).length > 0 && (
+        <View style={card()}>
+          <Text style={{ color: T.muted, fontSize: 12 }}>
+            Is somebody abroad paying? We send a card link in their money.
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+            {[{ code: "", label: "No, naira" }, ...(data?.monies ?? [])].map((one) => (
+              <Pressable
+                key={one.code || "naira"}
+                onPress={() => setMoney(one.code)}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: money === one.code ? T.brand : T.line,
+                  backgroundColor: money === one.code ? T.tint : T.paper,
+                }}
+              >
+                <Text style={{ color: T.ink, fontWeight: "600" }}>{one.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
 
       <View style={card()}>
         <Row label="What you picked" value={naira(food)} />

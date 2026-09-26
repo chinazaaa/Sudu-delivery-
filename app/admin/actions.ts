@@ -320,6 +320,48 @@ export async function setLineQty(form: FormData): Promise<void> {
 
   await retotal(orderId);
   revalidatePath("/admin", "layout");
+  // Their own page shows what is in the order, so it has to be told
+  // as well: an edit nobody can see is an edit that did not happen.
+  revalidatePath("/o", "layout");
+}
+
+/**
+ * Making a line a different thing.
+ *
+ * "Two rice, but the ten kilo one" is not a quantity change and not a new
+ * line: it is the same line, a different product. Doing it as a delete and
+ * an add loses the choices on it and takes two presses to get wrong.
+ */
+export async function swapOrderLine(form: FormData): Promise<void> {
+  await assertAdmin();
+  const lineId = String(form.get("line_id") ?? "");
+  const itemId = String(form.get("menu_item_id") ?? "");
+  if (lineId === "" || itemId === "") return;
+
+  const orderId = await orderOfLine(lineId);
+  if (orderId === "") return;
+
+  // Today's price for the new thing unless somebody types one, because the
+  // thing being swapped in was not priced when this order was placed.
+  const typed = Math.round(Number(String(form.get("unit_price") ?? "")));
+  let price = Number.isFinite(typed) && typed >= 0 ? typed : -1;
+  if (price < 0) {
+    const { data } = await db()
+      .from("menu_items")
+      .select("price_food")
+      .eq("id", itemId)
+      .maybeSingle();
+    price = Number((data as { price_food?: number } | null)?.price_food ?? 0);
+  }
+
+  await db()
+    .from("order_items")
+    .update({ menu_item_id: itemId, unit_price_at_order: price })
+    .eq("id", lineId);
+
+  await retotal(orderId);
+  revalidatePath("/admin", "layout");
+  revalidatePath("/o", "layout");
 }
 
 export async function addOrderLine(form: FormData): Promise<void> {
@@ -353,6 +395,9 @@ export async function addOrderLine(form: FormData): Promise<void> {
 
   await retotal(orderId);
   revalidatePath("/admin", "layout");
+  // Their own page shows what is in the order, so it has to be told
+  // as well: an edit nobody can see is an edit that did not happen.
+  revalidatePath("/o", "layout");
 }
 
 /**
@@ -385,6 +430,9 @@ export async function addLineOption(form: FormData): Promise<void> {
 
   await retotal(orderId);
   revalidatePath("/admin", "layout");
+  // Their own page shows what is in the order, so it has to be told
+  // as well: an edit nobody can see is an edit that did not happen.
+  revalidatePath("/o", "layout");
 }
 
 export async function removeLineOption(form: FormData): Promise<void> {
@@ -396,6 +444,9 @@ export async function removeLineOption(form: FormData): Promise<void> {
   await db().from("order_item_options").delete().eq("id", id);
   if (orderId !== "") await retotal(orderId);
   revalidatePath("/admin", "layout");
+  // Their own page shows what is in the order, so it has to be told
+  // as well: an edit nobody can see is an edit that did not happen.
+  revalidatePath("/o", "layout");
 }
 
 /** The price is agreed. The order stops saying it might still move. */

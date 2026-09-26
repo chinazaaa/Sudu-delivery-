@@ -32,6 +32,7 @@ import {
   setBoxDay,
   orderAgain,
   setLineQty,
+  swapOrderLine,
   addOrderLine,
   addLineOption,
   removeLineOption,
@@ -203,6 +204,7 @@ async function orderPage(id: string, said: string) {
           total={order.total}
           note={order.customer_note ?? ""}
           setQty={setLineQty}
+          swapLine={swapOrderLine}
           addLine={addOrderLine}
           addOption={addLineOption}
           removeOption={removeLineOption}
