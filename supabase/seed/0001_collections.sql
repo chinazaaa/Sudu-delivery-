@@ -130,3 +130,18 @@ from (values
 --   New: "Light and power": lamp, fan, power bank, extension, two bulbs.
 --   "Everything for a first year" lost the pot and gained the lamp, the
 --   laundry basket and the mugs.
+
+-- And the pot went properly, not quietly.
+--   delete from menu_items where name in ('Cooking pot, medium','Frying pan');
+-- Switching a product off was the wrong answer: a thing nobody can buy
+-- should not be on the page saying so. It can be added back any day.
+
+-- Food boxes: the one collection made of nothing new.
+--
+-- Pizza, wings and ice cream, all of it off menus the shop already carries,
+-- and every line swappable. Domino's, Dodo and Panarottis all sell a pizza;
+-- KFC and Chicken Republic both sell chicken. So the box names one and
+-- offers the others, and nobody has to be told no.
+--   Pizza night, for two      ₦23,599 on a run
+--   Friday night, for four    ₦43,299
+--   Everything at once        ₦67,299
