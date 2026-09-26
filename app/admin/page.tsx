@@ -12,7 +12,7 @@ import { parcelJobs } from "@/lib/parcel-jobs";
 import { tendBatches } from "@/lib/batches";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
-import { clockLabel, lagosToday, runDateLabel } from "@/lib/time";
+import { addDays, clockLabel, lagosToday, runDateLabel } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +61,18 @@ export default async function AdminHome() {
   }
 
   const open = batches.filter((batch) => batch.status === "open");
+  // What is actually happening. A list of every run for the next three weeks
+  // is a planning document, and this page is about today: the question in
+  // the morning is whether a car is going, not what Sunday week looks like.
+  const tomorrow = addDays(lagosToday(), 1);
+  const soon = open.filter(
+    (batch) => batch.run_date === lagosToday() || batch.run_date === tomorrow
+  );
+  // Where nothing is going either day, the next one that is, so the answer
+  // is never just "no" with nowhere to go from it.
+  const after = open
+    .filter((batch) => batch.run_date > tomorrow)
+    .sort((a, b) => a.run_date.localeCompare(b.run_date))[0];
   const profit = batches.reduce((total, batch) => total + batch.profit, 0);
   const unpaidValue = unpaid.reduce((total, order) => total + order.total, 0);
 
@@ -210,18 +222,24 @@ export default async function AdminHome() {
 
             <section className="card">
               <div className="flex items-baseline justify-between gap-2">
-                <h2 className="font-bold">Open runs</h2>
+                <h2 className="font-bold">Today and tomorrow</h2>
                 <Link href="/admin/runs" className="text-sm font-semibold text-brand">
                   All runs
                 </Link>
               </div>
               <ul className="mt-3 space-y-2">
-                {open.length === 0 && (
+                {soon.length === 0 && (
                   <li className="text-sm text-muted">
-                    No run is open. Create one and the shop starts taking orders.
+                    {open.length === 0
+                      ? "No run is open at all. Create one and the shop starts taking orders."
+                      : after
+                        ? `Nothing today or tomorrow. The next one is ${runDateLabel(
+                            after.run_date
+                          )} · ${SLOT_LABEL[after.slot]}.`
+                        : "Nothing today or tomorrow."}
                   </li>
                 )}
-                {open.map((batch) => (
+                {soon.map((batch) => (
                   <li key={batch.id}>
                     <Link
                       href={`/admin/batch/${batch.id}`}
@@ -229,7 +247,8 @@ export default async function AdminHome() {
                     >
                       <span>
                         <span className="font-semibold">
-                          {runDateLabel(batch.run_date)} · {SLOT_LABEL[batch.slot]}
+                          {batch.run_date === lagosToday() ? "Today" : "Tomorrow"} ·{" "}
+                          {SLOT_LABEL[batch.slot]}
                         </span>
                         <span className="block text-muted">
                           Closes {clockLabel(batch.cut_off_at)}
