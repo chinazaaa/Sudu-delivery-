@@ -205,11 +205,11 @@ export default function Home({
               further down: occasions, then parcels, then skincare, and the menu
               began below three screens of doors. A row costs the same height
               whether there are two of these or five. */}
-          <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Door
               href="/products"
-              title="Everything"
-              line="One list, filtered by restaurant and by kind"
+              title="Food"
+              line="Every restaurant in one list"
               action="Browse"
             />
             {parcels !== "" && (
@@ -221,7 +221,7 @@ export default function Home({
             {occasions !== "" && (
               <Door
                 href="/occasions"
-                title="Ordering for something?"
+                title="Boxes and gifts"
                 line={occasions}
                 action="See"
               />
@@ -238,20 +238,24 @@ export default function Home({
               line="Everybody adds their own, one delivery between you"
               action="Start"
             />
-            {/* Last in the row, which is near the top of the page and costs
-                no height at all: the row is already there and already
-                swiped. It was a line at the foot of the page, which is the
-                one place nobody reaches. */}
-            {iosAppId !== "" && (
-              <Door
-                href={`https://apps.apple.com/app/id${iosAppId}`}
-                title="On an iPhone?"
-                line="Sudu is on the App Store. Your orders and where they have got to."
-                action="Get the app"
-                away
-              />
-            )}
           </div>
+
+          {/* Not a bucket: it is not a thing the shop sells, and standing it
+              beside the ones that are made it compete with them. One line
+              under the grid, for whoever is on the right phone. */}
+          {iosAppId !== "" && (
+            <p className="text-center text-sm text-muted">
+              On an iPhone?{" "}
+              <a
+                href={`https://apps.apple.com/app/id${iosAppId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-brand underline"
+              >
+                Get the app
+              </a>
+            </p>
+          )}
 
           <section className="space-y-3">
             <div className="flex items-baseline justify-between gap-3">
@@ -444,7 +448,7 @@ function Door({
   away?: boolean;
 }) {
   const look =
-    "flex w-56 shrink-0 flex-col justify-between rounded-2xl bg-paper p-4 shadow-card transition active:scale-[0.99]";
+    "flex h-full flex-col justify-between rounded-2xl bg-paper p-4 shadow-card transition active:scale-[0.99]";
   const inside = (
     <>
       <span>
