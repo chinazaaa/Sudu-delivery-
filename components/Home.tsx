@@ -419,11 +419,19 @@ function Door({
   // buckets apart at a glance.
   const inside = (
     <>
-      <span className="flex items-center gap-2.5">
-        <span className="block size-11 shrink-0 overflow-hidden rounded-xl">
+      {/* The badge gives up room before the words do. "Matriculation" is one
+          long word with nowhere to break, so on a two column grid it ran off
+          the side of its own card: a shelf nobody could read the name of.
+          Smaller mark, tighter gap, and hyphens as the last resort, because
+          a word broken with a hyphen is still a word and a word off the edge
+          is not. */}
+      <span className="flex items-center gap-2">
+        <span className="block size-10 shrink-0 overflow-hidden rounded-xl">
           <Thumb src={image} name={title} rounded="" variant="banner" />
         </span>
-        <span className="min-w-0 font-extrabold leading-tight">{title}</span>
+        <span className="hyphens-auto min-w-0 break-words text-[15px] font-extrabold leading-tight sm:text-base">
+          {title}
+        </span>
       </span>
       <span className="mt-2 line-clamp-2 block text-sm leading-snug text-muted">
         {line}
