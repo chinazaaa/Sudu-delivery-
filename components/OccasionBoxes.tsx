@@ -596,10 +596,16 @@ export default function OccasionBoxes({
                 }
                 className="field"
               />
+              {/* A message on the card and a change to the box are two
+                  different things, and saying "anything you write here can
+                  change the price" makes the first sound like the second.
+                  Somebody writing "Congratulations Ada" should not be left
+                  wondering what those three words will cost. */}
               <p className="mt-1.5 text-xs leading-relaxed text-muted">
-                Anything you write here can change the price. Nothing extra is
-                charged now: we work it out, message you on WhatsApp, and your
-                order page updates before you pay.
+                A message on the card is free. Changing what is in the box, a
+                different flavour, a bigger size, an extra thing, can cost
+                more. Nothing is charged now: we work it out, message you on
+                WhatsApp, and your order page updates before you pay.
               </p>
             </fieldset>
 

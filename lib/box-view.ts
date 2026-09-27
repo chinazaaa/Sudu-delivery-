@@ -111,7 +111,21 @@ export async function boxViews(boxes: Box[]): Promise<BoxView[]> {
     const view = one(box, packed, swapped, names);
     if (view) views.push(view);
   }
-  return views;
+  // Cheapest first, dearest last, whatever order they were typed in. A
+  // shelf is a ladder and somebody reads it from the bottom rung: a N35,000
+  // box sitting under a N60,000 one reads as a mistake, and worse, it hides
+  // the cheap way in from the person who needed it.
+  //
+  // Sorted on the price rather than on a stored position, because the price
+  // is worked out off today's menu. A box that gets dearer moves up the
+  // shelf by itself, and nobody has to remember to drag it.
+  //
+  // Extras keep to the end regardless. They ride along with a box rather
+  // than being one, so a N2,100 box of doughnuts is not the first rung.
+  return views.sort((a, b) => {
+    if (a.isExtra !== b.isExtra) return a.isExtra ? 1 : -1;
+    return a.food + a.runFee - (b.food + b.runFee);
+  });
 }
 
 function one(

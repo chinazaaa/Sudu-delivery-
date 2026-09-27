@@ -643,9 +643,16 @@ export default function OccasionScreen() {
               onChange={setNote}
               placeholder={data.occasion.hint || "Say what you would like different"}
             />
+            {/* A message on the card and a change to the box are two
+                different things. "Anything you write here can change the
+                price" makes the first sound like the second, and somebody
+                writing "Congratulations Ada" should not be left wondering
+                what those three words will cost. */}
             <Text style={{ color: T.muted, fontSize: 12 }}>
-              Anything here can change the price. Nothing extra is charged now:
-              we work it out and message you before you pay.
+              A message on the card is free. Changing what is in the box, a
+              different flavour, a bigger size, an extra thing, can cost more.
+              Nothing is charged now: we work it out, message you on WhatsApp,
+              and your order page updates before you pay.
             </Text>
 
             {/* A mother in London cannot make a Nigerian transfer, and a
