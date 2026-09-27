@@ -4,7 +4,7 @@ import { menuView } from "@/lib/menu";
 import { hostelNames } from "@/lib/hostels";
 import { namedPromoters } from "@/lib/promoters";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
-import { dealsAt, offersByRestaurant } from "@/lib/coupons";
+import { dealsAt, offerNudge, offersByRestaurant } from "@/lib/coupons";
 import { offerBadge, offerLine } from "@/lib/offers";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { serialiseBands } from "@/lib/fees";
@@ -142,6 +142,13 @@ export async function GET(): Promise<NextResponse> {
         symbol: SYMBOL[code],
         rate: rateFor(settings, code),
       })),
+      // The one promotion worth interrupting somebody for, or nothing. The
+      // website has shown this in the corner since automatic offers went in
+      // and the app never did, so the phone was the one place a customer
+      // could be sitting on a free delivery and never be told. Only
+      // automatic ones: those are the offers nobody can type, so nobody
+      // finds them unless the shop says so.
+      nudge: await offerNudge().catch(() => null),
       shop: {
         tagline: settings.tagline,
         ribbon: ribbon?.text ?? "",

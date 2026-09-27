@@ -2064,6 +2064,31 @@ const SETTING_FIELDS = [
   "email_mute",
 ] as const;
 
+/**
+ * The settings that are a tick box rather than a line of text.
+ *
+ * A tick box that is not ticked posts nothing at all, and this form only
+ * wrote the fields it was sent. So ticking one saved fine and unticking one
+ * saved nothing, the old "on" survived, and the box came back ticked on the
+ * next load. Every one of these was a switch that could be turned on and
+ * never off: the footer, the promoter link, paying from abroad, and same
+ * day delivery.
+ *
+ * Each ships a hidden line saying the form asked the question. Where that
+ * is present, a missing tick is an answer rather than a silence.
+ */
+const SETTING_BOXES = [
+  "hide_footer",
+  "hide_promoter_link",
+  "abroad_on",
+  "same_day_on",
+] as const;
+
+/** What a form sends to say it put this question to somebody. Not exported:
+ *  everything a "use server" file exports has to be an async action, and
+ *  this is a name, not an action. The forms write the same suffix. */
+const askedName = (field: string) => `${field}__asked`;
+
 export async function saveSettings(form: FormData): Promise<void> {
   await assertAdmin();
 
@@ -2071,6 +2096,14 @@ export async function saveSettings(form: FormData): Promise<void> {
   for (const field of SETTING_FIELDS) {
     const value = form.get(field);
     if (value !== null) patch[field] = String(value).trim();
+  }
+
+  // Asked and not ticked is "no". Not asked at all is a different form,
+  // which has no business turning anything off.
+  for (const field of SETTING_BOXES) {
+    if (form.get(askedName(field)) !== null) {
+      patch[field] = form.get(field) !== null ? "on" : "";
+    }
   }
 
   // Tick boxes say what to send; the setting holds what to stop. Unticked

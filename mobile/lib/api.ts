@@ -1,5 +1,7 @@
 import Constants from "expo-constants";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 /**
  * Everything the app knows comes from the shop's own server.
  *
@@ -252,6 +254,21 @@ export type Run = {
   full?: boolean;
 };
 
+/**
+ * The one promotion worth interrupting somebody for.
+ *
+ * The same shape the website's card reads, so both say the offer the same
+ * way. Null where nothing automatic is on, which is most days.
+ */
+export type Nudge = {
+  /** Only ever a key for remembering a dismissal; never shown. */
+  code: string;
+  badge: string;
+  where: string;
+  detail: string;
+  go: { label: string; href: string }[];
+};
+
 /** A time somebody can ask for, as the shop's own clock works it out. */
 export type Slot = {
   at: string;
@@ -299,6 +316,9 @@ export type Shop = {
    *  Older servers send none, and then the app keeps the order it shipped
    *  with, which is the same one the website ships with. */
   homeOrder?: ("food" | "shelves" | "parcel" | "skincare" | "custom" | "group")[];
+  /** Today's automatic offer, for the card in the corner. Null or absent
+   *  means nothing is on, which is most days. */
+  nudge?: Nudge | null;
   /** The areas the shop delivers from, beyond Sangotedo, and which one each
    *  kitchen is in. Older servers send neither, and then everything is
    *  Sangotedo and every price is what it always was. */
@@ -376,11 +396,69 @@ export type OrderView = {
 let held: { at: number; shop: Shop } | null = null;
 const HELD_FOR = 60_000;
 
+/**
+ * And the same thing again on disk, for the cold start.
+ *
+ * The copy above lives as long as the app does, which is no help at all to
+ * somebody opening it from nothing: the front page had to draw its doors
+ * against no menu at all, then jolt as the banner arrived a second or two
+ * later. A phone that has been here before already knows what the shop
+ * looked like, so it draws that first and corrects itself when the real
+ * answer lands.
+ *
+ * A day is the outside limit. Prices and runs move, and a menu older than
+ * that is not worth showing even for the second before the real one lands.
+ */
+const KEPT_KEY = "sudu.shop.kept";
+const KEPT_FOR = 24 * 60 * 60 * 1000;
+
+/**
+ * Yesterday's runs, taken out.
+ *
+ * Whether a run is closed is worked out by the server when it answers, so a
+ * held copy carries an opinion that was true when it was fetched. On a copy
+ * off the disk that opinion can be hours old, and a front page promising a
+ * run that shut at six is worse than one that says nothing. The cut-off is
+ * a time rather than an opinion, so it still means what it says.
+ */
+function stillGoing(shop: Shop): Shop {
+  const now = Date.now();
+  return {
+    ...shop,
+    runs: (shop.runs ?? []).filter((one) => {
+      const shuts = new Date(one.cutOffISO).getTime();
+      return Number.isFinite(shuts) ? shuts > now : true;
+    }),
+  };
+}
+
+/** What the phone saw last time, if it is recent enough to be worth drawing. */
+export async function keptShop(): Promise<Shop | null> {
+  try {
+    const raw = await AsyncStorage.getItem(KEPT_KEY);
+    if (!raw) return null;
+    const kept = JSON.parse(raw) as { at: number; shop: Shop };
+    if (!kept?.shop || Date.now() - kept.at > KEPT_FOR) return null;
+    return stillGoing(kept.shop);
+  } catch {
+    // Nothing kept, or it was written by a version that shaped it
+    // differently. Either way the real answer is already on its way.
+    return null;
+  }
+}
+
 export const api = {
   shop: async (fresh = false): Promise<Shop> => {
-    if (!fresh && held !== null && Date.now() - held.at < HELD_FOR) return held.shop;
+    if (!fresh && held !== null && Date.now() - held.at < HELD_FOR) {
+      return stillGoing(held.shop);
+    }
     const shop = await get<Shop>("/menu");
     held = { at: Date.now(), shop };
+    // Written without waiting: the screen wants the menu, not the receipt
+    // for having filed it.
+    void AsyncStorage.setItem(KEPT_KEY, JSON.stringify({ at: Date.now(), shop })).catch(
+      () => {}
+    );
     return shop;
   },
   signIn: (phone: string, pin: string) =>

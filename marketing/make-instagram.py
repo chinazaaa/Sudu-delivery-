@@ -14,10 +14,19 @@ somebody typing one.
 """
 import sys
 
-W = H = 1080
-PAD = 88                      # the safe margin. Instagram crops previews.
+# Four by five, not square.
+#
+# A square looked right in the feed and wrong on the profile, because the
+# grid shows a three by four portrait thumbnail: cropping 1080 square to
+# that takes 135 pixels off each side, which is straight through the margin
+# the type starts at, so every poster lost the first letter of its first
+# word. Four by five crops to the same thumbnail losing 34 a side, which is
+# inside the margin, and it is taller in the feed as well.
+W = 1080
+H = 1350
+PAD = 88                      # the safe margin, wider than the grid's crop.
 TOP = 236                     # under the mark.
-FLOOR = 952                   # above the address.
+FLOOR = H - 128               # above the address.
 ORANGE = "#ff5a1f"
 DEEP = "#c2410c"
 SHELL = "#fff1ea"
@@ -128,10 +137,10 @@ def statement(dark, lines, under, size=76):
 def listing(dark, title, price, note, items, tail):
     """A box, said as a receipt: what is in it and what it costs."""
     p = Poster(dark)
-    p.add(text(PAD, 316, title, 62, "bold", p.ink))
-    p.add(text(PAD, 362, note, 26, "normal", p.soft))
+    p.add(text(PAD, 460, title, 62, "bold", p.ink))
+    p.add(text(PAD, 506, note, 26, "normal", p.soft))
 
-    card = 396
+    card = 540
     rows = items[:7]
     height = 50 * len(rows) + 56
     p.add('<rect x="%d" y="%d" width="%d" height="%d" rx="32" fill="%s"/>'
@@ -153,8 +162,8 @@ def listing(dark, title, price, note, items, tail):
 def shelves(dark, title, rows, under):
     """A price list. Four shelves, four numbers, nothing else."""
     p = Poster(dark)
-    p.add(text(PAD, 330, title, 66, "bold", p.ink))
-    y = 452
+    p.add(text(PAD, 460, title, 66, "bold", p.ink))
+    y = 580
     for name, price in rows:
         p.add(text(PAD, y, name, 40, "bold", p.ink))
         p.add(text(W - PAD, y, "from " + naira(price), 38, "bold", ORANGE if not dark else PAPER, "end"))

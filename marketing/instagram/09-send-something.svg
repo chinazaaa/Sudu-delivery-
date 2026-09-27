@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
-<rect width="1080" height="1080" fill="#ff5a1f"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+<rect width="1080" height="1350" fill="#ff5a1f"/>
 
   <g transform="translate(88 88) scale(0.1640625)">
     <rect width="512" height="512" rx="116" fill="#ff5a1f"/>
@@ -11,11 +11,11 @@
 
 <text x="192" y="144" font-family="DejaVu Sans" font-size="42" font-weight="bold" fill="#ffffff" text-anchor="start">Sudu</text>
 <text x="192" y="176" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#ffe6da" text-anchor="start">Delivery to PAU</text>
-<text x="88" y="487" font-family="DejaVu Sans" font-size="62" font-weight="bold" fill="#ffffff" text-anchor="start">Send something</text>
-<text x="88" y="556" font-family="DejaVu Sans" font-size="62" font-weight="bold" fill="#ffffff" text-anchor="start">to someone</text>
-<text x="88" y="625" font-family="DejaVu Sans" font-size="62" font-weight="bold" fill="#ffffff" text-anchor="start">at PAU.</text>
-<rect x="88" y="656" width="120" height="7" rx="4" fill="#ffffff" opacity="0.9"/>
-<text x="88" y="726" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#ffe6da" text-anchor="start">Pay from anywhere. A card link in pounds</text>
-<text x="88" y="768" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#ffe6da" text-anchor="start">or dollars, and we carry it to their block.</text>
-<text x="540" y="998" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#ffffff" text-anchor="middle">sudu.store</text>
+<text x="88" y="622" font-family="DejaVu Sans" font-size="62" font-weight="bold" fill="#ffffff" text-anchor="start">Send something</text>
+<text x="88" y="691" font-family="DejaVu Sans" font-size="62" font-weight="bold" fill="#ffffff" text-anchor="start">to someone</text>
+<text x="88" y="760" font-family="DejaVu Sans" font-size="62" font-weight="bold" fill="#ffffff" text-anchor="start">at PAU.</text>
+<rect x="88" y="791" width="120" height="7" rx="4" fill="#ffffff" opacity="0.9"/>
+<text x="88" y="861" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#ffe6da" text-anchor="start">Pay from anywhere. A card link in pounds</text>
+<text x="88" y="903" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#ffe6da" text-anchor="start">or dollars, and we carry it to their block.</text>
+<text x="540" y="1268" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#ffffff" text-anchor="middle">sudu.store</text>
 </svg>

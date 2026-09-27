@@ -11,6 +11,21 @@ const OFFER_KEY = "sudu.offer.seen";
 const APP_KEY = "sudu.app.seen";
 
 /**
+ * And what they only put down for now.
+ *
+ * Tapping the offer is not the same answer as tapping the cross, and this
+ * card used to treat them as one: following the link wrote the same "never
+ * again" as waving it away, so somebody who was interested, went to look,
+ * and did not order that minute had quietly opted out of ever being told
+ * again. Interest is the one answer that must not end the conversation.
+ *
+ * So the cross and "not interested" are final, and the link is only "not
+ * while I am busy": gone for the rest of this visit, back on the next one.
+ * Kept in session storage, which is exactly a visit long.
+ */
+const ASIDE_KEY = "sudu.nudge.aside";
+
+/**
  * Pages where a card is an interruption rather than an invitation.
  *
  * Somebody in the cart or at checkout has already decided; a card sliding in
@@ -63,10 +78,18 @@ export default function OfferNudge({
       }
     };
 
+    const aside = (() => {
+      try {
+        return window.sessionStorage.getItem(ASIDE_KEY) ?? "";
+      } catch {
+        return "";
+      }
+    })();
+
     let next: "offer" | "app" | null = null;
-    if (nudge && seen(OFFER_KEY) !== nudge.code) {
+    if (nudge && seen(OFFER_KEY) !== nudge.code && aside !== "offer") {
       next = "offer";
-    } else if (appId !== "" && seen(APP_KEY) !== appId) {
+    } else if (appId !== "" && seen(APP_KEY) !== appId && aside !== "app") {
       const ua = window.navigator.userAgent;
       const iPhone = /iPad|iPhone|iPod/.test(ua);
       // No Android app yet, so an Android phone is told nothing: an App
@@ -98,13 +121,23 @@ export default function OfferNudge({
 
   if (quiet || showing === null) return null;
 
-  const close = () => {
+  /**
+   * Put the card away.
+   *
+   * `forGood` is the difference between the cross and the link. Only an
+   * actual refusal is remembered as one.
+   */
+  const put = (forGood: boolean) => {
     setUp(false);
     try {
-      window.localStorage.setItem(
-        showing === "offer" ? OFFER_KEY : APP_KEY,
-        showing === "offer" ? (nudge?.code ?? "") : appId
-      );
+      if (forGood) {
+        window.localStorage.setItem(
+          showing === "offer" ? OFFER_KEY : APP_KEY,
+          showing === "offer" ? (nudge?.code ?? "") : appId
+        );
+      } else {
+        window.sessionStorage.setItem(ASIDE_KEY, showing ?? "");
+      }
     } catch {
       /* Nothing to remember it with. It will come back next visit. */
     }
@@ -112,6 +145,9 @@ export default function OfferNudge({
     // still catches taps.
     window.setTimeout(() => setShowing(null), 300);
   };
+
+  const dismiss = () => put(true);
+  const followed = () => put(false);
 
   return (
     <div
@@ -142,7 +178,7 @@ export default function OfferNudge({
           </p>
           <button
             type="button"
-            onClick={close}
+            onClick={dismiss}
             aria-label="Close"
             className="-mr-1 -mt-1 shrink-0 rounded-full px-2 py-1 text-lg leading-none text-muted"
           >
@@ -175,7 +211,7 @@ export default function OfferNudge({
               <Link
                 key={one.href}
                 href={one.href}
-                onClick={close}
+                onClick={followed}
                 className="rounded-full bg-brand px-3.5 py-2 text-sm font-extrabold text-white"
               >
                 {one.label}
@@ -186,7 +222,7 @@ export default function OfferNudge({
               href={`https://apps.apple.com/app/id${appId}`}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={close}
+              onClick={followed}
               className="rounded-full bg-brand px-3.5 py-2 text-sm font-extrabold text-white"
             >
               {onADesk ? "Open it here" : "Get the app"}
@@ -194,7 +230,7 @@ export default function OfferNudge({
           )}
           <button
             type="button"
-            onClick={close}
+            onClick={dismiss}
             className="px-1 text-sm font-semibold text-muted underline"
           >
             Not interested

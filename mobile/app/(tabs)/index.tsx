@@ -13,6 +13,7 @@ import { Link, useFocusEffect, useRouter } from "expo-router";
 import { useCallback } from "react";
 import {
   api,
+  keptShop,
   lagosToday,
   naira,
   nextArrival,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/api";
 import { mine } from "@/lib/store";
 import CutOff from "@/components/CutOff";
+import OfferNudge from "@/components/OfferNudge";
 import Thumb from "@/components/Thumb";
 import { T } from "@/lib/theme";
 
@@ -42,6 +44,22 @@ export default function Home() {
   const [pulling, setPulling] = useState(false);
   const [latest, setLatest] = useState<OrderView | null>(null);
   const [query, setQuery] = useState("");
+
+  // What the phone saw last time, drawn at once so the page arrives whole.
+  // The real answer replaces it a second or two later, and until then the
+  // banner says what it said last time rather than nothing: the doors used
+  // to appear first and the banner drop in afterwards, which reads as the
+  // page being assembled in front of you.
+  useEffect(() => {
+    let alive = true;
+    void keptShop().then((kept) => {
+      // Only if the real one has not already beaten it here.
+      if (alive && kept) setShop((now) => now ?? kept);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const load = useCallback(async (fresh = false) => {
     if (fresh) setPulling(true);
@@ -536,6 +554,10 @@ export default function Home() {
         ))}
       </ScrollView>
 
+      {/* Over the page rather than in it: the page carries on underneath and
+          one tap on the cross ends it. Outside the ScrollView so it stays
+          put while somebody reads past it. */}
+      <OfferNudge nudge={shop?.nudge ?? null} />
     </View>
   );
 }

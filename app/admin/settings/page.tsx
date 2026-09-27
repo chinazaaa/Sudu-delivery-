@@ -224,6 +224,7 @@ export default async function SettingsAdmin() {
         </div>
 
         <div className="rounded-2xl bg-shell p-3">
+          <input type="hidden" name="abroad_on__asked" value="1" />
           <label className="flex items-center gap-2 text-sm font-bold">
             <input
               type="checkbox"
@@ -422,10 +423,12 @@ export default async function SettingsAdmin() {
           handle and the WhatsApp group link above: each is in the footer
           because it is filled in.
         </p>
+        <input type="hidden" name="hide_footer__asked" value="1" />
         <label className="flex items-center gap-2 text-sm font-semibold">
           <input
             type="checkbox"
             name="hide_footer"
+            value="on"
             defaultChecked={settings.hide_footer === "on"}
           />
           Hide the whole footer
@@ -434,10 +437,12 @@ export default async function SettingsAdmin() {
           The line and all three links go together. The pages keep their
           spacing, so nothing jumps.
         </p>
+        <input type="hidden" name="hide_promoter_link__asked" value="1" />
         <label className="flex items-center gap-2 text-sm font-semibold">
           <input
             type="checkbox"
             name="hide_promoter_link"
+            value="on"
             defaultChecked={settings.hide_promoter_link === "on"}
           />
           Hide the Promoters link
@@ -733,6 +738,7 @@ export default async function SettingsAdmin() {
           </p>
         </div>
 
+        <input type="hidden" name="same_day_on__asked" value="1" />
         <label className="flex cursor-pointer items-start gap-3">
           <input
             type="checkbox"

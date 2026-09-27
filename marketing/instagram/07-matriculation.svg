@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
-<rect width="1080" height="1080" fill="#ff5a1f"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+<rect width="1080" height="1350" fill="#ff5a1f"/>
 
   <g transform="translate(88 88) scale(0.1640625)">
     <rect width="512" height="512" rx="116" fill="#ff5a1f"/>
@@ -11,10 +11,10 @@
 
 <text x="192" y="144" font-family="DejaVu Sans" font-size="42" font-weight="bold" fill="#ffffff" text-anchor="start">Sudu</text>
 <text x="192" y="176" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#ffe6da" text-anchor="start">Delivery to PAU</text>
-<text x="88" y="521" font-family="DejaVu Sans" font-size="72" font-weight="bold" fill="#ffffff" text-anchor="start">Matriculation</text>
-<text x="88" y="601" font-family="DejaVu Sans" font-size="72" font-weight="bold" fill="#ffffff" text-anchor="start">day.</text>
-<rect x="88" y="637" width="120" height="7" rx="4" fill="#ffffff" opacity="0.9"/>
-<text x="88" y="707" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#ffe6da" text-anchor="start">Cake, balloons and a card, carried to them.</text>
-<text x="88" y="749" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#ffe6da" text-anchor="start">From ₦30,000, delivery in it.</text>
-<text x="540" y="998" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#ffffff" text-anchor="middle">sudu.store</text>
+<text x="88" y="656" font-family="DejaVu Sans" font-size="72" font-weight="bold" fill="#ffffff" text-anchor="start">Matriculation</text>
+<text x="88" y="736" font-family="DejaVu Sans" font-size="72" font-weight="bold" fill="#ffffff" text-anchor="start">day.</text>
+<rect x="88" y="772" width="120" height="7" rx="4" fill="#ffffff" opacity="0.9"/>
+<text x="88" y="842" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#ffe6da" text-anchor="start">Cake, balloons and a card, carried to them.</text>
+<text x="88" y="884" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#ffe6da" text-anchor="start">From ₦30,000, delivery in it.</text>
+<text x="540" y="1268" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#ffffff" text-anchor="middle">sudu.store</text>
 </svg>
