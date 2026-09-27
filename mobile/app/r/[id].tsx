@@ -37,6 +37,10 @@ export default function Restaurant() {
   const router = useRouter();
 
   const [place, setPlace] = useState<Place | null>(null);
+  // Whether the menu has been looked in yet. Without it there is no telling
+  // "still arriving" from "asked for, and not there", and a link carrying a
+  // counter this app has never heard of spun a wheel for ever.
+  const [looked, setLooked] = useState(false);
   // What is on at this kitchen, worked out by the shop rather than guessed
   // at here, so the app and the website never disagree about a price.
   const [offer, setOffer] = useState<{ line: string; deals: Deal[] } | null>(null);
@@ -52,6 +56,7 @@ export default function Restaurant() {
       .then((shop) => {
         const found = shop.menu.find((one) => one.restaurant.id === id) ?? null;
         setPlace(found);
+        setLooked(true);
         const here = shop.offers?.[id];
         setOffer(here ? { line: here.line, deals: here.deals } : null);
         if (found) {
@@ -60,7 +65,10 @@ export default function Restaurant() {
           if (asked && asked.available) setOpen(asked);
         }
       })
-      .catch(() => setPlace(null));
+      .catch(() => {
+        setPlace(null);
+        setLooked(true);
+      });
   }, [id, wanted, navigation]);
 
   const items = countItems(lines);
@@ -97,7 +105,34 @@ export default function Restaurant() {
     return rest.length > 0 ? [...named, { name: "More", items: rest }] : named;
   }, [place, shown, tab]);
 
-  if (!place) return <ActivityIndicator color={T.brand} style={{ marginTop: 40 }} />;
+  if (!place) {
+    if (!looked) return <ActivityIndicator color={T.brand} style={{ marginTop: 40 }} />;
+    // Looked, and it is not there: a counter switched off since the link was
+    // made, or a link carrying a name this app cannot turn into a counter.
+    // Either way there is a way out of here rather than a wheel.
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <Text style={{ fontSize: 18, fontWeight: "800", color: T.ink }}>
+          That counter is not on
+        </Text>
+        <Text style={{ color: T.muted, textAlign: "center", marginTop: 6 }}>
+          It may have closed for the day, or the link is an old one.
+        </Text>
+        <Pressable
+          onPress={() => router.replace("/products" as never)}
+          style={{
+            marginTop: 16,
+            backgroundColor: T.brand,
+            borderRadius: 999,
+            paddingHorizontal: 24,
+            paddingVertical: 12,
+          }}
+        >
+          <Text style={{ color: T.paper, fontWeight: "800" }}>See the whole menu</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1 }}>

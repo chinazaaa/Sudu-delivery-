@@ -4,7 +4,7 @@ import { menuView } from "@/lib/menu";
 import { hostelNames } from "@/lib/hostels";
 import { namedPromoters } from "@/lib/promoters";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
-import { dealsAt, offerNudge, offersByRestaurant } from "@/lib/coupons";
+import { dealsAt, offerNudge, offersByRestaurant, type Nudge } from "@/lib/coupons";
 import { offerBadge, offerLine } from "@/lib/offers";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { serialiseBands } from "@/lib/fees";
@@ -13,6 +13,7 @@ import { allAreas, areaOfEach, valueBandsOfEach } from "@/lib/areas-server";
 import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
 import { readDoors } from "@/lib/home-doors";
 import { liveRibbon } from "@/lib/ribbon";
+import { db } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,39 @@ function appRoute(href: string): string {
     return path === "/custom-order" ? "" : path;
   }
   return "";
+}
+
+/**
+ * Today's offer, with its links pointing at screens this app has.
+ *
+ * The website's are written for the website: a counter is `/r/<slug>`
+ * there and `/r/<id>` here, because the app holds the menu it was given
+ * rather than asking for a page. A link whose id is really a slug matches
+ * nothing and leaves the screen loading forever, so anything that cannot
+ * be translated is dropped rather than shown.
+ */
+async function appNudge(): Promise<Nudge | null> {
+  const nudge = await offerNudge().catch(() => null);
+  if (!nudge) return null;
+
+  const { data } = await db().from("restaurants").select("id, slug");
+  const idOf = new Map<string, string>();
+  for (const row of (data ?? []) as { id: string; slug: string | null }[]) {
+    if (row.slug) idOf.set(row.slug, row.id);
+    idOf.set(row.id, row.id);
+  }
+
+  const go = nudge.go.flatMap((one) => {
+    const counter = one.href.match(/^\/r\/(.+)$/);
+    if (!counter) return one.href === "/products" ? [one] : [];
+    const id = idOf.get(counter[1]);
+    return id ? [{ label: one.label, href: `/r/${id}` }] : [];
+  });
+
+  // Every door it had led nowhere this app can go. Better to say nothing
+  // than to announce an offer with no way to take it.
+  if (go.length === 0) return null;
+  return { ...nudge, go };
 }
 
 export async function GET(): Promise<NextResponse> {
@@ -148,7 +182,12 @@ export async function GET(): Promise<NextResponse> {
       // could be sitting on a free delivery and never be told. Only
       // automatic ones: those are the offers nobody can type, so nobody
       // finds them unless the shop says so.
-      nudge: await offerNudge().catch(() => null),
+      //
+      // Its links are rewritten for the app. The website files a counter
+      // under its slug and the app screen finds one by its id, so the slug
+      // went through as an id, matched nothing, and the screen sat spinning
+      // on a restaurant that could never arrive.
+      nudge: await appNudge(),
       shop: {
         tagline: settings.tagline,
         ribbon: ribbon?.text ?? "",

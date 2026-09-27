@@ -115,11 +115,24 @@ export default async function AboutPage() {
           by bank transfer or by a card link we send on WhatsApp. It arrives in
           the window you were given, handed to you rather than left anywhere.
         </p>
-        <p className="pt-1 text-sm">
+        {/* The shelves as well as the menu. Somebody who read this far is
+            being told what the shop is, and the boxes are half of it; a page
+            about the shop that only links to the food leaves them thinking
+            the food is all there is. Wraps rather than runs off the edge,
+            which four links on a phone otherwise do. */}
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-1 text-sm">
           <Link href="/products" className="font-extrabold text-brand">
             See the menu
           </Link>
-          <span className="text-muted"> · </span>
+          <span className="text-muted">·</span>
+          <Link href="/collections" className="font-extrabold text-brand">
+            Collections
+          </Link>
+          <span className="text-muted">·</span>
+          <Link href="/occasions" className="font-extrabold text-brand">
+            Occasions
+          </Link>
+          <span className="text-muted">·</span>
           <Link href="/delivery-to-pau" className="font-extrabold text-brand">
             Delivery to PAU
           </Link>
