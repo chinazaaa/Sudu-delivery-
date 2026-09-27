@@ -146,6 +146,9 @@ export type BoxView = {
   food: number;
   runFee: number;
   carFee: number;
+  /** What to suggest in "want it changed?" for this box. Empty falls back to
+   *  the shelf's, because two boxes on one shelf want different advice. */
+  customHint?: string;
 };
 
 export type WhenOption = {

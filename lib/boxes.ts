@@ -45,6 +45,10 @@ export type Box = {
   lines: BoxLine[];
   active: boolean;
   sort_order: number;
+  /** What to put in the "want it changed?" box, for this box. Empty means
+   *  the shelf's own suggestion, which is right until two boxes on one shelf
+   *  want different advice. */
+  custom_hint: string;
 };
 
 /**
@@ -139,6 +143,7 @@ const toBox = (row: Record<string, unknown>): Box => ({
   lines: readLines(row.lines),
   active: row.active !== false,
   sort_order: Number(row.sort_order ?? 100),
+  custom_hint: (row.custom_hint as string) ?? "",
 });
 
 const toOccasion = (row: Record<string, unknown>): Occasion => ({

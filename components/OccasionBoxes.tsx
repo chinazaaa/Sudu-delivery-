@@ -601,7 +601,11 @@ export default function OccasionBoxes({
                 rows={3}
                 maxLength={500}
                 placeholder={
-                  hint || "Say what you would like different about it"
+                  // This box's own suggestion first. "Write Congratulations
+                  // Ada on it" is good advice on the box with a cake in it
+                  // and nonsense on the one holding cupcakes, which nobody
+                  // can write on.
+                  box?.customHint || hint || "Say what you would like different about it"
                 }
                 className="field"
               />

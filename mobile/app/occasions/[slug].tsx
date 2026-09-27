@@ -661,7 +661,13 @@ export default function OccasionScreen() {
               label="Want it changed?"
               value={note}
               onChange={setNote}
-              placeholder={data.occasion.hint || "Say what you would like different"}
+              // This box's own suggestion first. "Write Congratulations Ada
+              // on it" is good advice on the box with a cake in it and
+              // nonsense on the one holding cupcakes, which nobody can write
+              // on.
+              placeholder={
+                box.customHint || data.occasion.hint || "Say what you would like different"
+              }
             />
             {/* A message on the card and a change to the box are two
                 different things. "Anything you write here can change the

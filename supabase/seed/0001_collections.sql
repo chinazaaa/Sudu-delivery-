@@ -286,3 +286,26 @@ from (values
 --   price anywhere: a greeting card, iced cupcakes, a tray of sweets, a
 --   broom, cutlery, two sponges, plasters, a single rose. They are small and
 --   they are in docs/prices-to-confirm.csv.
+
+-- The last five guesses are gone.
+--   A broom, a cutlery set, two sponges and a pack of plasters. No online
+--   price exists for any of them and neither Local Market nor Market Square
+--   stocks anything close, so there was nothing honest to swap in: they came
+--   out of six boxes, and each box's price fell by what they were worth.
+--   "The room kit" went from N40,000 to N33,600, "Everything for a first
+--   year" from N137,800 to N130,300.
+--
+--   Every Sudu Shop price now sits on a dated source. Nothing on the shelf
+--   is a guess any more, which is the whole point: a box is a fixed price
+--   taken up front, and a guess inside one is the shop's loss to eat.
+--
+--   docs/prices-to-confirm.csv is deleted with them. An empty checklist is
+--   a file somebody opens in three months and misreads as "nothing was ever
+--   checked".
+
+-- A placeholder belongs to the box.
+--   The "want it changed?" prompt was the shelf's, and the shelf holds boxes
+--   that cannot take the same advice: "write Congratulations Ada on it" is
+--   good on the box with a cake and nonsense on the one holding cupcakes,
+--   which nobody can write on. boxes.custom_hint, falling back to the
+--   shelf's, so only the boxes that disagree need anything filled in.

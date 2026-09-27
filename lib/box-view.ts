@@ -57,6 +57,8 @@ export type BoxView = {
   food: number;
   runFee: number;
   carFee: number;
+  /** What to suggest when this box's "want it changed?" is empty. */
+  customHint: string;
 };
 
 /**
@@ -191,6 +193,7 @@ function one(
     food: lines.reduce((sum, line) => sum + line.total, 0),
     runFee: box.run_fee,
     carFee: box.car_fee,
+    customHint: box.custom_hint,
   };
 }
 
