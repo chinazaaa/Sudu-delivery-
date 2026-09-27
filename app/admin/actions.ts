@@ -43,7 +43,7 @@ import { orderOfLine, orderOfOption, retotal } from "@/lib/order-edit";
 import { tripForBox } from "@/lib/box-day";
 import { naira, orderRef } from "@/lib/money";
 import { namedPromoters, realPromoter } from "@/lib/promoters";
-import { pushDeal, pushToPhone } from "@/lib/push";
+import { pushDeal, pushToPhone, tellDelivered } from "@/lib/push";
 
 async function assertAdmin(): Promise<void> {
   if (!(await isSignedIn())) throw new Error("Not signed in.");
@@ -163,6 +163,11 @@ export async function setBagDelivered(form: FormData): Promise<void> {
     .update({ status: delivered ? "delivered" : "paid" })
     .in("id", ids);
 
+  // Ticking a bag off is the same event as handing a run out, so it says the
+  // same thing. Unticking one is a correction and says nothing: a phone that
+  // buzzes "delivered" and then buzzes again is worse than one that waited.
+  if (delivered) void tellDelivered(ids);
+
   revalidatePath("/admin", "layout");
   revalidatePath("/orders");
   revalidatePath("/o", "layout");
@@ -170,10 +175,9 @@ export async function setBagDelivered(form: FormData): Promise<void> {
 
 export async function markDelivered(form: FormData): Promise<void> {
   await assertAdmin();
-  await db()
-    .from("orders")
-    .update({ status: "delivered" })
-    .eq("id", String(form.get("order_id")));
+  const id = String(form.get("order_id"));
+  await db().from("orders").update({ status: "delivered" }).eq("id", id);
+  void tellDelivered([id]);
   revalidatePath("/admin", "layout");
 }
 
@@ -2249,11 +2253,17 @@ export async function setBatchStage(form: FormData): Promise<void> {
   // rather than a run marked delivered sitting above twenty orders that still
   // read "paid". Anything unpaid is left alone, since it never travelled.
   if (stage === "handed_out") {
-    await db()
+    // Asking which rows changed rather than which rows were paid a moment
+    // ago: a bag ticked off during the run is already delivered and must not
+    // be told twice, and this is the only answer that cannot drift.
+    const { data: moved } = await db()
       .from("orders")
       .update({ status: "delivered" })
       .eq("batch_id", batchId)
-      .eq("status", "paid");
+      .eq("status", "paid")
+      .select("id");
+
+    void tellDelivered(((moved ?? []) as { id: string }[]).map((row) => row.id));
   }
 
   revalidatePath("/admin", "layout");
