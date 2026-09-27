@@ -11,11 +11,11 @@
 
 <text x="192" y="144" font-family="DejaVu Sans" font-size="42" font-weight="bold" fill="#ffffff" text-anchor="start">Sudu</text>
 <text x="192" y="176" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#ffe6da" text-anchor="start">Delivery to PAU</text>
-<text x="88" y="622" font-family="DejaVu Sans" font-size="62" font-weight="bold" fill="#ffffff" text-anchor="start">Send something</text>
-<text x="88" y="691" font-family="DejaVu Sans" font-size="62" font-weight="bold" fill="#ffffff" text-anchor="start">to someone</text>
-<text x="88" y="760" font-family="DejaVu Sans" font-size="62" font-weight="bold" fill="#ffffff" text-anchor="start">at PAU.</text>
-<rect x="88" y="791" width="120" height="7" rx="4" fill="#ffffff" opacity="0.9"/>
-<text x="88" y="861" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#ffe6da" text-anchor="start">Pay from anywhere. A card link in pounds</text>
-<text x="88" y="903" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#ffe6da" text-anchor="start">or dollars, and we carry it to their block.</text>
+<text x="88" y="511" font-family="DejaVu Sans" font-size="84" font-weight="bold" fill="#ffffff" text-anchor="start">Send something</text>
+<text x="88" y="605" font-family="DejaVu Sans" font-size="84" font-weight="bold" fill="#ffffff" text-anchor="start">to someone</text>
+<text x="88" y="699" font-family="DejaVu Sans" font-size="84" font-weight="bold" fill="#ffffff" text-anchor="start">at PAU.</text>
+<rect x="88" y="741" width="120" height="7" rx="4" fill="#ffffff" opacity="0.9"/>
+<text x="88" y="811" font-family="DejaVu Sans" font-size="34" font-weight="normal" fill="#ffe6da" text-anchor="start">Pay from anywhere. A card link in pounds</text>
+<text x="88" y="859" font-family="DejaVu Sans" font-size="34" font-weight="normal" fill="#ffe6da" text-anchor="start">or dollars, and we carry it to their block.</text>
 <text x="540" y="1268" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#ffffff" text-anchor="middle">sudu.store</text>
 </svg>

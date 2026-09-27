@@ -11,10 +11,10 @@
 
 <text x="192" y="144" font-family="DejaVu Sans" font-size="42" font-weight="bold" fill="#14110f" text-anchor="start">Sudu</text>
 <text x="192" y="176" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#6b6360" text-anchor="start">Delivery to PAU</text>
-<text x="88" y="656" font-family="DejaVu Sans" font-size="72" font-weight="bold" fill="#14110f" text-anchor="start">A birthday,</text>
-<text x="88" y="736" font-family="DejaVu Sans" font-size="72" font-weight="bold" fill="#14110f" text-anchor="start">at PAU.</text>
-<rect x="88" y="772" width="120" height="7" rx="4" fill="#14110f" opacity="1"/>
-<text x="88" y="842" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#6b6360" text-anchor="start">A cake, pizza and drinks, on the day.</text>
-<text x="88" y="884" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#6b6360" text-anchor="start">From ₦25,600, delivery in it.</text>
+<text x="88" y="544" font-family="DejaVu Sans" font-size="92" font-weight="bold" fill="#14110f" text-anchor="start">A birthday,</text>
+<text x="88" y="647" font-family="DejaVu Sans" font-size="92" font-weight="bold" fill="#14110f" text-anchor="start">at PAU.</text>
+<rect x="88" y="693" width="120" height="7" rx="4" fill="#14110f" opacity="1"/>
+<text x="88" y="763" font-family="DejaVu Sans" font-size="34" font-weight="normal" fill="#6b6360" text-anchor="start">A cake, pizza and drinks, on the day.</text>
+<text x="88" y="811" font-family="DejaVu Sans" font-size="34" font-weight="normal" fill="#6b6360" text-anchor="start">From ₦25,600, delivery in it.</text>
 <text x="540" y="1268" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#14110f" text-anchor="middle">sudu.store</text>
 </svg>

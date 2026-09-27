@@ -11,10 +11,10 @@
 
 <text x="192" y="144" font-family="DejaVu Sans" font-size="42" font-weight="bold" fill="#ffffff" text-anchor="start">Sudu</text>
 <text x="192" y="176" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#ffe6da" text-anchor="start">Delivery to PAU</text>
-<text x="88" y="655" font-family="DejaVu Sans" font-size="76" font-weight="bold" fill="#ffffff" text-anchor="start">Sudu delivers</text>
-<text x="88" y="740" font-family="DejaVu Sans" font-size="76" font-weight="bold" fill="#ffffff" text-anchor="start">to PAU.</text>
-<rect x="88" y="778" width="120" height="7" rx="4" fill="#ffffff" opacity="0.9"/>
-<text x="88" y="848" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#ffe6da" text-anchor="start">Food, gifts, care packages and more,</text>
-<text x="88" y="890" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#ffe6da" text-anchor="start">carried to your block.</text>
+<text x="88" y="546" font-family="DejaVu Sans" font-size="96" font-weight="bold" fill="#ffffff" text-anchor="start">Sudu delivers</text>
+<text x="88" y="653" font-family="DejaVu Sans" font-size="96" font-weight="bold" fill="#ffffff" text-anchor="start">to PAU.</text>
+<rect x="88" y="701" width="120" height="7" rx="4" fill="#ffffff" opacity="0.9"/>
+<text x="88" y="771" font-family="DejaVu Sans" font-size="34" font-weight="normal" fill="#ffe6da" text-anchor="start">Food, gifts, care packages and more,</text>
+<text x="88" y="819" font-family="DejaVu Sans" font-size="34" font-weight="normal" fill="#ffe6da" text-anchor="start">carried to your block.</text>
 <text x="540" y="1268" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#ffffff" text-anchor="middle">sudu.store</text>
 </svg>

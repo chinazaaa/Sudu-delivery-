@@ -11,10 +11,10 @@
 
 <text x="192" y="144" font-family="DejaVu Sans" font-size="42" font-weight="bold" fill="#14110f" text-anchor="start">Sudu</text>
 <text x="192" y="176" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#6b6360" text-anchor="start">Delivery to PAU</text>
-<text x="88" y="655" font-family="DejaVu Sans" font-size="76" font-weight="bold" fill="#14110f" text-anchor="start">One delivery.</text>
-<text x="88" y="740" font-family="DejaVu Sans" font-size="76" font-weight="bold" fill="#14110f" text-anchor="start">Every kitchen.</text>
-<rect x="88" y="778" width="120" height="7" rx="4" fill="#14110f" opacity="1"/>
-<text x="88" y="848" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#6b6360" text-anchor="start">14 restaurants and 1,081 dishes in one list.</text>
-<text x="88" y="890" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#6b6360" text-anchor="start">Order together and split the delivery.</text>
+<text x="88" y="546" font-family="DejaVu Sans" font-size="96" font-weight="bold" fill="#14110f" text-anchor="start">One delivery.</text>
+<text x="88" y="653" font-family="DejaVu Sans" font-size="96" font-weight="bold" fill="#14110f" text-anchor="start">Every kitchen.</text>
+<rect x="88" y="701" width="120" height="7" rx="4" fill="#14110f" opacity="1"/>
+<text x="88" y="771" font-family="DejaVu Sans" font-size="34" font-weight="normal" fill="#6b6360" text-anchor="start">14 restaurants and 1,081 dishes in one list.</text>
+<text x="88" y="819" font-family="DejaVu Sans" font-size="34" font-weight="normal" fill="#6b6360" text-anchor="start">Order together and split the delivery.</text>
 <text x="540" y="1268" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#14110f" text-anchor="middle">sudu.store</text>
 </svg>

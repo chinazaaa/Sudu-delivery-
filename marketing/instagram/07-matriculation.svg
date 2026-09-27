@@ -11,10 +11,10 @@
 
 <text x="192" y="144" font-family="DejaVu Sans" font-size="42" font-weight="bold" fill="#ffffff" text-anchor="start">Sudu</text>
 <text x="192" y="176" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#ffe6da" text-anchor="start">Delivery to PAU</text>
-<text x="88" y="656" font-family="DejaVu Sans" font-size="72" font-weight="bold" fill="#ffffff" text-anchor="start">Matriculation</text>
-<text x="88" y="736" font-family="DejaVu Sans" font-size="72" font-weight="bold" fill="#ffffff" text-anchor="start">day.</text>
-<rect x="88" y="772" width="120" height="7" rx="4" fill="#ffffff" opacity="0.9"/>
-<text x="88" y="842" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#ffe6da" text-anchor="start">Cake, balloons and a card, carried to them.</text>
-<text x="88" y="884" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#ffe6da" text-anchor="start">From ₦30,000, delivery in it.</text>
+<text x="88" y="544" font-family="DejaVu Sans" font-size="88" font-weight="bold" fill="#ffffff" text-anchor="start">Matriculation</text>
+<text x="88" y="642" font-family="DejaVu Sans" font-size="88" font-weight="bold" fill="#ffffff" text-anchor="start">day.</text>
+<rect x="88" y="686" width="120" height="7" rx="4" fill="#ffffff" opacity="0.9"/>
+<text x="88" y="756" font-family="DejaVu Sans" font-size="34" font-weight="normal" fill="#ffe6da" text-anchor="start">Cake, balloons and a card, carried to them.</text>
+<text x="88" y="804" font-family="DejaVu Sans" font-size="34" font-weight="normal" fill="#ffe6da" text-anchor="start">From ₦30,000, delivery in it.</text>
 <text x="540" y="1268" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#ffffff" text-anchor="middle">sudu.store</text>
 </svg>

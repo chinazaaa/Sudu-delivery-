@@ -106,7 +106,7 @@ class Poster:
         print("wrote", path)
 
 
-def statement(dark, lines, under, size=76):
+def statement(dark, lines, under, size=96):
     """A sentence, set large. The whole poster is the sentence.
 
     Sat in the middle of the space the mark and the address leave, rather
@@ -115,8 +115,13 @@ def statement(dark, lines, under, size=76):
     them a foot deep."""
     p = Poster(dark)
     step = int(size * 1.12)
-    tall = step * len(lines) + 34 + 12 + 42 * len(under)
-    top = TOP + max(0, (FLOOR - TOP - tall) // 2)
+    tall = step * len(lines) + 34 + 12 + 48 * len(under)
+    # A third of the slack above rather than half. Dead centre is right on
+    # a page nobody crops, and every place these get shared crops them:
+    # a preview that catches only the empty half is a preview that says
+    # nothing, so the words sit a little above the middle where more of the
+    # crops look.
+    top = TOP + max(0, int((FLOOR - TOP - tall) * 0.34))
 
     y = top + size
     for line in lines:
@@ -129,8 +134,8 @@ def statement(dark, lines, under, size=76):
           % (PAD, y, p.ink, "0.9" if dark else "1"))
     y += 70
     for line in under:
-        p.add(text(PAD, y, line, 30, "normal", p.soft))
-        y += 42
+        p.add(text(PAD, y, line, 34, "normal", p.soft))
+        y += 48
     return p
 
 
@@ -231,7 +236,7 @@ posters.append(("07-matriculation", statement(
     ["Matriculation", "day."],
     ["Cake, balloons and a card, carried to them.",
      "From ₦30,000, delivery in it."],
-    size=72,
+    size=88,
 )))
 
 posters.append(("08-birthday", statement(
@@ -239,7 +244,7 @@ posters.append(("08-birthday", statement(
     ["A birthday,", "at PAU."],
     ["A cake, pizza and drinks, on the day.",
      "From ₦25,600, delivery in it."],
-    size=72,
+    size=92,
 )))
 
 posters.append(("09-send-something", statement(
@@ -247,7 +252,7 @@ posters.append(("09-send-something", statement(
     ["Send something", "to someone", "at PAU."],
     ["Pay from anywhere. A card link in pounds",
      "or dollars, and we carry it to their block."],
-    size=62,
+    size=84,
 )))
 
 for name, p in posters:
