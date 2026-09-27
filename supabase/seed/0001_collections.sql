@@ -245,3 +245,15 @@ from (values
 --   inch cake and spends the difference on the chocolate, and the ladder
 --   reads cupcakes, then a cake, then a cake with the good chocolate. Still
 --   N30,000, N45,000 and N60,000.
+
+-- Whichever is higher, ours or the check.
+--   The 27 September prices went both ways, and the shop's rule is to take
+--   the dearer of the two and never the cheaper. Eight items where our own
+--   number was above what Lagos online charges are held there: the power
+--   bank at N28,800, Milo at N6,300, Peak at N5,800, insecticide at N5,800,
+--   5kg rice at N8,600, tea at N4,000, toothpaste at N2,900, toothbrush at
+--   N1,400. Fifteen where the check was dearer take the checked price.
+--
+--   Their source lines say "held at shop price, above the 27 Sep check", so
+--   the next person to read one knows the number is a decision rather than a
+--   finding, and does not helpfully "correct" it back down.
