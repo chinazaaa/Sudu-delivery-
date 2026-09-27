@@ -175,8 +175,8 @@ export default async function AdminHome() {
               value={stats.fees}
               money
               hint={
-                stats.discounts > 0
-                  ? `Your margin, after ${naira(stats.discounts)} of codes`
+                stats.codesCost > 0
+                  ? `Your margin, after ${naira(stats.codesCost)} of codes`
                   : "Your margin"
               }
             />

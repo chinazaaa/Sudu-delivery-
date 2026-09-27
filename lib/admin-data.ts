@@ -1,4 +1,7 @@
 import { db } from "./supabase";
+import { activeBands } from "./settings";
+import { feeFor } from "./fees";
+import { containersIn } from "./containers";
 import { carLabel } from "./view";
 import { isGone, isPaid, linesFor, type OrderLine } from "./orders";
 import { SLOT_LABEL } from "./config";
@@ -360,8 +363,19 @@ export type Dashboard = {
   gross: number;
   /** Delivery money kept, after any discount codes came off it. */
   fees: number;
-  /** What the codes gave away, so the figure above can say so. */
+  /** What the codes took off orders, which is what the fee above is net of. */
   discounts: number;
+  /**
+   * What codes really cost: the money taken off orders, plus the delivery
+   * given away by a code that sets the fee outright.
+   *
+   * The second half was invisible. A code like DOM2K does not discount
+   * anything, it prices delivery at two thousand, so the fee column simply
+   * reads two thousand and the discount column reads nothing. The dashboard
+   * said "after N1,000 of codes" on a month where codes had really cost five,
+   * and a flash promotion looked free.
+   */
+  codesCost: number;
   customers: number;
   newCustomers: number;
   averageOrder: number;
@@ -412,6 +426,11 @@ export async function dashboard(days = 28): Promise<Dashboard> {
     .gte("created_at", since);
 
   const gross = paid.reduce((total, order) => total + (order.total as number), 0);
+  const discounts = paid.reduce(
+    (total, order) => total + ((order.discount as number) ?? 0),
+    0
+  );
+  const feeGivenAway = await feeGiven(paid, lines);
 
   return {
     paidOrders: paid.length,
@@ -424,11 +443,81 @@ export async function dashboard(days = 28): Promise<Dashboard> {
       (total, order) => total + (order.fee as number) - ((order.discount as number) ?? 0),
       0
     ),
-    discounts: paid.reduce((total, order) => total + ((order.discount as number) ?? 0), 0),
+    discounts,
+    codesCost: discounts + feeGivenAway,
     customers: customers ?? 0,
     newCustomers: newCustomers ?? 0,
     averageOrder: paid.length === 0 ? 0 : Math.round(gross / paid.length),
     topItems: [...counts.values()].sort((a, b) => b.qty - a.qty).slice(0, 8),
     byWeekday: [...weekdays.values()].sort((a, b) => b.gross - a.gross),
   };
+}
+
+/**
+ * Delivery given away by codes that price the fee outright.
+ *
+ * A code that takes money off an order writes it into the discount column
+ * and is counted everywhere. A code that sets the delivery fee instead
+ * leaves no trace at all: the fee column just reads what the promotion
+ * charged, and nothing says what the ladder would have.
+ *
+ * So the ladder is asked again, on what the order actually carried, and the
+ * difference is what the promotion cost. Never negative: a promotion that
+ * charged more than the ladder would have is not a gift, and counting it as
+ * one would hand the dashboard a number that grows when a code earns money.
+ */
+async function feeGiven(
+  paid: Record<string, unknown>[],
+  lines: OrderLine[]
+): Promise<number> {
+  const priced = paid.filter((order) => (order.coupon_code as string | null) ?? "");
+  if (priced.length === 0) return 0;
+
+  // Only the codes that set a fee. The rest are already in the discount
+  // column, and counting them here would count them twice.
+  const { data: coupons } = await db()
+    .from("coupons")
+    .select("code, applies_to")
+    .in("code", [...new Set(priced.map((order) => String(order.coupon_code)))]);
+  const setsFee = new Set(
+    ((coupons ?? []) as { code: string; applies_to: string }[])
+      .filter((one) => one.applies_to === "fee")
+      .map((one) => one.code)
+  );
+  const orders = priced.filter((order) => setsFee.has(String(order.coupon_code)));
+  if (orders.length === 0) return 0;
+
+  // How much room each line really took. Read off the item, because
+  // order_items does not keep a copy: a drink is a quarter of a container
+  // and a deal is three, and counting lines would price a crate of Coke as
+  // a crate of pizzas.
+  const mine = lines.filter((line) =>
+    orders.some((order) => order.id === line.order_id)
+  );
+  const { data: items } = await db()
+    .from("menu_items")
+    .select("id, container_pct")
+    .in("id", [...new Set(mine.map((line) => line.menu_item_id))]);
+  const room = new Map(
+    ((items ?? []) as { id: string; container_pct?: number }[]).map((one) => [
+      one.id,
+      one.container_pct,
+    ])
+  );
+
+  const bands = await activeBands();
+  let given = 0;
+  for (const order of orders) {
+    const its = mine.filter((line) => line.order_id === order.id);
+    if (its.length === 0) continue;
+    const ladder = feeFor(
+      containersIn(
+        its.map((line) => ({ qty: line.qty, container_pct: room.get(line.menu_item_id) }))
+      ),
+      null,
+      bands
+    );
+    given += Math.max(0, ladder - ((order.fee as number) ?? 0));
+  }
+  return given;
 }
