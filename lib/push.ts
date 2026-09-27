@@ -148,11 +148,15 @@ export async function dealAudience(): Promise<number> {
  * it from London, or sent it as a gift, and is waiting to hear that it
  * landed.
  *
+ * It goes to whoever placed the order, always, wherever they are. That is
+ * the one rule worth having: an order can be placed by a student and paid
+ * by a parent on a link, or bought for somebody else entirely, and in every
+ * one of those the person who wants to know it arrived is the person who
+ * asked for it.
+ *
  * It reads the orders itself rather than being handed phone numbers, so it
- * can do the two things a caller would otherwise have to remember: skip
- * anything already delivered, so ticking a bag twice does not buzz twice,
- * and tell the person who paid rather than whoever the bag was labelled
- * for. A gift's whole point is that those are different people.
+ * can skip anything already delivered: ticking a bag off and then handing
+ * the run out must not buzz the same phone twice.
  */
 export async function tellDelivered(orderIds: string[]): Promise<number> {
   const ids = [...new Set(orderIds.filter(Boolean))];
@@ -161,31 +165,18 @@ export async function tellDelivered(orderIds: string[]): Promise<number> {
   try {
     const { data, error } = await db()
       .from("orders")
-      .select("id, status, customer_phone, customer_name, deliver_to_name")
+      .select("id, status, customer_phone")
       .in("id", ids);
     if (error) return 0;
 
-    const rows = (data ?? []) as {
-      status: string;
-      customer_phone: string;
-      customer_name: string;
-      deliver_to_name: string | null;
-    }[];
+    const rows = (data ?? []) as { status: string; customer_phone: string }[];
 
     let sent = 0;
     for (const row of rows) {
       if (row.status !== "delivered" || !row.customer_phone) continue;
-
-      // Somebody else's name on the bag means the buyer is not the one who
-      // just took it, so the message says whose it was.
-      const to = (row.deliver_to_name ?? "").trim();
-      const theirs = to !== "" && to !== (row.customer_name ?? "").trim();
-
       sent += await pushToPhone(row.customer_phone, {
         title: "Delivered",
-        body: theirs
-          ? `${to.split(" ")[0]} has it. Thank you for ordering with Sudu.`
-          : "Your order has been handed over. Thank you for ordering with Sudu.",
+        body: "Your order has been handed over. Thank you for ordering with Sudu.",
       });
     }
     return sent;
