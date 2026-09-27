@@ -271,3 +271,18 @@ from (values
 --   N55,000 to feed a block. Both are restaurant items at real menu prices,
 --   so there is no estimate anywhere in them, and the flavours are swaps
 --   rather than fixed: nobody argues about pizza in the abstract.
+
+-- Second price pass, 27 September 2026.
+--   The other 37 checked, 26 of them against a live listing. Same rule, and
+--   greatest() in SQL rather than my judgement: listed is the higher of what
+--   we charge and the checked cost plus 15%.
+--
+--   Fourteen kept ours, fourteen took theirs. The ones that moved most were
+--   things I had priced like a market stall when the real source is a shop:
+--   an 8 inch cake to N40,300, a delivered rose bouquet to N34,500, ceramic
+--   plates to N10,300, a twist mop to N9,800, a cotton towel to N9,800.
+--
+--   Nine items are still a guess, and all nine are things with no online
+--   price anywhere: a greeting card, iced cupcakes, a tray of sweets, a
+--   broom, cutlery, two sponges, plasters, a single rose. They are small and
+--   they are in docs/prices-to-confirm.csv.

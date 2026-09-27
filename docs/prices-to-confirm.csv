@@ -1,38 +1,10 @@
-Item,Listed now (N),In how many boxes,Money riding on it (N),Where to look,REAL PRICE (fill in),What the online check could tell
-Bouquet of roses,28800,2,57600,A florist in Lekki or Ajah,,"Range found: N15,500-38,500. Ours sits inside it"
-"Birthday cake, 6 inch",17300,3,51900,A bakery in Sangotedo or Ajah; Market Square bakes,,"Diva Cakes list: N14,300-29,500 standard. Ours sits inside"
-"Balloons, set",5800,5,29000,Sangotedo market,,No online price. Foil/number cost more than latex
-"Birthday cake, 8 inch",28800,1,28800,A bakery in Sangotedo or Ajah,,"Diva Cakes list: N24,200-51,200 standard. Ours sits inside"
-Greeting card,2900,7,20300,Novare Mall,,No online price. Mall shops dearer than market stalls
-"Toilet roll, 4 pack",2900,5,14500,Market Square,,Supermart listing was stale/out of stock
-"Bedsheet and pillowcase, single",13800,1,13800,Sangotedo market,,No online price
-"Cupcakes, 6",6900,2,13800,Market Square,,"Plain 6 pack is N1,950 there. Ours assumes iced"
-"Plates, set of 4",6900,2,13800,Sangotedo market,,Glass/ceramic vs melamine changes it a lot
-Tray of sweets,5800,2,11600,Market Square,,No online price
-Broom and dustpan,3500,3,10500,Sangotedo market,,No online price
-"Bucket, 25 litre",5200,2,10400,Sangotedo market,,No online price
-Mattress protector,9200,1,9200,Sangotedo market,,Waterproof versions cost more
-Scented candle,8100,1,8100,Novare Mall or a Lekki gift shop,,"Lekki boutique candles often N12,000+"
-"Cutlery, set of 4",4000,2,8000,Sangotedo market,,No online price
-Padlock,3500,2,7000,Sangotedo market,,No online price
-Bar soap,1400,5,7000,Market Square,,"Depends on brand: Dettol, Premier etc"
-Mop,6900,1,6900,Sangotedo market,,No online price
-LED bulb,2300,3,6900,Sangotedo market,,No online price
-Food flask,5800,1,5800,Sangotedo market,,Branded insulated ones cost more
-Laundry basket,5800,1,5800,Sangotedo market,,No online price
-Towel,5800,1,5800,Sangotedo market,,No online price
-Washing bowl,2900,2,5800,Sangotedo market,,No online price
-"Hangers, 6",2900,2,5800,Sangotedo market,,No online price
-Mug,2300,2,4600,Sangotedo market,,No online price
-Hand sanitiser,2300,2,4600,A pharmacy,,No in-stock online listing
-Dishwashing sponge,600,4,2400,Local Market,,No online price
-Bath sponge,900,2,1800,Market Square,,No online price
-"Plasters, pack",1700,1,1700,A pharmacy,,No online price
-"Paracetamol, pack",900,1,900,A pharmacy,,Emzor/M&B card packs are cheap
-Iron,17300,0,0,Novare Mall,,Not in any box yet
-"Rice, 10kg bag",16700,0,0,Local Market,,"Not in any box. Jiji shows N15,000"
-"Indomie, full carton",11000,0,0,Local Market,,"Not in any box. Market rate N9,600-11,400"
-"Cornflakes, 350g",5200,0,0,Market Square,,Not in any box yet
-Single rose,4600,0,0,A florist in Lekki or Ajah,,Not in any box yet
-"Pegs, dozen",1700,0,0,Sangotedo market,,Not in any box yet
-"Toilet roll, single",800,0,0,Market Square,,Not in any box yet
+Item,Listed now (N),In how many boxes,Where to look,REAL PRICE (fill in),Why it is still a guess
+Greeting card,2900,7,Novare Mall,,"Only online card listing was N4,000, dearer than ours"
+"Cupcakes, 6",6900,2,Market Square or an Ajah home baker,,"No live 6 pack found. Home bakers N1,000-1,700 a cupcake"
+Tray of sweets,5800,2,Market Square,,No listing found
+Broom and dustpan,3500,3,Sangotedo market,,"Jumia listings exist, prices did not load"
+"Cutlery, set of 4",4000,2,Sangotedo market,,No priced listing loaded
+Dishwashing sponge,600,4,Local Market,,No listing found
+Bath sponge,900,2,Market Square,,No listing found
+"Plasters, pack",1700,1,A pharmacy,,"Jumia listings exist, prices did not load"
+Single rose,4600,0,A florist in Lekki or Ajah,,No single stem listing found
