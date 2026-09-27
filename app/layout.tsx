@@ -9,6 +9,7 @@ import GroupSync from "@/components/GroupSync";
 import SiteHeader from "@/components/SiteHeader";
 import { offerNudge, publicOffer } from "@/lib/coupons";
 import { instagramLink, safeSettings } from "@/lib/settings";
+import { liveRibbon } from "@/lib/ribbon";
 import { qrSvg } from "@/lib/qr";
 import "./globals.css";
 
@@ -63,6 +64,12 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const settings = await safeSettings();
+  // Checked against what it points at, so a banner for a match that has been
+  // played takes itself down rather than promising a box that is gone.
+  const ribbon = await liveRibbon(settings).catch(() => ({
+    text: settings.ribbon_text,
+    href: settings.ribbon_href,
+  }));
   const instagram = instagramLink(settings.instagram_handle);
   const showPromoterLink = settings.hide_promoter_link !== "on";
   const showFooter = settings.hide_footer !== "on";
@@ -133,7 +140,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
         {/* Each line of the footer is there because something is set. Empty
             it in admin and it goes. */}
-        <Ribbon text={settings.ribbon_text} href={settings.ribbon_href} offer={offer} />
+        <Ribbon text={ribbon?.text ?? ""} href={ribbon?.href ?? ""} offer={offer} />
         <SiteHeader tagline={settings.tagline || "Your Fav Foods to PAU"} />
         {/* Directly under the header, so being in a group is the first thing
             read on every page rather than something found at checkout. */}

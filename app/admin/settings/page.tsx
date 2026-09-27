@@ -384,6 +384,13 @@ export default async function SettingsAdmin() {
             empty for a claim like &quot;since 2018&quot;, which is not a
             door.
           </p>
+          <p className="mt-1 text-xs text-muted">
+            A collection is <code>/collections/its-name</code> and an occasion
+            is <code>/occasions/its-name</code>. Point it at an occasion with
+            a time on it, like a match, and the whole strip takes itself down
+            once that time has passed: there is no box to sell by then, and a
+            banner is worse than nothing when it promises one.
+          </p>
         </div>
 
         <div>

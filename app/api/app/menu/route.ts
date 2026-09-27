@@ -12,6 +12,7 @@ import { toBatchView } from "@/lib/view";
 import { allAreas, areaOfEach, valueBandsOfEach } from "@/lib/areas-server";
 import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
 import { readDoors } from "@/lib/home-doors";
+import { liveRibbon } from "@/lib/ribbon";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,14 @@ export async function GET(): Promise<NextResponse> {
     // rather than the phone's, exactly as the website works them out. Empty
     // when same day is switched off, which is the app's signal to offer runs
     // alone rather than a second way to say the same thing.
+    // The strip, checked against what it points at, so a banner for a match
+    // that has been played takes itself down on the phone the same moment it
+    // does on the website.
+    const ribbon = await liveRibbon(settings).catch(() => ({
+      text: settings.ribbon_text,
+      href: settings.ribbon_href,
+    }));
+
     const pricing = await sameDayPricing();
     const slots =
       settings.same_day_on === "on"
@@ -135,7 +144,7 @@ export async function GET(): Promise<NextResponse> {
       })),
       shop: {
         tagline: settings.tagline,
-        ribbon: settings.ribbon_text,
+        ribbon: ribbon?.text ?? "",
         // Where the strip goes, translated into a screen this app has. The
         // website files a collection under /collections and an occasion
         // under /occasions; the app keeps both on one screen, so a link
@@ -143,7 +152,7 @@ export async function GET(): Promise<NextResponse> {
         // Anything the app has no screen for comes back empty and the strip
         // is words rather than a door, which is better than a tap that goes
         // nowhere.
-        ribbonTo: appRoute(settings.ribbon_href),
+        ribbonTo: appRoute(ribbon?.href ?? ""),
         whatsapp: settings.whatsapp_number,
       },
     });
