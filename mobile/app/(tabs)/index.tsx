@@ -21,6 +21,7 @@ import {
   type Shop,
 } from "@/lib/api";
 import { mine } from "@/lib/store";
+import Thumb from "@/components/Thumb";
 import { T } from "@/lib/theme";
 
 /**
@@ -458,12 +459,13 @@ export default function Home() {
                     </Text>
                   )}
                 </View>
-                {item.imageUrl !== "" && (
-                  <Image
-                    source={{ uri: item.imageUrl }}
-                    style={{ width: 92, height: 92, borderRadius: 12 }}
-                  />
-                )}
+                {/* Always something. A row with no picture beside a row with
+                    one reads as a broken image rather than an item nobody
+                    has photographed, and on the Sudu Shop shelf almost
+                    nothing is photographed. */}
+                <View style={{ width: 92 }}>
+                  <Thumb src={item.imageUrl} name={item.name} radius={12} ratio={1} />
+                </View>
               </Pressable>
             ))}
           </View>

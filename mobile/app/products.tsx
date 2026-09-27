@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Pressable,
   ScrollView,
   Text,
@@ -12,6 +11,7 @@ import {
 import { useRouter } from "expo-router";
 
 import { api, naira, type Product } from "@/lib/api";
+import Thumb from "@/components/Thumb";
 import { T } from "@/lib/theme";
 
 /**
@@ -162,11 +162,7 @@ export default function ProductsScreen() {
               overflow: "hidden",
             }}
           >
-            {item.imageUrl !== "" ? (
-              <Image source={{ uri: item.imageUrl }} style={{ width: "100%", aspectRatio: 4 / 3 }} />
-            ) : (
-              <View style={{ width: "100%", aspectRatio: 4 / 3, backgroundColor: T.tint }} />
-            )}
+            <Thumb src={item.imageUrl} name={item.name} />
             <View style={{ padding: 10 }}>
               <Text style={{ fontWeight: "700", color: T.ink }} numberOfLines={2}>
                 {item.name}

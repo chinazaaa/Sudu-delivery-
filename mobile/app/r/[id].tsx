@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { api, naira, type Item, type Place } from "@/lib/api";
 import { cart, countItems, useStored, type Line } from "@/lib/store";
+import Thumb from "@/components/Thumb";
 import { T } from "@/lib/theme";
 import Deals, { type Deal } from "@/components/Deals";
 
@@ -199,12 +200,13 @@ export default function Restaurant() {
                     </Text>
                   )}
                 </View>
-                {item.imageUrl !== "" && (
-                  <Image
-                    source={{ uri: item.imageUrl }}
-                    style={{ width: 92, height: 92, borderRadius: 12 }}
-                  />
-                )}
+                {/* Always something. A row with no picture beside a row with
+                    one reads as a broken image rather than an item nobody
+                    has photographed, and on the Sudu Shop shelf almost
+                    nothing is photographed. */}
+                <View style={{ width: 92 }}>
+                  <Thumb src={item.imageUrl} name={item.name} radius={12} ratio={1} />
+                </View>
               </Pressable>
             ))}
           </View>
