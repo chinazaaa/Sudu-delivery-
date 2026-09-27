@@ -283,6 +283,10 @@ export type Shop = {
   /** The currencies a card link can be made out in, for somebody abroad
    *  paying. Older servers send none, and then the question is not asked. */
   monies?: { code: string; label: string; symbol: string; rate: number }[];
+  /** The order of the front page, as admin set it, and what is switched off.
+   *  Older servers send none, and then the app keeps the order it shipped
+   *  with, which is the same one the website ships with. */
+  homeOrder?: ("food" | "shelves" | "parcel" | "skincare" | "custom" | "group")[];
   /** The areas the shop delivers from, beyond Sangotedo, and which one each
    *  kitchen is in. Older servers send neither, and then everything is
    *  Sangotedo and every price is what it always was. */

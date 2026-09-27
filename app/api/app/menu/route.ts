@@ -11,6 +11,7 @@ import { serialiseBands } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
 import { allAreas, areaOfEach, valueBandsOfEach } from "@/lib/areas-server";
 import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
+import { readDoors } from "@/lib/home-doors";
 
 export const dynamic = "force-dynamic";
 
@@ -105,6 +106,12 @@ export async function GET(): Promise<NextResponse> {
       // Who somebody could say they heard about the shop from. Empty means
       // nobody is promoting, and then the question is not worth asking.
       promoters: await namedPromoters(),
+      // The order of the front page, as admin set it. The app used to hold
+      // its own opinion about this and drifted from the website the first
+      // time anybody moved a card.
+      homeOrder: readDoors(settings.home_order)
+        .filter((row) => row.on)
+        .map((row) => row.key),
       // Whose money a card link can be made out in. The website's food
       // checkout has asked this all along and the app's never did, so a
       // parent in London reached the last screen and was shown a naira
