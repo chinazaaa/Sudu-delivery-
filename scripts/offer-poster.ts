@@ -64,9 +64,17 @@ const phone = valueOf("--phone", "0903 217 5147");
  * window can end without anybody feeling something was taken away.
  */
 const only = valueOf("--only", "This week only");
-/** The two ends of the promise: when to order, and when it is at the door. */
+/** When to order by. The other end of the promise is the delivery window
+ *  itself, which the poster already knows, so it is not asked for twice. */
 const by = valueOf("--by", "1pm");
-const arrive = valueOf("--arrive", "5pm");
+/**
+ * The line that answers "what if it goes wrong".
+ *
+ * On a flyer aimed at somebody who has never used the shop, this does more
+ * than the discount does: a stranger's worry is not the price, it is
+ * handing money to a stranger. Say nothing here with --backed "".
+ */
+const backed = valueOf("--backed", "Late or missing = full refund");
 
 const safe = (s: string) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -102,7 +110,11 @@ const text = (
 /** The card the offer sits on: over the photograph, not in it. */
 const CARD_X = 48;
 const CARD_W = W - CARD_X * 2;
-const CARD_Y = 680;
+/** Low enough to leave the food whole above it. The block used to start at
+ *  the middle and cover the part of the picture that does the selling: the
+ *  photograph is what stops the scroll, the offer is what closes it, and in
+ *  that order. */
+const CARD_Y = 846;
 const IN = CARD_X + 44;
 
 /** The words, as an SVG laid over the photograph. */
@@ -114,7 +126,7 @@ export function words(p: {
   phone?: string;
   only?: string;
   by?: string;
-  arrive?: string;
+  backed?: string;
 }): string {
   // Written as two lists rather than one: the card has to be drawn under
   // the words but cannot be sized until they are measured, and counting
@@ -123,47 +135,46 @@ export function words(p: {
   const card: string[] = [];
   const front: string[] = [];
 
-  // Why it is worth acting on now: the two ends of the promise. A price on
-  // its own is a fact; a price with a deadline and an arrival is an offer.
+  // Why it is worth acting on now, in one line rather than two.
+  //
+  // It used to say "at your hostel by 5pm" directly above "between 3 and
+  // 5pm", which is the same fact told twice and told differently, and two
+  // versions of when food turns up is worse than one. The deadline and the
+  // window belong in the same sentence: order by this, get it then.
   const bySaid = (p.by ?? "").trim();
-  const arriveSaid = (p.arrive ?? "").trim();
   const promise =
-    bySaid !== "" && arriveSaid !== ""
-      ? `Order by ${bySaid}, at your hostel by ${arriveSaid}`
-      : bySaid !== ""
-        ? `Order by ${bySaid}`
-        : "";
-  // Wrapped to what the card is actually wide enough for. Narrower than
-  // that broke a line which fitted, and the runt landed on the days.
-  const promiseLines = promise === "" ? [] : wrap(promise, 42);
+    bySaid !== "" ? `Order by ${bySaid} \u2192 at your hostel ${p.window}` : `At your hostel ${p.window}`;
+  const promiseLines = wrap(promise, 48);
 
   // The window it runs in, said first and said small. It is what stops the
   // number reading as the new price.
   const tag = (p.only ?? "").trim();
   if (tag !== "") {
     front.push(
-      `<rect x="${IN}" y="${CARD_Y + 32}" width="${tag.length * 15 + 40}" height="46" rx="23" fill="${PAPER}"/>`,
-      text(IN + 20, CARD_Y + 63, tag.toUpperCase(), 23, "bold", ORANGE)
+      `<rect x="${IN}" y="${CARD_Y + 26}" width="${tag.length * 14 + 38}" height="42" rx="21" fill="${PAPER}"/>`,
+      text(IN + 19, CARD_Y + 55, tag.toUpperCase(), 22, "bold", ORANGE)
     );
   }
 
-  const big = p.offer.length > 15 ? 62 : p.offer.length > 12 ? 72 : 80;
+  const big = p.offer.length > 15 ? 58 : p.offer.length > 12 ? 66 : 74;
   front.push(
-    text(IN, CARD_Y + 178, p.offer, big, "bold", PAPER),
-    text(IN, CARD_Y + 222, p.from === "" ? "on the whole menu" : `from ${p.from}`, 30, "normal", CREAM),
-    `<rect x="${IN}" y="${CARD_Y + 246}" width="110" height="6" rx="3" fill="${PAPER}" opacity="0.5"/>`
+    text(IN, CARD_Y + 146, p.offer, big, "bold", PAPER),
+    text(IN, CARD_Y + 186, p.from === "" ? "on the whole menu" : `from ${p.from}`, 28, "normal", CREAM),
+    `<rect x="${IN}" y="${CARD_Y + 208}" width="100" height="5" rx="3" fill="${PAPER}" opacity="0.5"/>`
   );
 
   for (const [i, line] of promiseLines.entries()) {
-    front.push(text(IN, CARD_Y + 302 + i * 42, line, 31, "bold", PAPER));
+    front.push(text(IN, CARD_Y + 256 + i * 38, line, 29, "bold", PAPER));
   }
 
-  const daysY = CARD_Y + 302 + Math.max(1, promiseLines.length) * 42 + 22;
-  front.push(text(IN, daysY, `${p.days}, ${p.window}`, 26, "normal", CREAM));
+  // The days on their own now. The window they used to carry has moved up
+  // into the sentence above, where it is said once.
+  const daysY = CARD_Y + 256 + promiseLines.length * 38 + 18;
+  front.push(text(IN, daysY, p.days, 25, "normal", CREAM));
 
   // Now the height is known, so the card can be cut to it.
   card.push(
-    `<rect x="${CARD_X}" y="${CARD_Y}" width="${CARD_W}" height="${daysY - CARD_Y + 58}" rx="40" fill="${ORANGE}"/>`
+    `<rect x="${CARD_X}" y="${CARD_Y}" width="${CARD_W}" height="${daysY - CARD_Y + 44}" rx="36" fill="${ORANGE}"/>`
   );
 
   const foot = (p.phone ?? "") === "" ? "sudu.store" : `sudu.store  ·  ${p.phone}`;
@@ -185,7 +196,10 @@ export function words(p: {
     text(PAD, 152, "Delivery to PAU", 23, "normal", CREAM),
     ...card,
     ...front,
-    text(W / 2, H - PAD + 4, foot, 32, "bold", PAPER, "middle"),
+    text(W / 2, H - PAD - 24, foot, 30, "bold", PAPER, "middle"),
+    ...((p.backed ?? "").trim() === ""
+      ? []
+      : [text(W / 2, H - PAD + 18, (p.backed ?? "").trim(), 25, "normal", CREAM, "middle")]),
     "</svg>",
   ].join("\n");
 }
@@ -219,7 +233,8 @@ async function main() {
   console.log(`Days    ${days}`);
   console.log(`Window  ${window}`);
   console.log(`Window  ${only || "no end named"}`);
-  console.log(`Promise Order by ${by}, at your hostel by ${arrive}`);
+  console.log(`Promise Order by ${by} \u2192 at your hostel ${window}`);
+  console.log(`Backed  ${backed || "nothing said"}`);
   console.log(`Phone   ${phone || "not shown"}`);
   console.log(`Picture ${photo || "none, so plain orange"}`);
   console.log("");
@@ -231,7 +246,7 @@ async function main() {
   await sharp({ create: { width: W, height: H, channels: 4, background: ORANGE } })
     .composite([
       ...(shot ? [{ input: shot, top: 0, left: 0 }] : []),
-      { input: Buffer.from(words({ offer, from, days, window, phone, only, by, arrive })), top: 0, left: 0 },
+      { input: Buffer.from(words({ offer, from, days, window, phone, only, by, backed })), top: 0, left: 0 },
     ])
     .png()
     .toFile(path);
@@ -241,7 +256,7 @@ async function main() {
     `${OUT}/${name}.txt`,
     `${offer}${from ? ` from ${from}` : " on the whole menu"}.${only ? ` ${only}.` : ""}
 
-Order by ${by} and it is at your hostel by ${arrive}. We deliver ${days}, ${window}.
+Order by ${by} and it is at your hostel ${window}. We deliver ${days}.${backed ? `\n\n${backed}.` : ""}
 
 No code needed, it comes off at checkout.
 
