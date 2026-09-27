@@ -56,6 +56,17 @@ const name = valueOf("--name", "offer");
  *  than dialling: nobody types a number off a poster, they look at it and
  *  then find you. */
 const phone = valueOf("--phone", "0903 217 5147");
+/**
+ * What makes this a promotion rather than a new price.
+ *
+ * A cut that runs three days a week for ever is not an offer, it is the
+ * price, and a shop cannot walk that back once people have learned it. A
+ * window can end without anybody feeling something was taken away.
+ */
+const only = valueOf("--only", "This week only");
+/** The two ends of the promise: when to order, and when it is at the door. */
+const by = valueOf("--by", "1pm");
+const arrive = valueOf("--arrive", "5pm");
 
 const safe = (s: string) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -88,6 +99,12 @@ const text = (
   `<text x="${x}" y="${y}" font-family="DejaVu Sans" font-size="${size}" ` +
   `font-weight="${weight}" fill="${fill}" text-anchor="${anchor}">${safe(s)}</text>`;
 
+/** The card the offer sits on: over the photograph, not in it. */
+const CARD_X = 48;
+const CARD_W = W - CARD_X * 2;
+const CARD_Y = 680;
+const IN = CARD_X + 44;
+
 /** The words, as an SVG laid over the photograph. */
 export function words(p: {
   offer: string;
@@ -95,65 +112,82 @@ export function words(p: {
   days: string;
   window: string;
   phone?: string;
+  only?: string;
+  by?: string;
+  arrive?: string;
 }): string {
-  const parts: string[] = [
+  // Written as two lists rather than one: the card has to be drawn under
+  // the words but cannot be sized until they are measured, and counting
+  // backwards through a list of strings to slip it in is the sort of thing
+  // that breaks the next time a line is added.
+  const card: string[] = [];
+  const front: string[] = [];
+
+  // Why it is worth acting on now: the two ends of the promise. A price on
+  // its own is a fact; a price with a deadline and an arrival is an offer.
+  const bySaid = (p.by ?? "").trim();
+  const arriveSaid = (p.arrive ?? "").trim();
+  const promise =
+    bySaid !== "" && arriveSaid !== ""
+      ? `Order by ${bySaid}, at your hostel by ${arriveSaid}`
+      : bySaid !== ""
+        ? `Order by ${bySaid}`
+        : "";
+  // Wrapped to what the card is actually wide enough for. Narrower than
+  // that broke a line which fitted, and the runt landed on the days.
+  const promiseLines = promise === "" ? [] : wrap(promise, 42);
+
+  // The window it runs in, said first and said small. It is what stops the
+  // number reading as the new price.
+  const tag = (p.only ?? "").trim();
+  if (tag !== "") {
+    front.push(
+      `<rect x="${IN}" y="${CARD_Y + 32}" width="${tag.length * 15 + 40}" height="46" rx="23" fill="${PAPER}"/>`,
+      text(IN + 20, CARD_Y + 63, tag.toUpperCase(), 23, "bold", ORANGE)
+    );
+  }
+
+  const big = p.offer.length > 15 ? 62 : p.offer.length > 12 ? 72 : 80;
+  front.push(
+    text(IN, CARD_Y + 178, p.offer, big, "bold", PAPER),
+    text(IN, CARD_Y + 222, p.from === "" ? "on the whole menu" : `from ${p.from}`, 30, "normal", CREAM),
+    `<rect x="${IN}" y="${CARD_Y + 246}" width="110" height="6" rx="3" fill="${PAPER}" opacity="0.5"/>`
+  );
+
+  for (const [i, line] of promiseLines.entries()) {
+    front.push(text(IN, CARD_Y + 302 + i * 42, line, 31, "bold", PAPER));
+  }
+
+  const daysY = CARD_Y + 302 + Math.max(1, promiseLines.length) * 42 + 22;
+  front.push(text(IN, daysY, `${p.days}, ${p.window}`, 26, "normal", CREAM));
+
+  // Now the height is known, so the card can be cut to it.
+  card.push(
+    `<rect x="${CARD_X}" y="${CARD_Y}" width="${CARD_W}" height="${daysY - CARD_Y + 58}" rx="40" fill="${ORANGE}"/>`
+  );
+
+  const foot = (p.phone ?? "") === "" ? "sudu.store" : `sudu.store  ·  ${p.phone}`;
+
+  return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
     `<defs>`,
-    // Deep enough at the foot to read white against a photograph of
-    // anything, and gone by halfway up so the food is not behind a curtain.
-    `<linearGradient id="foot" x1="0" y1="0" x2="0" y2="1">` +
-      `<stop offset="0" stop-color="#1a0b04" stop-opacity="0"/>` +
-      `<stop offset="0.45" stop-color="#1a0b04" stop-opacity="0.72"/>` +
-      `<stop offset="1" stop-color="#1a0b04" stop-opacity="0.95"/></linearGradient>`,
-    // A lighter one at the top, so the mark has something to sit on.
     `<linearGradient id="head" x1="0" y1="0" x2="0" y2="1">` +
       `<stop offset="0" stop-color="#1a0b04" stop-opacity="0.78"/>` +
       `<stop offset="0.6" stop-color="#1a0b04" stop-opacity="0.3"/>` +
       `<stop offset="1" stop-color="#1a0b04" stop-opacity="0"/></linearGradient>`,
+    `<linearGradient id="foot" x1="0" y1="0" x2="0" y2="1">` +
+      `<stop offset="0" stop-color="#1a0b04" stop-opacity="0"/>` +
+      `<stop offset="1" stop-color="#1a0b04" stop-opacity="0.9"/></linearGradient>`,
     `</defs>`,
     `<rect x="0" y="0" width="${W}" height="300" fill="url(#head)"/>`,
-    `<rect x="0" y="${H - 720}" width="${W}" height="720" fill="url(#foot)"/>`,
+    `<rect x="0" y="${H - 330}" width="${W}" height="330" fill="url(#foot)"/>`,
     text(PAD, 118, "Sudu", 42, "bold", PAPER),
     text(PAD, 152, "Delivery to PAU", 23, "normal", CREAM),
-  ];
-
-  // Set from the foot upwards, because the foot is the one edge every one
-  // of these shares: the address sits on it and everything stacks off that.
-  const dayLines = wrap(p.days, 30);
-  const windowY = H - 158;
-  const daysTop = windowY - 44 - (dayLines.length - 1) * 46;
-
-  if (p.window !== "") parts.push(text(PAD, windowY, p.window, 33, "normal", CREAM));
-  let at = daysTop;
-  for (const line of dayLines) {
-    parts.push(text(PAD, at, line, 37, "bold", PAPER));
-    at += 46;
-  }
-
-  // The brand's own colour, as a line rather than a slab. One stripe of
-  // orange is enough to say whose poster this is; a block of it buries the
-  // photograph the poster is for.
-  const ruleY = daysTop - 52;
-  parts.push(`<rect x="${PAD}" y="${ruleY}" width="96" height="7" rx="4" fill="${ORANGE}"/>`);
-
-  const fromY = ruleY - 34;
-  parts.push(
-    text(PAD, fromY, p.from === "" ? "on the whole menu" : `from ${p.from}`, 36, "normal", CREAM)
-  );
-
-  // Shrunk where the offer is a long one. "Free delivery" and "₦10,000 off"
-  // are not the same width, and a headline that runs off the side is the
-  // one thing a poster cannot do.
-  const big = p.offer.length > 15 ? 74 : p.offer.length > 12 ? 84 : 96;
-  parts.push(text(PAD, fromY - 56, p.offer, big, "bold", PAPER));
-
-  // The address and the number on one line at the foot. Two ways to reach
-  // the shop, and a dot between them so it reads as one line rather than
-  // two things that happen to be near each other.
-  const foot = (p.phone ?? "") === "" ? "sudu.store" : `sudu.store  ·  ${p.phone}`;
-  parts.push(text(W / 2, H - PAD + 4, foot, 32, "bold", PAPER, "middle"));
-  parts.push("</svg>");
-  return parts.join("\n");
+    ...card,
+    ...front,
+    text(W / 2, H - PAD + 4, foot, 32, "bold", PAPER, "middle"),
+    "</svg>",
+  ].join("\n");
 }
 
 /** The photograph, cropped to the band it sits in. Null if it cannot be had. */
@@ -184,6 +218,8 @@ async function main() {
   console.log(`From    ${from || "the whole menu"}`);
   console.log(`Days    ${days}`);
   console.log(`Window  ${window}`);
+  console.log(`Window  ${only || "no end named"}`);
+  console.log(`Promise Order by ${by}, at your hostel by ${arrive}`);
   console.log(`Phone   ${phone || "not shown"}`);
   console.log(`Picture ${photo || "none, so plain orange"}`);
   console.log("");
@@ -195,7 +231,7 @@ async function main() {
   await sharp({ create: { width: W, height: H, channels: 4, background: ORANGE } })
     .composite([
       ...(shot ? [{ input: shot, top: 0, left: 0 }] : []),
-      { input: Buffer.from(words({ offer, from, days, window, phone })), top: 0, left: 0 },
+      { input: Buffer.from(words({ offer, from, days, window, phone, only, by, arrive })), top: 0, left: 0 },
     ])
     .png()
     .toFile(path);
@@ -203,9 +239,9 @@ async function main() {
   // The caption, so the words on the poster and the words under it agree.
   writeFileSync(
     `${OUT}/${name}.txt`,
-    `${offer}${from ? ` from ${from}` : " on the whole menu"}.
+    `${offer}${from ? ` from ${from}` : " on the whole menu"}.${only ? ` ${only}.` : ""}
 
-We deliver ${days}, ${window}.
+Order by ${by} and it is at your hostel by ${arrive}. We deliver ${days}, ${window}.
 
 No code needed, it comes off at checkout.
 
