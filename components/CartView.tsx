@@ -457,18 +457,29 @@ export default function CartView({
       ? sameDayFee(countItems(cart), soonSlot.urgent, sameDayBands, urgentExtra)
       : 0;
 
+  // What this run has knocked off delivery, if anything. A flash drop
+  // belongs to a run rather than to the shop, so it is read off the one the
+  // food is actually going on. The cart used to ignore it and quote the full
+  // ladder over a checkout about to charge less, which is the kinder
+  // direction to be wrong in and still wrong.
+  const flash = runs.find((one) => one.id === going?.runId)?.flashFee ?? null;
+
+  // The same order the checkout decides in, and the same order the server
+  // charges in. A car of its own is priced by the same day ladder whatever
+  // is in it: asking the value ladder first had a cart with market shopping
+  // going on a picked time quoting a fee nobody was going to be charged.
   const alone = promotion
     ? promotion.fee
+    : carFee > 0
+      ? carFee
     : byValue.length > 0
       ? feeAcross({
           marketFood: cartSubtotal(marketHalf),
-          restaurantFee: restHalf.length === 0 ? 0 : feeFor(countItems(restHalf), null, ladder),
+          restaurantFee: restHalf.length === 0 ? 0 : feeFor(countItems(restHalf), flash, ladder),
           bands: byValue,
         })
-    : carFee > 0
-      ? carFee
     : ladder.length > 0
-      ? feeFor(countItems(cart), null, ladder)
+      ? feeFor(countItems(cart), flash, ladder)
       : 0;
 
   const names = people.map((p) => p.name);

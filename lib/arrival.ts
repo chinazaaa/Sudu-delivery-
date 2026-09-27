@@ -24,6 +24,11 @@ export type ArrivalRun = {
    *  A capital B mid sentence is the tell that a label has been dropped into
    *  prose without being read. */
   said: string;
+  /** What this run has knocked off delivery, where anything is on. Null is
+   *  the ordinary ladder. It rides along with the run because the cart has
+   *  to quote the fee the checkout will charge, and a flash drop belongs to
+   *  one run rather than to the shop. */
+  flashFee: number | null;
 };
 
 export type Arrival = {
@@ -114,6 +119,7 @@ export function runArrival(run: {
   runDate: string;
   deliveryWindow: string;
   label: string;
+  flashFee?: number | null;
 }): ArrivalRun {
   // The label carries the day word already worked out against the shop's
   // clock ("today · Lunch"), so the day is taken from it rather than worked
@@ -124,5 +130,6 @@ export function runArrival(run: {
     runDate: run.runDate,
     when: `${run.deliveryWindow}, ${day}`,
     said: `${run.deliveryWindow.charAt(0).toLowerCase()}${run.deliveryWindow.slice(1)} ${day}`,
+    flashFee: run.flashFee ?? null,
   };
 }

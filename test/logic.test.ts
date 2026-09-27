@@ -1369,12 +1369,14 @@ test("the soonest way to eat is picked, not asked for", () => {
     runDate: today,
     when: "Between 2pm and 5pm, today",
     said: "between 2pm and 5pm today",
+    flashFee: null,
   };
   const runTomorrow = {
     id: "b",
     runDate: "2026-09-21",
     when: "Between 2pm and 5pm, tomorrow",
     said: "between 2pm and 5pm tomorrow",
+    flashFee: null,
   };
 
   // A run going today beats a car of its own today: same afternoon, two and
