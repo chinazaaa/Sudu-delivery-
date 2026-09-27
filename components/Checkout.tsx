@@ -28,7 +28,7 @@ import { normalisePhone } from "@/lib/phone";
 import { OPENED, TRAP } from "@/lib/guard";
 import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
-import { feeAcross, type ValueBand } from "@/lib/value-bands";
+import { feeAcross, feeForValue, type ValueBand } from "@/lib/value-bands";
 import { ladderFor, pricesByValue } from "@/lib/areas-shared";
 import CouponBox from "@/components/CouponBox";
 import { clearJoin, readJoin } from "@/components/JoinDelivery";
@@ -527,8 +527,29 @@ export default function Checkout({
    * market is priced by what the shopping comes to, and a promotion is a
    * price rather than a ladder, so there is nothing to compare.
    */
-  const comparable =
-    !shared && !promotion && itemCount > 0 && byValue.length === 0;
+  const comparable = !shared && !promotion && itemCount > 0;
+
+  /**
+   * What this cart costs on a run, on a named run's numbers.
+   *
+   * The two comparisons below used to give up whenever a market was in the
+   * cart, on the grounds that the container ladder was the wrong ladder to
+   * compare against. The market half has a ladder of its own, so there was
+   * always an answer, and the customer with market shopping in their cart
+   * was the only one never told a car of its own existed.
+   */
+  const feeOnRun = (flash: number | null): number =>
+    byValue.length > 0
+      ? feeAcross({
+          marketFood: cartSubtotal(marketHalf),
+          restaurantFee: (() => {
+            const containers =
+              (restHalf.length === 0 ? 0 : countItems(restHalf)) + alreadyItems;
+            return containers === 0 ? 0 : feeFor(containers, flash, bands);
+          })(),
+          bands: byValue,
+        }) + area.runExtra
+      : Math.max(0, feeFor(itemCount + alreadyItems, flash, bands) - alreadyCharged);
 
   /**
    * The next run, for somebody in a car of its own.
@@ -542,10 +563,7 @@ export default function Checkout({
     const run = todayRun ?? laterRun;
     if (!comparable || onARun || !run || !sameDay) return null;
 
-    const fee = Math.max(
-      0,
-      feeFor(itemCount + alreadyItems, run.flashFee, bands) - alreadyCharged
-    );
+    const fee = feeOnRun(run.flashFee);
     const now = sameDayFee(itemCount, sameDay.urgent, sameDayBands, urgentExtra);
     return { id: run.id, label: run.label, fee, saving: Math.max(0, now - fee) };
   })();
@@ -559,10 +577,7 @@ export default function Checkout({
     const soon = todaySlot ?? laterSlot;
     if (!comparable || !onARun || !soon) return null;
 
-    const runFee = Math.max(
-      0,
-      feeFor(itemCount + alreadyItems, null, bands) - alreadyCharged
-    );
+    const runFee = feeOnRun(selected?.flashFee ?? null);
     const fee = sameDayFee(itemCount, soon.urgent, sameDayBands, urgentExtra);
     return fee > runFee ? { fee, phrase: soon.phrase, at: soon.at } : null;
   })();
@@ -1397,6 +1412,60 @@ export default function Checkout({
                 : naira(charged)}
           </span>
         </div>
+        {/* Two errands on one trip. The rungs answer nothing here: what the
+            customer wants is the two halves and what they add up to, which
+            is the thing that makes seven thousand out of a five item cart
+            look like a mistake. */}
+        {!shared && !promotion && !sameDay && byValue.length > 0 && (
+          <details className="group text-sm sm:mt-1">
+            <summary className="cursor-pointer list-none text-muted underline decoration-dotted underline-offset-4">
+              Why this much?
+            </summary>
+            <ul className="mt-2 space-y-1 rounded-xl bg-black/[0.03] p-3">
+              {marketHalf.length > 0 && (
+                <li className="flex justify-between text-muted">
+                  <span>Market shopping, {naira(cartSubtotal(marketHalf))}</span>
+                  <span>{naira(feeForValue(cartSubtotal(marketHalf), byValue))}</span>
+                </li>
+              )}
+              {restHalf.length > 0 && (
+                <li className="flex justify-between text-muted">
+                  <span>
+                    {countItems(restHalf) + alreadyItems} item
+                    {countItems(restHalf) + alreadyItems === 1 ? "" : "s"} from the kitchens
+                  </span>
+                  <span>
+                    {naira(
+                      feeFor(
+                        countItems(restHalf) + alreadyItems,
+                        selected?.flashFee ?? null,
+                        bands
+                      )
+                    )}
+                  </span>
+                </li>
+              )}
+              {area.runExtra > 0 && (
+                <li className="flex justify-between text-muted">
+                  <span>{area.name} is a longer trip</span>
+                  <span>{naira(area.runExtra)}</span>
+                </li>
+              )}
+              <li className="flex justify-between border-t border-black/10 pt-1 font-bold text-ink">
+                <span>Delivery</span>
+                <span>{naira(charged)}</span>
+              </li>
+            </ul>
+            <p className="mt-2 text-muted">
+              Two errands on one trip. The market shopping is priced by what it
+              comes to, because a trip to the market is one trip whether it is
+              two bags or five. The kitchens are priced by how much room the
+              food takes in the car. One fee either way, however many places
+              are in it.
+            </p>
+          </details>
+        )}
+
         {/* Four items costing more than three looks arbitrary until the whole
             ladder is there, so it is one tap away. */}
         {!shared && !promotion && !sameDay && byValue.length === 0 && (

@@ -1091,3 +1091,47 @@ export function feeAcross(args: {
     args.bands.length > 0 && args.marketFood > 0 ? feeForValue(args.marketFood, args.bands) : 0;
   return market + args.restaurantFee;
 }
+
+/**
+ * The delivery ladder as rows, for showing somebody why their fee is what
+ * it is.
+ *
+ * The same shape the website's table has, worked out from the bands the
+ * shop sent rather than from a copy kept here: a ladder the app believes in
+ * and the server does not charge by is worse than no ladder at all.
+ */
+export function bandRows(
+  bands: Shop["bands"],
+  flashFee: number | null
+): { label: string; fee: number }[] {
+  const ladder = bands.length > 0 ? bands : [{ maxItems: null, fee: 4000 }];
+  return ladder.map((band, index) => {
+    const from = index === 0 ? 1 : (ladder[index - 1].maxItems ?? 0) + 1;
+    return {
+      label: band.maxItems === null ? `${from}+ items` : `${from}-${band.maxItems} items`,
+      fee: feeFor(from, bands, flashFee),
+    };
+  });
+}
+
+/** Which rung an order of this many containers lands on, or -1 for none. */
+export function bandIndex(bands: Shop["bands"], items: number): number {
+  if (items <= 0) return -1;
+  const ladder = bands.length > 0 ? bands : [{ maxItems: null, fee: 4000 }];
+  const found = ladder.findIndex((step) => step.maxItems !== null && items <= step.maxItems);
+  return found === -1 ? ladder.length - 1 : found;
+}
+
+/** What the shopping ladder looks like as rows, for the same question. */
+export function valueRows(bands: ValueBand[]): { label: string; fee: number }[] {
+  return bands.map((band, index) => {
+    const from = index === 0 ? 0 : (bands[index - 1].upTo ?? 0) + 1;
+    return {
+      label:
+        band.upTo === null
+          ? `${naira(from)} and up`
+          : `${naira(from)} to ${naira(band.upTo)}`,
+      fee: band.fee,
+    };
+  });
+}

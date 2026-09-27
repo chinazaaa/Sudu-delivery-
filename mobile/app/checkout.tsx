@@ -25,12 +25,16 @@ import {
   nextArrival,
   runCarries,
   runCovers,
+  bandIndex,
+  bandRows,
+  feeForValue,
   sameDayFeeFor,
   withExtra,
   type Shop,
   type Slot,
 } from "@/lib/api";
 import { cart, cartTotal, countItems, me, mine, people, useStored } from "@/lib/store";
+import FeeWhy from "@/components/FeeWhy";
 import KeepCart from "@/components/KeepCart";
 import { registerForPush } from "@/lib/push";
 import { T } from "@/lib/theme";
@@ -272,27 +276,44 @@ export default function Checkout() {
   // this screen is the number on the bill.
   const byValue = valueLadderFor(shop, kitchens);
 
-  const ladder = byValue.length > 0 && !picked
-    ? // Nothing but market shopping is charged by what the shopping comes
-      // to. Mix a restaurant in and the dearer of the two measures comes
-      // back, so a pepper added to twelve pizzas cannot drop the whole
-      // order onto the market's ladder.
-      feeAcross({
-        marketFood: cartTotal(marketHalf),
-        // The container count floors at one, which is right for a cart and
-        // wrong for half of one: no restaurant lines must mean no restaurant
-        // fee, not the price of a container nobody ordered.
-        restaurantFee: (() => {
-          const containers =
-            (restHalf.length === 0 ? 0 : countItems(restHalf)) + adding.items;
-          return containers === 0 ? 0 : feeFrom(containers, runBands, run?.flashFee ?? null);
-        })(),
-        bands: byValue,
-      }) + area.runExtra
-    : picked
-    ? sameDayFeeFor(items, picked.urgent, sameDayBands, shop?.sameDay?.urgentExtra ?? 0)
-    : shop && run
-      ? Math.max(0, feeFrom(items + adding.items, runBands, run.flashFee) - adding.feeCharged)
+  /**
+   * What this cart costs on a run, on a named run's numbers.
+   *
+   * Pulled out of the fee itself so the other way of getting it here can be
+   * priced with the same sentence. It used to be written once, inside the
+   * fee, and the comparison further down simply gave up whenever a market
+   * was in the cart: no alternative was offered, on the grounds that the
+   * ladder it would have compared against was the wrong ladder. The market
+   * half has a ladder of its own, so there was always an answer.
+   */
+  const feeOnRun = (flash: number | null): number =>
+    byValue.length > 0
+      ? // Nothing but market shopping is charged by what the shopping comes
+        // to. Mix a restaurant in and both are charged, their own way, and
+        // the bill is the two added.
+        feeAcross({
+          marketFood: cartTotal(marketHalf),
+          // The container count floors at one, which is right for a cart and
+          // wrong for half of one: no restaurant lines must mean no restaurant
+          // fee, not the price of a container nobody ordered.
+          restaurantFee: (() => {
+            const containers =
+              (restHalf.length === 0 ? 0 : countItems(restHalf)) + adding.items;
+            return containers === 0 ? 0 : feeFrom(containers, runBands, flash);
+          })(),
+          bands: byValue,
+        }) + area.runExtra
+      : Math.max(0, feeFrom(items + adding.items, runBands, flash) - adding.feeCharged);
+
+  /** And what it costs in a car of its own, which is one ladder either way:
+   *  a car is a car whatever is riding in it. */
+  const feeOnCar = (slot: Slot): number =>
+    sameDayFeeFor(items, slot.urgent, sameDayBands, shop?.sameDay?.urgentExtra ?? 0);
+
+  const ladder = picked
+    ? feeOnCar(picked)
+    : shop && (run || byValue.length > 0)
+      ? feeOnRun(run?.flashFee ?? null)
       : 0;
 
   /*
@@ -303,11 +324,7 @@ export default function Checkout() {
    * price rather than a ladder, so there is nothing to compare.
    */
   const otherWay = (() => {
-    if (byValue.length > 0 || items === 0) return null;
-
-    const runFee = run
-      ? Math.max(0, feeFrom(items + adding.items, runBands, run.flashFee) - adding.feeCharged)
-      : 0;
+    if (items === 0) return null;
 
     if (picked) {
       // On a car of its own. Name the run whether or not it is cheaper: a
@@ -315,11 +332,8 @@ export default function Checkout() {
       // get this.
       const soonest = runsHere[0];
       if (!soonest) return null;
-      const fee = Math.max(
-        0,
-        feeFrom(items + adding.items, runBands, soonest.flashFee) - adding.feeCharged
-      );
-      const now = sameDayFeeFor(items, picked.urgent, sameDayBands, shop?.sameDay?.urgentExtra ?? 0);
+      const fee = feeOnRun(soonest.flashFee);
+      const now = feeOnCar(picked);
       return {
         runId: soonest.id,
         at: "",
@@ -333,8 +347,8 @@ export default function Checkout() {
     // costs more, because a cheaper one would already have been chosen.
     const soon = slots[0];
     if (!soon) return null;
-    const fee = sameDayFeeFor(items, soon.urgent, sameDayBands, shop?.sameDay?.urgentExtra ?? 0);
-    return fee > runFee
+    const fee = feeOnCar(soon);
+    return fee > feeOnRun(run?.flashFee ?? null)
       ? { runId: "", at: soon.at, said: `${aroundPhrase(soon.at)} ${soon.day}`, fee, saving: 0 }
       : null;
   })();
@@ -548,49 +562,6 @@ export default function Checkout() {
         )}
       </View>
 
-      {/* What the order comes to, for the card link's rough conversion: the
-          same number the Total row shows. */}
-      {/* A parent in London cannot make a Nigerian transfer. The website has
-          asked this on its food checkout all along and the app never did, so
-          whoever was paying reached the last screen and found a naira figure
-          and an account number they could not use. */}
-      {method === "card" && (shop.monies ?? []).length > 0 && (
-        <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
-          <Text style={{ fontWeight: "800", color: T.ink }}>
-            Is somebody abroad paying?
-          </Text>
-          <Text style={{ color: T.muted, fontSize: 12 }}>
-            We send a card link in their money. The order is still {naira(owed)};
-            the amount on the link is worked out at our rate, so it is close
-            rather than exact.
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {[{ code: "", label: "No, naira" }, ...(shop.monies ?? [])].map((one) => (
-              <Pressable
-                key={one.code || "naira"}
-                onPress={() => setMoney(one.code)}
-                style={{
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: money === one.code ? T.brand : T.line,
-                  backgroundColor: money === one.code ? T.tint : T.paper,
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                }}
-              >
-                <Text style={{ color: T.ink, fontWeight: "600" }}>{one.label}</Text>
-                {"rate" in one && one.rate > 0 && (
-                  <Text style={{ color: T.muted, fontSize: 12 }}>
-                    about {one.symbol}
-                    {(Math.ceil((owed / one.rate) * 10) / 10).toFixed(2)}
-                  </Text>
-                )}
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      )}
-
       {(shop.promoters ?? []).length > 0 && (
         <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
           {/* Asked once, on the one form a first order passes through.
@@ -777,6 +748,55 @@ export default function Checkout() {
         ))}
       </View>
 
+      {/* What the order comes to, for the card link's rough conversion: the
+          same number the Total row shows. */}
+      {/* A parent in London cannot make a Nigerian transfer. The website has
+          asked this on its food checkout all along and the app never did, so
+          whoever was paying reached the last screen and found a naira figure
+          and an account number they could not use.
+
+          Directly under the question it answers. It used to sit up beside
+          the delivery time, which is a different subject entirely: whose
+          money this is only makes sense once they have said they are paying
+          by card, and appearing anywhere else reads as a question about the
+          food. */}
+      {method === "card" && (shop.monies ?? []).length > 0 && (
+        <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
+          <Text style={{ fontWeight: "800", color: T.ink }}>
+            Is somebody abroad paying?
+          </Text>
+          <Text style={{ color: T.muted, fontSize: 12 }}>
+            We send a card link in their money. The order is still {naira(owed)};
+            the amount on the link is worked out at our rate, so it is close
+            rather than exact.
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {[{ code: "", label: "No, naira" }, ...(shop.monies ?? [])].map((one) => (
+              <Pressable
+                key={one.code || "naira"}
+                onPress={() => setMoney(one.code)}
+                style={{
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: money === one.code ? T.brand : T.line,
+                  backgroundColor: money === one.code ? T.tint : T.paper,
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                }}
+              >
+                <Text style={{ color: T.ink, fontWeight: "600" }}>{one.label}</Text>
+                {"rate" in one && one.rate > 0 && (
+                  <Text style={{ color: T.muted, fontSize: 12 }}>
+                    about {one.symbol}
+                    {(Math.ceil((owed / one.rate) * 10) / 10).toFixed(2)}
+                  </Text>
+                )}
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+
       {adding.items > 0 && picked === null && (
         <View style={{ backgroundColor: T.tint, borderRadius: T.radius, padding: 14 }}>
           <Text style={{ fontWeight: "800", color: T.brandDark }}>
@@ -802,6 +822,83 @@ export default function Checkout() {
           }
           value={naira(fee)}
         />
+
+        {/* Why the line above says what it says. Four items costing more
+            than three looks arbitrary until the whole ladder is there, and a
+            fee nobody can account for reads as one that was made up. The
+            website has had this since the ladder went in; the app showed the
+            number and left them to work it out.
+
+            A promotion is a price rather than a ladder, so there is nothing
+            to show, and a share worked out when a group closes is not this
+            cart's to explain. */}
+        {!offered && fee > 0 && (
+          byValue.length > 0 && !picked ? (
+            // Two errands on one trip. The rungs are no use here: what the
+            // customer wants is the two halves and what they add up to,
+            // which is the thing that made seven thousand look like a
+            // mistake in the first place.
+            <FeeWhy
+              rows={[
+                ...(marketHalf.length > 0
+                  ? [
+                      {
+                        label: `Market shopping, ${naira(cartTotal(marketHalf))}`,
+                        fee: feeForValue(cartTotal(marketHalf), byValue),
+                      },
+                    ]
+                  : []),
+                ...(restHalf.length > 0
+                  ? [
+                      {
+                        label: `${countItems(restHalf) + adding.items} item${
+                          countItems(restHalf) + adding.items === 1 ? "" : "s"
+                        } from the kitchens`,
+                        fee: feeFrom(
+                          countItems(restHalf) + adding.items,
+                          runBands,
+                          run?.flashFee ?? null
+                        ),
+                      },
+                    ]
+                  : []),
+                ...(area.runExtra > 0
+                  ? [{ label: `${area.name} is a longer trip`, fee: area.runExtra }]
+                  : []),
+              ]}
+              here={-1}
+              total={{ label: "Delivery", fee }}
+              note="Two errands on one trip. The market shopping is priced by what it comes to, because a trip to the market is one trip whether it is two bags or five. The kitchens are priced by how much room the food takes in the car. One fee either way, however many places are in it."
+            />
+          ) : (
+            <FeeWhy
+              rows={
+                picked
+                  ? bandRows(sameDayBands, null)
+                  : bandRows(runBands, run?.flashFee ?? null)
+              }
+              here={bandIndex(
+                picked ? sameDayBands : runBands,
+                picked ? items : items + adding.items
+              )}
+              extra={
+                picked && picked.urgent && (shop.sameDay?.urgentExtra ?? 0) > 0
+                  ? { label: "Leaving within the hour", fee: shop.sameDay!.urgentExtra }
+                  : area.runExtra > 0
+                    ? { label: `${area.name} is a longer trip`, fee: area.runExtra }
+                    : null
+              }
+              note={
+                picked
+                  ? "A car of its own is one order, one driver, one trip, so there is nobody to share the petrol with. A run carries everybody at once, which is why it costs less."
+                  : area.runExtra > 0
+                    ? `${area.name} is a longer trip than Sangotedo, so every rung is ${naira(area.runExtra)} more. One fee for the whole order, however many kitchens are in it: it is the car, not the food, so it goes by how much room your order takes.`
+                    : "One fee for the whole order, however many kitchens are in it. It is the car, not the food, so it goes by how much room your order takes."
+              }
+            />
+          )
+        )}
+
         {applied && <Row label={`Code ${applied.code}`} value={`−${naira(applied.discount)}`} />}
         <View style={{ height: 1, backgroundColor: T.line, marginVertical: 4 }} />
         <Row label="Total" value={naira(owed)} strong />
