@@ -29,7 +29,7 @@
     },
     "android": {
       "package": "store.sudu.app",
-      "versionCode": 5,
+      "versionCode": 6,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#fff1ea"
