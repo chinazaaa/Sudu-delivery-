@@ -309,7 +309,7 @@ const byWhen = (a: WhenOption, b: WhenOption): number =>
   (a.date === b.date ? (a.onARun ? -1 : 1) : a.date < b.date ? -1 : 1);
 
 /**
- * What the cheapest box on each occasion comes to, delivery in.
+ * What the cheapest box on each occasion comes to, delivery in it.
  *
  * The list page lives or dies on this number. "Games night" is a category;
  * "Games night, from ₦32,900 with delivery" is an offer, and the difference

@@ -76,7 +76,7 @@ export default async function HomePage() {
   // find out if the words "Care package" are on the page they landed on.
   //
   // With a price, because a name is a category and a name with a price is an
-  // offer. Two more queries to say "from ₦20,000, delivery in", which is the
+  // offer. Two more queries to say "from ₦20,000, delivery in it", which is
   // sentence that gets the tap.
   const packed = await liveOccasions();
   const packedBoxes = await boxesAcross(packed.map((one) => one.id));
@@ -106,7 +106,7 @@ export default async function HomePage() {
         // is not the place to explain it: two lines of blurb made every card
         // a paragraph and the grid twice as tall.
         const said =
-          price !== undefined ? `From ${naira(price)}, delivery in` : one.blurb;
+          price !== undefined ? `From ${naira(price)}, delivery in it` : one.blurb;
         return {
           href: `/${kind === "occasion" ? "occasions" : "collections"}/${one.slug}`,
           title: one.name,

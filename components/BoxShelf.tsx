@@ -113,7 +113,7 @@ export default async function BoxShelf({
                     {price !== undefined && (
                       <span className="mt-2 block font-bold text-brand-dark">
                         {boxCount === 1 ? "One box" : `${boxCount} boxes`} from{" "}
-                        {naira(price)} <span className="font-semibold">· delivery in</span>
+                        {naira(price)} <span className="font-semibold">· delivery in it</span>
                       </span>
                     )}
                   </span>
