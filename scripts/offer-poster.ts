@@ -27,8 +27,14 @@ const ORANGE = "#ff5a1f";
 const PAPER = "#ffffff";
 const CREAM = "#ffe6da";
 
-/** The picture gets most of the poster: the food is why anybody stops. */
-const PHOTO_H = 780;
+/** The picture is the whole poster.
+ *
+ * It used to be a photograph on top and a flat orange slab under it, which
+ * read as two pictures stacked rather than one poster, and left a third of
+ * the page empty beside the words. Food sells food: the photograph fills
+ * the frame and the words sit on it, over a shade deep enough to read
+ * against whatever the picture happens to be. */
+const PHOTO_H = H;
 
 const OUT = "marketing/instagram";
 
@@ -43,7 +49,7 @@ const valueOf = (flag: string, fallback: string): string => {
 const offer = valueOf("--offer", "₦2,000 delivery");
 const from = valueOf("--from", "Domino's Pizza");
 const days = valueOf("--days", "Wednesday, Friday and Saturday");
-const window = valueOf("--window", "between 12 and 3pm");
+const window = valueOf("--window", "between 3 and 5pm");
 const photo = valueOf("--photo", "");
 const name = valueOf("--name", "offer");
 
@@ -87,44 +93,56 @@ export function words(p: {
 }): string {
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
-    `<rect x="0" y="${PHOTO_H}" width="${W}" height="${H - PHOTO_H}" fill="${ORANGE}"/>`,
-    // A wash at the foot of the picture, so the mark stays readable over
-    // whatever the photograph happens to be.
-    `<defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">` +
-      `<stop offset="0" stop-color="#000" stop-opacity="0"/>` +
-      `<stop offset="1" stop-color="#000" stop-opacity="0.45"/></linearGradient></defs>`,
-    `<rect x="0" y="${PHOTO_H - 200}" width="${W}" height="200" fill="url(#fade)"/>`,
-    text(PAD, PHOTO_H - 54, "Sudu", 40, "bold", PAPER),
-    text(PAD, PHOTO_H - 22, "Delivery to PAU", 22, "normal", CREAM),
+    `<defs>`,
+    // Deep enough at the foot to read white against a photograph of
+    // anything, and gone by halfway up so the food is not behind a curtain.
+    `<linearGradient id="foot" x1="0" y1="0" x2="0" y2="1">` +
+      `<stop offset="0" stop-color="#1a0b04" stop-opacity="0"/>` +
+      `<stop offset="0.45" stop-color="#1a0b04" stop-opacity="0.72"/>` +
+      `<stop offset="1" stop-color="#1a0b04" stop-opacity="0.95"/></linearGradient>`,
+    // A lighter one at the top, so the mark has something to sit on.
+    `<linearGradient id="head" x1="0" y1="0" x2="0" y2="1">` +
+      `<stop offset="0" stop-color="#1a0b04" stop-opacity="0.78"/>` +
+      `<stop offset="0.6" stop-color="#1a0b04" stop-opacity="0.3"/>` +
+      `<stop offset="1" stop-color="#1a0b04" stop-opacity="0"/></linearGradient>`,
+    `</defs>`,
+    `<rect x="0" y="0" width="${W}" height="300" fill="url(#head)"/>`,
+    `<rect x="0" y="${H - 720}" width="${W}" height="720" fill="url(#foot)"/>`,
+    text(PAD, 118, "Sudu", 42, "bold", PAPER),
+    text(PAD, 152, "Delivery to PAU", 23, "normal", CREAM),
   ];
 
-  let y = PHOTO_H + 116;
+  // Set from the foot upwards, because the foot is the one edge every one
+  // of these shares: the address sits on it and everything stacks off that.
+  const dayLines = wrap(p.days, 30);
+  const windowY = H - 158;
+  const daysTop = windowY - 44 - (dayLines.length - 1) * 46;
+
+  if (p.window !== "") parts.push(text(PAD, windowY, p.window, 33, "normal", CREAM));
+  let at = daysTop;
+  for (const line of dayLines) {
+    parts.push(text(PAD, at, line, 37, "bold", PAPER));
+    at += 46;
+  }
+
+  // The brand's own colour, as a line rather than a slab. One stripe of
+  // orange is enough to say whose poster this is; a block of it buries the
+  // photograph the poster is for.
+  const ruleY = daysTop - 52;
+  parts.push(`<rect x="${PAD}" y="${ruleY}" width="96" height="7" rx="4" fill="${ORANGE}"/>`);
+
+  const fromY = ruleY - 34;
+  parts.push(
+    text(PAD, fromY, p.from === "" ? "on the whole menu" : `from ${p.from}`, 36, "normal", CREAM)
+  );
+
   // Shrunk where the offer is a long one. "Free delivery" and "₦10,000 off"
   // are not the same width, and a headline that runs off the side is the
   // one thing a poster cannot do.
-  const big = p.offer.length > 15 ? 68 : p.offer.length > 12 ? 78 : 88;
-  parts.push(text(PAD, y, p.offer, big, "bold", PAPER));
+  const big = p.offer.length > 15 ? 74 : p.offer.length > 12 ? 84 : 96;
+  parts.push(text(PAD, fromY - 56, p.offer, big, "bold", PAPER));
 
-  y += 56;
-  for (const line of wrap(p.from === "" ? "on the whole menu" : `from ${p.from}`, 34)) {
-    parts.push(text(PAD, y, line, 34, "normal", CREAM));
-    y += 44;
-  }
-
-  if (p.days !== "" || p.window !== "") {
-    y += 34;
-    parts.push(
-      `<rect x="${PAD}" y="${y - 34}" width="${W - PAD * 2}" height="2" fill="${PAPER}" opacity="0.3"/>`
-    );
-    let at = y + 16;
-    for (const line of wrap(p.days, 30)) {
-      parts.push(text(PAD, at, line, 34, "bold", PAPER));
-      at += 44;
-    }
-    if (p.window !== "") parts.push(text(PAD, at + 6, p.window, 30, "normal", CREAM));
-  }
-
-  parts.push(text(W / 2, H - PAD + 6, "sudu.store", 32, "bold", PAPER, "middle"));
+  parts.push(text(W / 2, H - PAD + 4, "sudu.store", 32, "bold", PAPER, "middle"));
   parts.push("</svg>");
   return parts.join("\n");
 }
