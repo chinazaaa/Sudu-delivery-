@@ -179,3 +179,26 @@ from (values
 --   at the ordinary price now, not a deal. A deal can be pulled on a
 --   Tuesday, and then the box is a promise the shop cannot keep. Ordinary
 --   menu prices move slowly and the box re-prices itself off them anyway.
+
+-- Matriculation, for November.
+--
+--   A shelf of its own rather than a line on the care package. The buyer is
+--   somebody's mother and the reader is not: she is not shopping for a
+--   restock, she is marking the day her child started at PAU, and a shelf
+--   called "Care packages" does not say that back to her.
+--
+--   Three prices, because one is a guess at what a stranger will spend:
+--   N25,000, N36,000 and N51,000, each with delivery already in it. The
+--   middle one is the one most people take, which is why it has the cake.
+--
+--   A collection rather than an occasion, deliberately. An occasion is timed
+--   and wants a car before a whistle; this is bought over weeks and
+--   delivered on a day the buyer picks, which is exactly how the care
+--   packages work. Switch the kind in admin if it should ever count down.
+--
+--   The card line carries the placeholder "Congratulations Ada. We are so
+--   proud of you.", so nobody has to work out what to write.
+--
+--   One new product under it: a litre of juice on the Sudu Shop shelf, so
+--   the packer is not sent to Burger King for a carton of Five Alive. Its
+--   price is an estimate and says so.
