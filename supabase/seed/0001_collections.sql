@@ -309,3 +309,15 @@ from (values
 --   good on the box with a cake and nonsense on the one holding cupcakes,
 --   which nobody can write on. boxes.custom_hint, falling back to the
 --   shelf's, so only the boxes that disagree need anything filled in.
+
+-- Matriculation, written for whoever is buying.
+--   "They are starting at PAU. Send something to mark the day" writes the
+--   student out of their own matriculation, on the one shelf where the day
+--   belongs to them. A new student with their own money reads that and it is
+--   plainly addressed to somebody else. "Mark matriculation day. Send one,
+--   or order your own."
+--
+--   Every "them" in the box lines went the same way: a block of them became
+--   a whole block. And two blurbs were describing contents that had already
+--   changed underneath them, the tray of sweets that became ice cream and
+--   the chocolates that moved up a box.
