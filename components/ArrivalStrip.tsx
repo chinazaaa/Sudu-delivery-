@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import CutOff from "./CutOff";
+
 /**
  * The one thing worth saying at the top of a food shop: when it arrives.
  *
@@ -22,10 +24,14 @@ import Link from "next/link";
 export default function ArrivalStrip({
   said,
   also,
+  closesAt = "",
 }: {
   said: string;
   /** The other way of getting it here, when there is one. */
   also?: { said: string; sooner: boolean } | null;
+  /** When the run in the sentence above stops taking orders. Empty where
+   *  this is a car of its own, which has no queue to make. */
+  closesAt?: string;
 }) {
   return (
     <Link
@@ -36,6 +42,11 @@ export default function ArrivalStrip({
         <span className="block text-lg font-extrabold text-ink">
           Order now, get it {said}
         </span>
+
+        {/* The deadline, between the promise and the alternative: it is the
+            reason to take the first one rather than read on. Says nothing
+            unless it is close enough to mean something. */}
+        {closesAt !== "" && <CutOff at={closesAt} />}
 
         {also && (
           <span className="mt-1 block text-sm text-ink/75">

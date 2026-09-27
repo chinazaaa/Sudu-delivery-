@@ -250,6 +250,19 @@ export default async function HomePage() {
       // orders, a car of its own today, a run tomorrow, tomorrow's first
       // window. Worked out here so the clock is the shop's.
       arriving={decided?.said ?? ""}
+      // The deadline behind that sentence, where there is one. Only a run
+      // has a queue to make: a car of its own is three hours from whenever
+      // somebody asks for it, so there is nothing to be late for. Read off
+      // the run the sentence actually names rather than the soonest one,
+      // or the clock counts down to a car that is not the one being
+      // offered.
+      closesAt={
+        decided?.onARun
+          ? batches
+              .map(toBatchView)
+              .find((one) => one.id === decided.runId)?.cutOffISO ?? ""
+          : ""
+      }
       // The other way, for whoever the headline does not suit. Somebody who
       // wants dinner tonight and somebody who wants it cheap both open this
       // page, and one sentence naming a run five days out sends the first of

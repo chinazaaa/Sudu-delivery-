@@ -1,6 +1,11 @@
 import { db } from "./supabase";
 import type { Box } from "./boxes";
 
+/** What marks a picture as ours: our own storage, or a file in this app. */
+function ours(url: string): boolean {
+  return url.startsWith("/") || url.includes("/storage/v1/object/public/");
+}
+
 /**
  * A photograph of the food on a shelf, for the card that opens it.
  *
@@ -18,6 +23,13 @@ import type { Box } from "./boxes";
  *
  * The drawing stays as the fallback, for a shelf whose contents are all
  * unphotographed.
+ *
+ * Only pictures we host ourselves. A good deal of the catalogue came in
+ * from imports still carrying the address they were exported from, and one
+ * of those on the front page is a competitor's server handing out an image
+ * on our home page: they can swap it for anything or take it down the day
+ * they notice, and either way the shop's front page is theirs to change.
+ * A drawing we own beats a photograph we do not.
  */
 export async function shelfPhotos(boxes: Box[]): Promise<Record<string, string>> {
   const wanted = [
@@ -45,7 +57,7 @@ export async function shelfPhotos(boxes: Box[]): Promise<Record<string, string>>
     price_food?: number;
   }[]) {
     const url = (row.image_url ?? "").trim();
-    if (url !== "") shot.set(row.id, { url, price: row.price_food ?? 0 });
+    if (url !== "" && ours(url)) shot.set(row.id, { url, price: row.price_food ?? 0 });
   }
 
   const best: Record<string, { url: string; price: number }> = {};

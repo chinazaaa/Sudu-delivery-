@@ -28,6 +28,7 @@ export default function Home({
   menu,
   arriving,
   alsoArriving = null,
+  closesAt = "",
   buckets,
   packs = [],
   slides,
@@ -38,6 +39,9 @@ export default function Home({
    *  worked out on the server: a phone's own clock can be anything, and this
    *  is the same decision the checkout makes. Empty when nothing is going. */
   arriving: string;
+  /** When the run named above stops taking orders. Empty for a car of its
+   *  own, which is not a queue anybody has to make. */
+  closesAt?: string;
   /** The other way of getting it here, for whoever the headline does not
    *  suit. Null when there is only one way. */
   alsoArriving?: { said: string; sooner: boolean } | null;
@@ -125,7 +129,9 @@ export default function Home({
       {/* One sentence, and nothing else, and first. Most people never
           scroll, so the first screen has to answer the only question a
           hungry person has, which is when they can eat. */}
-      {arriving !== "" && <ArrivalStrip said={arriving} also={alsoArriving} />}
+      {arriving !== "" && (
+        <ArrivalStrip said={arriving} also={alsoArriving} closesAt={closesAt} />
+      )}
 
       {/* Above the restaurants, because by the time somebody is reading a
           menu they have already decided how they are ordering. */}
