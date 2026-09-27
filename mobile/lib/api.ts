@@ -1135,3 +1135,29 @@ export function valueRows(bands: ValueBand[]): { label: string; fee: number }[] 
     };
   });
 }
+
+/**
+ * The countdown text: "3h 12m", "12m 04s", or "now".
+ *
+ * Word for word what the website says, because the deadline on the front
+ * page of the app and the deadline on the front page of the site are the
+ * same deadline, and two ways of saying it is two shops.
+ */
+export function countdown(msRemaining: number): string {
+  if (msRemaining <= 0) return "now";
+  const total = Math.floor(msRemaining / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  // Past a day, in days. "71h 52m" is a sum somebody has to do before they
+  // know whether that is tonight or the weekend, which is the opposite of
+  // what a countdown is for.
+  if (h >= 24) {
+    const d = Math.floor(h / 24);
+    const rest = h % 24;
+    return rest === 0 ? `${d}d` : `${d}d ${rest}h`;
+  }
+  if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m`;
+  if (m > 0) return `${m}m ${String(s).padStart(2, "0")}s`;
+  return `${s}s`;
+}

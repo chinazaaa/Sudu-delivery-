@@ -21,6 +21,7 @@ import {
   type Shop,
 } from "@/lib/api";
 import { mine } from "@/lib/store";
+import CutOff from "@/components/CutOff";
 import Thumb from "@/components/Thumb";
 import { T } from "@/lib/theme";
 
@@ -273,6 +274,18 @@ export default function Home() {
               <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink }}>
                 Order now, get it {arriving}
               </Text>
+              {/* The deadline, between the promise and the alternative,
+                  exactly where the website puts it. Only a run has a queue
+                  to make: a car of its own is three hours from whenever it
+                  is asked for, so there is nothing to be late for. */}
+              {decided?.onARun && (
+                <CutOff
+                  at={
+                    (shop?.runs ?? []).find((one) => one.id === decided.runId)?.cutOffISO ?? ""
+                  }
+                />
+              )}
+
               {also && (
                 <Text style={{ color: T.ink, opacity: 0.75, marginTop: 4 }}>
                   {decided?.onARun
