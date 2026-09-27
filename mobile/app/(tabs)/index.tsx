@@ -246,6 +246,35 @@ export default function Home() {
           </Pressable>
         )}
 
+        {/* The food, first and by name.
+
+            Everything else on this screen is a door with a name on it, and
+            food, which is most of what the shop sells, had none: it was
+            reachable only through the word "Browse" on the arrival banner,
+            which reads as a caption rather than a way in. The website has
+            listed Food first all along. */}
+        <Pressable
+          onPress={() => router.push("/products" as never)}
+          style={{
+            backgroundColor: T.paper,
+            borderRadius: T.radius,
+            padding: 14,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontWeight: "800", color: T.ink }}>Food</Text>
+            <Text style={{ color: T.muted, marginTop: 2 }}>
+              {shop
+                ? `${shop.menu.length} restaurant${shop.menu.length === 1 ? "" : "s"} in one list`
+                : "Every restaurant in one list"}
+            </Text>
+          </View>
+          <Text style={{ color: T.brand, fontWeight: "800" }}>Browse</Text>
+        </Pressable>
+
         {/* Nobody is looking for a parcel service. They have a dress sitting
             in a shop in Lekki, so the line says both ends of the trip.
 
