@@ -257,3 +257,17 @@ from (values
 --   Their source lines say "held at shop price, above the 27 Sep check", so
 --   the next person to read one knows the number is a decision rather than a
 --   finding, and does not helpfully "correct" it back down.
+
+-- Matriculation, two more boxes and a cake that is not a birthday cake.
+--   "Birthday cake, 6 inch" on a matriculation box is a small wrong word in
+--   a large moment: it is not their birthday, and the card reads as though
+--   the shop pulled the nearest thing off a shelf. Renamed to "Celebration
+--   cake" everywhere, which is true of a birthday too, so the birthday boxes
+--   lose nothing.
+--
+--   And food, because a new student's friends want feeding and nobody
+--   celebrates a matriculation with a bucket and a card. Pizza and ice cream
+--   at N35,000, and a pot of chicken with two pizzas and doughnuts at
+--   N55,000 to feed a block. Both are restaurant items at real menu prices,
+--   so there is no estimate anywhere in them, and the flavours are swaps
+--   rather than fixed: nobody argues about pizza in the abstract.
