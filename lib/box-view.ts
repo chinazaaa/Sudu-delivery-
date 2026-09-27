@@ -3,7 +3,7 @@ import { priceLines, type PricedLine } from "./orders";
 import { openBatches } from "./batches";
 import { deliverySlots, slotsWorthOffering, type Slot } from "./same-day";
 import { hoursByDay, safeSettings } from "./settings";
-import { runDateLabel } from "./time";
+import { clockLabel, runDateLabel } from "./time";
 import { SLOT_LABEL } from "./config";
 import { cartOf, isTimed, type Box, type BoxLine, type Occasion } from "./boxes";
 
@@ -297,7 +297,26 @@ export async function whenOptions(
 
   if (Number.isFinite(closes) && now.getTime() < closes) {
     const pinned = onRuns.find((one) => one.runId === occasion.batch_id);
-    if (pinned) return [pinned];
+    if (pinned) {
+      // Said against the whistle rather than as a window.
+      //
+      // The run's own wording is right for a run: "between 3:30pm and
+      // 5:30pm" is what the shop promises anybody ordering dinner. On a
+      // match it reads as a risk, because half of that window is after
+      // kick-off, and somebody buying food for a 4:30 match should not have
+      // to work out whether 5:30 counts. This run is the one the shop put
+      // the occasion on, so it is the run that gets there in time; what was
+      // missing was saying so. A collection has no whistle and keeps the
+      // window it always had.
+      return [
+        {
+          ...pinned,
+          window: Number.isFinite(happens)
+            ? `Before ${occasion.when_word}, ${clockLabel(occasion.happens_at ?? "")}`
+            : pinned.window,
+        },
+      ];
+    }
   }
 
   return Number.isFinite(happens)
