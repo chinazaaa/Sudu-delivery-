@@ -369,6 +369,24 @@ export default async function SettingsAdmin() {
         </div>
 
         <div>
+          <label className="label" htmlFor="ribbon_href">Where it takes them</label>
+          <input
+            id="ribbon_href"
+            name="ribbon_href"
+            defaultValue={settings.ribbon_href}
+            maxLength={200}
+            placeholder="/collections/matriculation"
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">
+            Announcing something people can order is half an announcement if
+            the only way to act on it is to go and find the shelf. Leave it
+            empty for a claim like &quot;since 2018&quot;, which is not a
+            door.
+          </p>
+        </div>
+
+        <div>
           <label className="label" htmlFor="offer_code">A code to announce beside it</label>
           <input
             id="offer_code"

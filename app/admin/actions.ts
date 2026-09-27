@@ -2042,6 +2042,7 @@ const SETTING_FIELDS = [
   "hide_promoter_link",
   "hide_footer",
   "ribbon_text",
+  "ribbon_href",
   "offer_code",
   "auto_headline",
   "auto_lines",

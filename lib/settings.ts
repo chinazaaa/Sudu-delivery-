@@ -84,6 +84,8 @@ export type Settings = {
    * line, kept short on purpose. Empty means no strip at all.
    */
   ribbon_text: string;
+  /** Where the strip takes somebody. Empty leaves it as plain text. */
+  ribbon_href: string;
   /** Same day delivery is on today, or it is not. "on" or empty. */
   same_day_on: string;
   /** The same day price ladder, as JSON, so it can be changed without a
@@ -179,6 +181,7 @@ export const EMPTY: Settings = {
   hide_promoter_link: "",
   hide_footer: "",
   ribbon_text: "",
+  ribbon_href: "",
   same_day_on: "",
   same_day_bands: "",
   same_day_urgent_extra: "",

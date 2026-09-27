@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 /**
@@ -14,9 +15,13 @@ import { useState } from "react";
  */
 export default function Ribbon({
   text,
+  href = "",
   offer,
 }: {
   text: string;
+  /** Where the words take somebody. Empty leaves them as plain text, which
+   *  is right for a claim: "since 2018" is not a door. */
+  href?: string;
   offer: { code: string; line: string; automatic?: boolean } | null;
 }) {
   const [copied, setCopied] = useState(false);
@@ -26,7 +31,15 @@ export default function Ribbon({
   return (
     <div className="bg-ink px-4 py-2 text-center text-white">
       <p className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs sm:text-sm">
-        {text && <span className="font-semibold">{text}</span>}
+        {/* A thing people can order is announced with a way to order it.
+            Underlined, because white on black with no underline is a
+            sentence rather than a link, and nobody taps a sentence. */}
+        {text && href !== "" && (
+          <Link href={href} className="font-semibold underline underline-offset-2">
+            {text}
+          </Link>
+        )}
+        {text && href === "" && <span className="font-semibold">{text}</span>}
 
         {/* The dot only earns its place when both halves are on one line. */}
         {text && offer && (
