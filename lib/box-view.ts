@@ -81,16 +81,38 @@ export async function boxView(box: Box): Promise<BoxView | null> {
 export async function boxViews(boxes: Box[]): Promise<BoxView[]> {
   if (boxes.length === 0) return [];
 
+  // A swap that points at an item which no longer exists must cost that one
+  // swap and nothing more. It used to cost the entire shelf: swaps are
+  // priced alongside the box, one missing item failed the whole pricing
+  // call, and every box on the page came back empty under "Nothing is packed
+  // for this one yet". A shelf with five boxes on it said the shop had
+  // nothing, because one alternative flavour had been deleted.
+  const alive = await livingItems(
+    boxes.flatMap((box) => box.lines.flatMap((line) => line.swaps.map((s) => s.menu_item_id)))
+  );
+
   const asked = boxes.map((box) => {
     const wanted = cartOf(box);
     const swapCarts = box.lines.flatMap((line) =>
-      line.swaps.map((swap) => ({
-        menu_item_id: swap.menu_item_id,
-        option_ids: swap.option_ids,
-        qty: 1,
-      }))
+      line.swaps
+        .filter((swap) => alive.has(swap.menu_item_id))
+        .map((swap) => ({
+          menu_item_id: swap.menu_item_id,
+          option_ids: swap.option_ids,
+          qty: 1,
+        }))
     );
-    return { box, wanted, swapCarts };
+    return {
+      box: {
+        ...box,
+        lines: box.lines.map((line) => ({
+          ...line,
+          swaps: line.swaps.filter((swap) => alive.has(swap.menu_item_id)),
+        })),
+      },
+      wanted,
+      swapCarts,
+    };
   });
 
   const priced = await priceLines(asked.flatMap((one) => [...one.wanted, ...one.swapCarts]));
@@ -170,6 +192,23 @@ function one(
     runFee: box.run_fee,
     carFee: box.car_fee,
   };
+}
+
+/**
+ * Which of these items are still on the menu at all.
+ *
+ * Asked before pricing rather than discovered during it, because the pricing
+ * call is all or nothing and a box is not worth failing over an alternative
+ * nobody picked.
+ */
+async function livingItems(ids: string[]): Promise<Set<string>> {
+  const unique = [...new Set(ids)].filter(Boolean);
+  if (unique.length === 0) return new Set();
+  const { data, error } = await db().from("menu_items").select("id").in("id", unique);
+  // A database that cannot answer must not silently strip every swap, so the
+  // benefit of the doubt goes to the swap and pricing decides.
+  if (error) return new Set(unique);
+  return new Set((data ?? []).map((row: any) => row.id as string));
 }
 
 async function restaurantNames(ids: string[]): Promise<Map<string, string>> {

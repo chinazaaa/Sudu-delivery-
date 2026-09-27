@@ -200,7 +200,11 @@ export default async function ProductsPage({
       {pages > 1 && (
         <div className="flex items-center justify-between gap-3 pt-2">
           {page > 1 ? (
-            <Link href={link({ page: String(page - 1) })} className="btn-quiet px-4 py-2 text-sm">
+            <Link
+              replace
+              href={link({ page: String(page - 1) })}
+              className="btn-quiet px-4 py-2 text-sm"
+            >
               Back
             </Link>
           ) : (
@@ -210,7 +214,11 @@ export default async function ProductsPage({
             Page {page} of {pages}
           </span>
           {page < pages ? (
-            <Link href={link({ page: String(page + 1) })} className="btn-quiet px-4 py-2 text-sm">
+            <Link
+              replace
+              href={link({ page: String(page + 1) })}
+              className="btn-quiet px-4 py-2 text-sm"
+            >
               More
             </Link>
           ) : (
@@ -231,6 +239,16 @@ const Row = ({ label, children }: { label: string; children: React.ReactNode }) 
   </div>
 );
 
+/**
+ * A filter, a sort, or a page number.
+ *
+ * All of them replace rather than push. Paging and filtering are refinements
+ * of the one page somebody is on, not places they travelled to, and pushing
+ * them buries the way out: three pages into Browse, back went to page two,
+ * then page one, then the filter before that, and only then home. Replacing
+ * means one back press leaves Browse entirely, which is what the button is
+ * for.
+ */
 const Chip = ({
   href,
   on,
@@ -241,6 +259,7 @@ const Chip = ({
   children: React.ReactNode;
 }) => (
   <Link
+    replace
     href={href}
     className={`chip shrink-0 whitespace-nowrap text-sm ${
       on ? "border-brand bg-brand-tint font-bold text-brand-dark" : ""

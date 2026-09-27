@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PARTY_CHANGED, readGroup } from "./GroupLink";
 import { countItems, useCart } from "@/lib/cart";
@@ -10,6 +10,7 @@ import { shelfCount, useShelf } from "@/lib/skincare-cart";
 /** Thumb-height navigation, the way every food app on a phone does it. */
 export default function BottomNav() {
   const path = usePathname();
+  const router = useRouter();
   const cart = useCart();
   // Both baskets. They are two orders and two days, but one badge: a
   // skincare basket nobody can see from the menu is a basket nobody
@@ -61,6 +62,20 @@ export default function BottomNav() {
             <li key={tab.href} className="flex-1">
               <Link
                 href={tab.href}
+                // Pressing the tab you are already on starts it over.
+                // Three pages into Browse the address is /products?page=3,
+                // and the tab points at /products: the same pathname, so the
+                // router treats it as somewhere you already are and nothing
+                // happens. Somebody pressing Menu means "take me back to the
+                // top of the menu", so the query goes and page one comes
+                // back. Replaced rather than pushed, because starting over
+                // is not a place you travelled to.
+                onClick={(event) => {
+                  if (path !== tab.href) return;
+                  event.preventDefault();
+                  router.replace(tab.href);
+                  window.scrollTo({ top: 0 });
+                }}
                 className={`relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-bold ${
                   active ? "text-brand" : "text-muted"
                 }`}
