@@ -29,6 +29,7 @@ export default function OccasionBoxes({
   timed,
   hint = "",
   monies = [],
+  today,
   soonest,
   latest,
   hostels,
@@ -49,8 +50,17 @@ export default function OccasionBoxes({
   /** The currencies a card link can be made out in, where somebody abroad is
    *  paying. Empty where that is switched off. */
   monies?: Money[];
-  /** The soonest day a box can be packed for, and the furthest ahead worth
-   *  planning. Both worked out on the server: the clock is the shop's. */
+  /** Today on the shop's clock, the soonest day a box can be packed for at
+   *  the standard price, and the furthest ahead worth planning. All three
+   *  worked out on the server: a phone's clock is anybody's guess, and a
+   *  page left open overnight has yesterday's.
+   *
+   *  The floor under the picker is today, not `soonest`. Sooner than two
+   *  clear days is allowed and costs the rush price, which is the whole
+   *  point of the line under it; flooring at `soonest` made that line
+   *  unreachable and, in a browser lenient about `min`, let a day that has
+   *  already been through in its place. */
+  today: string;
   soonest: string;
   latest: string;
   hostels: string[];
@@ -80,7 +90,13 @@ export default function OccasionBoxes({
   // Sooner than the shop can find it, buy it and pack it, so it costs what a
   // car of its own costs. Worked out from dates the server sent, because a
   // phone's clock is anybody's guess.
-  const rush = !anyDay && wantedOn !== "" && wantedOn < soonest;
+  const rush = !anyDay && wantedOn !== "" && wantedOn >= today && wantedOn < soonest;
+
+  // A day that has already been. `min` on a date field is a hint rather than
+  // a rule in some browsers, and it can be typed into besides, so the page
+  // says so plainly instead of quoting a rush price for last month. The
+  // server refuses it too; this is so nobody gets that far.
+  const gone = !anyDay && wantedOn !== "" && wantedOn < today;
 
   // One entry per day that has anything going, in order, each carrying its
   // own cars. Built here rather than on the server because it is a shape,
@@ -380,7 +396,7 @@ export default function OccasionBoxes({
                   <input
                     type="date"
                     value={wantedOn}
-                    min={soonest}
+                    min={today}
                     max={latest}
                     onChange={(event) => {
                       setWantedOn(event.target.value);
@@ -405,19 +421,27 @@ export default function OccasionBoxes({
                 </label>
 
                 {/* One line, and it changes as they pick. A price that only
-                    appears at the end is a price that feels like a catch. */}
-                <p className="text-sm">
-                  <span className="font-extrabold">
-                    {naira(box.food + (rush ? box.carFee : box.runFee) + moved(box, swaps))}
-                  </span>{" "}
-                  <span className="text-muted">
-                    {anyDay
-                      ? "delivery in it. We message you to agree the day."
-                      : rush
-                        ? `delivery in it. Sooner than ${STANDARD_DAYS} days, so it is the rush price.`
-                        : "delivery in it."}
-                  </span>
-                </p>
+                    appears at the end is a price that feels like a catch.
+                    A day that has already been gets no price at all: quoting
+                    one for it says the shop will do something it cannot. */}
+                {gone ? (
+                  <p className="text-sm font-semibold text-brand-dark">
+                    That day has gone. Pick today or later.
+                  </p>
+                ) : (
+                  <p className="text-sm">
+                    <span className="font-extrabold">
+                      {naira(box.food + (rush ? box.carFee : box.runFee) + moved(box, swaps))}
+                    </span>{" "}
+                    <span className="text-muted">
+                      {anyDay
+                        ? "delivery in it. We message you to agree the day."
+                        : rush
+                          ? `delivery in it. Sooner than ${STANDARD_DAYS} days, so it is the rush price.`
+                          : "delivery in it."}
+                    </span>
+                  </p>
+                )}
               </>
             )}
           </section>
@@ -643,7 +667,12 @@ export default function OccasionBoxes({
 
           <button
             type="submit"
-            disabled={busy || going === ""}
+            /* A thing with a whistle needs a car picked. Everything else
+               needs a day that has not already been: the server refuses one
+               anyway, and letting them reach it only to be turned back is a
+               worse way to say the same thing. `going` is only a car, so it
+               has nothing to say about a box that travels on a date. */
+            disabled={busy || (timed ? going === "" : gone)}
             className="btn-primary w-full py-3.5 text-base"
           >
             {busy

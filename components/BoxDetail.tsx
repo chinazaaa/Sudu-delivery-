@@ -9,7 +9,7 @@ import { hostelNames } from "@/lib/hostels";
 import { currentCustomer, customerDetails } from "@/lib/customer-auth";
 import { safeSettings } from "@/lib/settings";
 import { namedPromoters } from "@/lib/promoters";
-import { whenLabel } from "@/lib/time";
+import { lagosToday, whenLabel } from "@/lib/time";
 import { ESTIMATE_NOTE } from "@/lib/arrival";
 import OccasionBoxes from "@/components/OccasionBoxes";
 import HelpLine from "@/components/HelpLine";
@@ -116,6 +116,7 @@ export default async function BoxDetail({
             symbol: SYMBOL[code],
             rate: rateFor(settings, code),
           }))}
+          today={lagosToday()}
           soonest={soonestStandard()}
           latest={furthest()}
           hostels={hostels}

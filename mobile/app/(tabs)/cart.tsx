@@ -89,11 +89,6 @@ export default function Cart() {
   }, [lines, run?.id, shop]);
 
   const offered = priced?.offer ?? null;
-  const fee = offered
-    ? offered.fee
-    : shop && run
-      ? feeFrom(items, shop.bands, run.flashFee)
-      : null;
 
   if (lines.length === 0) {
     return (
@@ -148,23 +143,50 @@ export default function Cart() {
       ? (shop?.sameDay?.slots ?? []).find((one) => one.at === decided.at) ?? null
       : null;
 
-  const alone =
-    shop && items > 0 && !offered
+  // What this cart costs to bring, worked out once.
+  //
+  // It used to be worked out twice: the summary at the bottom took the
+  // container ladder across the whole cart, and the group card took the two
+  // errands properly. A cart with market shopping and a restaurant in it
+  // then said seven thousand at the top and six at the bottom, and only one
+  // of those was what the checkout was going to charge. The cart is allowed
+  // one number, and it is the checkout's.
+  //
+  // Priced the way the food is actually going, not the way it usually goes.
+  // With no run inside the days people can order ahead, the soonest thing is
+  // a car of its own, and quoting the run ladder here had the cart promising
+  // four thousand over a checkout about to charge six and a half.
+  const byValue = shop ? valueLadderFor(shop, kitchensIn) : [];
+  const carFee =
+    shop && items > 0
       ? soon && (shop.sameDay?.bands?.length ?? 0) > 0
         ? sameDayFeeFor(items, soon.urgent, shop.sameDay!.bands, shop.sameDay!.urgentExtra ?? 0)
-        : // Two errands, two fees, and the cart has to say what the checkout
-          // will say.
-          feeAcross({
-            marketFood: cartTotal(
-              lines.filter((line) => pricesByValue(shop, kitchenOf(line)))
-            ),
-            restaurantFee: (() => {
-              const rest = lines.filter((line) => !pricesByValue(shop, kitchenOf(line)));
-              return rest.length === 0 ? 0 : feeFor(countItems(rest), shop.bands, null);
-            })(),
-            bands: valueLadderFor(shop, kitchensIn),
-          })
+        : byValue.length > 0
+          ? // Two errands, two fees. The market half pays by what the
+            // shopping comes to and the restaurant half by how much of the
+            // car it fills, and the bill is the two added.
+            feeAcross({
+              marketFood: cartTotal(
+                lines.filter((line) => pricesByValue(shop, kitchenOf(line)))
+              ),
+              // The container count floors at one, which is right for a cart
+              // and wrong for half of one: no restaurant lines must mean no
+              // restaurant fee, not the price of a container nobody ordered.
+              restaurantFee: (() => {
+                const rest = lines.filter((line) => !pricesByValue(shop, kitchenOf(line)));
+                return rest.length === 0
+                  ? 0
+                  : feeFor(countItems(rest), shop.bands, run?.flashFee ?? null);
+              })(),
+              bands: byValue,
+            })
+          : feeFor(items, shop.bands, run?.flashFee ?? null)
       : 0;
+
+  // An offer prices delivery outright, so there is no ladder left to beat
+  // and nothing for the group card to compare against.
+  const fee = offered ? offered.fee : shop && (run || soon) ? carFee : null;
+  const alone = offered ? 0 : carFee;
 
   // An offer this cart nearly has. From the inside, a qualifying dish with
   // something else beside it looks like the offer simply not working, so it
@@ -407,7 +429,9 @@ export default function Cart() {
             label={
               offered
                 ? offered.note || "Delivery, on offer"
-                : `Delivery (${items} item${items === 1 ? "" : "s"})`
+                : byValue.length > 0
+                  ? "Delivery"
+                  : `Delivery (${items} item${items === 1 ? "" : "s"})`
             }
             value={fee === null ? "at checkout" : naira(fee)}
           />
@@ -458,12 +482,4 @@ function round() {
     alignItems: "center",
     justifyContent: "center",
   } as const;
-}
-
-/** Imported lazily to keep this file readable; the rule lives in lib/api. */
-function feeFrom(items: number, bands: { maxItems: number | null; fee: number }[], flash: number | null) {
-  const ladder = bands.length > 0 ? bands : [{ maxItems: null, fee: 4000 }];
-  const band =
-    ladder.find((step) => step.maxItems !== null && items <= step.maxItems) ?? ladder[ladder.length - 1];
-  return flash === null ? band.fee : Math.max(0, flash + (band.fee - ladder[0].fee));
 }
