@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+<rect width="1080" height="1080" fill="#fff1ea"/>
+
+  <g transform="translate(88 88) scale(0.1640625)">
+    <rect width="512" height="512" rx="116" fill="#fff1ea"/>
+    <path d="M116 180h280l-27 248a44 44 0 0 1-44 39H187a44 44 0 0 1-44-39z" fill="#ff5a1f"/>
+    <path d="M196 180v-26a60 60 0 0 1 120 0v26" fill="none" stroke="#14110f" stroke-width="28" stroke-linecap="round"/>
+    <path d="M316 272C316 240 202 240 202 294C202 338 316 330 316 372C316 426 202 426 202 392"
+          fill="none" stroke="#fff1ea" stroke-width="34" stroke-linecap="round"/>
+  </g>
+
+<text x="192" y="144" font-family="DejaVu Sans" font-size="42" font-weight="bold" fill="#14110f" text-anchor="start">Sudu</text>
+<text x="192" y="176" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#6b6360" text-anchor="start">Delivery to PAU</text>
+<text x="88" y="521" font-family="DejaVu Sans" font-size="72" font-weight="bold" fill="#14110f" text-anchor="start">A birthday,</text>
+<text x="88" y="601" font-family="DejaVu Sans" font-size="72" font-weight="bold" fill="#14110f" text-anchor="start">at PAU.</text>
+<rect x="88" y="637" width="120" height="7" rx="4" fill="#14110f" opacity="1"/>
+<text x="88" y="707" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#6b6360" text-anchor="start">A cake, pizza and drinks, on the day.</text>
+<text x="88" y="749" font-family="DejaVu Sans" font-size="30" font-weight="normal" fill="#6b6360" text-anchor="start">From ₦25,600, delivery in it.</text>
+<text x="540" y="998" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#14110f" text-anchor="middle">sudu.store</text>
+</svg>

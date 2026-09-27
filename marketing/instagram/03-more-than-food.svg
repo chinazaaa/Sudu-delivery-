@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+<rect width="1080" height="1080" fill="#ff5a1f"/>
+
+  <g transform="translate(88 88) scale(0.1640625)">
+    <rect width="512" height="512" rx="116" fill="#ff5a1f"/>
+    <path d="M116 180h280l-27 248a44 44 0 0 1-44 39H187a44 44 0 0 1-44-39z" fill="#ffffff"/>
+    <path d="M196 180v-26a60 60 0 0 1 120 0v26" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+    <path d="M316 272C316 240 202 240 202 294C202 338 316 330 316 372C316 426 202 426 202 392"
+          fill="none" stroke="#ff5a1f" stroke-width="34" stroke-linecap="round"/>
+  </g>
+
+<text x="192" y="144" font-family="DejaVu Sans" font-size="42" font-weight="bold" fill="#ffffff" text-anchor="start">Sudu</text>
+<text x="192" y="176" font-family="DejaVu Sans" font-size="21" font-weight="normal" fill="#ffe6da" text-anchor="start">Delivery to PAU</text>
+<text x="88" y="330" font-family="DejaVu Sans" font-size="66" font-weight="bold" fill="#ffffff" text-anchor="start">More than food.</text>
+<text x="88" y="452" font-family="DejaVu Sans" font-size="40" font-weight="bold" fill="#ffffff" text-anchor="start">Care packages</text>
+<text x="992" y="452" font-family="DejaVu Sans" font-size="38" font-weight="bold" fill="#ffffff" text-anchor="end">from ₦24,200</text>
+<rect x="88" y="478" width="904" height="2" fill="#ffffff" opacity="0.25"/>
+<text x="88" y="556" font-family="DejaVu Sans" font-size="40" font-weight="bold" fill="#ffffff" text-anchor="start">Hostel packs</text>
+<text x="992" y="556" font-family="DejaVu Sans" font-size="38" font-weight="bold" fill="#ffffff" text-anchor="end">from ₦43,400</text>
+<rect x="88" y="582" width="904" height="2" fill="#ffffff" opacity="0.25"/>
+<text x="88" y="660" font-family="DejaVu Sans" font-size="40" font-weight="bold" fill="#ffffff" text-anchor="start">Restocks</text>
+<text x="992" y="660" font-family="DejaVu Sans" font-size="38" font-weight="bold" fill="#ffffff" text-anchor="end">from ₦20,050</text>
+<rect x="88" y="686" width="904" height="2" fill="#ffffff" opacity="0.25"/>
+<text x="88" y="764" font-family="DejaVu Sans" font-size="40" font-weight="bold" fill="#ffffff" text-anchor="start">Gifts</text>
+<text x="992" y="764" font-family="DejaVu Sans" font-size="38" font-weight="bold" fill="#ffffff" text-anchor="end">from ₦33,650</text>
+<rect x="88" y="790" width="904" height="2" fill="#ffffff" opacity="0.25"/>
+<text x="88" y="880" font-family="DejaVu Sans" font-size="28" font-weight="normal" fill="#ffe6da" text-anchor="start">Eighteen shelves, forty eight boxes.</text>
+<text x="88" y="920" font-family="DejaVu Sans" font-size="28" font-weight="normal" fill="#ffe6da" text-anchor="start">One price each, delivery in it.</text>
+<text x="540" y="998" font-family="DejaVu Sans" font-size="30" font-weight="bold" fill="#ffffff" text-anchor="middle">sudu.store</text>
+</svg>
