@@ -52,6 +52,10 @@ const days = valueOf("--days", "Wednesday, Friday and Saturday");
 const window = valueOf("--window", "between 3 and 5pm");
 const photo = valueOf("--photo", "");
 const name = valueOf("--name", "offer");
+/** The WhatsApp number as the shop gives it out. Spaced for reading rather
+ *  than dialling: nobody types a number off a poster, they look at it and
+ *  then find you. */
+const phone = valueOf("--phone", "0903 217 5147");
 
 const safe = (s: string) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -90,6 +94,7 @@ export function words(p: {
   from: string;
   days: string;
   window: string;
+  phone?: string;
 }): string {
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
@@ -142,7 +147,11 @@ export function words(p: {
   const big = p.offer.length > 15 ? 74 : p.offer.length > 12 ? 84 : 96;
   parts.push(text(PAD, fromY - 56, p.offer, big, "bold", PAPER));
 
-  parts.push(text(W / 2, H - PAD + 4, "sudu.store", 32, "bold", PAPER, "middle"));
+  // The address and the number on one line at the foot. Two ways to reach
+  // the shop, and a dot between them so it reads as one line rather than
+  // two things that happen to be near each other.
+  const foot = (p.phone ?? "") === "" ? "sudu.store" : `sudu.store  ·  ${p.phone}`;
+  parts.push(text(W / 2, H - PAD + 4, foot, 32, "bold", PAPER, "middle"));
   parts.push("</svg>");
   return parts.join("\n");
 }
@@ -175,6 +184,7 @@ async function main() {
   console.log(`From    ${from || "the whole menu"}`);
   console.log(`Days    ${days}`);
   console.log(`Window  ${window}`);
+  console.log(`Phone   ${phone || "not shown"}`);
   console.log(`Picture ${photo || "none, so plain orange"}`);
   console.log("");
 
@@ -185,7 +195,7 @@ async function main() {
   await sharp({ create: { width: W, height: H, channels: 4, background: ORANGE } })
     .composite([
       ...(shot ? [{ input: shot, top: 0, left: 0 }] : []),
-      { input: Buffer.from(words({ offer, from, days, window })), top: 0, left: 0 },
+      { input: Buffer.from(words({ offer, from, days, window, phone })), top: 0, left: 0 },
     ])
     .png()
     .toFile(path);
@@ -199,7 +209,7 @@ We deliver ${days}, ${window}.
 
 No code needed, it comes off at checkout.
 
-sudu.store
+sudu.store${phone ? ` or WhatsApp ${phone}` : ""}
 
 #Sudu #PAU #PanAtlanticUniversity #LagosDelivery #CampusLife
 #NigerianStudents #StudentLife #Lekki #IbejuLekki #LagosFood
