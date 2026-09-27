@@ -202,3 +202,21 @@ from (values
 --   One new product under it: a litre of juice on the Sudu Shop shelf, so
 --   the packer is not sent to Burger King for a carton of Five Alive. Its
 --   price is an estimate and says so.
+
+-- Matriculation, priced at the round numbers.
+--   N30,000, N45,000 and N60,000, hit by moving each box's own fixed
+--   delivery rather than by thinning what is in it. A box quotes one price
+--   with delivery already inside, so that fee is the dial that exists for
+--   this, and the contents stay what was promised. The rush price keeps the
+--   N2,500 premium it had over the ordinary one.
+--
+--   The margin sits in those fees on purpose: the goods are estimates with a
+--   15% buffer, and the buffer is a cushion rather than a wage.
+
+-- The Sudu Shop shelf carries a buffer.
+--   59 of its 60 items were an estimate of what the thing costs in Sangotedo
+--   or Novare, with nothing on top: a wrong guess came out of the shop, and a
+--   right one still paid nobody for the queuing. Every one is +15%, rounded
+--   to the nearest hundred, and its source says "+15% buffer" so the next
+--   person does not quietly take it off. docs/prices-to-confirm.csv lists all
+--   59 with the money riding on each, for walking the market.
