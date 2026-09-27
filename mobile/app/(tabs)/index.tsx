@@ -190,6 +190,40 @@ export default function Home() {
           <RefreshControl refreshing={pulling} onRefresh={() => load(true)} tintColor={T.brand} />
         }
       >
+        {/* Whatever is true today, written in admin, the same line the
+            website carries along its top. The app had no way to announce
+            anything at all: a new shelf opened and the only people who knew
+            were the ones who happened to scroll past it. Above the order
+            card, because an announcement below the fold is a leaflet in a
+            drawer. */}
+        {(shop?.shop.ribbon ?? "") !== "" && (
+          <Pressable
+            onPress={() => {
+              const to = shop?.shop.ribbonTo ?? "";
+              if (to !== "") router.push(to as never);
+            }}
+            // Not pressable when there is nowhere to go, so a claim like
+            // "since 2018" does not look like a door that is broken.
+            disabled={(shop?.shop.ribbonTo ?? "") === ""}
+            style={{
+              backgroundColor: T.ink,
+              borderRadius: T.radius,
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <Text style={{ color: T.paper, fontWeight: "700", flex: 1, lineHeight: 20 }}>
+              {shop!.shop.ribbon}
+            </Text>
+            {(shop?.shop.ribbonTo ?? "") !== "" && (
+              <Text style={{ color: T.brand, fontWeight: "800" }}>See</Text>
+            )}
+          </Pressable>
+        )}
+
         {latest && (
           <Pressable
             onPress={() => router.push(`/order/${latest.id}`)}

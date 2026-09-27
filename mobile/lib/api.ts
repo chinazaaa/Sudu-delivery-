@@ -279,7 +279,16 @@ export type Shop = {
     bands: { maxItems: number | null; fee: number }[];
     urgentExtra: number;
   };
-  shop: { tagline: string; ribbon: string; whatsapp: string };
+  shop: {
+    tagline: string;
+    /** The strip along the top, written in admin. Empty means nothing to
+     *  announce and no strip at all. */
+    ribbon: string;
+    /** Where it takes them, already translated into a screen this app has.
+     *  Empty leaves the strip as words rather than a door. */
+    ribbonTo?: string;
+    whatsapp: string;
+  };
   /** Who somebody could say they heard about the shop from. Empty means
    *  nobody is promoting, and the question is not worth asking. */
   promoters?: { code: string; name: string }[];

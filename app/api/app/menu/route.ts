@@ -23,6 +23,17 @@ export const dynamic = "force-dynamic";
  * phone cannot be trusted with a key that can read every customer, and the
  * rules about what a thing costs belong in one place.
  */
+/** A website address as the screen this app would open for it. */
+function appRoute(href: string): string {
+  const path = (href || "").trim();
+  const shelf = path.match(/^\/(?:collections|occasions)\/([a-z0-9-]+)$/i);
+  if (shelf) return `/occasions/${shelf[1]}`;
+  if (["/products", "/parcel", "/skincare", "/group", "/custom-order"].includes(path)) {
+    return path === "/custom-order" ? "" : path;
+  }
+  return "";
+}
+
 export async function GET(): Promise<NextResponse> {
   try {
     const [menu, batches, bands, settings, hostels] = await Promise.all([
@@ -125,6 +136,14 @@ export async function GET(): Promise<NextResponse> {
       shop: {
         tagline: settings.tagline,
         ribbon: settings.ribbon_text,
+        // Where the strip goes, translated into a screen this app has. The
+        // website files a collection under /collections and an occasion
+        // under /occasions; the app keeps both on one screen, so a link
+        // written for the website has to be read rather than passed on.
+        // Anything the app has no screen for comes back empty and the strip
+        // is words rather than a door, which is better than a tap that goes
+        // nowhere.
+        ribbonTo: appRoute(settings.ribbon_href),
         whatsapp: settings.whatsapp_number,
       },
     });
