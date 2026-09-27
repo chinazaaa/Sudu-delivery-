@@ -73,8 +73,15 @@ const by = valueOf("--by", "1pm");
  * On a flyer aimed at somebody who has never used the shop, this does more
  * than the discount does: a stranger's worry is not the price, it is
  * handing money to a stranger. Say nothing here with --backed "".
+ *
+ * It names what the shop already does rather than a new promise. "Late"
+ * was the first draft and is the wrong word: a window is an estimate, the
+ * site says half an hour either way is normal, and nothing anywhere says
+ * when late begins. That is an argument waiting to happen in public with a
+ * student who is owed nothing. Missing and wrong are not arguable, and
+ * same night is a harder commitment than the vague one it replaces.
  */
-const backed = valueOf("--backed", "Late or missing = full refund");
+const backed = valueOf("--backed", "Missing or wrong = full refund, same night");
 
 const safe = (s: string) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
