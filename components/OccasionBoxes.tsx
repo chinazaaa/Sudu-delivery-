@@ -179,6 +179,15 @@ export default function OccasionBoxes({
                   </span>
                 ))}
               </span>
+              {/* Said on the card, not left for whoever scrolls far enough to
+                  find the box that asks. A packed box reads as fixed, so the
+                  person who wanted it without the nuts closes the page
+                  instead of asking. */}
+              <span className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className="rounded-full bg-ink/5 px-2 py-0.5 text-xs font-bold text-ink/70">
+                  Fully customisable
+                </span>
+              </span>
               <span className="mt-1 block text-sm font-semibold text-brand">
                 Delivery included
               </span>
@@ -403,10 +412,10 @@ export default function OccasionBoxes({
                   </span>{" "}
                   <span className="text-muted">
                     {anyDay
-                      ? "delivery in. We message you to agree the day."
+                      ? "delivery in it. We message you to agree the day."
                       : rush
-                        ? `delivery in. Sooner than ${STANDARD_DAYS} days, so it is the rush price.`
-                        : "delivery in."}
+                        ? `delivery in it. Sooner than ${STANDARD_DAYS} days, so it is the rush price.`
+                        : "delivery in it."}
                   </span>
                 </p>
               </>

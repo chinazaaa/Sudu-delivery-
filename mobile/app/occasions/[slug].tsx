@@ -276,6 +276,26 @@ export default function OccasionScreen() {
               </Text>
             ))}
           </View>
+          {/* Said on the card rather than left for whoever scrolls far
+              enough to find the box that asks. A packed box reads as fixed,
+              so the person who wanted it without the nuts closes the page
+              instead of asking. */}
+          <View style={{ flexDirection: "row", marginTop: 8 }}>
+            <Text
+              style={{
+                backgroundColor: "rgba(20,17,15,0.06)",
+                color: "rgba(20,17,15,0.7)",
+                fontSize: 11,
+                fontWeight: "800",
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+                borderRadius: 999,
+                overflow: "hidden",
+              }}
+            >
+              Fully customisable
+            </Text>
+          </View>
           <Text style={{ color: T.brand, fontWeight: "700", marginTop: 4 }}>
             Delivery included
           </Text>
@@ -496,10 +516,10 @@ export default function OccasionScreen() {
                   <Text style={{ fontWeight: "800" }}>{naira(priceOf(box))}</Text>
                   <Text style={{ color: T.muted }}>
                     {mode === "any"
-                      ? " delivery in. We message you to agree the day."
+                      ? " delivery in it. We message you to agree the day."
                       : rush
-                        ? " delivery in, at the rush price."
-                        : " delivery in."}
+                        ? " delivery in it, at the rush price."
+                        : " delivery in it."}
                   </Text>
                 </Text>
               </>
