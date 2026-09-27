@@ -220,3 +220,28 @@ from (values
 --   to the nearest hundred, and its source says "+15% buffer" so the next
 --   person does not quietly take it off. docs/prices-to-confirm.csv lists all
 --   59 with the money riding on each, for walking the market.
+
+-- Real prices, 27 September 2026.
+--   A Lagos price check against live pages (Supermart.ng, Jumia, Jiji, Diva
+--   Cakes, BuyFlowers, and the Lagos State food tracker) replaced my guess on
+--   23 items. The rule did not change: listed is cost plus 15%. What changed
+--   is that cost is now something somebody saw, so the 15% is margin rather
+--   than a cushion, and each source line says which it is and when.
+--
+--   Both directions, which is the useful part. Milo, Peak, the power bank,
+--   toothpaste, tea and insecticide were all listed ABOVE what Lagos charges:
+--   the power bank alone came down from N28,800 to N23,600. And rice has
+--   fallen, not risen: the Lagos tracker had 50kg imported long grain at
+--   N56,000 in August, so a guess built on "prices only go up" was wrong.
+--
+--   Four were a question about the thing rather than the price, and were
+--   answered: Ferrero Rocher rather than an unnamed assortment (N28,600), a
+--   true medium teddy (N24,200), a branded vacuum flask (N27,500), and a 16
+--   inch standing fan rather than a table one (N44,900). Each is now named
+--   for what it is, so nobody packs the cheap version against the dear price.
+--
+--   Ferrero moved the Matriculation ladder: the 8 inch cake and a box of it
+--   came to N57,400 before anything else went in. So the top box takes the 6
+--   inch cake and spends the difference on the chocolate, and the ladder
+--   reads cupcakes, then a cake, then a cake with the good chocolate. Still
+--   N30,000, N45,000 and N60,000.
