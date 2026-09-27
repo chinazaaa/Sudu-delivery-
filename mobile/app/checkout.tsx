@@ -454,6 +454,48 @@ export default function Checkout() {
     }
   };
 
+  /**
+   * The other way of getting this here, and a way to take it.
+   *
+   * A car of its own can be two and a half thousand dearer than waiting for
+   * a run, and nobody should pay that without being told there was another
+   * way. It reads as a button because it is one: a sentence people cannot
+   * tell is tappable is a sentence they never tap.
+   *
+   * Written once and shown in one of two places, because it is really two
+   * arguments. "A car could be there sooner" is about time, so it sits with
+   * the time. "A run costs less" is about money, so it sits with the money,
+   * which is where the website has always put it and where somebody reading
+   * a fee they think is high will actually be looking.
+   */
+  const theOtherWay = () =>
+    otherWay ? (
+      <Pressable
+        onPress={() => {
+          if (picked) {
+            setDeliverAt("");
+            setRunId(otherWay.runId);
+          } else {
+            setDeliverAt(otherWay.at);
+          }
+        }}
+        style={{
+          backgroundColor: T.tint,
+          borderRadius: 12,
+          paddingHorizontal: 12,
+          paddingVertical: 10,
+        }}
+      >
+        <Text style={{ color: T.brandDark, fontWeight: "700" }}>
+          {picked
+            ? `Rather pay less? ${otherWay.said} for ${naira(otherWay.fee)}` +
+              (otherWay.saving > 0 ? `, ${naira(otherWay.saving)} less.` : ".")
+            : `Need it sooner? A car of its own can be there ${otherWay.said}, for ${naira(otherWay.fee)}.`}
+          <Text style={{ textDecorationLine: "underline" }}> Tap for that.</Text>
+        </Text>
+      </Pressable>
+    ) : null;
+
   if (!shop) return <ActivityIndicator color={T.brand} style={{ marginTop: 40 }} />;
 
   return (
@@ -515,37 +557,10 @@ export default function Checkout() {
             promise nobody can keep in Lagos traffic. */}
         <Text style={{ color: T.muted }}>{ESTIMATE_NOTE}</Text>
 
-        {/* The other way of getting it here, and a way to take it. A car of
-            its own can be two and a half thousand dearer than waiting for a
-            run, and nobody should pay that without being told there was
-            another way. It reads as a button because it is one: a sentence
-            people cannot tell is tappable is a sentence they never tap. */}
-        {otherWay && (
-          <Pressable
-            onPress={() => {
-              if (picked) {
-                setDeliverAt("");
-                setRunId(otherWay.runId);
-              } else {
-                setDeliverAt(otherWay.at);
-              }
-            }}
-            style={{
-              backgroundColor: T.tint,
-              borderRadius: 12,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-            }}
-          >
-            <Text style={{ color: T.brandDark, fontWeight: "700" }}>
-              {picked
-                ? `Rather pay less? ${otherWay.said} for ${naira(otherWay.fee)}` +
-                  (otherWay.saving > 0 ? `, ${naira(otherWay.saving)} less.` : ".")
-                : `Need it sooner? A car of its own can be there ${otherWay.said}, for ${naira(otherWay.fee)}.`}
-              <Text style={{ textDecorationLine: "underline" }}> Tap for that.</Text>
-            </Text>
-          </Pressable>
-        )}
+        {/* Somebody on a run being told a car could be quicker. The argument
+            here is time, so it belongs beside the time. The other direction
+            is an argument about money and sits by the money, further down. */}
+        {otherWay && !picked && theOtherWay()}
 
         {noRunThere && (
           <Text style={{ color: T.brandDark, fontWeight: "700" }}>
@@ -898,6 +913,9 @@ export default function Checkout() {
             />
           )
         )}
+
+        {/* A run for less, right under the fee it undercuts. */}
+        {otherWay && picked && theOtherWay()}
 
         {applied && <Row label={`Code ${applied.code}`} value={`−${naira(applied.discount)}`} />}
         <View style={{ height: 1, backgroundColor: T.line, marginVertical: 4 }} />
