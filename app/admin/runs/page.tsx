@@ -96,8 +96,24 @@ export default async function RunsPage({
   // purpose; this page is the one that asks what is happening now, and
   // "every run so far" is the other tab for a reason.
   const weekEnd = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+
+  /**
+   * Whether a run that has already gone still wants looking at.
+   *
+   * A finished run is history, and history has its own tab. One with a bag
+   * nobody ticked off, or money nobody paid, is not history: it is a job,
+   * and it has to stay in front of whoever can do it.
+   */
+  const unfinished = (batch: (typeof batches)[number]) =>
+    batch.orderCount > 0 &&
+    (batch.paidCount < batch.orderCount || batch.stage !== "handed_out");
+
   if (window === "recent") {
-    batches = batches.filter((batch) => batch.run_date <= weekEnd);
+    batches = batches.filter(
+      (batch) =>
+        batch.run_date <= weekEnd && (batch.run_date >= today || unfinished(batch))
+    );
   }
 
   const live = batches.filter((batch) => batch.status !== "cancelled");
@@ -131,7 +147,7 @@ export default async function RunsPage({
         detail={
           window === "all"
             ? "Every run ever made, newest first."
-            : "The next seven days and the few just gone. Fridays open themselves."
+            : "The next seven days, and anything behind that is not finished."
         }
         actions={
           <>
