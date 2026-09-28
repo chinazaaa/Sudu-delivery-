@@ -3,11 +3,17 @@ import Stat from "@/components/admin/Stat";
 import { customerRows } from "@/lib/admin-data";
 import { getSettings } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
-import { whatsappTo } from "@/lib/messages";
+import { firstName, whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import SaveButton from "@/components/SaveButton";
-import { addCustomer, deleteCustomer, saveCustomerNote, setCustomerPromoter } from "../actions";
+import {
+  addCustomer,
+  deleteCustomer,
+  saveCustomerName,
+  saveCustomerNote,
+  setCustomerPromoter,
+} from "../actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { hostelNames } from "@/lib/hostels";
 import { namedPromoters } from "@/lib/promoters";
@@ -176,7 +182,7 @@ export default async function CustomersPage({
           {shown.map((row) => {
             const message = whatsappTo(
               row.phone,
-              `Hi ${row.name}, here is your Sudu PIN: ${row.pin}.\n\n` +
+              `Hi ${firstName(row.name, row.callsThem)}, here is your Sudu PIN: ${row.pin}.\n\n` +
                 `Open ${url}/orders, put in your number and that PIN, and every ` +
                 `order you have placed is there.`
             );
@@ -276,6 +282,21 @@ export default async function CustomersPage({
                     </SaveButton>
                   </form>
                 )}
+
+                {/* Messages open with a first name, and the first word of a
+                    saved name is only a guess at which word that is: names
+                    arrive written both ways round. This is where somebody
+                    says which, once, for the ones the guess gets wrong. */}
+                <form action={saveCustomerName} className="mt-3 flex gap-2">
+                  <input type="hidden" name="phone" value={row.phone} />
+                  <input
+                    name="calls_them"
+                    defaultValue={row.callsThem}
+                    placeholder={`What to call them (now: ${firstName(row.name)})`}
+                    className="field grow py-2 text-sm"
+                  />
+                  <SaveButton />
+                </form>
 
                 <form action={saveCustomerNote} className="mt-3 flex gap-2">
                   <input type="hidden" name="phone" value={row.phone} />

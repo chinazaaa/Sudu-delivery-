@@ -55,6 +55,9 @@ export type BatchSheet = {
   groupsShort: GroupShortfall[];
   /** Phone to PIN, for the confirmation message. */
   pins: Record<string, string>;
+  /** What to greet each person as, by phone, where the shop has said.
+   *  Missing means the first word of their name. */
+  callsThem: Record<string, string>;
   summary: {
     paidCount: number;
     unpaidCount: number;
@@ -183,6 +186,7 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
     refunds: await refundsOwed(batchId),
     groupsShort: await groupShortfalls(batchId),
     pins: await pinsFor(orders.map((o) => o.customer_phone)),
+    callsThem: await callsThemFor(orders.map((o) => o.customer_phone)),
     summary: {
       paidCount: paid.length,
       unpaidCount: unpaid.length,
@@ -228,6 +232,33 @@ async function pinsFor(phones: string[]): Promise<Record<string, string>> {
 
   const { data } = await db().from("customers").select("phone, pin").in("phone", unique);
   return Object.fromEntries((data ?? []).map((row) => [row.phone as string, row.pin as string]));
+}
+
+/**
+ * What the shop calls each of these people, where somebody has said.
+ *
+ * Asked for on its own, and forgiving of a database that has not had the
+ * migration run yet: the run sheet is not the place to fall over because a
+ * greeting could not be looked up.
+ */
+async function callsThemFor(phones: string[]): Promise<Record<string, string>> {
+  const unique = [...new Set(phones)];
+  if (unique.length === 0) return {};
+
+  try {
+    const { data, error } = await db()
+      .from("customers")
+      .select("phone, calls_them")
+      .in("phone", unique);
+    if (error) return {};
+    return Object.fromEntries(
+      (data ?? [])
+        .map((row) => [row.phone as string, ((row.calls_them as string) ?? "").trim()])
+        .filter(([, called]) => called !== "")
+    );
+  } catch {
+    return {};
+  }
 }
 
 /**

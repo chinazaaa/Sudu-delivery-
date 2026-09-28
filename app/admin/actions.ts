@@ -1542,6 +1542,25 @@ export async function saveCustomerNote(form: FormData): Promise<void> {
 }
 
 /**
+ * What to greet somebody as.
+ *
+ * Messages open with a first name, and the first word of a saved name is
+ * only a guess at which one that is: names arrive written both ways round,
+ * so the guess is as likely to produce a surname. This is where somebody
+ * says which, once, for the people it gets wrong. Empty puts the guess
+ * back.
+ */
+export async function saveCustomerName(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db()
+    .from("customers")
+    .update({ calls_them: String(form.get("calls_them") ?? "").trim() })
+    .eq("phone", String(form.get("phone")));
+
+  revalidatePath("/admin/customers");
+}
+
+/**
  * Closing a cart, with what came of it. Chasing someone who has already said
  * no is the thing this prevents, so the reason is kept rather than a bare
  * flag: it is also the only record of why the money never arrived.

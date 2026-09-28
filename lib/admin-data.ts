@@ -27,6 +27,9 @@ export type FeedOrder = Order & {
   deliveryWindow: string;
   slot: Batch["slot"];
   pin: string | null;
+  /** What to greet them as, where the shop has said. Empty means the first
+   *  word of their name. */
+  callsThem: string;
   /** In a shared delivery that has not closed, so it has no fee yet and
    *  marking it paid would take the food money alone. */
   awaitingGroup: boolean;
@@ -104,6 +107,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
   const lines = await linesFor(orders.map((o) => o.id));
   const batches = await batchMap(orders.map((o) => o.batch_id));
   const pins = await pinMap(orders.map((o) => o.customer_phone));
+  const called = await callsThemMap(orders.map((o) => o.customer_phone));
 
  return orders.map((order) => {
     const batch = batches.get(order.batch_id);
@@ -139,6 +143,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
       deliveryWindow: batch?.delivery_window_text ?? "",
       slot: batch?.slot ?? "afternoon",
       pin: pins.get(order.customer_phone) ?? null,
+      callsThem: called.get(order.customer_phone) ?? "",
       awaitingGroup: order.group_id ? stillOpen.has(order.group_id) : false,
       promoter: promoters.get(order.customer_phone) ?? null,
       // Older orders have no column and no answer, which reads as empty and
@@ -242,6 +247,33 @@ async function pinMap(phones: string[]): Promise<Map<string, string>> {
   return new Map((data ?? []).map((row) => [row.phone as string, row.pin as string]));
 }
 
+/**
+ * What the shop calls each of these people, where somebody has said.
+ *
+ * Forgiving of a database that has not had the migration run yet: an order
+ * feed must not fall over because a greeting could not be looked up.
+ */
+async function callsThemMap(phones: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(phones)];
+  if (unique.length === 0) return new Map();
+  try {
+    const { data, error } = await db()
+      .from("customers")
+      .select("phone, calls_them")
+      .in("phone", unique);
+    if (error) return new Map();
+    return new Map(
+      (data ?? [])
+        .map(
+          (row) => [row.phone as string, ((row.calls_them as string) ?? "").trim()] as const
+        )
+        .filter(([, called]) => called !== "")
+    );
+  } catch {
+    return new Map();
+  }
+}
+
 /** "1005", "#1005b" or "1005b" all find the order they were typed for. */
 function matchesRef(
   order: Order,
@@ -275,6 +307,9 @@ export type CustomerRow = {
   /** Who brought them, if anybody. Written once on a first order and never
    *  touched again, which is what makes a promoter's commission lifetime. */
   promoterCode: string | null;
+  /** What to greet them as, where somebody has said. Empty means the first
+   *  word of their name, which is only a guess. */
+  callsThem: string;
   /** Which front door they use, over all their orders: "app", "web",
    *  "mixed", or empty where none of their orders recorded it. Worth
    *  knowing before pushing an app at somebody who already has it, or
@@ -304,7 +339,7 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
   // not had the migration run on it still shows the customer book.
   const full = await db()
     .from("customers")
-    .select("phone, name, hostel, pin, admin_note, payment_method, promoter_code")
+    .select("phone, name, hostel, pin, admin_note, payment_method, promoter_code, calls_them")
     .order("name");
 
   const { data, error } = full.error
@@ -339,6 +374,7 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
         ? "card"
         : "transfer") as "transfer" | "card",
       promoterCode: ((row as { promoter_code?: string | null }).promoter_code ?? null),
+      callsThem: ((row as { calls_them?: string }).calls_them ?? ""),
       orders: mine.length,
       uses: doorFor(mine.map((order) => String((order as { source?: string }).source ?? ""))),
       spend: paid.reduce((total, order) => total + (order.total as number), 0),

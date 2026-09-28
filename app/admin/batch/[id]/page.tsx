@@ -64,7 +64,8 @@ export default async function BatchPage({
   const sheet = await batchSheet((await params).id);
   if (!sheet) notFound();
 
-  const { batch, counter, handout, unpaid, summary, refunds, groupsShort, pins } = sheet;
+  const { batch, counter, handout, unpaid, summary, refunds, groupsShort, pins, callsThem } =
+    sheet;
   const areas = await allAreas();
   // For the run that is one counter's run. Read here rather than typed, so
   // a restaurant added this morning is tickable this afternoon.
@@ -146,7 +147,7 @@ export default async function BatchPage({
       order.customer_phone,
       template({
         kind: order.status === "pending" ? "payment" : "confirmed",
-        order,
+        order: { ...order, callsThem: callsThem[order.customer_phone] ?? "" },
         settings,
         pin: pins[order.customer_phone] ?? null,
         siteUrl,

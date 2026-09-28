@@ -2,6 +2,28 @@ import { shortRef } from "./links";
 import { naira, orderRef, shareRef } from "./money";
 import { externalUrl, type Settings } from "./settings";
 
+/**
+ * What to call somebody in a message.
+ *
+ * "Hi Amieghe Kayla" is nobody's idea of how a person is addressed, so the
+ * templates greet by first name. The catch is that the first word is not
+ * reliably the first name: names arrive written both ways round, and
+ * greeting somebody by their surname is worse than greeting them by both.
+ *
+ * So `called` is whatever the shop has set for this person in the customer
+ * book, and the first word is only the guess used until somebody says
+ * otherwise. A name with nothing in it at all falls back to "there", which
+ * reads as a greeting rather than as a gap where a name should be.
+ */
+export function firstName(full: string, called = ""): string {
+  const set = String(called ?? "").trim();
+  if (set !== "") return set;
+
+  const said = String(full ?? "").trim();
+  if (said === "") return "there";
+  return said.split(/\s+/)[0];
+}
+
 /** wa.me needs international digits with no plus. */
 export function whatsappTo(phone: string, message: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -157,6 +179,9 @@ type TemplateOrder = {
   /** The other orders in this one's group, when it is part of one. */
   groupOrders?: { id: string; order_no: number | null }[];
   customer_name: string;
+  /** What the shop calls this person, where somebody has said. Empty means
+   *  the first word of their name. */
+  callsThem?: string;
   customer_phone: string;
   for_name: string | null;
   total: number;
@@ -217,7 +242,10 @@ export function template(args: {
       : "Message me for the account details.";
 
   const values: Record<string, string> = {
-    "{name}": order.for_name ?? order.customer_name,
+    // First name, and the shop's own answer for this person where it has
+    // one. A message that opens with somebody's full name reads like a
+    // letter from a bank.
+    "{name}": firstName(order.for_name ?? order.customer_name, order.callsThem),
     "{ref}": shareRef(order, order.groupOrders ?? []),
     "{narration}": narration(order, order.groupOrders),
     "{batch}": batchLabel,
