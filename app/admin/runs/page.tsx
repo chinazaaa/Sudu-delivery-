@@ -54,6 +54,11 @@ export default async function RunsPage({
 
   let problem: Awaited<ReturnType<typeof diagnoseEmpty>> | null = null;
   let batches: Awaited<ReturnType<typeof batchOverview>> = [];
+  /** The same list before the week is cut out of it. The warning about the
+   *  next run being further off than customers can see has to be able to
+   *  see that run, and cutting the list to a week is exactly what hides
+   *  it. */
+  let everything: Awaited<ReturnType<typeof batchOverview>> = [];
 
   try {
     // Forced: whoever is on this page has just changed something and
@@ -65,6 +70,7 @@ export default async function RunsPage({
     await tidyEmptySameDay();
     batches = await batchOverview(window);
     if (batches.length === 0) problem = await diagnoseEmpty();
+    everything = batches;
   } catch (error) {
     // A blocked write usually means the wrong key, so say that rather than
     // repeating a Postgres permission message at someone deploying a site.
@@ -82,12 +88,25 @@ export default async function RunsPage({
   // is ten batches and one trip, and the trip is the thing somebody drives.
   const trips = await sameDayTrips().catch(() => []);
 
+  // "This week" has to mean a week.
+  //
+  // It went three days back and then forward for ever, so a tab called this
+  // week was listing nineteen runs three weeks out, and the count and the
+  // profit beside it were adding up a month. Runs are made weeks ahead on
+  // purpose; this page is the one that asks what is happening now, and
+  // "every run so far" is the other tab for a reason.
+  const weekEnd = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  if (window === "recent") {
+    batches = batches.filter((batch) => batch.run_date <= weekEnd);
+  }
+
   const live = batches.filter((batch) => batch.status !== "cancelled");
   // The nearest run a customer could actually reach. Runs exist weeks out so
   // they can be planned, but only the ones closing inside the order horizon
   // are offered, and a horizon shorter than the gap to the next run hides
   // every run in the shop without saying so anywhere.
-  const soonestRun = live
+  const soonestRun = everything
+    .filter((batch) => batch.status !== "cancelled")
     // How far ahead the shop is open is a question about runs. A parcel is
     // one person's trip and a car of its own is somebody's own order, and
     // neither says anything about whether the week is set up.
@@ -112,7 +131,7 @@ export default async function RunsPage({
         detail={
           window === "all"
             ? "Every run ever made, newest first."
-            : "This week and the days just gone. Fridays open themselves."
+            : "The next seven days and the few just gone. Fridays open themselves."
         }
         actions={
           <>
