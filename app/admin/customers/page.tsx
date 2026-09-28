@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; by?: string }>;
 }) {
   const query = await searchParams;
   const [rows, settings, url, hostels, promoters] = await Promise.all([
@@ -28,35 +28,73 @@ export default async function CustomersPage({
     namedPromoters(),
   ]);
 
-  const spend = rows.reduce((total, row) => total + row.spend, 0);
-  const repeat = rows.filter((row) => row.orders > 1).length;
+  // Narrowed to one promoter, so "who brought who" is a question the book
+  // can answer rather than something to be worked out by reading every card.
+  // "none" is a real answer and a useful one: it is everybody who arrived on
+  // their own, which is the number a promoter's work has to be measured
+  // against.
+  const by = (query.by ?? "").trim();
+  const shown =
+    by === ""
+      ? rows
+      : by === "none"
+        ? rows.filter((row) => !row.promoterCode)
+        : rows.filter((row) => row.promoterCode === by);
+
+  const spend = shown.reduce((total, row) => total + row.spend, 0);
+  const repeat = shown.filter((row) => row.orders > 1).length;
+  const brought = promoters.find((one) => one.code === by) ?? null;
 
   return (
     <div>
       <PageHeader
         title="Customers"
-        detail="Everyone who has ever ordered, with the PIN that opens their history."
+        detail={
+          brought
+            ? `Everybody ${brought.name} brought in, and what they have spent.`
+            : by === "none"
+              ? "Everybody who arrived on their own, with nobody to thank for it."
+              : "Everyone who has ever ordered, with the PIN that opens their history."
+        }
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Customers" value={rows.length} />
+        <Stat label="Customers" value={shown.length} />
         <Stat label="Ordered twice or more" value={repeat} tone="good" />
         <Stat label="Lifetime spend" value={spend} money />
         <Stat
           label="Average each"
-          value={rows.length === 0 ? 0 : Math.round(spend / rows.length)}
+          value={shown.length === 0 ? 0 : Math.round(spend / shown.length)}
           money
         />
       </div>
 
-      <form className="mb-4 flex gap-2" action="/admin/customers">
+      <form className="mb-4 flex flex-wrap gap-2" action="/admin/customers">
         <input
           name="q"
           defaultValue={query.q ?? ""}
           placeholder="Name, number or block"
           className="field grow py-2 text-sm sm:max-w-xs"
         />
+        {/* Only worth asking when somebody is promoting. One promoter and a
+            dropdown of one is a control that does nothing. */}
+        {promoters.length > 0 && (
+          <select name="by" defaultValue={by} className="field py-2 text-sm sm:w-56">
+            <option value="">Anyone brought them</option>
+            {promoters.map((one) => (
+              <option key={one.code} value={one.code}>
+                Brought by {one.name}
+              </option>
+            ))}
+            <option value="none">Nobody brought them</option>
+          </select>
+        )}
         <button className="btn-quiet px-4 py-2 text-sm">Search</button>
+        {(by !== "" || (query.q ?? "") !== "") && (
+          <a href="/admin/customers" className="btn-quiet px-4 py-2 text-sm">
+            Clear
+          </a>
+        )}
       </form>
 
       {/* A customer with no order behind them. Needed whenever somebody must
@@ -123,14 +161,19 @@ export default async function CustomersPage({
         </form>
       </details>
 
-      {rows.length === 0 ? (
+      {shown.length === 0 ? (
         <p className="card text-sm text-muted">
-          No customers yet. A customer is created by their first order, or by hand
-          above.
+          {rows.length === 0
+            ? "No customers yet. A customer is created by their first order, or by hand above."
+            : brought
+              ? `Nobody is down as brought in by ${brought.name} yet.`
+              : by === "none"
+                ? "Everybody here was brought in by somebody."
+                : "Nobody here matches that."}
         </p>
       ) : (
         <div className="space-y-3">
-          {rows.map((row) => {
+          {shown.map((row) => {
             const message = whatsappTo(
               row.phone,
               `Hi ${row.name}, here is your Sudu PIN: ${row.pin}.\n\n` +
