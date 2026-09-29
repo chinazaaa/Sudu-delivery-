@@ -21,6 +21,7 @@ import { naira } from "@/lib/money";
  */
 export const revalidate = 3600;
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
 const TITLE = "Delivery to Pan-Atlantic University (PAU), Lagos";
 const BLURB =
   "Food delivered to Pan-Atlantic University from the restaurants around " +
@@ -171,7 +172,13 @@ export default async function DeliveryToPauPage() {
         "@type": "Service",
         name: "Delivery to Pan-Atlantic University",
         serviceType: "Food and parcel delivery",
-        provider: { "@type": "Organization", name: "Sudu" },
+        image: `${SITE}/covers/sudu.png`,
+        provider: {
+          "@type": "Organization",
+          name: "Sudu",
+          url: SITE,
+          logo: `${SITE}/logo.png`,
+        },
         areaServed: [
           { "@type": "Place", name: "Pan-Atlantic University, Ibeju-Lekki, Lagos" },
           { "@type": "Place", name: "Sangotedo, Lagos" },

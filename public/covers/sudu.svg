@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" width="1200" height="1200" role="img" aria-label="Sudu">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff9a5c"/>
+      <stop offset="1" stop-color="#c2400e"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.3" r="0.75">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="1200" fill="url(#g)"/>
+  <rect width="1200" height="1200" fill="url(#glow)"/>
+  <g transform="translate(346 290) scale(1.0)">
+    <path d="M116 180h280l-27 248a44 44 0 0 1-44 39H187a44 44 0 0 1-44-39z" fill="#fff1ea"/>
+    <path d="M196 180v-26a60 60 0 0 1 120 0v26" fill="none" stroke="#fff1ea" stroke-width="28" stroke-linecap="round"/>
+    <path d="M316 272C316 240 202 240 202 294C202 338 316 330 316 372C316 426 202 426 202 392"
+          fill="none" stroke="#c2400e" stroke-width="34" stroke-linecap="round"/>
+  </g>
+  <text x="600" y="1010" text-anchor="middle" font-family="DejaVu Sans, Liberation Sans, sans-serif" font-size="108" font-weight="bold" fill="#fff1ea" letter-spacing="6">Sudu</text>
+  <text x="600" y="1080" text-anchor="middle" font-family="DejaVu Sans, Liberation Sans, sans-serif" font-size="44" fill="#fff1ea" fill-opacity="0.85">Delivery to PAU</text>
+</svg>

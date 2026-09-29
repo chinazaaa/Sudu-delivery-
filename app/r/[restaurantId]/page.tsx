@@ -7,6 +7,7 @@ import { menuViewFor } from "@/lib/menu";
 import { dealsAt } from "@/lib/coupons";
 import { isSkincare } from "@/lib/skincare";
 import Deals from "@/components/Deals";
+import { photoOf } from "@/lib/product-photo";
 
 export const dynamic = "force-dynamic";
 
@@ -102,7 +103,7 @@ export default async function RestaurantPage({
         "@type": "Restaurant",
         "@id": `${here}#restaurant`,
         name: place.restaurant.name,
-        image: place.restaurant.bannerUrl || place.restaurant.logoUrl || undefined,
+        image: photoOf({}, place.restaurant),
         url: here,
         servesCuisine: kinds.length > 0 ? kinds : undefined,
       },
@@ -137,7 +138,7 @@ export default async function RestaurantPage({
             "@type": "Product",
             name: item.name,
             description: item.description || undefined,
-            image: item.imageUrl || undefined,
+            image: photoOf(item, place.restaurant),
             url: `${site}/p/${item.id}`,
             brand: { "@type": "Brand", name: place.restaurant.name },
             offers: {

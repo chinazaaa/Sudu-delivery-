@@ -9,6 +9,7 @@ import { parseBands } from "@/lib/fees";
 import { valueBandsOfEach } from "@/lib/areas-server";
 import { productNotes, safeSettings } from "@/lib/settings";
 import { naira } from "@/lib/money";
+import { photoOf } from "@/lib/product-photo";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,9 @@ export async function generateMetadata({
     alternates: { canonical: `/p/${item.id}` },
     openGraph: {
       title: `${item.name} from ${place.restaurant.name}`,
+      // Left to fall through to the drawn card in app/opengraph-image.tsx
+      // when there is no photo: that card says what the shop is, which is a
+      // better thing to paste into a group chat than a plain orange square.
       images: item.imageUrl ? [item.imageUrl] : undefined,
     },
   };
@@ -94,7 +98,7 @@ export default async function ProductPage({
     "@type": "Product",
     name: item.name,
     description: saidAbout(item, place.restaurant.name),
-    image: item.imageUrl || undefined,
+    image: photoOf(item, place.restaurant),
     brand: { "@type": "Brand", name: place.restaurant.name },
     offers: {
       "@type": "Offer",

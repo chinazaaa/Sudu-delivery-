@@ -20,6 +20,7 @@ import { skincareOn } from "@/lib/skincare";
  */
 export const revalidate = 3600;
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
 const TITLE = "About Sudu, PAU's student delivery service";
 const BLURB =
   "Sudu has been delivering onto the Pan-Atlantic University campus since " +
@@ -50,6 +51,9 @@ export default async function AboutPage() {
     mainEntity: {
       "@type": "Organization",
       name: "Sudu",
+      url: SITE,
+      logo: `${SITE}/logo.png`,
+      image: `${SITE}/covers/sudu.png`,
       foundingDate: "2018",
       description: BLURB,
       areaServed: {

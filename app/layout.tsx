@@ -95,7 +95,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     "@id": `${SITE.origin}/#shop`,
     name: "Sudu",
     url: SITE.origin,
-    logo: `${SITE.origin}/icon.svg`,
+    // A raster, because the things that read this draw it into a card and
+    // not every one of them will render an SVG.
+    logo: `${SITE.origin}/logo.png`,
+    image: `${SITE.origin}/covers/sudu.png`,
     description: BLURB,
     areaServed: [
       { "@type": "Place", name: "Pan-Atlantic University, Lagos" },
