@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { safeSettings } from "@/lib/settings";
+import { parseAreas } from "@/lib/areas";
+import { liveRoutes, parcels, placesSaid } from "@/lib/parcels";
+import { naira } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +33,21 @@ export default async function TermsPage() {
   const settings = await safeSettings();
   const whatsapp = settings.whatsapp_number;
 
+  // Where the shop really goes, read from admin rather than written here.
+  // Sangotedo is where most of the food comes from, not all of it, and a
+  // terms page that names only Sangotedo describes half the shop.
+  const areaNames = parseAreas(settings.delivery_areas).map((one) => one.name);
+  const beyond =
+    areaNames.length > 1
+      ? `${areaNames.slice(0, -1).join(", ")} and ${areaNames[areaNames.length - 1]}`
+      : areaNames[0] ?? "";
+
+  // And where a parcel goes, which is further again.
+  const parcelSetup = await parcels().catch(() => null);
+  const routes = parcelSetup ? liveRoutes(parcelSetup.routes) : [];
+  const parcelPlaces = placesSaid(routes);
+  const parcelCap = parcelSetup?.maxValue ?? 0;
+
   return (
     <article className="mx-auto max-w-2xl space-y-6 pb-10">
       <header className="space-y-1">
@@ -44,8 +62,23 @@ export default async function TermsPage() {
         <p>
           Sudu is a delivery and errand service for Pan-Atlantic University. We
           do not cook. We buy what you asked for from a restaurant, a market or
-          a shop in Sangotedo, and we carry it to your block on a run shared
-          with everybody else who ordered for the same car.
+          a shop and carry it to your block on a run shared with everybody else
+          who ordered for the same car.
+        </p>
+        <p>
+          Most runs go to Sangotedo and Novare Mall.
+          {beyond !== "" ? (
+            <>
+              {" "}
+              Some go further out, to {beyond}, which is a longer drive and a
+              bigger fee. The checkout only offers you a run that can actually
+              fetch what is in your cart, so you cannot end up waiting on a car
+              that was never going that way.
+            </>
+          ) : null}
+          {parcelPlaces !== "" ? (
+            <> Parcels run further again: {parcelPlaces}.</> 
+          ) : null}
         </p>
         <p>
           The kitchen whose name is on the menu is the one that makes the food.
@@ -181,10 +214,11 @@ export default async function TermsPage() {
           will take something back we pass that on.
         </p>
         <p>
-          Nobody is home and nobody answers their phone: the driver waits as
-          long as the rest of the run allows, then takes the bag on. Come and
-          get it from us and it is still yours. We cannot keep food warm, and
-          we cannot leave it at a door.
+          If you do not come down and your phone is not answered, the driver
+          waits as long as the rest of the run allows and then carries your bag
+          on to the next block. It is still yours: come and collect it from us.
+          What we cannot do is keep food warm, hold a car up while everybody
+          else on it waits, or leave a bag outside a room.
         </p>
       </Section>
 
@@ -218,8 +252,10 @@ export default async function TermsPage() {
       <Section title="Parcels">
         <p>
           A parcel is somebody handing us something to carry, not something we
-          bought, so we cannot say what is in it or what it is worth. There is
-          a limit on the value of a parcel we will take, shown on the{" "}
+          bought, so we cannot say what is in it or what it is worth.
+          {parcelPlaces !== "" ? <> Routes run between PAU and {parcelPlaces}.</> : null}{" "}
+          There is a limit on the value of a parcel we will take
+          {parcelCap > 0 ? `, ${naira(parcelCap)}` : ""}, shown on the{" "}
           <Link href="/parcel" className="font-semibold text-brand">
             parcel page
           </Link>
