@@ -74,7 +74,11 @@ export default async function CheckoutPage({
   // is whatever somebody types into it.
   const promoters = await namedPromoters();
   const fromLink = (await cookies()).get(WHO_COOKIE)?.value ?? "";
-  const sentBy = promoters.find((one) => one.code === fromLink)?.code ?? "";
+  const sent = promoters.find((one) => one.code === fromLink);
+  const sentBy = sent?.code ?? "";
+  // First name only: a discount line saying "Claire Okonkwo's link" is a
+  // surname nobody needed on a checkout.
+  const sentByName = (sent?.name ?? "").trim().split(/\s+/)[0] ?? "";
 
   const settings = await safeSettings();
   const monies = moniesOn(settings).map((code) => ({
@@ -128,6 +132,7 @@ export default async function CheckoutPage({
       // Who sent them, off their own link, so the question below is already
       // answered and they only have to look at it if it is wrong.
       sentBy={sentBy}
+      sentByName={sentByName}
       />
       {/* Every page somebody can get stuck on has the same way out, so
           nothing needs a paragraph explaining itself: if it is not clear,

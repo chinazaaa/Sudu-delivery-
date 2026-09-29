@@ -19,6 +19,7 @@ export default function CouponBox({
   phone,
   applied,
   onApplied,
+  perk = null,
 }: {
   batchId: string;
   /** The cart as it will be posted: ids and quantities. */
@@ -26,8 +27,15 @@ export default function CouponBox({
   phone: string;
   applied: { code: string; discount: number } | null;
   onApplied: (applied: { code: string; discount: number } | null) => void;
+  /** What the link they arrived on is already worth. Nobody typed it, so it
+   *  has no code to show, but it holds the one offer this order gets. */
+  perk?: { label: string; discount: number } | null;
 }) {
   const [code, setCode] = useState("");
+  // Opened by hand. A box sitting open under a discount that is already on
+  // reads as an invitation to add a second one, and there is no second one:
+  // whatever is typed here replaces what is there.
+  const [open, setOpen] = useState(false);
   const [label, setLabel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -61,6 +69,7 @@ export default function CouponBox({
         onApplied({ code: result.code, discount: result.discount });
         setLabel(result.label);
         setError(null);
+        setOpen(false);
         return;
       }
 
@@ -68,6 +77,43 @@ export default function CouponBox({
       setLabel(null);
       setError(result.error ?? "That code did not work.");
     });
+  }
+
+  // Something already has the slot, and the box has nothing to add to it.
+  if ((applied || perk) && !open) {
+    return (
+      <div className="border-t border-black/10 pt-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-mint/10 px-3 py-2">
+          <p className="min-w-0 text-sm font-semibold text-mint">
+            {/* The link's own wording already says what it is worth, so
+                adding "₦500 off" to "₦500 off your first delivery" would
+                say it twice. */}
+            {applied ? `${applied.code} applied: ${naira(applied.discount)} off` : perk!.label}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(true);
+              // A typed code is theirs to take off. The link's is not: it
+              // comes back by itself the moment the box is empty again.
+              if (applied) {
+                onApplied(null);
+                setLabel(null);
+              }
+            }}
+            className="shrink-0 text-sm font-medium text-brand underline underline-offset-2"
+          >
+            {applied ? "Use a different code" : "I have a code"}
+          </button>
+        </div>
+        {perk && !applied && (
+          <p className="mt-1 text-xs text-muted">
+            Only one offer applies at a time, so a code would go instead of
+            this one.
+          </p>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -108,6 +154,19 @@ export default function CouponBox({
         <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
           {error}
         </p>
+      )}
+      {perk && !applied && (
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            setError(null);
+            setCode("");
+          }}
+          className="mt-2 text-sm font-medium text-brand underline underline-offset-2"
+        >
+          Never mind, keep the {naira(perk.discount)} off
+        </button>
       )}
     </div>
   );

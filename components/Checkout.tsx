@@ -82,6 +82,7 @@ export default function Checkout({
   hostels,
   promoters,
   sentBy = "",
+  sentByName = "",
   monies = [],
 }: {
   batches: BatchView[];
@@ -118,6 +119,8 @@ export default function Checkout({
   promoters: { code: string; name: string }[];
   /** Whose link they arrived on, already checked against the live list. */
   sentBy?: string;
+  /** What to call them, so a discount says whose doing it was. */
+  sentByName?: string;
 }) {
   const cart = useCart();
   const { people } = usePeople();
@@ -1553,6 +1556,27 @@ export default function Checkout({
             </span>
           </button>
         )}
+        {/* Above the total, where money taken off belongs. Below it, the
+            total read as the price before the discount and the line under it
+            read as a promise nothing had been done about. */}
+        {applied && (
+          <div className="flex justify-between font-semibold text-mint">
+            <span>Code {applied.code}</span>
+            <span>−{naira(applied.discount)}</span>
+          </div>
+        )}
+        {!applied && perk.kind === "applied" && (
+          <div className="flex justify-between font-semibold text-mint">
+            <span>{sentByName ? `${sentByName}'s link` : perk.label}</span>
+            <span>−{naira(perk.discount)}</span>
+          </div>
+        )}
+        {!applied && perk.kind === "offer" && (
+          <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm text-brand-dark">
+            {perk.note} is already on this order, so it is that rather than
+            the discount on the link. Only one offer applies at a time.
+          </p>
+        )}
         <div className="flex justify-between border-t border-black/10 pt-2 text-lg font-extrabold">
           <span>{shared ? "Food so far" : "Total"}</span>
           <span>{naira(total)}</span>
@@ -1589,28 +1613,20 @@ export default function Checkout({
           phone={phone}
           applied={applied}
           onApplied={setApplied}
+          // What the link is already worth, so the box does not sit open
+          // inviting a second code that could not be taken anyway.
+          perk={
+            !applied && perk.kind === "applied"
+              ? {
+                  label: sentByName
+                    ? `${perk.label}, from ${sentByName}`
+                    : perk.label,
+                  discount: perk.discount,
+                }
+              : null
+          }
         />
-        {applied && (
-          <div className="flex justify-between text-mint">
-            <span>Code {applied.code}</span>
-            <span>−{naira(applied.discount)}</span>
-          </div>
-        )}
-        {/* What the link they opened turned out to be worth. Said here, under
-            the money, rather than as a banner: this is where somebody looks
-            to find out what they are paying. */}
-        {!applied && perk.kind === "applied" && (
-          <div className="flex justify-between text-mint">
-            <span>{perk.label}</span>
-            <span>−{naira(perk.discount)}</span>
-          </div>
-        )}
-        {!applied && perk.kind === "offer" && (
-          <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm text-brand-dark">
-            {perk.note} is already on this order, so it is that rather than
-            the discount on the link. Only one offer applies at a time.
-          </p>
-        )}
+
       </section>
 
       <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t border-black/5 bg-paper p-3 shadow-bar sm:bottom-0">

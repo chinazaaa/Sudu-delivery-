@@ -13,6 +13,7 @@ import {
   activePromotion,
   checkCoupon,
   couponLabel,
+  offerWording,
   useCoupon,
   type CouponCheck,
 } from "./coupons";
@@ -1456,7 +1457,7 @@ export async function perkFor(args: {
     kind: "applied",
     code: result.coupon.code,
     discount: result.discount,
-    label: couponLabel(result.coupon),
+    label: offerWording(result.coupon),
   };
 }
 
