@@ -52,6 +52,55 @@ export async function linesToEdit(orderId: string): Promise<EditedLine[]> {
 }
 
 /**
+ * What a line's stored price means, said once because two halves of the shop
+ * had different answers and the customer paid the difference.
+ *
+ * `unit_price_at_order` is the WHOLE price of one of these: the thing plus
+ * every choice made on it. The checkout has always written it that way, and
+ * every row in the table is that way, so it is the answer.
+ *
+ * The choices are kept beside it as well, in order_item_options, but those
+ * rows are there to say what was chosen and what each choice was worth at
+ * the time. They are a record, not a sum to be added on. Adding them on is
+ * exactly what this file used to do, which charged a pizza's toppings twice
+ * the moment anybody edited the order in admin.
+ *
+ * So anything that changes the choices has to move the price with them, and
+ * that is what nudgeLinePrice is for.
+ */
+
+/** Move one line's price by a difference, never below nothing. */
+export async function nudgeLinePrice(lineId: string, by: number): Promise<void> {
+  if (lineId === "" || by === 0) return;
+
+  const { data } = await db()
+    .from("order_items")
+    .select("unit_price_at_order")
+    .eq("id", lineId)
+    .maybeSingle();
+  if (!data) return;
+
+  const now = Number((data as { unit_price_at_order?: number }).unit_price_at_order ?? 0);
+  await db()
+    .from("order_items")
+    .update({ unit_price_at_order: Math.max(0, now + by) })
+    .eq("id", lineId);
+}
+
+/** What the choices already on a line come to. */
+export async function choicesOn(lineId: string): Promise<number> {
+  const { data } = await db()
+    .from("order_item_options")
+    .select("price_delta_at_order")
+    .eq("order_item_id", lineId);
+
+  return ((data ?? []) as { price_delta_at_order?: number }[]).reduce(
+    (sum, one) => sum + Number(one.price_delta_at_order ?? 0),
+    0
+  );
+}
+
+/**
  * Add the order up again and write the new total.
  *
  * The fee is whatever the order already carries: a box's delivery is fixed
@@ -60,14 +109,8 @@ export async function linesToEdit(orderId: string): Promise<EditedLine[]> {
  */
 export async function retotal(orderId: string): Promise<void> {
   const lines = await linesToEdit(orderId);
-  const food = lines.reduce(
-    (sum, line) =>
-      sum +
-      line.qty *
-        (line.unit_price_at_order +
-          line.options.reduce((extra, one) => extra + one.delta, 0)),
-    0
-  );
+  // The price of a line already has its choices in it. See above.
+  const food = lines.reduce((sum, line) => sum + line.qty * line.unit_price_at_order, 0);
 
   const { data } = await db()
     .from("orders")

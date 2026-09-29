@@ -137,9 +137,10 @@ export default function OrderEditor({
 
       <ul className="divide-y divide-black/5">
         {lines.map((line) => {
-          const each =
-            line.unit_price_at_order +
-            line.options.reduce((sum, one) => sum + one.delta, 0);
+          // The stored price is already the thing plus its choices. Adding
+          // the choices on again here is what showed a pizza's toppings
+          // twice, and matched what was being charged.
+          const each = line.unit_price_at_order;
           const isOpen = open && showing === line.id;
 
           return (

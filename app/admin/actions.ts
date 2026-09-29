@@ -40,7 +40,13 @@ import { areaText } from "@/lib/areas";
 import { placesText } from "@/lib/run-places";
 import { newPin } from "@/lib/customer-auth";
 import { recordDeletion } from "@/lib/deletions";
-import { orderOfLine, orderOfOption, retotal } from "@/lib/order-edit";
+import {
+  choicesOn,
+  nudgeLinePrice,
+  orderOfLine,
+  orderOfOption,
+  retotal,
+} from "@/lib/order-edit";
 import { tripForBox } from "@/lib/box-day";
 import { naira, orderRef } from "@/lib/money";
 import { namedPromoters, realPromoter } from "@/lib/promoters";
@@ -359,9 +365,15 @@ export async function swapOrderLine(form: FormData): Promise<void> {
     price = Number((data as { price_food?: number } | null)?.price_food ?? 0);
   }
 
+  // The choices on the line outlive the swap, and a line's price includes
+  // them, so they are carried onto the new thing's price rather than
+  // silently stopping being charged for.
   await db()
     .from("order_items")
-    .update({ menu_item_id: itemId, unit_price_at_order: price })
+    .update({
+      menu_item_id: itemId,
+      unit_price_at_order: price + (await choicesOn(lineId)),
+    })
     .eq("id", lineId);
 
   await retotal(orderId);
@@ -426,12 +438,19 @@ export async function addLineOption(form: FormData): Promise<void> {
   // money off, not only put it on.
   const delta = Math.round(Number(String(form.get("delta") ?? "0")));
 
+  const worth = Number.isFinite(delta) ? delta : 0;
+
   await db().from("order_item_options").insert({
     order_item_id: lineId,
     option_id: null,
     name_at_order: name.slice(0, 120),
-    price_delta_at_order: Number.isFinite(delta) ? delta : 0,
+    price_delta_at_order: worth,
   });
+
+  // The line's price is the thing plus its choices, so adding a choice moves
+  // it. The rows beside it only say what was chosen; nothing adds them up
+  // afterwards, because the checkout already did.
+  await nudgeLinePrice(lineId, worth);
 
   await retotal(orderId);
   revalidatePath("/admin", "layout");
@@ -446,7 +465,20 @@ export async function removeLineOption(form: FormData): Promise<void> {
   if (id === "") return;
 
   const orderId = await orderOfOption(id);
+  // Read before it is deleted: afterwards there is nothing to say what the
+  // choice was worth, and the line would keep charging for it.
+  const { data: going } = await db()
+    .from("order_item_options")
+    .select("order_item_id, price_delta_at_order")
+    .eq("id", id)
+    .maybeSingle();
+
   await db().from("order_item_options").delete().eq("id", id);
+
+  if (going) {
+    const row = going as { order_item_id: string; price_delta_at_order?: number };
+    await nudgeLinePrice(row.order_item_id, -Number(row.price_delta_at_order ?? 0));
+  }
   if (orderId !== "") await retotal(orderId);
   revalidatePath("/admin", "layout");
   // Their own page shows what is in the order, so it has to be told
