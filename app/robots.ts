@@ -1,7 +1,18 @@
 import type { MetadataRoute } from "next";
 
 /** Nobody but us needs the admin, the promoter portal, or one person's order. */
-const PRIVATE = ["/admin", "/admin/", "/promoter", "/o/", "/checkout", "/cart"];
+const PRIVATE = [
+  "/admin",
+  "/admin/",
+  "/promoter",
+  "/o/",
+  "/checkout",
+  "/cart",
+  // A promoter's own link is not a page, it is a doorway that sets a cookie
+  // and redirects. Crawling it indexes nothing and only muddies who brought
+  // whom, since a crawler is nobody's referral.
+  "/s/",
+];
 
 /**
  * The readers that answer questions about shops.

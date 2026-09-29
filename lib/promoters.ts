@@ -5,6 +5,7 @@ import { runDateLabel } from "./time";
 import { NUDGE_DEFAULT } from "./messages";
 import { abandonedCarts } from "./carts";
 import { safeSettings } from "./settings";
+import { tidyHandle } from "./came-from";
 
 /** The one promoter, if there is one set up. */
 export async function thePromoter(): Promise<{
@@ -66,6 +67,8 @@ export type AbandonedCart = {
 export type PromoterEarnings = {
   code: string;
   name: string;
+  /** The short name in their own link. Their code, if nobody set one. */
+  handle: string;
   rate: number;
   /** What a collection, an occasion or any other packed box is worth. A
    *  ₦500 wrap and a ₦80,000 care package are not the same sale. */
@@ -262,6 +265,9 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
   return {
     code: promoter.code as string,
     name: promoter.name as string,
+    handle:
+      ((promoter as { handle?: string }).handle || "").trim() ||
+      String(promoter.code).toLowerCase(),
     rate,
     boxRate,
     nudge: ((promoter.nudge_template as string) || "").trim() || NUDGE_DEFAULT,
@@ -298,6 +304,36 @@ export async function namedPromoters(): Promise<{ code: string; name: string }[]
   return ((data ?? []) as { code: string; name: string }[]).filter(
     (one) => one.name.trim() !== ""
   );
+}
+
+/**
+ * The promoter whose short link this is.
+ *
+ * Their handle first, then their code, so a link made before handles existed
+ * goes on working and nobody has to be told their address has changed. Case
+ * is ignored: somebody will capitalise it in a caption.
+ */
+export async function promoterByHandle(
+  said: string
+): Promise<{ code: string; name: string } | null> {
+  const handle = tidyHandle(said);
+  if (handle === "") return null;
+
+  const { data } = await db()
+    .from("promoters")
+    .select("code, name")
+    .eq("active", true)
+    .ilike("handle", handle)
+    .maybeSingle();
+  if (data) return data as { code: string; name: string };
+
+  const { data: byCode } = await db()
+    .from("promoters")
+    .select("code, name")
+    .eq("active", true)
+    .ilike("code", said.trim())
+    .maybeSingle();
+  return (byCode as { code: string; name: string } | null) ?? null;
 }
 
 /** Whether that code belongs to somebody currently promoting. */

@@ -4,6 +4,7 @@ import Stat from "@/components/admin/Stat";
 import { naira } from "@/lib/money";
 import {
   boxNumbers,
+  channels,
   feedback,
   funnel,
   parcelNumbers,
@@ -26,7 +27,7 @@ export default async function AnalyticsPage({
   const days = RANGES.includes(asked as (typeof RANGES)[number]) ? asked : 7;
 
   // Null means nothing is counting yet. The rest of the page still works.
-  const [views, steps, said, shelf, boxes, parcels, settings] = await Promise.all([
+  const [views, steps, said, shelf, boxes, parcels, settings, came] = await Promise.all([
     traffic(days),
     funnel(days),
     feedback(days),
@@ -34,6 +35,7 @@ export default async function AnalyticsPage({
     boxNumbers(days),
     parcelNumbers(days),
     safeSettings(),
+    channels(days),
   ]);
   const busiest = views ? Math.max(...views.perDay.map((day) => day.views), 1) : 1;
   // A route is stored by its id, and the id is not what anybody calls it.
@@ -423,6 +425,52 @@ export default async function AnalyticsPage({
           <p className="text-xs text-muted">
             A link opened from inside WhatsApp usually arrives with nothing
             attached, so it counts as typed or a link.
+          </p>
+        </section>
+
+        <section className="card space-y-2 lg:col-span-2">
+          <h2 className="font-bold">What each one is actually worth</h2>
+          <p className="text-sm text-muted">
+            The same question as the card beside it, asked of orders instead
+            of visits. A hundred people off Instagram who never order are
+            worth less than nine off Google who do.
+          </p>
+          {came && came.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-xs uppercase tracking-wide text-muted">
+                  <tr>
+                    <th className="py-2 pr-3 font-semibold">From</th>
+                    <th className="py-2 pr-3 text-right font-semibold">People</th>
+                    <th className="py-2 pr-3 text-right font-semibold">Orders</th>
+                    <th className="py-2 pr-3 text-right font-semibold">Paid</th>
+                    <th className="py-2 text-right font-semibold">Money</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5">
+                  {came.map((one) => (
+                    <tr key={one.channel || "unknown"}>
+                      <td className="py-2 pr-3 font-medium">{one.label}</td>
+                      <td className="py-2 pr-3 text-right">{one.visitors || "-"}</td>
+                      <td className="py-2 pr-3 text-right">{one.orders || "-"}</td>
+                      <td className="py-2 pr-3 text-right">{one.paid || "-"}</td>
+                      <td className="py-2 text-right font-semibold">
+                        {one.money > 0 ? naira(one.money) : "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-muted">Nothing yet.</p>
+          )}
+          <p className="text-xs text-muted">
+            Only counts orders placed since this started recording, so
+            anything older sits under "Not known" and will thin out on its
+            own. Add ?utm_source=instagram to a link in a bio and it lands
+            under Instagram; Google needs nothing, since a search result
+            cannot carry one.
           </p>
         </section>
       </div>

@@ -8,6 +8,8 @@ import { liveRoutes, parcels } from "@/lib/parcels";
 import { hostelNames } from "@/lib/hostels";
 import { lagosToday } from "@/lib/time";
 import { namedPromoters } from "@/lib/promoters";
+import { WHO_COOKIE } from "@/lib/came-from";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +37,9 @@ export default async function ParcelPage() {
   // take it, so it matters more here than anywhere.
   const hostels = await hostelNames();
   const promoters = await namedPromoters();
+  // Who sent them, off a promoter's own link, checked against the live list.
+  const fromLink = (await cookies()).get(WHO_COOKIE)?.value ?? "";
+  const sentBy = promoters.find((one) => one.code === fromLink)?.code ?? "";
 
   if (!setup.on || routes.length === 0) {
     return (
@@ -85,6 +90,7 @@ export default async function ParcelPage() {
         maxValue={setup.maxValue}
         hostels={hostels}
         promoters={promoters}
+        sentBy={sentBy}
         monies={moniesOn(settings).map((code) => ({
           code,
           label: code === "GBP" ? "Pounds" : "Dollars",

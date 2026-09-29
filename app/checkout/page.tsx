@@ -10,6 +10,7 @@ import {
 import { liveOffers } from "@/lib/coupons";
 import { hostelNames } from "@/lib/hostels";
 import { namedPromoters } from "@/lib/promoters";
+import { WHO_COOKIE } from "@/lib/came-from";
 import Checkout, { type AddingTo } from "@/components/Checkout";
 import { openBatches, recentlyClosedBatch } from "@/lib/batches";
 import { existingLoad } from "@/lib/orders";
@@ -68,6 +69,13 @@ export default async function CheckoutPage({
   // Somebody abroad paying by card, where the shop has switched it on and
   // set a rate it will honour. Worked out here so the checkout is handed
   // figures rather than settings.
+  // Who sent them, if they came in through a promoter's own link. Checked
+  // against the live list rather than trusted: it is a cookie, and a cookie
+  // is whatever somebody types into it.
+  const promoters = await namedPromoters();
+  const fromLink = (await cookies()).get(WHO_COOKIE)?.value ?? "";
+  const sentBy = promoters.find((one) => one.code === fromLink)?.code ?? "";
+
   const settings = await safeSettings();
   const monies = moniesOn(settings).map((code) => ({
     code,
@@ -116,7 +124,10 @@ export default async function CheckoutPage({
       hostels={await hostelNames()}
       // Asked on the one form a first order has to pass through. Whoever
       // they name is theirs for life, so there is no second chance at it.
-      promoters={await namedPromoters()}
+      promoters={promoters}
+      // Who sent them, off their own link, so the question below is already
+      // answered and they only have to look at it if it is wrong.
+      sentBy={sentBy}
       />
       {/* Every page somebody can get stuck on has the same way out, so
           nothing needs a paragraph explaining itself: if it is not clear,

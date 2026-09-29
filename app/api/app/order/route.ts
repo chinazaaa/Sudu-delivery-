@@ -40,6 +40,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const result = await placeOrder({
+      // The app is its own front door, and nobody arrives in it off a link.
+      cameFrom: "app",
       source: "app",
       batchId: String(body.batchId ?? ""),
       // Same day from a phone is the same trip as from the web: placeOrder

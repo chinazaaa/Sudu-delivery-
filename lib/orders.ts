@@ -79,6 +79,10 @@ export type PlaceOrderInput = {
   /** Who they say they heard about the shop from, as a promoter's code.
    *  Empty is a real answer: most people are nobody's referral. */
   heardFrom?: string;
+  /** The channel that brought them: "google", "instagram", "whatsapp". A
+   *  place, not a person, and nobody is paid for it. Worked out from the
+   *  link they arrived on or the site that sent them. */
+  cameFrom?: string;
   /** A discount code typed at checkout. */
   coupon?: string;
   /** The order whose join link they opened, so their food rides along with it. */
@@ -479,6 +483,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           people: input.people ?? [],
           bands,
           customerNote,
+          cameFrom: input.cameFrom,
           promotion: promotion ? { code: promotion.coupon.code, offer: promotion.offer } : null,
         })
       : await placeSingleOrder({
@@ -489,6 +494,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           lines: priced.lines,
           coupon: coupon?.ok ? coupon : null,
           source: input.source,
+          cameFrom: input.cameFrom,
           payCurrency: input.payCurrency,
           joinRootId: sameDay ? null : joinRootId,
           sharedGroupId,
@@ -566,6 +572,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     returning,
     paymentMethod,
     heardFrom: input.heardFrom ?? "",
+    cameFrom: input.cameFrom ?? "",
   });
   // The cart behind this order is no longer abandoned, and the admins are told
   // rather than having to keep refreshing. Neither can fail the order.
@@ -693,6 +700,8 @@ async function placeSingleOrder(args: {
   customerNote: string;
   /** Which front door it came through. */
   source?: "app" | "web";
+  /** The channel that brought them. A place, never a person. */
+  cameFrom?: string;
   /** The money a card link will be made out in. */
   payCurrency?: "GBP" | "USD";
   /** The delivery being joined, already resolved back to the order that
@@ -788,6 +797,7 @@ async function placeSingleOrder(args: {
     payment_method: args.paymentMethod,
     customer_note: args.customerNote,
     source: args.source,
+    cameFrom: args.cameFrom,
     pay_currency: args.payCurrency,
     shared_with: args.joinRootId,
     lines,
@@ -820,6 +830,8 @@ async function placeSplitGroup(args: {
   }[];
   bands: Band[];
   customerNote: string;
+  /** The channel that brought them. A place, never a person. */
+  cameFrom?: string;
   /** A promotion pricing the delivery, split between them with a floor. */
   promotion: { code: string; offer: LiveOffer } | null;
 }): Promise<PlaceOrderResult> {
@@ -896,6 +908,9 @@ async function placeSplitGroup(args: {
       payment_method: isLeader ? args.paymentMethod : theirs?.pays ?? args.paymentMethod,
       // The note belongs to whoever wrote it, not to everyone in the group.
       customer_note: isLeader ? args.customerNote : "",
+      // The whole group came in through whatever the leader clicked: they
+      // are in it because she put them in it.
+      cameFrom: args.cameFrom,
       lines,
     });
     if (!id) return { ok: false, error: "Could not save that group order." };
@@ -1024,6 +1039,8 @@ async function insertOrder(args: {
   customer_note: string;
   /** Which front door it came through. */
   source?: "app" | "web";
+  /** The channel that brought them. A place, never a person. */
+  cameFrom?: string;
   /** The money a card link will be made out in. */
   pay_currency?: "GBP" | "USD";
   /** The order whose delivery this one is joining, if any. */
@@ -1055,6 +1072,7 @@ async function insertOrder(args: {
         : {}),
       ...(args.box_id ? { box_id: args.box_id } : {}),
       ...(args.source ? { source: args.source } : {}),
+      ...(args.cameFrom ? { came_from: args.cameFrom } : {}),
       ...(args.pay_currency ? { pay_currency: args.pay_currency } : {}),
     })
     .select("id")
@@ -1064,12 +1082,16 @@ async function insertOrder(args: {
   // a shop that has not run the migration yet takes the order anyway and
   // simply does not know it was a gift. Losing an order over it would be far
   // worse than losing the label.
-  if (error && (args.gift || args.box_id || args.source || args.pay_currency)) {
+  if (
+    error &&
+    (args.gift || args.box_id || args.source || args.cameFrom || args.pay_currency)
+  ) {
     return insertOrder({
       ...args,
       gift: null,
       box_id: null,
       source: undefined,
+      cameFrom: undefined,
       pay_currency: undefined,
     });
   }
@@ -1650,6 +1672,10 @@ async function bindCustomer(args: {
   paymentMethod?: "transfer" | "card";
   /** Who they said they heard about us from, on their first order. */
   heardFrom?: string;
+  /** Where they were when they first saw us. Written once, like the
+   *  promoter: whatever introduced somebody introduced them once, and the
+   *  orders after that are not Google's doing. */
+  cameFrom?: string;
 }): Promise<void> {
   const way = args.paymentMethod ?? "transfer";
 
@@ -1685,8 +1711,13 @@ async function bindCustomer(args: {
   };
   const { error } = await db()
     .from("customers")
-    .insert({ ...row, payment_method: way });
-  if (error) await db().from("customers").insert(row);
+    .insert({ ...row, payment_method: way, came_from: args.cameFrom ?? "" });
+  if (error) {
+    const { error: again } = await db()
+      .from("customers")
+      .insert({ ...row, payment_method: way });
+    if (again) await db().from("customers").insert(row);
+  }
 }
 
 export type OrderLine = OrderItem & {

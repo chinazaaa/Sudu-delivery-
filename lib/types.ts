@@ -226,6 +226,9 @@ export type Promoter = {
   code: string;
   /** Their own four-digit sign-in, given out on WhatsApp. */
   pin?: string;
+  /** The short name in their own link, sudu.store/s/ada. Their code is what
+   *  everything joins on; this is what goes in a caption. */
+  handle?: string;
   name: string;
   phone: string;
   rate: number;

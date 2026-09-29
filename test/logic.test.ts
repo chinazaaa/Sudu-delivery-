@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import { containersIn } from "../lib/containers";
+import { channelOfSite, tidyChannel, tidyHandle } from "../lib/came-from";
 import { numberOr } from "../lib/settings";
 import { test } from "node:test";
 import { groupForCounter } from "../lib/admin";
@@ -1657,4 +1658,43 @@ test("a setting of zero is an answer, not a missing setting", () => {
   assert.equal(numberOr(null, 2000), 2000);
   assert.equal(numberOr("nonsense", 2000), 2000);
   assert.equal(numberOr("1500", 2000), 1500);
+});
+
+/*
+ * Where somebody came from.
+ *
+ * The column has to be countable a year from now, so the only thing worth
+ * testing is that nothing else can get into it.
+ */
+test("a channel is tidied to a name we chose, or thrown away", () => {
+  assert.equal(tidyChannel("Instagram"), "instagram");
+  assert.equal(tidyChannel(" IG "), "instagram");
+  // A word at a time: whoever writes the link is usually saying where on
+  // Instagram it went, not naming a channel we have never heard of.
+  assert.equal(tidyChannel("ig-bio"), "instagram");
+  assert.equal(tidyChannel("instagram_story"), "instagram");
+  assert.equal(tidyChannel("GOOGLE"), "google");
+  assert.equal(tidyChannel("fb"), "facebook");
+  assert.equal(tidyChannel("x"), "twitter");
+  // Not one of ours. Better empty than a column with a thousand spellings.
+  assert.equal(tidyChannel("some-random-blog"), "");
+  assert.equal(tidyChannel(""), "");
+});
+
+test("a referring site names its channel, and our own pages name none", () => {
+  assert.equal(channelOfSite("www.google.com"), "google");
+  assert.equal(channelOfSite("google.com.ng"), "google");
+  assert.equal(channelOfSite("l.instagram.com"), "instagram");
+  assert.equal(channelOfSite("t.co"), "twitter");
+  assert.equal(channelOfSite("wa.me"), "whatsapp");
+  assert.equal(channelOfSite("somebodyelse.com"), "");
+  assert.equal(channelOfSite(""), "");
+});
+
+test("a promoter's link is only ever letters and numbers", () => {
+  assert.equal(tidyHandle("Ada"), "ada");
+  assert.equal(tidyHandle("ada's link (2)"), "adaslink2");
+  assert.equal(tidyHandle("  TOBI  "), "tobi");
+  assert.equal(tidyHandle("!!!"), "");
+  assert.equal(tidyHandle("a".repeat(40)).length, 20);
 });

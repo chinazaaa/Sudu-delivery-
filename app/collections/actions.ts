@@ -8,6 +8,7 @@ import { whenOptions } from "@/lib/box-view";
 import { furthest, isUrgent, readRepeat, tripForBox } from "@/lib/box-day";
 import { lagosToday } from "@/lib/time";
 import { db } from "@/lib/supabase";
+import { cameFromNow } from "@/lib/where-from";
 import { placeOrder } from "@/lib/orders";
 import { orderLinkId } from "@/lib/orders";
 import { OPENED, sprung, tooFast, TRAP } from "@/lib/guard";
@@ -117,6 +118,7 @@ async function order(form: FormData): Promise<BoxOrderState> {
   }
 
   const result = await placeOrder({
+    cameFrom: await cameFromNow(),
     batchId: going.runId,
     deliverAt: going.at || undefined,
     name: String(form.get("name") ?? ""),

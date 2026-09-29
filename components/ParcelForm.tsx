@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import PayChoice from "./PayChoice";
 import AbroadMoney, { type Money } from "./AbroadMoney";
 import { naira } from "@/lib/money";
+import HeardFrom from "./HeardFrom";
 import { feeFor, type Route } from "@/lib/parcels";
 import { sendParcel, type ParcelState } from "@/app/parcel/actions";
 
@@ -29,6 +30,7 @@ export default function ParcelForm({
   maxValue,
   hostels,
   promoters,
+  sentBy = "",
   today,
 }: {
   routes: Route[];
@@ -42,6 +44,8 @@ export default function ParcelForm({
    *  somebody's first order, and a promoter goes uncredited for every one
    *  that never asks. */
   promoters: { code: string; name: string }[];
+  /** Whose link they arrived on, already checked against the live list. */
+  sentBy?: string;
   /** The shop's today, in Lagos, so a phone set to another day cannot offer
    *  a date that is already gone here. */
   today: string;
@@ -379,27 +383,12 @@ export default function ParcelForm({
           )}
         </div>
 
-        {promoters.length > 0 && (
-          <div>
-            <label className="label" htmlFor="heard_from">
-              Where did you hear about us?
-            </label>
-            <select
-              id="heard_from"
-              name="heard_from"
-              value={said.heard_from}
-              onChange={put("heard_from")}
-              className="field"
-            >
-              <option value="">Somewhere else</option>
-              {promoters.map((one) => (
-                <option key={one.code} value={one.code}>
-                  {one.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        <HeardFrom
+          promoters={promoters}
+          sentBy={sentBy}
+          value={said.heard_from}
+          onChange={(code) => setSaid((was) => ({ ...was, heard_from: code }))}
+        />
 
         <div>
           <label className="label" htmlFor="note">

@@ -10,6 +10,7 @@ import { naira } from "@/lib/money";
 import { OPENED, TRAP } from "@/lib/guard";
 import AbroadMoney, { type Money } from "./AbroadMoney";
 import { STANDARD_DAYS } from "@/lib/box-day";
+import HeardFrom from "./HeardFrom";
 
 /**
  * Picking a box and ordering it.
@@ -34,6 +35,7 @@ export default function OccasionBoxes({
   latest,
   hostels,
   promoters,
+  sentBy = "",
   me,
   note,
   shut,
@@ -65,6 +67,8 @@ export default function OccasionBoxes({
   latest: string;
   hostels: string[];
   promoters: { code: string; name: string }[];
+  /** Whose link they arrived on, already checked against the live list. */
+  sentBy?: string;
   me: { name: string; hostel: string; paymentMethod: "transfer" | "card" } | null;
   note: string;
   shut: boolean;
@@ -646,17 +650,7 @@ export default function OccasionBoxes({
               </p>
             </fieldset>
 
-            {promoters.length > 0 && !me && (
-              <div>
-                <label className="label" htmlFor="box_heard">Where did you hear about us?</label>
-                <select id="box_heard" name="heard_from" defaultValue="" className="field">
-                  <option value="">Nowhere in particular</option>
-                  {promoters.map((one) => (
-                    <option key={one.code} value={one.code}>{one.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {!me && <HeardFrom promoters={promoters} sentBy={sentBy} />}
           </section>
 
           {state.error !== "" && (

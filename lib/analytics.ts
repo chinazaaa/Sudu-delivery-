@@ -2,6 +2,7 @@ import { db } from "./supabase";
 import { isGone, isPaid, NOT_ORDERS_SQL } from "./orders";
 import { SLOT_LABEL } from "./config";
 import { runDateLabel } from "./time";
+import { channelLabel } from "./came-from";
 
 export type Traffic = {
   days: number;
@@ -13,6 +14,26 @@ export type Traffic = {
   pages: { path: string; label: string; views: number }[];
   /** Where people came from, by site. Empty means typed or a private link. */
   sources: { source: string; views: number }[];
+};
+
+/**
+ * A channel, all the way down: how many people it brought and what they
+ * actually paid.
+ *
+ * The sources card above it counts visits, which flatters whichever channel
+ * sends the most idle browsing. This counts orders, which is the question
+ * worth asking: a hundred people off Instagram who never order are worth
+ * less than nine off Google who do.
+ */
+export type Channel = {
+  channel: string;
+  label: string;
+  /** People who landed and were remembered as coming from here. */
+  visitors: number;
+  orders: number;
+  paid: number;
+  /** What the paid ones came to, in naira. */
+  money: number;
 };
 
 export type Funnel = {
@@ -577,4 +598,80 @@ export async function parcelNumbers(days = 7): Promise<ParcelNumbers | null> {
     // wherever two shared a car.
     trips: new Set(rows.map((one) => one.batch_id)).size,
   };
+}
+
+/**
+ * Orders by where the person came from, over the last so many days.
+ *
+ * Only orders placed since the column existed can say anything, so a shop
+ * that has just turned this on sees nearly everything under "not known" for
+ * a while. That is honest, and better than spreading a guess across the
+ * channels to make the card look finished.
+ */
+export async function channels(days = 28): Promise<Channel[] | null> {
+  const since = new Date(Date.now() - days * 86400_000).toISOString();
+
+  let orders: { came_from: string; status: string; total: number }[];
+  try {
+    const { data, error } = await db()
+      .from("orders")
+      .select("came_from, status, total")
+      .gte("created_at", since)
+      .not("status", "in", NOT_ORDERS_SQL)
+      .limit(20000);
+    if (error) throw new Error(error.message);
+    orders = (data ?? []) as typeof orders;
+  } catch {
+    // The column is not there yet. Nothing to show, and nothing broken.
+    return null;
+  }
+
+  const counts = new Map<string, Channel>();
+  const of = (channel: string): Channel => {
+    const found = counts.get(channel);
+    if (found) return found;
+    const made: Channel = {
+      channel,
+      label: channelLabel(channel),
+      visitors: 0,
+      orders: 0,
+      paid: 0,
+      money: 0,
+    };
+    counts.set(channel, made);
+    return made;
+  };
+
+  for (const row of orders) {
+    const one = of(row.came_from ?? "");
+    one.orders += 1;
+    if (isPaid(row.status)) {
+      one.paid += 1;
+      one.money += row.total ?? 0;
+    }
+  }
+
+  // How many people each channel put on the site at all, so a channel that
+  // brings a crowd and no orders is visibly doing that rather than missing.
+  try {
+    const { data } = await db()
+      .from("page_views")
+      .select("visitor, came_from")
+      .gte("created_at", since)
+      .limit(20000);
+    const seen = new Map<string, Set<string>>();
+    for (const row of (data ?? []) as { visitor: string; came_from: string }[]) {
+      const channel = row.came_from ?? "";
+      const set = seen.get(channel) ?? new Set<string>();
+      set.add(row.visitor);
+      seen.set(channel, set);
+    }
+    for (const [channel, set] of seen) of(channel).visitors = set.size;
+  } catch {
+    /* Visits are the nice-to-have here. The orders are the point. */
+  }
+
+  return [...counts.values()]
+    .filter((one) => one.orders > 0 || one.visitors > 0)
+    .sort((a, b) => b.money - a.money || b.orders - a.orders || b.visitors - a.visitors);
 }

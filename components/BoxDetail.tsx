@@ -9,6 +9,8 @@ import { hostelNames } from "@/lib/hostels";
 import { currentCustomer, customerDetails } from "@/lib/customer-auth";
 import { safeSettings } from "@/lib/settings";
 import { namedPromoters } from "@/lib/promoters";
+import { WHO_COOKIE } from "@/lib/came-from";
+import { cookies } from "next/headers";
 import { lagosToday, whenLabel } from "@/lib/time";
 import { ESTIMATE_NOTE } from "@/lib/arrival";
 import OccasionBoxes from "@/components/OccasionBoxes";
@@ -77,6 +79,11 @@ export default async function BoxDetail({
     safeSettings(),
   ]);
 
+  // Who sent them, off a promoter's own link. Checked against the live list:
+  // it arrives in a cookie, and a cookie is whatever somebody typed into it.
+  const fromLink = (await cookies()).get(WHO_COOKIE)?.value ?? "";
+  const sentBy = promoters.find((one) => one.code === fromLink)?.code ?? "";
+
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div>
@@ -121,6 +128,7 @@ export default async function BoxDetail({
           latest={furthest()}
           hostels={hostels}
           promoters={promoters.map((one) => ({ code: one.code, name: one.name }))}
+          sentBy={sentBy}
           me={me}
           note={ESTIMATE_NOTE}
           /* Only a thing with a whistle can run out of ways to arrive. A

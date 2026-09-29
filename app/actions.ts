@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { getOrder, moveOrder, orderLinkId, placeOrder, previewCoupon, saveRating } from "@/lib/orders";
 import { lastOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
+import { cameFromNow } from "@/lib/where-from";
 import { rememberCart } from "@/lib/carts";
 import { countCheckoutLinkUse, getCheckoutLink } from "@/lib/checkout-links";
 import { arrivalNow } from "@/lib/arrival-server";
@@ -68,6 +69,7 @@ export async function submitOrder(
   if (inGroup) redirect(`/g/${inGroup}`);
 
   const result = await placeOrder({
+    cameFrom: await cameFromNow(),
     source: "web",
     batchId: String(form.get("batch_id") ?? ""),
     name: String(form.get("name") ?? ""),
@@ -126,6 +128,7 @@ export async function submitReorder(
   if (!previous) return { error: "No previous order found for that number." };
 
   const result = await placeOrder({
+    cameFrom: await cameFromNow(),
     source: "web",
     batchId: String(form.get("batch_id") ?? ""),
     name: previous.customer_name,
@@ -380,6 +383,7 @@ export async function orderFromLink(input: {
   }
 
   const result = await placeOrder({
+    cameFrom: await cameFromNow(),
     source: "web",
     batchId: going.runId,
     deliverAt: going.at || undefined,
@@ -513,6 +517,7 @@ export async function placeSkincareOrder(input: {
   }
 
   const result = await placeOrder({
+    cameFrom: await cameFromNow(),
     source: "web",
     batchId: car.id,
     name: input.name,

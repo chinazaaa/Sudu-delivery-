@@ -28,6 +28,7 @@ import { normalisePhone } from "@/lib/phone";
 import { OPENED, TRAP } from "@/lib/guard";
 import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
+import HeardFrom from "./HeardFrom";
 import { feeAcross, feeForValue, type ValueBand } from "@/lib/value-bands";
 import { ladderFor, pricesByValue } from "@/lib/areas-shared";
 import CouponBox from "@/components/CouponBox";
@@ -78,6 +79,7 @@ export default function Checkout({
   offers,
   hostels,
   promoters,
+  sentBy = "",
   monies = [],
 }: {
   batches: BatchView[];
@@ -112,6 +114,8 @@ export default function Checkout({
   /** Who somebody could say they heard about the shop from. Empty means
    *  nobody is promoting, and then the question is not worth asking. */
   promoters: { code: string; name: string }[];
+  /** Whose link they arrived on, already checked against the live list. */
+  sentBy?: string;
 }) {
   const cart = useCart();
   const { people } = usePeople();
@@ -1240,21 +1244,7 @@ export default function Checkout({
             Whoever they name is theirs for life, so it is worth a line on a
             form people are already filling in, and "somewhere else" is a
             real answer: most people are nobody's referral. */}
-        {promoters.length > 0 && (
-          <div>
-            <label className="label" htmlFor="heard_from">
-              Where did you hear about us?
-            </label>
-            <select id="heard_from" name="heard_from" className="field" defaultValue="">
-              <option value="">Somewhere else</option>
-              {promoters.map((one) => (
-                <option key={one.code} value={one.code}>
-                  {one.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        <HeardFrom promoters={promoters} sentBy={sentBy} />
 
         {/* Buying it for somebody else. Folded away, because nearly every
             order is for whoever is typing, and two more boxes on every

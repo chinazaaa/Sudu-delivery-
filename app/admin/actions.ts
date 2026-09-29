@@ -1,5 +1,6 @@
 "use server";
 
+import { tidyHandle } from "@/lib/came-from";
 import { normalisePhone } from "@/lib/phone";
 import { redirect } from "next/navigation";
 import { revalidatePath, updateTag } from "next/cache";
@@ -1986,8 +1987,14 @@ export async function savePromoter(form: FormData): Promise<void> {
 
   const typedPin = String(form.get("pin") ?? "").replace(/\D/g, "").slice(0, 4);
 
+  // The short name in their own link, sudu.store/s/ada. Falls back to their
+  // code lower cased, so every promoter has a link the day they are added
+  // rather than only the ones somebody remembered to fill this in for.
+  const handle = tidyHandle(String(form.get("handle") ?? "")) || tidyHandle(code);
+
   const row = {
     code,
+    handle,
     name: String(form.get("name") ?? "").trim(),
     phone: String(form.get("phone") ?? "").trim(),
     rate: Math.round(Number(form.get("rate")) || 500),
@@ -1998,9 +2005,15 @@ export async function savePromoter(form: FormData): Promise<void> {
   };
 
   let { error } = await db().from("promoters").upsert(row);
+  // Somebody else already has that link. Their name is not wrong and their
+  // rate is not wrong, so the rest is saved and only the link is left alone.
+  if (error) {
+    const { handle: _taken, ...noHandle } = row;
+    ({ error } = await db().from("promoters").upsert(noHandle));
+  }
   // A shop that has not had the box rate migration yet still saves the rest.
   if (error) {
-    const { box_rate: _noBoxRate, ...older } = row;
+    const { box_rate: _noBoxRate, handle: _noHandle, ...older } = row;
     ({ error } = await db().from("promoters").upsert(older));
   }
 

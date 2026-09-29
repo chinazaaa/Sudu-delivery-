@@ -127,6 +127,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       const giftPhone = String(body.giftPhone ?? "").trim();
 
       const result = await placeOrder({
+      // The app is its own front door, and nobody arrives in it off a link.
+      cameFrom: "app",
         source: "app",
         batchId,
         deliverAt: at || undefined,

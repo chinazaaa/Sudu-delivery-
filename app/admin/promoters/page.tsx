@@ -122,6 +122,11 @@ export default async function PromotersAdmin({
           // Everything they need in one message, because half of it is
           // useless alone: a PIN with no code, or a code with no page to put
           // it into.
+          // Their own front door. Anybody who opens it has their name filled
+          // in at the checkout already, which is the whole point: promoters
+          // kept saying people forget to pick it out of the dropdown.
+          const theirLink = `${url}/s/${promoter.handle || promoter.code.toLowerCase()}`;
+
           const brief =
             `Hi ${promoter.name || "there"}, you are promoting Sudu.\n\n` +
             `You earn ${naira(promoter.rate)} on every order a customer you brought pays ` +
@@ -130,8 +135,11 @@ export default async function PromotersAdmin({
             `See what you have earned: ${url}/promoter\n` +
             `Code: ${promoter.code}\n` +
             `PIN: ${promoter.pin || "ask us"}\n\n` +
-            `Tell people to pick "${promoter.name || promoter.code}" at the checkout, ` +
-            `under "Where did you hear about us?". That is what puts them on your list.`;
+            `Your link: ${theirLink}\n` +
+            `Share that instead of sudu.store and anybody who orders after opening it ` +
+            `is yours automatically, with your name already filled in at the checkout. ` +
+            `They can still pick "${promoter.name || promoter.code}" by hand under ` +
+            `"Where did you hear about us?" if they came another way.`;
 
           return (
             <article key={promoter.code} className="card">
@@ -196,6 +204,11 @@ export default async function PromotersAdmin({
                   {promoter.phone ? "Send their details" : "Share their details"}
                 </a>
                 <CopyText value={brief} label="Copy" className="px-3 py-1.5 text-sm" />
+                <CopyText
+                  value={theirLink}
+                  label={`Copy ${theirLink.replace(/^https?:\/\//, "")}`}
+                  className="px-3 py-1.5 text-sm"
+                />
                 {promoter.phone && (
                   <a
                     href={`tel:${promoter.phone}`}
@@ -397,6 +410,7 @@ function PromoterForm({
     name: string;
     phone: string;
     pin?: string;
+    handle?: string;
     rate: number;
     box_rate?: number;
     active: boolean;
@@ -443,6 +457,26 @@ function PromoterForm({
             Phone
           </label>
           <input id={`phone${at}`} name="phone" defaultValue={promoter?.phone} className="field" />
+        </div>
+        <div>
+          <label className="label" htmlFor={`handle${at}`}>
+            Their own link
+          </label>
+          <div className="flex items-center gap-1">
+            <span className="whitespace-nowrap text-sm text-muted">sudu.store/s/</span>
+            <input
+              id={`handle${at}`}
+              name="handle"
+              defaultValue={promoter?.handle ?? ""}
+              placeholder={promoter?.code.toLowerCase() ?? "tobi"}
+              className="field"
+            />
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            Letters and numbers only. Anybody who orders after opening it has
+            their name already filled in at the checkout, so nobody has to
+            remember to pick it. Leave it blank and their code is used.
+          </p>
         </div>
         <div>
           <label className="label" htmlFor={`pin${at}`}>

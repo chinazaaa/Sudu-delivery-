@@ -10,6 +10,7 @@ import { hasNudgeColumn } from "@/lib/health";
 import SaveButton from "@/components/SaveButton";
 import { confirmPayout, saveBank, saveNudge, signOut } from "./actions";
 import ChangePin from "@/components/ChangePin";
+import CopyText from "@/components/CopyText";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,27 @@ export default async function PromoterPage({
           <button className="text-sm text-muted hover:underline">Sign out</button>
         </form>
       </div>
+
+      {/* Their own front door, at the top where they will see it, because
+          the whole reason it exists is that people forget to pick a name out
+          of a dropdown at the end of a form. Share the link instead and
+          nobody has to remember anything. */}
+      <section className="rounded-2xl border border-brand/20 bg-brand-tint/40 p-4">
+        <h2 className="text-sm font-bold text-brand-dark">Your link</h2>
+        <p className="mt-1 break-all font-mono text-sm font-bold text-ink">
+          {`${site.replace(/^https?:\/\//, "")}/s/${earnings.handle}`}
+        </p>
+        <p className="mt-1.5 text-xs leading-relaxed text-muted">
+          Share this instead of sudu.store. Anybody who orders after opening
+          it counts for you, with your name already filled in at the
+          checkout, so nobody has to remember to pick it.
+        </p>
+        <CopyText
+          value={`${site}/s/${earnings.handle}`}
+          label="Copy your link"
+          className="mt-2 px-3 py-1.5 text-sm"
+        />
+      </section>
 
       <nav className="flex gap-2">
         {[
