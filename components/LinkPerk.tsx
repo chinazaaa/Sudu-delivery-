@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 /**
@@ -16,6 +17,7 @@ import { useEffect, useState } from "react";
  */
 export default function LinkPerk({ who, line }: { who: string; line: string }) {
   const [shut, setShut] = useState(true);
+  const path = usePathname();
 
   // Drawn only after the browser has it, so a strip nobody wants does not
   // flash up on a page that was served with it already dismissed.
@@ -27,6 +29,10 @@ export default function LinkPerk({ who, line }: { who: string; line: string }) {
     }
   }, []);
 
+  // Not over the admin or the promoter portal. Whoever is signed in there
+  // opened a promoter's link at some point to see what it did, and has been
+  // told a friend sent them on every page of their own shop since.
+  if (path?.startsWith("/admin") || path?.startsWith("/promoter")) return null;
   if (shut) return null;
 
   return (

@@ -5,6 +5,8 @@ import Stat from "@/components/admin/Stat";
 import OrderCard from "@/components/admin/OrderCard";
 import { orderFeed } from "@/lib/admin-data";
 import { getOrder } from "@/lib/orders";
+import { getBatch } from "@/lib/batches";
+import { SLOT_LABEL } from "@/lib/config";
 import { getSettings } from "@/lib/settings";
 import { payableAccounts } from "@/lib/banks";
 import { siteUrl, toCard } from "@/lib/admin-templates";
@@ -133,6 +135,16 @@ async function orderPage(id: string, said: string) {
   const bank = (await payableAccounts(settings))[0] ?? null;
   if (!order) notFound();
 
+  // Which run it is on, said rather than left behind a button. "Open its
+  // run" told you there was one and nothing about which: knowing an order is
+  // on Friday night is most of what anybody opens this page to find out.
+  const run = await getBatch(order.batch_id);
+  const runLabel = run
+    ? run.kind === "same_day"
+      ? `A car of its own · ${runDateLabel(run.run_date)}`
+      : `${runDateLabel(run.run_date)} · ${SLOT_LABEL[run.slot]}`
+    : "";
+
   // The card wants the feed's shape, so this one order is read the same way.
   const card = (await orderFeed({ status: "all", search: order.customer_phone })).find(
     (row) => row.id === order.id
@@ -161,7 +173,7 @@ async function orderPage(id: string, said: string) {
             href={`/admin/batch/${order.batch_id}`}
             className="btn-quiet px-4 py-2.5 text-sm"
           >
-            Open its run
+            {runLabel === "" ? "Open its run" : `On ${runLabel}`}
           </Link>
         }
       />
