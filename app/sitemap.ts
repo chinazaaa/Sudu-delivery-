@@ -66,6 +66,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Both are public pages the stores point at, so they are worth finding.
     { url: `${site}/support`, changeFrequency: "monthly" as const, priority: 0.3 },
     { url: `${site}/privacy`, changeFrequency: "monthly" as const, priority: 0.3 },
+    { url: `${site}/terms`, changeFrequency: "monthly" as const, priority: 0.3 },
   ];
 
   try {

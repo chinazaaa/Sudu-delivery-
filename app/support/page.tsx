@@ -71,10 +71,23 @@ export default async function SupportPage() {
 
       <Section title="Something is wrong or missing">
         <p>
-          Tell us the same day, with a photo if you can. We deal with the
-          restaurant, not you. If an item is missing or is not what you ordered
-          we refund it to the account you paid from, and we do not ask you to
-          take it up with the restaurant yourself.
+          Tell us the same day, with a photo if you can. Either way you talk to
+          us and not to the restaurant.
+        </p>
+        <p>
+          If it is our doing, we refund it ourselves, to the account you paid
+          from: something missing because we missed it, the wrong thing
+          collected, damaged on the way, or never delivered.
+        </p>
+        <p>
+          If it is the kitchen&apos;s doing, how it was cooked or what went
+          into it, the refund is theirs to give and we are the ones who go and
+          ask. We put it to them the same day and pass on whatever they agree.
+          The{" "}
+          <Link href="/terms" className="font-semibold text-brand">
+            terms
+          </Link>{" "}
+          set out which is which.
         </p>
       </Section>
 

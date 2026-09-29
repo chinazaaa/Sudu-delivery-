@@ -181,11 +181,19 @@ export default function AddToCart({
       ))}
 
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1 rounded-full border border-black/10 p-1">
+        {/* Dead when the thing is sold out. Counting up to four of something
+            nobody can have reads as the shop taking the order, and the only
+            thing that says otherwise is a button further down the page. */}
+        <div
+          className={`flex items-center gap-1 rounded-full border border-black/10 p-1 ${
+            item.available ? "" : "opacity-40"
+          }`}
+        >
           <button
             type="button"
+            disabled={!item.available}
             onClick={() => step(-1)}
-            className="size-9 rounded-full text-lg leading-none hover:bg-black/5"
+            className="size-9 rounded-full text-lg leading-none hover:bg-black/5 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             aria-label="One less"
           >
             −
@@ -193,8 +201,9 @@ export default function AddToCart({
           <span className="w-7 text-center font-semibold">{shownQty}</span>
           <button
             type="button"
+            disabled={!item.available}
             onClick={() => step(1)}
-            className="size-9 rounded-full text-lg leading-none hover:bg-black/5"
+            className="size-9 rounded-full text-lg leading-none hover:bg-black/5 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             aria-label="One more"
           >
             +
