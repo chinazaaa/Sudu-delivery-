@@ -503,12 +503,22 @@ export async function publicOffer(code: string): Promise<PublicOffer | null> {
     if (coupon.expires_at && new Date(coupon.expires_at) <= new Date()) return null;
     if (coupon.max_uses !== null && coupon.used >= coupon.max_uses) return null;
 
+    // Written out as a sentence rather than a phrase with "your first order"
+    // stuck on the end, which read "₦500 off delivery your first order".
+    const money = naira(coupon.amount);
+    const once = coupon.first_order_only;
     const what =
       coupon.applies_to === "fee"
-        ? `${naira(coupon.amount)} delivery`
+        ? once
+          ? `${money} delivery on your first order`
+          : `${money} delivery`
         : coupon.applies_to === "delivery"
-          ? `${naira(coupon.amount)} off delivery`
-          : `${naira(coupon.amount)} off`;
+          ? once
+            ? `${money} off your first delivery`
+            : `${money} off delivery`
+          : once
+            ? `${money} off your first order`
+            : `${money} off`;
 
     // A code kept to one kitchen says so in the strip. Announcing "₦500 off"
     // to the whole site and then refusing it at the counter is the sort of
@@ -518,7 +528,7 @@ export async function publicOffer(code: string): Promise<PublicOffer | null> {
 
     return {
       code: coupon.code,
-      line: coupon.first_order_only ? `${what} your first order${where}` : `${what}${where}`,
+      line: `${what}${where}`,
       automatic: coupon.automatic,
     };
   } catch {

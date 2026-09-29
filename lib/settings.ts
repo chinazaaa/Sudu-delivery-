@@ -106,6 +106,15 @@ export type Settings = {
    */
   offer_code: string;
   /**
+   * The coupon a promoter's own link carries: open sudu.store/s/ada and it
+   * applies itself at the checkout.
+   *
+   * The name of a code rather than an amount, so what it is worth, who it is
+   * for and how long it runs are all on the coupons page with every other
+   * offer. Empty means a link brings nothing but the promoter's name.
+   */
+  promoter_perk_code: string;
+  /**
    * The slider the home page builds when there are no slides of your own.
    * The headline is per restaurant, and the lines rotate beneath it.
    */
@@ -189,6 +198,7 @@ export const EMPTY: Settings = {
   same_day_day_hours: "",
   same_day_last_hour: "",
   offer_code: "",
+  promoter_perk_code: "",
   auto_headline: "",
   auto_lines: "",
   home_order: "",

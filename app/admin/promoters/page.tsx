@@ -11,6 +11,8 @@ import { promoterSchema } from "@/lib/health";
 import { naira } from "@/lib/money";
 import { whatsappTo } from "@/lib/messages";
 import { siteUrl } from "@/lib/admin-templates";
+import { publicOffer } from "@/lib/coupons";
+import { safeSettings } from "@/lib/settings";
 import { recordPayout, savePromoter } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +49,9 @@ export default async function PromotersAdmin({
     )
   );
   const url = await siteUrl();
+  // What their link is worth to whoever opens it, read off the code itself
+  // so a brief sent today cannot promise ₦500 that was switched off in May.
+  const perk = await publicOffer((await safeSettings()).promoter_perk_code);
 
   // About everybody, whoever is being looked at: the question "what do I owe
   // in total" does not change because the page is showing one person.
@@ -136,6 +141,7 @@ export default async function PromotersAdmin({
             `Code: ${promoter.code}\n` +
             `PIN: ${promoter.pin || "ask us"}\n\n` +
             `Your link: ${theirLink}\n` +
+            (perk ? `Anybody who opens it gets ${perk.line}.\n` : "") +
             `Share that instead of sudu.store and anybody who orders after opening it ` +
             `is yours automatically, with your name already filled in at the checkout. ` +
             `They can still pick "${promoter.name || promoter.code}" by hand under ` +

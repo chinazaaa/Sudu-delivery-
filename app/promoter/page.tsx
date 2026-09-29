@@ -6,6 +6,8 @@ import { shortRef } from "@/lib/links";
 import { naira } from "@/lib/money";
 import { fillNudge, whatsappTo, NUDGE_TOKENS } from "@/lib/messages";
 import { siteUrl } from "@/lib/admin-templates";
+import { publicOffer } from "@/lib/coupons";
+import { safeSettings } from "@/lib/settings";
 import { hasNudgeColumn } from "@/lib/health";
 import SaveButton from "@/components/SaveButton";
 import { confirmPayout, saveBank, saveNudge, signOut } from "./actions";
@@ -29,6 +31,11 @@ export default async function PromoterPage({
   const earnings = code ? await promoterEarnings(code) : null;
   // Links inside a message have to be absolute, so they come from the request.
   const site = await siteUrl().catch(() => "");
+  // Read off the code, so this page cannot go on promising a discount that
+  // has been switched off, run out or had its amount changed.
+  const perk = await publicOffer((await safeSettings()).promoter_perk_code).catch(
+    () => null
+  );
   // The box only appears once the column is there, rather than offering a
   // save that throws on a database that has not had update.sql run on it.
   const canEditNudge = earnings ? await hasNudgeColumn() : false;
@@ -66,10 +73,16 @@ export default async function PromoterPage({
         <p className="mt-1 break-all font-mono text-sm font-bold text-ink">
           {`${site.replace(/^https?:\/\//, "")}/s/${earnings.handle}`}
         </p>
+        {perk && (
+          <p className="mt-1.5 text-sm font-semibold text-brand-dark">
+            Anybody who opens it gets {perk.line}.
+          </p>
+        )}
         <p className="mt-1.5 text-xs leading-relaxed text-muted">
           Share this instead of sudu.store. Anybody who orders after opening
           it counts for you, with your name already filled in at the
-          checkout, so nobody has to remember to pick it.
+          checkout, so nobody has to remember to pick it. You earn the same
+          either way.
         </p>
         <CopyText
           value={`${site}/s/${earnings.handle}`}

@@ -83,6 +83,15 @@ export type PlaceOrderInput = {
    *  place, not a person, and nobody is paid for it. Worked out from the
    *  link they arrived on or the site that sent them. */
   cameFrom?: string;
+  /**
+   * A code nobody typed: the one a promoter's own link carries.
+   *
+   * Held apart from `coupon` because a typed code that does not work has to
+   * say so, and one that arrived on a link must never fail an order. A
+   * returning customer opening a first-order link, or a cart that already
+   * has a promotion on it, simply pays the ordinary fee.
+   */
+  autoCoupon?: string;
   /** A discount code typed at checkout. */
   coupon?: string;
   /** The order whose join link they opened, so their food rides along with it. */
@@ -425,6 +434,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     };
   }
 
+  // The code a promoter's link carries, taken up only when there is room for
+  // it. A promotion has already claimed the one offer this order gets, so
+  // under one the link is worth nothing and says nothing.
+  const linkCode = promotion ? "" : (input.autoCoupon ?? "").trim();
+
   // A discount code is checked against this order's own delivery, so "free
   // delivery" is worth what delivery actually costs here and no more. The
   // check happens against the fee the order is about to be charged.
@@ -439,6 +453,24 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
       })
     : null;
   if (coupon && !coupon.ok) return { ok: false, error: coupon.error };
+
+  // And the link's own code, under the same rules but silently. A typed code
+  // that fails is worth an error, because somebody typed it and is waiting to
+  // hear. One that arrived on a link is not: they were told "₦500 off your
+  // first delivery", they are on their fourth, and the order goes through at
+  // the ordinary price rather than refusing to be placed at all.
+  const fromLink =
+    !coupon && linkCode !== ""
+      ? await checkCoupon({
+          code: linkCode,
+          fee: feeFor(countItems(priced.lines), batch.flash_fee, bands),
+          food: countFood(priced.lines),
+          returning,
+          batchId: batch.id,
+          restaurantIds: placesIn(priced.lines),
+        }).catch(() => null)
+      : null;
+  const earned = coupon?.ok ? coupon : fromLink?.ok ? fromLink : null;
 
   const paymentMethod = input.paymentMethod ?? "transfer";
   const collectMode = input.collectMode ?? "leader";
@@ -477,7 +509,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           name,
           hostel,
           lines: priced.lines,
-          coupon: coupon?.ok ? coupon : null,
+          coupon: earned,
           paymentMethod,
           collectMode,
           people: input.people ?? [],
@@ -492,7 +524,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           name,
           hostel,
           lines: priced.lines,
-          coupon: coupon?.ok ? coupon : null,
+          coupon: earned,
           source: input.source,
           cameFrom: input.cameFrom,
           payCurrency: input.payCurrency,
@@ -550,7 +582,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
 
   if (!result.ok) return result;
 
-  if (coupon?.ok) await useCoupon(coupon.coupon.code);
+  if (earned) await useCoupon(earned.coupon.code);
   // A promotion counts its uses too, because the cap on how many orders it is
   // good for is the cap on how much you can carry. In a split group it is one
   // use per person, since each of them paid the offer price.
@@ -1361,6 +1393,71 @@ export async function previewCoupon(args: {
   return result.ok
     ? { ok: true, discount: result.discount, label: couponLabel(result.coupon) }
     : { ok: false, error: result.error };
+}
+
+/**
+ * What a promoter's link is worth on this cart, right now.
+ *
+ * Three honest answers and no fourth. The shop's one-offer rule is not bent
+ * for this: if Domino's delivery is already ₦2,000 on this order, saying
+ * "and ₦500 off" would be a second offer, so it says which one is on instead.
+ */
+export type LinkPerk =
+  | { kind: "applied"; code: string; discount: number; label: string }
+  /** A promotion has the slot. Worth saying, because they were promised
+   *  something and are owed an explanation of what they got instead. */
+  | { kind: "offer"; note: string }
+  | { kind: "none" };
+
+export async function perkFor(args: {
+  batchId: string;
+  lines: CartLine[];
+  phone: string;
+}): Promise<LinkPerk> {
+  const code = (await safeSettings()).promoter_perk_code.trim();
+  if (code === "") return { kind: "none" };
+
+  const batch = await getBatch(args.batchId);
+  if (!batch) return { kind: "none" };
+
+  const priced = await priceLines(args.lines);
+  if ("error" in priced) return { kind: "none" };
+
+  const phone = normalisePhone(args.phone);
+  const returning = phone ? await isReturningCustomer(phone) : false;
+
+  const holding = await activePromotion({
+    restaurantIds: placesIn(priced.lines),
+    itemIds: priced.lines.map((line) => line.menu_item_id),
+    lineChoices: priced.lines.map((line) => line.options.map((one) => one.name)),
+    items: countItems(priced.lines),
+    batchId: batch.id,
+    deliverAt: batch.kind === "same_day" ? batch.deliver_at : null,
+    returning,
+  });
+  if (holding) {
+    return { kind: "offer", note: holding.coupon.note.trim() || "An offer" };
+  }
+
+  const result = await checkCoupon({
+    code,
+    fee: feeFor(countItems(priced.lines), batch.flash_fee, await bandsFor(batch)),
+    food: countFood(priced.lines),
+    returning,
+    batchId: batch.id,
+    restaurantIds: placesIn(priced.lines),
+  });
+  // Why it did not apply is nobody's business at the checkout: the code is
+  // not theirs, they never typed it, and "that code is for a first order
+  // only" reads as an accusation. It simply is not there.
+  if (!result.ok) return { kind: "none" };
+
+  return {
+    kind: "applied",
+    code: result.coupon.code,
+    discount: result.discount,
+    label: couponLabel(result.coupon),
+  };
 }
 
 export type MoveResult = { ok: true; orderId: string } | { ok: false; error: string };

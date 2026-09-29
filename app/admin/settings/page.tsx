@@ -413,6 +413,37 @@ export default async function SettingsAdmin() {
       </form>
 
       <form action={saveSettings} className="card space-y-3">
+        <h2 className="font-semibold">What a promoter's link is worth</h2>
+        <p className="text-sm text-muted">
+          Every promoter has a link of their own, like{" "}
+          <code>sudu.store/s/ada</code>. Name a code here and anybody who
+          opens one gets it applied at the checkout without typing anything,
+          which is what lets them say "use my link and get ₦500 off".
+        </p>
+        <div>
+          <label className="label" htmlFor="promoter_perk_code">
+            The code their link carries
+          </label>
+          <input
+            id="promoter_perk_code"
+            name="promoter_perk_code"
+            defaultValue={settings.promoter_perk_code}
+            placeholder="WELCOME500"
+            className="field font-mono uppercase"
+          />
+          <p className="mt-1 text-xs text-muted">
+            A code from Codes, so what it is worth, whether it is a first
+            order only and how many times it can be used are all set there
+            beside every other offer. Leave it empty and a link brings the
+            promoter's name and nothing else. Only one offer applies at a
+            time: where a promotion already prices the delivery, the checkout
+            says so rather than taking money off twice.
+          </p>
+        </div>
+        <SaveButton>Save</SaveButton>
+      </form>
+
+      <form action={saveSettings} className="card space-y-3">
         <h2 className="font-semibold">Footer line</h2>
         <p className="text-sm text-muted">
           The line at the bottom of every page.

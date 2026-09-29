@@ -349,6 +349,28 @@ export async function realPromoter(code: string): Promise<boolean> {
 }
 
 /**
+ * What one promoter is called, by their code.
+ *
+ * For the strip at the top of the site that names whoever sent somebody. It
+ * says nothing at all rather than naming somebody no longer promoting: a
+ * link that has been retired still works, it just brings no name with it.
+ */
+export async function promoterCalledName(code: string): Promise<string> {
+  if (code.trim() === "") return "";
+  try {
+    const { data } = await db()
+      .from("promoters")
+      .select("name")
+      .eq("code", code.trim())
+      .eq("active", true)
+      .maybeSingle();
+    return firstName(String((data as { name?: string } | null)?.name ?? ""));
+  } catch {
+    return "";
+  }
+}
+
+/**
  * The name somebody would be called out loud.
  *
  * A promoter asking who ordered is asking whether their two friends came

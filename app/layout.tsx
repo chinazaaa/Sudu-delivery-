@@ -11,6 +11,10 @@ import { offerNudge, publicOffer } from "@/lib/coupons";
 import { instagramLink, safeSettings } from "@/lib/settings";
 import { liveRibbon } from "@/lib/ribbon";
 import { qrSvg } from "@/lib/qr";
+import { cookies } from "next/headers";
+import { WHO_COOKIE } from "@/lib/came-from";
+import { promoterCalledName } from "@/lib/promoters";
+import LinkPerk from "@/components/LinkPerk";
 import "./globals.css";
 
 /**
@@ -81,6 +85,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Drawn here because it is the same square for everybody and never
   // changes. A laptop cannot install an app; it can hold up something a
   // phone can read.
+  // Somebody who arrived on a promoter's own link, and what that link is
+  // worth. Read off the coupon itself rather than a sentence typed beside
+  // it, so the strip cannot go on promising ₦500 after the code has been
+  // switched off, run out or had its amount changed.
+  const sentBy = (await cookies()).get(WHO_COOKIE)?.value ?? "";
+  const perk = sentBy ? await publicOffer(settings.promoter_perk_code) : null;
+  const perkFrom = perk ? await promoterCalledName(sentBy) : "";
+
   const appQr = settings.ios_app_id
     ? await qrSvg(`https://apps.apple.com/app/id${settings.ios_app_id}`)
     : "";
@@ -144,6 +156,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Each line of the footer is there because something is set. Empty
             it in admin and it goes. */}
         <Ribbon text={ribbon?.text ?? ""} href={ribbon?.href ?? ""} offer={offer} />
+        {/* Above the header, because it is about why they are here at all
+            rather than about anything on the page under it. */}
+        {perk && perkFrom && <LinkPerk who={perkFrom} line={perk.line} />}
         <SiteHeader tagline={settings.tagline || "Your Fav Foods to PAU"} />
         {/* Directly under the header, so being in a group is the first thing
             read on every page rather than something found at checkout. */}

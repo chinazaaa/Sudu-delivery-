@@ -2080,6 +2080,7 @@ const SETTING_FIELDS = [
   "ribbon_text",
   "ribbon_href",
   "offer_code",
+  "promoter_perk_code",
   "auto_headline",
   "auto_lines",
   "home_order",

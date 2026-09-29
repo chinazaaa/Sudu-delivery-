@@ -28,6 +28,8 @@ import { normalisePhone } from "@/lib/phone";
 import { OPENED, TRAP } from "@/lib/guard";
 import FeeBands from "./FeeBands";
 import { naira } from "@/lib/money";
+import { perkOnCart } from "@/app/actions";
+import type { LinkPerk } from "@/lib/orders";
 import HeardFrom from "./HeardFrom";
 import { feeAcross, feeForValue, type ValueBand } from "@/lib/value-bands";
 import { ladderFor, pricesByValue } from "@/lib/areas-shared";
@@ -263,6 +265,10 @@ export default function Checkout({
   // matters is how long it was open.
   const [openedAt] = useState(() => Date.now());
   const [applied, setApplied] = useState<{ code: string; discount: number } | null>(null);
+  // What the link they arrived on is worth on this cart. Asked of the server
+  // rather than assumed, because whether it applies at all depends on whose
+  // first order this is and on what else is already on the order.
+  const [perk, setPerk] = useState<LinkPerk>({ kind: "none" });
   const [state, action, pending] = useActionState<SubmitState, FormData>(submitOrder, {
     error: null,
   });
@@ -617,7 +623,10 @@ export default function Checkout({
     promotion && shares.length > 1
       ? feeShares.reduce((sum, one) => sum + one, 0)
       : fee;
-  const total = Math.max(0, subtotal + charged - (applied?.discount ?? 0));
+  // One offer to a checkout: a typed code takes the slot if there is one,
+  // and the link's own code only fills it when nothing else has.
+  const linkOff = !applied && perk.kind === "applied" ? perk.discount : 0;
+  const total = Math.max(0, subtotal + charged - (applied?.discount ?? 0) - linkOff);
 
   const collect: "leader" | "each" = people.some(
     (person) =>
@@ -672,6 +681,40 @@ export default function Checkout({
   useEffect(() => {
     setApplied(null);
   }, [batchId, itemCount]);
+
+  // The same is true of the link's code, and more so: it turns on the phone
+  // number as well, since it is a first order only. Re-asked whenever any of
+  // the three move, so the line above the button is never a number from a
+  // cart somebody has since changed.
+  useEffect(() => {
+    if (sentBy === "" || batchId === "" || cart.length === 0) {
+      setPerk({ kind: "none" });
+      return;
+    }
+
+    let current = true;
+    const timer = setTimeout(async () => {
+      const form = new FormData();
+      form.set("batch_id", batchId);
+      form.set("cart", JSON.stringify(toServerLines(cart)));
+      form.set("phone", phone);
+      try {
+        const answer = await perkOnCart(form);
+        if (current) setPerk(answer);
+      } catch {
+        // The discount still applies when the order is placed; this line is
+        // only the promise of it, and a promise nobody can make is better
+        // left unmade than shown as an error on a checkout.
+        if (current) setPerk({ kind: "none" });
+      }
+    }, 350);
+
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sentBy, batchId, itemCount, phone]);
 
   // A group already has its car, picked when the link was made, so nobody in
   // one is asked again. Everybody else picks here.
@@ -1552,6 +1595,21 @@ export default function Checkout({
             <span>Code {applied.code}</span>
             <span>−{naira(applied.discount)}</span>
           </div>
+        )}
+        {/* What the link they opened turned out to be worth. Said here, under
+            the money, rather than as a banner: this is where somebody looks
+            to find out what they are paying. */}
+        {!applied && perk.kind === "applied" && (
+          <div className="flex justify-between text-mint">
+            <span>{perk.label}</span>
+            <span>−{naira(perk.discount)}</span>
+          </div>
+        )}
+        {!applied && perk.kind === "offer" && (
+          <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm text-brand-dark">
+            {perk.note} is already on this order, so it is that rather than
+            the discount on the link. Only one offer applies at a time.
+          </p>
         )}
       </section>
 

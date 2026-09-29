@@ -4,9 +4,9 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getOrder, moveOrder, orderLinkId, placeOrder, previewCoupon, saveRating } from "@/lib/orders";
-import { lastOrderForPhone } from "@/lib/orders";
+import { lastOrderForPhone, perkFor, type LinkPerk } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
-import { cameFromNow } from "@/lib/where-from";
+import { cameFromNow, linkCouponNow } from "@/lib/where-from";
 import { rememberCart } from "@/lib/carts";
 import { countCheckoutLinkUse, getCheckoutLink } from "@/lib/checkout-links";
 import { arrivalNow } from "@/lib/arrival-server";
@@ -70,6 +70,7 @@ export async function submitOrder(
 
   const result = await placeOrder({
     cameFrom: await cameFromNow(),
+    autoCoupon: await linkCouponNow(),
     source: "web",
     batchId: String(form.get("batch_id") ?? ""),
     name: String(form.get("name") ?? ""),
@@ -129,6 +130,7 @@ export async function submitReorder(
 
   const result = await placeOrder({
     cameFrom: await cameFromNow(),
+    autoCoupon: await linkCouponNow(),
     source: "web",
     batchId: String(form.get("batch_id") ?? ""),
     name: previous.customer_name,
@@ -189,6 +191,22 @@ export async function tryCoupon(
   return result.ok
     ? { error: null, code, discount: result.discount, label: result.label }
     : { error: result.error, code: null, discount: 0, label: null };
+}
+
+/**
+ * What the link somebody arrived on is worth on the cart in front of them.
+ *
+ * Called from the checkout as the cart and the phone number change, so the
+ * banner says the real number rather than the number on the poster: whether
+ * it applies at all depends on whose first order this is and what else is
+ * already on the order.
+ */
+export async function perkOnCart(form: FormData): Promise<LinkPerk> {
+  return perkFor({
+    batchId: String(form.get("batch_id") ?? ""),
+    lines: parseCart(form.get("cart")),
+    phone: String(form.get("phone") ?? ""),
+  });
 }
 
 export type MoveState = {
@@ -384,6 +402,7 @@ export async function orderFromLink(input: {
 
   const result = await placeOrder({
     cameFrom: await cameFromNow(),
+    autoCoupon: await linkCouponNow(),
     source: "web",
     batchId: going.runId,
     deliverAt: going.at || undefined,
@@ -518,6 +537,7 @@ export async function placeSkincareOrder(input: {
 
   const result = await placeOrder({
     cameFrom: await cameFromNow(),
+    autoCoupon: await linkCouponNow(),
     source: "web",
     batchId: car.id,
     name: input.name,
