@@ -25,8 +25,9 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
 const TITLE = "Delivery to Pan-Atlantic University (PAU), Lagos";
 const BLURB =
   "Food delivered to Pan-Atlantic University from the restaurants around " +
-  "Sangotedo and Novare Mall. One car, one delivery fee split between " +
-  "everybody on it, handed to you at your hostel. Skincare and parcels too.";
+  "Sangotedo, Novare, Lekki and Ikoyi. One car, one delivery fee split " +
+  "between everybody on it, handed to you at your hostel. Skincare and " +
+  "parcels too.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -124,7 +125,7 @@ export default async function DeliveryToPauPage() {
       // have. They are named under the parcel question, where they are true.
       q: "Where do you deliver food from?",
       a:
-        "Restaurants around Sangotedo and Novare Mall" +
+        "Restaurants around Sangotedo, Novare, Lekki and Ikoyi" +
         (places.length > 0
           ? `, including ${places.slice(0, 6).map((one) => one.name).join(", ")}.`
           : ".") +
@@ -223,7 +224,8 @@ export default async function DeliveryToPauPage() {
         <p className="text-ink/90">
           Sudu is a food delivery service for Pan-Atlantic University (PAU)
           students in Lagos. Order from your favourite restaurants around
-          Sangotedo and Novare and have your food delivered directly to your
+          Sangotedo, Novare, Lekki and Ikoyi and have your food delivered directly
+          to your
           PAU hostel.
         </p>
 

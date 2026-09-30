@@ -409,7 +409,7 @@ export default function Home({
           <p className="pt-2 text-center text-xs leading-relaxed text-muted">
             Sudu delivers food, groceries, skincare and parcels to
             Pan-Atlantic University students. Order from your favourite
-            restaurants around Sangotedo and Novare and get your order
+            restaurants around Sangotedo, Novare, Lekki and Ikoyi and get your order
             delivered directly to your PAU hostel.
           </p>
         </>

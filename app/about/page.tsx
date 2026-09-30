@@ -77,7 +77,8 @@ export default async function AboutPage() {
         </h1>
         <p className="text-ink/90">
           Sudu is a delivery service for Pan-Atlantic University students. We
-          collect from restaurants around Sangotedo and Novare and bring the
+          collect from restaurants around Sangotedo, Novare, Lekki and Ikoyi and
+          bring the
           order onto campus, to the block you named.
         </p>
       </header>
@@ -101,7 +102,7 @@ export default async function AboutPage() {
                 .slice(0, 5)
                 .map((one) => one.name)
                 .join(", ")}`
-            : "the restaurants around Sangotedo and Novare"}
+            : "the restaurants around Sangotedo, Novare, Lekki and Ikoyi"}
           , collected together and brought in on one car. Several kitchens can
           go in one order, and the delivery is one fee rather than one each.
           Order with friends and it splits between you.
