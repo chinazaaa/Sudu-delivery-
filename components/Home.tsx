@@ -33,6 +33,7 @@ export default function Home({
   packs = [],
   slides,
   iosAppId = "",
+  pitch = "",
 }: {
   menu: MenuView[];
   /** When something ordered right now would land, said as a sentence and
@@ -57,6 +58,10 @@ export default function Home({
   slides: Slide[];
   /** The App Store id, or empty where the shop has no app to mention. */
   iosAppId?: string;
+  /** Why a stranger should hand over sixteen thousand naira before anything
+   *  arrives. Written in admin; empty means the page says nothing, which is
+   *  better than the page inventing something. */
+  pitch?: string;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<{ item: ItemView; place: MenuView } | null>(null);
@@ -132,10 +137,6 @@ export default function Home({
       {arriving !== "" && (
         <ArrivalStrip said={arriving} also={alsoArriving} closesAt={closesAt} />
       )}
-
-      {/* Above the restaurants, because by the time somebody is reading a
-          menu they have already decided how they are ordering. */}
-      <SplitPrompt />
 
       <div className="relative">
         <input
@@ -239,6 +240,79 @@ export default function Home({
               further down: occasions, then parcels, then skincare, and the menu
               began below three screens of doors. A row costs the same height
               whether there are two of these or five. */}
+          {/* The restaurants, by their own logos, before anything else.
+
+              The page named none of them. A shop whose whole promise is
+              "Domino's, to your hostel" opened on a search box and a card
+              saying "Food", and the one thing that does the persuading — a
+              logo somebody already trusts, already knows the prices of and
+              already wants — was two taps away behind a category name. A
+              student does not arrive wanting food in general. They arrive
+              wanting KFC.
+
+              A row rather than a grid: it costs one line of height whatever
+              happens, and the one falling off the right edge is what says
+              there are more. */}
+          {menu.length > 0 && (
+            <section className="-mx-4 space-y-2 px-4">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 className="section-title">Order from</h2>
+                <Link
+                  href="/products"
+                  className="shrink-0 text-sm font-extrabold text-brand"
+                >
+                  All the food →
+                </Link>
+              </div>
+              <ul className="flex snap-x gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {menu.map((place) => (
+                  <li key={place.restaurant.id} className="snap-start">
+                    <Link
+                      href={`/r/${place.restaurant.href}`}
+                      className="flex w-20 flex-col items-center gap-1.5"
+                    >
+                      <span className="h-16 w-16 overflow-hidden rounded-full bg-paper shadow-card">
+                        <Thumb
+                          src={place.restaurant.logoUrl}
+                          name={place.restaurant.name}
+                          rounded="rounded-full"
+                        />
+                      </span>
+                      <span className="line-clamp-2 text-center text-xs font-bold leading-tight">
+                        {place.restaurant.name}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* Seven years on one campus and an award from the school
+              itself, said on the page people actually open.
+
+              It was on /about, which is a page nobody opens. The single
+              hardest thing this shop asks of a first-time customer is money
+              up front for food that has not been bought yet, and the answer
+              to that was filed behind a link in the footer. */}
+          {/* How ordering here works, and then why anybody should. Two
+              different jobs, so two lines: the first is the pitch and
+              belongs to admin, the second is the shop's record and does not
+              change. */}
+          <div className="space-y-1 text-center">
+            {pitch !== "" && (
+              <p className="text-sm font-semibold text-muted">{pitch}</p>
+            )}
+            <p className="text-xs text-muted">
+              On the PAU campus since 2018 · PAU Entrepreneurship Award, 2021
+            </p>
+          </div>
+
+          {/* Under the food rather than over it. Splitting a delivery is a
+              way of paying, and it was standing between somebody who came
+              here hungry and the first picture of anything to eat. */}
+          <SplitPrompt />
+
           {/* A line over the grid, and the way to the whole shelf on the
               right of it. The grid only names six collections, and somebody
               who wants the seventh should not have to guess there is one. */}

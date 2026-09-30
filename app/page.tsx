@@ -280,6 +280,10 @@ export default async function HomePage() {
         })()
       }
       buckets={buckets}
+      // Empty until somebody writes one, and then it is theirs to change
+      // without a deploy. The shipped words are the two facts worth saying:
+      // how long this has been running and who said it was any good.
+      pitch={settings.pitch_line.trim()}
       // The boxes by name, so a search for "care" finds the care package
       // rather than reporting that nothing matches.
       packs={packs}

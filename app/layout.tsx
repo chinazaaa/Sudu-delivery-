@@ -203,6 +203,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Link href="/about" className="underline">
                 About
               </Link>
+              {/* For the mother who typed the address in rather than tapping
+                  the link she was sent. The page itself is written to her,
+                  and it is down here rather than in the header because a
+                  student on the front page is not one and should not have to
+                  read past a card asking whether they are. */}
+              <Link href="/parents" className="underline">
+                For parents
+              </Link>
               {/* The front page names each shelf rather than the word, so
                   these two lists would otherwise be reachable only from
                   inside one of them. One link from a crawled page is what

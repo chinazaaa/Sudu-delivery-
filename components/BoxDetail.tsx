@@ -15,6 +15,7 @@ import { lagosToday, whenLabel } from "@/lib/time";
 import { ESTIMATE_NOTE } from "@/lib/arrival";
 import OccasionBoxes from "@/components/OccasionBoxes";
 import HelpLine from "@/components/HelpLine";
+import AskParents from "@/components/AskParents";
 
 /**
  * One collection or occasion, and the boxes packed for it.
@@ -27,6 +28,10 @@ import HelpLine from "@/components/HelpLine";
  * who arrived by the other one there, so every link ever sent still works
  * and Google is never told the same boxes live at two addresses.
  */
+/** Where the site lives. A message going into somebody else's phone cannot
+ *  carry a relative link. */
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
+
 const cars = async (
   occasion: Parameters<typeof whenOptions>[0],
   boxes: Parameters<typeof whenOptions>[1][]
@@ -134,6 +139,17 @@ export default async function BoxDetail({
           /* Only a thing with a whistle can run out of ways to arrive. A
              collection always has one: pick a day, or let us agree one. */
           shut={isTimed(occasion) && when.length === 0}
+        />
+      )}
+
+      {/* Only on a collection. An occasion is girls night and the football,
+          and "ask your mum for the all-nighter" is not a message anybody is
+          going to send. The same line the parents page draws, and for the
+          same reason. */}
+      {kind === "collection" && views.length > 0 && (
+        <AskParents
+          what={occasion.name}
+          href={`${SITE}/collections/${occasion.slug}?utm_source=whatsapp`}
         />
       )}
 
