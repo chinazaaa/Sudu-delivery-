@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 import Track from "@/components/Track";
 import Ribbon from "@/components/Ribbon";
@@ -7,6 +6,7 @@ import OfferNudge from "@/components/OfferNudge";
 import GroupBar from "@/components/GroupBar";
 import GroupSync from "@/components/GroupSync";
 import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 import { offerNudge, publicOffer } from "@/lib/coupons";
 import { instagramLink, safeSettings } from "@/lib/settings";
 import { liveRibbon } from "@/lib/ribbon";
@@ -164,92 +164,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             read on every page rather than something found at checkout. */}
         <GroupBar />
         <GroupSync />
-        <main className="mx-auto max-w-5xl px-4 pb-28 pt-4 sm:pb-24">{children}</main>
-        {/* Clears both the tab bar and a sticky cart bar, which were sitting
-            on top of this line. */}
+        {/* Room for the footer, and nothing more. The clearance for the bars
+            that float over the bottom of the screen belongs to the last
+            thing on the page, which is the footer: put on the main it opens
+            a hole between the end of the content and the footer instead, and
+            on a wide screen that hole was most of a screen of nothing. */}
+        <main className="mx-auto max-w-5xl px-4 pb-6 pt-4">{children}</main>
         {showFooter && (
-        <footer className="mx-auto max-w-5xl space-y-2 px-4 pb-44 pt-2 text-xs text-muted sm:pb-32">
-          {settings.footer_line && <p>{settings.footer_line}</p>}
-          {/* Always rendered: the privacy link is in here and has to be
-              reachable whether or not anything else is set. */}
-          <p className="flex gap-4">
-              {instagram && (
-                <a href={instagram} target="_blank" rel="noopener noreferrer" className="underline">
-                  Instagram
-                </a>
-              )}
-              {showPromoterLink && (
-                <Link href="/promoter" className="underline">
-                  Promoters
-                </Link>
-              )}
-              {/* Both app stores require these at a public address, and they
-                  belong where anybody can find them anyway. */}
-              <Link href="/support" className="underline">
-                Help
-              </Link>
-              <Link href="/privacy" className="underline">
-                Privacy
-              </Link>
-              <Link href="/terms" className="underline">
-                Terms
-              </Link>
-              {/* Not in the header or the tab bar: it is written for somebody
-                  who has not found us yet. One link from a page that is
-                  crawled is what stops it being an orphan. */}
-              <Link href="/delivery-to-pau" className="underline">
-                Delivery to PAU
-              </Link>
-              <Link href="/about" className="underline">
-                About
-              </Link>
-              {/* For the mother who typed the address in rather than tapping
-                  the link she was sent. The page itself is written to her,
-                  and it is down here rather than in the header because a
-                  student on the front page is not one and should not have to
-                  read past a card asking whether they are. */}
-              <Link href="/parents" className="underline">
-                For parents
-              </Link>
-              {/* The front page names each shelf rather than the word, so
-                  these two lists would otherwise be reachable only from
-                  inside one of them. One link from a crawled page is what
-                  stops a page being an orphan. */}
-              <Link href="/products" className="underline">
-                Food
-              </Link>
-              <Link href="/collections" className="underline">
-                Collections
-              </Link>
-              <Link href="/occasions" className="underline">
-                Occasions
-              </Link>
-              {/* These four were carried by a row of text links at the foot
-                  of the front page, which was the doors grid said a third
-                  time. The row has gone; the links have not, because a page
-                  nothing links to is a page nothing finds. */}
-              <Link href="/skincare" className="underline">
-                Skincare
-              </Link>
-              <Link href="/parcel" className="underline">
-                Parcels
-              </Link>
-              <Link href="/custom-order" className="underline">
-                Anything else
-              </Link>
-
-              {settings.whatsapp_group_link && (
-                <a
-                  href={settings.whatsapp_group_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                >
-                  PAU WhatsApp group
-                </a>
-              )}
-          </p>
-        </footer>
+          <SiteFooter
+            line={settings.footer_line}
+            instagram={instagram}
+            groupLink={settings.whatsapp_group_link}
+            showPromoterLink={showPromoterLink}
+          />
         )}
         {/* The footer carried the clearance for the tab bar and the sticky
             cart. With it hidden, that space still has to be there. */}

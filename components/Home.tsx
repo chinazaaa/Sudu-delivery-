@@ -8,6 +8,7 @@ import ItemRow from "./ItemRow";
 import ItemSheet from "./ItemSheet";
 import ArrivalStrip from "./ArrivalStrip";
 import Thumb from "./Thumb";
+import TrustStrip from "./TrustStrip";
 import { useCart } from "@/lib/cart";
 import SplitPrompt from "./SplitPrompt";
 import type { ItemView, MenuView } from "@/lib/view";
@@ -294,18 +295,7 @@ export default function Home({
               hardest thing this shop asks of a first-time customer is money
               up front for food that has not been bought yet, and the answer
               to that was filed behind a link in the footer. */}
-          {/* How ordering here works, and then why anybody should. Two
-              different jobs, so two lines: the first is the pitch and
-              belongs to admin, the second is the shop's record and does not
-              change. */}
-          <div className="space-y-1 text-center">
-            {pitch !== "" && (
-              <p className="text-sm font-semibold text-muted">{pitch}</p>
-            )}
-            <p className="text-xs text-muted">
-              On the PAU campus since 2018 · PAU Entrepreneurship Award, 2021
-            </p>
-          </div>
+          <TrustStrip pitch={pitch} />
 
           {/* Under the food rather than over it. Splitting a delivery is a
               way of paying, and it was standing between somebody who came
