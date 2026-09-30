@@ -218,7 +218,7 @@ export default async function ParentsPage() {
           it there.
         </p>
         {ask ? (
-          <a href={ask} className="btn inline-block px-6">
+          <a href={ask} className="btn-quiet px-6">
             Message us on WhatsApp
           </a>
         ) : null}

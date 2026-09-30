@@ -18,9 +18,8 @@ export type Bucket = {
   href: string;
   title: string;
   line: string;
-  action: string;
-  /** The picture on the card and on the slide. A shop with no pictures reads
-   *  as a list of links, whatever is behind them. */
+  /** The picture on the card. A shop with no pictures reads as a list of
+   *  links, whatever is behind them. */
   image?: string;
 };
 
@@ -333,7 +332,6 @@ export default function Home({
                 href={one.href}
                 title={one.title}
                 line={one.line}
-                action={one.action}
                 image={one.image ?? ""}
               />
             ))}
@@ -356,9 +354,18 @@ export default function Home({
             </p>
           )}
 
+          {/* Only ever slides somebody wrote.
+
+              It used to fall back to the buckets, which meant the bottom of
+              the page was the grid again, big, over a placeholder gradient,
+              under a row of text links that were the grid a third time. Three
+              goes at the same six destinations in three different shapes is
+              why the page stopped flowing where the food ended. A slider with
+              nothing of its own to say is not a slider. */}
+          {slides.length > 0 && (
           <Carousel>
-            {(slides.length > 0
-              ? slides.map((slide) => ({
+              {slides
+                .map((slide) => ({
                   key: slide.id,
                   image: slide.image_url,
                   name: slide.headline,
@@ -367,76 +374,40 @@ export default function Home({
                   href: slide.link_url,
                   linkText: slide.link_text || "See the menu",
                 }))
-              : /* A slide a restaurant was the front page saying the shop is
-                   a list of restaurants, which it stopped being. The slider
-                   says the same seven things the grid does, big, for whoever
-                   reads a picture before they read a card. Written in admin
-                   still wins: a slide somebody wrote is always better than
-                   one the page made up. */
-                buckets.map((one) => ({
-                  key: one.href,
-                  image: one.image ?? "",
-                  name: one.title,
-                  headline: one.title,
-                  body: one.line,
-                  href: one.href,
-                  linkText: one.action,
-                }))
-            ).map((slide) => (
-              <div key={slide.key} className="relative h-52 sm:h-72 lg:h-80">
-                <Thumb
-                  src={slide.image}
-                  name={slide.name}
-                  rounded="rounded-none"
-                  variant="banner"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-ink/95 via-ink/60 to-ink/20" />
-                {/* Every line is clamped and the block is allowed to overflow
-                    nowhere: a long restaurant name used to push the headline
-                    out through the top of the slide and lose half of it. */}
-                <div className="absolute inset-0 flex flex-col justify-end gap-2 overflow-hidden p-4 pb-11 text-white sm:gap-3 sm:p-8 sm:pb-14">
-                  <h2 className="line-clamp-2 text-xl font-extrabold leading-tight sm:text-3xl lg:text-4xl">
-                    {slide.headline}
-                  </h2>
-                  {slide.body && (
-                    <p className="line-clamp-2 max-w-md text-sm text-white/80 sm:text-base">
-                      {slide.body}
-                    </p>
-                  )}
-                  {slide.href && (
-                    <Link
-                      href={slide.href}
-                      className="btn w-fit shrink-0 bg-paper px-5 py-2.5 text-sm text-ink sm:px-6 sm:py-3 sm:text-base"
-                    >
-                      {slide.linkText}
-                    </Link>
-                  )}
+                .map((slide) => (
+                <div key={slide.key} className="relative h-52 sm:h-72 lg:h-80">
+                  <Thumb
+                    src={slide.image}
+                    name={slide.name}
+                    rounded="rounded-none"
+                    variant="banner"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-ink/95 via-ink/60 to-ink/20" />
+                  {/* Every line is clamped and the block is allowed to overflow
+                      nowhere: a long restaurant name used to push the headline
+                      out through the top of the slide and lose half of it. */}
+                  <div className="absolute inset-0 flex flex-col justify-end gap-2 overflow-hidden p-4 pb-11 text-white sm:gap-3 sm:p-8 sm:pb-14">
+                    <h2 className="line-clamp-2 text-xl font-extrabold leading-tight sm:text-3xl lg:text-4xl">
+                      {slide.headline}
+                    </h2>
+                    {slide.body && (
+                      <p className="line-clamp-2 max-w-md text-sm text-white/80 sm:text-base">
+                        {slide.body}
+                      </p>
+                    )}
+                    {slide.href && (
+                      <Link
+                        href={slide.href}
+                        className="btn w-fit shrink-0 bg-paper px-5 py-2.5 text-sm text-ink sm:px-6 sm:py-3 sm:text-base"
+                      >
+                        {slide.linkText}
+                      </Link>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </Carousel>
-
-          {/* The same doors again, as words, for whoever got to the bottom
-              without tapping one. Cheap to add and it is the last thing
-              between them and leaving. */}
-          <p className="pt-2 text-center text-sm">
-            <span className="text-muted">Looking for something? </span>
-            {[
-              { href: "/products", said: "Food" },
-              { href: "/collections", said: "Collections" },
-              { href: "/occasions", said: "Occasions" },
-              { href: "/skincare", said: "Skincare" },
-              { href: "/parcel", said: "Parcels" },
-              { href: "/custom-order", said: "Anything else" },
-            ].map((one, at) => (
-              <span key={one.href}>
-                {at > 0 && <span className="text-muted"> · </span>}
-                <Link href={one.href} className="font-bold text-brand">
-                  {one.said}
-                </Link>
-              </span>
-            ))}
-          </p>
+              ))}
+            </Carousel>
+          )}
 
           {/* What this shop is, in the plainest words there are.
               At the foot on purpose: somebody who is here already knows, and
@@ -445,7 +416,7 @@ export default function Home({
               on their behalf, which needs the relationship between Sudu, PAU
               and its students said outright rather than inferred from a list
               of restaurants. */}
-          <p className="pt-2 text-center text-sm leading-relaxed text-muted">
+          <p className="pt-2 text-center text-xs leading-relaxed text-muted">
             Sudu delivers food, groceries, skincare and parcels to
             Pan-Atlantic University students. Order from your favourite
             restaurants around Sangotedo and Novare and get your order
@@ -477,49 +448,40 @@ function Door({
   href,
   title,
   line,
-  action,
   image = "",
   away = false,
 }: {
   href: string;
   title: string;
   line: string;
-  action: string;
   /** The picture at the top of the card. Empty falls back to a tint. */
   image?: string;
   /** Somewhere that is not this site. Link would try to route it. */
   away?: boolean;
 }) {
   const look =
-    "flex h-full flex-col rounded-2xl bg-paper p-3.5 shadow-card transition active:scale-[0.99]";
+    "flex h-full flex-col overflow-hidden rounded-2xl bg-paper shadow-card transition active:scale-[0.99]";
 
-  // A badge, not a billboard. A picture the size of the card is a card you
-  // scroll past two of, and the whole point of the grid is that the ways in
-  // fit on one screen. Small enough to be a mark, big enough to tell the
-  // buckets apart at a glance.
+  // The picture leads, the way it does on the restaurants above and on every
+  // shop anybody has ever ordered food from.
+  //
+  // It was a badge the size of a stamp beside the name, with the blurb under
+  // it and the word "See" under that, which made every card a small notice
+  // and the grid a page of notices. Cards of the same shape, each showing
+  // the thing itself, is the difference between a list of links and a shop.
+  //
+  // The "See" is gone with it: a card with a photograph on it is plainly
+  // something to tap, and the word was a third line of type fighting the
+  // price for the eye. The price is the line that gets the tap.
   const inside = (
     <>
-      {/* A long name is set smaller rather than broken. "Matriculation" is
-          thirteen letters with nowhere to wrap, so beside the badge on a two
-          column grid it ran off the side of its own card. Hyphenating it
-          fixed the overflow and read as a fault, so the type gives way
-          instead: the word stays whole and stays inside. */}
-      <span className="flex items-center gap-2">
-        <span className="block size-10 shrink-0 overflow-hidden rounded-xl">
-          <Thumb src={image} name={title} rounded="" variant="banner" />
-        </span>
-        <span
-          className={`min-w-0 font-extrabold leading-tight ${
-            title.length > 11 ? "text-[13px] sm:text-base" : ""
-          }`}
-        >
-          {title}
-        </span>
+      <span className="block aspect-[5/4] w-full overflow-hidden bg-shell">
+        <Thumb src={image} name={title} rounded="" variant="banner" />
       </span>
-      <span className="mt-2 line-clamp-2 block text-sm leading-snug text-muted">
-        {line}
+      <span className="flex flex-1 flex-col gap-1 p-3">
+        <span className="font-extrabold leading-tight">{title}</span>
+        <span className="line-clamp-2 text-sm leading-snug text-muted">{line}</span>
       </span>
-      <span className="mt-auto pt-2 text-sm font-extrabold text-brand">{action}</span>
     </>
   );
 

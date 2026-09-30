@@ -215,11 +215,27 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   these two lists would otherwise be reachable only from
                   inside one of them. One link from a crawled page is what
                   stops a page being an orphan. */}
+              <Link href="/products" className="underline">
+                Food
+              </Link>
               <Link href="/collections" className="underline">
                 Collections
               </Link>
               <Link href="/occasions" className="underline">
                 Occasions
+              </Link>
+              {/* These four were carried by a row of text links at the foot
+                  of the front page, which was the doors grid said a third
+                  time. The row has gone; the links have not, because a page
+                  nothing links to is a page nothing finds. */}
+              <Link href="/skincare" className="underline">
+                Skincare
+              </Link>
+              <Link href="/parcel" className="underline">
+                Parcels
+              </Link>
+              <Link href="/custom-order" className="underline">
+                Anything else
               </Link>
 
               {settings.whatsapp_group_link && (
