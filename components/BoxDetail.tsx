@@ -104,6 +104,16 @@ export default async function BoxDetail({
         )}
       </div>
 
+      {/* Above the boxes, not under them. Only on a collection: an occasion
+          is girls night and the football, and "ask your mum for the
+          all-nighter" is not a message anybody is going to send. */}
+      {kind === "collection" && views.length > 0 && (
+        <AskParents
+          what={occasion.name}
+          href={`${SITE}/collections/${occasion.slug}?utm_source=whatsapp`}
+        />
+      )}
+
       {views.length === 0 ? (
         <p className="card text-sm text-muted">
           Nothing is packed for this one yet.{" "}
@@ -139,17 +149,6 @@ export default async function BoxDetail({
           /* Only a thing with a whistle can run out of ways to arrive. A
              collection always has one: pick a day, or let us agree one. */
           shut={isTimed(occasion) && when.length === 0}
-        />
-      )}
-
-      {/* Only on a collection. An occasion is girls night and the football,
-          and "ask your mum for the all-nighter" is not a message anybody is
-          going to send. The same line the parents page draws, and for the
-          same reason. */}
-      {kind === "collection" && views.length > 0 && (
-        <AskParents
-          what={occasion.name}
-          href={`${SITE}/collections/${occasion.slug}?utm_source=whatsapp`}
         />
       )}
 

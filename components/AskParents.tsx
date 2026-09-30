@@ -14,6 +14,13 @@
  * to compose it themselves most people close WhatsApp again, and the ones
  * who do write something write "there's this app" with no link.
  *
+ * A line at the top, not a card at the foot. It was under every box on the
+ * shelf, which is after somebody has read a dozen prices and decided they
+ * cannot afford any of them — and by then they have gone. The moment this
+ * has to be on the screen is the moment they see the first price, so it
+ * goes where the decision is still open, in the same shape as the line that
+ * offers to split a delivery, for the same reason.
+ *
  * A plain wa.me link, not a share sheet: it opens in WhatsApp with the words
  * in the box, ready to pick a contact, and it works the same on every phone
  * without a line of JavaScript.
@@ -40,20 +47,21 @@ export default function AskParents({
   );
 
   return (
-    <div className="card space-y-2 bg-brand-tint p-4">
-      <p className="font-bold">Not paying for it yourself?</p>
-      <p className="text-sm text-ink/90">
-        We will write the message. Send it to your mum or dad and they can
-        order it for you — they do not need you to do anything else.
-      </p>
-      <a
-        href={`https://wa.me/?text=${message}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="btn-primary inline-block px-6"
-      >
-        Ask your parents
-      </a>
-    </div>
+    <a
+      href={`https://wa.me/?text=${message}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center justify-between gap-3 rounded-2xl border border-brand/25 bg-brand-tint px-4 py-2.5"
+    >
+      <span className="min-w-0 text-sm">
+        <span className="font-bold text-brand-dark">
+          Not paying for it yourself?
+        </span>{" "}
+        <span className="text-ink/75">
+          We will write the message for your mum or dad.
+        </span>
+      </span>
+      <span className="shrink-0 text-sm font-extrabold text-brand-dark">Ask</span>
+    </a>
   );
 }
