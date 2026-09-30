@@ -83,6 +83,21 @@ const by = valueOf("--by", "1pm");
  */
 const backed = valueOf("--backed", "Missing or wrong = full refund, same night");
 
+/**
+ * The days, dropped into the middle of a sentence.
+ *
+ * The poster says them on a line of their own, where "This Thursday" is
+ * right. The caption says them after "We deliver", where a capital in the
+ * middle of a sentence is not. Only the ones that begin a phrase rather
+ * than name a day, so Friday keeps its capital.
+ */
+const midSentence = (s: string): string => {
+  const said = String(s ?? "").trim();
+  return /^(This|Next|Every|Only)\b/.test(said)
+    ? said.charAt(0).toLowerCase() + said.slice(1)
+    : said;
+};
+
 const safe = (s: string) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -263,7 +278,7 @@ async function main() {
     `${OUT}/${name}.txt`,
     `${offer}${from ? ` from ${from}` : " on the whole menu"}.${only ? ` ${only}.` : ""}
 
-Order by ${by} and it is at your hostel ${window}. We deliver ${days}.${backed ? `\n\n${backed}.` : ""}
+Order by ${by} and it is at your hostel ${window}. We deliver ${midSentence(days)}.${backed ? `\n\n${backed}.` : ""}
 
 No code needed, it comes off at checkout.
 
