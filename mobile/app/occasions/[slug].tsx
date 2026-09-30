@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   ScrollView,
   Text,
@@ -11,7 +12,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
-import { api, naira, type BoxView, type WhenOption } from "@/lib/api";
+import { api, BASE, naira, type BoxView, type WhenOption } from "@/lib/api";
 import { me as stored } from "@/lib/store";
 import { T } from "@/lib/theme";
 
@@ -217,6 +218,53 @@ export default function OccasionScreen() {
           <Text style={{ marginTop: 4, color: T.muted }}>{data.occasion.blurb}</Text>
         )}
       </View>
+
+      {/* The same line the website puts here, for the same reason: the
+          student is holding the phone and the parent has the money, and a
+          care package is not something anybody buys out of their own pocket
+          money. Asking them to forward a sentence is a thing they will do;
+          asking them for ₦24,000 is not.
+
+          Collections only. An occasion is girls night and the football, and
+          "ask your mum for the all-nighter" is not a message anybody sends.
+
+          The link goes to the website rather than into the app, because the
+          person opening it does not have the app and never will. */}
+      {data.occasion.kind === "collection" && data.boxes.length > 0 && (
+        <Pressable
+          onPress={() => {
+            const said =
+              `Mum, there is a service that delivers food and foodstuff to ` +
+              `the hostels here at school.\n\nPlease can you get me one of ` +
+              `these?\n${data.occasion.name}\n\nThey bring it to my hostel ` +
+              `and send you a photo when it is handed over. They have been ` +
+              `on the PAU campus since 2018.\n\n` +
+              `${BASE}/collections/${slug}?utm_source=whatsapp`;
+            Linking.openURL(`https://wa.me/?text=${encodeURIComponent(said)}`).catch(
+              () => {}
+            );
+          }}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: "rgba(255,90,31,0.25)",
+            backgroundColor: T.tint,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+          }}
+        >
+          <Text style={{ flex: 1, color: T.ink, lineHeight: 20 }}>
+            <Text style={{ fontWeight: "800", color: T.brandDark }}>
+              Not paying for it yourself?
+            </Text>{" "}
+            We will write the message for your mum or dad.
+          </Text>
+          <Text style={{ fontWeight: "800", color: T.brandDark }}>Ask</Text>
+        </Pressable>
+      )}
 
       {data.when.length === 0 && (data.day?.timed ?? true) && (
         <Card>
