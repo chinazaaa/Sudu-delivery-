@@ -163,10 +163,10 @@ export default function OfferNudge({
       <div
         className={`${
           up ? "pointer-events-auto" : ""
-        } rounded-2xl border border-black/5 bg-paper p-4 shadow-card`}
+        } rounded-2xl border border-black/5 bg-paper p-3.5 shadow-card`}
       >
         <div className="flex items-start justify-between gap-3">
-          <p className="text-base font-extrabold leading-tight">
+          <p className="line-clamp-2 text-base font-extrabold leading-tight">
             {showing === "offer" ? (
               <>
                 {nudge?.badge}
@@ -186,7 +186,10 @@ export default function OfferNudge({
           </button>
         </div>
 
-        <p className="mt-1 text-sm leading-snug text-muted">
+        {/* Clamped. The small print is built from whatever the offer says,
+            and an offer with a lot to explain must not grow a card that is
+            sitting over the page. */}
+        <p className="mt-1 line-clamp-2 text-sm leading-snug text-muted">
           {showing === "offer"
             ? nudge?.detail
             : onADesk
@@ -205,7 +208,7 @@ export default function OfferNudge({
           />
         )}
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
           {showing === "offer" ? (
             nudge?.go.slice(0, 3).map((one) => (
               <Link

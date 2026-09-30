@@ -940,13 +940,24 @@ export async function offerNudge(): Promise<Nudge | null> {
   // people to a page that is not there.
   if (offer.places.length > 0 && places.length === 0) return null;
 
+  // At most two names, then a count.
+  //
+  // It used to join every one of them, so an offer running on seven
+  // counters produced "Domino's Pizza, Panarottis, Burger King, Dodo Pizza,
+  // Chicken Republic, KFC or Yin Yang Express" as a headline. On a phone
+  // that is four lines of bold type, and the card it sits in is a card that
+  // covers the restaurants it is advertising. A headline cannot be allowed
+  // to grow every time a counter is added to an offer.
   const names = places.map((place) => place.name);
+  const rest = names.length - 2;
   const where =
     names.length === 0
       ? ""
       : names.length === 1
         ? names[0]
-        : `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
+        : rest > 0
+          ? `${names[0]}, ${names[1]} and ${rest} more`
+          : `${names[0]} or ${names[1]}`;
 
   const detail = [
     offerLine(offer),
@@ -961,12 +972,21 @@ export async function offerNudge(): Promise<Nudge | null> {
     badge: offerBadge(offer),
     where,
     detail,
+    // One button per counter only while there are few enough for that to be
+    // a choice. Past two it is a wall of chips naming an arbitrary three of
+    // seven places, so it becomes one button to the menu, where all of them
+    // are.
     go:
-      places.length > 0
-        ? places.map((place) => ({
+      places.length === 0 || places.length > 2
+        ? [
+            {
+              label: places.length > 2 ? "See where it is on" : "See the menu",
+              href: "/products",
+            },
+          ]
+        : places.map((place) => ({
             label: places.length === 1 ? `Order from ${place.name}` : place.name,
             href: `/r/${place.href}`,
-          }))
-        : [{ label: "See the menu", href: "/products" }],
+          })),
   };
 }
