@@ -53,21 +53,21 @@ export default async function HomeAdmin() {
         </HomeDoors>
       </form>
 
-      {/* The automatic slider used to be a slide per restaurant, with words
-          you could edit here. It is now the ways into the shop, which are
-          already written on the cards under it, so there is nothing left to
-          type. Anything you add below still replaces it. */}
+      {/* It used to fall back to a slide per restaurant, and then to the
+          ways into the shop — which were the cards directly under it, said
+          again, over a placeholder tint. A slider with nothing of its own to
+          say is not a slider, so there is no fallback any more. */}
       <p className="card mb-4 text-sm text-muted">
-        With no slides of your own, the slider shows the ways into the shop:
-        food, parcels, skincare, collections, occasions and the rest. Add a
-        slide below and it shows yours instead.
+        The front page has no slider until you write a slide here. It used to
+        fall back to the same cards that sit under it, which was the page
+        saying the same thing twice.
       </p>
 
       <h2 className="mb-2 font-bold">Slides</h2>
       {!ready ? (
         <p className="card mb-4 border-amber-300 bg-amber-50 text-sm">
           <span className="block font-bold">The slides table is missing.</span>
-          The home page is showing its automatic slider, and anything you add
+          The front page is running without a slider, and anything you add
           here will fail to save until the table exists. Run{" "}
           <span className="font-semibold">supabase/update.sql</span> in
           Supabase, then come back.

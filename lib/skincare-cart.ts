@@ -22,6 +22,16 @@ export type ShelfLine = {
 
 const KEY = "sudu_skincare_v1";
 
+/**
+ * The empty basket, as one object that never changes.
+ *
+ * A fresh `[]` on every call is a new value every time React asks, so it
+ * concludes the store changed, asks again, and does that for ever: "the
+ * result of getServerSnapshot should be cached to avoid an infinite loop".
+ * The food cart keeps its own EMPTY for the same reason.
+ */
+const EMPTY: ShelfLine[] = [];
+
 let lines: ShelfLine[] = [];
 let loaded = false;
 const listeners = new Set<() => void>();
@@ -57,7 +67,7 @@ export function useShelf(): ShelfLine[] {
       load();
       return lines;
     },
-    () => []
+    () => EMPTY
   );
 }
 

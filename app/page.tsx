@@ -111,7 +111,6 @@ export default async function HomePage() {
           href: `/${kind === "occasion" ? "occasions" : "collections"}/${one.slug}`,
           title: one.name,
           line: said,
-          action: "See",
           // The food on it, then its own drawing, then its shelf's. A
           // photograph of the pepperoni beats a drawing of a bucket.
           image:
@@ -171,7 +170,6 @@ export default async function HomePage() {
         image: "/covers/food.svg",
         title: "Food",
         line: "Every restaurant in one list",
-        action: "Browse",
       },
     ],
     // Capped, because this list only grows and a front page that is forty
@@ -185,7 +183,6 @@ export default async function HomePage() {
               image: "/covers/collections.svg",
               title: "Everything else packed",
               line: `${shelves.length - MOST_SHELVES} more, all at one price with delivery in it`,
-              action: "See",
             },
           ]
         : []),
@@ -199,7 +196,6 @@ export default async function HomePage() {
               image: "/covers/parcel.svg",
               title: "Send a parcel",
               line: parcelLine,
-              action: "Send",
             },
           ],
     skincare:
@@ -211,7 +207,6 @@ export default async function HomePage() {
               image: "/covers/skincare.svg",
               title: "Skincare",
               line: skincareLine,
-              action: "Shop",
             },
           ],
     custom: [
@@ -220,7 +215,6 @@ export default async function HomePage() {
         image: "/covers/custom.svg",
         title: "Can't find it?",
         line: "Tell us what you are looking for and we will get it for you",
-        action: "Ask us",
       },
     ],
     group: [
@@ -229,7 +223,6 @@ export default async function HomePage() {
         image: "/covers/group.svg",
         title: "Ordering together?",
         line: "Everybody adds their own, one delivery between you",
-        action: "Start",
       },
     ],
   };
@@ -280,6 +273,10 @@ export default async function HomePage() {
         })()
       }
       buckets={buckets}
+      // Empty until somebody writes one, and then it is theirs to change
+      // without a deploy. The shipped words are the two facts worth saying:
+      // how long this has been running and who said it was any good.
+      pitch={settings.pitch_line.trim()}
       // The boxes by name, so a search for "care" finds the care package
       // rather than reporting that nothing matches.
       packs={packs}
