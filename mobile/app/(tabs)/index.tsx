@@ -316,106 +316,6 @@ export default function Home() {
           </Pressable>
         )}
 
-        {/* The doors, in the order admin set on the website.
-
-            The app used to hold its own opinion about this: food, then
-            parcels, then skincare, then the shelves. The website reads the
-            order from a setting, so the two drifted the moment anybody moved
-            a card, and a page with three banners stacked above the shelves
-            is not the page the website shows. Now both read the same line,
-            and a door switched off in admin is off in both. */}
-        {doors.map((key) => {
-          if (key === "food") {
-            return (
-              <Pressable
-                key="food"
-                onPress={() => router.push("/products" as never)}
-                style={door()}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "800", color: T.ink }}>Food</Text>
-                  <Text style={{ color: T.muted, marginTop: 2 }}>
-                    {shop
-                      ? `${shop.menu.length} restaurant${shop.menu.length === 1 ? "" : "s"} in one list`
-                      : "Every restaurant in one list"}
-                  </Text>
-                </View>
-                <Text style={{ color: T.brand, fontWeight: "800" }}>Browse</Text>
-              </Pressable>
-            );
-          }
-
-          // Nobody is looking for a parcel service. They have a dress sitting
-          // in a shop in Lekki, so the line says every place it goes.
-          if (key === "parcel") {
-            if (parcels === "") return null;
-            return (
-              <Pressable
-                key="parcel"
-                onPress={() => router.push("/parcel" as never)}
-                style={door()}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "800", color: T.ink }}>Send a parcel</Text>
-                  <Text style={{ color: T.muted, marginTop: 2 }}>{parcels}</Text>
-                </View>
-                <Text style={{ color: T.brand, fontWeight: "800" }}>Send</Text>
-              </Pressable>
-            );
-          }
-
-          // The other half of the shop. It is not a restaurant and it does
-          // not come today, so it is a door rather than a card in the row.
-          if (key === "skincare") {
-            if (skincare === "") return null;
-            return (
-              <Pressable key="skincare" onPress={() => router.push("/skincare")} style={door()}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "800", color: T.ink }}>Skincare</Text>
-                  <Text style={{ color: T.muted, marginTop: 2 }}>{skincare}</Text>
-                </View>
-                <Text style={{ color: T.brand, fontWeight: "800" }}>Shop</Text>
-              </Pressable>
-            );
-          }
-
-          // One card each, by name, with the price on it. "Care package,
-          // from N23,400" is a reason to tap.
-          if (key === "shelves") {
-            return shelves.map((one) => (
-              <Pressable
-                key={one.slug}
-                onPress={() => router.push(`/occasions/${one.slug}` as never)}
-                style={door()}
-              >
-                {one.image !== "" && (
-                  <Image
-                    source={{ uri: one.image }}
-                    style={{ width: 64, height: 64, borderRadius: 12 }}
-                    // Cover, because these are photographs of food. Contain
-                    // would letterbox a wide shot of a pizza inside a square
-                    // and leave two grey bars where the appetite should be.
-                    resizeMode="cover"
-                  />
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "800", color: T.ink }}>{one.name}</Text>
-                  <Text style={{ color: T.muted, marginTop: 2 }}>
-                    {one.from === null
-                      ? "One price, delivery in it"
-                      : `From ${naira(one.from)}, delivery in it`}
-                  </Text>
-                </View>
-                <Text style={{ color: T.brand, fontWeight: "800" }}>See</Text>
-              </Pressable>
-            ));
-          }
-
-          // "custom" and "group" are doors on the website and tabs down the
-          // bottom here, so the app does not draw them twice.
-          return null;
-        })}
-
         {error !== "" && (
           <View style={[card(), { backgroundColor: "#fff4ed" }]}>
             <Text style={{ color: T.brandDark, fontWeight: "700" }}>{error}</Text>
@@ -552,6 +452,113 @@ export default function Home() {
             </Pressable>
           </Link>
         ))}
+
+        {/* The doors, under the food rather than over it.
+
+            They were above the restaurants, so the first thing on a shop was
+            four cards naming categories and the first photograph of anything
+            to eat was a screen and a half down. Nobody opens a food app
+            wanting a category. The website was fixed the same way and for
+            the same reason, and the two should read alike. Under the search
+            results too, where they are the answer to "not that, then"
+            rather than something in the way.
+
+            Their order is the one admin set on the website. The app used to
+            hold its own opinion — food, then parcels, then skincare, then
+            the shelves — so the two drifted the moment anybody moved a card.
+            Both read the same line now, and a door switched off in admin is
+            off in both. */}
+        {doors.map((key) => {
+          if (key === "food") {
+            return (
+              <Pressable
+                key="food"
+                onPress={() => router.push("/products" as never)}
+                style={door()}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: "800", color: T.ink }}>Food</Text>
+                  <Text style={{ color: T.muted, marginTop: 2 }}>
+                    {shop
+                      ? `${shop.menu.length} restaurant${shop.menu.length === 1 ? "" : "s"} in one list`
+                      : "Every restaurant in one list"}
+                  </Text>
+                </View>
+                <Text style={{ color: T.brand, fontWeight: "800" }}>Browse</Text>
+              </Pressable>
+            );
+          }
+
+          // Nobody is looking for a parcel service. They have a dress sitting
+          // in a shop in Lekki, so the line says every place it goes.
+          if (key === "parcel") {
+            if (parcels === "") return null;
+            return (
+              <Pressable
+                key="parcel"
+                onPress={() => router.push("/parcel" as never)}
+                style={door()}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: "800", color: T.ink }}>Send a parcel</Text>
+                  <Text style={{ color: T.muted, marginTop: 2 }}>{parcels}</Text>
+                </View>
+                <Text style={{ color: T.brand, fontWeight: "800" }}>Send</Text>
+              </Pressable>
+            );
+          }
+
+          // The other half of the shop. It is not a restaurant and it does
+          // not come today, so it is a door rather than a card in the row.
+          if (key === "skincare") {
+            if (skincare === "") return null;
+            return (
+              <Pressable key="skincare" onPress={() => router.push("/skincare")} style={door()}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: "800", color: T.ink }}>Skincare</Text>
+                  <Text style={{ color: T.muted, marginTop: 2 }}>{skincare}</Text>
+                </View>
+                <Text style={{ color: T.brand, fontWeight: "800" }}>Shop</Text>
+              </Pressable>
+            );
+          }
+
+          // One card each, by name, with the price on it. "Care package,
+          // from N23,400" is a reason to tap.
+          if (key === "shelves") {
+            return shelves.map((one) => (
+              <Pressable
+                key={one.slug}
+                onPress={() => router.push(`/occasions/${one.slug}` as never)}
+                style={door()}
+              >
+                {one.image !== "" && (
+                  <Image
+                    source={{ uri: one.image }}
+                    style={{ width: 64, height: 64, borderRadius: 12 }}
+                    // Cover, because these are photographs of food. Contain
+                    // would letterbox a wide shot of a pizza inside a square
+                    // and leave two grey bars where the appetite should be.
+                    resizeMode="cover"
+                  />
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: "800", color: T.ink }}>{one.name}</Text>
+                  <Text style={{ color: T.muted, marginTop: 2 }}>
+                    {one.from === null
+                      ? "One price, delivery in it"
+                      : `From ${naira(one.from)}, delivery in it`}
+                  </Text>
+                </View>
+                <Text style={{ color: T.brand, fontWeight: "800" }}>See</Text>
+              </Pressable>
+            ));
+          }
+
+          // "custom" and "group" are doors on the website and tabs down the
+          // bottom here, so the app does not draw them twice.
+          return null;
+        })}
       </ScrollView>
 
       {/* Over the page rather than in it: the page carries on underneath and
