@@ -20,6 +20,8 @@ export type FeedOrder = Order & {
   otherItems: number;
   otherFee: number;
   batchLabel: string;
+  /** When the order was actually placed, which is not the day it is for. */
+  placedAt: string;
   /** Which shop this order's trip belongs to: a run, a skincare drop, a car
    *  of its own or a parcel. */
   batchKind: string;
@@ -137,6 +139,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
       batchLabel: batch
         ? carLabel(batch)
         : "Unknown run",
+      placedAt: String(order.created_at ?? ""),
       batchStage: batch?.stage ?? "ordering",
       batchKind: batch?.kind ?? "run",
       runDate: batch?.run_date ?? "",

@@ -29,6 +29,7 @@ import { allAreas } from "@/lib/areas-server";
 import ImportCatalogue from "@/components/admin/ImportCatalogue";
 import ValueBandEditor from "@/components/admin/ValueBandEditor";
 import { parseValueBands } from "@/lib/value-bands";
+import PhotoField from "@/components/admin/PhotoField";
 
 export const dynamic = "force-dynamic";
 
@@ -168,7 +169,7 @@ export default async function RestaurantAdmin({
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="label" htmlFor="logo">Logo photo</label>
-            <input id="logo" name="logo" type="file" accept="image/*" className="field" />
+            <PhotoField id="logo" name="logo" />
             <input
               name="logo_url"
               defaultValue={restaurant.logo_url}
@@ -178,7 +179,7 @@ export default async function RestaurantAdmin({
           </div>
           <div>
             <label className="label" htmlFor="banner">Banner photo</label>
-            <input id="banner" name="banner" type="file" accept="image/*" className="field" />
+            <PhotoField id="banner" name="banner" />
             <input
               name="banner_url"
               defaultValue={restaurant.banner_url}
@@ -479,7 +480,7 @@ export default async function RestaurantAdmin({
                   </div>
                   <div>
                     <label className="label">Photo</label>
-                    <input name="photo" type="file" accept="image/*" className="field" />
+                    <PhotoField name="photo" />
                     <input
                       name="image_url"
                       defaultValue={item.image_url}

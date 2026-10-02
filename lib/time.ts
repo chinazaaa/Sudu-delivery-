@@ -136,3 +136,51 @@ export function lagosClock(iso: string): string {
   }).format(new Date(iso));
 }
 
+
+/**
+ * When something was placed, as somebody standing in Lagos would say it.
+ *
+ * "10:42pm" for today, "Fri 10:42pm" for this week, and the date once it is
+ * older than that. An order card is scanned rather than read, and the whole
+ * question being answered is "did this come in while I was not looking".
+ */
+export function placedLabel(iso: string, now: Date = new Date()): string {
+  const when = new Date(iso);
+  if (Number.isNaN(when.getTime())) return "";
+
+  const clock = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TZ,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
+    .format(when)
+    .replace(/\s/g, "")
+    .toLowerCase();
+
+  const day = (at: Date) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(at);
+
+  if (day(when) === day(now)) return clock;
+
+  const days = Math.round(
+    (new Date(`${day(now)}T12:00:00Z`).getTime() -
+      new Date(`${day(when)}T12:00:00Z`).getTime()) /
+      86400000
+  );
+  if (days === 1) return `yesterday ${clock}`;
+  if (days > 1 && days < 7) {
+    const name = new Intl.DateTimeFormat("en-GB", {
+      timeZone: TZ,
+      weekday: "short",
+    }).format(when);
+    return `${name} ${clock}`;
+  }
+
+  const date = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TZ,
+    day: "numeric",
+    month: "short",
+  }).format(when);
+  return `${date} ${clock}`;
+}

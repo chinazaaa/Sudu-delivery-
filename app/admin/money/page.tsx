@@ -151,6 +151,7 @@ export default async function OtherMoneyPage() {
                   <p className="font-bold">{one.what}</p>
                   <p className="text-sm text-muted">
                     {one.happened_on}
+                    {one.how_many > 1 ? ` · ${one.how_many} of them` : ""}
                     {one.who ? ` · ${one.who}` : ""}
                   </p>
                   {one.note && <p className="text-sm text-muted">{one.note}</p>}

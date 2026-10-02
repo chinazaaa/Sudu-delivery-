@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/supabase";
 import { isSignedIn } from "@/lib/admin-auth";
 import { lagosToday } from "@/lib/time";
+import { ensureCustomer } from "@/lib/orders";
 
 /**
  * Where a request has got to, and what it was quoted at.
@@ -139,11 +140,17 @@ export async function settleRequest(form: FormData): Promise<void> {
 
   const { data } = await db()
     .from("custom_requests")
-    .select("wanted, name, money_id")
+    .select("wanted, name, phone, hostel, money_id")
     .eq("id", id)
     .maybeSingle();
   const ask = data as
-    | { wanted: string; name: string; money_id: string | null }
+    | {
+        wanted: string;
+        name: string;
+        phone: string;
+        hostel: string;
+        money_id: string | null;
+      }
     | null;
   if (!ask) return;
   // Already counted. Pressing it twice must not count the money twice.
@@ -153,7 +160,12 @@ export async function settleRequest(form: FormData): Promise<void> {
     const digits = String(said ?? "").replace(/[^\d]/g, "");
     return digits === "" ? 0 : Math.min(100_000_000, Number(digits));
   };
-  const took = money(form.get("took"));
+  // How many of it, and what one of them cost her. She asked for one thing
+  // and bought three, and a line saying ₦21,000 with no count does not say
+  // what was sold.
+  const howMany = Math.max(1, Math.min(999, money(form.get("how_many")) || 1));
+  const each = money(form.get("took"));
+  const took = each * howMany;
   const spent = money(form.get("spent"));
   if (took === 0 && spent === 0) return;
 
@@ -163,6 +175,8 @@ export async function settleRequest(form: FormData): Promise<void> {
       happened_on: lagosToday(),
       what: String(ask.wanted ?? "").split("\n")[0].trim().slice(0, 140),
       who: String(ask.name ?? "").trim().slice(0, 80),
+      phone: ask.phone ?? "",
+      how_many: howMany,
       took,
       spent,
       note: "Asked for",
@@ -172,6 +186,15 @@ export async function settleRequest(form: FormData): Promise<void> {
   if (error || !line) {
     throw new Error(`Could not record that: ${error?.message ?? "nothing came back"}`);
   }
+
+  // She paid us and got a thing, so she is a customer, whether or not she
+  // ever places an order. No promoter and no first-order discount is spent:
+  // a row on its own is not an order, and the checkout still knows that.
+  await ensureCustomer({
+    phone: ask.phone ?? "",
+    name: ask.name ?? "",
+    hostel: ask.hostel ?? "",
+  }).catch(() => {});
 
   await db()
     .from("custom_requests")
@@ -185,5 +208,6 @@ export async function settleRequest(form: FormData): Promise<void> {
 
   revalidatePath("/admin/requests");
   revalidatePath("/admin/money");
+  revalidatePath("/admin/customers");
   revalidatePath("/admin");
 }

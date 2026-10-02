@@ -7,6 +7,7 @@ import SaveButton from "@/components/SaveButton";
 import { naira } from "@/lib/money";
 import { STAGE_LABEL, type BatchStage } from "@/lib/stages";
 import { formatPhone } from "@/lib/phone";
+import { placedLabel } from "@/lib/time";
 
 export type OrderCardLine = {
   id: string;
@@ -28,6 +29,8 @@ export type OrderCardData = {
   forName: string | null;
   phone: string;
   hostel: string;
+  /** When it was placed, so a card says whether it came in overnight. */
+  placedAt?: string;
   batchLabel: string;
   status: string;
   total: number;
@@ -147,6 +150,14 @@ export default function OrderCard({
           <p className="text-sm text-muted">
             {order.batchLabel} · {order.hostel} · {formatPhone(order.phone)}
           </p>
+          {/* When it came in, which is not the day it is for. The email can
+              be missed, and then the only question is how long this has been
+              sitting here unpaid. */}
+          {order.placedAt ? (
+            <p className="text-sm text-muted">
+              Ordered {placedLabel(order.placedAt)}
+            </p>
+          ) : null}
           {/* Everything that used to be six stacked lines, as one wrapped
               row of chips. A card in a list is scanned, not read: the eye
               wants the name, the money and the state of it, and the rest is

@@ -1,6 +1,7 @@
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import { customerRows } from "@/lib/admin-data";
+import { errandsBy } from "@/lib/other-money";
 import { getSettings } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
 import { firstName, whatsappTo } from "@/lib/messages";
@@ -46,6 +47,11 @@ export default async function CustomersPage({
       : by === "none"
         ? rows.filter((row) => !row.promoterCode)
         : rows.filter((row) => row.promoterCode === by);
+
+  // What each of them has paid for an errand with no order behind it, so a
+  // card does not read "0 orders" beside somebody who has paid us twenty
+  // thousand naira.
+  const aside = await errandsBy(shown.map((row) => row.phone));
 
   const spend = shown.reduce((total, row) => total + row.spend, 0);
   const repeat = shown.filter((row) => row.orders > 1).length;
@@ -201,6 +207,16 @@ export default async function CustomersPage({
                     <p className="text-xs text-muted">
                       {row.orders} order{row.orders === 1 ? "" : "s"}
                     </p>
+                    {/* Errands they paid for with no order behind them. A
+                        card reading "0 orders" beside somebody who has paid
+                        us twenty thousand naira is not the truth. */}
+                    {(aside.get(row.phone)?.count ?? 0) > 0 && (
+                      <p className="text-xs font-semibold text-mint">
+                        {naira(aside.get(row.phone)!.took)} on{" "}
+                        {aside.get(row.phone)!.count} errand
+                        {aside.get(row.phone)!.count === 1 ? "" : "s"}
+                      </p>
+                    )}
                     {/* Which door they come through, over everything they
                         have ordered. Nothing is said for somebody whose
                         orders all predate the shop writing it down. */}

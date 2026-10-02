@@ -13,6 +13,10 @@ export type OtherMoney = {
   happened_on: string;
   what: string;
   who: string;
+  /** Whose it was, where we know. Ties the line to a customer card. */
+  phone: string;
+  /** How many of it. One, unless somebody says otherwise. */
+  how_many: number;
   /** What they paid us. */
   took: number;
   /** What it cost us to do it. */
@@ -62,3 +66,53 @@ export const WINDOW_DAYS = 28;
 
 export const windowStart = (days = WINDOW_DAYS): string =>
   new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+
+/** What one person has paid us outside of any order. */
+export async function otherMoneyFor(phone: string): Promise<OtherMoney[]> {
+  const number = phone.trim();
+  if (number === "") return [];
+  try {
+    const { data, error } = await db()
+      .from("other_money")
+      .select("*")
+      .eq("phone", number)
+      .order("happened_on", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    return (data ?? []) as OtherMoney[];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * What each of these numbers has paid for an errand, keyed by phone.
+ *
+ * For the customers list, where somebody who paid ₦20,000 for an adapter and
+ * never placed an order would otherwise read as nought.
+ */
+export async function errandsBy(
+  phones: string[]
+): Promise<Map<string, { took: number; count: number }>> {
+  const wanted = [...new Set(phones.filter(Boolean))];
+  if (wanted.length === 0) return new Map();
+
+  try {
+    const { data, error } = await db()
+      .from("other_money")
+      .select("phone, took")
+      .in("phone", wanted);
+    if (error) throw new Error(error.message);
+
+    const out = new Map<string, { took: number; count: number }>();
+    for (const row of (data ?? []) as { phone: string; took: number }[]) {
+      const seen = out.get(row.phone) ?? { took: 0, count: 0 };
+      seen.took += row.took ?? 0;
+      seen.count += 1;
+      out.set(row.phone, seen);
+    }
+    return out;
+  } catch {
+    return new Map();
+  }
+}

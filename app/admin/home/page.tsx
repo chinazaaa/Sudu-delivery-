@@ -8,6 +8,7 @@ import Thumb from "@/components/Thumb";
 import { readSlides } from "@/lib/slides";
 import { getSettings } from "@/lib/settings";
 import { deleteSlide, moveSlide, saveSettings, saveSlide } from "../actions";
+import PhotoField from "@/components/admin/PhotoField";
 
 export const dynamic = "force-dynamic";
 
@@ -137,11 +138,9 @@ export default async function HomeAdmin() {
                 <label className="label" htmlFor={`photo-${slide.id}`}>
                   Replace the picture
                 </label>
-                <input
+                <PhotoField
                   id={`photo-${slide.id}`}
                   name="photo"
-                  type="file"
-                  accept="image/*"
                   className="field py-2 text-sm"
                 />
               </div>
@@ -203,7 +202,7 @@ export default async function HomeAdmin() {
         </div>
         <div>
           <label className="label" htmlFor="photo">Picture</label>
-          <input id="photo" name="photo" type="file" accept="image/*" className="field" />
+          <PhotoField id="photo" name="photo" />
         </div>
         <label className="flex items-center gap-2 text-sm font-semibold">
           <input type="checkbox" name="active" defaultChecked />

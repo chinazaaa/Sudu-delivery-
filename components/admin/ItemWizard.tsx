@@ -3,6 +3,7 @@
 import { useState } from "react";
 import OptionBuilder from "./OptionBuilder";
 import SaveButton from "@/components/SaveButton";
+import PhotoField from "./PhotoField";
 
 const STEPS = ["The item", "Choices", "Photo"];
 
@@ -138,13 +139,7 @@ export default function ItemWizard({
       <section className={`card space-y-3 ${step === 2 ? "" : "hidden"}`}>
         <div>
           <label className="label" htmlFor="item-photo">Upload a photo</label>
-          <input
-            id="item-photo"
-            name="photo"
-            type="file"
-            accept="image/*"
-            className="field"
-          />
+          <PhotoField id="item-photo" name="photo" />
         </div>
         <div>
           <label className="label" htmlFor="item-image-url">Or paste a link</label>

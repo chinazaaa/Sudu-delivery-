@@ -33,3 +33,14 @@ create index if not exists other_money_day_idx on other_money (happened_on desc)
 -- wrong records to keep one right number.
 alter table custom_requests
   add column if not exists money_id uuid references other_money(id) on delete set null;
+
+-- Whose money it was, where we know. Somebody who pays for an errand is a
+-- customer: they handed over money and got a thing. The phone is what ties
+-- the line to their customer card, the same way an order is tied to one.
+alter table other_money add column if not exists phone text not null default '';
+create index if not exists other_money_phone_idx on other_money (phone) where phone <> '';
+
+-- How many of it. She asked for one thing and bought three of them, and a
+-- line saying ₦21,000 with no count does not say what was sold.
+alter table other_money
+  add column if not exists how_many int not null default 1 check (how_many > 0);

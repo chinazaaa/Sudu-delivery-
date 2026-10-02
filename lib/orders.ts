@@ -1743,14 +1743,62 @@ async function checkCapacity(batch: Batch): Promise<string | null> {
     : null;
 }
 
-/** First-order detection is simply "does this phone exist in customers". */
-export async function isReturningCustomer(phone: string): Promise<boolean> {
+/**
+ * A customer row for somebody who has paid us, with no order behind it.
+ *
+ * Somebody who hands over ₦20,000 for an errand is a customer: they paid and
+ * they got a thing. Before this they were a name on a request and nothing
+ * else, because the only door into the customers table was placing an order.
+ *
+ * It writes no promoter, because an errand has nobody to credit and the ask
+ * form never asks. Their first real order still can: the promoter column is
+ * filled in then, and never over one already there.
+ */
+export async function ensureCustomer(args: {
+  phone: string;
+  name: string;
+  hostel?: string;
+}): Promise<void> {
+  const phone = normalisePhone(args.phone);
+  const name = args.name.trim();
+  if (!phone || name === "") return;
+
   const { data } = await db()
     .from("customers")
     .select("phone")
     .eq("phone", phone)
     .maybeSingle();
-  return Boolean(data);
+
+  // Already known. Their name and block are theirs to change at a checkout,
+  // and an errand is a worse source for both than an order they typed.
+  if (data) return;
+
+  const row = { phone, name, hostel: (args.hostel ?? "").trim(), pin: newPin() };
+  const { error } = await db().from("customers").insert(row);
+  // Nothing here is worth failing the thing that called it: the money is
+  // already recorded and a missing customer row can be made at a checkout.
+  if (error) await db().from("customers").insert({ phone, name, pin: row.pin });
+}
+
+/**
+ * Whether this number has ordered before.
+ *
+ * Counted in orders rather than in customer rows, because the two stopped
+ * meaning the same thing. A customer row is now written for somebody who
+ * paid for an errand with no order behind it, and if having a row meant
+ * "returning" she would lose the first-order discount she has never used and
+ * her promoter would lose a lifetime commission nobody ever earned.
+ *
+ * A cancelled or refunded order is not an order anybody made, so it does not
+ * spend a first order either.
+ */
+export async function isReturningCustomer(phone: string): Promise<boolean> {
+  const { count } = await db()
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("customer_phone", phone)
+    .not("status", "in", NOT_ORDERS_SQL);
+  return (count ?? 0) > 0;
 }
 
 /**
@@ -1777,26 +1825,41 @@ async function bindCustomer(args: {
 }): Promise<void> {
   const way = args.paymentMethod ?? "transfer";
 
-  if (args.returning) {
+  // Checked against the promoters table rather than trusted: the code comes
+  // off a form, and a made-up one would pay commission to nobody for ever.
+  const heardFrom =
+    args.heardFrom && (await realPromoter(args.heardFrom)) ? args.heardFrom.trim() : null;
+
+  // Whether the row is there, which is no longer the same question as
+  // whether they have ordered: somebody who paid for an errand has a row and
+  // no orders, and inserting over it would fail on the primary key.
+  const { data: already } = await db()
+    .from("customers")
+    .select("phone, promoter_code")
+    .eq("phone", args.phone)
+    .maybeSingle();
+
+  if (already) {
+    const there = (already as { promoter_code?: string | null }).promoter_code ?? "";
+    // Never over a promoter already written: that single column is what
+    // makes commission lifetime. But a row made by an errand has nobody in
+    // it, and the first order they place is still somebody's doing.
+    const owed = there.trim() === "" && heardFrom ? { promoter_code: heardFrom } : {};
+
     const { error } = await db()
       .from("customers")
-      .update({ name: args.name, hostel: args.hostel, payment_method: way })
+      .update({ name: args.name, hostel: args.hostel, payment_method: way, ...owed })
       .eq("phone", args.phone);
     // The column is not there yet, so the rest of the update is worth saving
     // on its own rather than losing the lot to a migration nobody has run.
     if (error) {
       await db()
         .from("customers")
-        .update({ name: args.name, hostel: args.hostel })
+        .update({ name: args.name, hostel: args.hostel, ...owed })
         .eq("phone", args.phone);
     }
     return;
   }
-
-  // Checked against the promoters table rather than trusted: the code comes
-  // off a form, and a made-up one would pay commission to nobody for ever.
-  const heardFrom =
-    args.heardFrom && (await realPromoter(args.heardFrom)) ? args.heardFrom.trim() : null;
 
   const row = {
     phone: args.phone,
