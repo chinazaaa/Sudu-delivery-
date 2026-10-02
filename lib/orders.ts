@@ -617,7 +617,12 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // start buying for yet. The group sends one mail when it closes, which is
   // the moment there is something to act on.
   if (!party) {
-    void announceOrder({
+    // Awaited, not left running. A serverless function is frozen the moment
+    // it answers, so a floating promise is a promise the host is entitled to
+    // throw away: the website usually got away with it and the app, which
+    // returns its JSON and stops, did not. It never throws and it never
+    // fails an order, so waiting for it costs a moment and nothing else.
+    await announceOrder({
       orderId: result.orderId,
       name,
       phone,

@@ -34,6 +34,9 @@ export async function emailAdmins(
   try {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
+      // Now that the order waits for this, it cannot be allowed to wait for
+      // ever: a provider having a bad night must not hold up a checkout.
+      signal: AbortSignal.timeout(8000),
       headers: {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
