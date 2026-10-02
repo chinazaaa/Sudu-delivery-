@@ -249,7 +249,7 @@ export default async function RequestsPage() {
                   </div>
                   <div className="w-28">
                     <label className="label" htmlFor={`spent-${ask.id}`}>
-                      It cost
+                      Cost, in all
                     </label>
                     <input
                       id={`spent-${ask.id}`}
@@ -263,11 +263,11 @@ export default async function RequestsPage() {
                     Bought it, count it
                   </button>
                   <p className="w-full text-xs text-muted">
-                    What she paid for one of them times how many, plus
-                    delivery, less what it cost us in total. No product and no
-                    order: it goes straight onto Other money and into the
-                    profit, and this ask is done. Only know what you made? Put
-                    that as the price and leave the rest empty.
+                    The price is for one of them and is multiplied; the cost
+                    is the whole amount you paid out and is not. No product
+                    and no order: it goes straight onto Other money and into
+                    the profit, and this ask is done. Only know what you made?
+                    Put that as the price and leave the rest empty.
                   </p>
                 </form>
               )}

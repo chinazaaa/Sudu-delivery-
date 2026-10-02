@@ -118,7 +118,7 @@ export default async function OtherMoneyPage() {
             </div>
             <div>
             <label className="label" htmlFor="spent">
-              It cost us
+              Cost, in all
             </label>
             <input
               id="spent"
@@ -128,8 +128,9 @@ export default async function OtherMoneyPage() {
               className="field"
             />
             <p className="mt-1 text-xs text-muted">
-              What you handed over: the thing itself, the bike, whatever it
-              took. Leave it empty and the whole lot counts as profit.
+              The whole amount you handed over, not the price of one: the
+              thing itself, the bike, whatever it took. Leave it empty and all
+              of it counts as profit.
             </p>
             </div>
           </div>
