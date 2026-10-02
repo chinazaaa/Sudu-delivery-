@@ -1384,6 +1384,11 @@ export async function createFullItem(form: FormData): Promise<void> {
 
   await saveGroups(item.id as string, String(form.get("groups") ?? "[]"));
 
+  // The shop's own menu is cached under this tag, and every other write
+  // here clears it. This one did not, so a brand new item was in admin the
+  // moment it was saved and invisible to customers until the cache happened
+  // to age out: added it, looked at the shop, and it was not there.
+  updateTag("menu");
   revalidatePath("/admin", "layout");
   revalidatePath("/");
   redirect(`/admin/menu/${restaurantId}`);
@@ -3150,6 +3155,8 @@ export async function importSkincare(
   const { added, changed, sections, choices, error } = await putCatalogue(shopId, products);
   if (error !== "") return { done: `${added} in, then it stopped.`, error };
 
+  // The shelf is read through the same cached menu as everything else.
+  updateTag("menu");
   revalidatePath("/admin", "layout");
   revalidatePath("/skincare");
 

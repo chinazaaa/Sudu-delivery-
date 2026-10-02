@@ -53,7 +53,16 @@ export default async function RestaurantAdmin({
   const [{ data: siblings }, { data: categories }, { data: items }] = await Promise.all([
     db().from("restaurants").select("id, name").order("name"),
     db().from("menu_categories").select("*").eq("restaurant_id", restaurantId).order("sort_order"),
-    db().from("menu_items").select("*").eq("restaurant_id", restaurantId).order("sort_order"),
+    // By name within a sort order, because nearly everything shares the one
+    // sort order and ties came back in whatever order the database felt
+    // like: a new item appeared in a different place on every load, which
+    // reads as it not being there at all.
+    db()
+      .from("menu_items")
+      .select("*")
+      .eq("restaurant_id", restaurantId)
+      .order("sort_order")
+      .order("name"),
   ]);
 
   const categoryList = (categories ?? []) as MenuCategory[];
