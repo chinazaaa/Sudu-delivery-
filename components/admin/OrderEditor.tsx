@@ -188,6 +188,13 @@ export default function OrderEditor({
                     </div>
                   )}
 
+                  {/* Whose counter it comes off. Two lines on one order can
+                      be two different kitchens, and the page said the dish
+                      and the price and never once said where to go. */}
+                  {line.restaurant !== "" && (
+                    <p className="mt-1 text-xs text-muted">{line.restaurant}</p>
+                  )}
+
                   {line.source !== "" && (
                     <p className="mt-1 text-xs font-semibold text-brand-dark">
                       Get it: {line.source}

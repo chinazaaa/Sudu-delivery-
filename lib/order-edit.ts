@@ -22,6 +22,9 @@ export type EditedLine = {
   qty: number;
   unit_price_at_order: number;
   name: string;
+  /** Whose counter it comes off. The order page named the dish and the
+   *  price and never once said whether it was a Domino's night. */
+  restaurant: string;
   source: string;
   options: { id: string; name: string; delta: number }[];
 };
@@ -31,7 +34,7 @@ export async function linesToEdit(orderId: string): Promise<EditedLine[]> {
   const { data, error } = await db()
     .from("order_items")
     .select(
-      "id, menu_item_id, qty, unit_price_at_order, menu_items(name, source), order_item_options(id, name_at_order, price_delta_at_order)"
+      "id, menu_item_id, qty, unit_price_at_order, menu_items(name, source, restaurants(name)), order_item_options(id, name_at_order, price_delta_at_order)"
     )
     .eq("order_id", orderId);
   if (error) return [];
@@ -42,6 +45,7 @@ export async function linesToEdit(orderId: string): Promise<EditedLine[]> {
     qty: Number(row.qty ?? 1),
     unit_price_at_order: Number(row.unit_price_at_order ?? 0),
     name: row.menu_items?.name ?? "(removed item)",
+    restaurant: row.menu_items?.restaurants?.name ?? "",
     source: row.menu_items?.source ?? "",
     options: (row.order_item_options ?? []).map((one: Record<string, any>) => ({
       id: one.id as string,
