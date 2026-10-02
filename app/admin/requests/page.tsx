@@ -152,6 +152,11 @@ export default async function RequestsPage() {
                   </a>
                 )}
 
+                {/* Only while there is something left to decide. Once the
+                    money is counted the ask is done, and four buttons that
+                    set it to what it already is read as broken: you press
+                    Done and the page comes back exactly as it was. */}
+                {!ask.money_id && (
                 <form action={markRequest} className="flex items-end gap-2">
                   <input type="hidden" name="id" value={ask.id} />
                   <div className="w-28">
@@ -189,6 +194,7 @@ export default async function RequestsPage() {
                     Drop
                   </button>
                 </form>
+                )}
               </div>
 
               {/* Bought it for her and that is the end of it. Most asks are
@@ -196,14 +202,20 @@ export default async function RequestsPage() {
                   making a product and an order to hold the money is two
                   records that are not true kept for one number that is. */}
               {ask.money_id ? (
-                <p className="rounded-xl bg-mint/10 px-3 py-2 text-sm font-semibold text-mint">
-                  Counted{ask.quoted ? ` · ${naira(ask.quoted)} in` : ""}. It is
-                  on{" "}
-                  <Link href="/admin/money" className="underline">
-                    Other money
-                  </Link>
-                  .
-                </p>
+                <div className="rounded-xl bg-mint/10 px-3 py-2">
+                  <p className="text-sm font-semibold text-mint">
+                    Counted{ask.quoted ? ` · ${naira(ask.quoted)} in` : ""}. It
+                    is on{" "}
+                    <Link href="/admin/money" className="underline">
+                      Other money
+                    </Link>
+                    .
+                  </p>
+                  <p className="mt-1 text-xs text-muted">
+                    Typed it wrong? Take the line off Other money and these
+                    boxes come back.
+                  </p>
+                </div>
               ) : (
                 <form
                   action={settleRequest}
