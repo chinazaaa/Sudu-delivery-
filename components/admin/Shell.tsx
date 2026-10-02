@@ -49,6 +49,41 @@ export default function AdminShell({
   // A tap on a link changes the path; the drawer should not survive it.
   useEffect(() => setOpen(false), [path]);
 
+  /*
+   * Hold the page still while the drawer is over it.
+   *
+   * Nineteen sections is taller than a phone, so reaching Settings means
+   * scrolling the drawer, and that scroll ran on past the end of the list
+   * into the page underneath. By the time the link was tapped the page
+   * behind had been dragged to its bottom, the drawer closed, and every
+   * section in admin opened at the footer with no way to tell why.
+   */
+  useEffect(() => {
+    if (!open) return;
+    const body = document.body;
+    const was = body.style.overflow;
+    body.style.overflow = "hidden";
+    return () => {
+      body.style.overflow = was;
+    };
+  }, [open]);
+
+  /*
+   * And start a new page at the top of it.
+   *
+   * A backstop rather than the fix: the scrolling above is dealt with, but a
+   * phone that has decided where it wants to be is hard to argue with, and
+   * arriving at the bottom of a page you have just opened is never right.
+   *
+   * Except when the address names something, which is how "Edit it" on a
+   * request lands on one row out of two hundred.
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "") return;
+    window.scrollTo(0, 0);
+  }, [path]);
+
   const active = (href: string) =>
     href === "/admin"
       ? path === "/admin"
@@ -118,7 +153,9 @@ export default function AdminShell({
             onClick={() => setOpen(false)}
             className="absolute inset-0 bg-ink/50"
           />
-          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col gap-5 overflow-y-auto bg-paper p-4 shadow-lift">
+          {/* overscroll-contain keeps a flick inside the drawer: without it
+              the end of the list hands the scroll to the page behind. */}
+          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col gap-5 overflow-y-auto overscroll-contain bg-paper p-4 shadow-lift">
             <div className="flex items-center justify-between">
               <Link href="/admin" className="flex items-center gap-2">
                 <span className="block size-9 shrink-0 overflow-hidden rounded-xl">
