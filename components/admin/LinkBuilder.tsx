@@ -57,6 +57,7 @@ const nextKey = () => `line-${(counter += 1)}`;
 export default function LinkBuilder({
   dishes,
   editing,
+  start = "",
 }: {
   dishes: Dish[];
   /** A link being changed rather than made. Everything comes back filled in,
@@ -72,13 +73,23 @@ export default function LinkBuilder({
     paymentLink: string;
     note: string;
   } | null;
+  /** One dish to begin with, from somewhere else in admin. "Asked for"
+   *  sends somebody here the moment a request becomes a product, and
+   *  hunting for the thing you just made would be the whole saving gone. */
+  start?: string;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(Boolean(editing));
+  const [open, setOpen] = useState(Boolean(editing) || start !== "");
   const [query, setQuery] = useState("");
-  const [picked, setPicked] = useState<Picked[]>(
-    (editing?.lines ?? []).map((line) => ({ ...line, key: nextKey() }))
-  );
+  const [picked, setPicked] = useState<Picked[]>(() => {
+    if (editing) return editing.lines.map((line) => ({ ...line, key: nextKey() }));
+    // Only if it is really on the menu: a dish that has been taken down
+    // between the link being sent and this page loading is not a basket.
+    if (start !== "" && dishes.some((dish) => dish.id === start)) {
+      return [{ key: nextKey(), id: start, qty: 1, options: [] }];
+    }
+    return [];
+  });
   // What somebody can have instead of it. The same shape, so a size or a
   // flavour is settled on these too.
   const [instead, setInstead] = useState<Picked[]>(

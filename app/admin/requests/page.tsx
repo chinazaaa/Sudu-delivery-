@@ -2,9 +2,42 @@ import PageHeader from "@/components/admin/PageHeader";
 import { requestList } from "@/lib/requests";
 import { safeSettings, whatsappLink } from "@/lib/settings";
 import { naira } from "@/lib/money";
-import { markRequest } from "./actions";
+import { markRequest, shelveRequest } from "./actions";
+import Link from "next/link";
+import { db } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
+
+/** Every counter the shop keeps, for the "put it on" dropdown. */
+async function shelfList(): Promise<{ id: string; name: string }[]> {
+  try {
+    const { data } = await db().from("restaurants").select("id, name").order("name");
+    return (data ?? []) as { id: string; name: string }[];
+  } catch {
+    // Without the list there is no dropdown and the rest of the page is
+    // exactly as useful as it was before any of this existed.
+    return [];
+  }
+}
+
+/** Where each of these products lives now, by id. */
+async function shelfOfItems(ids: string[]): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  try {
+    const { data } = await db()
+      .from("menu_items")
+      .select("id, restaurant_id")
+      .in("id", ids);
+    return new Map(
+      ((data ?? []) as { id: string; restaurant_id: string }[]).map((one) => [
+        one.id,
+        one.restaurant_id,
+      ])
+    );
+  } catch {
+    return new Map();
+  }
+}
 
 const STATUS: Record<string, string> = {
   new: "Waiting on you",
@@ -22,8 +55,30 @@ const STATUS: Record<string, string> = {
  * writing them down is being able to tell those apart.
  */
 export default async function RequestsPage() {
-  const [asks, settings] = await Promise.all([requestList(), safeSettings()]);
+  const [asks, settings, shelves] = await Promise.all([
+    requestList(),
+    safeSettings(),
+    // Where a request can be put. Every counter the shop keeps, so a power
+    // bank goes to the shop and a bag of rice to the market.
+    shelfList(),
+  ]);
   const waiting = asks.filter((one) => one.status === "new");
+
+  // The shop first, because that is where nearly everything asked for
+  // belongs and nobody should have to go looking for it in a dropdown.
+  const shopFirst = [...shelves].sort((one, two) => {
+    const ours = (name: string) => (/^sudu/i.test(name) ? 0 : 1);
+    return ours(one.name) - ours(two.name) || one.name.localeCompare(two.name);
+  });
+  const shelfName = (id: string) => shelves.find((one) => one.id === id)?.name ?? "the menu";
+
+  // Which shelf each already-made product ended up on, so the card can name
+  // it and link at it. Read now rather than stored on the request, because
+  // a product can be moved and a request remembering where it used to be
+  // would send somebody to the wrong page.
+  const itemShelf = await shelfOfItems(
+    asks.map((one) => one.menu_item_id).filter((one): one is string => Boolean(one))
+  );
 
   return (
     <div>
@@ -135,6 +190,76 @@ export default async function RequestsPage() {
                   </button>
                 </form>
               </div>
+
+              {/* From an ask to a thing somebody can buy, without leaving
+                  the page. Reading this list for the pattern is the point of
+                  it, and walking to another part of admin to retype the name
+                  is where that stopped being worth doing. */}
+              {ask.menu_item_id && itemShelf.has(ask.menu_item_id) ? (
+                <div className="flex flex-wrap items-center gap-2 rounded-xl bg-mint/10 px-3 py-2">
+                  <span className="text-sm font-semibold text-mint">
+                    On {shelfName(itemShelf.get(ask.menu_item_id)!)}.
+                  </span>
+                  <Link
+                    href={`/admin/menu/${itemShelf.get(ask.menu_item_id)!}#item-${ask.menu_item_id}`}
+                    className="btn-quiet px-3 py-1.5 text-sm"
+                  >
+                    Edit it
+                  </Link>
+                  <Link
+                    href={`/admin/links?start=${ask.menu_item_id}`}
+                    className="btn-quiet px-3 py-1.5 text-sm"
+                  >
+                    Make a checkout link
+                  </Link>
+                </div>
+              ) : (
+                shopFirst.length > 0 && (
+                  <form
+                    action={shelveRequest}
+                    className="flex flex-wrap items-end gap-2 border-t border-black/5 pt-3"
+                  >
+                    <input type="hidden" name="id" value={ask.id} />
+                    <div>
+                      <label className="label" htmlFor={`shelf-${ask.id}`}>
+                        Put it on
+                      </label>
+                      <select
+                        id={`shelf-${ask.id}`}
+                        name="restaurant_id"
+                        className="field w-auto py-2 text-sm"
+                      >
+                        {shopFirst.map((one) => (
+                          <option key={one.id} value={one.id}>
+                            {one.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="w-28">
+                      <label className="label" htmlFor={`shelf-price-${ask.id}`}>
+                        For
+                      </label>
+                      <input
+                        id={`shelf-price-${ask.id}`}
+                        name="quoted"
+                        inputMode="numeric"
+                        defaultValue={ask.quoted ?? ""}
+                        placeholder="0"
+                        className="field py-2 text-sm"
+                      />
+                    </div>
+                    <button className="btn-primary px-3 py-2 text-sm">
+                      Add to the shop
+                    </button>
+                    <p className="w-full text-xs text-muted">
+                      Their words become the name and this becomes the price.
+                      No picture, no description: it goes on with an Edit
+                      button beside it so you can finish it off.
+                    </p>
+                  </form>
+                )
+              )}
             </li>
           );
         })}

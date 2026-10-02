@@ -27,7 +27,7 @@ export default async function LinksPage({
   /** The link being changed, if one is. Editing lives in the address rather
    *  than in a piece of client state, so a half-finished edit survives a
    *  reload and the page can fill the form in on the server. */
-  searchParams: Promise<{ edit?: string }>;
+  searchParams: Promise<{ edit?: string; start?: string }>;
 }) {
   const [links, menu, settings, site] = await Promise.all([
     listCheckoutLinks(),
@@ -36,7 +36,11 @@ export default async function LinksPage({
     siteUrl(),
   ]);
 
-  const wanted = (await searchParams).edit ?? "";
+  const asked = await searchParams;
+  const wanted = asked.edit ?? "";
+  // A dish to begin with, sent from "Asked for" when a request has just
+  // become a product. The builder checks it is really on the menu.
+  const start = asked.start ?? "";
   const editing = links.find((one) => one.id === wanted) ?? null;
   const slots =
     settings.same_day_on === "on" ? deliverySlots(new Date(), await hoursByDay()) : [];
@@ -81,7 +85,8 @@ export default async function LinksPage({
         // keeps the same form alive, and a form's starting values are read
         // once when it appears: the fields stayed empty and the dishes stayed
         // as they were, so Edit looked like it had not worked.
-        key={editing?.id ?? "new"}
+        key={editing?.id ?? (start !== "" ? `start-${start}` : "new")}
+        start={start}
         editing={
           editing && {
             id: editing.id,

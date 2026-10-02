@@ -346,6 +346,10 @@ export default async function RestaurantAdmin({
           return (
             <div
               key={item.id}
+              // Named, so somewhere else in admin can send you straight at
+              // this one rather than at a page of two hundred to scroll.
+              // The margin is what stops the sticky header landing on it.
+              id={`item-${item.id}`}
               data-item
               data-name={item.name.toLowerCase()}
               data-category={
@@ -353,7 +357,7 @@ export default async function RestaurantAdmin({
               }
               data-stock={item.available ? "on" : "off"}
               data-photo={item.image_url ? "yes" : "no"}
-              className="card"
+              className="card scroll-mt-24"
             >
               <div className="flex items-center gap-3">
                 <span className="size-12 shrink-0 overflow-hidden rounded-xl">

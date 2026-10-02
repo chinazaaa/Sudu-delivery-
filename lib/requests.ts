@@ -28,6 +28,8 @@ export type CustomRequest = {
   admin_note: string;
   quoted: number | null;
   answered_at: string | null;
+  /** The product this became, once it was put on a shelf. */
+  menu_item_id: string | null;
 };
 
 export type AskResult = { ok: true; id: string } | { ok: false; error: string };
