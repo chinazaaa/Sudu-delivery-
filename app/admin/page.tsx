@@ -13,6 +13,11 @@ import { parcelJobs } from "@/lib/parcel-jobs";
 import { tendBatches } from "@/lib/batches";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
+import {
+  otherMoneySince,
+  otherMoneyTotals,
+  windowStart,
+} from "@/lib/other-money";
 import { clockLabel, lagosToday, runDateLabel } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -77,7 +82,13 @@ export default async function AdminHome() {
   const after = open
     .filter((batch) => batch.run_date > tomorrow)
     .sort((a, b) => a.run_date.localeCompare(b.run_date))[0];
-  const profit = batches.reduce((total, batch) => total + batch.profit, 0);
+  // Jobs with no run behind them: somebody paid for an errand nobody drove a
+  // car for. Counted in the same window as the runs, because a profit that
+  // leaves out a fortnight's errands is not the profit.
+  const aside = await otherMoneySince(windowStart()).catch(() => []);
+  const asideTotals = otherMoneyTotals(aside);
+  const profit =
+    batches.reduce((total, batch) => total + batch.profit, 0) + asideTotals.made;
   const unpaidValue = unpaid.reduce((total, order) => total + order.total, 0);
   // Somebody asking for something we do not stock, waiting on an answer.
   // It arrives by email too, and an inbox is where things go to be missed.
@@ -187,9 +198,32 @@ export default async function AdminHome() {
               value={profit}
               money
               tone={profit >= 0 ? "good" : "warn"}
-              hint="Last 28 days, after food, commission and costs"
+              hint={
+                asideTotals.count > 0
+                  ? `Last 28 days, after food, commission and costs. ` +
+                    `Includes ${naira(asideTotals.made)} off the runs.`
+                  : "Last 28 days, after food, commission and costs"
+              }
             />
           </div>
+
+          {/* Paid for something with no run behind it? It goes here rather
+              than as an invented order on a run nobody is driving. */}
+          <Link
+            href="/admin/money"
+            className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-black/10 px-4 py-3 text-sm font-semibold hover:border-ink/30"
+          >
+            <span>
+              Other money
+              {asideTotals.count > 0 && (
+                <span className="font-normal text-muted">
+                  {" "}
+                  · {asideTotals.count} in the last 28 days, {naira(asideTotals.made)}
+                </span>
+              )}
+            </span>
+            <span className="text-muted">Add one</span>
+          </Link>
 
           {asked > 0 && (
             <Link

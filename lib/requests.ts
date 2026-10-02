@@ -30,6 +30,9 @@ export type CustomRequest = {
   answered_at: string | null;
   /** The product this became, once it was put on a shelf. */
   menu_item_id: string | null;
+  /** The line of money it became, when it was a one-off and never a
+   *  product. Most asks are: bought once, for one person, never again. */
+  money_id: string | null;
 };
 
 export type AskResult = { ok: true; id: string } | { ok: false; error: string };

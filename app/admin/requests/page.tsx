@@ -2,7 +2,7 @@ import PageHeader from "@/components/admin/PageHeader";
 import { requestList } from "@/lib/requests";
 import { safeSettings, whatsappLink } from "@/lib/settings";
 import { naira } from "@/lib/money";
-import { markRequest, shelveRequest } from "./actions";
+import { markRequest, settleRequest, shelveRequest } from "./actions";
 import Link from "next/link";
 import { db } from "@/lib/supabase";
 
@@ -191,10 +191,64 @@ export default async function RequestsPage() {
                 </form>
               </div>
 
-              {/* From an ask to a thing somebody can buy, without leaving
-                  the page. Reading this list for the pattern is the point of
-                  it, and walking to another part of admin to retype the name
-                  is where that stopped being worth doing. */}
+              {/* Bought it for her and that is the end of it. Most asks are
+                  a one-off for one person and will never be on a menu, so
+                  making a product and an order to hold the money is two
+                  records that are not true kept for one number that is. */}
+              {ask.money_id ? (
+                <p className="rounded-xl bg-mint/10 px-3 py-2 text-sm font-semibold text-mint">
+                  Counted{ask.quoted ? ` · ${naira(ask.quoted)} in` : ""}. It is
+                  on{" "}
+                  <Link href="/admin/money" className="underline">
+                    Other money
+                  </Link>
+                  .
+                </p>
+              ) : (
+                <form
+                  action={settleRequest}
+                  className="flex flex-wrap items-end gap-2 border-t border-black/5 pt-3"
+                >
+                  <input type="hidden" name="id" value={ask.id} />
+                  <div className="w-28">
+                    <label className="label" htmlFor={`took-${ask.id}`}>
+                      They paid
+                    </label>
+                    <input
+                      id={`took-${ask.id}`}
+                      name="took"
+                      inputMode="numeric"
+                      defaultValue={ask.quoted ?? ""}
+                      placeholder="20000"
+                      className="field py-2 text-sm"
+                    />
+                  </div>
+                  <div className="w-28">
+                    <label className="label" htmlFor={`spent-${ask.id}`}>
+                      It cost
+                    </label>
+                    <input
+                      id={`spent-${ask.id}`}
+                      name="spent"
+                      inputMode="numeric"
+                      placeholder="0"
+                      className="field py-2 text-sm"
+                    />
+                  </div>
+                  <button className="btn-primary px-3 py-2 text-sm">
+                    Bought it, count it
+                  </button>
+                  <p className="w-full text-xs text-muted">
+                    No product, no order: it goes straight onto Other money and
+                    into the profit, and this ask is done. Only know what you
+                    made? Put that as what they paid and leave the cost empty.
+                  </p>
+                </form>
+              )}
+
+              {/* And the other way: a thing worth stocking, because three
+                  people have now asked for it. Reading this list for that
+                  pattern is the point of it. */}
               {ask.menu_item_id && itemShelf.has(ask.menu_item_id) ? (
                 <div className="flex flex-wrap items-center gap-2 rounded-xl bg-mint/10 px-3 py-2">
                   <span className="text-sm font-semibold text-mint">
@@ -215,10 +269,14 @@ export default async function RequestsPage() {
                 </div>
               ) : (
                 shopFirst.length > 0 && (
-                  <form
-                    action={shelveRequest}
-                    className="flex flex-wrap items-end gap-2 border-t border-black/5 pt-3"
-                  >
+                  <details className="border-t border-black/5 pt-3">
+                    <summary className="cursor-pointer text-sm font-semibold text-muted">
+                      Or is it worth stocking?
+                    </summary>
+                    <form
+                      action={shelveRequest}
+                      className="mt-3 flex flex-wrap items-end gap-2"
+                    >
                     <input type="hidden" name="id" value={ask.id} />
                     <div>
                       <label className="label" htmlFor={`shelf-${ask.id}`}>
@@ -252,12 +310,14 @@ export default async function RequestsPage() {
                     <button className="btn-primary px-3 py-2 text-sm">
                       Add to the shop
                     </button>
-                    <p className="w-full text-xs text-muted">
-                      Their words become the name and this becomes the price.
-                      No picture, no description: it goes on with an Edit
-                      button beside it so you can finish it off.
-                    </p>
-                  </form>
+                      <p className="w-full text-xs text-muted">
+                        Only when the same thing keeps being asked for. Their
+                        words become the name and this becomes the price: no
+                        picture, no description, and an Edit button beside it
+                        so you can finish it off.
+                      </p>
+                    </form>
+                  </details>
                 )
               )}
             </li>

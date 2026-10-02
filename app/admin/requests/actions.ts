@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/supabase";
 import { isSignedIn } from "@/lib/admin-auth";
+import { lagosToday } from "@/lib/time";
 
 /**
  * Where a request has got to, and what it was quoted at.
@@ -114,5 +115,75 @@ export async function shelveRequest(form: FormData): Promise<void> {
 
   revalidatePath("/admin/requests");
   revalidatePath("/admin/menu", "layout");
+  revalidatePath("/admin");
+}
+
+/**
+ * Bought it for her, took her money, done. One button.
+ *
+ * Most of what people ask for is a one-off: a particular adapter for a
+ * particular girl, which nobody else will ever want. Making a product for it
+ * and then an order for it is two records that are not true, kept in order
+ * to hold one number that is.
+ *
+ * So the money goes straight onto the "other money" page as a line, the ask
+ * is marked done, and nothing is invented. Profit is what came in less what
+ * went out, and if you only know the profit, put it in as what came in and
+ * leave the cost empty.
+ */
+export async function settleRequest(form: FormData): Promise<void> {
+  if (!(await isSignedIn())) throw new Error("Not signed in.");
+
+  const id = String(form.get("id") ?? "");
+  if (id === "") return;
+
+  const { data } = await db()
+    .from("custom_requests")
+    .select("wanted, name, money_id")
+    .eq("id", id)
+    .maybeSingle();
+  const ask = data as
+    | { wanted: string; name: string; money_id: string | null }
+    | null;
+  if (!ask) return;
+  // Already counted. Pressing it twice must not count the money twice.
+  if (ask.money_id) return;
+
+  const money = (said: FormDataEntryValue | null): number => {
+    const digits = String(said ?? "").replace(/[^\d]/g, "");
+    return digits === "" ? 0 : Math.min(100_000_000, Number(digits));
+  };
+  const took = money(form.get("took"));
+  const spent = money(form.get("spent"));
+  if (took === 0 && spent === 0) return;
+
+  const { data: line, error } = await db()
+    .from("other_money")
+    .insert({
+      happened_on: lagosToday(),
+      what: String(ask.wanted ?? "").split("\n")[0].trim().slice(0, 140),
+      who: String(ask.name ?? "").trim().slice(0, 80),
+      took,
+      spent,
+      note: "Asked for",
+    })
+    .select("id")
+    .single();
+  if (error || !line) {
+    throw new Error(`Could not record that: ${error?.message ?? "nothing came back"}`);
+  }
+
+  await db()
+    .from("custom_requests")
+    .update({
+      money_id: (line as { id: string }).id,
+      status: "done",
+      quoted: took > 0 ? took : null,
+      answered_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  revalidatePath("/admin/requests");
+  revalidatePath("/admin/money");
   revalidatePath("/admin");
 }
