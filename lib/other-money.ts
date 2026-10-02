@@ -17,6 +17,9 @@ export type OtherMoney = {
   phone: string;
   /** How many of it. One, unless somebody says otherwise. */
   how_many: number;
+  /** What she paid to have it brought, inside `took` but counted apart:
+   *  the goods are bought and sold on, the trip is the work. */
+  fee: number;
   /** What they paid us. */
   took: number;
   /** What it cost us to do it. */
@@ -49,12 +52,14 @@ export async function otherMoneySince(day: string): Promise<OtherMoney[]> {
 /** What these came to, for the dashboard. */
 export function otherMoneyTotals(rows: OtherMoney[]): {
   took: number;
+  fee: number;
   spent: number;
   made: number;
   count: number;
 } {
   return {
     took: rows.reduce((sum, one) => sum + one.took, 0),
+    fee: rows.reduce((sum, one) => sum + (one.fee ?? 0), 0),
     spent: rows.reduce((sum, one) => sum + one.spent, 0),
     made: rows.reduce((sum, one) => sum + madeOn(one), 0),
     count: rows.length,

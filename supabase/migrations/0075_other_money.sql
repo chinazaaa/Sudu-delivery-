@@ -44,3 +44,9 @@ create index if not exists other_money_phone_idx on other_money (phone) where ph
 -- line saying ₦21,000 with no count does not say what was sold.
 alter table other_money
   add column if not exists how_many int not null default 1 check (how_many > 0);
+
+-- What she paid to have it brought, kept apart from what the thing cost.
+-- Folded into the price it would be invisible, and the delivery is the part
+-- of an errand that is actually ours: the goods are bought and sold on, the
+-- trip is the work.
+alter table other_money add column if not exists fee int not null default 0 check (fee >= 0);

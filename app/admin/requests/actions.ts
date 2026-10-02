@@ -165,7 +165,10 @@ export async function settleRequest(form: FormData): Promise<void> {
   // what was sold.
   const howMany = Math.max(1, Math.min(999, money(form.get("how_many")) || 1));
   const each = money(form.get("took"));
-  const took = each * howMany;
+  // Delivery sits inside what she handed over, and apart in the record: the
+  // goods are bought and sold on, the trip is the part that is ours.
+  const fee = money(form.get("fee"));
+  const took = each * howMany + fee;
   const spent = money(form.get("spent"));
   if (took === 0 && spent === 0) return;
 
@@ -177,6 +180,7 @@ export async function settleRequest(form: FormData): Promise<void> {
       who: String(ask.name ?? "").trim().slice(0, 80),
       phone: ask.phone ?? "",
       how_many: howMany,
+      fee,
       took,
       spent,
       note: "Asked for",

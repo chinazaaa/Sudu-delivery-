@@ -39,8 +39,14 @@ export default async function OtherMoneyPage() {
         backLabel="Dashboard"
       />
 
-      <div className="mb-4 grid grid-cols-3 gap-3">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Came in" value={totals.took} money />
+        <Stat
+          label="Of that, delivery"
+          value={totals.fee}
+          money
+          hint="The part that is the trip"
+        />
         <Stat label="Cost us" value={totals.spent} money />
         <Stat
           label="Made"
@@ -68,19 +74,49 @@ export default async function OtherMoneyPage() {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="label" htmlFor="took">
-              They paid
-            </label>
-            <input
-              id="took"
-              name="took"
-              inputMode="numeric"
-              placeholder="20000"
-              className="field"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label" htmlFor="how_many">
+                How many
+              </label>
+              <input
+                id="how_many"
+                name="how_many"
+                inputMode="numeric"
+                defaultValue="1"
+                className="field"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="took">
+                Price each
+              </label>
+              <input
+                id="took"
+                name="took"
+                inputMode="numeric"
+                placeholder="20000"
+                className="field"
+              />
+            </div>
           </div>
-          <div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label" htmlFor="fee">
+                Delivery
+              </label>
+              <input
+                id="fee"
+                name="fee"
+                inputMode="numeric"
+                placeholder="0"
+                className="field"
+              />
+              <p className="mt-1 text-xs text-muted">
+                What they paid to have it brought.
+              </p>
+            </div>
+            <div>
             <label className="label" htmlFor="spent">
               It cost us
             </label>
@@ -92,9 +128,10 @@ export default async function OtherMoneyPage() {
               className="field"
             />
             <p className="mt-1 text-xs text-muted">
-              What you handed over for it: the thing itself, the bike, whatever
-              it took. Leave it empty and the whole lot counts as profit.
+              What you handed over: the thing itself, the bike, whatever it
+              took. Leave it empty and the whole lot counts as profit.
             </p>
+            </div>
           </div>
         </div>
 
@@ -108,6 +145,12 @@ export default async function OtherMoneyPage() {
               name="who"
               placeholder="A name, if it is worth remembering"
               className="field"
+            />
+            <input
+              name="phone"
+              inputMode="tel"
+              placeholder="Their number, to tie it to their card"
+              className="field mt-2"
             />
           </div>
           <div>
@@ -166,6 +209,7 @@ export default async function OtherMoneyPage() {
                   </p>
                   <p className="text-xs text-muted">
                     {naira(one.took)} in
+                    {one.fee > 0 ? ` (${naira(one.fee)} delivery)` : ""}
                     {one.spent > 0 ? ` · ${naira(one.spent)} out` : ""}
                   </p>
                 </div>

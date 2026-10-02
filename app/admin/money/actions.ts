@@ -22,7 +22,10 @@ export async function addOtherMoney(form: FormData): Promise<void> {
   if (!(await isSignedIn())) throw new Error("Not signed in.");
 
   const what = String(form.get("what") ?? "").trim().slice(0, 140);
-  const took = money(form.get("took"));
+  const howMany = Math.max(1, Math.min(999, money(form.get("how_many")) || 1));
+  // Delivery sits inside what they handed over and apart in the record.
+  const fee = money(form.get("fee"));
+  const took = money(form.get("took")) * howMany + fee;
   const spent = money(form.get("spent"));
   if (what === "" || (took === 0 && spent === 0)) return;
 
@@ -33,6 +36,9 @@ export async function addOtherMoney(form: FormData): Promise<void> {
     happened_on,
     what,
     who: String(form.get("who") ?? "").trim().slice(0, 80),
+    phone: String(form.get("phone") ?? "").trim().slice(0, 20),
+    how_many: howMany,
+    fee,
     took,
     spent,
     note: String(form.get("note") ?? "").trim().slice(0, 300),

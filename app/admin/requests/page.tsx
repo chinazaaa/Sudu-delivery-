@@ -236,6 +236,18 @@ export default async function RequestsPage() {
                     />
                   </div>
                   <div className="w-28">
+                    <label className="label" htmlFor={`fee-${ask.id}`}>
+                      Delivery
+                    </label>
+                    <input
+                      id={`fee-${ask.id}`}
+                      name="fee"
+                      inputMode="numeric"
+                      placeholder="0"
+                      className="field py-2 text-sm"
+                    />
+                  </div>
+                  <div className="w-28">
                     <label className="label" htmlFor={`spent-${ask.id}`}>
                       It cost
                     </label>
@@ -251,11 +263,11 @@ export default async function RequestsPage() {
                     Bought it, count it
                   </button>
                   <p className="w-full text-xs text-muted">
-                    What she paid for one of them, times how many, less what
-                    it cost us in total. No product and no order: it goes
-                    straight onto Other money and into the profit, and this
-                    ask is done. Only know what you made? Put that as the
-                    price and leave the cost empty.
+                    What she paid for one of them times how many, plus
+                    delivery, less what it cost us in total. No product and no
+                    order: it goes straight onto Other money and into the
+                    profit, and this ask is done. Only know what you made? Put
+                    that as the price and leave the rest empty.
                   </p>
                 </form>
               )}
