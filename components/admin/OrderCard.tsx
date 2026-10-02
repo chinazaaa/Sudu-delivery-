@@ -29,8 +29,6 @@ export type OrderCardData = {
   forName: string | null;
   phone: string;
   hostel: string;
-  /** When it was placed, so a card says whether it came in overnight. */
-  placedAt?: string;
   batchLabel: string;
   status: string;
   total: number;
@@ -153,9 +151,9 @@ export default function OrderCard({
           {/* When it came in, which is not the day it is for. The email can
               be missed, and then the only question is how long this has been
               sitting here unpaid. */}
-          {order.placedAt ? (
+          {order.createdAt ? (
             <p className="text-sm text-muted">
-              Ordered {placedLabel(order.placedAt)}
+              Ordered {placedLabel(order.createdAt)}
             </p>
           ) : null}
           {/* Everything that used to be six stacked lines, as one wrapped
