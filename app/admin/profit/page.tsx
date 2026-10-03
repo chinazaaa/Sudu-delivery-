@@ -5,6 +5,7 @@ import { naira } from "@/lib/money";
 import { lagosToday } from "@/lib/time";
 import { profitBetween } from "@/lib/profit";
 import { costsByKind, madeOn } from "@/lib/other-money";
+import { catchUpStanding } from "@/lib/standing";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,10 @@ export default async function ProfitPage({
   const typed = Boolean(asked.from || asked.to);
   const from = typed ? day(asked.from, chosen.from) : chosen.from;
   const to = typed ? day(asked.to, today) : chosen.to;
+
+  // A month end is exactly when somebody opens this, and exactly when a
+  // standing cost is owed. Written before the sums rather than after.
+  await catchUpStanding();
 
   const sums = await profitBetween(from, to);
   // Hosting, bank charges, data: what is actually eating the money, which a

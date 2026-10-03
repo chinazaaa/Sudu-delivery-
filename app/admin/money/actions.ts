@@ -6,6 +6,7 @@ import { db } from "@/lib/supabase";
 import { isSignedIn } from "@/lib/admin-auth";
 import { lagosToday } from "@/lib/time";
 import { tidyKind } from "@/lib/other-money";
+import { catchUpStanding } from "@/lib/standing";
 
 const money = (said: FormDataEntryValue | null): number => {
   const digits = String(said ?? "").replace(/[^\d]/g, "");
@@ -64,4 +65,69 @@ export async function removeOtherMoney(form: FormData): Promise<void> {
   await db().from("other_money").delete().eq("id", id);
   revalidatePath("/admin/money");
   revalidatePath("/admin");
+}
+
+/**
+ * A cost that comes back every month: added, repriced, paused, or dropped.
+ *
+ * One action for all four, because they are one row and the difference is
+ * which boxes were filled in. Changing the amount changes what next month is
+ * written at and leaves what is already recorded alone.
+ */
+export async function saveStanding(form: FormData): Promise<void> {
+  if (!(await isSignedIn())) throw new Error("Not signed in.");
+
+  const id = String(form.get("id") ?? "");
+  const what = String(form.get("what") ?? "").trim().slice(0, 140);
+  const amount = money(form.get("amount"));
+
+  // A day every month has, so February cannot swallow one.
+  const day = Math.min(28, Math.max(1, money(form.get("on_day")) || 1));
+
+  const row = {
+    what,
+    kind: tidyKind(String(form.get("kind") ?? "")),
+    amount,
+    on_day: day,
+    note: String(form.get("note") ?? "").trim().slice(0, 300),
+    active: String(form.get("active") ?? "") !== "off",
+  };
+
+  if (id !== "") {
+    if (what === "") return;
+    const { error } = await db().from("standing_costs").update(row).eq("id", id);
+    if (error) throw new Error(`Could not save that: ${error.message}`);
+  } else {
+    if (what === "" || amount === 0) return;
+    // From the month somebody says, or this one. Written as the first of it,
+    // because a standing cost belongs to a month rather than to a day.
+    const said = String(form.get("from_month") ?? "").trim();
+    const from = /^\d{4}-\d{2}/.test(said)
+      ? `${said.slice(0, 7)}-01`
+      : `${lagosToday().slice(0, 7)}-01`;
+
+    const { error } = await db()
+      .from("standing_costs")
+      .insert({ ...row, from_month: from });
+    if (error) throw new Error(`Could not save that: ${error.message}`);
+  }
+
+  // Write whatever months that has just made owing.
+  await catchUpStanding();
+
+  revalidatePath("/admin/money");
+  revalidatePath("/admin/profit");
+  revalidatePath("/admin");
+}
+
+/** Stop one for good. The months already written stay: they really happened. */
+export async function removeStanding(form: FormData): Promise<void> {
+  if (!(await isSignedIn())) throw new Error("Not signed in.");
+
+  const id = String(form.get("id") ?? "");
+  if (id === "") return;
+
+  await db().from("standing_costs").delete().eq("id", id);
+  revalidatePath("/admin/money");
+  revalidatePath("/admin/profit");
 }

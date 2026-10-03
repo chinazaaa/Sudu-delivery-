@@ -11,6 +11,9 @@ import {
 } from "@/lib/other-money";
 import { addOtherMoney, removeOtherMoney } from "./actions";
 import MoneyForm from "@/components/admin/MoneyForm";
+import StandingCosts from "@/components/admin/Standing";
+import { catchUpStanding, standingCosts } from "@/lib/standing";
+import { removeStanding, saveStanding } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +30,14 @@ export const dynamic = "force-dynamic";
  * and it should never grow into one.
  */
 export default async function OtherMoneyPage() {
-  const rows = await otherMoneySince(windowStart());
+  // Whatever months the standing costs owe, written before anything is
+  // counted. There is no scheduler here and nothing worth running one for.
+  await catchUpStanding();
+
+  const [rows, standing] = await Promise.all([
+    otherMoneySince(windowStart()),
+    standingCosts(),
+  ]);
   const totals = otherMoneyTotals(rows);
 
   return (
@@ -56,6 +66,13 @@ export default async function OtherMoneyPage() {
           hint={`Last ${WINDOW_DAYS} days`}
         />
       </div>
+
+      <StandingCosts
+        rows={standing}
+        save={saveStanding}
+        remove={removeStanding}
+        thisMonth={lagosToday().slice(0, 7)}
+      />
 
       <MoneyForm action={addOtherMoney} today={lagosToday()} />
 

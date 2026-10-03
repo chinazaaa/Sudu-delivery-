@@ -56,3 +56,37 @@ alter table other_money add column if not exists fee int not null default 0 chec
 -- worth asking of it, "what is actually eating the money", cannot be.
 alter table other_money add column if not exists kind text not null default '';
 create index if not exists other_money_kind_idx on other_money (kind) where kind <> '';
+
+-- Costs that come back every month: a subscription, a bank's monthly charge.
+--
+-- Not every cost is one of these, so this is a list of its own rather than a
+-- tick box on the ordinary form. What it holds is the standing instruction;
+-- the lines it writes are ordinary other_money rows, which is what keeps the
+-- profit sums from having to know this table exists.
+--
+-- Changing the amount changes what next month is written at and leaves
+-- what has already been recorded alone, because a bill that was ₦18,000 in
+-- September was ₦18,000 in September whatever it costs now.
+create table if not exists standing_costs (
+  id           uuid primary key default gen_random_uuid(),
+  what         text not null,
+  kind         text not null default '',
+  amount       int  not null check (amount >= 0),
+  -- Which day of the month it lands. Capped at 28 so every month has one.
+  on_day       int  not null default 1 check (on_day between 1 and 28),
+  active       boolean not null default true,
+  from_month   date not null,
+  -- The last month written, so a line somebody deleted on purpose is not
+  -- quietly put back the next time the page is opened.
+  made_through date,
+  note         text not null default '',
+  created_at   timestamptz not null default now()
+);
+
+alter table other_money
+  add column if not exists standing_id uuid references standing_costs(id) on delete set null,
+  add column if not exists for_month date;
+
+create unique index if not exists other_money_standing_month
+  on other_money (standing_id, for_month)
+  where standing_id is not null;

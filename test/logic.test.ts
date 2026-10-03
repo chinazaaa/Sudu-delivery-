@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { containersIn } from "../lib/containers";
 import { channelOfSite, tidyChannel, tidyHandle } from "../lib/came-from";
 import { weekAround } from "../lib/time";
+import { monthOf, nextMonth } from "../lib/standing";
 import { numberOr } from "../lib/settings";
 import { test } from "node:test";
 import { groupForCounter } from "../lib/admin";
@@ -1722,4 +1723,22 @@ test("a week runs Monday to Sunday, whichever day you ask on", () => {
     monday: "2026-10-05",
     sunday: "2026-10-11",
   });
+});
+
+/*
+ * Months, for the costs that come back every one of them.
+ *
+ * The rollovers are where this sort of thing goes quietly wrong, and a
+ * standing cost that skips December is a cost nobody notices is missing.
+ */
+test("a month knows which month comes after it", () => {
+  assert.equal(monthOf("2026-10-17"), "2026-10-01");
+  assert.equal(monthOf("2026-01-01"), "2026-01-01");
+
+  assert.equal(nextMonth("2026-10-01"), "2026-11-01");
+  // Over the end of a year.
+  assert.equal(nextMonth("2026-12-01"), "2027-01-01");
+  // And into a February, which is where day-of-month maths usually breaks.
+  assert.equal(nextMonth("2027-01-01"), "2027-02-01");
+  assert.equal(nextMonth("2027-02-01"), "2027-03-01");
 });
