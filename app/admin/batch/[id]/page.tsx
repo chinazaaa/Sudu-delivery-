@@ -593,11 +593,11 @@ export default async function BatchPage({
                       group.lines
                         .filter(
                           (line) =>
-                            line.paid !== null && line.paid > line.qty * line.unitPrice
+                            line.paid !== null && line.paid > line.qty * line.menuPrice
                         )
                         .map((line) => {
                           const upBy = Math.ceil(
-                            ((line.paid ?? 0) - line.qty * line.unitPrice) / line.qty
+                            ((line.paid ?? 0) - line.qty * line.menuPrice) / line.qty
                           );
                           return (
                             <form
@@ -609,8 +609,12 @@ export default async function BatchPage({
                               <input type="hidden" name="by" value={upBy} />
                               <span className="min-w-0 text-sm text-ink/80">
                                 <span className="font-semibold">{line.name}</span> cost{" "}
-                                {naira(upBy)} more each than the menu says. Put the
-                                menu up to {naira(line.unitPrice + upBy)}?
+                                {naira(upBy)} more each than the menu says
+                                {line.menuPrice !== line.unitPrice
+                                  ? ` now (${naira(line.menuPrice)})`
+                                  : ""}
+                                . Put the menu up to{" "}
+                                {naira(line.menuPrice + upBy)}?
                               </span>
                               <SaveButton>Put it up</SaveButton>
                             </form>

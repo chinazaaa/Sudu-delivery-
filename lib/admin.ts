@@ -21,6 +21,11 @@ export type CounterLine = {
   itemId: string;
   /** What the customer handed back, when they were asked to cover a gap. */
   recovered: number;
+  /** What the menu asks for this today, as against `unitPrice`, which is
+   *  what it asked for when this order was placed and never moves again.
+   *  The offer to put the menu up has to measure itself against the menu,
+   *  or it can never be satisfied. */
+  menuPrice: number;
 };
 export type CounterGroup = {
   restaurant: string;
@@ -172,6 +177,8 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
         : menuCost;
   const margin = sum(paid, (o) => o.total) - foodCost;
 
+  const onMenu = await menuPrices(everyLine.map((line) => line.itemId));
+
   return {
     batch,
     counter: groupForCounter(
@@ -184,6 +191,7 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
           ...line,
           paid: spentOn.has(line.key) ? (spentOn.get(line.key) as number) : null,
           recovered: gotBack.get(line.key) ?? 0,
+          menuPrice: onMenu.get(line.itemId) ?? line.unitPrice,
         })),
       })
     ),
@@ -304,6 +312,17 @@ function bagsFor(
   return [...bags.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/** What the menu asks for these items now, so an offer to raise a price can
+ *  tell whether it has already been raised. */
+async function menuPrices(ids: string[]): Promise<Map<string, number>> {
+  const wanted = [...new Set(ids.filter(Boolean))];
+  if (wanted.length === 0) return new Map();
+  const { data } = await db().from("menu_items").select("id, price_food").in("id", wanted);
+  return new Map(
+    (data ?? []).map((row: any) => [row.id as string, Number(row.price_food ?? 0)])
+  );
+}
+
 /**
  * Orders collapsed by restaurant into totals. This is what she reads aloud at
  * the counter, so it is one line per distinct item, not one per order.
@@ -335,6 +354,9 @@ export function groupForCounter(
         paid: null,
         itemId: line.menu_item_id,
         recovered: 0,
+        // Grouping does not read the menu, so the price on the line is the
+        // honest answer until somebody fills it in.
+        menuPrice: line.unit_price_at_order,
       });
     byRestaurant.set(line.restaurant, items);
   }
