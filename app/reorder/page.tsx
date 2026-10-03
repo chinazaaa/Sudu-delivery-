@@ -5,12 +5,10 @@ import ReorderCard, { type PreviousOrder } from "@/components/ReorderCard";
 import { openBatches } from "@/lib/batches";
 import { feeFor } from "@/lib/fees";
 import { activeBands, safeSettings } from "@/lib/settings";
-import { lastOrderForPhone, openOrderForPhone } from "@/lib/orders";
+import { lastOrderForPhone } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import { currentCustomer } from "@/lib/customer-auth";
 import { forgetMe } from "@/app/actions";
-import { SLOT_LABEL } from "@/lib/config";
-import { clockLabel, dayWord } from "@/lib/time";
 import { db } from "@/lib/supabase";
 import { toBatchView } from "@/lib/view";
 
@@ -34,8 +32,6 @@ export default async function ReorderPage({
   const typed = normalisePhone((await searchParams).phone ?? "");
   const phone = await currentCustomer();
   const previous = phone ? await lastOrderForPhone(phone) : null;
-  // An order already in an open batch can be added to, rather than duplicated.
-  const openOrder = phone ? await openOrderForPhone(phone) : null;
 
   if (!previous) {
     return (
@@ -116,27 +112,6 @@ export default async function ReorderPage({
           </button>
         </form>
       </div>
-
-      {openOrder && (
-        <div className="card">
-          <h2 className="font-semibold">
-            You have an order in the {dayWord(openOrder.batch.run_date)}{" "}
-            {SLOT_LABEL[openOrder.batch.slot]} run
-          </h2>
-          <p className="mt-1 text-sm text-ink/75">
-            {openOrder.items} item{openOrder.items === 1 ? "" : "s"}, closing{" "}
-            {clockLabel(openOrder.batch.cut_off_at)}. Add to it and it goes in the same
-            bag under your name. You only pay more delivery if the extra items push you
-            into a bigger load.
-          </p>
-          <Link
-            href={`/?batch=${openOrder.batch.id}&phone=${previous.customer_phone}`}
-            className="btn-primary mt-3 w-full"
-          >
-            Add to this order
-          </Link>
-        </div>
-      )}
 
       <ReorderCard previous={view} batches={views} />
       <p className="text-sm text-muted">

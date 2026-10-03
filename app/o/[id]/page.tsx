@@ -140,8 +140,7 @@ export default async function OrderPage({
   // The whole load is what delivery is priced on, so the page shows the band
   // it landed in and how it was shared out. "Why is my delivery ₦2,000?" has
   // to be answerable from the page itself.
-  const allItems = fees.items + fees.otherItems;
-  const band = bandFor(Math.max(allItems, 1), bands);
+  const band = bandFor(Math.max(fees.items, 1), bands);
   const bandLabel = Number.isFinite(band.maxItems)
     ? `up to ${band.maxItems} items`
     : "a full load";
@@ -160,7 +159,7 @@ export default async function OrderPage({
   const parcelToPau = (order.parcel_to ?? "").startsWith("PAU");
   const byLadder =
     !isParcel &&
-    order.fee === (fees.otherItems > 0 ? band.fee - fees.otherFee : band.fee);
+    order.fee === band.fee;
   const shared = order.group_id !== null;
 
   // A run that is not going out says so before anything else. Cancelled, it
@@ -693,9 +692,7 @@ export default async function OrderPage({
             label={
               isParcel
                 ? "Carrying it"
-                : fees.otherItems > 0
-                  ? `Delivery top-up (${allItems} items in this run)`
-                  : `Delivery (${fees.items} item${fees.items === 1 ? "" : "s"})`
+                : `Delivery (${fees.items} item${fees.items === 1 ? "" : "s"})`
             }
             value={naira(order.fee)}
           />
@@ -712,7 +709,7 @@ export default async function OrderPage({
             than three. Only when the ladder is what they were charged. */}
         {byLadder && (
           <FeeBands
-            itemCount={allItems}
+            itemCount={fees.items}
             flashFee={order.batch.flash_fee}
             bands={bands}
           />
@@ -734,18 +731,16 @@ export default async function OrderPage({
                   {order.batch.flash_fee_reason || "Enjoy it."}{" "}
                 </>
               )}
-              {allItems} item{allItems === 1 ? "" : "s"} travel together, which is the{" "}
+              {fees.items} item{fees.items === 1 ? "" : "s"} travel together, which is the{" "}
               {naira(band.fee)} band ({bandLabel}).
               {drops.length > 1 &&
                 ` That is shared out by what each person ordered, not split down the middle.`}
-              {fees.otherItems > 0 &&
-                ` ${naira(fees.otherFee)} of it was charged on your earlier order, so this one carries the rest.`}
             </>
           ) : shared ? (
             <>
               One delivery for the whole group, split evenly between everybody in
               it. That is why this is not the usual {naira(band.fee)} for{" "}
-              {allItems} item{allItems === 1 ? "" : "s"}.
+              {fees.items} item{fees.items === 1 ? "" : "s"}.
             </>
           ) : (
             <>
@@ -1017,14 +1012,6 @@ function CardPayment({
       </a>
     </div>
   );
-}
-
-/** Delivery is priced by container count, so the line says what it counted. */
-function feeLabel(fees: { items: number; otherItems: number }): string {
-  const plural = (n: number) => `${n} item${n === 1 ? "" : "s"}`;
-  return fees.otherItems > 0
-    ? `Delivery top-up (${plural(fees.items + fees.otherItems)} in this run)`
-    : `Delivery (${plural(fees.items)})`;
 }
 
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {

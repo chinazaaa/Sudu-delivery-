@@ -74,12 +74,6 @@ export default function Checkout() {
    *  the checkout asks for a typed answer as it always did. */
   const hostels = shop?.hostels ?? [];
 
-  /** What this number already has on the chosen run, if anything. */
-  const [adding, setAdding] = useState<{ items: number; feeCharged: number }>({
-    items: 0,
-    feeCharged: 0,
-  });
-
   useEffect(() => {
     void api
       .shop(true)
@@ -108,29 +102,6 @@ export default function Checkout() {
   useEffect(() => {
     setApplied(null);
   }, [runId, lines.length]);
-
-  // An order already placed on this run is topped up, not duplicated: only
-  // the difference in delivery is charged. Re-asked whenever the run or the
-  // number changes, because both decide the answer.
-  useEffect(() => {
-    let alive = true;
-    if (!runId || phone.trim().length < 10) {
-      setAdding({ items: 0, feeCharged: 0 });
-      return;
-    }
-    void api
-      .adding(runId, phone.trim(), saved.token)
-      .then((next) => {
-        if (alive) setAdding({ items: next.items, feeCharged: next.feeCharged });
-      })
-      .catch(() => {
-        // Not knowing means the ordinary fee, which is what it would be anyway.
-        if (alive) setAdding({ items: 0, feeCharged: 0 });
-      });
-    return () => {
-      alive = false;
-    };
-  }, [runId, phone, saved.token]);
 
   // Only the people with food in this cart matter to the order.
   const sharing = friends.filter((friend) =>
@@ -297,13 +268,12 @@ export default function Checkout() {
           // wrong for half of one: no restaurant lines must mean no restaurant
           // fee, not the price of a container nobody ordered.
           restaurantFee: (() => {
-            const containers =
-              (restHalf.length === 0 ? 0 : countItems(restHalf)) + adding.items;
+            const containers = restHalf.length === 0 ? 0 : countItems(restHalf);
             return containers === 0 ? 0 : feeFrom(containers, runBands, flash);
           })(),
           bands: byValue,
         }) + area.runExtra
-      : Math.max(0, feeFrom(items + adding.items, runBands, flash) - adding.feeCharged);
+      : feeFrom(items, runBands, flash);
 
   /** And what it costs in a car of its own, which is one ladder either way:
    *  a car is a car whatever is riding in it. */
@@ -812,18 +782,6 @@ export default function Checkout() {
         </View>
       )}
 
-      {adding.items > 0 && picked === null && (
-        <View style={{ backgroundColor: T.tint, borderRadius: T.radius, padding: 14 }}>
-          <Text style={{ fontWeight: "800", color: T.brandDark }}>
-            Adding to the order you already have on this run
-          </Text>
-          <Text style={{ color: T.ink, marginTop: 2 }}>
-            You already have {adding.items} item{adding.items === 1 ? "" : "s"} coming. This goes
-            in the same delivery, so you only pay the difference, never a second delivery fee.
-          </Text>
-        </View>
-      )}
-
       <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 6 }}>
         <Row label="Food" value={naira(food)} />
 
@@ -831,9 +789,7 @@ export default function Checkout() {
           label={
             offered
               ? offered.note || "Delivery, on offer"
-              : adding.items > 0
-                ? `Delivery top-up (${items + adding.items} items)`
-                : `Delivery (${items} item${items === 1 ? "" : "s"})`
+              : `Delivery (${items} item${items === 1 ? "" : "s"})`
           }
           value={naira(fee)}
         />
@@ -866,14 +822,10 @@ export default function Checkout() {
                 ...(restHalf.length > 0
                   ? [
                       {
-                        label: `${countItems(restHalf) + adding.items} item${
-                          countItems(restHalf) + adding.items === 1 ? "" : "s"
+                        label: `${countItems(restHalf)} item${
+                          countItems(restHalf) === 1 ? "" : "s"
                         } from the kitchens`,
-                        fee: feeFrom(
-                          countItems(restHalf) + adding.items,
-                          runBands,
-                          run?.flashFee ?? null
-                        ),
+                        fee: feeFrom(countItems(restHalf), runBands, run?.flashFee ?? null),
                       },
                     ]
                   : []),
@@ -894,7 +846,7 @@ export default function Checkout() {
               }
               here={bandIndex(
                 picked ? sameDayBands : runBands,
-                picked ? items : items + adding.items
+                items
               )}
               extra={
                 picked && picked.urgent && (shop.sameDay?.urgentExtra ?? 0) > 0

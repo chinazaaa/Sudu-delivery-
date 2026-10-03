@@ -38,8 +38,10 @@ export async function GET(
       // A first name only, which is what the friend was already told.
       name: order.customer_name.split(" ")[0],
       batchId: order.batch_id,
-      items: load.items,
-      feeCharged: load.feeCharged,
+      // The paid part only, so the app quotes the same fee the checkout will
+      // charge: an unpaid order is no credit towards the car.
+      items: load.paidItems,
+      feeCharged: load.paidFee,
     });
   } catch {
     return NextResponse.json({ ok: false });

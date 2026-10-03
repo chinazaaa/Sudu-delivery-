@@ -412,9 +412,9 @@ export default function OrderCard({
                   : order.joinedDelivery
                   ? "Delivery, sharing a car with a friend"
                   : order.otherItems > 0
-                    ? `Delivery top-up (${order.otherItems} more item${
+                    ? `Delivery (${order.otherItems} more item${
                         order.otherItems === 1 ? "" : "s"
-                      } already in this run)`
+                      } on this number, charged on its own order)`
                     : "Delivery"}
               </dt>
               <dd>{naira(order.fee)}</dd>

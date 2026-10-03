@@ -270,9 +270,9 @@ export default function Order() {
         <Row label="Total" value={naira(order.total)} strong />
       </View>
 
-      {/* Until the run closes, anything else goes in the same delivery. The
-          checkout works the fee out from what is already on this run, so this
-          is only the way back to the menu. */}
+      {/* Until the run closes there is still time to order. It travels in
+          the same car, and it pays its own delivery like any other order, so
+          this is only the way back to the menu. */}
       {/* Nothing to add to a parcel: it is one bag on one trip, and the
           menu has nothing to do with it. */}
       {!isParcel && new Date(order.run.cutOffISO).getTime() > Date.now() && (
@@ -286,7 +286,7 @@ export default function Order() {
           }}
         >
           <Text style={{ color: T.paper, fontWeight: "800", fontSize: 16 }}>
-            Add more to this order
+            Order something else
           </Text>
         </Pressable>
       )}

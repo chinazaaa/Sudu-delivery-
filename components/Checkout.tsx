@@ -57,14 +57,23 @@ type JoinLoad = {
   feeCharged: number;
 };
 
+/**
+ * An order already on this run for this number, so the checkout can lock to
+ * its car and fill in who it is for.
+ *
+ * It carries no items and no fee, because delivery is no longer credited
+ * across orders. It used to be: a second order on the same number paid only
+ * the difference, which read well and was trivially gamed. Somebody with an
+ * order in a run could add a friend's food to it for nothing, and an order
+ * abandoned unpaid handed its fee to the next one as credit that had never
+ * arrived. Each order now pays for the room its own containers take.
+ */
 export type AddingTo = {
   batchId: string;
   batchLabel: string;
   phone: string;
   name: string;
   hostel: string;
-  items: number;
-  feeCharged: number;
 };
 
 export default function Checkout({
@@ -442,9 +451,6 @@ export default function Checkout({
   const sameDay = sameDaySlots.find((one) => one.at === deliverAt) ?? null;
   const shared = joining !== null || party !== "";
 
-  const alreadyItems = adding?.items ?? 0;
-  const alreadyCharged = adding?.feeCharged ?? 0;
-
   // A promotion is the price rather than money off it, so it is settled
   // first. The same function decides it here and on the server, because a fee
   // quoted on this screen and charged on the next has to be one number.
@@ -490,8 +496,7 @@ export default function Checkout({
           // wrong for half of one: no restaurant lines must mean no
           // restaurant fee, not the price of a container nobody ordered.
           restaurantFee: (() => {
-            const containers =
-              (restHalf.length === 0 ? 0 : countItems(restHalf)) + alreadyItems;
+            const containers = restHalf.length === 0 ? 0 : countItems(restHalf);
             return containers === 0
               ? 0
               : feeFor(containers, selected?.flashFee ?? null, bands);
@@ -499,10 +504,7 @@ export default function Checkout({
           bands: byValue,
         }) +
         area.runExtra
-      : Math.max(
-          0,
-          feeFor(itemCount + alreadyItems, selected?.flashFee ?? null, bands) - alreadyCharged
-        );
+      : feeFor(itemCount, selected?.flashFee ?? null, bands);
 
   /**
    * When this order arrives, in the same words as the front page.
@@ -556,13 +558,12 @@ export default function Checkout({
       ? feeAcross({
           marketFood: cartSubtotal(marketHalf),
           restaurantFee: (() => {
-            const containers =
-              (restHalf.length === 0 ? 0 : countItems(restHalf)) + alreadyItems;
+            const containers = restHalf.length === 0 ? 0 : countItems(restHalf);
             return containers === 0 ? 0 : feeFor(containers, flash, bands);
           })(),
           bands: byValue,
         }) + area.runExtra
-      : Math.max(0, feeFor(itemCount + alreadyItems, flash, bands) - alreadyCharged);
+      : feeFor(itemCount, flash, bands);
 
   /**
    * The next run, for somebody in a car of its own.
@@ -791,9 +792,9 @@ export default function Checkout({
             Riding along with {joining.name}&apos;s delivery
           </p>
           <p className="mt-0.5 text-sm text-ink/80">
-            Your food goes in the same car, so you only pay the difference in
-            delivery, never a second fee. You pay for your own food and your bag
-            is labelled with your name.
+            Your food goes in the same car, so you pay a share of one delivery
+            rather than a whole one of your own. You pay for your own food and
+            your bag is labelled with your name.
           </p>
           <button
             type="button"
@@ -839,8 +840,8 @@ export default function Checkout({
 
       {adding && (
         <p className="rounded-2xl bg-brand-tint px-4 py-3 text-sm font-semibold text-brand-dark">
-          Adding to your {adding.batchLabel} order. Same bag, and more delivery only if
-          this pushes you into a bigger load.
+          Adding to your {adding.batchLabel} order. It travels in the same car, and
+          delivery is charged on this order the same as any other.
         </p>
       )}
 
@@ -1430,9 +1431,7 @@ export default function Checkout({
               ? `Delivery ${sameDay.phrase}${sameDay.urgent ? " · urgent" : ""}`
               : shared
               ? "Delivery"
-              : alreadyCharged > 0
-                ? `Delivery top-up (${itemCount + alreadyItems} items)`
-                : `Delivery (${itemCount} item${itemCount === 1 ? "" : "s"})`}
+              : `Delivery (${itemCount} item${itemCount === 1 ? "" : "s"})`}
             {/* When it lands, beside what it costs. The two decide each
                 other, and reading the total without the day meant scrolling
                 back up to find out what the money was buying. */}
@@ -1467,16 +1466,12 @@ export default function Checkout({
               {restHalf.length > 0 && (
                 <li className="flex justify-between text-muted">
                   <span>
-                    {countItems(restHalf) + alreadyItems} item
-                    {countItems(restHalf) + alreadyItems === 1 ? "" : "s"} from the kitchens
+                    {countItems(restHalf)} item
+                    {countItems(restHalf) === 1 ? "" : "s"} from the kitchens
                   </span>
                   <span>
                     {naira(
-                      feeFor(
-                        countItems(restHalf) + alreadyItems,
-                        selected?.flashFee ?? null,
-                        bands
-                      )
+                      feeFor(countItems(restHalf), selected?.flashFee ?? null, bands)
                     )}
                   </span>
                 </li>
@@ -1506,7 +1501,7 @@ export default function Checkout({
             ladder is there, so it is one tap away. */}
         {!shared && !promotion && !sameDay && byValue.length === 0 && (
           <FeeBands
-            itemCount={itemCount + alreadyItems}
+            itemCount={itemCount}
             flashFee={selected?.flashFee ?? null}
             bands={bands}
             // Where the cart reaches past Sangotedo the whole ladder is

@@ -45,8 +45,11 @@ export default async function CheckoutPage({
     ...batches.map(toBatchView),
   ];
 
-  // Arriving from "add to my order": same phone, same batch, so only the
-  // difference in delivery is charged.
+  // Arriving from "add to my order": same phone, same batch. It locks the
+  // checkout to that car and fills in who it is for. Delivery is charged on
+  // it like any other order, because crediting a fee across two orders on one
+  // number was gameable by anybody willing to put a friend's food on their
+  // own number.
   const phone = normalisePhone(params.phone ?? "");
   const target = params.batch && views.find((v) => v.id === params.batch && !v.closed);
   let adding: AddingTo | null = null;
@@ -60,8 +63,6 @@ export default async function CheckoutPage({
         phone,
         name: load.orders[0]?.customer_name ?? "",
         hostel: load.orders[0]?.hostel ?? "",
-        items: load.items,
-        feeCharged: load.feeCharged,
       };
     }
   }

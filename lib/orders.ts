@@ -759,15 +759,23 @@ async function placeSingleOrder(args: {
   /** The box it came out of, for analytics. */
   boxId?: string;
 }): Promise<PlaceOrderResult> {
-  // Adding to an existing order is a second order to the same batch, not an
-  // edit: the admin view merges by phone into one bag (addendum §3). Only the
-  // difference in fee is charged, because it is one load either way.
-  // Joining a friend's delivery is priced off that whole delivery rather than
-  // off this phone's own orders: it is one load in the car either way. Nobody
-  // already in it is altered, so a reference somebody has already been told to
-  // type in their transfer cannot change underneath them.
-  const existing = await existingLoad(args.batch.id, args.phone);
-  const combined = existing.items + countItems(args.lines);
+  // Every order pays for the room its own containers take, and nothing is
+  // credited across orders on the same number.
+  //
+  // It used to charge only the difference: adding to an order already in a
+  // run is a second order to the same batch rather than an edit, the admin
+  // view merges by phone into one bag (addendum §3), and it is one load in
+  // the car either way. Two things killed it. It was trivially gamed, because
+  // anybody with an order in a run could put a friend's food on their number
+  // and the friend's delivery came to nothing. And an order abandoned unpaid
+  // handed its fee to the next one as credit that had never arrived: #1029
+  // came to its food price alone with the whole ₦4,000 sitting on an unpaid
+  // #1027, so either both got paid or the car went to Lekki for free.
+  //
+  // Joining a friend's delivery through their link is the honest version of
+  // the same idea and is priced separately, off that delivery, with the
+  // group's share worked out when it closes.
+  const carrying = countItems(args.lines);
 
   // In a shared delivery nobody has a fee until the group closes: it is split
   // evenly then, once it is known how many are in the car. Writing a figure
@@ -782,10 +790,7 @@ async function placeSingleOrder(args: {
       ? args.sameDayFee
       : args.sharedGroupId
         ? 0
-        : Math.max(
-            0,
-            feeFor(combined, args.batch.flash_fee, args.bands) - existing.feeCharged
-          );
+        : feeFor(carrying, args.batch.flash_fee, args.bands);
 
   // Two different meanings of "group", and only one of them can apply.
   //
@@ -1172,7 +1177,22 @@ async function insertOrder(args: {
   return order.id as string;
 }
 
-/** What this phone already has in this batch: containers, and fee charged. */
+/**
+ * What this phone already has in this batch: containers, and fee charged.
+ *
+ * Nothing prices off this any more. It used to: a second order on the same
+ * number paid only the difference in delivery, since it is one load in the
+ * car either way. Two things ended that. Anybody with an order in a run could
+ * put a friend's food on their own number and the friend's delivery came to
+ * nothing, which needed no cleverness to work out. And an order abandoned
+ * unpaid handed its fee to the next one as credit that had never arrived:
+ * #1029 came to its food price alone with the whole ₦4,000 sitting on an
+ * unpaid #1027, so either both got paid or the car went to Lekki for free.
+ *
+ * What is left is for the admin and the checkout to see whose bag this joins,
+ * and to fill in a name and a block. A discount on a second order is now
+ * given by hand on the order, where there is somebody to decide it.
+ */
 export async function existingLoad(
   batchId: string,
   phone: string
@@ -1216,18 +1236,28 @@ export async function rootOrder(orderId: string): Promise<FullOrder | null> {
 
 /**
  * Everything travelling in one shared delivery: the order that started it and
- * everyone who joined, with what they have been charged for carrying it.
+ * everyone who joined, with what they have been charged for carrying it, and
+ * separately what has actually been paid.
  *
  * The same shape as `existingLoad`, and used the same way: a new arrival pays
  * the difference between what the whole load costs to carry and what has
- * already been paid towards it. Nobody who already ordered is touched, which
- * is what makes this safe to do to an order somebody has already been given a
- * narration for.
+ * already been paid towards it. Paid, not charged: joining somebody whose own
+ * order is still unpaid used to cost nothing in delivery, so a link from a
+ * friend who never paid carried both of them for free.
+ *
+ * Nobody who already ordered is touched, which is what makes this safe to do
+ * to an order somebody has already been given a narration for.
  */
 export async function deliveryLoad(
   batchId: string,
   rootId: string
-): Promise<{ items: number; feeCharged: number; orders: Order[] }> {
+): Promise<{
+  items: number;
+  feeCharged: number;
+  paidItems: number;
+  paidFee: number;
+  orders: Order[];
+}> {
   const { data } = await db()
     .from("orders")
     .select("*")
@@ -1236,16 +1266,26 @@ export async function deliveryLoad(
     .not("status", "in", NOT_ORDERS_SQL);
 
   const orders = (data ?? []) as Order[];
-  if (orders.length === 0) return { items: 0, feeCharged: 0, orders };
+  if (orders.length === 0)
+    return { items: 0, feeCharged: 0, paidItems: 0, paidFee: 0, orders };
 
   const { data: items } = await db()
     .from("order_items")
     .select("order_id, qty")
     .in("order_id", orders.map((o) => o.id));
 
+  const rows = ((items ?? []) as { order_id: string; qty: number }[]).map((row) => ({
+    order_id: String(row.order_id),
+    qty: Number(row.qty),
+  }));
+  const settled = new Set(orders.filter((o) => isPaid(o.status)).map((o) => o.id));
+  const countIn = (list: typeof rows) => list.reduce((sum, row) => sum + row.qty, 0);
+
   return {
-    items: (items ?? []).reduce((sum, row) => sum + (row.qty as number), 0),
+    items: countIn(rows),
     feeCharged: orders.reduce((sum, o) => sum + o.fee, 0),
+    paidItems: countIn(rows.filter((row) => settled.has(row.order_id))),
+    paidFee: orders.reduce((sum, o) => sum + (isPaid(o.status) ? o.fee : 0), 0),
     orders,
   };
 }
@@ -1556,12 +1596,9 @@ export async function moveOrder(
     );
     const items = repriced.lines.reduce((count, line) => count + line.qty, 0);
 
-    // Whatever that person already has on the new run decides the top-up.
-    const existing = await existingLoad(batch.id, one.customer_phone);
-    const fee = Math.max(
-      0,
-      feeFor(existing.items + items, batch.flash_fee, bands) - existing.feeCharged
-    );
+    // Its own containers, like any other order. Nothing on the new run is
+    // credited towards it, because nothing is credited across orders at all.
+    const fee = feeFor(items, batch.flash_fee, bands);
 
     // The lines carry the new prices too, so the order reads as it is charged.
     for (const line of one.lines) {
@@ -1707,34 +1744,26 @@ export async function repeatLines(order: FullOrder): Promise<RepeatResult> {
 }
 
 export type FeeStory = {
-  /** Containers on this order alone. */
+  /** Containers on this order. */
   items: number;
-  /** Containers on that person's other orders in the same run. */
-  otherItems: number;
-  /** Delivery already charged on those other orders. */
-  otherFee: number;
-  /** What the whole load costs to carry. */
-  wholeFee: number;
-  /** Delivery charged on this order: the difference, when adding. */
+  /** Delivery charged on it. */
   fee: number;
   /** A flash drop was on when this was priced. */
   flashFee: number | null;
 };
 
 /**
- * Why this order's delivery is what it is. Adding to an order already in a
- * run charges only the difference, because it is one load either way, which
- * makes a small number on a big order look wrong without the explanation.
+ * Why this order's delivery is what it is: the containers on it and the band
+ * they land in, and nothing else.
+ *
+ * It used to have to explain a top-up as well, because a second order on the
+ * same number paid only the difference. That is gone. An order's delivery is
+ * now the room its own containers take, which is the one thing the page can
+ * explain without knowing about orders the reader cannot see.
  */
 export async function feeStory(order: FullOrder): Promise<FeeStory> {
-  const load = await existingLoad(order.batch_id, order.customer_phone);
-  const items = order.lines.reduce((count, line) => count + line.qty, 0);
-
   return {
-    items,
-    otherItems: Math.max(0, load.items - items),
-    otherFee: Math.max(0, load.feeCharged - order.fee),
-    wholeFee: load.feeCharged,
+    items: order.lines.reduce((count, line) => count + line.qty, 0),
     fee: order.fee,
     flashFee: order.batch.flash_fee,
   };

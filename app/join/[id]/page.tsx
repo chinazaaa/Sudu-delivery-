@@ -50,10 +50,14 @@ export default async function JoinPage({ params }: { params: Promise<{ id: strin
   // What one more person's food would cost to carry, as against ordering
   // alone. This is the whole argument for joining, so it is worked out rather
   // than claimed.
+  // Off the paid part of the delivery only. Delivery charged on an order
+  // nobody has paid for is not money towards the car, so joining somebody who
+  // has not paid yet costs the ordinary fee and shows no saving, which is the
+  // truth.
   const alone = feeFor(1, order.batch.flash_fee, bands);
   const joining = Math.max(
     0,
-    feeFor(load.items + 1, order.batch.flash_fee, bands) - load.feeCharged
+    feeFor(load.paidItems + 1, order.batch.flash_fee, bands) - load.paidFee
   );
   const saving = Math.max(0, alone - joining);
 

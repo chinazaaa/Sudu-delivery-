@@ -558,8 +558,10 @@ export const api = {
     hostel: string;
     note: string;
   }) => post<{ ok: boolean; id: string }>("/ask", said),
-  /** What this number already has on a run, so adding to it tops up the
-   *  delivery rather than paying it twice. */
+  /** Who an order on this run is for, so the checkout can fill itself in.
+   *  The counts come back zero: delivery is charged on every order for the
+   *  room its own containers take, and nothing is credited across two orders
+   *  on one number. */
   adding: (batchId: string, phone: string, token?: string | null) =>
     get<{ items: number; feeCharged: number; name?: string; hostel?: string }>(
       `/adding?batchId=${encodeURIComponent(batchId)}&phone=${encodeURIComponent(phone)}`,

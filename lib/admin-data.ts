@@ -111,8 +111,10 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
 
  return orders.map((order) => {
     const batch = batches.get(order.batch_id);
-    // Adding to an order already in a run charges only the difference, so the
-    // rest of that person's load in this run has to be visible beside it.
+    // The bags get merged by phone at the counter, so the rest of that
+    // person's load in this run has to be visible beside it. It no longer
+    // changes what either order pays: each one is charged for the room its
+    // own containers take.
     const siblings = orders.filter(
       (other) =>
         other.id !== order.id &&
