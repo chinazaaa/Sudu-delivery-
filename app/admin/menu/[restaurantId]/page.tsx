@@ -77,7 +77,10 @@ export default async function RestaurantAdmin({
           ← All restaurants
         </Link>
         {/* Jump straight to another menu rather than going back out first. */}
-        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+        {/* Wrapped, not scrolled sideways: the tap after a fling is
+            spent stopping the fling, so a row somebody has to scroll is a
+            row whose buttons sometimes do nothing. */}
+        <div className="flex flex-wrap gap-2">
           {((siblings ?? []) as { id: string; name: string }[]).map((other) => (
             <Link
               key={other.id}

@@ -226,7 +226,10 @@ export default async function RunsPage({
         </section>
       )}
 
-      <div className="no-scrollbar -mx-4 mb-3 flex gap-2 overflow-x-auto px-4">
+      {/* Wrapped, not scrolled sideways: the tap after a fling is
+          spent stopping the fling, so a row somebody has to scroll is a
+          row whose buttons sometimes do nothing. */}
+      <div className="mb-3 flex flex-wrap gap-2">
         <Link
           href="/admin/runs"
           className={`chip ${

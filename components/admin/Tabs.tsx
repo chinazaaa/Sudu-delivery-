@@ -16,7 +16,10 @@ export default function Tabs({
 
   return (
     <div>
-      <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4">
+      {/* Wrapped, not scrolled sideways: a tap that follows a fling is spent
+          stopping the fling, so a row somebody has to scroll is a row whose
+          buttons sometimes do nothing. */}
+      <div className="mb-4 flex flex-wrap gap-2">
         {sections.map((section) => (
           <button
             key={section.id}

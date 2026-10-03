@@ -52,7 +52,10 @@ export default async function CartsPage({
         <Stat label="Closed" value={done.length} />
       </div>
 
-      <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4">
+      {/* Wrapped, not scrolled sideways: the tap after a fling is
+          spent stopping the fling, so a row somebody has to scroll is a
+          row whose buttons sometimes do nothing. */}
+      <div className="mb-4 flex flex-wrap gap-2">
         <Link
           href="/admin/carts"
           className={`chip ${

@@ -144,7 +144,12 @@ export default async function OrdersPage({
         </p>
       )}
 
-      <div className="no-scrollbar -mx-4 mb-3 flex gap-2 overflow-x-auto px-4">
+      {/* Wrapped rather than scrolled sideways. Seven of these do not fit a
+          phone, so reaching one meant a fling, and on iOS the tap after a
+          fling is spent stopping it rather than following the link: the
+          button "sometimes does not click". Two rows of chips cost a little
+          height and nothing else. */}
+      <div className="mb-3 flex flex-wrap gap-2">
         {TABS.map((item) => (
           <Link
             key={item.value}

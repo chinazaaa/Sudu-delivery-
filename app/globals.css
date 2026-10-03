@@ -61,7 +61,7 @@ body {
     @apply mb-1.5 block text-sm font-semibold text-muted;
   }
   .chip {
-    @apply inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-semibold transition;
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-semibold transition touch-manipulation active:scale-[0.97];
   }
   .section-title {
     @apply text-xl font-extrabold sm:text-2xl;
