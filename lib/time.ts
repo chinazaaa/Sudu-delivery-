@@ -184,3 +184,28 @@ export function placedLabel(iso: string, now: Date = new Date()): string {
   }).format(when);
   return `${date} ${clock}`;
 }
+
+/**
+ * The Monday and the Sunday of the week a day falls in, Lagos time.
+ *
+ * "This week" meant the next seven days, so on a Saturday it began on
+ * Saturday and ran into the middle of the week after: a tab called this week
+ * that never once showed the week. A week here starts on Monday, the way the
+ * schedule is written and the way anybody asking "how did this week go"
+ * means it.
+ */
+export function weekAround(day: string = lagosToday()): {
+  monday: string;
+  sunday: string;
+} {
+  // Midday UTC, so adding days cannot slip across a midnight.
+  const at = new Date(`${day}T12:00:00Z`);
+  if (Number.isNaN(at.getTime())) return { monday: day, sunday: day };
+
+  // getUTCDay is 0 for Sunday; we want 0 for Monday.
+  const since = (at.getUTCDay() + 6) % 7;
+  const asDay = (shift: number) =>
+    new Date(at.getTime() + shift * 86400000).toISOString().slice(0, 10);
+
+  return { monday: asDay(-since), sunday: asDay(6 - since) };
+}

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { containersIn } from "../lib/containers";
 import { channelOfSite, tidyChannel, tidyHandle } from "../lib/came-from";
+import { weekAround } from "../lib/time";
 import { numberOr } from "../lib/settings";
 import { test } from "node:test";
 import { groupForCounter } from "../lib/admin";
@@ -1697,4 +1698,28 @@ test("a promoter's link is only ever letters and numbers", () => {
   assert.equal(tidyHandle("  TOBI  "), "tobi");
   assert.equal(tidyHandle("!!!"), "");
   assert.equal(tidyHandle("a".repeat(40)).length, 20);
+});
+
+/*
+ * A week is Monday to Sunday.
+ *
+ * It used to be the next seven days, so on a Saturday "this week" began on
+ * Saturday and ran into the middle of the week after.
+ */
+test("a week runs Monday to Sunday, whichever day you ask on", () => {
+  // Saturday 3 October 2026.
+  assert.deepEqual(weekAround("2026-10-03"), {
+    monday: "2026-09-28",
+    sunday: "2026-10-04",
+  });
+  // The Sunday at the end of that same week, not the start of the next.
+  assert.deepEqual(weekAround("2026-10-04"), {
+    monday: "2026-09-28",
+    sunday: "2026-10-04",
+  });
+  // And the Monday after it begins a new one.
+  assert.deepEqual(weekAround("2026-10-05"), {
+    monday: "2026-10-05",
+    sunday: "2026-10-11",
+  });
 });

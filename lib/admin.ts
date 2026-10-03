@@ -652,13 +652,17 @@ export async function batchOverview(
   const rows = (batches ?? []) as Batch[];
   const { data: orders } = await db()
     .from("orders")
-    .select("id, batch_id, status, total, subtotal_food")
+    // customer_phone is what commission is worked out from: a promoter is
+    // bound to a number, not to an order. Without it every order here looked
+    // like nobody's, every run owed nothing, and the dashboard's profit had
+    // never once had commission taken off it.
+    .select("id, batch_id, status, total, subtotal_food, customer_phone")
     .in("batch_id", rows.map((b) => b.id))
     .not("status", "in", NOT_ORDERS_SQL);
 
   const all = (orders ?? []) as Pick<
     Order,
-    "id" | "batch_id" | "status" | "total" | "subtotal_food"
+    "id" | "batch_id" | "status" | "total" | "subtotal_food" | "customer_phone"
   >[];
 
   // What the counters really charged, where it has been said. Without this

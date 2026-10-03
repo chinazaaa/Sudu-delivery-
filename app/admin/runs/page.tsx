@@ -16,6 +16,7 @@ import {
   toggleScheduleRun,
 } from "../actions";
 import { runSchedule, WEEKDAYS } from "@/lib/schedule";
+import { weekAround } from "@/lib/time";
 import { placesOfRun } from "@/lib/run-places";
 import { openRestaurants } from "@/lib/menu";
 import SaveButton from "@/components/SaveButton";
@@ -95,8 +96,11 @@ export default async function RunsPage({
   // profit beside it were adding up a month. Runs are made weeks ahead on
   // purpose; this page is the one that asks what is happening now, and
   // "every run so far" is the other tab for a reason.
-  const weekEnd = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-  const today = new Date().toISOString().slice(0, 10);
+  // Monday to Sunday, the way the schedule is written and the way anybody
+  // asking how the week went means it. A rolling seven days from today meant
+  // that on a Saturday "this week" began on Saturday and ran into the middle
+  // of the week after, which is not a week anybody keeps.
+  const { monday, sunday } = weekAround();
 
   /**
    * Whether a run that has already gone still wants looking at.
@@ -112,7 +116,7 @@ export default async function RunsPage({
   if (window === "recent") {
     batches = batches.filter(
       (batch) =>
-        batch.run_date <= weekEnd && (batch.run_date >= today || unfinished(batch))
+        batch.run_date <= sunday && (batch.run_date >= monday || unfinished(batch))
     );
   }
 
@@ -147,7 +151,7 @@ export default async function RunsPage({
         detail={
           window === "all"
             ? "Every run ever made, newest first."
-            : "The next seven days, and anything behind that is not finished."
+            : "Monday to Sunday, and anything before it that is not finished."
         }
         actions={
           <>
