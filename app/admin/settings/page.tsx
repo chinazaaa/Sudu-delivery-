@@ -179,7 +179,7 @@ export default async function SettingsAdmin() {
             />
           </div>
           <div className="sm:col-span-4">
-            <SaveButton quiet className="px-4 py-2 text-sm">
+            <SaveButton className="px-4 py-2 text-sm">
               Add account
             </SaveButton>
           </div>
@@ -716,7 +716,7 @@ export default async function SettingsAdmin() {
               className="field py-2 text-sm"
             />
           </div>
-          <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
+          <SaveButton className="shrink-0 px-4 py-2 text-sm">
             Add block
           </SaveButton>
         </form>

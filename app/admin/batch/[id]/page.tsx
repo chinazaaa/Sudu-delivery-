@@ -545,7 +545,7 @@ export default async function BatchPage({
                                   )}
                                 </span>
                               )}
-                              <SaveButton quiet>Save</SaveButton>
+                              <SaveButton>Save</SaveButton>
                             </span>
                           </form>
                         ))
@@ -581,7 +581,7 @@ export default async function BatchPage({
                                 {naira(upBy)} more each than the menu says. Put the
                                 menu up to {naira(line.unitPrice + upBy)}?
                               </span>
-                              <SaveButton quiet>Put it up</SaveButton>
+                              <SaveButton>Put it up</SaveButton>
                             </form>
                           );
                         })
@@ -635,7 +635,7 @@ export default async function BatchPage({
                         />
                         <input type="hidden" name="recovered" value="" />
                       </div>
-                      <SaveButton quiet>Add</SaveButton>
+                      <SaveButton>Add</SaveButton>
                     </form>
                     )}
 
@@ -675,7 +675,7 @@ export default async function BatchPage({
                           ))}
                         </select>
                       </div>
-                      <SaveButton quiet>Move it</SaveButton>
+                      <SaveButton>Move it</SaveButton>
                     </form>
                     {windows.length === 0 && (
                       <p className="text-sm text-muted">
@@ -1039,7 +1039,7 @@ export default async function BatchPage({
                         className="field"
                       />
                     </div>
-                    <SaveButton quiet>Save costs</SaveButton>
+                    <SaveButton>Save costs</SaveButton>
                   </form>
                 </section>
 
@@ -1242,7 +1242,7 @@ export default async function BatchPage({
                           className="field"
                         />
                       </div>
-                      <SaveButton quiet className="shrink-0">Save</SaveButton>
+                      <SaveButton className="shrink-0">Save</SaveButton>
                     </div>
                   </form>
                 </section>
@@ -1280,7 +1280,7 @@ export default async function BatchPage({
                           className="field"
                         />
                       </div>
-                      <SaveButton quiet className="shrink-0">Save</SaveButton>
+                      <SaveButton className="shrink-0">Save</SaveButton>
                     </div>
                     <p className="text-xs text-muted">
                       {batch.flash_fee === null
@@ -1304,7 +1304,7 @@ export default async function BatchPage({
                         className="field"
                       />
                     </div>
-                    <SaveButton quiet className="shrink-0">Save</SaveButton>
+                    <SaveButton className="shrink-0">Save</SaveButton>
                   </form>
 
                   <div className="border-t border-black/5 pt-3">

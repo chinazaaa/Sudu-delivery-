@@ -204,7 +204,7 @@ export default async function SchedulePage() {
                       </span>
                     </div>
                   )}
-                  <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
+                  <SaveButton className="shrink-0 px-4 py-2 text-sm">
                     Save
                   </SaveButton>
                 </div>
@@ -302,7 +302,7 @@ export default async function SchedulePage() {
             </div>
           )}
           <div className="sm:col-span-5">
-            <SaveButton quiet>Add to the week</SaveButton>
+            <SaveButton>Add to the week</SaveButton>
           </div>
         </form>
 

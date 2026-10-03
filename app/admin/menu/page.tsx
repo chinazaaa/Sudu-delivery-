@@ -75,9 +75,16 @@ export default async function RestaurantsAdmin() {
         {/* The form is at the bottom, under however many restaurants there
             are, which is the right place for it and the wrong place to have
             to scroll to. */}
-        <a href="#add" className="btn-quiet mt-2 inline-block px-4 py-2 text-sm">
-          Add a restaurant
-        </a>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <a href="#add" className="btn-quiet inline-block px-4 py-2 text-sm">
+            Add a restaurant
+          </a>
+          {/* Taking one thing off sale does not need any of this page. It
+              needs a search box, and that is somewhere else. */}
+          <Link href="/admin/stock" className="btn-quiet inline-block px-4 py-2 text-sm">
+            Something sold out?
+          </Link>
+        </div>
       </section>
 
       {problem && !problem.ok && (

@@ -87,7 +87,7 @@ export default function ParcelDay({
             className="field py-2 text-sm"
           />
         </div>
-        <SaveButton quiet className="px-4 py-2 text-sm">
+        <SaveButton className="px-4 py-2 text-sm">
           {busy ? "Saving…" : agreed ? "Change it" : "Agree it"}
         </SaveButton>
       </div>

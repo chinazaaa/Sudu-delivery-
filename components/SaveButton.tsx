@@ -7,15 +7,20 @@ import { useFormStatus } from "react-dom";
  * A form that saves silently looks broken. This says what it is doing, and
  * confirms when it is done: pending while the action runs, then Saved for a
  * couple of seconds.
+ *
+ * Always the orange button, never a quiet one. There used to be a `quiet`
+ * flag for "the many small forms in the menu editor", and every form in
+ * admin had taken it, so every save button on every admin page was white on
+ * white. Saving a restaurant was indistinguishable from the borders around
+ * it, and finding it meant scrolling the page looking for the thing you had
+ * already scrolled past. The button that commits the change is the one thing
+ * on an editing page that should be impossible to miss.
  */
 export default function SaveButton({
   children = "Save",
-  quiet = false,
   className = "",
 }: {
   children?: React.ReactNode;
-  /** Secondary styling, for the many small forms in the menu editor. */
-  quiet?: boolean;
   className?: string;
 }) {
   const { pending } = useFormStatus();
@@ -35,7 +40,7 @@ export default function SaveButton({
     <button
       type="submit"
       disabled={pending}
-      className={`${quiet ? "btn-quiet" : "btn-primary"} ${className} ${
+      className={`btn-primary ${className} ${
         saved ? "!bg-mint !text-white !border-transparent" : ""
       }`}
     >

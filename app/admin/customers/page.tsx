@@ -293,7 +293,7 @@ export default async function CustomersPage({
                         </option>
                       ))}
                     </select>
-                    <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
+                    <SaveButton className="shrink-0 px-4 py-2 text-sm">
                       Save
                     </SaveButton>
                   </form>
@@ -322,7 +322,7 @@ export default async function CustomersPage({
                     placeholder="Note about this customer, only you see it"
                     className="field grow py-2 text-sm"
                   />
-                  <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
+                  <SaveButton className="shrink-0 px-4 py-2 text-sm">
                     Save
                   </SaveButton>
                 </form>

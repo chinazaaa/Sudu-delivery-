@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Thumb from "./Thumb";
 import { naira } from "@/lib/money";
 import { addToShelf, setShelfQty, useShelf } from "@/lib/skincare-cart";
@@ -58,6 +58,26 @@ export default function Shelf({
 
   useEffect(() => setTyped(picked.q), [picked.q]);
 
+  /**
+   * Searching as you type, not on Enter.
+   *
+   * Nobody remembers a product's whole name, and half of searching the shelf
+   * is typing "straw" to find out what there is. Waiting a third of a second
+   * after the typing stops keeps a word to one query rather than eight, which
+   * is what Enter was protecting, without making you know the answer before
+   * you may ask the question.
+   */
+  const waiting = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (typed.trim() === picked.q) return;
+    waiting.current = setTimeout(() => go({ q: typed.trim() }), 300);
+    return () => {
+      if (waiting.current) clearTimeout(waiting.current);
+    };
+    // `go` is rebuilt every render and would restart the clock on each one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typed, picked.q]);
+
   /** One thing changed, everything else kept, and back to the first page. */
   const go = (change: Record<string, string>) => {
     const next = new URLSearchParams(params.toString());
@@ -66,7 +86,9 @@ export default function Shelf({
       else next.set(key, value);
     }
     next.delete("page");
-    router.push(`/skincare?${next.toString()}`, { scroll: false });
+    // Replaced rather than pushed: typing six letters must not put six pages
+    // in the back button.
+    router.replace(`/skincare?${next.toString()}`, { scroll: false });
   };
 
   const pages = Math.max(1, Math.ceil(total / perPage));
@@ -93,6 +115,9 @@ export default function Shelf({
         <form
           onSubmit={(event) => {
             event.preventDefault();
+            // Enter means now, rather than leaving the wait to fire a second
+            // identical search a moment later.
+            if (waiting.current) clearTimeout(waiting.current);
             go({ q: typed.trim() });
           }}
           className="relative flex-1"

@@ -250,7 +250,7 @@ export default function OrderCard({
                 className="field grow py-2 text-sm"
               />
               <input type="hidden" name="order_id" value={order.id} />
-              <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
+              <SaveButton className="shrink-0 px-4 py-2 text-sm">
                 Save
               </SaveButton>
             </div>
@@ -468,7 +468,7 @@ export default function OrderCard({
                 className="field grow py-2 text-sm"
               />
               <input type="hidden" name="order_id" value={order.id} />
-              <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
+              <SaveButton className="shrink-0 px-4 py-2 text-sm">
                 Save
               </SaveButton>
             </div>

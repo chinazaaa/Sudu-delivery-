@@ -254,7 +254,7 @@ export default async function PromotersAdmin({
                         <input type="hidden" name="batch_id" value={run.batchId} />
                         <input type="hidden" name="amount" value={run.earned - run.paidOut} />
                         <input type="hidden" name="note" value={run.label} />
-                        <SaveButton quiet className="px-3 py-1.5 text-sm">
+                        <SaveButton className="px-3 py-1.5 text-sm">
                           Pay {naira(run.earned - run.paidOut)}
                         </SaveButton>
                       </form>
@@ -325,7 +325,7 @@ export default async function PromotersAdmin({
                         className="field py-2 text-sm"
                       />
                     </div>
-                    <SaveButton quiet className="shrink-0 px-4 py-2 text-sm">
+                    <SaveButton className="shrink-0 px-4 py-2 text-sm">
                       Record it
                     </SaveButton>
                   </form>

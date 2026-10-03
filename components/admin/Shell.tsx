@@ -16,6 +16,7 @@ const NAV = [
   { href: "/admin/schedule", label: "Schedule", icon: "🗓" },
   { href: "/admin/customers", label: "Customers", icon: "☺" },
   { href: "/admin/menu", label: "Restaurants", icon: "🍽" },
+  { href: "/admin/stock", label: "Stock", icon: "◧" },
   { href: "/admin/skincare", label: "Skincare", icon: "✿" },
   { href: "/admin/parcels", label: "Parcels", icon: "▣" },
   { href: "/admin/requests", label: "Asked for", icon: "?" },

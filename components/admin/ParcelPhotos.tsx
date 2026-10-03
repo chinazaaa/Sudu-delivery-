@@ -90,7 +90,7 @@ export default function ParcelPhotos({
                 placeholder="Sealed, handed to the porter"
                 className="field py-2 text-sm"
               />
-              <SaveButton quiet className="px-4 py-2 text-sm">
+              <SaveButton className="px-4 py-2 text-sm">
                 {busy ? "Saving…" : "Add it"}
               </SaveButton>
             </form>

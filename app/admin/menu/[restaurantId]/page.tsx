@@ -205,7 +205,7 @@ export default async function RestaurantAdmin({
             variant="banner"
           />
         </div>
-        <SaveButton quiet>Save restaurant</SaveButton>
+        <SaveButton>Save restaurant</SaveButton>
       </form>
 
       <section className="card space-y-3">
@@ -238,7 +238,7 @@ export default async function RestaurantAdmin({
                     size={Math.max(category.name.length, 6)}
                     className="min-w-0 rounded bg-transparent px-1 py-0.5 font-semibold outline-none focus:bg-black/[0.04] focus:ring-2 focus:ring-brand/30"
                   />
-                  <SaveButton quiet className="px-1.5 py-0.5 text-xs">
+                  <SaveButton className="px-1.5 py-0.5 text-xs">
                     ✓
                   </SaveButton>
                 </form>
@@ -304,7 +304,7 @@ export default async function RestaurantAdmin({
                   Separate with commas. Add +amount or -amount for a price difference.
                 </p>
               </div>
-              <SaveButton quiet>Apply to every item in that category</SaveButton>
+              <SaveButton>Apply to every item in that category</SaveButton>
             </form>
           </details>
         )}
@@ -321,7 +321,7 @@ export default async function RestaurantAdmin({
             <label className="label">Add category</label>
             <input name="name" required placeholder="Pizzas" className="field" />
           </div>
-          <SaveButton quiet className="shrink-0">Add</SaveButton>
+          <SaveButton className="shrink-0">Add</SaveButton>
         </form>
       </section>
 
@@ -497,7 +497,7 @@ export default async function RestaurantAdmin({
                       className="field mt-2 text-sm"
                     />
                   </div>
-                  <SaveButton quiet>Save item</SaveButton>
+                  <SaveButton>Save item</SaveButton>
                 </form>
 
                 <div className="space-y-3 rounded-xl bg-black/[0.03] p-3">
@@ -552,7 +552,7 @@ export default async function RestaurantAdmin({
                                 <input type="checkbox" name="available" defaultChecked={option.available} />
                                 On
                               </label>
-                              <SaveButton quiet className="px-2 py-1 text-xs">
+                              <SaveButton className="px-2 py-1 text-xs">
                                 Save
                               </SaveButton>
                             </form>
@@ -611,7 +611,7 @@ export default async function RestaurantAdmin({
                       <input type="checkbox" name="required" defaultChecked />
                       Required
                     </label>
-                    <SaveButton quiet>Add group</SaveButton>
+                    <SaveButton>Add group</SaveButton>
                   </form>
                 </div>
 
@@ -655,7 +655,7 @@ Premium | Meat Lovers | 17500
 Favourites | BBQ Chicken | 12000
 Sides | Garlic Bread | 3000`}
             />
-            <SaveButton quiet>Import these</SaveButton>
+            <SaveButton>Import these</SaveButton>
           </form>
         </details>
 

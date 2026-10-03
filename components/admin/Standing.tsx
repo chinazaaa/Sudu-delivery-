@@ -199,7 +199,7 @@ export default function StandingCosts({
                   Running
                 </label>
 
-                <SaveButton className="btn-quiet px-3 py-2 text-sm">Save</SaveButton>
+                <SaveButton className="px-3 py-2 text-sm">Save</SaveButton>
               </form>
 
               <form action={remove} className="mt-1">

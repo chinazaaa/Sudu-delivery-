@@ -377,7 +377,7 @@ export default async function PromoterPage({
                   ) : (
                     <form action={confirmPayout}>
                       <input type="hidden" name="payout_id" value={payout.id} />
-                      <SaveButton quiet className="px-3 py-1 text-xs">
+                      <SaveButton className="px-3 py-1 text-xs">
                         It landed
                       </SaveButton>
                     </form>

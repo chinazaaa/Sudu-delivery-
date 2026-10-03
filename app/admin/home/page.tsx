@@ -150,7 +150,7 @@ export default async function HomeAdmin() {
                   <input type="checkbox" name="active" defaultChecked={slide.active} />
                   Showing
                 </label>
-                <SaveButton quiet className="px-4 py-2 text-sm">Save</SaveButton>
+                <SaveButton className="px-4 py-2 text-sm">Save</SaveButton>
               </div>
             </form>
 
