@@ -22,7 +22,7 @@ import { openRestaurants } from "@/lib/menu";
 import SaveButton from "@/components/SaveButton";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
-import { clockLabel, runDateLabel } from "@/lib/time";
+import { clockLabel, lagosToday, runDateLabel } from "@/lib/time";
 import ActionButton from "@/components/admin/ActionButton";
 
 export const dynamic = "force-dynamic";
@@ -119,6 +119,22 @@ export default async function RunsPage({
         batch.run_date <= sunday && (batch.run_date >= monday || unfinished(batch))
     );
   }
+
+  // Today leads, whatever time it is.
+  //
+  // The list ran oldest first, so a run being driven this afternoon sat
+  // below everything already finished, under a heading reading "Still to
+  // come". The run somebody is working is the reason this page is open, and
+  // on a phone it was a scroll past the morning's history to reach it.
+  //
+  // Only today is lifted. Everything else keeps the order it had, because
+  // the rest of the page is a record of a week and a record reads in the
+  // order it happened.
+  const todayIs = lagosToday();
+  batches = [
+    ...batches.filter((batch) => batch.run_date === todayIs),
+    ...batches.filter((batch) => batch.run_date !== todayIs),
+  ];
 
   const live = batches.filter((batch) => batch.status !== "cancelled");
   // The nearest run a customer could actually reach. Runs exist weeks out so
@@ -348,15 +364,35 @@ export default async function RunsPage({
 
       <ul className="space-y-3">
         {batches.map((batch, index) => {
-          // One line between what has happened and what is still coming.
+          // One line between what has happened and what is still coming,
+          // and one above today where today has been lifted out of the
+          // order. Both read off the row before rather than off the clock,
+          // because today's run is no longer in time order with the rest.
+          const isToday = batch.run_date === todayIs;
           const past = new Date(batch.cut_off_at).getTime() <= Date.now();
           const firstUpcoming =
+            !isToday &&
             !past &&
             index > 0 &&
+            batches[index - 1].run_date !== todayIs &&
             new Date(batches[index - 1].cut_off_at).getTime() <= Date.now();
+          // The first row after the lifted ones, so the rest of the week is
+          // not read as more of today.
+          const firstRest =
+            !isToday && index > 0 && batches[index - 1].run_date === todayIs;
           const open = batch.status === "open";
           return (
             <li key={batch.id}>
+              {index === 0 && isToday && (
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brand">
+                  Today
+                </p>
+              )}
+              {firstRest && (
+                <p className="mb-2 mt-4 text-xs font-bold uppercase tracking-wide text-muted">
+                  The rest of the week
+                </p>
+              )}
               {firstUpcoming && (
                 <p className="mb-2 mt-4 text-xs font-bold uppercase tracking-wide text-muted">
                   Still to come

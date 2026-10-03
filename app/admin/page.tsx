@@ -82,6 +82,28 @@ export default async function AdminHome() {
   const after = open
     .filter((batch) => batch.run_date > tomorrow)
     .sort((a, b) => a.run_date.localeCompare(b.run_date))[0];
+
+  // The run somebody is actually working today, for the button at the top.
+  //
+  // It was always reachable, under the stat tiles and the unpaid list, in a
+  // card called "Today and tomorrow": a scroll on a phone, every time, for
+  // the one page that gets opened most. Today's run leads, then tomorrow's,
+  // then whatever is next, so the button goes somewhere useful even on a
+  // quiet day. A same day car is somebody's own order rather than the run
+  // being driven, so it is not what this points at.
+  const working =
+    open
+      .filter((batch) => batch.kind !== "same_day" && batch.kind !== "parcel")
+      .sort((a, b) => a.run_date.localeCompare(b.run_date))
+      .find((batch) => batch.run_date >= lagosToday()) ?? null;
+  const workingLabel =
+    working === null
+      ? ""
+      : working.run_date === lagosToday()
+        ? "Today's run"
+        : working.run_date === tomorrow
+          ? "Tomorrow's run"
+          : `${runDateLabel(working.run_date)} run`;
   // Jobs with no run behind them: somebody paid for an errand nobody drove a
   // car for. Counted in the same window as the runs, because a profit that
   // leaves out a fortnight's errands is not the profit.
@@ -101,9 +123,24 @@ export default async function AdminHome() {
         title="Dashboard"
         detail="The last four weeks, and what needs doing today."
         actions={
-          <Link href="/admin/runs?new=1" className="btn-primary px-4 py-2.5 text-sm">
-            New run
-          </Link>
+          <span className="flex flex-wrap items-center gap-2">
+            {/* The thing reached for most days, in the place it is looked
+                for, rather than down the page under everything else. */}
+            {working && (
+              <Link
+                href={`/admin/batch/${working.id}`}
+                className="btn-primary px-4 py-2.5 text-sm"
+              >
+                Open {workingLabel.toLowerCase()}
+              </Link>
+            )}
+            <Link
+              href="/admin/runs?new=1"
+              className={`${working ? "btn-quiet" : "btn-primary"} px-4 py-2.5 text-sm`}
+            >
+              New run
+            </Link>
+          </span>
         }
       />
 
