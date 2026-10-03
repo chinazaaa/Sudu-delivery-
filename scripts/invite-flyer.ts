@@ -1,31 +1,27 @@
 /**
- * The flyer for the bring-a-friend offer.
+ * The bring-a-friend offer, as an image to send on WhatsApp.
  *
- * One number does the work here, and it is not the discount: it is "no
- * limit". A flat "₦1,000 off when you refer a friend" is read as a coupon
- * and forgotten. A ladder that visibly keeps going is read as an amount
- * somebody can decide how big it gets, and that is the thing worth printing.
+ * Not a wall flyer: there is no square to scan, because the message it
+ * arrives attached to already carries the link, and a QR code on a picture
+ * somebody is holding in their hand is a thing to photograph with the phone
+ * they are reading it on. The image's whole job is to make the offer
+ * understood in the two seconds before a thumb moves on.
  *
- * So the page is the ladder. The hook names the trade in six words, the
- * ladder shows it compounding, and the line under it says the one condition
- * that makes it real: they have to pay. Everything else is small.
+ * The number doing the work is not the thousand, it is "no limit". A flat
+ * "₦1,000 off when you refer a friend" is read as a coupon and forgotten; a
+ * ladder that visibly keeps going is read as an amount somebody decides the
+ * size of. So the page is the ladder.
  *
- * The square goes to WhatsApp rather than to the shop, for the same reason
- * the hostel flyer does: the point is a number we can talk to. Its opener
- * names the offer, so the morning after a wall goes up the inbox says which
- * paper is working without anything being set up to measure it.
+ * Two shapes, because WhatsApp crops differently in the two places this gets
+ * sent. Chat is 4:5, which previews whole without being tapped. Status is
+ * 9:16, which fills the screen.
  *
  *   npx tsx scripts/invite-flyer.ts
  *   npx tsx scripts/invite-flyer.ts --back 1500 --per 2
  *   npx tsx scripts/invite-flyer.ts --hook "Feed your friends." --hook2 "Get paid for it."
  */
 import { mkdirSync, writeFileSync } from "node:fs";
-import QRCode from "qrcode";
 import sharp from "sharp";
-
-/** A4 at 200dpi: big enough to print sharply, small enough to send. */
-const W = 1654;
-const H = 2339;
 
 const ORANGE = "#ff5a1f";
 const DEEP = "#c2400e";
@@ -43,19 +39,15 @@ const valueOf = (flag: string, fallback: string): string => {
   return said === "" || said.startsWith("--") ? fallback : said;
 };
 
+const naira = (amount: number): string => `₦${amount.toLocaleString("en-NG")}`;
+
 /** What comes back, and how many paying friends it takes to earn it. */
 const back = Math.max(100, Number(valueOf("--back", "1000")) || 1000);
 const per = Math.max(1, Number(valueOf("--per", "2")) || 2);
 
-const phone = valueOf("--phone", "2349032175147").replace(/\D/g, "");
 const site = valueOf("--site", "sudu.store");
-
 const hookTop = valueOf("--hook", `Bring ${per} friends.`);
 const hookEnd = valueOf("--hook2", `Get ${naira(back)} back.`);
-
-function naira(amount: number): string {
-  return `₦${amount.toLocaleString("en-NG")}`;
-}
 
 const safe = (s: string) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -83,145 +75,168 @@ const mark = (x: number, y: number, size: number) => `
   </g>`;
 
 /**
- * What the chat opens with.
- *
- * Written as the person rather than as us: WhatsApp puts it in their box for
- * them to send, and anything that reads like a shop talking gets deleted
- * before it is sent. Then there is no message and no number.
+ * Four rungs: three reads as a list, five reads as a table, and the last one
+ * is far enough out that nothing about it reads as a cap.
  */
-const opener = `Hi Sudu, I want to bring my friends and get the ${naira(back)} back.`;
+const rungs = [per, per * 2, per * 3, per * 10].map((friends) => ({
+  friends,
+  gets: (friends / per) * back,
+}));
 
-async function flyer(): Promise<void> {
-  const link = `https://wa.me/${phone}?text=${encodeURIComponent(opener)}`;
+/**
+ * The page as a stack of blocks, each saying how tall it is before anything
+ * is drawn.
+ *
+ * Written this way because the first cut used fixed offsets and the picture
+ * came out with the headline printed through the wordmark and the last two
+ * lines through each other. A phone picture is one glance: anything touching
+ * anything else is not untidy, it is unreadable. So each block reports a
+ * height, the leftover space is shared out as equal gaps, and nothing can
+ * land on anything else however the wording changes.
+ */
+type Block = { height: number; draw: (y: number) => string[] };
+
+async function draw(W: number, H: number, name: string): Promise<void> {
   const mid = W / 2;
+  const tall = H / W > 1.5;
 
-  /*
-   * The ladder, which is the whole argument. Four rungs, because three reads
-   * as a list and five reads as a table, and the last one is far enough out
-   * to make the point that nothing stops it.
-   */
-  const rungs = [per, per * 2, per * 3, per * 10].map((friends) => ({
-    friends,
-    gets: (friends / per) * back,
-  }));
+  const edge = tall ? 120 : 84;
+  const side = tall ? 86 : 72;
+  const big = tall ? 100 : 78;
+  const rowH = tall ? 138 : 110;
 
-  /*
-   * The footer is measured up from the paper's edge and the square takes
-   * what is left, rather than the square being a number and the footer
-   * hoping. On the last flyer a line moved three times and printed the final
-   * sentence off the bottom of the page, which on a wall is a flyer with a
-   * sentence missing and no way to tell from the file.
-   */
-  const lastAt = H - 108;
-  const siteAt = H - 172;
-
-  const ladderTop = 760;
-  const rowH = 128;
-  const ladderHeight = rungs.length * rowH;
-  const noteAt = ladderTop + ladderHeight + 96;
-  const plateTop = noteAt + 70;
-
-  const roomForPlate = siteAt - 86 - plateTop;
-  // 300 is what sits under the square: its baseline, the two lines saying
-  // what it is for, and air under the last of them.
-  const QR = Math.max(380, Math.min(560, roomForPlate - 300 - 70));
-  const qrTop = plateTop + 76;
-  const plateHeight = QR + 300;
-  const scanAt = qrTop + QR + 96;
-
-  const square = await QRCode.toString(link, {
-    type: "svg",
-    margin: 0,
-    width: QR,
-    color: { dark: INK, light: "#0000" },
-  });
-
-  const parts: string[] = [
-    `<rect width="${W}" height="${H}" fill="${SHELL}"/>`,
-
-    mark(mid - 56, 112, 112),
-    text(mid, 312, "Sudu", 72, "800", INK),
-    text(mid, 368, "Food, market and errands, to your block", 36, "normal", MUTED),
-
-    // The hook, as big as it goes, over two lines.
-    text(mid, 520, hookTop, 96, "800", INK),
-    text(mid, 628, hookEnd, 96, "800", DEEP),
-
-    text(
-      mid,
-      704,
-      "Every time, however many times you do it.",
-      40,
-      "normal",
-      MUTED
-    ),
-  ];
-
-  // The ladder. Friends on the left, money on the right, one rule between.
-  rungs.forEach((rung, index) => {
-    const y = ladderTop + index * rowH;
-    const last = index === rungs.length - 1;
-    parts.push(
-      `<rect x="150" y="${y}" width="${W - 300}" height="${rowH - 16}" rx="28" fill="${
-        last ? ORANGE : PAPER
-      }"/>`,
+  const header: Block = {
+    height: 104 + 92 + 46,
+    draw: (y) => [
+      mark(mid - 52, y, 104),
+      text(mid, y + 104 + 70, "Sudu", tall ? 62 : 54, "800", INK),
       text(
-        210,
-        y + 76,
-        `${rung.friends} friends`,
-        52,
-        "700",
-        last ? PAPER : INK,
-        "start"
+        mid,
+        y + 104 + 70 + 44,
+        "Food, market and errands, to your block",
+        tall ? 31 : 27,
+        "normal",
+        MUTED
       ),
+    ],
+  };
+
+  const hook: Block = {
+    height: big * 2 + 18 + 62,
+    draw: (y) => [
+      text(mid, y + big, hookTop, big, "800", INK),
+      text(mid, y + big * 2 + 18, hookEnd, big, "800", DEEP),
       text(
-        W - 210,
-        y + 76,
-        `${naira(rung.gets)} back`,
-        56,
-        "800",
-        last ? PAPER : DEEP,
-        "end"
-      )
-    );
-  });
+        mid,
+        y + big * 2 + 18 + 58,
+        "Every time. There is no limit.",
+        tall ? 38 : 33,
+        "700",
+        MUTED
+      ),
+    ],
+  };
 
-  parts.push(
-    text(mid, noteAt, "It does not stop there. There is no limit.", 42, "700", INK),
+  const ladder: Block = {
+    height: rungs.length * rowH,
+    draw: (y) =>
+      rungs.flatMap((rung, index) => {
+        const top = y + index * rowH;
+        const last = index === rungs.length - 1;
+        return [
+          `<rect x="${side}" y="${top}" width="${W - side * 2}" height="${rowH - 16}" rx="24" fill="${
+            last ? ORANGE : PAPER
+          }"/>`,
+          text(
+            side + 42,
+            top + (rowH - 16) / 2 + (tall ? 17 : 15),
+            `${rung.friends} friends`,
+            tall ? 48 : 42,
+            "700",
+            last ? PAPER : INK,
+            "start"
+          ),
+          text(
+            W - side - 42,
+            top + (rowH - 16) / 2 + (tall ? 18 : 16),
+            `${naira(rung.gets)} back`,
+            tall ? 52 : 45,
+            "800",
+            last ? PAPER : DEEP,
+            "end"
+          ),
+        ];
+      }),
+  };
 
-    // The one condition, said plainly rather than in small print, because a
-    // promise somebody finds out about later is worse than one they read.
-    text(
-      mid,
-      noteAt + 58,
-      "They have to order and pay. It comes back on your own order.",
-      34,
-      "normal",
-      MUTED
-    ),
+  // The condition, at a size somebody reads, rather than as small print.
+  // Terms discovered afterwards are worse than terms read up front.
+  const terms: Block = {
+    height: 90,
+    draw: (y) => [
+      text(mid, y + 38, "They have to order and pay.", tall ? 40 : 35, "700", INK),
+      text(
+        mid,
+        y + 84,
+        "It comes back on your own order.",
+        tall ? 35 : 31,
+        "normal",
+        MUTED
+      ),
+    ],
+  };
 
-    // The square, on white, so it reads off a printed page.
-    `<rect x="${mid - QR / 2 - 70}" y="${plateTop}" width="${QR + 140}" height="${plateHeight}" rx="48" fill="${PAPER}"/>`,
-    `<g transform="translate(${mid - QR / 2} ${qrTop})">${square}</g>`,
-    text(mid, scanAt, "Scan to start", 50, "800", INK),
-    text(mid, scanAt + 56, "It opens a chat with us on WhatsApp", 32, "normal", MUTED),
+  /*
+   * What to actually do, because an offer nobody can act on is a poster.
+   *
+   * One line, and no word about how we know who sent them. That is said in
+   * the WhatsApp message this picture is attached to, where it can be put in
+   * somebody's own words and changed without redrawing anything. Printing it
+   * here would also plant a name in the order note, which is a box that
+   * exists for something else.
+   */
+  const how: Block = {
+    height: 56,
+    draw: (y) => [
+      text(mid, y + 48, `Send them ${site}`, tall ? 48 : 42, "800", DEEP),
+    ],
+  };
 
-    text(mid, siteAt, site, 46, "800", DEEP),
-    text(mid, lastAt, "Pan-Atlantic University", 32, "normal", MUTED)
-  );
+  const foot: Block = {
+    height: 34,
+    draw: (y) => [
+      text(mid, y + 28, "Pan-Atlantic University", tall ? 30 : 26, "normal", MUTED),
+    ],
+  };
+
+  const blocks = [header, hook, ladder, terms, how, foot];
+  const used = blocks.reduce((sum, one) => sum + one.height, 0);
+  const gap = Math.max(10, (H - edge * 2 - used) / (blocks.length - 1));
+
+  const parts: string[] = [`<rect width="${W}" height="${H}" fill="${SHELL}"/>`];
+  let y = edge;
+  for (const block of blocks) {
+    parts.push(...block.draw(y));
+    y += block.height + gap;
+  }
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${parts.join(
     ""
   )}</svg>`;
 
   mkdirSync(OUT, { recursive: true });
-  const file = `${OUT}/invite-friends.png`;
-  await sharp(Buffer.from(svg)).png().toFile(file);
-  writeFileSync(`${OUT}/invite-friends.svg`, svg);
-  console.log(`${file}  ${W}x${H}  ->  ${link}`);
+  await sharp(Buffer.from(svg)).png().toFile(`${OUT}/${name}.png`);
+  writeFileSync(`${OUT}/${name}.svg`, svg);
+  console.log(`${OUT}/${name}.png  ${W}x${H}  gap ${Math.round(gap)}`);
 }
 
-flyer().catch((problem) => {
+async function run(): Promise<void> {
+  // Chat previews whole at 4:5; status fills the screen at 9:16.
+  await draw(1080, 1350, "invite-friends");
+  await draw(1080, 1920, "invite-friends-status");
+}
+
+run().catch((problem) => {
   console.error(problem);
   process.exit(1);
 });
