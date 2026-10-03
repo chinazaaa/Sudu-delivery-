@@ -175,11 +175,13 @@ async function draw(W: number, H: number, name: string): Promise<void> {
     height: 90,
     draw: (y) => [
       text(mid, y + 38, "They have to order and pay.", tall ? 40 : 35, "700", INK),
+      // Named as the order they are holding rather than as "your own order",
+      // which answers "whose?" and leaves "which one?" hanging.
       text(
         mid,
         y + 84,
-        "It comes back on your own order.",
-        tall ? 35 : 31,
+        "Money back from the order you placed today.",
+        tall ? 35 : 29,
         "normal",
         MUTED
       ),
