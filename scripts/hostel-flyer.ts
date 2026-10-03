@@ -168,7 +168,10 @@ async function flyer(hostel: string): Promise<void> {
   const siteAt = H - 170;
 
   const roomForPlate = siteAt - 90 - plateTop;
-  const QR = Math.max(420, Math.min(WANTED_QR, roomForPlate - 250 - 80));
+  // 310 is what sits under the square: eighty to its baseline, the two
+  // lines saying what it is for, and air under the last of them. At 250 the
+  // second line printed over the edge of the white and out onto the paper.
+  const QR = Math.max(420, Math.min(WANTED_QR, roomForPlate - 310 - 80));
 
   // Drawn at the size it is printed at, so the modules land on whole pixels
   // and a phone reads it from across a corridor rather than from a foot away.
@@ -180,7 +183,7 @@ async function flyer(hostel: string): Promise<void> {
   });
 
   const qrTop = plateTop + 80;
-  const plateHeight = QR + 250;
+  const plateHeight = QR + 310;
   const scanAt = qrTop + QR + 100;
 
   const parts: string[] = [
