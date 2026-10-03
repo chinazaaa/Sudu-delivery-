@@ -150,7 +150,10 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   // Typed-in figures first, and only for the lines somebody has actually
   // typed: the rest stay at the menu price, so a half-finished reconcile
   // still leaves an honest number rather than a wrong one.
-  const counterLines = groupForCounter(lines.filter((l) => paidIds.has(l.order_id)));
+  const counterLines = groupForCounter(
+    lines.filter((l) => paidIds.has(l.order_id)),
+    batch.stop_order ?? null
+  );
   const everyLine = counterLines.flatMap((place) => place.lines);
   const reconciled = everyLine.filter((line) => spentOn.has(line.key));
 
@@ -171,7 +174,10 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
 
   return {
     batch,
-    counter: groupForCounter(lines.filter((l) => paidIds.has(l.order_id))).map(
+    counter: groupForCounter(
+      lines.filter((l) => paidIds.has(l.order_id)),
+      batch.stop_order ?? null
+    ).map(
       (place) => ({
         ...place,
         lines: place.lines.map((line) => ({
@@ -302,7 +308,13 @@ function bagsFor(
  * Orders collapsed by restaurant into totals. This is what she reads aloud at
  * the counter, so it is one line per distinct item, not one per order.
  */
-export function groupForCounter(lines: OrderLine[]): CounterGroup[] {
+export function groupForCounter(
+  lines: OrderLine[],
+  /** The order this run is actually driven in, when somebody has arranged
+   *  it. Anything not named keeps its place at the end, alphabetically, so a
+   *  restaurant added after the arranging still appears. */
+  stopOrder: string[] | null = null
+): CounterGroup[] {
   const byRestaurant = new Map<string, Map<string, CounterLine>>();
 
   for (const line of lines) {
@@ -327,13 +339,43 @@ export function groupForCounter(lines: OrderLine[]): CounterGroup[] {
     byRestaurant.set(line.restaurant, items);
   }
 
-  return [...byRestaurant.entries()].map(([restaurant, items]) => {
+  const groups = [...byRestaurant.entries()].map(([restaurant, items]) => {
     const lines = [...items.values()].sort((a, b) => b.qty - a.qty);
     return {
       restaurant,
       lines,
       expectedFoodTotal: lines.reduce((t, l) => t + l.qty * l.unitPrice, 0),
     };
+  });
+
+  return sortStops(groups, stopOrder);
+}
+
+/**
+ * The stops in the order they are driven.
+ *
+ * Without an arrangement this is alphabetical, which is at least steady:
+ * before, it came out in whatever order the orders happened to arrive, so the
+ * same run read differently after every new order.
+ *
+ * With one, named stops lead in the order given and anything unnamed follows
+ * alphabetically. A restaurant that joins the run after somebody arranged it
+ * therefore appears at the end rather than disappearing, which is the only
+ * safe way to be wrong here: a missing stop is food nobody buys.
+ */
+export function sortStops<T extends { restaurant: string }>(
+  groups: T[],
+  stopOrder: string[] | null
+): T[] {
+  const place = new Map((stopOrder ?? []).map((name, index) => [name, index]));
+  const last = place.size;
+
+  return [...groups].sort((a, b) => {
+    const left = place.get(a.restaurant) ?? last;
+    const right = place.get(b.restaurant) ?? last;
+    return left === right
+      ? a.restaurant.localeCompare(b.restaurant)
+      : left - right;
   });
 }
 

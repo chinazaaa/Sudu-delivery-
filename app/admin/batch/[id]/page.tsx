@@ -52,7 +52,9 @@ import {
   setRunCosts,
   updateRun,
   deleteRun,
+  moveStop,
 } from "../../actions";
+import Reorder from "@/components/admin/Reorder";
 
 export const dynamic = "force-dynamic";
 
@@ -366,6 +368,15 @@ export default async function BatchPage({
                   </p>
                 )}
 
+                {counter.length > 1 && !shopped && (
+                  <p className="rounded-2xl bg-black/[0.03] px-4 py-3 text-sm text-muted">
+                    Put the stops in the order you are driving them. Which one
+                    is nearest depends on where you set off from and which
+                    branch you are using, so it is yours to say rather than
+                    ours to guess.
+                  </p>
+                )}
+
                 {counter.map((group, index) => (
                   <section key={group.restaurant} className="card">
                     <div className="flex items-baseline justify-between gap-2">
@@ -376,6 +387,26 @@ export default async function BatchPage({
                       <span className="shrink-0 font-bold">
                         {naira(group.expectedFoodTotal)}
                       </span>
+                      {/* Only worth arranging when there is more than one,
+                          and not once the food is bought: the route is a
+                          plan, and a plan after the fact is clutter. */}
+                      {counter.length > 1 && !shopped && (
+                        <Reorder
+                          action={moveStop}
+                          field="restaurant"
+                          id={group.restaurant}
+                          first={index === 0}
+                          last={index === counter.length - 1}
+                          label={group.restaurant}
+                          extra={{
+                            batch_id: batch.id,
+                            // The order on screen, so the arrow moves what
+                            // the eye is looking at even before anybody has
+                            // arranged this run.
+                            stops: counter.map((one) => one.restaurant).join("\n"),
+                          }}
+                        />
+                      )}
                     </div>
                     <div className="mt-2">
                       <Checklist

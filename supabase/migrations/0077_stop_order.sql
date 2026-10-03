@@ -1,0 +1,12 @@
+-- The order the stops are actually driven in, for one run.
+--
+-- The counter list numbered its stops one, two, three in whatever order the
+-- orders happened to arrive, which is not a route. Which restaurant is
+-- nearest depends on where the driver is starting from and which branch of
+-- each chain the run is using, so it changes from run to run and cannot be
+-- a property of the restaurant.
+--
+-- Restaurant names rather than ids: the counter list groups by name, and a
+-- name that is no longer on the run simply falls out of the ordering. Null
+-- means nobody has arranged this run, and it falls back to alphabetical.
+alter table batches add column if not exists stop_order text[];

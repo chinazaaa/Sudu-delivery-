@@ -2979,6 +2979,48 @@ export async function moveRestaurant(form: FormData): Promise<void> {
   );
 }
 
+/**
+ * Move one stop up or down the route for one run.
+ *
+ * Which restaurant is nearest depends on where the driver starts from and
+ * which branch of each chain this particular run is using, so it is a fact
+ * about the run and not about the restaurant. Coming from Bogije, Chicken
+ * Republic is first and Yin Yang is a detour west; coming from campus it is
+ * the other way round. The list numbered its stops in whatever order the
+ * orders arrived, which is not a route and changed every time somebody
+ * ordered.
+ *
+ * The whole arrangement is written back each time rather than two rows
+ * swapped, because until somebody has arranged this run there is no stored
+ * order to swap within: the first press has to write the list it can see.
+ */
+export async function moveStop(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const batchId = String(form.get("batch_id"));
+  const stop = String(form.get("restaurant") ?? "").trim();
+  const up = form.get("direction") === "up";
+  if (!batchId || stop === "") return;
+
+  // The order on screen right now, which is what the arrow is pointing at.
+  const shown = String(form.get("stops") ?? "")
+    .split("\n")
+    .map((one) => one.trim())
+    .filter((one) => one !== "");
+
+  const at = shown.indexOf(stop);
+  if (at === -1) return;
+
+  const to = up ? at - 1 : at + 1;
+  if (to < 0 || to >= shown.length) return;
+
+  const next = [...shown];
+  [next[at], next[to]] = [next[to], next[at]];
+
+  await db().from("batches").update({ stop_order: next }).eq("id", batchId);
+  revalidatePath("/admin", "layout");
+}
+
 /** Reorder the home page slider. */
 export async function moveSlide(form: FormData): Promise<void> {
   await assertAdmin();

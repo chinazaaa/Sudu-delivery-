@@ -115,6 +115,9 @@ export type Batch = {
   cost_note: string;
   /** When the books were closed on it. Null while there is still work. */
   settled_at: string | null;
+  /** The order the stops are driven in on this run, by restaurant name.
+   *  Null until somebody arranges it, which falls back to alphabetical. */
+  stop_order?: string[] | null;
 };
 
 /** "cancelled" is only ever an order nobody paid for: a test, a duplicate,

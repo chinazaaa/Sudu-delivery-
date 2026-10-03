@@ -16,6 +16,7 @@ export default function Reorder({
   first,
   last,
   label,
+  extra,
 }: {
   /** The server action that moves one row. */
   action: (form: FormData) => Promise<void>;
@@ -26,6 +27,9 @@ export default function Reorder({
   last: boolean;
   /** Read out to anyone using a screen reader. */
   label: string;
+  /** Anything else the action needs to know, such as which run this is and
+   *  the order currently on screen. Sent with every press. */
+  extra?: Record<string, string>;
 }) {
   const [pending, start] = useTransition();
 
@@ -33,6 +37,7 @@ export default function Reorder({
     const form = new FormData();
     form.set(field, id);
     form.set("direction", direction);
+    for (const [key, value] of Object.entries(extra ?? {})) form.set(key, value);
     start(() => {
       void action(form);
     });
