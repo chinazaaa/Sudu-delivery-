@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/supabase";
 import { isSignedIn } from "@/lib/admin-auth";
 import { lagosToday } from "@/lib/time";
+import { tidyKind } from "@/lib/other-money";
 
 const money = (said: FormDataEntryValue | null): number => {
   const digits = String(said ?? "").replace(/[^\d]/g, "");
@@ -36,6 +37,7 @@ export async function addOtherMoney(form: FormData): Promise<void> {
     happened_on,
     what,
     who: String(form.get("who") ?? "").trim().slice(0, 80),
+    kind: tidyKind(String(form.get("kind") ?? "")),
     phone: String(form.get("phone") ?? "").trim().slice(0, 20),
     how_many: howMany,
     fee,

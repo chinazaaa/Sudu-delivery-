@@ -50,3 +50,9 @@ alter table other_money
 -- of an errand that is actually ours: the goods are bought and sold on, the
 -- trip is the work.
 alter table other_money add column if not exists fee int not null default 0 check (fee >= 0);
+
+-- What sort of cost it is: hosting, bank charges, data, transport. Without
+-- it a month of outgoings is one undifferentiated list and the only question
+-- worth asking of it, "what is actually eating the money", cannot be.
+alter table other_money add column if not exists kind text not null default '';
+create index if not exists other_money_kind_idx on other_money (kind) where kind <> '';

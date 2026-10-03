@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import SaveButton from "@/components/SaveButton";
+import { COST_KINDS } from "@/lib/other-money";
 
 /**
  * A line of money that did not come through a run, in or out.
@@ -105,6 +106,29 @@ export default function MoneyForm({
               What they paid to have it brought.
             </p>
           </div>
+        </div>
+      )}
+
+      {out && (
+        <div>
+          <label className="label" htmlFor="kind">
+            What kind of cost
+          </label>
+          <input
+            id="kind"
+            name="kind"
+            list="cost-kinds"
+            placeholder="Hosting, bank charges, data…"
+            className="field"
+          />
+          <datalist id="cost-kinds">
+            {COST_KINDS.map((one) => (
+              <option key={one} value={one} />
+            ))}
+          </datalist>
+          <p className="mt-1 text-xs text-muted">
+            So a month of outgoings groups itself. Type your own if none fit.
+          </p>
         </div>
       )}
 

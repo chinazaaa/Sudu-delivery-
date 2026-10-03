@@ -4,7 +4,7 @@ import Stat from "@/components/admin/Stat";
 import { naira } from "@/lib/money";
 import { lagosToday } from "@/lib/time";
 import { profitBetween } from "@/lib/profit";
-import { madeOn } from "@/lib/other-money";
+import { costsByKind, madeOn } from "@/lib/other-money";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +67,9 @@ export default async function ProfitPage({
   const to = typed ? day(asked.to, today) : chosen.to;
 
   const sums = await profitBetween(from, to);
+  // Hosting, bank charges, data: what is actually eating the money, which a
+  // single "paid out" figure cannot answer.
+  const costs = costsByKind(sums.aside);
 
   return (
     <div>
@@ -175,6 +178,35 @@ export default async function ProfitPage({
           </div>
         </dl>
       </section>
+
+      {costs.length > 0 && (
+        <section className="card mb-4 space-y-2">
+          <h2 className="font-bold">What the shop paid for</h2>
+          <p className="text-sm text-muted">
+            Everything that left, outside of a run&apos;s own fuel and driver.
+          </p>
+          <ul className="divide-y divide-black/5 text-sm">
+            {costs.map((one) => (
+              <li key={one.kind} className="flex justify-between gap-3 py-2">
+                <span>
+                  {one.kind}
+                  <span className="text-muted">
+                    {" "}
+                    · {one.count} {one.count === 1 ? "line" : "lines"}
+                  </span>
+                </span>
+                <span className="font-semibold text-brand">
+                  −{naira(one.spent)}
+                </span>
+              </li>
+            ))}
+            <li className="flex justify-between gap-3 border-t border-black/10 pt-2 font-extrabold">
+              <span>All of it</span>
+              <span className="text-brand">−{naira(sums.otherOut)}</span>
+            </li>
+          </ul>
+        </section>
+      )}
 
       <section className="card space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">

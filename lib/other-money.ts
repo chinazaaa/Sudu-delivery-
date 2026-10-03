@@ -17,6 +17,9 @@ export type OtherMoney = {
   phone: string;
   /** How many of it. One, unless somebody says otherwise. */
   how_many: number;
+  /** What sort of cost it is: hosting, bank charges, data. Empty on money
+   *  coming in, where the thing itself is the description. */
+  kind: string;
   /** What she paid to have it brought, inside `took` but counted apart:
    *  the goods are bought and sold on, the trip is the work. */
   fee: number;
@@ -120,4 +123,49 @@ export async function errandsBy(
   } catch {
     return new Map();
   }
+}
+
+/**
+ * The kinds of cost a shop like this actually has.
+ *
+ * Offered rather than enforced: the box takes anything, these are only what
+ * comes up first, so a month of outgoings groups itself instead of being
+ * one list nobody can read a pattern out of.
+ */
+export const COST_KINDS = [
+  "Hosting",
+  "Bank charges",
+  "Data and airtime",
+  "Transport",
+  "Packaging",
+  "Marketing",
+  "Equipment",
+  "Wages",
+  "Other",
+] as const;
+
+/** Tidied so two spellings of the same thing do not become two columns. */
+export function tidyKind(said: string): string {
+  const word = String(said ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
+  if (word === "") return "";
+  const known = (COST_KINDS as readonly string[]).find(
+    (one) => one.toLowerCase() === word.toLowerCase()
+  );
+  return known ?? word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+/** What was paid out in this window, by kind, biggest first. */
+export function costsByKind(
+  rows: OtherMoney[]
+): { kind: string; spent: number; count: number }[] {
+  const out = new Map<string, { kind: string; spent: number; count: number }>();
+  for (const one of rows) {
+    if (one.spent <= 0) continue;
+    const kind = (one.kind ?? "").trim() || (one.took > 0 ? "Buying for somebody" : "Other");
+    const seen = out.get(kind) ?? { kind, spent: 0, count: 0 };
+    seen.spent += one.spent;
+    seen.count += 1;
+    out.set(kind, seen);
+  }
+  return [...out.values()].sort((a, b) => b.spent - a.spent);
 }
