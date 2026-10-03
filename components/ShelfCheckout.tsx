@@ -182,6 +182,17 @@ export default function ShelfCheckout({
                 >
                   +
                 </button>
+                {/* The same thing the food cart was missing: pressing minus
+                    until the row goes is not a delete button to anybody who
+                    has not been told. */}
+                <button
+                  type="button"
+                  aria-label={`Remove ${line.name}`}
+                  onClick={() => setShelfQty(line.id, 0)}
+                  className="text-xs font-semibold text-muted underline hover:text-ink"
+                >
+                  Remove
+                </button>
               </span>
             </li>
           ))}

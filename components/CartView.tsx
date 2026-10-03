@@ -710,6 +710,19 @@ export default function CartView({
                   </span>
                 </div>
 
+                {/* Taking something out had no button of its own: the only way
+                    was to press minus until the row went, and somebody who
+                    did not already know that reported that the cart would not
+                    let her delete anything. A word that says what it does. */}
+                <button
+                  type="button"
+                  onClick={() => setQty(line.key, 0)}
+                  className="mt-2 text-xs font-semibold text-muted underline hover:text-ink"
+                  aria-label={`Remove ${line.name} from the cart`}
+                >
+                  Remove
+                </button>
+
                 {people.length > 0 && !inParty && (
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     <span className="text-xs font-semibold text-muted">Whose?</span>

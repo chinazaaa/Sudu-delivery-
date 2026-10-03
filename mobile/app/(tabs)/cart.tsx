@@ -396,6 +396,28 @@ export default function Cart() {
                   </Pressable>
                 </View>
 
+                {/* Taking something out had no button of its own: the only
+                    way was to press minus until the row went, which somebody
+                    who does not already know reads as a cart that will not
+                    let them delete anything. */}
+                <Pressable
+                  onPress={() => cart.setQty(line.key, 0)}
+                  hitSlop={8}
+                  accessibilityLabel={`Remove ${line.name} from the cart`}
+                  style={{ marginTop: 8, alignSelf: "flex-start" }}
+                >
+                  <Text
+                    style={{
+                      color: T.muted,
+                      fontWeight: "700",
+                      fontSize: 12,
+                      textDecorationLine: "underline",
+                    }}
+                  >
+                    Remove
+                  </Text>
+                </Pressable>
+
                 {friends.length > 0 && (
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
                     <Text style={{ color: T.muted, fontWeight: "700", alignSelf: "center" }}>

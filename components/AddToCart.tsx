@@ -84,12 +84,32 @@ export default function AddToCart({
   const shownQty = already ? already.qty : qty;
   function step(by: number) {
     if (already) {
-      // Never to nothing: taking the last one out is the cart's job, where
-      // you can see what you are removing.
+      // Never to nothing by accident: the last one goes through Remove, which
+      // says what it is about to do.
       setCartQty(already.key, Math.max(1, already.qty + by));
       return;
     }
     setQty((q) => Math.max(1, q + by));
+  }
+
+  /**
+   * Take it out of the cart from here.
+   *
+   * This page is where somebody who wants rid of something goes, because the
+   * cart's picture and name link to it. It had nothing to take it out with:
+   * the stepper stops at one and said "use − and + to change how many", which
+   * at one is a button that does nothing. Worse on something that has since
+   * sold out, where the stepper is dead altogether and there was no way out
+   * of the cart from this page at all.
+   *
+   * So it is never gated on the item being available. Removing a thing the
+   * kitchen has run out of is exactly when somebody needs it most.
+   */
+  const inCart = editing ?? already;
+  function drop() {
+    if (!inCart) return;
+    setCartQty(inCart.key, 0);
+    router.push("/cart");
   }
 
   function toggle(groupId: string, optionId: string, maxSelect: number) {
@@ -228,13 +248,25 @@ export default function AddToCart({
         </button>
       </div>
 
+      {/* Whatever is in the cart can be taken out from here, including the
+          thing that has sold out since it went in. */}
+      {inCart && (
+        <button
+          type="button"
+          onClick={drop}
+          className="btn-quiet w-full py-2.5 text-sm"
+        >
+          Remove from cart
+        </button>
+      )}
+
       {/* Said here, beside the button, rather than at the foot of the page
           where nobody on a phone was seeing it. */}
       {already ? (
         <p className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-xl bg-mint/10 px-3 py-2 text-sm font-semibold text-mint">
           <span>
             {already.qty} in the cart{active ? ` for ${active}` : ""}. Use − and +
-            to change how many
+            to change how many, or Remove to take it out
             {people.length > 0 ? ", or pick another name below" : ""}.
           </span>
           <Link href="/cart" className="underline">
