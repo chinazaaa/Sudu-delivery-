@@ -43,5 +43,9 @@ export default function robots(): MetadataRoute.Robots {
       ...READERS.map((userAgent) => ({ userAgent, allow: "/", disallow: PRIVATE })),
     ],
     sitemap: `${process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store"}/sitemap.xml`,
+    // Not a standard robots field, and harmless where it is not understood.
+    // A reader that does understand it is pointed straight at the plain-text
+    // answer rather than left to infer the shop from a menu page.
+    host: `${process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store"}`,
   };
 }
