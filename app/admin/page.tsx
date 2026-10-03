@@ -87,15 +87,31 @@ export default async function AdminHome() {
   //
   // It was always reachable, under the stat tiles and the unpaid list, in a
   // card called "Today and tomorrow": a scroll on a phone, every time, for
-  // the one page that gets opened most. Today's run leads, then tomorrow's,
-  // then whatever is next, so the button goes somewhere useful even on a
-  // quiet day. A same day car is somebody's own order rather than the run
-  // being driven, so it is not what this points at.
+  // the one page that gets opened most.
+  //
+  // Open is the wrong test for it. A run stops being open at its cut-off,
+  // and the cut-off is the start of the work rather than the end: closed is
+  // precisely the state a run is in while somebody is at the counter buying
+  // it. Looking only at open runs sent the button past today's closed run to
+  // tomorrow's, which is the one day it could not help with.
+  //
+  // So: today's run while it is still going, then the next one that is still
+  // to come, so the button goes somewhere useful on a quiet day too.
+  // Delivered is done and cancelled is not going, and neither is work. A same
+  // day car is somebody's own order rather than the run being driven.
+  const drivable = batches
+    .filter(
+      (batch) =>
+        batch.kind !== "same_day" &&
+        batch.kind !== "parcel" &&
+        batch.status !== "cancelled" &&
+        batch.status !== "delivered"
+    )
+    .sort((a, b) => a.run_date.localeCompare(b.run_date));
   const working =
-    open
-      .filter((batch) => batch.kind !== "same_day" && batch.kind !== "parcel")
-      .sort((a, b) => a.run_date.localeCompare(b.run_date))
-      .find((batch) => batch.run_date >= lagosToday()) ?? null;
+    drivable.find((batch) => batch.run_date === lagosToday()) ??
+    drivable.find((batch) => batch.run_date > lagosToday()) ??
+    null;
   const workingLabel =
     working === null
       ? ""
