@@ -20,6 +20,7 @@ const NAV = [
   { href: "/admin/parcels", label: "Parcels", icon: "▣" },
   { href: "/admin/requests", label: "Asked for", icon: "?" },
   { href: "/admin/money", label: "Other money", icon: "₦" },
+  { href: "/admin/profit", label: "Profit", icon: "↗" },
   { href: "/admin/home", label: "Home page", icon: "▣" },
   { href: "/admin/occasions", label: "Collections", icon: "◉" },
   { href: "/admin/subscriptions", label: "Repeats", icon: "↻" },

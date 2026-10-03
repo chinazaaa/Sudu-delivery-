@@ -210,6 +210,20 @@ export default async function AdminHome() {
           {/* Paid for something with no run behind it? It goes here rather
               than as an invented order on a run nobody is driving. */}
           <Link
+            href="/admin/profit"
+            className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-black/10 px-4 py-3 text-sm font-semibold hover:border-ink/30"
+          >
+            <span>
+              Profit
+              <span className="font-normal text-muted">
+                {" "}
+                · any month, any range, with the working shown
+              </span>
+            </span>
+            <span className="text-muted">Open</span>
+          </Link>
+
+          <Link
             href="/admin/money"
             className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-black/10 px-4 py-3 text-sm font-semibold hover:border-ink/30"
           >

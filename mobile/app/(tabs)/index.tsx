@@ -38,6 +38,9 @@ import { T } from "@/lib/theme";
 export default function Home() {
   const router = useRouter();
   const [shop, setShop] = useState<Shop | null>(null);
+  /** Whether the shop itself has answered, as opposed to the copy kept on
+   *  the phone having been drawn while we wait. */
+  const [settled, setSettled] = useState(false);
   const [error, setError] = useState("");
   // Only a pull sets this. The first load has its own spinner in the middle
   // of the page, and turning the pull-to-refresh one on as well put two
@@ -71,6 +74,10 @@ export default function Home() {
       setError(problem instanceof Error ? problem.message : "Could not reach the shop.");
     } finally {
       if (fresh) setPulling(false);
+      // Whatever came of it, the shop has now been asked. Until then the
+      // page cannot honestly say there is no run going, only that it does
+      // not know yet, and the two look very different on a phone.
+      setSettled(true);
     }
 
     try {
@@ -360,7 +367,16 @@ export default function Home() {
             that is left to say is when the food turns up. The old strip said
             "afternoon batch closes 2:45pm, in 1h 01m": four facts about how
             the shop works and none about dinner. */}
-        {arriving !== "" && (
+        {/* Drawn as soon as there is a menu to draw it from, even while the
+            arrival line is still unknown.
+
+            The copy kept on the phone is up to a day old, and a run whose cut
+            off has passed is stripped out of it, so a cached menu routinely
+            has no live run and this card was simply absent. Then the real
+            menu landed and it appeared, shoving everything below it down the
+            screen: the banner that turns up after the page has finished
+            loading. The card holds its place and fills itself in. */}
+        {(arriving !== "" || (shop !== null && !settled)) && (
           <Pressable
             /* It used to go to the cart, which is where somebody goes when
                they have already chosen. This is the top of the page: they
@@ -379,8 +395,15 @@ export default function Home() {
           >
             <View style={{ flex: 1 }}>
               <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink }}>
-                Order now, get it {arriving}
+                {arriving !== "" ? `Order now, get it ${arriving}` : "Order now"}
               </Text>
+              {/* Holds the line the arrival sentence will take, so filling it
+                  in does not move the page under somebody's thumb. */}
+              {arriving === "" && (
+                <Text style={{ color: T.ink, opacity: 0.45, marginTop: 4 }}>
+                  Working out when…
+                </Text>
+              )}
               {/* The deadline, between the promise and the alternative,
                   exactly where the website puts it. Only a run has a queue
                   to make: a car of its own is three hours from whenever it
