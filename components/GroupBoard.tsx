@@ -8,6 +8,7 @@ import { enterGroup, readGroup } from "./GroupLink";
 import Sheet from "./Sheet";
 import SendLink from "./SendLink";
 import { countItems, useCart } from "@/lib/cart";
+import { canReach } from "@/lib/reachable";
 import { naira } from "@/lib/money";
 import type { Stage } from "@/lib/group-view";
 
@@ -183,7 +184,12 @@ export default function GroupBoard({
     };
     tick();
     const clock = setInterval(tick, 1000);
-    const poll = setInterval(() => router.refresh(), 8000);
+    // Not while the phone cannot reach us. This one polls every eight
+    // seconds, so on a bad connection it is the fastest way to an error
+    // screen over a group everybody is still ordering into.
+    const poll = setInterval(() => {
+      if (canReach()) router.refresh();
+    }, 8000);
     return () => {
       clearInterval(clock);
       clearInterval(poll);
