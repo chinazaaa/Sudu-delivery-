@@ -1,6 +1,5 @@
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
-import SaveButton from "@/components/SaveButton";
 import { naira } from "@/lib/money";
 import { lagosToday } from "@/lib/time";
 import {
@@ -11,6 +10,7 @@ import {
   WINDOW_DAYS,
 } from "@/lib/other-money";
 import { addOtherMoney, removeOtherMoney } from "./actions";
+import MoneyForm from "@/components/admin/MoneyForm";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +34,7 @@ export default async function OtherMoneyPage() {
     <div>
       <PageHeader
         title="Other money"
-        detail="Jobs with no run behind them. These count towards the profit on the dashboard."
+        detail="Money in and out with no run behind it: errands, sales settled by hand, and what the shop pays for. It all counts towards the profit."
         backHref="/admin"
         backLabel="Dashboard"
       />
@@ -57,129 +57,7 @@ export default async function OtherMoneyPage() {
         />
       </div>
 
-      <form action={addOtherMoney} className="card mb-4 space-y-3">
-        <h2 className="font-bold">Add one</h2>
-
-        <div>
-          <label className="label" htmlFor="what">
-            What was it
-          </label>
-          <input
-            id="what"
-            name="what"
-            required
-            placeholder="Found an adapter in Sangotedo and dropped it off"
-            className="field"
-          />
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label" htmlFor="how_many">
-                How many
-              </label>
-              <input
-                id="how_many"
-                name="how_many"
-                inputMode="numeric"
-                defaultValue="1"
-                className="field"
-              />
-            </div>
-            <div>
-              <label className="label" htmlFor="took">
-                Price each
-              </label>
-              <input
-                id="took"
-                name="took"
-                inputMode="numeric"
-                placeholder="20000"
-                className="field"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label" htmlFor="fee">
-                Delivery
-              </label>
-              <input
-                id="fee"
-                name="fee"
-                inputMode="numeric"
-                placeholder="0"
-                className="field"
-              />
-              <p className="mt-1 text-xs text-muted">
-                What they paid to have it brought.
-              </p>
-            </div>
-            <div>
-            <label className="label" htmlFor="spent">
-              Cost, in all
-            </label>
-            <input
-              id="spent"
-              name="spent"
-              inputMode="numeric"
-              placeholder="14000"
-              className="field"
-            />
-            <p className="mt-1 text-xs text-muted">
-              The whole amount you handed over, not the price of one: the
-              thing itself, the bike, whatever it took. Leave it empty and all
-              of it counts as profit.
-            </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="label" htmlFor="who">
-              Who for
-            </label>
-            <input
-              id="who"
-              name="who"
-              placeholder="A name, if it is worth remembering"
-              className="field"
-            />
-            <input
-              name="phone"
-              inputMode="tel"
-              placeholder="Their number, to tie it to their card"
-              className="field mt-2"
-            />
-          </div>
-          <div>
-            <label className="label" htmlFor="happened_on">
-              When
-            </label>
-            <input
-              id="happened_on"
-              name="happened_on"
-              type="date"
-              defaultValue={lagosToday()}
-              className="field"
-            />
-            <p className="mt-1 text-xs text-muted">
-              The day the work happened, not the day you are writing it down.
-            </p>
-          </div>
-        </div>
-
-        <div>
-          <label className="label" htmlFor="note">
-            Anything else
-          </label>
-          <input id="note" name="note" className="field" />
-        </div>
-
-        <SaveButton>Add it</SaveButton>
-      </form>
+      <MoneyForm action={addOtherMoney} today={lagosToday()} />
 
       {rows.length === 0 ? (
         <p className="card text-sm text-muted">
@@ -209,9 +87,13 @@ export default async function OtherMoneyPage() {
                     {naira(madeOn(one))}
                   </p>
                   <p className="text-xs text-muted">
-                    {naira(one.took)} in
-                    {one.fee > 0 ? ` (${naira(one.fee)} delivery)` : ""}
-                    {one.spent > 0 ? ` · ${naira(one.spent)} out` : ""}
+                    {/* Nothing came in, so this is something the shop paid
+                        for rather than a job that went badly. */}
+                    {one.took === 0
+                      ? `${naira(one.spent)} paid out`
+                      : `${naira(one.took)} in` +
+                        (one.fee > 0 ? ` (${naira(one.fee)} delivery)` : "") +
+                        (one.spent > 0 ? ` · ${naira(one.spent)} out` : "")}
                   </p>
                 </div>
               </div>
