@@ -202,14 +202,12 @@ async function draw(W: number, H: number, name: string): Promise<void> {
     ],
   };
 
-  const foot: Block = {
-    height: 34,
-    draw: (y) => [
-      text(mid, y + 28, "Pan-Atlantic University", tall ? 30 : 26, "normal", MUTED),
-    ],
-  };
-
-  const blocks = [header, hook, ladder, terms, how, foot];
+  /*
+   * No line naming the university. Everybody this is sent to is already a
+   * student here, and a picture read in one glance cannot afford a sentence
+   * telling its reader something they know about themselves.
+   */
+  const blocks = [header, hook, ladder, terms, how];
   const used = blocks.reduce((sum, one) => sum + one.height, 0);
   const gap = Math.max(10, (H - edge * 2 - used) / (blocks.length - 1));
 
