@@ -1301,7 +1301,12 @@ export async function updateMenuItem(form: FormData): Promise<void> {
 
   const fields = {
     price_food: Math.round(price),
-    available: form.get("available") === "on",
+    // Priced at nothing means off, whatever the tick says. The menu prints a
+    // zero rather than hiding it, so an item on sale at ₦0 is free food on
+    // the website. The database refuses this outright; coercing it here means
+    // a save that would have been refused saves, with the item switched off,
+    // rather than throwing an error at somebody mid-edit.
+    available: form.get("available") === "on" && Math.round(price) > 0,
     name: String(form.get("name") ?? "").trim() || undefined,
     description: String(form.get("description") ?? "").trim(),
     // A new photo wins; otherwise whatever link is in the box stays.
@@ -2866,18 +2871,61 @@ export async function applyGroupToCategory(form: FormData): Promise<void> {
   revalidatePath("/", "layout");
 }
 
-/** One tap on and off, for the times a branch has run out mid-week. */
+/**
+ * One tap on and off, for the times a branch has run out mid-week.
+ *
+ * Never on for something with no price. The menu does not hide a zero, it
+ * prints it, so an item switched on before anybody priced it is free food on
+ * the website that anybody can order. The restaurant page has always said
+ * "set a price before this can go on sale" in a tooltip and nothing enforced
+ * it, which held until a stray tap put a ₦0 Cinnamon Roll on sale.
+ *
+ * Switching off is never refused, whatever the price. Taking something down
+ * must always work.
+ */
 export async function toggleItemAvailable(form: FormData): Promise<void> {
   await assertAdmin();
 
-  await db()
-    .from("menu_items")
-    .update({ available: form.get("available") === "true" })
-    .eq("id", String(form.get("item_id")));
+  const id = String(form.get("item_id"));
+  const wanted = form.get("available") === "true";
+
+  if (wanted) {
+    const { data } = await db()
+      .from("menu_items")
+      .select("price_food")
+      .eq("id", id)
+      .maybeSingle();
+    if (!data || Number(data.price_food ?? 0) <= 0) return;
+  }
+
+  await db().from("menu_items").update({ available: wanted }).eq("id", id);
 
   revalidatePath("/admin", "layout");
   updateTag("menu");
   revalidatePath("/", "layout");
+}
+
+/**
+ * The same switch, from the stock page, which says what it did afterwards.
+ *
+ * A page built for speed has no room for an "are you sure" on every tap, and
+ * a confirmation people tap through teaches nothing anyway. The real problem is not
+ * being asked twice, it is a tap you cannot undo because you cannot remember
+ * what you hit. So this hands the item back in the address: the page then
+ * names what changed, which way it went, and offers to put it back.
+ *
+ * The search goes back too, or switching one thing off would drop somebody
+ * into an empty box and lose the list they were working through.
+ */
+export async function setItemStock(form: FormData): Promise<void> {
+  await toggleItemAvailable(form);
+
+  const asked = String(form.get("q") ?? "").trim();
+  const back = new URLSearchParams();
+  if (asked !== "") back.set("q", asked);
+  back.set("changed", String(form.get("item_id")));
+
+  redirect(`/admin/stock?${back.toString()}`);
 }
 
 /**

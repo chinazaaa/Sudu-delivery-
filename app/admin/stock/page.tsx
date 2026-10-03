@@ -6,7 +6,7 @@ import Thumb from "@/components/Thumb";
 import Empty from "@/components/Empty";
 import { db } from "@/lib/supabase";
 import { naira } from "@/lib/money";
-import { toggleItemAvailable } from "../actions";
+import { setItemStock } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -44,9 +44,11 @@ type Row = {
 export default async function StockPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; changed?: string }>;
 }) {
-  const asked = ((await searchParams).q ?? "").trim();
+  const said = await searchParams;
+  const asked = (said.q ?? "").trim();
+  const changed = (said.changed ?? "").trim();
 
   const picked = db()
     .from("menu_items")
@@ -68,6 +70,17 @@ export default async function StockPage({
 
   const rows = (data ?? []) as unknown as Row[];
 
+  // The thing the last tap changed, read by name rather than remembered, so
+  // the page can say what happened to it and offer to put it back.
+  const { data: justDone } = changed
+    ? await db()
+        .from("menu_items")
+        .select("id, name, available, price_food, restaurant_id, restaurants!inner(name)")
+        .eq("id", changed)
+        .maybeSingle()
+    : { data: null };
+  const last = justDone as unknown as Row | null;
+
   const { count: offNow } = await db()
     .from("menu_items")
     .select("id", { count: "exact", head: true })
@@ -81,6 +94,41 @@ export default async function StockPage({
         backHref="/admin/menu"
         backLabel="Restaurants"
       />
+
+      {/* What the last tap did, in words, with the way back. There is no
+          "are you sure" on this page on purpose: it is built to be fast, and
+          a confirmation people tap through teaches nothing. Being told what
+          you changed, and being able to undo it, is the thing that was
+          actually missing. */}
+      {last && (
+        <div
+          className={`card flex flex-wrap items-center gap-3 border-l-4 ${
+            last.available ? "border-l-mint" : "border-l-amber-500"
+          }`}
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold">
+              {last.available ? "Put back on sale" : "Taken off sale"}
+            </span>
+            <span className="block truncate text-sm text-muted">
+              {last.name} · {last.restaurants?.name ?? ""}
+            </span>
+          </span>
+
+          <form action={setItemStock} className="shrink-0">
+            <input type="hidden" name="item_id" value={last.id} />
+            <input type="hidden" name="q" value={asked} />
+            <input
+              type="hidden"
+              name="available"
+              value={last.available ? "false" : "true"}
+            />
+            <ActionButton busy="…" done="✓" className="btn-quiet px-4 py-2 text-sm">
+              Undo
+            </ActionButton>
+          </form>
+        </div>
+      )}
 
       <div className="card space-y-3">
         <StockSearch start={asked} />
@@ -139,8 +187,9 @@ export default async function StockPage({
               Edit
             </Link>
 
-            <form action={toggleItemAvailable} className="shrink-0">
+            <form action={setItemStock} className="shrink-0">
               <input type="hidden" name="item_id" value={item.id} />
+              <input type="hidden" name="q" value={asked} />
               <input
                 type="hidden"
                 name="available"
@@ -149,7 +198,17 @@ export default async function StockPage({
               <ActionButton
                 busy="…"
                 done="✓"
-                className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                // Nothing with no price may go on sale: the menu prints a
+                // zero rather than hiding it, so that is free food on the
+                // website. Said here rather than left as a tap that appears
+                // to do nothing.
+                disabled={!item.available && item.price_food <= 0}
+                title={
+                  !item.available && item.price_food <= 0
+                    ? "Give it a price before it can go on sale"
+                    : undefined
+                }
+                className={`rounded-full px-3 py-1.5 text-xs font-bold transition disabled:opacity-40 ${
                   item.available ? "bg-mint/15 text-mint" : "bg-black/[0.06] text-muted"
                 }`}
               >
