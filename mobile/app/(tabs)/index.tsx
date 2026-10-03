@@ -25,6 +25,7 @@ import { mine } from "@/lib/store";
 import CutOff from "@/components/CutOff";
 import OfferNudge from "@/components/OfferNudge";
 import Thumb from "@/components/Thumb";
+import AskUs from "@/components/AskUs";
 import { T } from "@/lib/theme";
 
 /**
@@ -210,6 +211,94 @@ export default function Home() {
           <RefreshControl refreshing={pulling} onRefresh={() => load(true)} tintColor={T.brand} />
         }
       >
+        {/* First, and above every banner.
+
+            It sat under the ribbon, the last order and the order card, so on
+            a phone it was most of a screen down and tapping it put the
+            keyboard straight over it: you could not see what you were
+            typing. Those three arrive at their own speed as well, so the box
+            moved under your thumb as you reached for it. */}
+        {shop && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search chicken, pizza, wings…"
+              placeholderTextColor={T.muted}
+              returnKeyType="search"
+              autoCorrect={false}
+              style={{
+                flex: 1,
+                backgroundColor: T.paper,
+                borderRadius: T.radius,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                fontSize: 16,
+                color: T.ink,
+              }}
+            />
+            {query !== "" && (
+              <Pressable onPress={() => setQuery("")} style={{ paddingHorizontal: 8 }}>
+                <Text style={{ color: T.muted, fontWeight: "800" }}>Clear</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        {found !== null && (
+          <View style={{ gap: 10 }}>
+            <Text style={{ fontWeight: "800", fontSize: 16, color: T.ink }}>
+              {found.length} result{found.length === 1 ? "" : "s"}
+            </Text>
+            {found.length === 0 && (
+              <View style={{ gap: 10 }}>
+                <Text style={{ color: T.muted }}>
+                  Nothing matches that. Try a shorter word, like chicken or
+                  pizza.
+                </Text>
+                <AskUs q={query} />
+              </View>
+            )}
+            {found.map(({ item, restaurant }) => (
+              <Pressable
+                key={item.id}
+                // Straight to the dish on its own menu, where the sheet asks
+                // whatever the meal asks before anything joins the cart.
+                onPress={() => router.push(`/r/${restaurant.id}?item=${item.id}`)}
+                style={{
+                  flexDirection: "row",
+                  gap: 12,
+                  backgroundColor: T.paper,
+                  borderRadius: T.radius,
+                  padding: 12,
+                  opacity: item.available ? 1 : 0.5,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: "800", color: T.ink }}>{item.name}</Text>
+                  <Text style={{ color: T.muted, marginTop: 2 }}>{restaurant.name}</Text>
+                  <Text style={{ fontWeight: "800", marginTop: 6, color: T.ink }}>
+                    {item.groups.length > 0 ? "from " : ""}
+                    {naira(item.price)}
+                  </Text>
+                  {!item.available && (
+                    <Text style={{ color: T.muted, fontWeight: "700", marginTop: 2 }}>
+                      Sold out today
+                    </Text>
+                  )}
+                </View>
+                {/* Always something. A row with no picture beside a row with
+                    one reads as a broken image rather than an item nobody
+                    has photographed, and on the Sudu Shop shelf almost
+                    nothing is photographed. */}
+                <View style={{ width: 92 }}>
+                  <Thumb src={item.imageUrl} name={item.name} radius={12} ratio={1} />
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
         {/* Whatever is true today, written in admin, the same line the
             website carries along its top. The app had no way to announce
             anything at all: a new shelf opened and the only people who knew
@@ -325,82 +414,7 @@ export default function Home() {
 
         {!shop && !error && <ActivityIndicator color={T.brand} style={{ marginTop: 40 }} />}
 
-        {shop && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search chicken, pizza, wings…"
-              placeholderTextColor={T.muted}
-              returnKeyType="search"
-              autoCorrect={false}
-              style={{
-                flex: 1,
-                backgroundColor: T.paper,
-                borderRadius: T.radius,
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-                fontSize: 16,
-                color: T.ink,
-              }}
-            />
-            {query !== "" && (
-              <Pressable onPress={() => setQuery("")} style={{ paddingHorizontal: 8 }}>
-                <Text style={{ color: T.muted, fontWeight: "800" }}>Clear</Text>
-              </Pressable>
-            )}
-          </View>
-        )}
 
-        {found !== null && (
-          <View style={{ gap: 10 }}>
-            <Text style={{ fontWeight: "800", fontSize: 16, color: T.ink }}>
-              {found.length} result{found.length === 1 ? "" : "s"}
-            </Text>
-            {found.length === 0 && (
-              <Text style={{ color: T.muted }}>
-                Nothing matches that. Try a shorter word, like chicken or pizza.
-              </Text>
-            )}
-            {found.map(({ item, restaurant }) => (
-              <Pressable
-                key={item.id}
-                // Straight to the dish on its own menu, where the sheet asks
-                // whatever the meal asks before anything joins the cart.
-                onPress={() => router.push(`/r/${restaurant.id}?item=${item.id}`)}
-                style={{
-                  flexDirection: "row",
-                  gap: 12,
-                  backgroundColor: T.paper,
-                  borderRadius: T.radius,
-                  padding: 12,
-                  opacity: item.available ? 1 : 0.5,
-                }}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "800", color: T.ink }}>{item.name}</Text>
-                  <Text style={{ color: T.muted, marginTop: 2 }}>{restaurant.name}</Text>
-                  <Text style={{ fontWeight: "800", marginTop: 6, color: T.ink }}>
-                    {item.groups.length > 0 ? "from " : ""}
-                    {naira(item.price)}
-                  </Text>
-                  {!item.available && (
-                    <Text style={{ color: T.muted, fontWeight: "700", marginTop: 2 }}>
-                      Sold out today
-                    </Text>
-                  )}
-                </View>
-                {/* Always something. A row with no picture beside a row with
-                    one reads as a broken image rather than an item nobody
-                    has photographed, and on the Sudu Shop shelf almost
-                    nothing is photographed. */}
-                <View style={{ width: 92 }}>
-                  <Thumb src={item.imageUrl} name={item.name} radius={12} ratio={1} />
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        )}
 
         {found === null &&
           shop?.menu.map((place) => (

@@ -12,6 +12,7 @@ import { useRouter } from "expo-router";
 
 import { api, naira, type Product } from "@/lib/api";
 import Thumb from "@/components/Thumb";
+import AskUs from "@/components/AskUs";
 import { T } from "@/lib/theme";
 
 /**
@@ -150,7 +151,15 @@ export default function ProductsScreen() {
           if (!busy && rows.length < total) setPage((was) => was + 1);
         }}
         ListFooterComponent={
-          busy ? <ActivityIndicator color={T.brand} style={{ marginTop: 12 }} /> : null
+          busy ? (
+            <ActivityIndicator color={T.brand} style={{ marginTop: 12 }} />
+          ) : total === 0 ? (
+            // The one moment somebody has said exactly what they want and
+            // been told we have not got it.
+            <View style={{ paddingHorizontal: 16 }}>
+              <AskUs q={query} />
+            </View>
+          ) : null
         }
         renderItem={({ item }) => (
           <Pressable

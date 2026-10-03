@@ -548,6 +548,16 @@ export const api = {
    *  reading the order: the link is what somebody was given. */
   rate: (orderId: string, rating: number, feedback: string) =>
     post<{ ok: boolean }>("/rate", { orderId, rating, feedback }),
+
+  /** Asking us to find something the shop does not carry. */
+  ask: (said: {
+    wanted: string;
+    budget: string;
+    name: string;
+    phone: string;
+    hostel: string;
+    note: string;
+  }) => post<{ ok: boolean; id: string }>("/ask", said),
   /** What this number already has on a run, so adding to it tops up the
    *  delivery rather than paying it twice. */
   adding: (batchId: string, phone: string, token?: string | null) =>

@@ -14,13 +14,17 @@ import {
   valueLadderFor,
 } from "@/lib/api";
 import { cart, cartTotal, countItems, party, people, useStored, type Line } from "@/lib/store";
+import { useShop } from "@/lib/use-shop";
 import { T } from "@/lib/theme";
 
 /** What is in the bag, and what it will cost to bring it. */
 export default function Cart() {
   const router = useRouter();
   const [lines] = useStored(cart.read, []);
-  const [shop] = useStored(() => api.shop().catch(() => null), null);
+  // From the copy on the phone first, so the delivery fee is a number the
+  // moment the cart opens rather than "at checkout" for as long as the
+  // network takes and then a figure that appears from nowhere.
+  const shop = useShop();
   const [friends] = useStored(people.read, []);
   // In a car, this cart is their part of it: it is finalised into the group
   // rather than checked out, and nobody has a delivery fee until it closes.
