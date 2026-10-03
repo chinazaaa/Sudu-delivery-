@@ -380,6 +380,12 @@ export default async function AdminHome() {
                 )}
                 {batches
                   .filter((batch) => batch.paidCount > 0)
+                  // Newest first. The list came in run order, so four weeks
+                  // of runs put the middle of September at the top and
+                  // yesterday off the bottom of the card, which is the one
+                  // anybody opening a dashboard is looking for.
+                  .slice()
+                  .sort((one, two) => two.run_date.localeCompare(one.run_date))
                   .map((batch) => (
                     <li key={batch.id}>
                       <Link
