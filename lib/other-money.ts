@@ -133,6 +133,7 @@ export async function errandsBy(
  * one list nobody can read a pattern out of.
  */
 export const COST_KINDS = [
+  "Software",
   "Hosting",
   "Bank charges",
   "Data and airtime",

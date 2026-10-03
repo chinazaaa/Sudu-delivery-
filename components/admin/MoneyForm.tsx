@@ -118,7 +118,7 @@ export default function MoneyForm({
             id="kind"
             name="kind"
             list="cost-kinds"
-            placeholder="Hosting, bank charges, data…"
+            placeholder="Software, hosting, bank charges…"
             className="field"
           />
           <datalist id="cost-kinds">
