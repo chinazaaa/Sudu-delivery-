@@ -104,7 +104,9 @@ export default function ItemSheet({
                 <span className="font-bold">{group.name}</span>
                 <span className="text-xs font-semibold text-muted">
                   {group.required ? "Pick one" : "Optional"}
-                  {group.maxSelect > 1 && ` · up to ${group.maxSelect}`}
+                  {group.maxSelect > 1 &&
+                    group.maxSelect < group.options.length &&
+                    ` · up to ${group.maxSelect}`}
                 </span>
               </legend>
 

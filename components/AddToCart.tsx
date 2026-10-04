@@ -167,7 +167,9 @@ export default function AddToCart({
             <span className="font-semibold">{group.name}</span>
             <span className="text-xs text-muted">
               {group.required ? "Required" : "Optional"}
-              {group.maxSelect > 1 && ` · up to ${group.maxSelect}`}
+              {group.maxSelect > 1 &&
+                group.maxSelect < group.options.length &&
+                ` · up to ${group.maxSelect}`}
             </span>
           </legend>
 
