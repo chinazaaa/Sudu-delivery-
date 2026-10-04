@@ -1,6 +1,12 @@
 import { db } from "./supabase";
 import { isPaid, NOT_ORDERS_SQL } from "./orders";
 import { otherMoneyTotals, type OtherMoney } from "./other-money";
+// The same two sums the dashboard and the run list use. This page had its
+// own copies, and they drifted: food nobody typed into a sheet was counted
+// as having cost nothing, so a half-reconciled run read as a large saving
+// and this page claimed a profit the dashboard never agreed with.
+import { commissionFor, overMenu } from "./admin";
+import type { Batch, Order } from "./types";
 
 /**
  * What the shop made between two days, and where every naira of it went.
@@ -77,18 +83,20 @@ export async function profitBetween(from: string, to: string): Promise<Profit> {
   const ids = batches.map((one) => String(one.id));
   const { data: orderRows } = await db()
     .from("orders")
-    .select("id, batch_id, status, total, subtotal_food, customer_phone")
+    .select("id, batch_id, status, total, subtotal_food, customer_phone, box_id")
     .in("batch_id", ids)
     .not("status", "in", NOT_ORDERS_SQL);
 
-  const orders = (orderRows ?? []) as {
-    id: string;
-    batch_id: string;
-    status: string;
-    total: number;
-    subtotal_food: number;
-    customer_phone: string;
-  }[];
+  const orders = (orderRows ?? []) as Pick<
+    Order,
+    | "id"
+    | "batch_id"
+    | "status"
+    | "total"
+    | "subtotal_food"
+    | "customer_phone"
+    | "box_id"
+  >[];
   const paid = orders.filter((one) => isPaid(one.status));
 
   const gross = money(paid, "total");
@@ -103,15 +111,16 @@ export async function profitBetween(from: string, to: string): Promise<Profit> {
     0
   );
 
-  const [overMenu, commission, aside] = await Promise.all([
-    reallyPaid(ids, paid),
-    owedOn(paid),
+  const [overByRun, commission, aside] = await Promise.all([
+    overMenu(batches as unknown as Batch[], orders),
+    commissionFor(paid).then((one) => one.total),
     asideBetween(from, to),
   ]);
+  const over = [...overByRun.values()].reduce((sum, one) => sum + one, 0);
 
   const totals = otherMoneyTotals(aside);
   const margin = gross - foodAtMenu;
-  const profit = margin - overMenu - commission - runCosts + totals.made;
+  const profit = margin - over - commission - runCosts + totals.made;
 
   return {
     from,
@@ -119,7 +128,7 @@ export async function profitBetween(from: string, to: string): Promise<Profit> {
     orders: paid.length,
     gross,
     foodAtMenu,
-    overMenu,
+    overMenu: over,
     margin,
     commission,
     runCosts,
@@ -156,82 +165,5 @@ async function asideBetween(from: string, to: string): Promise<OtherMoney[]> {
     return (data ?? []) as OtherMoney[];
   } catch {
     return [];
-  }
-}
-
-/**
- * What the counters really charged above the menu, across these runs.
- *
- * Only runs somebody has reconciled are looked at; the rest are at the menu
- * price by definition. Negative is a saving, which is the usual case.
- */
-async function reallyPaid(
-  batchIds: string[],
-  paid: { batch_id: string; subtotal_food: number }[]
-): Promise<number> {
-  try {
-    const { data } = await db()
-      .from("counter_spend")
-      .select("batch_id, paid")
-      .in("batch_id", batchIds);
-
-    const spend = (data ?? []) as { batch_id: string; paid: number }[];
-    if (spend.length === 0) return 0;
-
-    const byRun = new Map<string, number>();
-    for (const row of spend) {
-      byRun.set(row.batch_id, (byRun.get(row.batch_id) ?? 0) + Number(row.paid ?? 0));
-    }
-
-    let over = 0;
-    for (const [runId, reallyPaidHere] of byRun) {
-      const atMenu = paid
-        .filter((one) => one.batch_id === runId)
-        .reduce((sum, one) => sum + one.subtotal_food, 0);
-      // A run with nothing paid on it has no menu figure to compare against.
-      if (atMenu > 0) over += reallyPaidHere - atMenu;
-    }
-    return over;
-  } catch {
-    return 0;
-  }
-}
-
-/**
- * Promoter commission earned on these orders.
- *
- * A promoter is bound to a customer's number rather than to an order, so it
- * is the number that decides, and a box pays its own rate where the shop has
- * set one.
- */
-async function owedOn(
-  paid: { customer_phone: string }[]
-): Promise<number> {
-  if (paid.length === 0) return 0;
-  try {
-    const phones = [...new Set(paid.map((one) => one.customer_phone))];
-    const [{ data: customers }, { data: promoters }] = await Promise.all([
-      db().from("customers").select("phone, promoter_code").in("phone", phones),
-      db().from("promoters").select("code, rate"),
-    ]);
-
-    const broughtBy = new Map(
-      ((customers ?? []) as { phone: string; promoter_code?: string | null }[]).map(
-        (one) => [one.phone, (one.promoter_code ?? "").trim()]
-      )
-    );
-    const rates = new Map(
-      ((promoters ?? []) as { code: string; rate: number }[]).map((one) => [
-        one.code,
-        Number(one.rate ?? 0),
-      ])
-    );
-
-    return paid.reduce((sum, order) => {
-      const code = broughtBy.get(order.customer_phone) ?? "";
-      return sum + (code ? rates.get(code) ?? 0 : 0);
-    }, 0);
-  } catch {
-    return 0;
   }
 }

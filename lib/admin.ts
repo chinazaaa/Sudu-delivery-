@@ -423,15 +423,15 @@ export type Commission = {
  * Returned broken down as well as totalled, because "promoter commission
  * owed, ₦500" with no name on it is not something anybody can check.
  */
-async function commissionFor(
-  orders: Order[]
+export async function commissionFor(
+  orders: Pick<Order, "customer_phone" | "box_id">[]
 ): Promise<{ total: number; by: Commission[] }> {
   if (orders.length === 0) return { total: 0, by: [] };
 
   const phones = [...new Set(orders.map((one) => one.customer_phone))];
   const [{ data: customers }, { data: promoters }] = await Promise.all([
     db().from("customers").select("phone, promoter_code").in("phone", phones),
-    db().from("promoters").select("code, name, rate"),
+    db().from("promoters").select("code, name, rate, box_rate"),
   ]);
 
   const broughtBy = new Map(
@@ -441,10 +441,14 @@ async function commissionFor(
     ])
   );
   const rates = new Map(
-    ((promoters ?? []) as { code: string; name: string; rate: number }[]).map((one) => [
-      one.code,
-      one,
-    ])
+    (
+      (promoters ?? []) as {
+        code: string;
+        name: string;
+        rate: number;
+        box_rate?: number;
+      }[]
+    ).map((one) => [one.code, one])
   );
 
   const tally = new Map<string, Commission>();
@@ -459,10 +463,16 @@ async function commissionFor(
       orders: 0,
       amount: 0,
     };
+    // A box pays its own rate, which is what the promoter's own earnings
+    // page has always paid them. Costing it at the ordinary rate here meant
+    // the shop's profit was short of what it actually owed.
+    const earns = order.box_id
+      ? Number(promoter.box_rate ?? promoter.rate) || promoter.rate
+      : promoter.rate;
     tally.set(code, {
       ...now,
       orders: now.orders + 1,
-      amount: now.amount + promoter.rate,
+      amount: now.amount + earns,
     });
   }
 
@@ -720,13 +730,19 @@ export async function batchOverview(
     // bound to a number, not to an order. Without it every order here looked
     // like nobody's, every run owed nothing, and the dashboard's profit had
     // never once had commission taken off it.
-    .select("id, batch_id, status, total, subtotal_food, customer_phone")
+    .select("id, batch_id, status, total, subtotal_food, customer_phone, box_id")
     .in("batch_id", rows.map((b) => b.id))
     .not("status", "in", NOT_ORDERS_SQL);
 
   const all = (orders ?? []) as Pick<
     Order,
-    "id" | "batch_id" | "status" | "total" | "subtotal_food" | "customer_phone"
+    | "id"
+    | "batch_id"
+    | "status"
+    | "total"
+    | "subtotal_food"
+    | "customer_phone"
+    | "box_id"
   >[];
 
   // What the counters really charged, where it has been said. Without this
@@ -782,7 +798,7 @@ export async function batchOverview(
  * the menu price by definition, and reading every line of every run to learn
  * that would be a great deal of work to arrive back where we started.
  */
-async function overMenu(
+export async function overMenu(
   batches: Batch[],
   orders: Pick<Order, "id" | "batch_id" | "status" | "subtotal_food">[]
 ): Promise<Map<string, number>> {

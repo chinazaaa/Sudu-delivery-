@@ -135,6 +135,10 @@ export type Order = {
   /** The short number on the run sheet and in messages: #1042. */
   order_no: number | null;
   batch_id: string;
+  /** The box this order is, where it is one. A box pays its own commission
+   *  rate, so whether there is one here decides what a promoter earns.
+   *  Optional: most callers never select it. */
+  box_id?: string | null;
   customer_phone: string;
   customer_name: string;
   hostel: string;
