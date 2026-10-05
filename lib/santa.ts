@@ -43,6 +43,9 @@ export type Member = {
   paidAt: string | null;
   /** What they put in the transfer, so we can tell whose money it is. */
   reference: string;
+  /** Where their own gift goes. Not where they order food to: a gift is
+   *  the one delivery somebody might send somewhere else. */
+  hostel: string;
   joinedAt: string;
   leftAt: string | null;
 };
@@ -86,6 +89,7 @@ const member = (row: Record<string, any>): Member => ({
   paid: Number(row.paid ?? 0),
   paidAt: row.paid_at ?? null,
   reference: row.reference ?? "",
+  hostel: row.hostel ?? "",
   joinedAt: row.joined_at,
   leftAt: row.left_at ?? null,
 });
@@ -211,6 +215,7 @@ export async function joinRoom(args: {
   roomId: string;
   phone: string;
   name: string;
+  hostel?: string;
 }): Promise<Joined> {
   const here = await roomById(args.roomId);
   if (!here) return { ok: false, error: "That room is gone." };
@@ -225,6 +230,7 @@ export async function joinRoom(args: {
       room_id: args.roomId,
       phone: args.phone,
       name,
+      hostel: (args.hostel ?? "").trim(),
       paid: 0,
       reference: newReference(),
     })
@@ -764,5 +770,71 @@ export async function agreeToPayMore(args: {
     .eq("assignment_id", mine.id)
     .eq("status", "asking");
 
+  return error ? { ok: false, error: "Could not save that." } : { ok: true };
+}
+
+/**
+ * Where this person's own gift goes.
+ *
+ * Theirs to set and theirs to change, right up until it is driven. The
+ * person who drew them never sees it: they chose the gift and paid for it,
+ * and neither of those requires knowing which block somebody sleeps in.
+ */
+export async function setHostel(args: {
+  roomId: string;
+  phone: string;
+  hostel: string;
+}): Promise<Done> {
+  const me = await memberIn(args.roomId, args.phone);
+  if (!me || me.leftAt) return { ok: false, error: "You are not in this room." };
+
+  const { error } = await db()
+    .from("santa_members")
+    .update({ hostel: args.hostel.trim() })
+    .eq("id", me.id);
+  return error ? { ok: false, error: "Could not save that." } : { ok: true };
+}
+
+/**
+ * Change something already on your own list.
+ *
+ * Remove and add again loses the photograph and the place in the order,
+ * and "I typed the wrong size" should not cost somebody both.
+ */
+export async function editWish(args: {
+  roomId: string;
+  phone: string;
+  wishId: string;
+  title: string;
+  note?: string;
+  estPrice?: number;
+  photoUrl?: string;
+}): Promise<Done> {
+  const here = await roomById(args.roomId);
+  if (!here || here.status !== "open") {
+    return { ok: false, error: "The room has closed, so lists cannot change." };
+  }
+  const me = await memberIn(args.roomId, args.phone);
+  if (!me) return { ok: false, error: "You are not in this room." };
+
+  const title = args.title.trim();
+  if (title === "") return { ok: false, error: "Say what the thing is." };
+
+  // Scoped by the member as well as the wish, so an id off somebody else's
+  // list cannot be edited by posting it here.
+  const patch: Record<string, unknown> = {
+    title,
+    note: (args.note ?? "").trim(),
+    est_price: Math.max(0, Math.round(args.estPrice ?? 0)),
+  };
+  // Only when a new one was actually uploaded: an empty file input must not
+  // wipe the picture they added last week.
+  if (args.photoUrl) patch.photo_url = args.photoUrl;
+
+  const { error } = await db()
+    .from("santa_wishes")
+    .update(patch)
+    .eq("id", args.wishId)
+    .eq("member_id", me.id);
   return error ? { ok: false, error: "Could not save that." } : { ok: true };
 }

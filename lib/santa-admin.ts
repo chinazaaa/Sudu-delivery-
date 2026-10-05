@@ -131,6 +131,8 @@ export type Job = {
   buyer: string;
   buyerPhone: string;
   forWhom: string;
+  /** The block the gift is driven to. Empty is a job nobody can finish. */
+  forWhomHostel: string;
   /** What they chose. Null when nobody has chosen yet. */
   wish: { title: string; note: string; estPrice: number } | null;
   status: string;
@@ -175,7 +177,7 @@ export async function jobs(): Promise<Job[]> {
 
   const [{ data: roomRows }, { data: memberRows }, { data: wishRows }] = await Promise.all([
     db().from("santa_rooms").select("id, name, budget, exchange_date").in("id", roomIds),
-    db().from("santa_members").select("id, name, phone").in("id", memberIds),
+    db().from("santa_members").select("id, name, phone, hostel").in("id", memberIds),
     wishIds.length
       ? db().from("santa_wishes").select("id, title, note, est_price").in("id", wishIds)
       : Promise.resolve({ data: [] as Record<string, any>[] }),
@@ -201,6 +203,7 @@ export async function jobs(): Promise<Job[]> {
       buyer: who.get(link.giver_id)?.name ?? "",
       buyerPhone: who.get(link.giver_id)?.phone ?? "",
       forWhom: who.get(link.receiver_id)?.name ?? "",
+      forWhomHostel: who.get(link.receiver_id)?.hostel ?? "",
       wish: wish
         ? {
             title: wish.title as string,

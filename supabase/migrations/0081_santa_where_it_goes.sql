@@ -1,0 +1,14 @@
+-- Where somebody's own gift is delivered.
+--
+-- Missing entirely, which is the sort of hole that only shows up on the
+-- day: ten gifts bought, wrapped and in a car, and nothing anywhere saying
+-- which block any of them goes to. The customers table has a hostel, but it
+-- is the last one they ordered food to, and a gift is the one delivery
+-- somebody might want sent somewhere else: home for the holidays, a
+-- friend's room, the block they moved into in November.
+--
+-- On the member rather than on the order, because it is a fact about the
+-- person receiving, and the person receiving is not the person who chose
+-- the gift or paid for it. The giver never sees it; it is read when the
+-- thing is being driven.
+alter table santa_members add column if not exists hostel text not null default '';

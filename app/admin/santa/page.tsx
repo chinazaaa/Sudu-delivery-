@@ -95,6 +95,17 @@ export default async function SantaAdminPage() {
                 {one.roomName} · {one.buyer} buying for {one.forWhom} · budget{" "}
                 {naira(one.budget)}
               </p>
+              <p className="text-sm">
+                {one.byHand ? (
+                  <>to {one.buyer} to hand over</>
+                ) : one.forWhomHostel ? (
+                  <>to {one.forWhomHostel}</>
+                ) : (
+                  <span className="font-semibold text-brand">
+                    {one.forWhom} has not said which block. Ask before the day.
+                  </span>
+                )}
+              </p>
               {one.wish?.note ? (
                 <p className="mt-1 text-sm">{one.wish.note}</p>
               ) : null}
@@ -228,6 +239,11 @@ export default async function SantaAdminPage() {
                     <span className="font-semibold">{one.name}</span>
                     <span className="text-muted">{one.phone}</span>
                     <span className="font-mono text-xs text-muted">{one.reference}</span>
+                    {one.hostel ? (
+                      <span className="text-xs text-muted">{one.hostel}</span>
+                    ) : (
+                      <span className="text-xs font-semibold text-brand">no block</span>
+                    )}
                     {hasPaid(one) ? (
                       <>
                         <span className="chip border-mint/40 bg-mint/10 py-0.5 text-xs text-mint">

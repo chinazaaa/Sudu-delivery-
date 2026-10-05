@@ -6,7 +6,13 @@ import { naira } from "@/lib/money";
 import { runDateLabel } from "@/lib/time";
 import SantaHero from "@/components/SantaHero";
 import { MOST_WISHES, memberIn, roomByToken, wishesOf, type Wish } from "@/lib/santa";
-import { addWishAction, removeWishAction } from "../../actions";
+import {
+  addWishAction,
+  editWishAction,
+  hostelAction,
+  removeWishAction,
+} from "../../actions";
+import { hostelNames } from "@/lib/hostels";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +55,7 @@ export default async function WishlistPage({
   // where joining happens.
   if (!me || me.leftAt) redirect(`/santa/${token}`);
 
-  const mine = await wishesOf(me.id);
+  const [mine, hostels] = await Promise.all([wishesOf(me.id), hostelNames()]);
   const shut = room.status !== "open";
 
   return (
@@ -76,10 +82,49 @@ export default async function WishlistPage({
         so they will probably pick something else.
       </p>
 
+      {/* Where their own gift is delivered. Nothing anywhere said this,
+        * which is a hole that only shows up on the day: ten gifts in a car
+        * and no block written against any of them. */}
+      <form action={hostelAction} className="card mt-5 space-y-3">
+        <input type="hidden" name="token" value={token} />
+        <h2 className="font-bold">Where your gift goes</h2>
+        <p className="text-sm text-muted">
+          Whoever drew you never sees this. It is only read when it is being
+          driven.
+        </p>
+        <div>
+          <label className="label" htmlFor="hostel">
+            Your block
+          </label>
+          <input
+            id="hostel"
+            name="hostel"
+            className="field"
+            list="santa-hostels"
+            defaultValue={me.hostel}
+            placeholder="Queen Mary"
+          />
+          <datalist id="santa-hostels">
+            {hostels.map((one) => (
+              <option key={one} value={one} />
+            ))}
+          </datalist>
+        </div>
+        <button type="submit" className="btn-quiet w-full">
+          {me.hostel ? "Change it" : "Save"}
+        </button>
+        {!me.hostel ? (
+          <p className="text-sm font-semibold text-brand">
+            We cannot deliver your gift without this.
+          </p>
+        ) : null}
+      </form>
+
       {mine.length > 0 ? (
         <ul className="mt-5 space-y-3">
           {mine.map((one: Wish) => (
-            <li key={one.id} className="card flex items-start justify-between gap-3">
+            <li key={one.id} className="card">
+              <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3">
                 {one.photoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -118,6 +163,60 @@ export default async function WishlistPage({
                     Remove
                   </button>
                 </form>
+              )}
+              </div>
+
+              {/* Changing it, rather than removing and starting again:
+                * that loses the picture and the place in the list, and "I
+                * typed the wrong size" should not cost somebody both. */}
+              {shut ? null : (
+                <details className="mt-3 border-t pt-3">
+                  <summary className="cursor-pointer text-sm font-semibold text-muted">
+                    Edit
+                  </summary>
+                  <form action={editWishAction} className="mt-3 space-y-3">
+                    <input type="hidden" name="token" value={token} />
+                    <input type="hidden" name="wishId" value={one.id} />
+                    <div>
+                      <label className="label">What is it?</label>
+                      <input
+                        name="title"
+                        className="field"
+                        defaultValue={one.title}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="label">A link, or how to know it is right</label>
+                      <input name="note" className="field" defaultValue={one.note} />
+                    </div>
+                    <div>
+                      <label className="label">What you think it costs</label>
+                      <input
+                        name="estPrice"
+                        className="field"
+                        type="number"
+                        min={0}
+                        step={500}
+                        defaultValue={one.estPrice || ""}
+                      />
+                    </div>
+                    <div>
+                      <label className="label">
+                        {one.photoUrl ? "Replace the picture" : "Add a picture"}
+                      </label>
+                      <input name="photo" className="field" type="file" accept="image/*" />
+                      {one.photoUrl ? (
+                        <p className="mt-1.5 text-sm text-muted">
+                          Leave it empty to keep the one you have.
+                        </p>
+                      ) : null}
+                    </div>
+                    <button type="submit" className="btn-primary w-full">
+                      Save changes
+                    </button>
+                  </form>
+                </details>
               )}
             </li>
           ))}

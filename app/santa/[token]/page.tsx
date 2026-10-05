@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { currentCustomer } from "@/lib/customer-auth";
+import { currentCustomer, customerDetails } from "@/lib/customer-auth";
 import { naira } from "@/lib/money";
 import { safeSettings } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
@@ -65,6 +65,7 @@ export default async function RoomPage({
   const site = await siteUrl();
 
   const phone = await currentCustomer();
+  const known = phone ? await customerDetails(phone) : null;
   const me = phone ? await memberIn(room.id, phone) : null;
   const people = await membersOf(room.id);
   const mine = me ? await wishesOf(me.id) : [];
@@ -135,6 +136,21 @@ export default async function RoomPage({
                   <label className="label" htmlFor="name">Your name</label>
                   <input id="name" name="name" className="field" required />
                 </div>
+              </div>
+              <div>
+                <label className="label" htmlFor="hostel">
+                  Which block is your gift delivered to?
+                </label>
+                <input
+                  id="hostel"
+                  name="hostel"
+                  className="field"
+                  defaultValue={known?.hostel ?? ""}
+                  placeholder="Queen Mary"
+                />
+                <p className="mt-1.5 text-sm text-muted">
+                  Whoever draws you never sees this. You can change it later.
+                </p>
               </div>
               <button type="submit" className="btn-primary w-full">Join the room</button>
             </>
@@ -238,6 +254,14 @@ export default async function RoomPage({
               afterwards.
             </p>
           </form>
+        ) : null}
+
+        {room.status === "open" ? (
+          <p className="mt-3 text-sm text-muted">
+            Once names are drawn you will see who you are buying for, pick
+            something off their list, and choose whether we deliver it on the
+            day or bring it to you to hand over yourself.
+          </p>
         ) : null}
       </section>
 

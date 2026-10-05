@@ -11,11 +11,13 @@ import {
   agreeToPayMore,
   closeRoom,
   createRoom,
+  editWish,
   joinRoom,
   pickWish,
   removeWish,
   roomByToken,
   setHandover,
+  setHostel,
 } from "@/lib/santa";
 
 /**
@@ -71,8 +73,9 @@ export async function joinRoomAction(form: FormData): Promise<void> {
     redirect(`/santa/${token}?problem=${encodeURIComponent("Give your number and your name.")}`);
   }
 
-  await ensureCustomer({ phone, name });
-  const joined = await joinRoom({ roomId: here.id, phone, name });
+  const hostel = said(form, "hostel");
+  await ensureCustomer({ phone, name, hostel });
+  const joined = await joinRoom({ roomId: here.id, phone, name, hostel });
 
   revalidatePath(`/santa/${token}`);
   if (!joined.ok) redirect(`/santa/${token}?problem=${encodeURIComponent(joined.error)}`);
@@ -192,4 +195,48 @@ export async function agreeAction(form: FormData): Promise<void> {
   const done = await agreeToPayMore({ roomId: here.id, phone: await me(token) });
   revalidatePath(`/santa/${token}`);
   if (!done.ok) redirect(`/santa/${token}?problem=${encodeURIComponent(done.error)}`);
+}
+
+/** Change something already on your list, keeping its picture and place. */
+export async function editWishAction(form: FormData): Promise<void> {
+  const token = said(form, "token");
+  const here = await roomByToken(token);
+  if (!here) return;
+
+  let photoUrl = "";
+  try {
+    photoUrl = (await uploadImage(fileFrom(form, "photo"), "santa")) ?? "";
+  } catch {
+    photoUrl = "";
+  }
+
+  const done = await editWish({
+    roomId: here.id,
+    phone: await me(token),
+    wishId: said(form, "wishId"),
+    title: said(form, "title"),
+    note: said(form, "note"),
+    estPrice: Number(said(form, "estPrice") || 0),
+    photoUrl,
+  });
+
+  revalidatePath(`/santa/${token}/wishlist`);
+  if (!done.ok) redirect(`/santa/${token}/wishlist?problem=${encodeURIComponent(done.error)}`);
+}
+
+/** Where this person's own gift should be driven to. */
+export async function hostelAction(form: FormData): Promise<void> {
+  const token = said(form, "token");
+  const here = await roomByToken(token);
+  if (!here) return;
+
+  const done = await setHostel({
+    roomId: here.id,
+    phone: await me(token),
+    hostel: said(form, "hostel"),
+  });
+
+  revalidatePath(`/santa/${token}/wishlist`);
+  revalidatePath(`/santa/${token}`);
+  if (!done.ok) redirect(`/santa/${token}/wishlist?problem=${encodeURIComponent(done.error)}`);
 }
