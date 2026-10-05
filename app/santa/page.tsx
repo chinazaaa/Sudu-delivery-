@@ -5,6 +5,7 @@ import { currentCustomer } from "@/lib/customer-auth";
 import { customerDetails } from "@/lib/customer-auth";
 import { lagosToday } from "@/lib/time";
 import { LEAST_MEMBERS } from "@/lib/santa";
+import SantaHero from "@/components/SantaHero";
 
 export const dynamic = "force-dynamic";
 
@@ -34,10 +35,14 @@ export default async function SantaPage({
 
   return (
     <div className="mx-auto max-w-xl px-4 py-8">
-      <h1 className="section-title">Secret Santa</h1>
-      <p className="mt-2 text-muted">
-        Your group draws names here. Everyone adds a wishlist, and we buy and
-        deliver every gift on the day. You do not have to shop for anything.
+      <SantaHero
+        kicker="Sudu"
+        title="Secret Santa"
+        chips={["Draw names", "Everyone adds a wishlist", "We buy and deliver"]}
+      />
+      <p className="mt-4 text-muted">
+        Your group draws names here. Everyone adds a wishlist, and we find, buy
+        and deliver every gift on the day. Nobody has to shop for anything.
       </p>
 
       {problem ? (

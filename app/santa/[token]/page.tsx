@@ -3,6 +3,10 @@ import { notFound } from "next/navigation";
 import { currentCustomer } from "@/lib/customer-auth";
 import { naira } from "@/lib/money";
 import { safeSettings } from "@/lib/settings";
+import { siteUrl } from "@/lib/admin-templates";
+import CopyText from "@/components/CopyText";
+import SantaHero from "@/components/SantaHero";
+import SendLink from "@/components/SendLink";
 import { runDateLabel } from "@/lib/time";
 import {
   LEAST_MEMBERS,
@@ -60,6 +64,7 @@ export default async function RoomPage({
   if (!room) notFound();
 
   const settings = await safeSettings();
+  const site = await siteUrl();
 
   const phone = await currentCustomer();
   const me = phone ? await memberIn(room.id, phone) : null;
@@ -78,11 +83,15 @@ export default async function RoomPage({
 
   return (
     <div className="mx-auto max-w-xl px-4 py-8">
-      <p className="text-sm font-semibold text-muted">Secret Santa</p>
-      <h1 className="section-title">{room.name}</h1>
-      <p className="mt-1 text-muted">
-        {naira(room.budget)} each · exchanged {runDateLabel(room.exchangeDate)}
-      </p>
+      <SantaHero
+        kicker="Secret Santa"
+        title={room.name}
+        chips={[
+          `${naira(room.budget)} each`,
+          `${room.status === "open" ? "closes" : "closed"} ${runDateLabel(room.closeDate)}`,
+          `exchanged ${runDateLabel(room.exchangeDate)}`,
+        ]}
+      />
 
       {problem ? (
         <p className="card mt-4 border-brand/30 bg-brand/5 font-semibold text-brand">
@@ -148,9 +157,16 @@ export default async function RoomPage({
               <dt className="text-muted">Bank</dt>
               <dd className="font-semibold">{settings.bank_name || "ask us"}</dd>
             </div>
-            <div className="flex justify-between gap-3">
+            <div className="flex items-center justify-between gap-3">
               <dt className="text-muted">Account</dt>
-              <dd className="font-semibold">{settings.bank_account_number}</dd>
+              <dd className="flex items-center gap-2 font-semibold">
+                {settings.bank_account_number}
+                <CopyText
+                  value={settings.bank_account_number}
+                  label="Copy"
+                  className="px-3 py-1 text-xs"
+                />
+              </dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-muted">Name</dt>
@@ -162,8 +178,13 @@ export default async function RoomPage({
             </div>
           </dl>
 
-          <p className="mt-3 text-sm text-muted">Reference</p>
-          <p className="font-mono text-2xl font-black tracking-wider">{me.reference}</p>
+          <p className="mt-4 text-sm text-muted">Reference</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="font-mono text-2xl font-black tracking-wider">
+              {me.reference}
+            </p>
+            <CopyText value={me.reference} label="Copy" className="px-3 py-1 text-xs" />
+          </div>
           <p className="mt-1 text-sm text-muted">
             Put it in the transfer. It can take a few hours to show.
           </p>
@@ -178,7 +199,12 @@ export default async function RoomPage({
         <ul className="mt-2 space-y-1 text-sm">
           {people.map((one) => (
             <li key={one.id} className="flex items-center justify-between gap-3">
-              <span>{one.name}</span>
+              <span className="flex items-center gap-2">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-shell text-xs font-bold">
+                  {one.name.trim().charAt(0).toUpperCase() || "?"}
+                </span>
+                <span className="font-semibold">{one.name}</span>
+              </span>
               <span className="flex items-center gap-2 text-muted">
                 <span>{written.has(one.id) ? "list ready" : "no list yet"}</span>
                 <span
@@ -505,9 +531,20 @@ export default async function RoomPage({
         </p>
       ) : null}
 
-      <p className="mt-6 break-words text-sm text-muted">
-        Share this room: <span className="font-semibold">sudu.store/santa/{token}</span>
-      </p>
+      {room.status === "open" ? (
+        <section className="card mt-6">
+          <h2 className="font-bold">Fill the room</h2>
+          <p className="mt-1 text-sm text-muted">
+            Send this to the group. Anybody with it can join.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <SendLink
+              message={`Join our Secret Santa on Sudu. ${naira(room.budget)} each, names drawn ${runDateLabel(room.closeDate)}: ${site}/santa/${token}`}
+              link={`${site}/santa/${token}`}
+            />
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

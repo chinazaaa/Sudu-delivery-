@@ -1,6 +1,14 @@
 import { db } from "./supabase";
 import { lagosToday } from "./time";
-import { hasPaid, membersOf, moneyHeld, type Member, type RoomStatus } from "./santa";
+import {
+  hasPaid,
+  membersOf,
+  moneyHeld,
+  wishesOf,
+  type Member,
+  type RoomStatus,
+  type Wish,
+} from "./santa";
 
 /**
  * What somebody running Secret Santa needs to see.
@@ -26,8 +34,11 @@ export type RoomRow = {
   shareToken: string;
   members: number;
   paidCount: number;
-  /** Everyone in the room, so admin can see who still owes. */
-  people: Member[];
+  /** Everyone in the room, so admin can see who still owes, and what each
+   *  of them asked for. The lists are worth reading before the draw: half
+   *  of what students want takes a week to find, and waiting until somebody
+   *  has picked it is a week nobody has in December. */
+  people: (Member & { wishes: Wish[] })[];
   /** How many have written a list. The ones who have not are the ones whose
    *  giver will be stuck at close. */
   withLists: number;
@@ -45,15 +56,13 @@ export async function rooms(): Promise<RoomRow[]> {
 
   const out: RoomRow[] = [];
   for (const row of (data ?? []) as Record<string, any>[]) {
-    const people = await membersOf(row.id);
+    const plain = await membersOf(row.id);
+    const people = await Promise.all(
+      plain.map(async (one) => ({ ...one, wishes: await wishesOf(one.id) }))
+    );
     const ids = people.map((one) => one.id);
 
-    const { data: lists } = ids.length
-      ? await db().from("santa_wishes").select("member_id").in("member_id", ids)
-      : { data: [] };
-    const withLists = new Set(
-      ((lists ?? []) as { member_id: string }[]).map((one) => one.member_id)
-    ).size;
+    const withLists = people.filter((one) => one.wishes.length > 0).length;
 
     const { count: picked } = await db()
       .from("santa_assignments")

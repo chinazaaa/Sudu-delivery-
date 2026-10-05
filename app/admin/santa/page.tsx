@@ -222,7 +222,8 @@ export default async function SantaAdminPage() {
                 * everybody in the room has also paid. */}
               <ul className="mt-3 space-y-1">
                 {room.people.map((one) => (
-                  <li key={one.id} className="flex flex-wrap items-center gap-2 text-sm">
+                  <li key={one.id} className="border-t pt-2 text-sm first:border-t-0">
+                    <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold">{one.name}</span>
                     <span className="text-muted">{one.phone}</span>
                     <span className="font-mono text-xs text-muted">{one.reference}</span>
@@ -244,6 +245,51 @@ export default async function SantaAdminPage() {
                       <span className="chip border-brand/40 bg-brand/10 py-0.5 text-xs text-brand">
                         not paid
                       </span>
+                    )}
+                    </div>
+
+                    {/* What they asked for, so the hard ones can be looked
+                      * for before anybody has picked anything. Half of what
+                      * students want takes a week to find, and that is a
+                      * week nobody has in December. */}
+                    {one.wishes.length > 0 ? (
+                      <ul className="mt-1.5 space-y-1.5 pl-1">
+                        {one.wishes.map((item) => (
+                          <li key={item.id} className="flex items-start gap-2">
+                            {item.photoUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={item.photoUrl}
+                                alt=""
+                                className="h-10 w-10 shrink-0 rounded object-cover"
+                              />
+                            ) : null}
+                            <div>
+                              <p>
+                                {item.title}
+                                {item.estPrice > 0 ? (
+                                  <span
+                                    className={
+                                      item.estPrice > room.budget
+                                        ? "font-semibold text-brand"
+                                        : "text-muted"
+                                    }
+                                  >
+                                    {" "}
+                                    · {naira(item.estPrice)}
+                                    {item.estPrice > room.budget ? " over" : ""}
+                                  </span>
+                                ) : null}
+                              </p>
+                              {item.note ? (
+                                <p className="text-xs text-muted">{item.note}</p>
+                              ) : null}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-1 text-xs text-muted">No list yet.</p>
                     )}
                   </li>
                 ))}
