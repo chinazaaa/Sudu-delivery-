@@ -401,3 +401,171 @@ export async function moneyHeld(roomId: string): Promise<{
 
   return { held, spent, refunded, owing: held - spent - refunded };
 }
+
+export type Done = { ok: true } | { ok: false; error: string };
+
+/** Add something to your own list, while the room is still open. */
+export async function addWish(args: {
+  roomId: string;
+  phone: string;
+  title: string;
+  photoUrl?: string;
+  note?: string;
+  estPrice?: number;
+}): Promise<Done> {
+  const here = await roomById(args.roomId);
+  if (!here) return { ok: false, error: "That room is gone." };
+  if (here.status !== "open") {
+    return { ok: false, error: "The room has closed, so lists cannot change." };
+  }
+  const me = await memberIn(args.roomId, args.phone);
+  if (!me || me.leftAt) return { ok: false, error: "You are not in this room." };
+
+  const title = args.title.trim();
+  if (title === "") return { ok: false, error: "Say what the thing is." };
+
+  const mine = await wishesOf(me.id);
+  if (mine.length >= MOST_WISHES) {
+    return { ok: false, error: `${MOST_WISHES} things is enough to choose from.` };
+  }
+
+  const { error } = await db().from("santa_wishes").insert({
+    member_id: me.id,
+    title,
+    photo_url: (args.photoUrl ?? "").trim(),
+    note: (args.note ?? "").trim(),
+    est_price: Math.max(0, Math.round(args.estPrice ?? 0)),
+    sort_order: mine.length,
+  });
+  return error ? { ok: false, error: "Could not add that." } : { ok: true };
+}
+
+/**
+ * Take something off your own list.
+ *
+ * Scoped by the member rather than by the wish alone, so a stray id from
+ * somebody else's list cannot delete off it.
+ */
+export async function removeWish(args: {
+  roomId: string;
+  phone: string;
+  wishId: string;
+}): Promise<Done> {
+  const here = await roomById(args.roomId);
+  if (!here || here.status !== "open") {
+    return { ok: false, error: "The room has closed, so lists cannot change." };
+  }
+  const me = await memberIn(args.roomId, args.phone);
+  if (!me) return { ok: false, error: "You are not in this room." };
+
+  await db().from("santa_wishes").delete().eq("id", args.wishId).eq("member_id", me.id);
+  return { ok: true };
+}
+
+/**
+ * The giver picks one thing off their match's list.
+ *
+ * The order row is written here rather than at close, because until
+ * somebody has chosen there is nothing to source and an empty row on the
+ * buying list is a job that looks outstanding and is not.
+ */
+export async function pickWish(args: {
+  roomId: string;
+  phone: string;
+  wishId: string;
+}): Promise<Done> {
+  const me = await memberIn(args.roomId, args.phone);
+  if (!me || me.leftAt) return { ok: false, error: "You are not in this room." };
+
+  const { data: mine } = await db()
+    .from("santa_assignments")
+    .select("id, receiver_id")
+    .eq("room_id", args.roomId)
+    .eq("giver_id", me.id)
+    .maybeSingle();
+  if (!mine) return { ok: false, error: "The room has not been drawn yet." };
+
+  // The wish has to be on the list of the person they actually drew. Without
+  // this somebody could post any id and have us buy a stranger a laptop.
+  const { data: theirs } = await db()
+    .from("santa_wishes")
+    .select("id")
+    .eq("id", args.wishId)
+    .eq("member_id", mine.receiver_id)
+    .maybeSingle();
+  if (!theirs) return { ok: false, error: "That is not on their list." };
+
+  await db()
+    .from("santa_assignments")
+    .update({ wish_id: args.wishId })
+    .eq("id", mine.id);
+
+  const { data: already } = await db()
+    .from("santa_orders")
+    .select("id")
+    .eq("assignment_id", mine.id)
+    .maybeSingle();
+  if (!already) {
+    await db().from("santa_orders").insert({ assignment_id: mine.id });
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Who carries the gift the last step.
+ *
+ * A buyer who wants to hand it over themselves gets it delivered to them
+ * instead, on a day they choose. The date has to be on or before the
+ * exchange: a gift promised for after the party is somebody standing
+ * empty-handed at it. And it cannot be before the room closes, because
+ * until then there is nothing bought to deliver.
+ *
+ * Choosing this moves the promise. Once it is in their hands we cannot
+ * make the handover happen, so the screen that calls this says so.
+ */
+export async function setHandover(args: {
+  roomId: string;
+  phone: string;
+  byGiver: boolean;
+  deliverOn?: string;
+}): Promise<Done> {
+  const here = await roomById(args.roomId);
+  if (!here) return { ok: false, error: "That room is gone." };
+
+  const me = await memberIn(args.roomId, args.phone);
+  if (!me || me.leftAt) return { ok: false, error: "You are not in this room." };
+
+  const { data: mine } = await db()
+    .from("santa_assignments")
+    .select("id")
+    .eq("room_id", args.roomId)
+    .eq("giver_id", me.id)
+    .maybeSingle();
+  if (!mine) return { ok: false, error: "The room has not been drawn yet." };
+
+  if (!args.byGiver) {
+    await db()
+      .from("santa_orders")
+      .update({ handover: "we_deliver", deliver_on: null })
+      .eq("assignment_id", mine.id);
+    return { ok: true };
+  }
+
+  const day = (args.deliverOn ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+    return { ok: false, error: "Pick the day you want it." };
+  }
+  if (day > here.exchangeDate) {
+    return { ok: false, error: "That is after the exchange. Pick an earlier day." };
+  }
+  if (day < here.closeDate) {
+    return { ok: false, error: "Nothing can be bought before the room closes." };
+  }
+
+  const { error } = await db()
+    .from("santa_orders")
+    .update({ handover: "giver", deliver_on: day })
+    .eq("assignment_id", mine.id);
+  return error ? { ok: false, error: "Could not save that." } : { ok: true };
+}
