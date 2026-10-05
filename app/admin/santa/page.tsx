@@ -1,0 +1,257 @@
+import PageHeader from "@/components/admin/PageHeader";
+import Stat from "@/components/admin/Stat";
+import { naira } from "@/lib/money";
+import { runDateLabel } from "@/lib/time";
+import { jobs, rooms } from "@/lib/santa-admin";
+import { LEAST_MEMBERS } from "@/lib/santa";
+import {
+  addMember,
+  agreeOverBudget,
+  backToUs,
+  drawRoom,
+  markHandedOver,
+  markRefunded,
+  priceJob,
+  setStatus,
+} from "./actions";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * Secret Santa, from the other side.
+ *
+ * Two lists. What is to be bought and carried, soonest first, which is the
+ * one somebody works from; and the rooms, which is where the money is.
+ *
+ * The buying list is deliberately not grouped by room. A room is how the
+ * money is counted. A day is what gets packed into a car, and a gift whose
+ * buyer is handing it over themselves is wanted on their day, not on the
+ * exchange day. Grouping by room is how that gift ends up in the wrong car.
+ */
+export default async function SantaAdminPage() {
+  const [list, open] = await Promise.all([jobs(), rooms()]);
+
+  const held = open.reduce((sum, one) => sum + one.held, 0);
+  const owing = open.reduce((sum, one) => sum + one.owing, 0);
+  const toBuy = list.filter((one) => one.status !== "delivered");
+  const late = list.filter((one) => one.late);
+  const asking = list.filter((one) => one.status === "asking");
+  const toRefund = list.filter(
+    (one) => one.refund !== null && one.refund > 0 && !one.refundedAt
+  );
+
+  return (
+    <div>
+      <PageHeader
+        title="Secret Santa"
+        detail="Rooms, and every gift still to be found or carried. Money held here belongs to the people who paid it and is not takings."
+        backHref="/admin"
+        backLabel="Dashboard"
+      />
+
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat label="Held for members" value={held} money hint="Not ours" />
+        <Stat label="Still owed out" value={owing} money />
+        <Stat label="Gifts to go" value={toBuy.length} />
+        <Stat
+          label="Past their day"
+          value={late.length}
+          tone={late.length > 0 ? "warn" : undefined}
+        />
+      </div>
+
+      {asking.length > 0 ? (
+        <p className="card mb-4 border-brand/30 bg-brand/5 font-semibold">
+          {asking.length} {asking.length === 1 ? "gift is" : "gifts are"} over
+          budget and waiting on the buyer.
+        </p>
+      ) : null}
+
+      <h2 className="section-title mb-2">To buy and carry</h2>
+      {list.length === 0 ? (
+        <p className="card mb-6 text-muted">
+          Nothing yet. Gifts appear here once a room is drawn and somebody has
+          picked something.
+        </p>
+      ) : (
+        <ul className="mb-6 space-y-3">
+          {list.map((one) => (
+            <li key={one.orderId} className="card">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <p className="font-bold">
+                  {one.wish ? one.wish.title : "Nothing picked yet"}
+                </p>
+                <p className={one.late ? "font-bold text-brand" : "text-sm text-muted"}>
+                  {one.wantedOn ? runDateLabel(one.wantedOn) : "no date"}
+                  {one.byHand ? " · to the buyer" : ""}
+                  {one.late ? " · late" : ""}
+                </p>
+              </div>
+
+              <p className="text-sm text-muted">
+                {one.roomName} · {one.buyer} buying for {one.forWhom} · budget{" "}
+                {naira(one.budget)}
+              </p>
+              {one.wish?.note ? (
+                <p className="mt-1 text-sm">{one.wish.note}</p>
+              ) : null}
+              {one.wish && one.wish.estPrice > 0 ? (
+                <p className="text-sm text-muted">
+                  they thought about {naira(one.wish.estPrice)}
+                </p>
+              ) : null}
+
+              <p className="mt-2 text-sm">
+                <span className="font-semibold">{one.status}</span>
+                {one.sourcedPrice !== null ? ` · paid ${naira(one.sourcedPrice)}` : ""}
+                {one.refund !== null && one.refund > 0
+                  ? ` · ${naira(one.refund)} back${one.refundedAt ? ", sent" : ", owing"}`
+                  : ""}
+              </p>
+
+              {one.sourcedPrice !== null && one.sourcedPrice > one.budget && !one.refundedAt ? (
+                <p className="mt-1 text-sm font-semibold text-brand">
+                  {naira(one.sourcedPrice - one.budget)} over. Ask {one.buyer} on{" "}
+                  {one.buyerPhone} before buying.
+                </p>
+              ) : null}
+
+              <div className="mt-3 flex flex-wrap items-end gap-2">
+                <form action={priceJob} className="flex items-end gap-2">
+                  <input type="hidden" name="orderId" value={one.orderId} />
+                  <input type="hidden" name="budget" value={one.budget} />
+                  <div>
+                    <label className="label">What it cost</label>
+                    <input
+                      name="sourcedPrice"
+                      className="field w-32"
+                      type="number"
+                      min={0}
+                      defaultValue={one.sourcedPrice ?? ""}
+                    />
+                  </div>
+                  <button className="btn-primary">Save</button>
+                </form>
+
+                {one.status === "asking" ? (
+                  <form action={agreeOverBudget}>
+                    <input type="hidden" name="orderId" value={one.orderId} />
+                    <button className="btn-quiet">They agreed</button>
+                  </form>
+                ) : null}
+
+                {one.status !== "bought" && one.status !== "delivered" ? (
+                  <form action={setStatus}>
+                    <input type="hidden" name="orderId" value={one.orderId} />
+                    <input type="hidden" name="status" value="bought" />
+                    <button className="btn-quiet">Bought</button>
+                  </form>
+                ) : null}
+
+                {one.byHand && !one.handedOverAt ? (
+                  <>
+                    <form action={markHandedOver}>
+                      <input type="hidden" name="orderId" value={one.orderId} />
+                      <button className="btn-quiet">Given to {one.buyer}</button>
+                    </form>
+                    <form action={backToUs}>
+                      <input type="hidden" name="orderId" value={one.orderId} />
+                      <button className="btn-quiet">
+                        Could not reach them, we deliver
+                      </button>
+                    </form>
+                  </>
+                ) : null}
+
+                {!one.byHand && one.status !== "delivered" ? (
+                  <form action={setStatus}>
+                    <input type="hidden" name="orderId" value={one.orderId} />
+                    <input type="hidden" name="status" value="delivered" />
+                    <button className="btn-quiet">Delivered</button>
+                  </form>
+                ) : null}
+
+                {one.refund !== null && one.refund > 0 && !one.refundedAt ? (
+                  <form action={markRefunded}>
+                    <input type="hidden" name="orderId" value={one.orderId} />
+                    <button className="btn-quiet">
+                      Refunded {naira(one.refund)}
+                    </button>
+                  </form>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {toRefund.length > 0 ? (
+        <p className="card mb-6 font-semibold">
+          {toRefund.length} {toRefund.length === 1 ? "refund" : "refunds"} owing,{" "}
+          {naira(toRefund.reduce((sum, one) => sum + (one.refund ?? 0), 0))} in all.
+          They go back the same week, not after the event.
+        </p>
+      ) : null}
+
+      <h2 className="section-title mb-2">Rooms</h2>
+      {open.length === 0 ? (
+        <p className="card text-muted">No rooms yet.</p>
+      ) : (
+        <ul className="space-y-3">
+          {open.map((room) => (
+            <li key={room.id} className="card">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <p className="font-bold">{room.name}</p>
+                <p className="text-sm text-muted">
+                  {room.status} · closes {runDateLabel(room.closeDate)} · exchanged{" "}
+                  {runDateLabel(room.exchangeDate)}
+                </p>
+              </div>
+              <p className="text-sm text-muted">
+                {naira(room.budget)} each · {room.members} in · {room.withLists} with
+                lists · {room.picked} picked · holding {naira(room.held)}
+              </p>
+
+              {room.status === "open" ? (
+                <>
+                  <form action={addMember} className="mt-3 flex flex-wrap items-end gap-2">
+                    <input type="hidden" name="roomId" value={room.id} />
+                    <div>
+                      <label className="label">Their number</label>
+                      <input name="phone" className="field w-44" inputMode="tel" />
+                    </div>
+                    <div>
+                      <label className="label">Their name</label>
+                      <input name="name" className="field w-40" />
+                    </div>
+                    <button className="btn-primary">Paid, add them</button>
+                  </form>
+                  <p className="mt-1.5 text-sm text-muted">
+                    Only once the money is in. They pay {naira(room.budget)}, and
+                    that is what the row says.
+                  </p>
+
+                  <form action={drawRoom} className="mt-3">
+                    <input type="hidden" name="roomId" value={room.id} />
+                    <button
+                      className="btn-quiet"
+                      disabled={room.members < LEAST_MEMBERS}
+                    >
+                      {room.members < LEAST_MEMBERS
+                        ? `${LEAST_MEMBERS - room.members} more needed to draw`
+                        : "Close and draw"}
+                    </button>
+                  </form>
+                </>
+              ) : null}
+
+              <p className="mt-2 break-words text-sm text-muted">
+                sudu.store/santa/{room.shareToken}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
