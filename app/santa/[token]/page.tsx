@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { currentCustomer } from "@/lib/customer-auth";
 import { naira } from "@/lib/money";
@@ -10,7 +11,6 @@ import SendLink from "@/components/SendLink";
 import { runDateLabel } from "@/lib/time";
 import {
   LEAST_MEMBERS,
-  MOST_WISHES,
   hasPaid,
   matchFor,
   memberIn,
@@ -21,13 +21,11 @@ import {
   type Wish,
 } from "@/lib/santa";
 import {
-  addWishAction,
   agreeAction,
   closeRoomAction,
   joinRoomAction,
   handoverAction,
   pickWishAction,
-  removeWishAction,
 } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -243,119 +241,28 @@ export default async function RoomPage({
         ) : null}
       </section>
 
-      {/* Your own list, while there is still time to write it. */}
-      {me && room.status === "open" ? (
-        <section className="card mt-6">
-          <h2 className="font-bold">What you would like</h2>
-          <p className="mt-1 text-sm text-muted">
-            Three to five things, so whoever drew you has a choice. Keep them
-            near {naira(room.budget)}: anything over and whoever drew you has
-            to pay the difference, so they will probably pick something else.
-          </p>
-
-          <ul className="mt-3 space-y-2">
-            {mine.map((one: Wish) => (
-              <li key={one.id} className="flex items-start justify-between gap-3 border-t pt-2">
-                <div className="flex items-start gap-3">
-                  {one.photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={one.photoUrl}
-                      alt=""
-                      className="h-14 w-14 shrink-0 rounded-lg object-cover"
-                    />
-                  ) : null}
-                  <div>
-                  <p className="font-semibold">{one.title}</p>
-                  {one.note ? <p className="text-sm text-muted">{one.note}</p> : null}
-                  {one.estPrice > 0 ? (
-                    <p className="text-sm text-muted">
-                      about {naira(one.estPrice)}
-                      {one.estPrice > room.budget ? (
-                        <span className="font-semibold text-brand">
-                          {" "}
-                          · over the {naira(room.budget)} budget
-                        </span>
-                      ) : null}
-                    </p>
-                  ) : null}
-                  </div>
-                </div>
-                <form action={removeWishAction}>
-                  <input type="hidden" name="token" value={token} />
-                  <input type="hidden" name="wishId" value={one.id} />
-                  <button type="submit" className="text-sm font-semibold text-brand">
-                    Remove
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
-
-          {mine.length < MOST_WISHES ? (
-            <form action={addWishAction} className="mt-4 space-y-3 border-t pt-4">
-              <input type="hidden" name="token" value={token} />
-              <div>
-                <label className="label" htmlFor="title">
-                  What is it?
-                </label>
-                <input
-                  id="title"
-                  name="title"
-                  className="field"
-                  placeholder="Maison Margiela perfume"
-                  required
-                />
-              </div>
-              <div>
-                <label className="label" htmlFor="note">
-                  A link, or how to know it is the right one
-                </label>
-                <input
-                  id="note"
-                  name="note"
-                  className="field"
-                  placeholder="Replica, Jazz Club. 30ml is fine"
-                />
-              </div>
-              <div>
-                <label className="label" htmlFor="photo">
-                  A picture
-                </label>
-                <input
-                  id="photo"
-                  name="photo"
-                  className="field"
-                  type="file"
-                  accept="image/*"
-                />
-                <p className="mt-1 text-sm text-muted">
-                  A screenshot is usually the clearest way to say which one.
-                </p>
-              </div>
-              <div>
-                <label className="label" htmlFor="estPrice">
-                  What you think it costs
-                </label>
-                <input
-                  id="estPrice"
-                  name="estPrice"
-                  className="field"
-                  type="number"
-                  min={0}
-                  step={500}
-                />
-              </div>
-              <button type="submit" className="btn-primary w-full">
-                Add to my list
-              </button>
-            </form>
-          ) : (
-            <p className="mt-3 text-sm text-muted">
-              That is {MOST_WISHES}, which is plenty. Remove one to add another.
-            </p>
-          )}
-        </section>
+      {/* Your list lives on its own page. It is the one thing somebody
+        * comes back to four times, and under the money and the roll call
+        * is the wrong place for it. */}
+      {me ? (
+        <Link
+          href={`/santa/${token}/wishlist`}
+          className="card mt-6 flex items-center justify-between gap-3 transition hover:bg-black/[0.02]"
+        >
+          <span>
+            <span className="block font-bold">Your wishlist</span>
+            <span className="block text-sm text-muted">
+              {mine.length === 0
+                ? room.status === "open"
+                  ? "Nothing on it yet. Whoever draws you picks from this."
+                  : "You did not write one."
+                : `${mine.length} thing${mine.length === 1 ? "" : "s"} on it${
+                    room.status === "open" ? "" : ", locked"
+                  }`}
+            </span>
+          </span>
+          <span className="text-xl text-muted">›</span>
+        </Link>
       ) : null}
 
       {/* After the draw. */}

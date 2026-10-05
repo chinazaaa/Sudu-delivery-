@@ -110,8 +110,9 @@ export async function addWishAction(form: FormData): Promise<void> {
     estPrice: Number(said(form, "estPrice") || 0),
   });
 
+  revalidatePath(`/santa/${token}/wishlist`);
   revalidatePath(`/santa/${token}`);
-  if (!done.ok) redirect(`/santa/${token}?problem=${encodeURIComponent(done.error)}`);
+  if (!done.ok) redirect(`/santa/${token}/wishlist?problem=${encodeURIComponent(done.error)}`);
 }
 
 export async function removeWishAction(form: FormData): Promise<void> {
@@ -124,6 +125,7 @@ export async function removeWishAction(form: FormData): Promise<void> {
     phone: await me(token),
     wishId: said(form, "wishId"),
   });
+  revalidatePath(`/santa/${token}/wishlist`);
   revalidatePath(`/santa/${token}`);
 }
 

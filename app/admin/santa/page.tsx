@@ -14,6 +14,7 @@ import {
   markHandedOver,
   markRefunded,
   priceJob,
+  saveWishPlan,
   setStatus,
 } from "./actions";
 
@@ -284,6 +285,60 @@ export default async function SantaAdminPage() {
                               {item.note ? (
                                 <p className="text-xs text-muted">{item.note}</p>
                               ) : null}
+
+                              {/* The shop's side. Filled in now rather than
+                                * when somebody picks it, because the things
+                                * that take a week to find are knowable in
+                                * November. */}
+                              <form
+                                action={saveWishPlan}
+                                className="mt-1.5 flex flex-wrap items-end gap-2"
+                              >
+                                <input type="hidden" name="wishId" value={item.id} />
+                                <div>
+                                  <label className="label text-xs">Costs us</label>
+                                  <input
+                                    name="costPrice"
+                                    className="field w-28 py-1.5 text-sm"
+                                    type="number"
+                                    min={0}
+                                    defaultValue={item.costPrice || ""}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="label text-xs">We charge</label>
+                                  <input
+                                    name="sellPrice"
+                                    className="field w-28 py-1.5 text-sm"
+                                    type="number"
+                                    min={0}
+                                    defaultValue={item.sellPrice || ""}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="label text-xs">Where from</label>
+                                  <input
+                                    name="source"
+                                    className="field w-52 py-1.5 text-sm"
+                                    defaultValue={item.source}
+                                    placeholder="Balogun, second floor"
+                                  />
+                                </div>
+                                <button className="btn-quiet px-4 py-1.5 text-sm">
+                                  Save
+                                </button>
+                                {item.costPrice > 0 && item.sellPrice > 0 ? (
+                                  <span
+                                    className={
+                                      item.sellPrice - item.costPrice >= 0
+                                        ? "pb-2 text-xs font-semibold text-mint"
+                                        : "pb-2 text-xs font-semibold text-brand"
+                                    }
+                                  >
+                                    {naira(item.sellPrice - item.costPrice)} margin
+                                  </span>
+                                ) : null}
+                              </form>
                             </div>
                           </li>
                         ))}

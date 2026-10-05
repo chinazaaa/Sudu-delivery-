@@ -1,0 +1,207 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { currentCustomer } from "@/lib/customer-auth";
+import { naira } from "@/lib/money";
+import { runDateLabel } from "@/lib/time";
+import SantaHero from "@/components/SantaHero";
+import { MOST_WISHES, memberIn, roomByToken, wishesOf, type Wish } from "@/lib/santa";
+import { addWishAction, removeWishAction } from "../../actions";
+
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Your wishlist",
+  description: "What you would like, for whoever draws your name.",
+  robots: { index: false, follow: false },
+};
+
+/**
+ * Your own list, on its own page.
+ *
+ * It was a section on the room page, under the money and the list of who
+ * had joined, which is the wrong place for the one thing somebody comes
+ * back to four times. A room is read once a week; a wishlist is edited the
+ * evening you remember the thing you actually wanted.
+ *
+ * It also lets the form breathe. Squeezed into the room it was a title, a
+ * link, a price and a file picker stacked under three other cards, and a
+ * picture nobody noticed they could add.
+ */
+export default async function WishlistPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<{ problem?: string }>;
+}) {
+  const { token } = await params;
+  const { problem } = await searchParams;
+
+  const room = await roomByToken(token);
+  if (!room) notFound();
+
+  const phone = await currentCustomer();
+  if (!phone) redirect(`/orders?next=${encodeURIComponent(`/santa/${token}/wishlist`)}`);
+
+  const me = await memberIn(room.id, phone);
+  // Not in this room: there is nothing here for them, and the room page is
+  // where joining happens.
+  if (!me || me.leftAt) redirect(`/santa/${token}`);
+
+  const mine = await wishesOf(me.id);
+  const shut = room.status !== "open";
+
+  return (
+    <div className="mx-auto max-w-xl px-4 py-8">
+      <SantaHero
+        kicker={room.name}
+        title="Your wishlist"
+        chips={[
+          `${mine.length} of ${MOST_WISHES}`,
+          shut ? "locked" : `edit until ${runDateLabel(room.closeDate)}`,
+          `${naira(room.budget)} budget`,
+        ]}
+      />
+
+      {problem ? (
+        <p className="card mt-4 border-brand/30 bg-brand/5 font-semibold text-brand">
+          {problem}
+        </p>
+      ) : null}
+
+      <p className="mt-4 text-muted">
+        Three to five things, so whoever draws you has a choice. Keep them near{" "}
+        {naira(room.budget)}: anything over and they have to pay the difference,
+        so they will probably pick something else.
+      </p>
+
+      {mine.length > 0 ? (
+        <ul className="mt-5 space-y-3">
+          {mine.map((one: Wish) => (
+            <li key={one.id} className="card flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                {one.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={one.photoUrl}
+                    alt=""
+                    className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                  />
+                ) : (
+                  <span className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-shell text-xl">
+                    🎁
+                  </span>
+                )}
+                <div>
+                  <p className="font-bold">{one.title}</p>
+                  {one.note ? <p className="text-sm text-muted">{one.note}</p> : null}
+                  {one.estPrice > 0 ? (
+                    <p className="text-sm text-muted">
+                      about {naira(one.estPrice)}
+                      {one.estPrice > room.budget ? (
+                        <span className="font-semibold text-brand">
+                          {" "}
+                          · over the {naira(room.budget)} budget
+                        </span>
+                      ) : null}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+
+              {shut ? null : (
+                <form action={removeWishAction}>
+                  <input type="hidden" name="token" value={token} />
+                  <input type="hidden" name="wishId" value={one.id} />
+                  <button type="submit" className="text-sm font-semibold text-brand">
+                    Remove
+                  </button>
+                </form>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="card mt-5 text-muted">
+          Nothing on your list yet. Whoever draws you has to pick from it, so
+          it is worth writing before the room closes.
+        </p>
+      )}
+
+      {shut ? (
+        <p className="card mt-5 text-muted">
+          The room has closed, so lists cannot change now.
+        </p>
+      ) : mine.length < MOST_WISHES ? (
+        <form action={addWishAction} className="card mt-5 space-y-4">
+          <input type="hidden" name="token" value={token} />
+          <h2 className="font-bold">Add something</h2>
+
+          <div>
+            <label className="label" htmlFor="title">
+              What is it?
+            </label>
+            <input
+              id="title"
+              name="title"
+              className="field"
+              placeholder="Maison Margiela perfume"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="label" htmlFor="photo">
+              A picture
+            </label>
+            <input id="photo" name="photo" className="field" type="file" accept="image/*" />
+            <p className="mt-1.5 text-sm text-muted">
+              A screenshot is usually the clearest way to say which one.
+            </p>
+          </div>
+
+          <div>
+            <label className="label" htmlFor="note">
+              A link, or how to know it is the right one
+            </label>
+            <input
+              id="note"
+              name="note"
+              className="field"
+              placeholder="Replica, Jazz Club. 30ml is fine"
+            />
+          </div>
+
+          <div>
+            <label className="label" htmlFor="estPrice">
+              What you think it costs
+            </label>
+            <input
+              id="estPrice"
+              name="estPrice"
+              className="field"
+              type="number"
+              min={0}
+              step={500}
+            />
+          </div>
+
+          <button type="submit" className="btn-primary w-full">
+            Add to my list
+          </button>
+        </form>
+      ) : (
+        <p className="card mt-5 text-muted">
+          That is {MOST_WISHES}, which is plenty. Remove one to add another.
+        </p>
+      )}
+
+      <p className="mt-6">
+        <Link className="font-semibold text-brand" href={`/santa/${token}`}>
+          Back to the room
+        </Link>
+      </p>
+    </div>
+  );
+}

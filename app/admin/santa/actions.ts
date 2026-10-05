@@ -149,3 +149,31 @@ export async function markRefunded(form: FormData): Promise<void> {
     .eq("id", said(form, "orderId"));
   back();
 }
+
+/**
+ * The shop's side of one wish: what it costs, what we charge, where it is bought.
+ *
+ * Saved against the wish rather than the order, because the useful moment is
+ * before anybody has picked anything. Fifty things on ten lists, and the ones
+ * that take a week to find are knowable in November.
+ */
+export async function saveWishPlan(form: FormData): Promise<void> {
+  const wishId = said(form, "wishId");
+  if (!wishId) return;
+
+  const number = (key: string) => {
+    const raw = said(form, key);
+    const value = Math.round(Number(raw));
+    return raw === "" || !Number.isFinite(value) || value < 0 ? 0 : value;
+  };
+
+  await db()
+    .from("santa_wishes")
+    .update({
+      cost_price: number("costPrice"),
+      sell_price: number("sellPrice"),
+      source: said(form, "source"),
+    })
+    .eq("id", wishId);
+  back();
+}

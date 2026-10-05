@@ -4,11 +4,42 @@ import {
   hasPaid,
   membersOf,
   moneyHeld,
-  wishesOf,
   type Member,
   type RoomStatus,
   type Wish,
 } from "./santa";
+
+/**
+ * A wish with the shop's side of it: what it would cost us, what we would
+ * charge, and where it is bought. Admin only, and the member-facing
+ * wishesOf deliberately does not select these columns at all.
+ */
+export type WishPlan = Wish & {
+  costPrice: number;
+  sellPrice: number;
+  source: string;
+};
+
+async function planFor(memberId: string): Promise<WishPlan[]> {
+  const { data } = await db()
+    .from("santa_wishes")
+    .select("*")
+    .eq("member_id", memberId)
+    .order("sort_order", { ascending: true });
+
+  return ((data ?? []) as Record<string, any>[]).map((row) => ({
+    id: row.id,
+    memberId: row.member_id,
+    title: row.title,
+    photoUrl: row.photo_url ?? "",
+    note: row.note ?? "",
+    estPrice: Number(row.est_price ?? 0),
+    sortOrder: Number(row.sort_order ?? 0),
+    costPrice: Number(row.cost_price ?? 0),
+    sellPrice: Number(row.sell_price ?? 0),
+    source: row.source ?? "",
+  }));
+}
 
 /**
  * What somebody running Secret Santa needs to see.
@@ -38,7 +69,7 @@ export type RoomRow = {
    *  of them asked for. The lists are worth reading before the draw: half
    *  of what students want takes a week to find, and waiting until somebody
    *  has picked it is a week nobody has in December. */
-  people: (Member & { wishes: Wish[] })[];
+  people: (Member & { wishes: WishPlan[] })[];
   /** How many have written a list. The ones who have not are the ones whose
    *  giver will be stuck at close. */
   withLists: number;
@@ -58,7 +89,7 @@ export async function rooms(): Promise<RoomRow[]> {
   for (const row of (data ?? []) as Record<string, any>[]) {
     const plain = await membersOf(row.id);
     const people = await Promise.all(
-      plain.map(async (one) => ({ ...one, wishes: await wishesOf(one.id) }))
+      plain.map(async (one) => ({ ...one, wishes: await planFor(one.id) }))
     );
     const ids = people.map((one) => one.id);
 

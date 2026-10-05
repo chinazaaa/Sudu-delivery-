@@ -292,10 +292,18 @@ export async function memberIn(roomId: string, phone: string): Promise<Member | 
   return data ? member(data) : null;
 }
 
+/**
+ * Somebody's list, as a member may see it.
+ *
+ * Columns named rather than `*` on purpose. The table also carries what the
+ * shop would pay for each thing and where it would buy it, and a select
+ * that drags those along is one careless prop away from printing the
+ * margin on the page the person who wrote the list is reading.
+ */
 export async function wishesOf(memberId: string): Promise<Wish[]> {
   const { data } = await db()
     .from("santa_wishes")
-    .select("*")
+    .select("id, member_id, title, photo_url, note, est_price, sort_order")
     .eq("member_id", memberId)
     .order("sort_order", { ascending: true });
   return ((data ?? []) as Record<string, any>[]).map(wish);
