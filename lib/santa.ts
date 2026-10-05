@@ -39,9 +39,16 @@ export type Member = {
   phone: string;
   name: string;
   paid: number;
+  /** When their money landed. Null means they are not in the draw. */
+  paidAt: string | null;
+  /** What they put in the transfer, so we can tell whose money it is. */
+  reference: string;
   joinedAt: string;
   leftAt: string | null;
 };
+
+/** Paid is a date, not an amount: somebody could be let in free. */
+export const hasPaid = (one: Member): boolean => one.paidAt !== null;
 
 export type Wish = {
   id: string;
@@ -77,6 +84,8 @@ const member = (row: Record<string, any>): Member => ({
   phone: row.phone,
   name: row.name,
   paid: Number(row.paid ?? 0),
+  paidAt: row.paid_at ?? null,
+  reference: row.reference ?? "",
   joinedAt: row.joined_at,
   leftAt: row.left_at ?? null,
 });
@@ -169,41 +178,62 @@ export async function membersOf(roomId: string): Promise<Member[]> {
 }
 
 /**
- * Put somebody in a room, once their money is in.
+ * What somebody puts in the transfer.
  *
- * The payment is the caller's job: this writes the row that says it
- * happened, and the row existing is what makes them a member. There is
- * deliberately no half-joined state to tidy up later.
+ * Short enough to type into a narration box without a mistake, and without
+ * the letters that get read back wrong: no O against 0, no I or 1, no S
+ * against 5. A bank statement gives a name and an amount, and in a room
+ * where everybody pays the same amount in the same week that is not enough
+ * to tell two people apart, especially when the sender's name is their
+ * father's.
  */
+const PLAIN = "ACDEFGHJKMNPQRTUVWXY2346789";
+
+export function newReference(): string {
+  let out = "";
+  for (let at = 0; at < 6; at++) out += PLAIN[randomInt(0, PLAIN.length)];
+  return `SS-${out}`;
+}
+
 export type Joined = { ok: true; member: Member } | { ok: false; error: string };
 
+/**
+ * Put somebody in a room.
+ *
+ * Joining is open and costs nothing, because a room nobody can look at
+ * until their money has been taken by hand is a room that cannot fill. The
+ * rule the whole thing rests on has not gone anywhere: it has moved to the
+ * draw, which takes paid members only. Anybody may be in a room; only
+ * people who have paid are drawn, and so nobody gives a gift and receives
+ * nothing.
+ */
 export async function joinRoom(args: {
   roomId: string;
   phone: string;
   name: string;
-  paid: number;
 }): Promise<Joined> {
   const here = await roomById(args.roomId);
   if (!here) return { ok: false, error: "That room is gone." };
   if (here.status !== "open") return { ok: false, error: "That room has closed." };
-  if (args.paid < here.budget) {
-    return { ok: false, error: "The whole budget has to be paid to join." };
-  }
+
+  const name = args.name.trim();
+  if (name === "") return { ok: false, error: "Give your name." };
 
   const { data, error } = await db()
     .from("santa_members")
     .insert({
       room_id: args.roomId,
       phone: args.phone,
-      name: args.name.trim(),
-      paid: Math.round(args.paid),
+      name,
+      paid: 0,
+      reference: newReference(),
     })
     .select("*")
     .single();
 
   // The unique index on (room_id, phone) is what stops a double join, so a
   // conflict here is somebody tapping twice rather than an error worth
-  // showing. Hand back the row they already have.
+  // showing. Hand back the row they already have, reference and all.
   if (error) {
     const { data: already } = await db()
       .from("santa_members")
@@ -216,6 +246,40 @@ export async function joinRoom(args: {
   }
 
   return { ok: true, member: member(data) };
+}
+
+/**
+ * Their money landed.
+ *
+ * The amount comes off the room rather than being passed in, because a
+ * member who paid less than the budget is the thing this design exists to
+ * prevent and a number somebody types is a number somebody mistypes.
+ */
+export async function markPaid(memberId: string): Promise<Done> {
+  const { data: who } = await db()
+    .from("santa_members")
+    .select("room_id")
+    .eq("id", memberId)
+    .maybeSingle();
+  if (!who) return { ok: false, error: "No such member." };
+
+  const here = await roomById(who.room_id as string);
+  if (!here) return { ok: false, error: "That room is gone." };
+
+  const { error } = await db()
+    .from("santa_members")
+    .update({ paid: here.budget, paid_at: new Date().toISOString() })
+    .eq("id", memberId);
+  return error ? { ok: false, error: "Could not save that." } : { ok: true };
+}
+
+/** Money went back, or never came. They are out of the draw again. */
+export async function markUnpaid(memberId: string): Promise<Done> {
+  const { error } = await db()
+    .from("santa_members")
+    .update({ paid: 0, paid_at: null })
+    .eq("id", memberId);
+  return error ? { ok: false, error: "Could not save that." } : { ok: true };
 }
 
 export async function memberIn(roomId: string, phone: string): Promise<Member | null> {
@@ -276,11 +340,14 @@ export async function closeRoom(roomId: string): Promise<Closed> {
   if (!here) return { ok: false, error: "That room is gone." };
   if (here.status !== "open") return { ok: false, error: "That room is already closed." };
 
-  const people = await membersOf(roomId);
+  // Paid members only. This line is the whole promise: somebody who never
+  // paid is not drawn, so nobody is given their name and nobody is left
+  // waiting on a gift that was never funded.
+  const people = (await membersOf(roomId)).filter(hasPaid);
   if (people.length < LEAST_MEMBERS) {
     return {
       ok: false,
-      error: `A room needs ${LEAST_MEMBERS} people to draw. This one has ${people.length}.`,
+      error: `A room needs ${LEAST_MEMBERS} paid people to draw. This one has ${people.length}.`,
     };
   }
 

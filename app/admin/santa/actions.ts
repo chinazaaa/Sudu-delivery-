@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/supabase";
 import { normalisePhone } from "@/lib/phone";
 import { ensureCustomer } from "@/lib/orders";
-import { closeRoom, joinRoom, roomById } from "@/lib/santa";
+import { closeRoom, joinRoom, markPaid, markUnpaid, roomById } from "@/lib/santa";
 
 /**
  * Running the rooms.
@@ -17,11 +17,12 @@ const said = (form: FormData, key: string): string => String(form.get(key) ?? ""
 const back = () => revalidatePath("/admin/santa");
 
 /**
- * Put somebody in a room, once their money has landed.
+ * Add somebody by hand.
  *
- * The amount is taken from the room rather than typed, because a member who
- * paid less than the budget is the one thing this whole design exists to
- * prevent, and a box somebody can type into is a box somebody can mistype.
+ * Joining is open on the room page, so this is for the person who paid in
+ * cash, or rang up, or whose transfer landed before they ever opened the
+ * link. It does not mark them paid: that is its own step, done against a
+ * statement.
  */
 export async function addMember(form: FormData): Promise<void> {
   const roomId = said(form, "roomId");
@@ -33,7 +34,29 @@ export async function addMember(form: FormData): Promise<void> {
   if (!phone || name === "") return;
 
   await ensureCustomer({ phone, name });
-  await joinRoom({ roomId, phone, name, paid: here.budget });
+  await joinRoom({ roomId, phone, name });
+  back();
+}
+
+/**
+ * Their money landed, so they are in the draw.
+ *
+ * Picked off a list that shows the name, the number and the reference
+ * together, because a bank statement gives a name that is often somebody's
+ * father's and an amount every member of the room has also paid.
+ */
+export async function markMemberPaid(form: FormData): Promise<void> {
+  const memberId = said(form, "memberId");
+  if (!memberId) return;
+  await markPaid(memberId);
+  back();
+}
+
+/** It bounced, or went back. Out of the draw again. */
+export async function markMemberUnpaid(form: FormData): Promise<void> {
+  const memberId = said(form, "memberId");
+  if (!memberId) return;
+  await markUnpaid(memberId);
   back();
 }
 

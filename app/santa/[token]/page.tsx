@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { currentCustomer } from "@/lib/customer-auth";
 import { naira } from "@/lib/money";
-import { safeSettings, whatsappLink } from "@/lib/settings";
+import { safeSettings } from "@/lib/settings";
 import { runDateLabel } from "@/lib/time";
 import {
   LEAST_MEMBERS,
   MOST_WISHES,
+  hasPaid,
   matchFor,
   memberIn,
   myOrder,
@@ -19,6 +20,7 @@ import {
   addWishAction,
   agreeAction,
   closeRoomAction,
+  joinRoomAction,
   handoverAction,
   pickWishAction,
   removeWishAction,
@@ -68,6 +70,7 @@ export default async function RoomPage({
   // receiving it never sees any of this.
   const order = me && room.status !== "open" ? await myOrder(room.id, me.phone) : null;
 
+  const paid = people.filter(hasPaid);
   const lists = await Promise.all(
     people.map(async (one) => ({ id: one.id, has: (await wishesOf(one.id)).length > 0 }))
   );
@@ -92,49 +95,89 @@ export default async function RoomPage({
         </p>
       ) : null}
 
-      {/* Before you are in it.
-        *
-        * No form writes a member row. Somebody is in the draw when their
-        * money has arrived and not a moment sooner, and nothing typed into
-        * a public box proves that. So this hands them to WhatsApp, we take
-        * the payment, and the member is written in admin. The rule the
-        * whole thing rests on stays true of the data rather than of
-        * somebody remembering to check a column.
-        */}
+      {/* Joining is free and puts you in the room. Paying is what puts
+        * you in the draw, and they are two different days. Saying so here
+        * is the difference between a room that fills up and a room nobody
+        * can look inside until somebody has taken their money by hand. */}
       {!me ? (
-        <div className="card mt-6 space-y-3">
+        <form action={joinRoomAction} className="card mt-6 space-y-4">
+          <input type="hidden" name="token" value={token} />
           <h2 className="font-bold">Join this room</h2>
           <p className="text-sm text-muted">
-            Joining costs {naira(room.budget)}, paid up front. That is what buys
-            the gift you are giving, and whatever it does not use comes back to
-            you the same week. Nobody who has not paid is in the draw, so nobody
-            gives a gift and goes home without one.
+            Joining is free. You can see who else is in and write your list
+            straight away. Paying {naira(room.budget)} is what puts you in the
+            draw, and you will get a reference for the transfer as soon as you
+            are in.
           </p>
 
           {room.status !== "open" ? (
-            <p className="font-semibold text-brand">
-              Joining has closed for this room.
-            </p>
+            <p className="font-semibold text-brand">Joining has closed for this room.</p>
           ) : (
             <>
-              <a
-                className="btn-primary w-full"
-                href={
-                  whatsappLink(
-                    settings.whatsapp_number,
-                    `Hi Sudu, I'd like to join the ${room.name} Secret Santa (${naira(room.budget)}).`
-                  ) ?? "/support"
-                }
-              >
-                Join for {naira(room.budget)}
-              </a>
-              <p className="text-sm text-muted">
-                This opens a chat. We take the payment there and put you in the
-                room, and you will get a PIN on that number for signing in.
-              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="label" htmlFor="phone">Your number</label>
+                  <input
+                    id="phone"
+                    name="phone"
+                    className="field"
+                    inputMode="tel"
+                    defaultValue={phone ?? ""}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label" htmlFor="name">Your name</label>
+                  <input id="name" name="name" className="field" required />
+                </div>
+              </div>
+              <button type="submit" className="btn-primary w-full">Join the room</button>
             </>
           )}
-        </div>
+        </form>
+      ) : null}
+
+      {/* In the room, not yet in the draw. */}
+      {me && !hasPaid(me) && room.status === "open" ? (
+        <section className="card mt-6 border-brand/30 bg-brand/5">
+          <h2 className="font-bold">Pay {naira(room.budget)} to be in the draw</h2>
+          <p className="mt-1 text-sm">
+            You are in the room and can write your list now. Until this is paid
+            you will not be given anybody to buy for, and nobody will be given
+            you. That is what makes sure nobody gives a gift and gets nothing.
+          </p>
+
+          <dl className="mt-3 space-y-1 text-sm">
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted">Bank</dt>
+              <dd className="font-semibold">{settings.bank_name || "ask us"}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted">Account</dt>
+              <dd className="font-semibold">{settings.bank_account_number}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted">Name</dt>
+              <dd className="font-semibold">{settings.bank_account_name}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted">Amount</dt>
+              <dd className="font-semibold">{naira(room.budget)}</dd>
+            </div>
+          </dl>
+
+          <p className="mt-3 text-sm">
+            Put this in the transfer so we know it is you:
+          </p>
+          <p className="mt-1 font-mono text-2xl font-black tracking-wider">
+            {me.reference}
+          </p>
+          <p className="mt-1 text-sm text-muted">
+            Everybody pays the same amount in the same week, so without this we
+            cannot tell two transfers apart. Paid already? It can take us a few
+            hours to see it.
+          </p>
+        </section>
       ) : null}
 
       {/* Who is here. */}
@@ -146,8 +189,17 @@ export default async function RoomPage({
           {people.map((one) => (
             <li key={one.id} className="flex items-center justify-between gap-3">
               <span>{one.name}</span>
-              <span className="text-muted">
-                {written.has(one.id) ? "list ready" : "no list yet"}
+              <span className="flex items-center gap-2 text-muted">
+                <span>{written.has(one.id) ? "list ready" : "no list yet"}</span>
+                <span
+                  className={
+                    hasPaid(one)
+                      ? "chip border-mint/40 bg-mint/10 py-0.5 text-xs text-mint"
+                      : "chip border-brand/40 bg-brand/10 py-0.5 text-xs text-brand"
+                  }
+                >
+                  {hasPaid(one) ? "paid" : "not paid"}
+                </span>
               </span>
             </li>
           ))}
@@ -155,9 +207,9 @@ export default async function RoomPage({
         {room.status === "open" ? (
           <p className="mt-3 text-sm text-muted">
             Joining closes {runDateLabel(room.closeDate)}.{" "}
-            {people.length < LEAST_MEMBERS
-              ? `${LEAST_MEMBERS - people.length} more needed to draw.`
-              : "Enough to draw."}
+            {paid.length < LEAST_MEMBERS
+              ? `${LEAST_MEMBERS - paid.length} more paid people needed to draw.`
+              : `${paid.length} paid and in the draw.`}
           </p>
         ) : null}
 

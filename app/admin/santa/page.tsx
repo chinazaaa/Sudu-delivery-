@@ -3,9 +3,11 @@ import Stat from "@/components/admin/Stat";
 import { naira } from "@/lib/money";
 import { runDateLabel } from "@/lib/time";
 import { jobs, rooms } from "@/lib/santa-admin";
-import { LEAST_MEMBERS } from "@/lib/santa";
+import { hasPaid, LEAST_MEMBERS } from "@/lib/santa";
 import {
   addMember,
+  markMemberPaid,
+  markMemberUnpaid,
   agreeOverBudget,
   backToUs,
   drawRoom,
@@ -208,12 +210,70 @@ export default async function SantaAdminPage() {
                 </p>
               </div>
               <p className="text-sm text-muted">
-                {naira(room.budget)} each · {room.members} in · {room.withLists} with
-                lists · {room.picked} picked · holding {naira(room.held)}
+                {naira(room.budget)} each · {room.members} in ·{" "}
+                <span className="font-semibold">{room.paidCount} paid</span> ·{" "}
+                {room.withLists} with lists · {room.picked} picked · holding{" "}
+                {naira(room.held)}
               </p>
+
+              {/* Who is in, and who has actually paid. The number sits
+                * beside the name because a bank statement gives a name that
+                * is half the time somebody's father's, and an amount that
+                * everybody in the room has also paid. */}
+              <ul className="mt-3 space-y-1">
+                {room.people.map((one) => (
+                  <li key={one.id} className="flex flex-wrap items-center gap-2 text-sm">
+                    <span className="font-semibold">{one.name}</span>
+                    <span className="text-muted">{one.phone}</span>
+                    <span className="font-mono text-xs text-muted">{one.reference}</span>
+                    {hasPaid(one) ? (
+                      <>
+                        <span className="chip border-mint/40 bg-mint/10 py-0.5 text-xs text-mint">
+                          paid
+                        </span>
+                        {room.status === "open" ? (
+                          <form action={markMemberUnpaid}>
+                            <input type="hidden" name="memberId" value={one.id} />
+                            <button className="text-xs font-semibold text-muted underline">
+                              undo
+                            </button>
+                          </form>
+                        ) : null}
+                      </>
+                    ) : (
+                      <span className="chip border-brand/40 bg-brand/10 py-0.5 text-xs text-brand">
+                        not paid
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
 
               {room.status === "open" ? (
                 <>
+                  {room.people.some((one) => !hasPaid(one)) ? (
+                    <form
+                      action={markMemberPaid}
+                      className="mt-3 flex flex-wrap items-end gap-2"
+                    >
+                      <div>
+                        <label className="label">Whose money came in?</label>
+                        <select name="memberId" className="field w-full sm:w-96">
+                          {room.people
+                            .filter((one) => !hasPaid(one))
+                            .map((one) => (
+                              <option key={one.id} value={one.id}>
+                                {one.name} · {one.phone} · {one.reference}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                      <button className="btn-primary">
+                        Mark paid {naira(room.budget)}
+                      </button>
+                    </form>
+                  ) : null}
+
                   <form action={addMember} className="mt-3 flex flex-wrap items-end gap-2">
                     <input type="hidden" name="roomId" value={room.id} />
                     <div>
@@ -227,19 +287,19 @@ export default async function SantaAdminPage() {
                     <button className="btn-primary">Paid, add them</button>
                   </form>
                   <p className="mt-1.5 text-sm text-muted">
-                    Only once the money is in. They pay {naira(room.budget)}, and
-                    that is what the row says.
+                    For somebody who paid in cash or never opened the link.
+                    Adding them does not mark them paid.
                   </p>
 
                   <form action={drawRoom} className="mt-3">
                     <input type="hidden" name="roomId" value={room.id} />
                     <button
                       className="btn-quiet"
-                      disabled={room.members < LEAST_MEMBERS}
+                      disabled={room.paidCount < LEAST_MEMBERS}
                     >
-                      {room.members < LEAST_MEMBERS
-                        ? `${LEAST_MEMBERS - room.members} more needed to draw`
-                        : "Close and draw"}
+                      {room.paidCount < LEAST_MEMBERS
+                        ? `${LEAST_MEMBERS - room.paidCount} more paid needed to draw`
+                        : `Close and draw ${room.paidCount}`}
                     </button>
                   </form>
                 </>

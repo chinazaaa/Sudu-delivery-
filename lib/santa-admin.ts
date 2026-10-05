@@ -1,6 +1,6 @@
 import { db } from "./supabase";
 import { lagosToday } from "./time";
-import { moneyHeld, type RoomStatus } from "./santa";
+import { hasPaid, membersOf, moneyHeld, type Member, type RoomStatus } from "./santa";
 
 /**
  * What somebody running Secret Santa needs to see.
@@ -25,6 +25,9 @@ export type RoomRow = {
   exchangeDate: string;
   shareToken: string;
   members: number;
+  paidCount: number;
+  /** Everyone in the room, so admin can see who still owes. */
+  people: Member[];
   /** How many have written a list. The ones who have not are the ones whose
    *  giver will be stuck at close. */
   withLists: number;
@@ -42,12 +45,8 @@ export async function rooms(): Promise<RoomRow[]> {
 
   const out: RoomRow[] = [];
   for (const row of (data ?? []) as Record<string, any>[]) {
-    const { data: people } = await db()
-      .from("santa_members")
-      .select("id")
-      .eq("room_id", row.id)
-      .is("left_at", null);
-    const ids = ((people ?? []) as { id: string }[]).map((one) => one.id);
+    const people = await membersOf(row.id);
+    const ids = people.map((one) => one.id);
 
     const { data: lists } = ids.length
       ? await db().from("santa_wishes").select("member_id").in("member_id", ids)
@@ -73,6 +72,8 @@ export async function rooms(): Promise<RoomRow[]> {
       exchangeDate: row.exchange_date,
       shareToken: row.share_token,
       members: ids.length,
+      paidCount: people.filter(hasPaid).length,
+      people,
       withLists,
       picked: picked ?? 0,
       held: money.held,
