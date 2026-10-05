@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { currentCustomer } from "@/lib/customer-auth";
 import { ensureCustomer } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
+import { fileFrom, uploadImage } from "@/lib/uploads";
 import {
   addWish,
   agreeToPayMore,
@@ -90,11 +91,21 @@ export async function addWishAction(form: FormData): Promise<void> {
   const here = await roomByToken(token);
   if (!here) return;
 
+  // A screenshot is how half of what students want is described, so the
+  // photograph is the field that matters most on this form. Failing to
+  // upload must not lose the rest of what they typed.
+  let photoUrl = "";
+  try {
+    photoUrl = (await uploadImage(fileFrom(form, "photo"), "santa")) ?? "";
+  } catch {
+    photoUrl = "";
+  }
+
   const done = await addWish({
     roomId: here.id,
     phone: await me(token),
     title: said(form, "title"),
-    photoUrl: said(form, "photoUrl"),
+    photoUrl,
     note: said(form, "note"),
     estPrice: Number(said(form, "estPrice") || 0),
   });

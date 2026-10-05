@@ -104,10 +104,8 @@ export default async function RoomPage({
           <input type="hidden" name="token" value={token} />
           <h2 className="font-bold">Join this room</h2>
           <p className="text-sm text-muted">
-            Joining is free. You can see who else is in and write your list
-            straight away. Paying {naira(room.budget)} is what puts you in the
-            draw, and you will get a reference for the transfer as soon as you
-            are in.
+            Free to join. Paying {naira(room.budget)} is what puts you in the
+            draw.
           </p>
 
           {room.status !== "open" ? (
@@ -141,10 +139,8 @@ export default async function RoomPage({
       {me && !hasPaid(me) && room.status === "open" ? (
         <section className="card mt-6 border-brand/30 bg-brand/5">
           <h2 className="font-bold">Pay {naira(room.budget)} to be in the draw</h2>
-          <p className="mt-1 text-sm">
-            You are in the room and can write your list now. Until this is paid
-            you will not be given anybody to buy for, and nobody will be given
-            you. That is what makes sure nobody gives a gift and gets nothing.
+          <p className="mt-1 text-sm text-muted">
+            Write your list now. You are drawn once this lands.
           </p>
 
           <dl className="mt-3 space-y-1 text-sm">
@@ -166,16 +162,10 @@ export default async function RoomPage({
             </div>
           </dl>
 
-          <p className="mt-3 text-sm">
-            Put this in the transfer so we know it is you:
-          </p>
-          <p className="mt-1 font-mono text-2xl font-black tracking-wider">
-            {me.reference}
-          </p>
+          <p className="mt-3 text-sm text-muted">Reference</p>
+          <p className="font-mono text-2xl font-black tracking-wider">{me.reference}</p>
           <p className="mt-1 text-sm text-muted">
-            Everybody pays the same amount in the same week, so without this we
-            cannot tell two transfers apart. Paid already? It can take us a few
-            hours to see it.
+            Put it in the transfer. It can take a few hours to show.
           </p>
         </section>
       ) : null}
@@ -213,7 +203,7 @@ export default async function RoomPage({
           </p>
         ) : null}
 
-        {me && phone === room.creatorPhone && room.status === "open" ? (
+        {phone === room.creatorPhone && room.status === "open" ? (
           <form action={closeRoomAction} className="mt-4">
             <input type="hidden" name="token" value={token} />
             <button type="submit" className="btn-quiet w-full">
@@ -232,20 +222,38 @@ export default async function RoomPage({
         <section className="card mt-6">
           <h2 className="font-bold">What you would like</h2>
           <p className="mt-1 text-sm text-muted">
-            Three to five things. Whoever drew you picks one, so give them a
-            choice, and give us something to fall back on if the first is
-            nowhere in Lagos.
+            Three to five things, so whoever drew you has a choice. Keep them
+            near {naira(room.budget)}: anything over and whoever drew you has
+            to pay the difference, so they will probably pick something else.
           </p>
 
           <ul className="mt-3 space-y-2">
             {mine.map((one: Wish) => (
               <li key={one.id} className="flex items-start justify-between gap-3 border-t pt-2">
-                <div>
+                <div className="flex items-start gap-3">
+                  {one.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={one.photoUrl}
+                      alt=""
+                      className="h-14 w-14 shrink-0 rounded-lg object-cover"
+                    />
+                  ) : null}
+                  <div>
                   <p className="font-semibold">{one.title}</p>
                   {one.note ? <p className="text-sm text-muted">{one.note}</p> : null}
                   {one.estPrice > 0 ? (
-                    <p className="text-sm text-muted">about {naira(one.estPrice)}</p>
+                    <p className="text-sm text-muted">
+                      about {naira(one.estPrice)}
+                      {one.estPrice > room.budget ? (
+                        <span className="font-semibold text-brand">
+                          {" "}
+                          · over the {naira(room.budget)} budget
+                        </span>
+                      ) : null}
+                    </p>
                   ) : null}
+                  </div>
                 </div>
                 <form action={removeWishAction}>
                   <input type="hidden" name="token" value={token} />
@@ -283,6 +291,21 @@ export default async function RoomPage({
                   className="field"
                   placeholder="Replica, Jazz Club. 30ml is fine"
                 />
+              </div>
+              <div>
+                <label className="label" htmlFor="photo">
+                  A picture
+                </label>
+                <input
+                  id="photo"
+                  name="photo"
+                  className="field"
+                  type="file"
+                  accept="image/*"
+                />
+                <p className="mt-1 text-sm text-muted">
+                  A screenshot is usually the clearest way to say which one.
+                </p>
               </div>
               <div>
                 <label className="label" htmlFor="estPrice">
@@ -327,12 +350,30 @@ export default async function RoomPage({
             <ul className="mt-3 space-y-2">
               {match.wishes.map((one) => (
                 <li key={one.id} className="flex items-start justify-between gap-3 border-t pt-2">
-                  <div>
+                  <div className="flex items-start gap-3">
+                    {one.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={one.photoUrl}
+                        alt=""
+                        className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                      />
+                    ) : null}
+                    <div>
                     <p className="font-semibold">{one.title}</p>
                     {one.note ? <p className="text-sm text-muted">{one.note}</p> : null}
                     {one.estPrice > 0 ? (
-                      <p className="text-sm text-muted">about {naira(one.estPrice)}</p>
+                      <p className="text-sm text-muted">
+                        about {naira(one.estPrice)}
+                        {one.estPrice > match.budget ? (
+                          <span className="font-semibold text-brand">
+                            {" "}
+                            · over budget, you would pay the difference
+                          </span>
+                        ) : null}
+                      </p>
                     ) : null}
+                    </div>
                   </div>
                   {match.pickedWishId === one.id ? (
                     <span className="text-sm font-bold text-mint">Picked</span>
