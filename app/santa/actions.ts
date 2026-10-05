@@ -7,6 +7,7 @@ import { ensureCustomer } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import {
   addWish,
+  agreeToPayMore,
   closeRoom,
   createRoom,
   pickWish,
@@ -131,6 +132,23 @@ export async function handoverAction(form: FormData): Promise<void> {
     deliverOn: said(form, "deliverOn"),
   });
 
+  revalidatePath(`/santa/${token}`);
+  if (!done.ok) redirect(`/santa/${token}?problem=${encodeURIComponent(done.error)}`);
+}
+
+/**
+ * The buyer says yes to paying the difference.
+ *
+ * Theirs to give, not something admin ticks for them: the reason the rule
+ * exists at all is that somebody is being asked for more than they agreed
+ * to hand over.
+ */
+export async function agreeAction(form: FormData): Promise<void> {
+  const token = said(form, "token");
+  const here = await roomByToken(token);
+  if (!here) return;
+
+  const done = await agreeToPayMore({ roomId: here.id, phone: await me(token) });
   revalidatePath(`/santa/${token}`);
   if (!done.ok) redirect(`/santa/${token}?problem=${encodeURIComponent(done.error)}`);
 }

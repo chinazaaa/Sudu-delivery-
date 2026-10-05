@@ -495,6 +495,13 @@ export async function pickWish(args: {
     .maybeSingle();
   if (!theirs) return { ok: false, error: "That is not on their list." };
 
+  const { data: before } = await db()
+    .from("santa_assignments")
+    .select("wish_id")
+    .eq("id", mine.id)
+    .maybeSingle();
+  const changed = (before?.wish_id ?? null) !== args.wishId;
+
   await db()
     .from("santa_assignments")
     .update({ wish_id: args.wishId })
@@ -502,11 +509,35 @@ export async function pickWish(args: {
 
   const { data: already } = await db()
     .from("santa_orders")
-    .select("id")
+    .select("id, status")
     .eq("assignment_id", mine.id)
     .maybeSingle();
+
   if (!already) {
     await db().from("santa_orders").insert({ assignment_id: mine.id });
+    return { ok: true };
+  }
+
+  /*
+   * Picking something else throws away what we had found for the old one.
+   *
+   * Without this, somebody told their choice came to three thousand over
+   * budget picks the cheaper thing on the list and the order still carries
+   * the old price, the old refund and the agreement they gave for an item
+   * they are no longer buying. The handover and its date are theirs and
+   * survive, because that is a decision about carrying rather than about
+   * what is being carried.
+   */
+  if (changed && already.status !== "delivered") {
+    await db()
+      .from("santa_orders")
+      .update({
+        status: "sourcing",
+        sourced_price: null,
+        agreed_at: null,
+        refund: null,
+      })
+      .eq("id", already.id);
   }
 
   return { ok: true };
@@ -567,5 +598,96 @@ export async function setHandover(args: {
     .from("santa_orders")
     .update({ handover: "giver", deliver_on: day })
     .eq("assignment_id", mine.id);
+  return error ? { ok: false, error: "Could not save that." } : { ok: true };
+}
+
+export type MyOrder = {
+  status: "sourcing" | "asking" | "buying" | "bought" | "delivered" | "stuck";
+  /** What we have actually paid, once we have. */
+  sourcedPrice: number | null;
+  /** How much over the budget that is, if it is over. */
+  over: number;
+  agreedAt: string | null;
+  refund: number | null;
+  refundedAt: string | null;
+  handover: "we_deliver" | "giver";
+  deliverOn: string | null;
+  handedOverAt: string | null;
+};
+
+/**
+ * The buyer's own order.
+ *
+ * Theirs alone: it is the gift they are paying for, so the money, the
+ * status and the date are all their business. The person receiving it sees
+ * none of this, and must not, because "your gift is being sourced" on the
+ * receiver's screen is a sentence that tells them somebody is buying for
+ * them and roughly when, which is half of what the room is keeping back.
+ */
+export async function myOrder(roomId: string, phone: string): Promise<MyOrder | null> {
+  const me = await memberIn(roomId, phone);
+  if (!me || me.leftAt) return null;
+
+  const { data: mine } = await db()
+    .from("santa_assignments")
+    .select("id")
+    .eq("room_id", roomId)
+    .eq("giver_id", me.id)
+    .maybeSingle();
+  if (!mine) return null;
+
+  const { data } = await db()
+    .from("santa_orders")
+    .select("*")
+    .eq("assignment_id", mine.id)
+    .maybeSingle();
+  if (!data) return null;
+
+  const here = await roomById(roomId);
+  const budget = here?.budget ?? 0;
+  const paid = data.sourced_price === null ? null : Number(data.sourced_price);
+
+  return {
+    status: data.status,
+    sourcedPrice: paid,
+    over: paid !== null && paid > budget ? paid - budget : 0,
+    agreedAt: data.agreed_at ?? null,
+    refund: data.refund === null ? null : Number(data.refund),
+    refundedAt: data.refunded_at ?? null,
+    handover: data.handover,
+    deliverOn: data.deliver_on ?? null,
+    handedOverAt: data.handed_over_at ?? null,
+  };
+}
+
+/**
+ * The buyer agrees to pay the difference.
+ *
+ * Nothing above the budget is bought without this, and the agreement is
+ * the buyer's to give rather than something admin can tick on their
+ * behalf: the whole reason the rule exists is that somebody is being asked
+ * for more money than they agreed to hand over.
+ */
+export async function agreeToPayMore(args: {
+  roomId: string;
+  phone: string;
+}): Promise<Done> {
+  const me = await memberIn(args.roomId, args.phone);
+  if (!me || me.leftAt) return { ok: false, error: "You are not in this room." };
+
+  const { data: mine } = await db()
+    .from("santa_assignments")
+    .select("id")
+    .eq("room_id", args.roomId)
+    .eq("giver_id", me.id)
+    .maybeSingle();
+  if (!mine) return { ok: false, error: "Nothing to agree to yet." };
+
+  const { error } = await db()
+    .from("santa_orders")
+    .update({ agreed_at: new Date().toISOString(), status: "buying" })
+    .eq("assignment_id", mine.id)
+    .eq("status", "asking");
+
   return error ? { ok: false, error: "Could not save that." } : { ok: true };
 }

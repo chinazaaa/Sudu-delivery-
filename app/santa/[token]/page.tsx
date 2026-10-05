@@ -9,6 +9,7 @@ import {
   MOST_WISHES,
   matchFor,
   memberIn,
+  myOrder,
   membersOf,
   roomByToken,
   wishesOf,
@@ -16,6 +17,7 @@ import {
 } from "@/lib/santa";
 import {
   addWishAction,
+  agreeAction,
   closeRoomAction,
   handoverAction,
   pickWishAction,
@@ -62,6 +64,9 @@ export default async function RoomPage({
   const people = await membersOf(room.id);
   const mine = me ? await wishesOf(me.id) : [];
   const match = me && room.status !== "open" ? await matchFor(room.id, me.phone) : null;
+  // The buyer's own order: their money, so their business. The person
+  // receiving it never sees any of this.
+  const order = me && room.status !== "open" ? await myOrder(room.id, me.phone) : null;
 
   const lists = await Promise.all(
     people.map(async (one) => ({ id: one.id, has: (await wishesOf(one.id)).length > 0 }))
@@ -292,6 +297,64 @@ export default async function RoomPage({
               ))}
             </ul>
           )}
+
+          {order ? (
+            <div className="mt-4 border-t pt-4">
+              <h3 className="font-bold">Where it has got to</h3>
+
+              {order.status === "asking" && order.over > 0 ? (
+                <div className="mt-2 space-y-3">
+                  <p className="text-sm">
+                    It comes to {naira(order.sourcedPrice ?? 0)}, which is{" "}
+                    <span className="font-bold text-brand">
+                      {naira(order.over)} over
+                    </span>{" "}
+                    the {naira(match.budget)} budget. We have not bought it.
+                  </p>
+                  <p className="text-sm text-muted">
+                    Pay the difference and we will get it, or pick something
+                    else off the list above and we will start again.
+                  </p>
+                  <form action={agreeAction}>
+                    <input type="hidden" name="token" value={token} />
+                    <button type="submit" className="btn-primary w-full">
+                      I will pay the {naira(order.over)}
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                <p className="mt-2 text-sm">
+                  {order.status === "sourcing" ? "We are looking for it." : null}
+                  {order.status === "buying"
+                    ? order.agreedAt
+                      ? "You agreed the extra. We are buying it."
+                      : "Found, and we are buying it."
+                    : null}
+                  {order.status === "bought"
+                    ? order.handover === "giver"
+                      ? `Bought. It comes to you${order.deliverOn ? ` on ${runDateLabel(order.deliverOn)}` : ""}.`
+                      : `Bought. It goes out on ${runDateLabel(match.exchangeDate)}.`
+                    : null}
+                  {order.status === "delivered"
+                    ? order.handedOverAt
+                      ? "With you. The rest is between the two of you."
+                      : "Delivered."
+                    : null}
+                  {order.status === "stuck"
+                    ? "We cannot find this one. We will message you about the next thing on their list."
+                    : null}
+                </p>
+              )}
+
+              {order.refund !== null && order.refund > 0 ? (
+                <p className="mt-2 text-sm text-muted">
+                  {naira(order.refund)} of your {naira(match.budget)} is coming
+                  back to you
+                  {order.refundedAt ? ", and has been sent." : " this week."}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           {match.pickedWishId ? (
             <form action={handoverAction} className="mt-5 space-y-3 border-t pt-4">
