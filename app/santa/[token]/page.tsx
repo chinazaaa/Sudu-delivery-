@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { currentCustomer, customerDetails } from "@/lib/customer-auth";
 import { naira } from "@/lib/money";
-import { safeSettings } from "@/lib/settings";
+import { safeSettings, whatsappLink } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
 import CopyText from "@/components/CopyText";
 import SantaHero from "@/components/SantaHero";
@@ -63,6 +63,10 @@ export default async function RoomPage({
 
   const settings = await safeSettings();
   const site = await siteUrl();
+  const chatToPay = whatsappLink(
+    settings.whatsapp_number,
+    `Hi Sudu, I'd like to pay for the ${room.name} Secret Santa by card.`
+  );
 
   const phone = await currentCustomer();
   const known = phone ? await customerDetails(phone) : null;
@@ -202,6 +206,19 @@ export default async function RoomPage({
           <p className="mt-1 text-sm text-muted">
             Put it in the transfer. It can take a few hours to show.
           </p>
+
+          {/* Quiet on purpose. Transfer is what nearly everybody does and
+            * what costs the shop nothing; a card is for the one person it
+            * is the difference between joining and not. */}
+          {chatToPay ? (
+            <p className="mt-3 text-sm text-muted">
+              Would rather pay by card?{" "}
+              <a className="font-semibold text-brand underline" href={chatToPay}>
+                Message us
+              </a>
+              .
+            </p>
+          ) : null}
         </section>
       ) : null}
 
