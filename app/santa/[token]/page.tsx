@@ -427,7 +427,7 @@ export default async function RoomPage({
             Pick one thing. We will find it, and if it comes to more than{" "}
             {naira(match.toSpend)} we will ask you before buying anything.
             {match.delivery > 0
-              ? ` Of the ${naira(match.budget)} you put in, ${naira(match.delivery)} carries it.`
+              ? ` Of the ${naira(match.budget)} you put in, ${naira(match.delivery)} goes on fetching it and bringing it over.`
               : ""}
           </p>
 

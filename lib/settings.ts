@@ -136,9 +136,10 @@ export type Settings = {
   /** Where the products come from, in the shop's own words. Empty falls back
    *  to the line in the code, so this reads right before anybody sets it. */
   skincare_promise: string;
-  /** What carrying one Secret Santa gift costs. Every gift in a room goes
-   *  out in one car on one day, so it is a flat number per gift rather than
-   *  the container ladder. Zero adds nothing. */
+  /** What one Secret Santa gift costs to fetch and deliver. Each gift is
+   *  its own errand, from its own shop, so it is charged per gift against
+   *  that giver's budget rather than shared across the room. Zero adds
+   *  nothing. */
   santa_delivery: number;
   /** The areas the shop delivers from, as JSON. Empty means one area, and
    *  every price exactly as it was. */

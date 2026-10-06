@@ -141,7 +141,7 @@ export default async function WishlistPage({
         {naira(spend)}: anything over and whoever draws you has to pay the
         difference, so they will probably pick something else.
         {delivery > 0
-          ? ` Everybody puts in ${naira(room.budget)}, and ${naira(delivery)} of it carries the gift to you.`
+          ? ` Everybody puts in ${naira(room.budget)}, and ${naira(delivery)} of it goes on finding your gift and bringing it to you.`
           : ""}
       </p>
 

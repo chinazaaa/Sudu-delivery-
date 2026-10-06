@@ -118,7 +118,7 @@ export default async function SantaPickPage({
           Anything here goes straight onto your list at the price on the tile,
           so whoever draws you knows exactly what they are getting.
           {delivery > 0
-            ? ` There is ${naira(spend)} to spend: the other ${naira(delivery)} of the ${naira(room.budget)} carries it to you.`
+            ? ` There is ${naira(spend)} to spend: the other ${naira(delivery)} of the ${naira(room.budget)} fetches it and brings it to you.`
             : ""}
         </p>
       </header>

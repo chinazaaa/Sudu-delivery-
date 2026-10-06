@@ -988,11 +988,13 @@ export async function deleteRoom(roomId: string, force = false): Promise<Done> {
 /**
  * What is actually left for the gift.
  *
- * A giver pays the budget and the budget has to carry the thing as well as
- * buy it: every gift in a room is driven somewhere, and a delivery nobody
- * took out of the budget is a delivery coming out of the margin. So it is
- * taken off the top, once, for every gift in the room, wherever the gift
- * comes from. Nothing is free to carry because it is ours.
+ * A giver pays the budget and the budget has to fetch the thing as well as
+ * buy it. Every gift is its own errand: ten gifts in a room come from ten
+ * shops, and the one car on the exchange day is the last step of ten
+ * journeys rather than the whole of one. A delivery nobody took out of the
+ * budget is a delivery coming out of the margin, so it is taken off the
+ * top, once per gift, against that giver's own budget. Nothing is free to
+ * carry because it is ours.
  *
  * It never goes below zero: a delivery larger than the budget is somebody's
  * mistake in settings, and the right answer to it is a gift of nothing
@@ -1002,7 +1004,7 @@ export function toSpend(budget: number, delivery: number): number {
   return Math.max(0, Math.round(budget) - Math.max(0, Math.round(delivery)));
 }
 
-/** What the shop charges to carry one gift. Zero until it is set. */
+/** What the shop charges to fetch and deliver one gift. Zero until set. */
 export async function santaDelivery(): Promise<number> {
   const { data } = await db()
     .from("settings")

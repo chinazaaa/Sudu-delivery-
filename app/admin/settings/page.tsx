@@ -488,12 +488,12 @@ export default async function SettingsAdmin() {
       <form action={saveSettings} className="card space-y-3">
         <h2 className="font-semibold">Secret Santa delivery</h2>
         <p className="text-sm text-muted">
-          What carrying one gift costs. Every gift in a room goes out on the
-          same day in the same car, so this is one flat number per gift rather
-          than the container ladder: charging each giver a whole trip would be
-          charging ten people for one journey. It is added to anything picked
-          off our own menu, and it comes out of the budget the giver paid.
-          Zero adds nothing.
+          What one gift costs to fetch and deliver. Every gift is its own
+          errand: they come from different shops, on different days, and the
+          one car on the exchange day is the last step of ten separate
+          journeys rather than the whole of one. So it is charged once per
+          gift, against that giver&apos;s budget, whatever the gift is and
+          wherever it comes from. Zero adds nothing.
         </p>
         <div className="max-w-xs">
           <label className="label" htmlFor="santa_delivery">
