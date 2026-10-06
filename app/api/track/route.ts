@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { tidyChannel } from "@/lib/came-from";
+import { isSignedIn } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,21 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const agent = request.headers.get("user-agent") ?? "";
     if (agent === "" || ROBOTS.test(agent)) return ok();
+
+    /*
+     * Us, on the shop.
+     *
+     * Dropping /admin was only half of it: checking a price, opening a
+     * customer's order link, or testing a new page all happen on the
+     * customer side of the site, on a laptop that is open all day. One
+     * person reloading the menu forty times is forty views and a person
+     * who never orders, which drags the conversion figure down by more
+     * than most things that are actually wrong with it.
+     *
+     * The admin cookie is signed, so this cannot be faked by anybody
+     * wanting to go uncounted, and it is only ever on our own browsers.
+     */
+    if (await isSignedIn()) return ok();
     if (visitor.length < 8) return ok();
 
     const { error } = await db()
