@@ -3,6 +3,25 @@
 Everything a listing asks for, written once so both listings say the same
 thing. Copy from here rather than retyping it.
 
+Both apps are live. This stopped being a submission checklist and became the
+record of what was submitted, so when a listing is edited it is edited here
+first and copied out, not the other way round.
+
+## Live listings
+
+| | |
+|---|---|
+| Play Store | https://play.google.com/store/apps/details?id=store.sudu.app |
+| App Store | https://apps.apple.com/app/id6813707812 |
+| One link for both | https://sudu.store/app |
+
+`sudu.store/app` is what to put on a flyer, in a bio, or in a WhatsApp
+message. It reads the phone and sends Android to Play, iPhone to the App
+Store, and anything else to a page with both buttons on it. The QR square the
+site generates points at it as well, so one printed code works for both kinds
+of phone. Nothing on the site hardcodes a store address any more; the App
+Store id and the Play package are in Admin under Settings.
+
 ## Names and identifiers
 
 | | |
@@ -14,7 +33,8 @@ thing. Copy from here rather than retyping it.
 | Category | Food and Drink |
 | Website | https://sudu.store |
 | Privacy policy | https://sudu.store/privacy |
-| Support | the WhatsApp number on the website |
+| Support | https://sudu.store/support, which carries the WhatsApp number |
+| Get the app | https://sudu.store/app, which sends each phone to its own store |
 
 ## Short description (Play, 80 characters max)
 
@@ -83,7 +103,7 @@ lagos,sangotedo,novare,student,university,hostel,restaurant,takeaway,lunch,dinne
 
 **Support URL**: `https://sudu.store/support`
 **Marketing URL** (optional): `https://sudu.store`
-**Version**: must match `mobile/app.json`, which says `1.0.0`
+**Version**: must match `mobile/app.json`
 **Copyright** (200): `2026 Sudu`
 
 **Description** (4000, uses 2191). Restaurant names are deliberately absent:
@@ -172,7 +192,7 @@ here so nothing is discovered at submission.
 | **Account deletion in the app** (Apple 5.1.1(v)) | Home screen, the **You** button, then Delete my data. Deletes from inside the app, no email, no web form |
 | Privacy policy at a public URL | https://sudu.store/privacy, and linked on that same screen |
 | Privacy questionnaire / nutrition labels | The data safety table above |
-| Support URL | https://sudu.store |
+| Support URL | https://sudu.store/support |
 | Sign in with Apple (4.8) | Not required. It applies only to apps offering a third-party login such as Google or Facebook. Ours is a phone number and our own PIN |
 | Login required to use the app (2.1) | It is not. Anyone can browse and order without signing in. Signing in only brings back past orders |
 | In-app purchase (3.1.1) | Not required. Food delivered to a person is a real-world good, which 3.1.3(e) exempts. Payment happens by bank transfer in their own bank app |
@@ -250,12 +270,15 @@ promises, in the same words.
 | `assets/notification-icon.png` | Android notification silhouette |
 | `assets/store/feature-graphic.png` | 1024x500. Play Store only, required |
 
-## Screenshots still to take
+## Screenshots
 
-Neither store will publish without these, and they have to come from a real
-build. Run `eas build -p android --profile preview`, install the APK, then
-screenshot on the phone. iOS screenshots come from the simulator or a
-TestFlight build.
+Both listings have these already. They are here because a listing is reshot
+every time the app changes shape, and the order matters more than the
+pictures: it is the order somebody new reads the app in.
+
+They have to come from a real build. Run `eas build -p android --profile
+preview`, install the APK, then screenshot on the phone. iOS screenshots come
+from the simulator or a TestFlight build.
 
 Play needs at least 2 phone screenshots, 16:9 or 9:16, between 320px and
 3840px on the long side. The App Store needs 3 to 10 at 6.7 inch
@@ -278,18 +301,38 @@ new reads it:
 Do not put a promotional frame or marketing text around them. Both stores
 now prefer plain screenshots, and a plain one never looks out of date.
 
-## Release checklist
+## Shipping a change
 
-1. `cd mobile && npm install`
-2. `npx expo-doctor`
-3. `eas login` then `eas init` once, which writes the project ID into
-   `app.json`
-4. `eas build -p android --profile preview` for an APK you can install by
-   hand and send to anybody
-5. Take the screenshots above
-6. `eas build -p android --profile production` for the Play bundle
-7. `eas build -p ios --profile production` for TestFlight
-8. `eas submit -p android` and `eas submit -p ios`
+Most changes never need a build. The app is JavaScript over a native shell,
+and anything that is only JavaScript, which is nearly everything, goes out
+over the air:
+
+```
+cd mobile && eas update --branch production --message "what changed"
+```
+
+Phones pick it up on their next launch. No review, no waiting, both stores at
+once.
+
+A new build is needed only when the native shell changes: a new Expo SDK, a
+new native dependency, a change to permissions, the icon, the splash screen,
+or anything in `app.json` outside the JavaScript.
+
+```
+cd mobile && npm install
+npx expo-doctor
+eas build -p android --profile production
+eas build -p ios --profile production
+eas submit -p android
+eas submit -p ios
+```
 
 Bump `version` in `app.json` for anything customers would notice.
-`autoIncrement` in the production profile handles the build numbers.
+`autoIncrement` in the production profile handles the build numbers. An APK
+to install by hand or send to somebody is `eas build -p android --profile
+preview`.
+
+### First time on a machine
+
+`eas login`, then `eas init` once, which writes the project ID into
+`app.json`.
