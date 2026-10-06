@@ -290,63 +290,57 @@ export default async function WishlistPage({
       {/* Where their own gift is delivered. Nothing anywhere said this,
         * which is a hole that only shows up on the day: ten gifts in a car
         * and no block written against any of them. */}
-      <form id="where" action={hostelAction} className="card mt-5 space-y-3">
-        <input type="hidden" name="token" value={token} />
-        <h2 className="font-bold">Where your gift goes</h2>
-        <p className="text-sm text-muted">
-          {me.hostel
-            ? `So we know where to bring it. Yours goes to ${me.hostel}.`
-            : "So we know where to bring it."}
-        </p>
-        <div>
-          <label className="label" htmlFor="hostel">
-            Your block
-          </label>
-          {/* The real list, the same as checkout uses. Free text was
-            * letting people invent a block nobody drives to. The text box
-            * stays only for a shop that has not filled its hostels in. */}
-          {hostels.length > 0 ? (
-            <select id="hostel" name="hostel" className="field" defaultValue={me.hostel}>
-              <option value="">Pick your block</option>
-              {hostels.map((one) => (
-                <option key={one} value={one}>
-                  {one}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              id="hostel"
-              name="hostel"
-              className="field"
-              defaultValue={me.hostel}
-              placeholder="Queen Mary"
-            />
-          )}
-        </div>
-        <button type="submit" className="btn-quiet w-full">
-          {me.hostel ? "Change it" : "Save"}
-        </button>
-        {saved && !problem ? (
-        <p className="card mt-4 border-mint/40 bg-mint/10 font-semibold">
-          {saved === "block"
-            ? me.hostel
-              ? `Saved. Your gift goes to ${me.hostel}.`
-              : "Saved."
-            : saved === "added"
-              ? "Added to your list."
-              : saved === "changed"
-                ? "Saved."
-                : "Taken off your list."}
-        </p>
-      ) : null}
+      {/* Folded away once it is answered. It is one line of fact for
+        * somebody who has already given it, and a whole card of form for
+        * somebody who has not. */}
+      <details id="where" className="card mt-5" open={!me.hostel}>
+        <summary className="cursor-pointer list-none">
+          <span className="flex items-center justify-between gap-3">
+            <span>
+              <span className="block font-bold">Where your gift goes</span>
+              <span className="block text-sm text-muted">
+                {me.hostel ? me.hostel : "Not said yet. We cannot deliver it without this."}
+              </span>
+            </span>
+            <span className="text-sm font-semibold text-brand">
+              {me.hostel ? "Change" : "Pick"}
+            </span>
+          </span>
+        </summary>
 
-      {!me.hostel ? (
-          <p className="text-sm font-semibold text-brand">
-            We cannot deliver your gift without this.
-          </p>
-        ) : null}
-      </form>
+        <form action={hostelAction} className="mt-3 space-y-3 border-t pt-3">
+          <input type="hidden" name="token" value={token} />
+          <div>
+            <label className="label" htmlFor="hostel">
+              Your block
+            </label>
+            {/* The real list, the same as checkout uses. Free text was
+              * letting people invent a block nobody drives to. The text box
+              * stays only for a shop that has not filled its hostels in. */}
+            {hostels.length > 0 ? (
+              <select id="hostel" name="hostel" className="field" defaultValue={me.hostel}>
+                <option value="">Pick your block</option>
+                {hostels.map((one) => (
+                  <option key={one} value={one}>
+                    {one}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id="hostel"
+                name="hostel"
+                className="field"
+                defaultValue={me.hostel}
+                placeholder="Queen Mary"
+              />
+            )}
+          </div>
+          <button type="submit" className="btn-quiet w-full">
+            {me.hostel ? "Change it" : "Save"}
+          </button>
+        </form>
+      </details>
 
       <p className="mt-6">
         <Link className="font-semibold text-brand" href={`/santa/${token}`}>

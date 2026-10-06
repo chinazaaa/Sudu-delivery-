@@ -4,7 +4,14 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/supabase";
 import { normalisePhone } from "@/lib/phone";
 import { ensureCustomer } from "@/lib/orders";
-import { closeRoom, joinRoom, markPaid, markUnpaid, roomById } from "@/lib/santa";
+import {
+  closeRoom,
+  joinRoom,
+  markPaid,
+  markUnpaid,
+  removeMember as takeOut,
+  roomById,
+} from "@/lib/santa";
 
 /**
  * Running the rooms.
@@ -63,12 +70,16 @@ export async function markMemberUnpaid(form: FormData): Promise<void> {
   back();
 }
 
-/** Somebody left before the draw. Their money goes back. */
+/**
+ * Somebody left before the draw. Their money goes back.
+ *
+ * The rule and the tidying up live in the engine, so this and the button
+ * the room's own creator presses cannot drift apart: before the draw only,
+ * marked rather than deleted so their reference still means something on a
+ * statement, and their list goes with them.
+ */
 export async function removeMember(form: FormData): Promise<void> {
-  await db()
-    .from("santa_members")
-    .update({ left_at: new Date().toISOString() })
-    .eq("id", said(form, "memberId"));
+  await takeOut(said(form, "memberId"));
   back();
 }
 

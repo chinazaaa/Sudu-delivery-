@@ -25,6 +25,8 @@ import {
   agreeAction,
   closeRoomAction,
   joinRoomAction,
+  kickMemberAction,
+  leaveRoomAction,
   handoverAction,
   pickWishAction,
 } from "../actions";
@@ -54,10 +56,15 @@ export default async function RoomPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ problem?: string; joined?: string }>;
+  searchParams: Promise<{
+    problem?: string;
+    joined?: string;
+    left?: string;
+    removed?: string;
+  }>;
 }) {
   const { token } = await params;
-  const { problem, joined } = await searchParams;
+  const { problem, joined, left, removed } = await searchParams;
 
   const room = await roomByToken(token);
   if (!room) notFound();
@@ -109,6 +116,18 @@ export default async function RoomPage({
       {joined && me ? (
         <p className="card mt-4 border-mint/40 bg-mint/10 font-semibold">
           You are in. Write your wishlist below.
+        </p>
+      ) : null}
+
+      {left ? (
+        <p className="card mt-4 border-mint/40 bg-mint/10 font-semibold">
+          You are out of this room. Anything you had paid comes back to you;
+          message us if it has not by the end of the week.
+        </p>
+      ) : null}
+      {removed ? (
+        <p className="card mt-4 border-mint/40 bg-mint/10 font-semibold">
+          Taken out of the room. Send their money back if they had paid.
         </p>
       ) : null}
 
@@ -312,6 +331,21 @@ export default async function RoomPage({
               </span>
               <span className="flex items-center gap-2 text-muted">
                 <span>{written.has(one.id) ? "list ready" : "no list yet"}</span>
+                {/* Whoever made the room is the one being asked why it has
+                  * not been drawn, so taking out the person who joined and
+                  * never paid is theirs to do. Not themselves: a room with
+                  * nobody to close it is worse than a slow one. */}
+                {phone === room.creatorPhone &&
+                room.status === "open" &&
+                one.phone !== room.creatorPhone ? (
+                  <form action={kickMemberAction}>
+                    <input type="hidden" name="token" value={token} />
+                    <input type="hidden" name="memberId" value={one.id} />
+                    <button type="submit" className="text-xs font-semibold text-brand underline">
+                      Remove
+                    </button>
+                  </form>
+                ) : null}
                 <span
                   className={
                     hasPaid(one)
@@ -345,6 +379,24 @@ export default async function RoomPage({
               afterwards.
             </p>
           </form>
+        ) : null}
+
+        {me && room.status === "open" && phone !== room.creatorPhone ? (
+          <details className="mt-4 border-t pt-3">
+            <summary className="cursor-pointer text-sm text-muted">
+              Leave this room
+            </summary>
+            <form action={leaveRoomAction} className="mt-2">
+              <input type="hidden" name="token" value={token} />
+              <p className="text-sm text-muted">
+                Your list goes with you, and anything you paid comes back to
+                you. You can only do this before names are drawn.
+              </p>
+              <button type="submit" className="btn-quiet mt-2 w-full">
+                Leave the room
+              </button>
+            </form>
+          </details>
         ) : null}
 
         {room.status === "open" ? (

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ConfirmButton from "@/components/admin/ConfirmButton";
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import { naira } from "@/lib/money";
@@ -9,6 +10,7 @@ import {
   addMember,
   markMemberPaid,
   markMemberUnpaid,
+  removeMember,
   agreeOverBudget,
   backToUs,
   drawRoom,
@@ -268,6 +270,25 @@ export default async function SantaAdminPage() {
                         not paid
                       </span>
                     )}
+                    {/* Somebody who changed their mind rang us, not the
+                      * room. Before the draw only: afterwards it is a ring
+                      * and taking a link out of it breaks two gifts. */}
+                    {room.status === "open" ? (
+                      <form action={removeMember}>
+                        <input type="hidden" name="memberId" value={one.id} />
+                        <ConfirmButton
+                          tone="bare"
+                          className="text-xs font-semibold text-brand underline"
+                          confirm={
+                            hasPaid(one)
+                              ? "Take out, and send their money back?"
+                              : "Sure? Take them out"
+                          }
+                        >
+                          Take out
+                        </ConfirmButton>
+                      </form>
+                    ) : null}
                     </div>
 
                     {/* Just the shape of it. What it costs us, what we

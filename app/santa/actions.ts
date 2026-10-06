@@ -15,6 +15,9 @@ import {
   joinRoom,
   pickWish,
   removeWish,
+  leaveRoom,
+  memberIn,
+  removeMember,
   roomByToken,
   setHandover,
   setHostel,
@@ -268,4 +271,45 @@ export async function hostelAction(form: FormData): Promise<void> {
   revalidatePath(`/santa/${token}`);
   if (!done.ok) redirect(`/santa/${token}/wishlist?problem=${encodeURIComponent(done.error)}`);
   redirect(`/santa/${token}/wishlist?saved=block`);
+}
+
+/** Walking away from a room, before it is drawn. */
+export async function leaveRoomAction(form: FormData): Promise<void> {
+  const token = said(form, "token");
+  const here = await roomByToken(token);
+  if (!here) return;
+
+  const done = await leaveRoom({ roomId: here.id, phone: await me(token) });
+  revalidatePath(`/santa/${token}`);
+  if (!done.ok) redirect(`/santa/${token}?problem=${encodeURIComponent(done.error)}`);
+  redirect(`/santa/${token}?left=1`);
+}
+
+/**
+ * The person who made the room taking somebody out of it.
+ *
+ * Theirs to do, because they are the one being asked by the eleven other
+ * people why the room still has not been drawn. Only while it is open, and
+ * never themselves: that is what leaving is for, and they cannot leave.
+ */
+export async function kickMemberAction(form: FormData): Promise<void> {
+  const token = said(form, "token");
+  const here = await roomByToken(token);
+  if (!here) return;
+
+  const phone = await me(token);
+  if (phone !== here.creatorPhone) {
+    redirect(`/santa/${token}?problem=${encodeURIComponent("Only whoever made the room can do that.")}`);
+  }
+
+  const them = said(form, "memberId");
+  const mine = await memberIn(here.id, phone);
+  if (mine && them === mine.id) {
+    redirect(`/santa/${token}?problem=${encodeURIComponent("You made this room, so message us to close it.")}`);
+  }
+
+  const done = await removeMember(them);
+  revalidatePath(`/santa/${token}`);
+  if (!done.ok) redirect(`/santa/${token}?problem=${encodeURIComponent(done.error)}`);
+  redirect(`/santa/${token}?removed=1`);
 }

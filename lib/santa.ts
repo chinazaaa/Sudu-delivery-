@@ -854,3 +854,76 @@ export async function editWish(args: {
     .eq("member_id", me.id);
   return error ? { ok: false, error: "Could not save that." } : { ok: true };
 }
+
+/**
+ * Somebody walks away from a room.
+ *
+ * Only while it is open. After the draw a room is a ring, and a person
+ * leaving it is a gift nobody is buying and a person nobody is buying for:
+ * that is a conversation, not a button.
+ *
+ * Their money is not handed back here. Money came in by transfer and goes
+ * out by transfer, and this writes neither; what it does is take them out
+ * of the draw and leave the amount against their name for whoever sends it
+ * back. The screen says so.
+ *
+ * Marked rather than deleted, because the reference they put in a transfer
+ * has to keep meaning something on a statement a week later.
+ */
+export async function leaveRoom(args: {
+  roomId: string;
+  phone: string;
+}): Promise<Done> {
+  const here = await roomById(args.roomId);
+  if (!here) return { ok: false, error: "That room is gone." };
+  if (here.status !== "open") {
+    return { ok: false, error: "The room has been drawn, so message us instead." };
+  }
+
+  const me = await memberIn(args.roomId, args.phone);
+  if (!me || me.leftAt) return { ok: false, error: "You are not in this room." };
+
+  // The person who made it is the one everybody else is relying on to close
+  // it. Letting them walk out leaves a room nobody can draw.
+  if (args.phone === here.creatorPhone) {
+    return { ok: false, error: "You made this room, so message us to close it." };
+  }
+
+  await db()
+    .from("santa_members")
+    .update({ left_at: new Date().toISOString() })
+    .eq("id", me.id);
+
+  // Their list goes with them. It was written for whoever drew them, and
+  // nobody is drawing them now.
+  await db().from("santa_wishes").delete().eq("member_id", me.id);
+  return { ok: true };
+}
+
+/**
+ * Taking somebody out, from the shop's side.
+ *
+ * The same rule and the same marking. It exists because the person who
+ * rings up to say they are out rings the shop, not the room.
+ */
+export async function removeMember(memberId: string): Promise<Done> {
+  const { data } = await db()
+    .from("santa_members")
+    .select("id, room_id, left_at")
+    .eq("id", memberId)
+    .maybeSingle();
+  if (!data || data.left_at) return { ok: false, error: "They are not in a room." };
+
+  const here = await roomById(data.room_id as string);
+  if (!here) return { ok: false, error: "That room is gone." };
+  if (here.status !== "open") {
+    return { ok: false, error: "The room has been drawn. Taking somebody out now breaks the ring." };
+  }
+
+  await db()
+    .from("santa_members")
+    .update({ left_at: new Date().toISOString() })
+    .eq("id", memberId);
+  await db().from("santa_wishes").delete().eq("member_id", memberId);
+  return { ok: true };
+}
