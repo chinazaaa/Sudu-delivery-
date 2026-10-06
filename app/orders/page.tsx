@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { shortRef } from "@/lib/links";
 import Empty from "@/components/Empty";
 import PinForm from "@/components/PinForm";
 import { currentCustomer } from "@/lib/customer-auth";
+import { formatPhone } from "@/lib/phone";
 import { safeSettings } from "@/lib/settings";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
@@ -31,8 +31,38 @@ export default async function OrdersPage({
   const { next } = await searchParams;
   const back = (next ?? "").startsWith("/") ? next! : "";
 
-  // Already signed in, so there is nothing to ask: go where they were going.
-  if (phone && back) redirect(back);
+  /*
+   * Signed in already, and sent here to sign in.
+   *
+   * Bouncing straight back was the obvious thing and the wrong one: the
+   * reason somebody taps "sign in with your PIN" is almost always that the
+   * browser is signed in as somebody else, or as a number they joined with
+   * by mistake. Sending them back to the page they just left reads as the
+   * link being broken, and they tap it again. So it says who it thinks they
+   * are and offers both doors.
+   */
+  if (phone && back) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold tracking-tight">You are signed in</h1>
+        <p className="text-ink/75">
+          This phone is signed in as{" "}
+          <span className="font-semibold">{formatPhone(phone)}</span>.
+        </p>
+        <div className="card space-y-3">
+          <Link href={back} className="btn-primary block w-full text-center">
+            Carry on as {formatPhone(phone)}
+          </Link>
+          <form action={forgetMe}>
+            <input type="hidden" name="next" value={`/orders?next=${encodeURIComponent(back)}`} />
+            <button className="btn-quiet w-full">
+              Not you? Sign in with another number
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   if (!phone) {
     return (
