@@ -334,3 +334,29 @@ export async function wishLines(): Promise<WishLine[]> {
     return person !== 0 ? person : a.sortOrder - b.sortOrder;
   });
 }
+
+/**
+ * Which numbers are in a Secret Santa room, and which rooms.
+ *
+ * A room is now a door into the shop: somebody joins one having never
+ * ordered, and a customer card reading "0 orders" against a name nobody
+ * recognises is a puzzle rather than a fact. This is what turns it back
+ * into a fact.
+ */
+export async function santaRooms(): Promise<Map<string, string[]>> {
+  const [{ data: memberRows }, { data: roomRows }] = await Promise.all([
+    db().from("santa_members").select("phone, room_id").is("left_at", null),
+    db().from("santa_rooms").select("id, name"),
+  ]);
+
+  const named = new Map(((roomRows ?? []) as Record<string, any>[]).map((one) => [one.id, one.name]));
+  const out = new Map<string, string[]>();
+  for (const row of (memberRows ?? []) as Record<string, any>[]) {
+    const name = named.get(row.room_id);
+    if (!name) continue;
+    const had = out.get(row.phone) ?? [];
+    if (!had.includes(name)) had.push(name);
+    out.set(row.phone, had);
+  }
+  return out;
+}

@@ -195,6 +195,6 @@ export async function saveWishPlan(form: FormData): Promise<void> {
 
 /** A room made to try the thing out, swept up afterwards. */
 export async function removeRoom(form: FormData): Promise<void> {
-  await deleteRoom(said(form, "roomId"));
+  await deleteRoom(said(form, "roomId"), said(form, "force") === "1");
   back();
 }

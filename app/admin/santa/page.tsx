@@ -229,20 +229,25 @@ export default async function SantaAdminPage() {
                     {room.status} · closes {runDateLabel(room.closeDate)} · exchanged{" "}
                     {runDateLabel(room.exchangeDate)}
                   </span>
-                  {/* For the rooms made to find out whether it works. It
-                    * refuses while the room is holding anybody's money. */}
-                  {room.held === 0 ? (
-                    <form action={removeRoom}>
-                      <input type="hidden" name="roomId" value={room.id} />
-                      <ConfirmButton
-                        tone="bare"
-                        className="text-xs font-semibold text-brand underline"
-                        confirm={`Delete ${room.name} and everything in it?`}
-                      >
-                        Delete
-                      </ConfirmButton>
-                    </form>
-                  ) : null}
+                  {/* For the rooms made to find out whether it works, where
+                    * the money was marked paid to see whether the screen
+                    * adds up. The confirm says the amount out loud, because
+                    * on a real room that amount is somebody's. */}
+                  <form action={removeRoom}>
+                    <input type="hidden" name="roomId" value={room.id} />
+                    <input type="hidden" name="force" value="1" />
+                    <ConfirmButton
+                      tone="bare"
+                      className="text-xs font-semibold text-brand underline"
+                      confirm={
+                        room.held > 0
+                          ? `Delete, and forget the ${naira(room.held)} it is holding?`
+                          : `Delete ${room.name} and everything in it?`
+                      }
+                    >
+                      Delete
+                    </ConfirmButton>
+                  </form>
                 </p>
               </div>
               <p className="text-sm text-muted">

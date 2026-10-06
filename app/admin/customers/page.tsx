@@ -18,6 +18,7 @@ import {
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { hostelNames } from "@/lib/hostels";
 import { namedPromoters } from "@/lib/promoters";
+import { santaRooms } from "@/lib/santa-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -27,12 +28,13 @@ export default async function CustomersPage({
   searchParams: Promise<{ q?: string; by?: string }>;
 }) {
   const query = await searchParams;
-  const [rows, settings, url, hostels, promoters] = await Promise.all([
+  const [rows, settings, url, hostels, promoters, santa] = await Promise.all([
     customerRows(query.q),
     getSettings(),
     siteUrl(),
     hostelNames(),
     namedPromoters(),
+    santaRooms(),
   ]);
 
   // Narrowed to one promoter, so "who brought who" is a question the book
@@ -233,6 +235,15 @@ export default async function CustomersPage({
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {/* A Secret Santa room is a door into the shop, and
+                      somebody who came through it has no orders behind
+                      them. Naming the room turns a puzzling card into a
+                      fact. */}
+                  {santa.has(row.phone) && (
+                    <span className="chip border-mint/40 bg-mint/10 text-mint">
+                      Secret Santa · {santa.get(row.phone)!.join(", ")}
+                    </span>
+                  )}
                   <span className="chip border-black/10 bg-shell">
                     PIN <span className="font-black tracking-wider">{row.pin}</span>
                   </span>

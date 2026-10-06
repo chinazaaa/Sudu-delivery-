@@ -1565,6 +1565,28 @@ export async function deleteCustomer(form: FormData): Promise<void> {
     throw new Error("That number has orders behind it, so it stays.");
   }
 
+  // A room that has been drawn is a ring, and a person in it is two gifts.
+  // Deleting the customer behind one is not a tidy-up, it is a hole.
+  const { data: inRooms } = await db()
+    .from("santa_members")
+    .select("id, room_id, santa_rooms!inner(status)")
+    .eq("phone", phone)
+    .is("left_at", null);
+
+  const drawn = ((inRooms ?? []) as Record<string, any>[]).filter(
+    (one) => one.santa_rooms?.status !== "open"
+  );
+  if (drawn.length > 0) {
+    throw new Error("They are in a Secret Santa room that has been drawn, so they stay.");
+  }
+
+  // Out of the open ones, though: a room counting somebody who no longer
+  // exists is a room that never reaches its number.
+  for (const one of (inRooms ?? []) as Record<string, any>[]) {
+    await db().from("santa_wishes").delete().eq("member_id", one.id);
+    await db().from("santa_members").delete().eq("id", one.id);
+  }
+
   // Their abandoned carts go too: a cart with nobody behind it is a row
   // nobody will ever chase.
   await db().from("carts").delete().eq("phone", phone);

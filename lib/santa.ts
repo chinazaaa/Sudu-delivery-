@@ -948,16 +948,22 @@ export async function removeMember(memberId: string): Promise<Done> {
  * orders, all by cascade. It exists for the rooms made to find out whether
  * the thing works, which would otherwise sit in the list for a year.
  *
- * It refuses while the room is holding money. A room with somebody's sixty
- * thousand in it is not a mistake to be swept up, and the money has to be
- * sent back before there is nothing left saying who it belongs to.
+ * It refuses while the room is holding money, unless the person deleting it
+ * says the amount out loud first. A room with somebody's sixty thousand in
+ * it is not a mistake to be swept up, and once it is gone there is nothing
+ * left saying whose the money was. A room where the money was marked paid
+ * to see whether the screen adds up is the reason force exists.
+ *
+ * Nothing in a room has ever been takings: held money is worked out from
+ * these tables and has never been in the profit figure, so a room going
+ * away takes its pretend money with it and changes no number anywhere else.
  */
-export async function deleteRoom(roomId: string): Promise<Done> {
+export async function deleteRoom(roomId: string, force = false): Promise<Done> {
   const here = await roomById(roomId);
   if (!here) return { ok: false, error: "That room is gone already." };
 
   const money = await moneyHeld(roomId);
-  if (money.held > 0) {
+  if (money.held > 0 && !force) {
     return {
       ok: false,
       error: "That room is holding money. Send it back first, then delete it.",
