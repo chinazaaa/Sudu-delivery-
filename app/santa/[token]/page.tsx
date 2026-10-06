@@ -13,6 +13,8 @@ import { hostelNames } from "@/lib/hostels";
 import {
   LEAST_MEMBERS,
   hasPaid,
+  santaDelivery,
+  toPay,
   matchFor,
   memberIn,
   myOrder,
@@ -72,6 +74,11 @@ export default async function RoomPage({
   const settings = await safeSettings();
   const site = await siteUrl();
   const hostels = await hostelNames();
+  // What a member is asked for: the budget, plus what it costs to go and
+  // find one gift. The pay card, the amount marked paid and the amount on
+  // a statement all have to be this same number.
+  const delivery = await santaDelivery();
+  const due = toPay(room.budget, delivery);
   const chatToPay = whatsappLink(
     settings.whatsapp_number,
     `Hi Sudu, I'd like to pay for the ${room.name} Secret Santa by card.`
@@ -99,7 +106,7 @@ export default async function RoomPage({
         kicker="Secret Santa"
         title={room.name}
         chips={[
-          `${naira(room.budget)} each`,
+          `${naira(due)} each`,
           `${room.status === "open" ? "closes" : "closed"} ${runDateLabel(room.closeDate)}`,
           `exchanged ${runDateLabel(room.exchangeDate)}`,
         ]}
@@ -140,8 +147,11 @@ export default async function RoomPage({
           <input type="hidden" name="token" value={token} />
           <h2 className="font-bold">Join this room</h2>
           <p className="text-sm text-muted">
-            Free to join. Paying {naira(room.budget)} is what puts you in the
-            draw.
+            Free to join. Paying {naira(due)} is what puts you in the draw
+            {delivery > 0
+              ? `: ${naira(room.budget)} on the gift and ${naira(delivery)} to find it and bring it over`
+              : ""}
+            .
           </p>
 
           {room.status !== "open" ? (
@@ -225,7 +235,7 @@ export default async function RoomPage({
       {/* In the room, not yet in the draw. */}
       {me && !hasPaid(me) && room.status === "open" ? (
         <section className="card mt-6 border-brand/30 bg-brand/5">
-          <h2 className="font-bold">Pay {naira(room.budget)} to be in the draw</h2>
+          <h2 className="font-bold">Pay {naira(due)} to be in the draw</h2>
           <p className="mt-1 text-sm text-muted">
             Write your list now. You are drawn once this lands.
           </p>
@@ -252,8 +262,17 @@ export default async function RoomPage({
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-muted">Amount</dt>
-              <dd className="font-semibold">{naira(room.budget)}</dd>
+              <dd className="font-semibold">{naira(due)}</dd>
             </div>
+            {delivery > 0 ? (
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted">What that is</dt>
+                <dd className="text-right">
+                  {naira(room.budget)} on the gift, {naira(delivery)} to go and
+                  find it and bring it over
+                </dd>
+              </div>
+            ) : null}
           </dl>
 
           <p className="mt-4 text-sm text-muted">Reference</p>
@@ -425,9 +444,9 @@ export default async function RoomPage({
           </h2>
           <p className="mt-1 text-sm text-muted">
             Pick one thing. We will find it, and if it comes to more than{" "}
-            {naira(match.toSpend)} we will ask you before buying anything.
+            {naira(match.budget)} we will ask you before buying anything.
             {match.delivery > 0
-              ? ` Of the ${naira(match.budget)} you put in, ${naira(match.delivery)} goes on fetching it and bringing it over.`
+              ? ` The whole ${naira(match.budget)} goes on the gift: the ${naira(match.delivery)} you paid on top of it is what finds it and brings it over.`
               : ""}
           </p>
 
@@ -465,7 +484,7 @@ export default async function RoomPage({
                     {one.estPrice > 0 ? (
                       <p className="text-sm text-muted">
                         about {naira(one.estPrice)}
-                        {one.estPrice > match.toSpend ? (
+                        {one.estPrice > match.budget ? (
                           <span className="font-semibold text-brand">
                             {" "}
                             · over budget, you would pay the difference
@@ -506,7 +525,7 @@ export default async function RoomPage({
                     <span className="font-bold text-brand">
                       {naira(order.over)} over
                     </span>{" "}
-                    the {naira(match.toSpend)} there was to spend. We have not
+                    the {naira(match.budget)} there was to spend. We have not
                     bought it.
                   </p>
                   <p className="text-sm text-muted">
@@ -640,7 +659,7 @@ export default async function RoomPage({
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <SendLink
-              message={`Join our Secret Santa on Sudu. ${naira(room.budget)} each, names drawn ${runDateLabel(room.closeDate)}: ${site}/santa/${token}`}
+              message={`Join our Secret Santa on Sudu. ${naira(due)} each${delivery > 0 ? ` (${naira(room.budget)} gift, ${naira(delivery)} to find it and bring it)` : ""}, names drawn ${runDateLabel(room.closeDate)}: ${site}/santa/${token}`}
               link={`${site}/santa/${token}`}
             />
           </div>

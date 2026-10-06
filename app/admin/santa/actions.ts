@@ -12,8 +12,6 @@ import {
   markUnpaid,
   removeMember as takeOut,
   roomById,
-  santaDelivery,
-  toSpend,
 } from "@/lib/santa";
 
 /**
@@ -105,17 +103,12 @@ export async function priceJob(form: FormData): Promise<void> {
   const budget = Math.max(0, Math.round(Number(said(form, "budget"))));
   if (!orderId || !Number.isFinite(paid)) return;
 
-  // The delivery comes off the top, for every gift, wherever it came from.
-  // What is left is what the giver's money had to buy with, so it is what
-  // "over budget" and the change back are both worked out against.
-  const spend = toSpend(budget, await santaDelivery());
-
   await db()
     .from("santa_orders")
     .update({
       sourced_price: paid,
-      refund: Math.max(0, spend - paid),
-      status: paid > spend ? "asking" : "buying",
+      refund: Math.max(0, budget - paid),
+      status: paid > budget ? "asking" : "buying",
     })
     .eq("id", orderId);
   back();

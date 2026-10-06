@@ -38,6 +38,9 @@ export default async function SantaAdminPage() {
   const [list, open] = await Promise.all([jobs(), rooms()]);
 
   const held = open.reduce((sum, one) => sum + one.held, 0);
+  // The errand fees inside that, which are takings rather than somebody's
+  // money being looked after.
+  const fees = open.reduce((sum, one) => sum + one.fees, 0);
   const owing = open.reduce((sum, one) => sum + one.owing, 0);
   const toBuy = list.filter((one) => one.status !== "delivered");
   const late = list.filter((one) => one.late);
@@ -56,7 +59,12 @@ export default async function SantaAdminPage() {
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Held for members" value={held} money hint="Not ours" />
+        <Stat
+          label="Held for members"
+          value={held - fees}
+          money
+          hint={fees > 0 ? `Not ours · ${naira(fees)} of fees on top` : "Not ours"}
+        />
         <Stat label="Still owed out" value={owing} money />
         <Stat label="Gifts to go" value={toBuy.length} />
         <Stat
@@ -126,9 +134,9 @@ export default async function SantaAdminPage() {
                   : ""}
               </p>
 
-              {one.sourcedPrice !== null && one.sourcedPrice > one.toSpend && !one.refundedAt ? (
+              {one.sourcedPrice !== null && one.sourcedPrice > one.budget && !one.refundedAt ? (
                 <p className="mt-1 text-sm font-semibold text-brand">
-                  {naira(one.sourcedPrice - one.toSpend)} over. Ask {one.buyer} on{" "}
+                  {naira(one.sourcedPrice - one.budget)} over. Ask {one.buyer} on{" "}
                   {one.buyerPhone} before buying.
                 </p>
               ) : null}
@@ -139,10 +147,7 @@ export default async function SantaAdminPage() {
                   <input type="hidden" name="budget" value={one.budget} />
                   <div>
                     <label className="label">
-                      What it cost
-                      {one.toSpend !== one.budget
-                        ? ` · ${naira(one.toSpend)} to spend`
-                        : ""}
+                      What it cost · {naira(one.budget)} to spend
                     </label>
                     <input
                       name="sourcedPrice"
@@ -259,7 +264,8 @@ export default async function SantaAdminPage() {
                 {naira(room.budget)} each · {room.members} in ·{" "}
                 <span className="font-semibold">{room.paidCount} paid</span> ·{" "}
                 {room.withLists} with lists · {room.picked} picked · holding{" "}
-                {naira(room.held)}
+                {naira(room.held - room.fees)}
+                {room.fees > 0 ? ` · ${naira(room.fees)} in fees` : ""}
               </p>
 
               {/* Who is in, and who has actually paid. The number sits

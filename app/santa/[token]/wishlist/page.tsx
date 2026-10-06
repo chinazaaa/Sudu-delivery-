@@ -10,7 +10,6 @@ import {
   memberIn,
   roomByToken,
   santaDelivery,
-  toSpend,
   wishesOf,
   type Wish,
 } from "@/lib/santa";
@@ -68,10 +67,8 @@ export default async function WishlistPage({
     hostelNames(),
     santaDelivery(),
   ]);
-  // What is actually left for the gift. The delivery comes off the top of
-  // every gift in the room, so the number to keep near is this one, not
-  // what everybody paid.
-  const spend = toSpend(room.budget, delivery);
+  // The budget is the gift, whole: fetching it was paid on top.
+  const spend = room.budget;
   const shut = room.status !== "open";
 
   return (
@@ -141,7 +138,7 @@ export default async function WishlistPage({
         {naira(spend)}: anything over and whoever draws you has to pay the
         difference, so they will probably pick something else.
         {delivery > 0
-          ? ` Everybody puts in ${naira(room.budget)}, and ${naira(delivery)} of it goes on finding your gift and bringing it to you.`
+          ? ` The whole ${naira(room.budget)} goes on the gift. The ${naira(delivery)} on top of it is what finds it and brings it to you.`
           : ""}
       </p>
 

@@ -281,7 +281,10 @@ export async function markPaid(memberId: string): Promise<Done> {
 
   const { error } = await db()
     .from("santa_members")
-    .update({ paid: here.budget, paid_at: new Date().toISOString() })
+    .update({
+      paid: toPay(here.budget, await santaDelivery()),
+      paid_at: new Date().toISOString(),
+    })
     .eq("id", memberId);
   return error ? { ok: false, error: "Could not save that." } : { ok: true };
 }
@@ -406,10 +409,8 @@ export type Match = {
   wishes: Wish[];
   /** Which of them they have picked, if they have. */
   pickedWishId: string | null;
-  /** What the shop takes to carry the gift, out of the budget. */
+  /** What the shop took to go and find it, on top of the budget. */
   delivery: number;
-  /** What is left for the gift itself, which is the number that matters. */
-  toSpend: number;
   /** Their block. The giver already knows whose name they drew, so this
    *  gives away nothing about the draw, and somebody handing a gift over
    *  themselves has to know where to find them. */
@@ -456,7 +457,6 @@ export async function matchFor(roomId: string, phone: string): Promise<Match | n
     pickedWishId: (data.wish_id as string) ?? null,
     budget: here.budget,
     delivery,
-    toSpend: toSpend(here.budget, delivery),
     exchangeDate: here.exchangeDate,
   };
 }
@@ -470,19 +470,26 @@ export async function matchFor(roomId: string, phone: string): Promise<Match | n
  */
 export async function moneyHeld(roomId: string): Promise<{
   held: number;
+  /** The part of it that is the shop's: one errand fee per person who has
+   *  paid. It is in what they transferred, so it is in held, and leaving it
+   *  out of this sum would have the room owing it back to them. */
+  fees: number;
   spent: number;
   refunded: number;
   owing: number;
 }> {
   const people = await membersOf(roomId);
   const held = people.reduce((sum, one) => sum + one.paid, 0);
+  const fees = people.filter(hasPaid).length * (await santaDelivery());
 
   const { data: assignments } = await db()
     .from("santa_assignments")
     .select("id")
     .eq("room_id", roomId);
   const ids = ((assignments ?? []) as { id: string }[]).map((one) => one.id);
-  if (ids.length === 0) return { held, spent: 0, refunded: 0, owing: held };
+  if (ids.length === 0) {
+    return { held, fees, spent: 0, refunded: 0, owing: Math.max(0, held - fees) };
+  }
 
   const { data: orders } = await db()
     .from("santa_orders")
@@ -500,7 +507,7 @@ export async function moneyHeld(roomId: string): Promise<{
     .filter((one) => one.refunded_at)
     .reduce((sum, one) => sum + Number(one.refund ?? 0), 0);
 
-  return { held, spent, refunded, owing: held - spent - refunded };
+  return { held, fees, spent, refunded, owing: held - fees - spent - refunded };
 }
 
 export type Done = { ok: true } | { ok: false; error: string };
@@ -761,10 +768,7 @@ export async function myOrder(roomId: string, phone: string): Promise<MyOrder | 
   if (!data) return null;
 
   const here = await roomById(roomId);
-  // What is left after carrying it. Over budget means over what was left
-  // for the gift, not over what they paid: the delivery was never theirs
-  // to spend.
-  const budget = toSpend(here?.budget ?? 0, await santaDelivery());
+  const budget = here?.budget ?? 0;
   const paid = data.sourced_price === null ? null : Number(data.sourced_price);
 
   return {
@@ -986,22 +990,20 @@ export async function deleteRoom(roomId: string, force = false): Promise<Done> {
 }
 
 /**
- * What is actually left for the gift.
+ * What somebody actually transfers.
  *
- * A giver pays the budget and the budget has to fetch the thing as well as
- * buy it. Every gift is its own errand: ten gifts in a room come from ten
- * shops, and the one car on the exchange day is the last step of ten
- * journeys rather than the whole of one. A delivery nobody took out of the
- * budget is a delivery coming out of the margin, so it is taken off the
- * top, once per gift, against that giver's own budget. Nothing is free to
- * carry because it is ours.
+ * The budget buys the gift and nothing else: a ₦60,000 room means ₦60,000
+ * of present, and a delivery taken out of it would mean everybody quietly
+ * getting less than the number the room is named after.
  *
- * It never goes below zero: a delivery larger than the budget is somebody's
- * mistake in settings, and the right answer to it is a gift of nothing
- * rather than a negative refund.
+ * So fetching it is on top. Every gift is its own errand, from its own
+ * shop, so it is one fee per gift against that giver rather than a share of
+ * anything. What they send is the two added together, and it is the amount
+ * on the pay card, the amount marked paid, and the amount a statement has
+ * to match.
  */
-export function toSpend(budget: number, delivery: number): number {
-  return Math.max(0, Math.round(budget) - Math.max(0, Math.round(delivery)));
+export function toPay(budget: number, delivery: number): number {
+  return Math.max(0, Math.round(budget)) + Math.max(0, Math.round(delivery));
 }
 
 /** What the shop charges to fetch and deliver one gift. Zero until set. */
