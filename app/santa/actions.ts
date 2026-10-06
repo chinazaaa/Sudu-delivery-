@@ -6,6 +6,7 @@ import { currentCustomer, customerDetails, signInCustomer } from "@/lib/customer
 import { ensureCustomer } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import { fileFrom, uploadImage } from "@/lib/uploads";
+import { db } from "@/lib/supabase";
 import {
   addWish,
   agreeToPayMore,
@@ -320,4 +321,44 @@ export async function kickMemberAction(form: FormData): Promise<void> {
   revalidatePath(`/santa/${token}`);
   if (!done.ok) redirect(`/santa/${token}?problem=${encodeURIComponent(done.error)}`);
   redirect(`/santa/${token}?removed=1`);
+}
+
+/**
+ * Something off our own shelf, straight onto a list.
+ *
+ * The name, the price and the picture are read here rather than posted,
+ * because a form field is a thing anybody can type and this one would be
+ * saying what we charge. All the browser sends is which item it was.
+ */
+export async function addFromMenuAction(form: FormData): Promise<void> {
+  const token = said(form, "token");
+  const here = await roomByToken(token);
+  if (!here) return;
+
+  const itemId = said(form, "itemId");
+  const { data: item } = await db()
+    .from("menu_items")
+    .select("id, name, price_food, image_url, available")
+    .eq("id", itemId)
+    .maybeSingle();
+
+  if (!item || item.available === false) {
+    redirect(`/santa/${token}/pick?problem=${encodeURIComponent("We are not selling that at the moment.")}`);
+  }
+
+  const done = await addWish({
+    roomId: here.id,
+    phone: await me(token),
+    title: String(item.name ?? ""),
+    photos: [String(item.image_url ?? "")],
+    note: "From Sudu",
+    estPrice: Number(item.price_food ?? 0),
+    itemId: String(item.id),
+  });
+
+  revalidatePath(`/santa/${token}/pick`);
+  revalidatePath(`/santa/${token}/wishlist`);
+  revalidatePath(`/santa/${token}`);
+  if (!done.ok) redirect(`/santa/${token}/pick?problem=${encodeURIComponent(done.error)}`);
+  redirect(`/santa/${token}/wishlist?saved=added#list`);
 }

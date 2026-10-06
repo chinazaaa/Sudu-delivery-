@@ -6,6 +6,7 @@ import { normalisePhone } from "@/lib/phone";
 import { ensureCustomer } from "@/lib/orders";
 import {
   closeRoom,
+  deleteRoom,
   joinRoom,
   markPaid,
   markUnpaid,
@@ -189,5 +190,11 @@ export async function saveWishPlan(form: FormData): Promise<void> {
       source: said(form, "source"),
     })
     .eq("id", wishId);
+  back();
+}
+
+/** A room made to try the thing out, swept up afterwards. */
+export async function removeRoom(form: FormData): Promise<void> {
+  await deleteRoom(said(form, "roomId"));
   back();
 }

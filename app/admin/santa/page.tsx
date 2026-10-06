@@ -11,6 +11,7 @@ import {
   markMemberPaid,
   markMemberUnpaid,
   removeMember,
+  removeRoom,
   agreeOverBudget,
   backToUs,
   drawRoom,
@@ -223,9 +224,25 @@ export default async function SantaAdminPage() {
             <li key={room.id} className="card">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="font-bold">{room.name}</p>
-                <p className="text-sm text-muted">
-                  {room.status} · closes {runDateLabel(room.closeDate)} · exchanged{" "}
-                  {runDateLabel(room.exchangeDate)}
+                <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
+                  <span>
+                    {room.status} · closes {runDateLabel(room.closeDate)} · exchanged{" "}
+                    {runDateLabel(room.exchangeDate)}
+                  </span>
+                  {/* For the rooms made to find out whether it works. It
+                    * refuses while the room is holding anybody's money. */}
+                  {room.held === 0 ? (
+                    <form action={removeRoom}>
+                      <input type="hidden" name="roomId" value={room.id} />
+                      <ConfirmButton
+                        tone="bare"
+                        className="text-xs font-semibold text-brand underline"
+                        confirm={`Delete ${room.name} and everything in it?`}
+                      >
+                        Delete
+                      </ConfirmButton>
+                    </form>
+                  ) : null}
                 </p>
               </div>
               <p className="text-sm text-muted">

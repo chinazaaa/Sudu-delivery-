@@ -63,6 +63,8 @@ export type Wish = {
   note: string;
   estPrice: number;
   sortOrder: number;
+  /** Set when it is something off our own menu. Null is the normal case. */
+  itemId: string | null;
 };
 
 /** Below this a room is not a draw, it is two people swapping. */
@@ -106,6 +108,7 @@ const wish = (row: Record<string, any>): Wish => ({
   note: row.note ?? "",
   estPrice: Number(row.est_price ?? 0),
   sortOrder: Number(row.sort_order ?? 0),
+  itemId: row.item_id ?? null,
 });
 
 /**
@@ -313,7 +316,7 @@ export async function memberIn(roomId: string, phone: string): Promise<Member | 
 export async function wishesOf(memberId: string): Promise<Wish[]> {
   const { data } = await db()
     .from("santa_wishes")
-    .select("id, member_id, title, photo_url, photo_url_2, note, est_price, sort_order")
+    .select("id, member_id, title, photo_url, photo_url_2, note, est_price, sort_order, item_id")
     .eq("member_id", memberId)
     .order("sort_order", { ascending: true });
   return ((data ?? []) as Record<string, any>[]).map(wish);
@@ -503,6 +506,8 @@ export async function addWish(args: {
   photos?: string[];
   note?: string;
   estPrice?: number;
+  /** When it came off our own menu rather than out of their head. */
+  itemId?: string;
 }): Promise<Done> {
   const here = await roomById(args.roomId);
   if (!here) return { ok: false, error: "That room is gone." };
@@ -528,6 +533,7 @@ export async function addWish(args: {
     note: (args.note ?? "").trim(),
     est_price: Math.max(0, Math.round(args.estPrice ?? 0)),
     sort_order: mine.length,
+    item_id: args.itemId ?? null,
   });
   return error ? { ok: false, error: "Could not add that." } : { ok: true };
 }
@@ -933,4 +939,31 @@ export async function removeMember(memberId: string): Promise<Done> {
     .eq("id", memberId);
   await db().from("santa_wishes").delete().eq("member_id", memberId);
   return { ok: true };
+}
+
+/**
+ * Throw a room away entirely.
+ *
+ * Everything under it goes with it: members, their lists, the draw and the
+ * orders, all by cascade. It exists for the rooms made to find out whether
+ * the thing works, which would otherwise sit in the list for a year.
+ *
+ * It refuses while the room is holding money. A room with somebody's sixty
+ * thousand in it is not a mistake to be swept up, and the money has to be
+ * sent back before there is nothing left saying who it belongs to.
+ */
+export async function deleteRoom(roomId: string): Promise<Done> {
+  const here = await roomById(roomId);
+  if (!here) return { ok: false, error: "That room is gone already." };
+
+  const money = await moneyHeld(roomId);
+  if (money.held > 0) {
+    return {
+      ok: false,
+      error: "That room is holding money. Send it back first, then delete it.",
+    };
+  }
+
+  const { error } = await db().from("santa_rooms").delete().eq("id", roomId);
+  return error ? { ok: false, error: "Could not delete that room." } : { ok: true };
 }

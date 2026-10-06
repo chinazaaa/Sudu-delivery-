@@ -105,6 +105,21 @@ export default async function WishlistPage({
         </p>
       ) : null}
 
+      {!shut ? (
+        <Link
+          href={`/santa/${token}/pick`}
+          className="card mt-4 flex items-center justify-between gap-3 transition hover:bg-black/[0.02]"
+        >
+          <span>
+            <span className="block font-bold">Something we sell</span>
+            <span className="block text-sm text-muted">
+              Pick it off our own shelf and the price comes with it.
+            </span>
+          </span>
+          <span className="text-xl text-muted">&rsaquo;</span>
+        </Link>
+      ) : null}
+
       <p className="mt-4 text-muted">
         Three to five things, so whoever draws you has a choice. Keep them near{" "}
         {naira(room.budget)}: anything over and they have to pay the difference,
@@ -215,9 +230,13 @@ export default async function WishlistPage({
                 <div>
                   <p className="font-bold">{one.title}</p>
                   {one.note ? <p className="text-sm text-muted">{one.note}</p> : null}
+                  {one.itemId ? (
+                    <p className="text-xs font-semibold text-mint">From Sudu</p>
+                  ) : null}
                   {one.estPrice > 0 ? (
                     <p className="text-sm text-muted">
-                      about {naira(one.estPrice)}
+                      {one.itemId ? "" : "about "}
+                      {naira(one.estPrice)}
                       {one.estPrice > room.budget ? (
                         <span className="font-semibold text-brand">
                           {" "}

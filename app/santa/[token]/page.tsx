@@ -453,6 +453,11 @@ export default async function RoomPage({
                     ) : null}
                     <div>
                     <p className="font-semibold">{one.title}</p>
+                    {one.itemId ? (
+                      <p className="text-xs font-semibold text-mint">
+                        We sell this, so it is here already
+                      </p>
+                    ) : null}
                     {one.note ? <p className="text-sm text-muted">{one.note}</p> : null}
                     {one.estPrice > 0 ? (
                       <p className="text-sm text-muted">

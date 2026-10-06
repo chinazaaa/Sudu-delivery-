@@ -151,7 +151,14 @@ export default async function SantaWishlistsPage({
                 )}
 
                 <div className="min-w-0 grow">
-                  <p className="font-bold">{one.title}</p>
+                  <p className="font-bold">
+                    {one.title}
+                    {one.itemId ? (
+                      <span className="ml-2 chip border-mint/40 bg-mint/10 py-0.5 text-xs text-mint">
+                        ours
+                      </span>
+                    ) : null}
+                  </p>
                   {one.note ? (
                     <p className="break-words text-sm text-muted">{one.note}</p>
                   ) : null}

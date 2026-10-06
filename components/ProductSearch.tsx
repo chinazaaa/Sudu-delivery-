@@ -21,7 +21,15 @@ import { useEffect, useRef, useState, useTransition } from "react";
  *
  * Enter still works, and skips the wait.
  */
-export default function ProductSearch({ start }: { start: string }) {
+export default function ProductSearch({
+  start,
+  to = "/products",
+}: {
+  start: string;
+  /** The list this box narrows. The Secret Santa picker is the same list
+   *  with a different button on every tile. */
+  to?: string;
+}) {
   const router = useRouter();
   const params = useSearchParams();
   const [typed, setTyped] = useState(start);
@@ -35,7 +43,7 @@ export default function ProductSearch({ start }: { start: string }) {
     now.delete("page");
     // Replaced rather than pushed: typing six letters must not put six pages
     // in the back button between here and wherever they came from.
-    startWorking(() => router.replace(`/products?${now.toString()}`, { scroll: false }));
+    startWorking(() => router.replace(`${to}?${now.toString()}`, { scroll: false }));
   };
 
   // The address is the truth, so arriving with a search in it, or pressing

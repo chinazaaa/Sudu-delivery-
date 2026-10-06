@@ -42,6 +42,8 @@ export type Browse = {
   category?: string;
   sort?: "" | "cheap" | "dear";
   page?: number;
+  /** Include the shelves that are not food. */
+  all?: boolean;
 };
 
 export type Facets = {
@@ -49,15 +51,21 @@ export type Facets = {
   categories: string[];
 };
 
-/** The food restaurants, which is everything but the skincare shelf. */
-async function foodPlaces(): Promise<{ id: string; name: string; slug: string }[]> {
+/**
+ * The food restaurants, which is everything but the skincare shelf.
+ *
+ * `all` keeps the shelf in. The one list is a food list because somebody
+ * browsing it is hungry, but somebody picking a Christmas present is not,
+ * and skincare is the most giftable thing in the shop.
+ */
+async function foodPlaces(all = false): Promise<{ id: string; name: string; slug: string }[]> {
   const { data } = await db()
     .from("restaurants")
     .select("id, name, slug, kind, active")
     .order("sort_order", { ascending: true });
 
   return ((data ?? []) as any[])
-    .filter((one) => onTheMenu(one.kind) && one.active !== false)
+    .filter((one) => (all || onTheMenu(one.kind)) && one.active !== false)
     .map((one) => ({
       id: one.id as string,
       name: one.name as string,
@@ -72,8 +80,8 @@ async function foodPlaces(): Promise<{ id: string; name: string; slug: string }[
  * out: a row of forty is a row nobody reaches the end of, and a category
  * with two things in it is not a way of finding anything.
  */
-export async function productFacets(place?: string): Promise<Facets> {
-  const places = await foodPlaces();
+export async function productFacets(place?: string, all = false): Promise<Facets> {
+  const places = await foodPlaces(all);
   if (places.length === 0) return { places: [], categories: [] };
 
   // With a restaurant chosen, its own categories, in its own order. Without
@@ -117,7 +125,7 @@ export async function productFacets(place?: string): Promise<Facets> {
 export async function browseProducts(
   options: Browse
 ): Promise<{ products: Product[]; total: number }> {
-  const places = await foodPlaces();
+  const places = await foodPlaces(options.all === true);
   if (places.length === 0) return { products: [], total: 0 };
 
   const wanted = options.place
