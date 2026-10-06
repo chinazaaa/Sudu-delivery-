@@ -93,7 +93,9 @@ export default async function SantaAdminPage() {
             <li key={one.orderId} className="card">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="font-bold">
-                  {one.wish ? one.wish.title : "Nothing picked yet"}
+                  {one.wishes.length === 0
+                    ? "Nothing picked yet"
+                    : one.wishes.map((item) => item.title).join(" + ")}
                 </p>
                 <p className={one.late ? "font-bold text-brand" : "text-sm text-muted"}>
                   {one.wantedOn ? runDateLabel(one.wantedOn) : "no date"}
@@ -105,6 +107,9 @@ export default async function SantaAdminPage() {
               <p className="text-sm text-muted">
                 {one.roomName} · {one.buyer} buying for {one.forWhom} · budget{" "}
                 {naira(one.budget)}
+                {one.toSpend !== one.budget
+                  ? ` · ${naira(one.toSpend)} to spend after fetching`
+                  : ""}
               </p>
               <p className="text-sm">
                 {one.byHand ? (
@@ -117,13 +122,21 @@ export default async function SantaAdminPage() {
                   </span>
                 )}
               </p>
-              {one.wish?.note ? (
-                <p className="mt-1 text-sm">{one.wish.note}</p>
-              ) : null}
-              {one.wish && one.wish.estPrice > 0 ? (
-                <p className="text-sm text-muted">
-                  they thought about {naira(one.wish.estPrice)}
-                </p>
+              {/* Each one on its own line, with what they guessed it
+                * costs: a list of five small things is five errands and
+                * reading them off one run-on line is how one is missed. */}
+              {one.wishes.length > 0 ? (
+                <ul className="mt-1 space-y-0.5 text-sm">
+                  {one.wishes.map((item, at) => (
+                    <li key={`${item.title}-${at}`}>
+                      {item.title}
+                      {item.note ? <span className="text-muted"> · {item.note}</span> : null}
+                      {item.estPrice > 0 ? (
+                        <span className="text-muted"> · they thought {naira(item.estPrice)}</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
               ) : null}
 
               <p className="mt-2 text-sm">
@@ -134,9 +147,9 @@ export default async function SantaAdminPage() {
                   : ""}
               </p>
 
-              {one.sourcedPrice !== null && one.sourcedPrice > one.budget && !one.refundedAt ? (
+              {one.sourcedPrice !== null && one.sourcedPrice > one.toSpend && !one.refundedAt ? (
                 <p className="mt-1 text-sm font-semibold text-brand">
-                  {naira(one.sourcedPrice - one.budget)} over. Ask {one.buyer} on{" "}
+                  {naira(one.sourcedPrice - one.toSpend)} over. Ask {one.buyer} on{" "}
                   {one.buyerPhone} before buying.
                 </p>
               ) : null}
@@ -144,10 +157,10 @@ export default async function SantaAdminPage() {
               <div className="mt-3 flex flex-wrap items-end gap-2">
                 <form action={priceJob} className="flex items-end gap-2">
                   <input type="hidden" name="orderId" value={one.orderId} />
-                  <input type="hidden" name="budget" value={one.budget} />
+                  <input type="hidden" name="budget" value={one.toSpend} />
                   <div>
                     <label className="label">
-                      What it cost · {naira(one.budget)} to spend
+                      What it all cost · {naira(one.toSpend)} to spend
                     </label>
                     <input
                       name="sourcedPrice"

@@ -100,6 +100,8 @@ export async function drawRoom(form: FormData): Promise<void> {
 export async function priceJob(form: FormData): Promise<void> {
   const orderId = said(form, "orderId");
   const paid = Math.max(0, Math.round(Number(said(form, "sourcedPrice"))));
+  // The ceiling the screen showed, which already has the fetching taken
+  // out of it: one errand per thing chosen.
   const budget = Math.max(0, Math.round(Number(said(form, "budget"))));
   if (!orderId || !Number.isFinite(paid)) return;
 

@@ -12,6 +12,7 @@ import {
   memberIn,
   roomByToken,
   santaDelivery,
+  toBuyWith,
   wishesOf,
 } from "@/lib/santa";
 import { addFromMenuAction } from "../../actions";
@@ -81,9 +82,9 @@ export default async function SantaPickPage({
     santaDelivery(),
   ]);
 
-  // The tile price is the thing, and the whole budget is there for it:
-  // fetching it was paid on top when they joined.
-  const spend = room.budget;
+  // One thing, fetched once. Each further thing takes another fetch out of
+  // the same budget, so this is the ceiling for a single present.
+  const spend = toBuyWith(room.budget, 1, delivery);
 
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
   const full = mine.length >= MOST_WISHES;
@@ -116,7 +117,7 @@ export default async function SantaPickPage({
           Anything here goes straight onto your list at the price on the tile,
           so whoever draws you knows exactly what they are getting.
           {delivery > 0
-            ? ` The whole ${naira(room.budget)} is there to spend: the ${naira(delivery)} on top of it is what brings it to you.`
+            ? ` ${naira(spend)} of the ${naira(room.budget)} can go on one present: the other ${naira(delivery)} fetches it and brings it over.`
             : ""}
         </p>
       </header>

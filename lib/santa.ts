@@ -282,7 +282,7 @@ export async function markPaid(memberId: string): Promise<Done> {
   const { error } = await db()
     .from("santa_members")
     .update({
-      paid: toPay(here.budget, await santaDelivery()),
+      paid: here.budget,
       paid_at: new Date().toISOString(),
     })
     .eq("id", memberId);
@@ -407,10 +407,13 @@ export type Match = {
   name: string;
   /** What that person asked for. */
   wishes: Wish[];
-  /** Which of them they have picked, if they have. */
-  pickedWishId: string | null;
-  /** What the shop took to go and find it, on top of the budget. */
+  /** Everything they have picked off it. More than one is normal when the
+   *  list is five thousand naira things and the budget is sixty. */
+  pickedWishIds: string[];
+  /** What one fetch costs, out of the budget. */
   delivery: number;
+  /** What is left to buy with, after fetching what they have chosen. */
+  toSpend: number;
   /** Their block. The giver already knows whose name they drew, so this
    *  gives away nothing about the draw, and somebody handing a gift over
    *  themselves has to know where to find them. */
@@ -436,11 +439,13 @@ export async function matchFor(roomId: string, phone: string): Promise<Match | n
 
   const { data } = await db()
     .from("santa_assignments")
-    .select("receiver_id, wish_id")
+    .select("id, receiver_id")
     .eq("room_id", roomId)
     .eq("giver_id", me.id)
     .maybeSingle();
   if (!data) return null;
+
+  const picked = await picksFor(data.id as string);
 
   const delivery = await santaDelivery();
 
@@ -454,9 +459,10 @@ export async function matchFor(roomId: string, phone: string): Promise<Match | n
     name: (them?.name as string) ?? "",
     hostel: (them?.hostel as string) ?? "",
     wishes: await wishesOf(data.receiver_id as string),
-    pickedWishId: (data.wish_id as string) ?? null,
+    pickedWishIds: picked,
     budget: here.budget,
     delivery,
+    toSpend: toBuyWith(here.budget, Math.max(1, picked.length), delivery),
     exchangeDate: here.exchangeDate,
   };
 }
@@ -470,9 +476,9 @@ export async function matchFor(roomId: string, phone: string): Promise<Match | n
  */
 export async function moneyHeld(roomId: string): Promise<{
   held: number;
-  /** The part of it that is the shop's: one errand fee per person who has
-   *  paid. It is in what they transferred, so it is in held, and leaving it
-   *  out of this sum would have the room owing it back to them. */
+  /** The part of what is held that is ours: one errand fee per gift
+   *  somebody has chosen. Nothing is earned before the draw, because
+   *  nothing has been fetched. */
   fees: number;
   spent: number;
   refunded: number;
@@ -480,7 +486,6 @@ export async function moneyHeld(roomId: string): Promise<{
 }> {
   const people = await membersOf(roomId);
   const held = people.reduce((sum, one) => sum + one.paid, 0);
-  const fees = people.filter(hasPaid).length * (await santaDelivery());
 
   const { data: assignments } = await db()
     .from("santa_assignments")
@@ -488,13 +493,14 @@ export async function moneyHeld(roomId: string): Promise<{
     .eq("room_id", roomId);
   const ids = ((assignments ?? []) as { id: string }[]).map((one) => one.id);
   if (ids.length === 0) {
-    return { held, fees, spent: 0, refunded: 0, owing: Math.max(0, held - fees) };
+    return { held, fees: 0, spent: 0, refunded: 0, owing: held };
   }
 
-  const { data: orders } = await db()
-    .from("santa_orders")
-    .select("sourced_price, refund, refunded_at")
-    .in("assignment_id", ids);
+  const [{ data: orders }, { data: picks }, delivery] = await Promise.all([
+    db().from("santa_orders").select("sourced_price, refund, refunded_at").in("assignment_id", ids),
+    db().from("santa_picks").select("assignment_id").in("assignment_id", ids),
+    santaDelivery(),
+  ]);
 
   const rows = (orders ?? []) as {
     sourced_price: number | null;
@@ -502,6 +508,7 @@ export async function moneyHeld(roomId: string): Promise<{
     refunded_at: string | null;
   }[];
 
+  const fees = ((picks ?? []) as { assignment_id: string }[]).length * delivery;
   const spent = rows.reduce((sum, one) => sum + Number(one.sourced_price ?? 0), 0);
   const refunded = rows
     .filter((one) => one.refunded_at)
@@ -608,52 +615,108 @@ export async function pickWish(args: {
     .maybeSingle();
   if (!theirs) return { ok: false, error: "That is not on their list." };
 
-  const { data: before } = await db()
-    .from("santa_assignments")
+  const picked = await picksFor(mine.id as string);
+  if (picked.includes(args.wishId)) return { ok: true };
+
+  // Every thing past the first is another fetch, and the fetches come out of
+  // the budget. Once there is no budget left to fetch with there is nothing
+  // to buy with either.
+  const here = await roomById(args.roomId);
+  const delivery = await santaDelivery();
+  if (here && toBuyWith(here.budget, picked.length + 1, delivery) <= 0) {
+    return {
+      ok: false,
+      error: "There is not enough left in the budget to fetch another one.",
+    };
+  }
+
+  const { error } = await db()
+    .from("santa_picks")
+    .insert({ assignment_id: mine.id, wish_id: args.wishId });
+  if (error) return { ok: false, error: "Could not add that one." };
+
+  await startOrder(mine.id as string);
+  return { ok: true };
+}
+
+/** What has been chosen off the list, in the order it was chosen. */
+export async function picksFor(assignmentId: string): Promise<string[]> {
+  const { data } = await db()
+    .from("santa_picks")
     .select("wish_id")
-    .eq("id", mine.id)
+    .eq("assignment_id", assignmentId)
+    .order("created_at", { ascending: true });
+  return ((data ?? []) as { wish_id: string }[]).map((one) => one.wish_id);
+}
+
+/**
+ * Taking one back off.
+ *
+ * Scoped by the giver, so an id posted from somewhere else cannot unpick
+ * somebody's choice for them.
+ */
+export async function unpickWish(args: {
+  roomId: string;
+  phone: string;
+  wishId: string;
+}): Promise<Done> {
+  const me = await memberIn(args.roomId, args.phone);
+  if (!me || me.leftAt) return { ok: false, error: "You are not in this room." };
+
+  const { data: mine } = await db()
+    .from("santa_assignments")
+    .select("id")
+    .eq("room_id", args.roomId)
+    .eq("giver_id", me.id)
     .maybeSingle();
-  const changed = (before?.wish_id ?? null) !== args.wishId;
+  if (!mine) return { ok: false, error: "The room has not been drawn yet." };
 
   await db()
-    .from("santa_assignments")
-    .update({ wish_id: args.wishId })
-    .eq("id", mine.id);
+    .from("santa_picks")
+    .delete()
+    .eq("assignment_id", mine.id)
+    .eq("wish_id", args.wishId);
 
-  const { data: already } = await db()
+  await forgetPricing(mine.id as string);
+  return { ok: true };
+}
+
+/** The order row exists from the first choice onwards. */
+async function startOrder(assignmentId: string): Promise<void> {
+  const { data } = await db()
+    .from("santa_orders")
+    .select("id")
+    .eq("assignment_id", assignmentId)
+    .maybeSingle();
+  if (!data) {
+    await db().from("santa_orders").insert({ assignment_id: assignmentId });
+    return;
+  }
+  await forgetPricing(assignmentId);
+}
+
+/*
+ * Changing what is being bought throws away what we had found.
+ *
+ * Without this, somebody told their choice came to three thousand over
+ * budget picks the cheaper thing on the list and the order still carries the
+ * old price, the old refund and the agreement they gave for something they
+ * are no longer buying. The handover and its date are theirs and survive,
+ * because that is a decision about carrying rather than about what is being
+ * carried.
+ */
+async function forgetPricing(assignmentId: string): Promise<void> {
+  const { data } = await db()
     .from("santa_orders")
     .select("id, status")
-    .eq("assignment_id", mine.id)
+    .eq("assignment_id", assignmentId)
     .maybeSingle();
+  if (!data || data.status === "delivered") return;
 
-  if (!already) {
-    await db().from("santa_orders").insert({ assignment_id: mine.id });
-    return { ok: true };
-  }
-
-  /*
-   * Picking something else throws away what we had found for the old one.
-   *
-   * Without this, somebody told their choice came to three thousand over
-   * budget picks the cheaper thing on the list and the order still carries
-   * the old price, the old refund and the agreement they gave for an item
-   * they are no longer buying. The handover and its date are theirs and
-   * survive, because that is a decision about carrying rather than about
-   * what is being carried.
-   */
-  if (changed && already.status !== "delivered") {
-    await db()
-      .from("santa_orders")
-      .update({
-        status: "sourcing",
-        sourced_price: null,
-        agreed_at: null,
-        refund: null,
-      })
-      .eq("id", already.id);
-  }
-
-  return { ok: true };
+  await db()
+    .from("santa_orders")
+    .update({ status: "sourcing", sourced_price: null, agreed_at: null, refund: null })
+    .eq("id", data.id);
 }
 
 /**
@@ -768,7 +831,8 @@ export async function myOrder(roomId: string, phone: string): Promise<MyOrder | 
   if (!data) return null;
 
   const here = await roomById(roomId);
-  const budget = here?.budget ?? 0;
+  const picked = await picksFor(mine.id as string);
+  const budget = toBuyWith(here?.budget ?? 0, Math.max(1, picked.length), await santaDelivery());
   const paid = data.sourced_price === null ? null : Number(data.sourced_price);
 
   return {
@@ -990,20 +1054,19 @@ export async function deleteRoom(roomId: string, force = false): Promise<Done> {
 }
 
 /**
- * What somebody actually transfers.
+ * What is left to buy with, once the fetching is paid for.
  *
- * The budget buys the gift and nothing else: a ₦60,000 room means ₦60,000
- * of present, and a delivery taken out of it would mean everybody quietly
- * getting less than the number the room is named after.
+ * The budget is the whole of what somebody hands over: a room that calls
+ * itself sixty thousand is sixty thousand out of pocket, because that is
+ * the number the group agreed out loud and the one everybody budgets
+ * against. Fetching comes out of it rather than on top of it.
  *
- * So fetching it is on top. Every gift is its own errand, from its own
- * shop, so it is one fee per gift against that giver rather than a share of
- * anything. What they send is the two added together, and it is the amount
- * on the pay card, the amount marked paid, and the amount a statement has
- * to match.
+ * Every gift is its own errand, from its own shop, so every gift costs a
+ * fetch: two things off the same list is two journeys, not one.
  */
-export function toPay(budget: number, delivery: number): number {
-  return Math.max(0, Math.round(budget)) + Math.max(0, Math.round(delivery));
+export function toBuyWith(budget: number, gifts: number, delivery: number): number {
+  const fetches = Math.max(1, Math.round(gifts)) * Math.max(0, Math.round(delivery));
+  return Math.round(budget) - fetches;
 }
 
 /** What the shop charges to fetch and deliver one gift. Zero until set. */

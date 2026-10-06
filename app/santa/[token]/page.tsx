@@ -14,7 +14,6 @@ import {
   LEAST_MEMBERS,
   hasPaid,
   santaDelivery,
-  toPay,
   matchFor,
   memberIn,
   myOrder,
@@ -31,6 +30,7 @@ import {
   leaveRoomAction,
   handoverAction,
   pickWishAction,
+  unpickWishAction,
 } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -74,11 +74,10 @@ export default async function RoomPage({
   const settings = await safeSettings();
   const site = await siteUrl();
   const hostels = await hostelNames();
-  // What a member is asked for: the budget, plus what it costs to go and
-  // find one gift. The pay card, the amount marked paid and the amount on
-  // a statement all have to be this same number.
+  // The budget is the whole of what somebody hands over, because that is
+  // the number the group agreed out loud. Fetching comes out of it.
   const delivery = await santaDelivery();
-  const due = toPay(room.budget, delivery);
+  const due = room.budget;
   const chatToPay = whatsappLink(
     settings.whatsapp_number,
     `Hi Sudu, I'd like to pay for the ${room.name} Secret Santa by card.`
@@ -149,7 +148,7 @@ export default async function RoomPage({
           <p className="text-sm text-muted">
             Free to join. Paying {naira(due)} is what puts you in the draw
             {delivery > 0
-              ? `: ${naira(room.budget)} on the gift and ${naira(delivery)} to find it and bring it over`
+              ? `, and ${naira(delivery)} of that is what finds the gift and brings it over`
               : ""}
             .
           </p>
@@ -268,8 +267,8 @@ export default async function RoomPage({
               <div className="flex justify-between gap-3">
                 <dt className="text-muted">What that is</dt>
                 <dd className="text-right">
-                  {naira(room.budget)} on the gift, {naira(delivery)} to go and
-                  find it and bring it over
+                  up to {naira(room.budget - delivery)} on the gift, and{" "}
+                  {naira(delivery)} to go and find it and bring it over
                 </dd>
               </div>
             ) : null}
@@ -443,10 +442,11 @@ export default async function RoomPage({
             ) : null}
           </h2>
           <p className="mt-1 text-sm text-muted">
-            Pick one thing. We will find it, and if it comes to more than{" "}
-            {naira(match.budget)} we will ask you before buying anything.
+            Pick anything off their list, as many as the budget carries. We
+            will find them, and if they come to more than{" "}
+            {naira(match.toSpend)} we will ask you before buying anything.
             {match.delivery > 0
-              ? ` The whole ${naira(match.budget)} goes on the gift: the ${naira(match.delivery)} you paid on top of it is what finds it and brings it over.`
+              ? ` Each thing is its own errand, so each one takes ${naira(match.delivery)} of the ${naira(match.budget)} to find and bring over.`
               : ""}
           </p>
 
@@ -484,7 +484,7 @@ export default async function RoomPage({
                     {one.estPrice > 0 ? (
                       <p className="text-sm text-muted">
                         about {naira(one.estPrice)}
-                        {one.estPrice > match.budget ? (
+                        {one.estPrice > match.toSpend ? (
                           <span className="font-semibold text-brand">
                             {" "}
                             · over budget, you would pay the difference
@@ -494,14 +494,21 @@ export default async function RoomPage({
                     ) : null}
                     </div>
                   </div>
-                  {match.pickedWishId === one.id ? (
-                    <span className="text-sm font-bold text-mint">Picked</span>
+                  {match.pickedWishIds.includes(one.id) ? (
+                    <form action={unpickWishAction}>
+                      <input type="hidden" name="token" value={token} />
+                      <input type="hidden" name="wishId" value={one.id} />
+                      <span className="block text-sm font-bold text-mint">Picked</span>
+                      <button type="submit" className="text-xs text-muted underline">
+                        Take it off
+                      </button>
+                    </form>
                   ) : (
                     <form action={pickWishAction}>
                       <input type="hidden" name="token" value={token} />
                       <input type="hidden" name="wishId" value={one.id} />
                       <button type="submit" className="text-sm font-semibold text-brand">
-                        Pick this
+                        {match.pickedWishIds.length > 0 ? "Add this too" : "Pick this"}
                       </button>
                     </form>
                   )}
@@ -514,7 +521,7 @@ export default async function RoomPage({
             * exist before that, because choosing who hands it over writes
             * it, and "we are looking for it" when nothing has been picked
             * is a lie. */}
-          {order && match.pickedWishId ? (
+          {order && match.pickedWishIds.length > 0 ? (
             <div className="mt-4 border-t pt-4">
               <h3 className="font-bold">Where it has got to</h3>
 
@@ -659,7 +666,7 @@ export default async function RoomPage({
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <SendLink
-              message={`Join our Secret Santa on Sudu. ${naira(due)} each${delivery > 0 ? ` (${naira(room.budget)} gift, ${naira(delivery)} to find it and bring it)` : ""}, names drawn ${runDateLabel(room.closeDate)}: ${site}/santa/${token}`}
+              message={`Join our Secret Santa on Sudu. ${naira(due)} each, names drawn ${runDateLabel(room.closeDate)}: ${site}/santa/${token}`}
               link={`${site}/santa/${token}`}
             />
           </div>

@@ -22,6 +22,7 @@ import {
   roomByToken,
   setHandover,
   setHostel,
+  unpickWish,
 } from "@/lib/santa";
 
 /**
@@ -199,6 +200,22 @@ export async function pickWishAction(form: FormData): Promise<void> {
   if (!here) return;
 
   const done = await pickWish({
+    roomId: here.id,
+    phone: await me(token),
+    wishId: said(form, "wishId"),
+  });
+
+  revalidatePath(`/santa/${token}`);
+  if (!done.ok) redirect(`/santa/${token}?problem=${encodeURIComponent(done.error)}`);
+}
+
+/** Taking one of them back off. */
+export async function unpickWishAction(form: FormData): Promise<void> {
+  const token = said(form, "token");
+  const here = await roomByToken(token);
+  if (!here) return;
+
+  const done = await unpickWish({
     roomId: here.id,
     phone: await me(token),
     wishId: said(form, "wishId"),

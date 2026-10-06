@@ -10,6 +10,7 @@ import {
   memberIn,
   roomByToken,
   santaDelivery,
+  toBuyWith,
   wishesOf,
   type Wish,
 } from "@/lib/santa";
@@ -67,8 +68,10 @@ export default async function WishlistPage({
     hostelNames(),
     santaDelivery(),
   ]);
-  // The budget is the gift, whole: fetching it was paid on top.
-  const spend = room.budget;
+  // One thing, fetched once: what is left of the budget after that is what
+  // a single present may cost. Whoever draws them may well buy three, and
+  // each one takes another fetch out of the same budget.
+  const spend = toBuyWith(room.budget, 1, delivery);
   const shut = room.status !== "open";
 
   return (
@@ -138,7 +141,7 @@ export default async function WishlistPage({
         {naira(spend)}: anything over and whoever draws you has to pay the
         difference, so they will probably pick something else.
         {delivery > 0
-          ? ` The whole ${naira(room.budget)} goes on the gift. The ${naira(delivery)} on top of it is what finds it and brings it to you.`
+          ? ` Everybody puts in ${naira(room.budget)}, and ${naira(delivery)} of it finds the gift and brings it over, so ${naira(spend)} is what one present can cost.`
           : ""}
       </p>
 

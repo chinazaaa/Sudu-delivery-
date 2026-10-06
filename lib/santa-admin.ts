@@ -4,6 +4,8 @@ import {
   hasPaid,
   membersOf,
   moneyHeld,
+  santaDelivery,
+  toBuyWith,
   type Member,
   type RoomStatus,
   type Wish,
@@ -100,11 +102,17 @@ export async function rooms(): Promise<RoomRow[]> {
 
     const withLists = people.filter((one) => one.wishes.length > 0).length;
 
-    const { count: picked } = await db()
+    const { data: drawn } = await db()
       .from("santa_assignments")
-      .select("id", { count: "exact", head: true })
-      .eq("room_id", row.id)
-      .not("wish_id", "is", null);
+      .select("id")
+      .eq("room_id", row.id);
+    const drawnIds = ((drawn ?? []) as { id: string }[]).map((one) => one.id);
+    const { data: chose } = drawnIds.length
+      ? await db().from("santa_picks").select("assignment_id").in("assignment_id", drawnIds)
+      : { data: [] as Record<string, any>[] };
+    const picked = new Set(
+      ((chose ?? []) as Record<string, any>[]).map((one) => one.assignment_id)
+    ).size;
 
     const money = await moneyHeld(row.id);
 
@@ -120,7 +128,7 @@ export async function rooms(): Promise<RoomRow[]> {
       paidCount: people.filter(hasPaid).length,
       people,
       withLists,
-      picked: picked ?? 0,
+      picked,
       held: money.held,
       fees: money.fees,
       owing: money.owing,
@@ -139,8 +147,11 @@ export type Job = {
   forWhom: string;
   /** The block the gift is driven to. Empty is a job nobody can finish. */
   forWhomHostel: string;
-  /** What they chose. Null when nobody has chosen yet. */
-  wish: { title: string; note: string; estPrice: number } | null;
+  /** What they chose. Empty until they have. More than one is normal on a
+   *  list of small things, and each one is its own fetch. */
+  wishes: { title: string; note: string; estPrice: number }[];
+  /** What the budget leaves to buy with, after fetching what was chosen. */
+  toSpend: number;
   status: string;
   sourcedPrice: number | null;
   refund: number | null;
@@ -166,7 +177,7 @@ export type Job = {
 export async function jobs(): Promise<Job[]> {
   const { data } = await db()
     .from("santa_orders")
-    .select("*, santa_assignments!inner(id, room_id, giver_id, receiver_id, wish_id)");
+    .select("*, santa_assignments!inner(id, room_id, giver_id, receiver_id)");
 
   const rows = (data ?? []) as Record<string, any>[];
   if (rows.length === 0) return [];
@@ -177,9 +188,17 @@ export async function jobs(): Promise<Job[]> {
       rows.flatMap((one) => [one.santa_assignments.giver_id, one.santa_assignments.receiver_id])
     ),
   ];
-  const wishIds = rows
-    .map((one) => one.santa_assignments.wish_id)
-    .filter((one): one is string => Boolean(one));
+  const { data: pickRows } = await db()
+    .from("santa_picks")
+    .select("assignment_id, wish_id")
+    .in("assignment_id", rows.map((one) => one.santa_assignments.id))
+    .order("created_at", { ascending: true });
+
+  const chosen = new Map<string, string[]>();
+  for (const one of (pickRows ?? []) as Record<string, any>[]) {
+    chosen.set(one.assignment_id, [...(chosen.get(one.assignment_id) ?? []), one.wish_id]);
+  }
+  const wishIds = [...chosen.values()].flat();
 
   const [{ data: roomRows }, { data: memberRows }, { data: wishRows }] = await Promise.all([
     db().from("santa_rooms").select("id, name, budget, exchange_date").in("id", roomIds),
@@ -194,11 +213,12 @@ export async function jobs(): Promise<Job[]> {
   const wishOf = new Map(((wishRows ?? []) as Record<string, any>[]).map((one) => [one.id, one]));
 
   const today = lagosToday();
+  const delivery = await santaDelivery();
 
   const out: Job[] = rows.map((row) => {
     const link = row.santa_assignments;
     const room = roomOf.get(link.room_id);
-    const wish = link.wish_id ? wishOf.get(link.wish_id) : null;
+    const picked = chosen.get(link.id) ?? [];
     const byHand = row.handover === "giver";
     const wantedOn = byHand ? row.deliver_on : (room?.exchange_date ?? "");
 
@@ -210,13 +230,15 @@ export async function jobs(): Promise<Job[]> {
       buyerPhone: who.get(link.giver_id)?.phone ?? "",
       forWhom: who.get(link.receiver_id)?.name ?? "",
       forWhomHostel: who.get(link.receiver_id)?.hostel ?? "",
-      wish: wish
-        ? {
-            title: wish.title as string,
-            note: (wish.note as string) ?? "",
-            estPrice: Number(wish.est_price ?? 0),
-          }
-        : null,
+      wishes: picked
+        .map((id) => wishOf.get(id))
+        .filter(Boolean)
+        .map((one) => ({
+          title: one!.title as string,
+          note: (one!.note as string) ?? "",
+          estPrice: Number(one!.est_price ?? 0),
+        })),
+      toSpend: toBuyWith(Number(room?.budget ?? 0), Math.max(1, picked.length), delivery),
       status: row.status,
       sourcedPrice: row.sourced_price === null ? null : Number(row.sourced_price),
       refund: row.refund === null ? null : Number(row.refund),
