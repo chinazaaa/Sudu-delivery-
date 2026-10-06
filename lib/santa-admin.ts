@@ -4,6 +4,8 @@ import {
   hasPaid,
   membersOf,
   moneyHeld,
+  santaDelivery,
+  toSpend,
   type Member,
   type RoomStatus,
   type Wish,
@@ -130,6 +132,8 @@ export type Job = {
   orderId: string;
   roomName: string;
   budget: number;
+  /** What the budget leaves for the gift once carrying it is taken off. */
+  toSpend: number;
   /** Who is paying for it, and who it is for. */
   buyer: string;
   buyerPhone: string;
@@ -191,6 +195,7 @@ export async function jobs(): Promise<Job[]> {
   const wishOf = new Map(((wishRows ?? []) as Record<string, any>[]).map((one) => [one.id, one]));
 
   const today = lagosToday();
+  const delivery = await santaDelivery();
 
   const out: Job[] = rows.map((row) => {
     const link = row.santa_assignments;
@@ -203,6 +208,7 @@ export async function jobs(): Promise<Job[]> {
       orderId: row.id,
       roomName: room?.name ?? "",
       budget: Number(room?.budget ?? 0),
+      toSpend: toSpend(Number(room?.budget ?? 0), delivery),
       buyer: who.get(link.giver_id)?.name ?? "",
       buyerPhone: who.get(link.giver_id)?.phone ?? "",
       forWhom: who.get(link.receiver_id)?.name ?? "",

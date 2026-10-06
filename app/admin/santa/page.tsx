@@ -126,9 +126,9 @@ export default async function SantaAdminPage() {
                   : ""}
               </p>
 
-              {one.sourcedPrice !== null && one.sourcedPrice > one.budget && !one.refundedAt ? (
+              {one.sourcedPrice !== null && one.sourcedPrice > one.toSpend && !one.refundedAt ? (
                 <p className="mt-1 text-sm font-semibold text-brand">
-                  {naira(one.sourcedPrice - one.budget)} over. Ask {one.buyer} on{" "}
+                  {naira(one.sourcedPrice - one.toSpend)} over. Ask {one.buyer} on{" "}
                   {one.buyerPhone} before buying.
                 </p>
               ) : null}
@@ -138,7 +138,12 @@ export default async function SantaAdminPage() {
                   <input type="hidden" name="orderId" value={one.orderId} />
                   <input type="hidden" name="budget" value={one.budget} />
                   <div>
-                    <label className="label">What it cost</label>
+                    <label className="label">
+                      What it cost
+                      {one.toSpend !== one.budget
+                        ? ` · ${naira(one.toSpend)} to spend`
+                        : ""}
+                    </label>
                     <input
                       name="sourcedPrice"
                       className="field w-32"

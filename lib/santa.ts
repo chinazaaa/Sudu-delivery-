@@ -406,6 +406,10 @@ export type Match = {
   wishes: Wish[];
   /** Which of them they have picked, if they have. */
   pickedWishId: string | null;
+  /** What the shop takes to carry the gift, out of the budget. */
+  delivery: number;
+  /** What is left for the gift itself, which is the number that matters. */
+  toSpend: number;
   /** Their block. The giver already knows whose name they drew, so this
    *  gives away nothing about the draw, and somebody handing a gift over
    *  themselves has to know where to find them. */
@@ -437,6 +441,8 @@ export async function matchFor(roomId: string, phone: string): Promise<Match | n
     .maybeSingle();
   if (!data) return null;
 
+  const delivery = await santaDelivery();
+
   const { data: them } = await db()
     .from("santa_members")
     .select("name, hostel")
@@ -449,6 +455,8 @@ export async function matchFor(roomId: string, phone: string): Promise<Match | n
     wishes: await wishesOf(data.receiver_id as string),
     pickedWishId: (data.wish_id as string) ?? null,
     budget: here.budget,
+    delivery,
+    toSpend: toSpend(here.budget, delivery),
     exchangeDate: here.exchangeDate,
   };
 }
@@ -753,7 +761,10 @@ export async function myOrder(roomId: string, phone: string): Promise<MyOrder | 
   if (!data) return null;
 
   const here = await roomById(roomId);
-  const budget = here?.budget ?? 0;
+  // What is left after carrying it. Over budget means over what was left
+  // for the gift, not over what they paid: the delivery was never theirs
+  // to spend.
+  const budget = toSpend(here?.budget ?? 0, await santaDelivery());
   const paid = data.sourced_price === null ? null : Number(data.sourced_price);
 
   return {
@@ -972,4 +983,31 @@ export async function deleteRoom(roomId: string, force = false): Promise<Done> {
 
   const { error } = await db().from("santa_rooms").delete().eq("id", roomId);
   return error ? { ok: false, error: "Could not delete that room." } : { ok: true };
+}
+
+/**
+ * What is actually left for the gift.
+ *
+ * A giver pays the budget and the budget has to carry the thing as well as
+ * buy it: every gift in a room is driven somewhere, and a delivery nobody
+ * took out of the budget is a delivery coming out of the margin. So it is
+ * taken off the top, once, for every gift in the room, wherever the gift
+ * comes from. Nothing is free to carry because it is ours.
+ *
+ * It never goes below zero: a delivery larger than the budget is somebody's
+ * mistake in settings, and the right answer to it is a gift of nothing
+ * rather than a negative refund.
+ */
+export function toSpend(budget: number, delivery: number): number {
+  return Math.max(0, Math.round(budget) - Math.max(0, Math.round(delivery)));
+}
+
+/** What the shop charges to carry one gift. Zero until it is set. */
+export async function santaDelivery(): Promise<number> {
+  const { data } = await db()
+    .from("settings")
+    .select("santa_delivery")
+    .eq("id", true)
+    .maybeSingle();
+  return Math.max(0, Math.round(Number((data as any)?.santa_delivery ?? 0)));
 }

@@ -351,7 +351,10 @@ export async function addFromMenuAction(form: FormData): Promise<void> {
     phone: await me(token),
     title: String(item.name ?? ""),
     photos: [String(item.image_url ?? "")],
-    note: "From Sudu",
+    // Nothing: it is ours, and every screen that reads it says so itself.
+    // Writing it into the note put "From Sudu" twice on the same card and
+    // into the box asking how to know it is the right one.
+    note: "",
     estPrice: Number(item.price_food ?? 0),
     itemId: String(item.id),
   });
@@ -359,6 +362,19 @@ export async function addFromMenuAction(form: FormData): Promise<void> {
   revalidatePath(`/santa/${token}/pick`);
   revalidatePath(`/santa/${token}/wishlist`);
   revalidatePath(`/santa/${token}`);
-  if (!done.ok) redirect(`/santa/${token}/pick?problem=${encodeURIComponent(done.error)}`);
-  redirect(`/santa/${token}/wishlist?saved=added#list`);
+
+  /*
+   * Back to where they were standing, filters and page and all.
+   *
+   * Nobody picks one present and stops. Sending them to the wishlist after
+   * each one meant scrolling back into the shop and finding their place
+   * again to add the second, and the shop is the one screen where staying
+   * put is the whole point.
+   */
+  const asked = said(form, "back");
+  const where = asked.startsWith(`/santa/${token}/pick`) ? asked : `/santa/${token}/pick`;
+  const join = where.includes("?") ? "&" : "?";
+
+  if (!done.ok) redirect(`${where}${join}problem=${encodeURIComponent(done.error)}`);
+  redirect(`${where}${join}added=${encodeURIComponent(String(item.name ?? ""))}`);
 }

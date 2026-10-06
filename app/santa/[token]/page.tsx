@@ -425,7 +425,10 @@ export default async function RoomPage({
           </h2>
           <p className="mt-1 text-sm text-muted">
             Pick one thing. We will find it, and if it comes to more than{" "}
-            {naira(match.budget)} we will ask you before buying anything.
+            {naira(match.toSpend)} we will ask you before buying anything.
+            {match.delivery > 0
+              ? ` Of the ${naira(match.budget)} you put in, ${naira(match.delivery)} carries it.`
+              : ""}
           </p>
 
           {match.wishes.length === 0 ? (
@@ -462,7 +465,7 @@ export default async function RoomPage({
                     {one.estPrice > 0 ? (
                       <p className="text-sm text-muted">
                         about {naira(one.estPrice)}
-                        {one.estPrice > match.budget ? (
+                        {one.estPrice > match.toSpend ? (
                           <span className="font-semibold text-brand">
                             {" "}
                             · over budget, you would pay the difference
@@ -503,7 +506,8 @@ export default async function RoomPage({
                     <span className="font-bold text-brand">
                       {naira(order.over)} over
                     </span>{" "}
-                    the {naira(match.budget)} budget. We have not bought it.
+                    the {naira(match.toSpend)} there was to spend. We have not
+                    bought it.
                   </p>
                   <p className="text-sm text-muted">
                     Pay the difference and we will get it, or pick something

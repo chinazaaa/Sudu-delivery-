@@ -5,7 +5,15 @@ import { currentCustomer } from "@/lib/customer-auth";
 import { naira } from "@/lib/money";
 import { runDateLabel } from "@/lib/time";
 import SantaHero from "@/components/SantaHero";
-import { MOST_WISHES, memberIn, roomByToken, wishesOf, type Wish } from "@/lib/santa";
+import {
+  MOST_WISHES,
+  memberIn,
+  roomByToken,
+  santaDelivery,
+  toSpend,
+  wishesOf,
+  type Wish,
+} from "@/lib/santa";
 import {
   addWishAction,
   editWishAction,
@@ -55,7 +63,15 @@ export default async function WishlistPage({
   // where joining happens.
   if (!me || me.leftAt) redirect(`/santa/${token}`);
 
-  const [mine, hostels] = await Promise.all([wishesOf(me.id), hostelNames()]);
+  const [mine, hostels, delivery] = await Promise.all([
+    wishesOf(me.id),
+    hostelNames(),
+    santaDelivery(),
+  ]);
+  // What is actually left for the gift. The delivery comes off the top of
+  // every gift in the room, so the number to keep near is this one, not
+  // what everybody paid.
+  const spend = toSpend(room.budget, delivery);
   const shut = room.status !== "open";
 
   return (
@@ -74,7 +90,7 @@ export default async function WishlistPage({
         chips={[
           `${mine.length} of ${MOST_WISHES}`,
           shut ? "locked" : `edit until ${runDateLabel(room.closeDate)}`,
-          `${naira(room.budget)} budget`,
+          `${naira(spend)} on the gift`,
         ]}
       />
 
@@ -122,8 +138,11 @@ export default async function WishlistPage({
 
       <p className="mt-4 text-muted">
         Three to five things, so whoever draws you has a choice. Keep them near{" "}
-        {naira(room.budget)}: anything over and they have to pay the difference,
-        so they will probably pick something else.
+        {naira(spend)}: anything over and whoever draws you has to pay the
+        difference, so they will probably pick something else.
+        {delivery > 0
+          ? ` Everybody puts in ${naira(room.budget)}, and ${naira(delivery)} of it carries the gift to you.`
+          : ""}
       </p>
 
       {shut ? (
@@ -237,10 +256,10 @@ export default async function WishlistPage({
                     <p className="text-sm text-muted">
                       {one.itemId ? "" : "about "}
                       {naira(one.estPrice)}
-                      {one.estPrice > room.budget ? (
+                      {one.estPrice > spend ? (
                         <span className="font-semibold text-brand">
                           {" "}
-                          · over the {naira(room.budget)} budget
+                          · over the {naira(spend)}
                         </span>
                       ) : null}
                     </p>

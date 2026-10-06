@@ -486,6 +486,34 @@ export default async function SettingsAdmin() {
       </form>
 
       <form action={saveSettings} className="card space-y-3">
+        <h2 className="font-semibold">Secret Santa delivery</h2>
+        <p className="text-sm text-muted">
+          What carrying one gift costs. Every gift in a room goes out on the
+          same day in the same car, so this is one flat number per gift rather
+          than the container ladder: charging each giver a whole trip would be
+          charging ten people for one journey. It is added to anything picked
+          off our own menu, and it comes out of the budget the giver paid.
+          Zero adds nothing.
+        </p>
+        <div className="max-w-xs">
+          <label className="label" htmlFor="santa_delivery">
+            Per gift
+          </label>
+          <input
+            id="santa_delivery"
+            name="santa_delivery"
+            type="number"
+            min={0}
+            step={100}
+            defaultValue={settings.santa_delivery || ""}
+            className="field"
+            placeholder="0"
+          />
+        </div>
+        <SaveButton>Save</SaveButton>
+      </form>
+
+      <form action={saveSettings} className="card space-y-3">
         <h2 className="font-semibold">Product page notes</h2>
         <p className="text-sm text-muted">
           The reassurance lines under the buy button, one per line. Write{" "}

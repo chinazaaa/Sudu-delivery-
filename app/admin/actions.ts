@@ -2161,6 +2161,7 @@ const SETTING_FIELDS = [
   "skincare_blurb",
   "skincare_bands",
   "skincare_promise",
+  "santa_delivery",
   "delivery_areas",
   "email_mute",
 ] as const;

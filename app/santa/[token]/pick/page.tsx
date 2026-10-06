@@ -7,7 +7,14 @@ import { naira } from "@/lib/money";
 import Thumb from "@/components/Thumb";
 import ProductSearch from "@/components/ProductSearch";
 import { browseProducts, productFacets, PER_PAGE } from "@/lib/products";
-import { MOST_WISHES, memberIn, roomByToken, wishesOf } from "@/lib/santa";
+import {
+  MOST_WISHES,
+  memberIn,
+  roomByToken,
+  santaDelivery,
+  toSpend,
+  wishesOf,
+} from "@/lib/santa";
 import { addFromMenuAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +52,7 @@ export default async function SantaPickPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<Asked>;
+  searchParams: Promise<Asked & { added?: string; problem?: string }>;
 }) {
   const { token } = await params;
   const asked = await searchParams;
@@ -61,7 +68,7 @@ export default async function SantaPickPage({
   if (room.status !== "open") redirect(`/santa/${token}/wishlist`);
 
   const page = Math.max(1, Number(asked.page ?? 1) || 1);
-  const [{ products, total }, facets, mine] = await Promise.all([
+  const [{ products, total }, facets, mine, delivery] = await Promise.all([
     browseProducts({
       query: asked.q,
       place: asked.place,
@@ -72,7 +79,13 @@ export default async function SantaPickPage({
     }),
     productFacets(asked.place, true),
     wishesOf(me.id),
+    santaDelivery(),
   ]);
+
+  // The tile price is the thing. Carrying it is on top, out of the same
+  // budget, so what a gift can actually cost is less than what everybody
+  // paid in.
+  const spend = toSpend(room.budget, delivery);
 
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
   const full = mine.length >= MOST_WISHES;
@@ -80,7 +93,8 @@ export default async function SantaPickPage({
 
   const link = (changes: Partial<Asked>) => {
     const now = new URLSearchParams();
-    const next = { ...asked, ...changes };
+    const { added: _added, problem: _problem, ...rest } = asked;
+    const next = { ...rest, ...changes };
     if (next.q) now.set("q", next.q);
     if (next.place) now.set("place", next.place);
     if (next.category) now.set("category", next.category);
@@ -103,8 +117,25 @@ export default async function SantaPickPage({
         <p className="text-sm text-muted">
           Anything here goes straight onto your list at the price on the tile,
           so whoever draws you knows exactly what they are getting.
+          {delivery > 0
+            ? ` There is ${naira(spend)} to spend: the other ${naira(delivery)} of the ${naira(room.budget)} carries it to you.`
+            : ""}
         </p>
       </header>
+
+      {asked.problem ? (
+        <p className="card border-brand/30 bg-brand/5 font-semibold text-brand">
+          {asked.problem}
+        </p>
+      ) : null}
+      {asked.added ? (
+        <p className="card border-mint/40 bg-mint/10 font-semibold">
+          {asked.added} is on your list.{" "}
+          <Link className="text-brand underline" href={`/santa/${token}/wishlist`}>
+            See the list
+          </Link>
+        </p>
+      ) : null}
 
       {full ? (
         <p className="card font-semibold">
@@ -180,9 +211,9 @@ export default async function SantaPickPage({
                 <p className="text-sm font-bold leading-tight">{one.name}</p>
                 <p className="mt-0.5 text-xs text-muted">{one.restaurant}</p>
                 <p className="mt-1 font-extrabold">{naira(one.price)}</p>
-                {one.price > room.budget ? (
+                {one.price > spend ? (
                   <p className="mt-0.5 text-xs font-semibold text-brand">
-                    over the {naira(room.budget)} budget
+                    over the {naira(spend)}
                   </p>
                 ) : null}
 
@@ -192,6 +223,9 @@ export default async function SantaPickPage({
                   <form action={addFromMenuAction} className="mt-2">
                     <input type="hidden" name="token" value={token} />
                     <input type="hidden" name="itemId" value={one.id} />
+                    {/* Where they are standing, so adding a second thing
+                      * does not start with finding this page again. */}
+                    <input type="hidden" name="back" value={link({})} />
                     <button type="submit" className="btn-quiet w-full px-3 py-1.5 text-sm">
                       Add to my list
                     </button>
