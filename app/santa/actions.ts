@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { currentCustomer } from "@/lib/customer-auth";
+import { currentCustomer, customerDetails, signInCustomer } from "@/lib/customer-auth";
 import { ensureCustomer } from "@/lib/orders";
 import { normalisePhone } from "@/lib/phone";
 import { fileFrom, uploadImage } from "@/lib/uploads";
@@ -74,11 +74,33 @@ export async function joinRoomAction(form: FormData): Promise<void> {
   }
 
   const hostel = said(form, "hostel");
+
+  // Whether we knew this number before they typed it, asked before the row
+  // is written. It decides whether joining is enough to be them.
+  const knownBefore = await customerDetails(phone);
+
   await ensureCustomer({ phone, name, hostel });
   const joined = await joinRoom({ roomId: here.id, phone, name, hostel });
 
   revalidatePath(`/santa/${token}`);
   if (!joined.ok) redirect(`/santa/${token}?problem=${encodeURIComponent(joined.error)}`);
+
+  /*
+   * Joining has to leave them signed in, or the room has no idea who they
+   * are the second it reloads: it shows the join form again, forever, to
+   * somebody already standing in the room.
+   *
+   * A number nobody has ever ordered under guards nothing, so typing it is
+   * enough to be it. A number we already know guards a name, a block and
+   * every order ever placed under it, and a typed number is not an identity
+   * here and never has been. That one signs in with its PIN and comes
+   * straight back to the room, already joined.
+   */
+  const signedIn = await currentCustomer();
+  if (!knownBefore) await signInCustomer(phone);
+  if (knownBefore && signedIn !== phone) {
+    redirect(`/orders?next=${encodeURIComponent(`/santa/${token}`)}`);
+  }
   redirect(`/santa/${token}?joined=1`);
 }
 

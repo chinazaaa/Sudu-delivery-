@@ -14,7 +14,10 @@ import { closeRoom, joinRoom, markPaid, markUnpaid, roomById } from "@/lib/santa
  */
 
 const said = (form: FormData, key: string): string => String(form.get(key) ?? "").trim();
-const back = () => revalidatePath("/admin/santa");
+const back = () => {
+  revalidatePath("/admin/santa");
+  revalidatePath("/admin/santa/wishlists");
+};
 
 /**
  * Add somebody by hand.

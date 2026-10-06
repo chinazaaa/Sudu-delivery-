@@ -103,9 +103,12 @@ export default async function RoomPage({
           {problem}
         </p>
       ) : null}
-      {joined ? (
+      {/* Only when the room can actually see them. It said "you are in"
+        * over the join form to somebody the page did not recognise, which
+        * is the most confusing thing a page can do. */}
+      {joined && me ? (
         <p className="card mt-4 border-mint/40 bg-mint/10 font-semibold">
-          You are in. Add what you would like below.
+          You are in. Write your wishlist below.
         </p>
       ) : null}
 
@@ -178,6 +181,20 @@ export default async function RoomPage({
                 </p>
               </div>
               <button type="submit" className="btn-primary w-full">Join the room</button>
+
+              {/* A different phone, or a browser that lost the cookie. The
+                * room cannot tell them apart from a stranger, and joining
+                * again would only say they are already in. */}
+              <p className="text-sm text-muted">
+                Joined already, on another phone?{" "}
+                <Link
+                  className="font-semibold text-brand underline"
+                  href={`/orders?next=${encodeURIComponent(`/santa/${token}`)}`}
+                >
+                  Sign in with your PIN
+                </Link>
+                .
+              </p>
             </>
           )}
         </form>

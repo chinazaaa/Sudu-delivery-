@@ -1,3 +1,4 @@
+import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import { naira } from "@/lib/money";
@@ -14,7 +15,6 @@ import {
   markHandedOver,
   markRefunded,
   priceJob,
-  saveWishPlan,
   setStatus,
 } from "./actions";
 
@@ -207,7 +207,12 @@ export default async function SantaAdminPage() {
         </p>
       ) : null}
 
-      <h2 className="section-title mb-2">Rooms</h2>
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="section-title">Rooms</h2>
+        <Link className="text-sm font-semibold text-brand underline" href="/admin/santa/wishlists">
+          Every wishlist, with prices
+        </Link>
+      </div>
       {open.length === 0 ? (
         <p className="card text-muted">No rooms yet.</p>
       ) : (
@@ -265,100 +270,25 @@ export default async function SantaAdminPage() {
                     )}
                     </div>
 
-                    {/* What they asked for, so the hard ones can be looked
-                      * for before anybody has picked anything. Half of what
-                      * students want takes a week to find, and that is a
-                      * week nobody has in December. */}
+                    {/* Just the shape of it. What it costs us, what we
+                      * charge and where it comes from is an afternoon's
+                      * work with every list in front of you, so it lives
+                      * on its own page rather than squeezed in here. */}
                     {one.wishes.length > 0 ? (
-                      <ul className="mt-1.5 space-y-1.5 pl-1">
-                        {one.wishes.map((item) => (
-                          <li key={item.id} className="flex items-start gap-2">
-                            {item.photoUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={item.photoUrl}
-                                alt=""
-                                className="h-10 w-10 shrink-0 rounded object-cover"
-                              />
-                            ) : null}
-                            <div>
-                              <p>
-                                {item.title}
-                                {item.estPrice > 0 ? (
-                                  <span
-                                    className={
-                                      item.estPrice > room.budget
-                                        ? "font-semibold text-brand"
-                                        : "text-muted"
-                                    }
-                                  >
-                                    {" "}
-                                    · {naira(item.estPrice)}
-                                    {item.estPrice > room.budget ? " over" : ""}
-                                  </span>
-                                ) : null}
-                              </p>
-                              {item.note ? (
-                                <p className="text-xs text-muted">{item.note}</p>
-                              ) : null}
-
-                              {/* The shop's side. Filled in now rather than
-                                * when somebody picks it, because the things
-                                * that take a week to find are knowable in
-                                * November. */}
-                              <form
-                                action={saveWishPlan}
-                                className="mt-1.5 flex flex-wrap items-end gap-2"
-                              >
-                                <input type="hidden" name="wishId" value={item.id} />
-                                <div>
-                                  <label className="label text-xs">Costs us</label>
-                                  <input
-                                    name="costPrice"
-                                    className="field w-28 py-1.5 text-sm"
-                                    type="number"
-                                    min={0}
-                                    defaultValue={item.costPrice || ""}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="label text-xs">We charge</label>
-                                  <input
-                                    name="sellPrice"
-                                    className="field w-28 py-1.5 text-sm"
-                                    type="number"
-                                    min={0}
-                                    defaultValue={item.sellPrice || ""}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="label text-xs">Where from</label>
-                                  <input
-                                    name="source"
-                                    className="field w-52 py-1.5 text-sm"
-                                    defaultValue={item.source}
-                                    placeholder="Balogun, second floor"
-                                  />
-                                </div>
-                                <button className="btn-quiet px-4 py-1.5 text-sm">
-                                  Save
-                                </button>
-                                {item.costPrice > 0 && item.sellPrice > 0 ? (
-                                  <span
-                                    className={
-                                      item.sellPrice - item.costPrice >= 0
-                                        ? "pb-2 text-xs font-semibold text-mint"
-                                        : "pb-2 text-xs font-semibold text-brand"
-                                    }
-                                  >
-                                    {naira(item.sellPrice - item.costPrice)} margin
-                                  </span>
-                                ) : null}
-                              </form>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
+                      <p className="mt-1 text-xs text-muted">
+                        {one.wishes.length}{" "}
+                        {one.wishes.length === 1 ? "thing" : "things"} on their
+                        list ·{" "}
+                        {one.wishes.filter((item) => item.costPrice > 0 && item.sellPrice > 0)
+                          .length}{" "}
+                        priced ·{" "}
+                        <Link
+                          className="font-semibold text-brand underline"
+                          href={`/admin/santa/wishlists?q=${encodeURIComponent(one.phone)}`}
+                        >
+                          open the list
+                        </Link>
+                      </p>
                     ) : (
                       <p className="mt-1 text-xs text-muted">No list yet.</p>
                     )}

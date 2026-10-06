@@ -225,3 +225,106 @@ export async function jobs(): Promise<Job[]> {
 
   return out.sort((a, b) => a.wantedOn.localeCompare(b.wantedOn));
 }
+
+/**
+ * One line of somebody's wishlist, with everything needed to decide what to
+ * do about it: whose it is, which room, whether their money has landed,
+ * whether anybody has chosen it, and the shop's side of it.
+ *
+ * Flat on purpose. Pricing is a sitting: an hour with every line in front
+ * of you, sorted by what still has no price against it. Nested three deep
+ * under a room and a person it was a form you had to go hunting for, and
+ * the room page is for money and membership, not for an afternoon of
+ * working out where to buy twenty things.
+ */
+export type WishLine = WishPlan & {
+  roomId: string;
+  roomName: string;
+  budget: number;
+  roomStatus: RoomStatus;
+  exchangeDate: string;
+  shareToken: string;
+  /** Whose list it is. */
+  owner: string;
+  ownerPhone: string;
+  ownerHostel: string;
+  ownerPaid: boolean;
+  /** Who is buying it, once somebody has chosen it. Empty until then. */
+  chosenBy: string;
+  /** Over the room's budget as the member guessed it. */
+  overBudget: boolean;
+  /** Both prices in, so there is nothing left to work out. */
+  priced: boolean;
+};
+
+export async function wishLines(): Promise<WishLine[]> {
+  const [{ data: wishRows }, { data: memberRows }, { data: roomRows }, { data: pickRows }] =
+    await Promise.all([
+      db().from("santa_wishes").select("*").order("sort_order", { ascending: true }),
+      db().from("santa_members").select("*"),
+      db().from("santa_rooms").select("id, name, budget, status, exchange_date, share_token"),
+      db().from("santa_assignments").select("giver_id, wish_id").not("wish_id", "is", null),
+    ]);
+
+  const who = new Map(
+    ((memberRows ?? []) as Record<string, any>[]).map((one) => [one.id, one])
+  );
+  const roomOf = new Map(((roomRows ?? []) as Record<string, any>[]).map((one) => [one.id, one]));
+  const buyerOf = new Map(
+    ((pickRows ?? []) as Record<string, any>[]).map((one) => [
+      one.wish_id as string,
+      who.get(one.giver_id)?.name ?? "",
+    ])
+  );
+
+  const out: WishLine[] = [];
+  for (const row of (wishRows ?? []) as Record<string, any>[]) {
+    const owner = who.get(row.member_id);
+    // A list belonging to somebody who has left the room is not work.
+    if (!owner || owner.left_at) continue;
+    const room = roomOf.get(owner.room_id);
+    if (!room) continue;
+
+    const costPrice = Number(row.cost_price ?? 0);
+    const sellPrice = Number(row.sell_price ?? 0);
+    const estPrice = Number(row.est_price ?? 0);
+
+    out.push({
+      id: row.id,
+      memberId: row.member_id,
+      title: row.title,
+      photoUrl: row.photo_url ?? "",
+      note: row.note ?? "",
+      estPrice,
+      sortOrder: Number(row.sort_order ?? 0),
+      costPrice,
+      sellPrice,
+      source: row.source ?? "",
+      roomId: room.id,
+      roomName: room.name,
+      budget: Number(room.budget ?? 0),
+      roomStatus: room.status,
+      exchangeDate: room.exchange_date,
+      shareToken: room.share_token,
+      owner: owner.name ?? "",
+      ownerPhone: owner.phone ?? "",
+      ownerHostel: owner.hostel ?? "",
+      ownerPaid: owner.paid_at !== null,
+      chosenBy: buyerOf.get(row.id) ?? "",
+      overBudget: estPrice > 0 && estPrice > Number(room.budget ?? 0),
+      priced: costPrice > 0 && sellPrice > 0,
+    });
+  }
+
+  // Chosen first, because somebody is waiting on those; then the ones still
+  // without a price, which is the whole point of the page; then by room so
+  // one person's list stays together.
+  return out.sort((a, b) => {
+    if ((a.chosenBy !== "") !== (b.chosenBy !== "")) return a.chosenBy !== "" ? -1 : 1;
+    if (a.priced !== b.priced) return a.priced ? 1 : -1;
+    const room = a.roomName.localeCompare(b.roomName);
+    if (room !== 0) return room;
+    const person = a.owner.localeCompare(b.owner);
+    return person !== 0 ? person : a.sortOrder - b.sortOrder;
+  });
+}

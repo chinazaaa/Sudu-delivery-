@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { shortRef } from "@/lib/links";
 import Empty from "@/components/Empty";
 import PinForm from "@/components/PinForm";
@@ -15,19 +16,40 @@ import { forgetMe } from "@/app/actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function OrdersPage() {
+export default async function OrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
   const phone = await currentCustomer();
   const settings = await safeSettings();
+
+  // Sent here from somewhere else, to come back to it. Everything that
+  // needs a signed-in customer already passes this; it was being dropped
+  // on the floor, which left people signed in and stranded on their own
+  // order history wondering what they had clicked.
+  const { next } = await searchParams;
+  const back = (next ?? "").startsWith("/") ? next! : "";
+
+  // Already signed in, so there is nothing to ask: go where they were going.
+  if (phone && back) redirect(back);
 
   if (!phone) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight">My orders</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {back ? "Your number and PIN" : "My orders"}
+        </h1>
         <p className="text-ink/75">
-          Your phone number and PIN bring back everything you have ordered. No account,
-          no password.
+          {back
+            ? "We already know this number, and your PIN is what proves it is yours. It came on WhatsApp with your first order."
+            : "Your phone number and PIN bring back everything you have ordered. No account, no password."}
         </p>
-        <PinForm whatsapp={settings.whatsapp_number} />
+        <PinForm
+          whatsapp={settings.whatsapp_number}
+          next={back || undefined}
+          label={back ? "Carry on" : undefined}
+        />
       </div>
     );
   }
