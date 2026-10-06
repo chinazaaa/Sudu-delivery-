@@ -9,6 +9,7 @@ import CopyText from "@/components/CopyText";
 import SantaHero from "@/components/SantaHero";
 import SendLink from "@/components/SendLink";
 import { runDateLabel } from "@/lib/time";
+import { hostelNames } from "@/lib/hostels";
 import {
   LEAST_MEMBERS,
   hasPaid,
@@ -63,6 +64,7 @@ export default async function RoomPage({
 
   const settings = await safeSettings();
   const site = await siteUrl();
+  const hostels = await hostelNames();
   const chatToPay = whatsappLink(
     settings.whatsapp_number,
     `Hi Sudu, I'd like to pay for the ${room.name} Secret Santa by card.`
@@ -145,15 +147,34 @@ export default async function RoomPage({
                 <label className="label" htmlFor="hostel">
                   Which block is your gift delivered to?
                 </label>
-                <input
-                  id="hostel"
-                  name="hostel"
-                  className="field"
-                  defaultValue={known?.hostel ?? ""}
-                  placeholder="Queen Mary"
-                />
+                {hostels.length > 0 ? (
+                  <select
+                    id="hostel"
+                    name="hostel"
+                    className="field"
+                    defaultValue={known?.hostel ?? ""}
+                  >
+                    <option value="">Pick your block</option>
+                    {hostels.map((one) => (
+                      <option key={one} value={one}>
+                        {one}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    id="hostel"
+                    name="hostel"
+                    className="field"
+                    defaultValue={known?.hostel ?? ""}
+                    placeholder="Queen Mary"
+                  />
+                )}
                 <p className="mt-1.5 text-sm text-muted">
-                  Whoever draws you never sees this. You can change it later.
+                  Only read when we are driving your gift to you, and never
+                  shown to whoever drew you. If they choose to hand it over
+                  themselves we take it to them instead, so your block is not
+                  used at all. You can change it later.
                 </p>
               </div>
               <button type="submit" className="btn-primary w-full">Join the room</button>
@@ -222,6 +243,45 @@ export default async function RoomPage({
         </section>
       ) : null}
 
+      {/* Your list lives on its own page, and the link to it sits above the
+        * roll call rather than under it. Below the list of who has joined
+        * it was missed outright: somebody lands mid-page, scrolls past the
+        * names straight to the share card, and never sees the one thing
+        * they came to do. While the list is empty it is loud on purpose. */}
+      {me ? (
+        <Link
+          href={`/santa/${token}/wishlist`}
+          className={`card mt-6 flex items-center justify-between gap-3 transition hover:bg-black/[0.02] ${
+            mine.length === 0 && room.status === "open"
+              ? "border-brand/30 bg-brand/5"
+              : ""
+          }`}
+        >
+          <span className="flex items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-shell text-lg">
+              🎁
+            </span>
+            <span>
+              <span className="block font-bold">
+                {mine.length === 0 && room.status === "open"
+                  ? "Write your wishlist"
+                  : "Your wishlist"}
+              </span>
+              <span className="block text-sm text-muted">
+                {mine.length === 0
+                  ? room.status === "open"
+                    ? "Nothing on it yet. Whoever draws you picks from this."
+                    : "You did not write one."
+                  : `${mine.length} thing${mine.length === 1 ? "" : "s"} on it${
+                      room.status === "open" ? "" : ", locked"
+                    }`}
+              </span>
+            </span>
+          </span>
+          <span className="text-xl text-muted">›</span>
+        </Link>
+      ) : null}
+
       {/* Who is here. */}
       <section className="card mt-6">
         <h2 className="font-bold">
@@ -282,30 +342,6 @@ export default async function RoomPage({
         ) : null}
       </section>
 
-      {/* Your list lives on its own page. It is the one thing somebody
-        * comes back to four times, and under the money and the roll call
-        * is the wrong place for it. */}
-      {me ? (
-        <Link
-          href={`/santa/${token}/wishlist`}
-          className="card mt-6 flex items-center justify-between gap-3 transition hover:bg-black/[0.02]"
-        >
-          <span>
-            <span className="block font-bold">Your wishlist</span>
-            <span className="block text-sm text-muted">
-              {mine.length === 0
-                ? room.status === "open"
-                  ? "Nothing on it yet. Whoever draws you picks from this."
-                  : "You did not write one."
-                : `${mine.length} thing${mine.length === 1 ? "" : "s"} on it${
-                    room.status === "open" ? "" : ", locked"
-                  }`}
-            </span>
-          </span>
-          <span className="text-xl text-muted">›</span>
-        </Link>
-      ) : null}
-
       {/* After the draw. */}
       {match ? (
         <section className="card mt-6">
@@ -365,7 +401,11 @@ export default async function RoomPage({
             </ul>
           )}
 
-          {order ? (
+          {/* Only once something is actually being found. The row can now
+            * exist before that, because choosing who hands it over writes
+            * it, and "we are looking for it" when nothing has been picked
+            * is a lie. */}
+          {order && match.pickedWishId ? (
             <div className="mt-4 border-t pt-4">
               <h3 className="font-bold">Where it has got to</h3>
 
@@ -423,52 +463,74 @@ export default async function RoomPage({
             </div>
           ) : null}
 
-          {match.pickedWishId ? (
-            <form action={handoverAction} className="mt-5 space-y-3 border-t pt-4">
-              <input type="hidden" name="token" value={token} />
-              <h3 className="font-bold">Who hands it over?</h3>
-              <p className="text-sm text-muted">
-                We can bring it with the rest of the gifts on the exchange day,
-                or deliver it to you first so you can give it to them yourself.
-              </p>
+          {/* Who carries it the last step. Not held back until something
+            * has been picked: it is a decision about carrying rather than
+            * about what is carried, and hiding it behind the pick meant
+            * nothing on the page ever said the choice existed. */}
+          <form action={handoverAction} className="mt-5 space-y-3 border-t pt-4">
+            <input type="hidden" name="token" value={token} />
+            <h3 className="font-bold">Who hands it over?</h3>
+            <p className="text-sm text-muted">
+              We can bring it with the rest of the gifts on the exchange day,
+              or deliver it to you first so you can give it to them yourself.
+            </p>
 
-              <label className="flex items-start gap-2 text-sm">
-                <input type="radio" name="byGiver" value="0" defaultChecked className="mt-1" />
-                <span>
-                  <span className="font-semibold">We deliver it</span> on{" "}
-                  {runDateLabel(match.exchangeDate)}, with everybody else's.
-                </span>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="radio"
+                name="byGiver"
+                value="0"
+                defaultChecked={order?.handover !== "giver"}
+                className="mt-1"
+              />
+              <span>
+                <span className="font-semibold">We deliver it</span> to{" "}
+                {match.name} on {runDateLabel(match.exchangeDate)}, with
+                everybody else's.
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="radio"
+                name="byGiver"
+                value="1"
+                defaultChecked={order?.handover === "giver"}
+                className="mt-1"
+              />
+              <span>
+                <span className="font-semibold">I will give it to them myself.</span>{" "}
+                We bring it to you on the day you choose. Once it is with you
+                the handover is between the two of you, and the cost of that
+                separate delivery comes out of your change.
+              </span>
+            </label>
+
+            <div>
+              <label className="label" htmlFor="deliverOn">
+                If you are giving it yourself, which day?
               </label>
+              <input
+                id="deliverOn"
+                name="deliverOn"
+                className="field"
+                type="date"
+                min={room.closeDate}
+                max={room.exchangeDate}
+                defaultValue={order?.deliverOn ?? ""}
+              />
+            </div>
 
-              <label className="flex items-start gap-2 text-sm">
-                <input type="radio" name="byGiver" value="1" className="mt-1" />
-                <span>
-                  <span className="font-semibold">I will give it to them myself.</span>{" "}
-                  We bring it to you on the day you choose. Once it is with you
-                  the handover is between the two of you, and the cost of that
-                  separate delivery comes out of your change.
-                </span>
-              </label>
+            <button type="submit" className="btn-primary w-full">
+              Save
+            </button>
 
-              <div>
-                <label className="label" htmlFor="deliverOn">
-                  If you are giving it yourself, which day?
-                </label>
-                <input
-                  id="deliverOn"
-                  name="deliverOn"
-                  className="field"
-                  type="date"
-                  min={room.closeDate}
-                  max={room.exchangeDate}
-                />
-              </div>
-
-              <button type="submit" className="btn-primary w-full">
-                Save
-              </button>
-            </form>
-          ) : null}
+            <p className="text-sm text-muted">
+              {order?.handover === "giver"
+                ? `Saved: it comes to you${order.deliverOn ? ` on ${runDateLabel(order.deliverOn)}` : ""}, and you hand it over.`
+                : `Saved: we deliver it on ${runDateLabel(match.exchangeDate)}. You can change this until the day.`}
+            </p>
+          </form>
         </section>
       ) : null}
 

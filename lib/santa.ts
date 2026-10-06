@@ -656,6 +656,17 @@ export async function setHandover(args: {
     .maybeSingle();
   if (!mine) return { ok: false, error: "The room has not been drawn yet." };
 
+  // The choice is theirs to make before they have picked anything: it is
+  // about who carries it, not about what is carried. So the row it is
+  // written on may not exist yet, and an update with nothing to update
+  // would have quietly saved nothing at all.
+  const { data: row } = await db()
+    .from("santa_orders")
+    .select("id")
+    .eq("assignment_id", mine.id)
+    .maybeSingle();
+  if (!row) await db().from("santa_orders").insert({ assignment_id: mine.id });
+
   if (!args.byGiver) {
     await db()
       .from("santa_orders")

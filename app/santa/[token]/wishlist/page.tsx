@@ -85,30 +85,39 @@ export default async function WishlistPage({
       {/* Where their own gift is delivered. Nothing anywhere said this,
         * which is a hole that only shows up on the day: ten gifts in a car
         * and no block written against any of them. */}
-      <form action={hostelAction} className="card mt-5 space-y-3">
+      <form id="where" action={hostelAction} className="card mt-5 space-y-3">
         <input type="hidden" name="token" value={token} />
         <h2 className="font-bold">Where your gift goes</h2>
         <p className="text-sm text-muted">
-          Whoever drew you never sees this. It is only read when it is being
-          driven.
+          Only read when we are driving your gift to you, and never shown to
+          whoever drew you. If they choose to hand it over themselves we take
+          it to them instead, so your block is not used at all.
         </p>
         <div>
           <label className="label" htmlFor="hostel">
             Your block
           </label>
-          <input
-            id="hostel"
-            name="hostel"
-            className="field"
-            list="santa-hostels"
-            defaultValue={me.hostel}
-            placeholder="Queen Mary"
-          />
-          <datalist id="santa-hostels">
-            {hostels.map((one) => (
-              <option key={one} value={one} />
-            ))}
-          </datalist>
+          {/* The real list, the same as checkout uses. Free text was
+            * letting people invent a block nobody drives to. The text box
+            * stays only for a shop that has not filled its hostels in. */}
+          {hostels.length > 0 ? (
+            <select id="hostel" name="hostel" className="field" defaultValue={me.hostel}>
+              <option value="">Pick your block</option>
+              {hostels.map((one) => (
+                <option key={one} value={one}>
+                  {one}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              id="hostel"
+              name="hostel"
+              className="field"
+              defaultValue={me.hostel}
+              placeholder="Queen Mary"
+            />
+          )}
         </div>
         <button type="submit" className="btn-quiet w-full">
           {me.hostel ? "Change it" : "Save"}
@@ -121,7 +130,7 @@ export default async function WishlistPage({
       </form>
 
       {mine.length > 0 ? (
-        <ul className="mt-5 space-y-3">
+        <ul id="list" className="mt-5 space-y-3">
           {mine.map((one: Wish) => (
             <li key={one.id} className="card">
               <div className="flex items-start justify-between gap-3">
@@ -233,7 +242,7 @@ export default async function WishlistPage({
           The room has closed, so lists cannot change now.
         </p>
       ) : mine.length < MOST_WISHES ? (
-        <form action={addWishAction} className="card mt-5 space-y-4">
+        <form id="add" action={addWishAction} className="card mt-5 space-y-4">
           <input type="hidden" name="token" value={token} />
           <h2 className="font-bold">Add something</h2>
 

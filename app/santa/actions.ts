@@ -116,6 +116,10 @@ export async function addWishAction(form: FormData): Promise<void> {
   revalidatePath(`/santa/${token}/wishlist`);
   revalidatePath(`/santa/${token}`);
   if (!done.ok) redirect(`/santa/${token}/wishlist?problem=${encodeURIComponent(done.error)}`);
+  // Back to the list they just added to, not the top of the page. The form
+  // is the bottom of a long page, and a submit that scrolls you away from
+  // it costs a scroll every single time.
+  redirect(`/santa/${token}/wishlist#list`);
 }
 
 export async function removeWishAction(form: FormData): Promise<void> {
@@ -130,6 +134,7 @@ export async function removeWishAction(form: FormData): Promise<void> {
   });
   revalidatePath(`/santa/${token}/wishlist`);
   revalidatePath(`/santa/${token}`);
+  redirect(`/santa/${token}/wishlist#list`);
 }
 
 export async function closeRoomAction(form: FormData): Promise<void> {
@@ -222,6 +227,7 @@ export async function editWishAction(form: FormData): Promise<void> {
 
   revalidatePath(`/santa/${token}/wishlist`);
   if (!done.ok) redirect(`/santa/${token}/wishlist?problem=${encodeURIComponent(done.error)}`);
+  redirect(`/santa/${token}/wishlist#list`);
 }
 
 /** Where this person's own gift should be driven to. */
@@ -239,4 +245,5 @@ export async function hostelAction(form: FormData): Promise<void> {
   revalidatePath(`/santa/${token}/wishlist`);
   revalidatePath(`/santa/${token}`);
   if (!done.ok) redirect(`/santa/${token}/wishlist?problem=${encodeURIComponent(done.error)}`);
+  redirect(`/santa/${token}/wishlist#where`);
 }
