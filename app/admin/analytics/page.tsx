@@ -402,6 +402,18 @@ export default async function AnalyticsPage({
                   <span className="shrink-0 font-semibold">{page.views}</span>
                 </li>
               ))}
+              {/* The busiest twelve and then everything else, because a
+                * column of numbers that does not add up to the total above
+                * it reads as a bug. Most of the rest is one view each on
+                * one product page. */}
+              {views.restViews > 0 ? (
+                <li className="flex justify-between gap-3 py-2 text-muted">
+                  <span className="min-w-0 truncate">
+                    {views.restPages} other {views.restPages === 1 ? "page" : "pages"}
+                  </span>
+                  <span className="shrink-0 font-semibold">{views.restViews}</span>
+                </li>
+              ) : null}
             </ul>
           ) : (
             <p className="text-sm text-muted">Nothing yet.</p>

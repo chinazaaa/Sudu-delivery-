@@ -12,6 +12,11 @@ export type Traffic = {
   perDay: { date: string; views: number; visitors: number }[];
   /** The busiest pages, with a readable name. */
   pages: { path: string; label: string; views: number }[];
+  /** Views on everything outside that list, and how many pages that is. The
+   *  list is the busiest twelve, so it never sums to the total, and a column
+   *  of numbers that does not add up reads as a bug. */
+  restViews: number;
+  restPages: number;
   /** Where people came from, by site. Empty means typed or a private link. */
   sources: { source: string; views: number }[];
 };
@@ -54,6 +59,8 @@ type Summary = {
   reachedCart: number;
   perDay: { date: string; views: number; visitors: number }[];
   pages: { path: string; views: number }[];
+  restViews: number;
+  restPages: number;
   sources: { source: string; views: number }[];
   channels: { channel: string; visitors: number }[];
   ids: string[];
@@ -93,6 +100,8 @@ async function readSummary(days: number): Promise<Summary | null> {
         path: String(one.path),
         views: Number(one.views ?? 0),
       })),
+      restViews: Number(row.rest_views ?? 0),
+      restPages: Number(row.rest_pages ?? 0),
       sources: ((row.sources ?? []) as Record<string, any>[]).map((one) => ({
         source: String(one.source ?? ""),
         views: Number(one.views ?? 0),
@@ -175,6 +184,8 @@ export async function traffic(days = 7): Promise<Traffic | null> {
       label: label(one.path, names),
       views: one.views,
     })),
+    restViews: sum.restViews,
+    restPages: sum.restPages,
     sources: [...bySource.entries()]
       .sort((a, b) => b[1] - a[1])
       .map(([source, views]) => ({ source, views })),

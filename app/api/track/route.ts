@@ -8,6 +8,22 @@ export const dynamic = "force-dynamic";
 const ok = () => new NextResponse(null, { status: 204 });
 
 /**
+ * Something walking the site rather than shopping on it.
+ *
+ * Search engines run JavaScript now, so a crawler fires this the same as a
+ * person does, with a clean browser every time: one view, one brand new id,
+ * counted as one more person who looked. Four thousand of those in a week
+ * against eight orders is not a shop with a conversion problem, it is a
+ * shop counting robots.
+ *
+ * Only the ones that say what they are. Anything pretending to be a phone
+ * is indistinguishable from a phone, and guessing harder would start
+ * throwing away students.
+ */
+const ROBOTS =
+  /bot|crawler|crawling|spider|slurp|headless|phantom|puppeteer|playwright|lighthouse|pagespeed|monitor|uptime|preview|facebookexternalhit|embedly|quora link preview|whatsapp|telegram|curl|wget|python-requests|httpx|axios|node-fetch|go-http-client|java\/|okhttp|scrapy|ahrefs|semrush|dataforseo|mj12|dotbot|petal|yandex|bytespider|gptbot|claudebot|ccbot|perplexity|applebot/i;
+
+/**
  * One page view, recorded and forgotten.
  *
  * It answers 204 whatever happens: a missing table, a full disk, somebody
@@ -34,6 +50,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (!path.startsWith("/") || path.startsWith("/admin") || path.startsWith("/promoter")) {
       return ok();
     }
+
+    const agent = request.headers.get("user-agent") ?? "";
+    if (agent === "" || ROBOTS.test(agent)) return ok();
     if (visitor.length < 8) return ok();
 
     const { error } = await db()
