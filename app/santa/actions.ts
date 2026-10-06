@@ -12,10 +12,12 @@ import {
   agreeToPayMore,
   closeRoom,
   createRoom,
+  editRoom,
   editWish,
   joinRoom,
   pickWish,
   removeWish,
+  renameMe,
   leaveRoom,
   memberIn,
   removeMember,
@@ -394,4 +396,42 @@ export async function addFromMenuAction(form: FormData): Promise<void> {
 
   if (!done.ok) redirect(`${where}${join}problem=${encodeURIComponent(done.error)}`);
   redirect(`${where}${join}added=${encodeURIComponent(String(item.name ?? ""))}`);
+}
+
+/** The creator changing the room's name, budget or dates. */
+export async function editRoomAction(form: FormData): Promise<void> {
+  const token = said(form, "token");
+  const here = await roomByToken(token);
+  if (!here) return;
+
+  const done = await editRoom({
+    roomId: here.id,
+    phone: await me(token),
+    name: said(form, "name"),
+    budget: Number(said(form, "budget")),
+    closeDate: said(form, "closeDate"),
+    exchangeDate: said(form, "exchangeDate"),
+  });
+
+  revalidatePath(`/santa/${token}`);
+  if (!done.ok) redirect(`/santa/${token}?problem=${encodeURIComponent(done.error)}`);
+  redirect(`/santa/${token}?saved=1`);
+}
+
+/** What this room calls you. */
+export async function renameAction(form: FormData): Promise<void> {
+  const token = said(form, "token");
+  const here = await roomByToken(token);
+  if (!here) return;
+
+  const done = await renameMe({
+    roomId: here.id,
+    phone: await me(token),
+    name: said(form, "name"),
+  });
+
+  revalidatePath(`/santa/${token}`);
+  revalidatePath(`/santa/${token}/wishlist`);
+  if (!done.ok) redirect(`/santa/${token}/wishlist?problem=${encodeURIComponent(done.error)}`);
+  redirect(`/santa/${token}/wishlist?saved=name`);
 }

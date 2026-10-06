@@ -29,6 +29,7 @@ import {
   kickMemberAction,
   leaveRoomAction,
   handoverAction,
+  editRoomAction,
   pickWishAction,
   unpickWishAction,
 } from "../actions";
@@ -61,12 +62,13 @@ export default async function RoomPage({
   searchParams: Promise<{
     problem?: string;
     joined?: string;
+    saved?: string;
     left?: string;
     removed?: string;
   }>;
 }) {
   const { token } = await params;
-  const { problem, joined, left, removed } = await searchParams;
+  const { problem, joined, left, removed, saved } = await searchParams;
 
   const room = await roomByToken(token);
   if (!room) notFound();
@@ -125,6 +127,11 @@ export default async function RoomPage({
         </p>
       ) : null}
 
+      {saved ? (
+        <p className="card mt-4 border-mint/40 bg-mint/10 font-semibold">
+          Saved. Everybody with the link sees the new one.
+        </p>
+      ) : null}
       {left ? (
         <p className="card mt-4 border-mint/40 bg-mint/10 font-semibold">
           You are out of this room. Anything you had paid comes back to you;
@@ -390,6 +397,74 @@ export default async function RoomPage({
               ? `${LEAST_MEMBERS - paid.length} more paid people needed to draw.`
               : `${paid.length} paid and in the draw.`}
           </p>
+        ) : null}
+
+        {/* Theirs to change until it is drawn: a date moves, a budget is
+          * argued down in the group chat, and a room named in a hurry gets
+          * named properly later. Folded away because it is not what anybody
+          * opens the page for. */}
+        {phone === room.creatorPhone && room.status === "open" ? (
+          <details className="mt-4 border-t pt-3">
+            <summary className="cursor-pointer text-sm font-semibold text-muted">
+              Change the room
+            </summary>
+            <form action={editRoomAction} className="mt-3 space-y-3">
+              <input type="hidden" name="token" value={token} />
+              <div>
+                <label className="label" htmlFor="roomName">What it is called</label>
+                <input
+                  id="roomName"
+                  name="name"
+                  className="field"
+                  defaultValue={room.name}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="roomBudget">Each</label>
+                <input
+                  id="roomBudget"
+                  name="budget"
+                  className="field"
+                  type="number"
+                  min={0}
+                  step={500}
+                  defaultValue={room.budget}
+                  required
+                />
+                {paid.length > 0 ? (
+                  <p className="mt-1.5 text-sm text-muted">
+                    {paid.length} {paid.length === 1 ? "person has" : "people have"} paid, so this one is fixed now.
+                  </p>
+                ) : null}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="label" htmlFor="closeDate">Joining closes</label>
+                  <input
+                    id="closeDate"
+                    name="closeDate"
+                    className="field"
+                    type="date"
+                    defaultValue={room.closeDate}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label" htmlFor="exchangeDate">Exchanged</label>
+                  <input
+                    id="exchangeDate"
+                    name="exchangeDate"
+                    className="field"
+                    type="date"
+                    defaultValue={room.exchangeDate}
+                    required
+                  />
+                </div>
+              </div>
+              <button type="submit" className="btn-quiet w-full">Save the room</button>
+            </form>
+          </details>
         ) : null}
 
         {phone === room.creatorPhone && room.status === "open" ? (

@@ -254,8 +254,21 @@ export async function joinRoom(args: {
       .eq("room_id", args.roomId)
       .eq("phone", args.phone)
       .maybeSingle();
-    if (already) return { ok: true, member: member(already) };
-    return { ok: false, error: "Could not join the room." };
+    if (!already) return { ok: false, error: "Could not join the room." };
+
+    // They had left, or been taken out, and are joining again. The row is
+    // theirs and the reference on it is already in somebody's transfer, so
+    // it comes back rather than a second one being written.
+    if (already.left_at) {
+      const { data: back } = await db()
+        .from("santa_members")
+        .update({ left_at: null, name })
+        .eq("id", already.id)
+        .select("*")
+        .single();
+      return { ok: true, member: member(back ?? already) };
+    }
+    return { ok: true, member: member(already) };
   }
 
   return { ok: true, member: member(data) };
@@ -298,12 +311,22 @@ export async function markUnpaid(memberId: string): Promise<Done> {
   return error ? { ok: false, error: "Could not save that." } : { ok: true };
 }
 
+/**
+ * Somebody's membership of a room, or nothing.
+ *
+ * Nothing, specifically, for a person who has left or been taken out. They
+ * are still a row, because their reference has to keep meaning something on
+ * a statement, but a row is not a membership: the room page read one as if
+ * it were and went on showing somebody who had been removed the bank
+ * details and the amount to pay.
+ */
 export async function memberIn(roomId: string, phone: string): Promise<Member | null> {
   const { data } = await db()
     .from("santa_members")
     .select("*")
     .eq("room_id", roomId)
     .eq("phone", phone)
+    .is("left_at", null)
     .maybeSingle();
   return data ? member(data) : null;
 }
@@ -1077,4 +1100,87 @@ export async function santaDelivery(): Promise<number> {
     .eq("id", true)
     .maybeSingle();
   return Math.max(0, Math.round(Number((data as any)?.santa_delivery ?? 0)));
+}
+
+/**
+ * The person who made the room changing their mind about it.
+ *
+ * Only while it is open: the dates and the budget are what everybody agreed
+ * to before they paid, and after the draw they are history rather than
+ * settings.
+ *
+ * The budget is frozen the moment somebody's money lands. What they paid is
+ * written against their name as an amount, and moving the number afterwards
+ * would leave half the room having paid one figure and the rest another,
+ * with the screen quietly claiming they all paid the same.
+ */
+export async function editRoom(args: {
+  roomId: string;
+  phone: string;
+  name: string;
+  budget: number;
+  closeDate: string;
+  exchangeDate: string;
+}): Promise<Done> {
+  const here = await roomById(args.roomId);
+  if (!here) return { ok: false, error: "That room is gone." };
+  if (here.status !== "open") {
+    return { ok: false, error: "The room has been drawn, so it cannot change now." };
+  }
+  if (args.phone !== here.creatorPhone) {
+    return { ok: false, error: "Only whoever made the room can change it." };
+  }
+
+  const name = args.name.trim();
+  if (name === "") return { ok: false, error: "Give the room a name." };
+  if (!Number.isFinite(args.budget) || args.budget <= 0) {
+    return { ok: false, error: "Set a budget." };
+  }
+  if (args.closeDate > args.exchangeDate) {
+    return { ok: false, error: "Joining has to close before the exchange day." };
+  }
+
+  const budget = Math.round(args.budget);
+  if (budget !== here.budget) {
+    const paid = (await membersOf(args.roomId)).filter(hasPaid).length;
+    if (paid > 0) {
+      return {
+        ok: false,
+        error: `${paid} ${paid === 1 ? "person has" : "people have"} already paid ${here.budget.toLocaleString()}, so the budget cannot move.`,
+      };
+    }
+  }
+
+  const { error } = await db()
+    .from("santa_rooms")
+    .update({
+      name,
+      budget,
+      close_date: args.closeDate,
+      exchange_date: args.exchangeDate,
+    })
+    .eq("id", args.roomId);
+  return error ? { ok: false, error: "Could not save that." } : { ok: true };
+}
+
+/**
+ * What a room calls somebody.
+ *
+ * Their own, and only in this room: a nickname everybody in a class uses is
+ * not what they want written on their orders. It is also the name a giver
+ * reads when they draw them, which is reason enough to let them spell it.
+ */
+export async function renameMe(args: {
+  roomId: string;
+  phone: string;
+  name: string;
+}): Promise<Done> {
+  const me = await memberIn(args.roomId, args.phone);
+  if (!me) return { ok: false, error: "You are not in this room." };
+
+  const name = args.name.trim();
+  if (name === "") return { ok: false, error: "Give a name." };
+
+  const { error } = await db().from("santa_members").update({ name }).eq("id", me.id);
+  return error ? { ok: false, error: "Could not save that." } : { ok: true };
 }

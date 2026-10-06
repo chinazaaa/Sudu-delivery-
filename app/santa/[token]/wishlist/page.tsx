@@ -19,6 +19,7 @@ import {
   editWishAction,
   hostelAction,
   removeWishAction,
+  renameAction,
 } from "../../actions";
 import { hostelNames } from "@/lib/hostels";
 
@@ -106,7 +107,9 @@ export default async function WishlistPage({
             ? me.hostel
               ? `Saved. Your gift goes to ${me.hostel}.`
               : "Saved."
-            : saved === "added"
+            : saved === "name"
+              ? "Saved. That is what the room calls you now."
+              : saved === "added"
               ? "Added to your list."
               : saved === "changed"
                 ? "Saved."
@@ -351,6 +354,31 @@ export default async function WishlistPage({
       {/* Where their own gift is delivered. Nothing anywhere said this,
         * which is a hole that only shows up on the day: ten gifts in a car
         * and no block written against any of them. */}
+      {/* What the room calls them. It is the name their giver reads when
+        * they draw them, and the one they typed in a hurry while joining,
+        * so it has to be theirs to spell. */}
+      <details className="card mt-5">
+        <summary className="cursor-pointer list-none">
+          <span className="flex items-center justify-between gap-3">
+            <span>
+              <span className="block font-bold">Your name</span>
+              <span className="block text-sm text-muted">{me.name}</span>
+            </span>
+            <span className="text-sm font-semibold text-brand">Change</span>
+          </span>
+        </summary>
+        <form action={renameAction} className="mt-3 space-y-3 border-t pt-3">
+          <input type="hidden" name="token" value={token} />
+          <div>
+            <label className="label" htmlFor="name">
+              What this room calls you
+            </label>
+            <input id="name" name="name" className="field" defaultValue={me.name} required />
+          </div>
+          <button type="submit" className="btn-quiet w-full">Save</button>
+        </form>
+      </details>
+
       {/* Folded away once it is answered. It is one line of fact for
         * somebody who has already given it, and a whole card of form for
         * somebody who has not. */}
