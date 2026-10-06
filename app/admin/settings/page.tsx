@@ -321,6 +321,25 @@ export default async function SettingsAdmin() {
           </p>
         </div>
         <div>
+          <label className="label" htmlFor="android_package">
+            Android app, Play package name
+          </label>
+          <input
+            id="android_package"
+            name="android_package"
+            defaultValue={settings.android_package}
+            placeholder="store.sudu.app"
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">
+            The id from the Play address, after id=. With either of these
+            filled in, every &ldquo;get the app&rdquo; on the site points at
+            /app, which asks the phone which store it wants. Empty this and
+            the site says nothing about an Android app.
+          </p>
+        </div>
+
+        <div>
           <label className="label" htmlFor="whatsapp_group_link">
             PAU WhatsApp group link
           </label>

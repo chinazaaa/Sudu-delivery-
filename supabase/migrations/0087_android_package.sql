@@ -1,0 +1,11 @@
+-- The Android app.
+--
+-- There was one app and it was on the App Store, so a store id of digits was
+-- enough and "get the app" could say iPhone out loud. There are two now, and
+-- half the campus is on Android, so the shop has to be able to say which
+-- phone it is talking to.
+--
+-- The package name rather than a numeric id, because that is what Play is
+-- addressed by. Empty means the site never mentions an Android app, exactly
+-- as an empty App Store id has always meant.
+alter table settings add column if not exists android_package text not null default '';

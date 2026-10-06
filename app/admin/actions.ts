@@ -2107,6 +2107,7 @@ const SETTING_FIELDS = [
   "card_note",
   "instagram_handle",
   "ios_app_id",
+  "android_package",
   "abroad_on",
   "gbp_rate",
   "usd_rate",

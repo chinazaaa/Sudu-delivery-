@@ -33,6 +33,7 @@ export default function Home({
   packs = [],
   slides,
   iosAppId = "",
+  androidPackage = "",
   pitch = "",
 }: {
   menu: MenuView[];
@@ -58,6 +59,7 @@ export default function Home({
   slides: Slide[];
   /** The App Store id, or empty where the shop has no app to mention. */
   iosAppId?: string;
+  androidPackage?: string;
   /** Why a stranger should hand over sixteen thousand naira before anything
    *  arrives. Written in admin; empty means the page says nothing, which is
    *  better than the page inventing something. */
@@ -330,15 +332,17 @@ export default function Home({
           {/* Not a bucket: it is not a thing the shop sells, and standing it
               beside the ones that are made it compete with them. One line
               under the grid, for whoever is on the right phone. */}
-          {iosAppId !== "" && (
+          {/* One link for both phones now. Naming one of them was right
+              while there was one app and is a way of telling half the
+              campus the shop is not for them. */}
+          {(iosAppId !== "" || androidPackage !== "") && (
             <p className="text-center text-sm text-muted">
-              On an iPhone?{" "}
-              <a
-                href={`https://apps.apple.com/app/id${iosAppId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-bold text-brand underline"
-              >
+              {iosAppId !== "" && androidPackage !== ""
+                ? "On iPhone or Android? "
+                : iosAppId !== ""
+                  ? "On an iPhone? "
+                  : "On Android? "}
+              <a href="/app" className="font-bold text-brand underline">
                 Get the app
               </a>
             </p>

@@ -236,6 +236,7 @@ export default async function HomePage() {
   return (
     <Home
       iosAppId={settings.ios_app_id}
+      androidPackage={settings.android_package}
       menu={menu}
       slides={slides}
       // When something ordered right now would land, by the one rule every

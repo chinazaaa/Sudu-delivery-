@@ -11,6 +11,7 @@ import { offerNudge, publicOffer } from "@/lib/coupons";
 import { instagramLink, safeSettings } from "@/lib/settings";
 import { liveRibbon } from "@/lib/ribbon";
 import { qrSvg } from "@/lib/qr";
+import { siteUrl } from "@/lib/admin-templates";
 import { cookies } from "next/headers";
 import { WHO_COOKIE } from "@/lib/came-from";
 import { promoterCalledName } from "@/lib/promoters";
@@ -93,9 +94,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const perk = sentBy ? await publicOffer(settings.promoter_perk_code) : null;
   const perkFrom = perk ? await promoterCalledName(sentBy) : "";
 
-  const appQr = settings.ios_app_id
-    ? await qrSvg(`https://apps.apple.com/app/id${settings.ios_app_id}`)
-    : "";
+  // The square goes to the one address that asks the phone which store it
+  // wants. A printed code is scanned by both kinds of phone, and one that
+  // only ever opens the App Store is wrong half the time.
+  const hasApp = settings.ios_app_id !== "" || settings.android_package !== "";
+  const appQr = hasApp ? await qrSvg(`${await siteUrl()}/app`) : "";
 
   // Who this is, in the form a search engine reads rather than guesses. The
   // shop is a delivery service for one campus, and saying so plainly is the
@@ -184,7 +187,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <BottomNav />
         {/* A small card in the corner, once per offer, never over the cart
             or the checkout. */}
-        <OfferNudge nudge={nudge} appId={settings.ios_app_id} appQr={appQr} />
+        <OfferNudge
+          nudge={nudge}
+          appId={settings.ios_app_id}
+          androidPackage={settings.android_package}
+          appQr={appQr}
+        />
         {/* Counts a view after the page is up. Never in the way of anything. */}
         <Track />
       </body>

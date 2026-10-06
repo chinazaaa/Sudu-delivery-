@@ -48,9 +48,12 @@ const QUIET = ["/cart", "/checkout", "/admin", "/promoter", "/o/", "/orders", "/
 export default function OfferNudge({
   nudge,
   appId = "",
+  androidPackage = "",
   appQr = "",
 }: {
   nudge: Nudge | null;
+  /** The Play Store package. Empty where there is no Android app. */
+  androidPackage?: string;
   /** The App Store id. Empty means the shop has no app to mention. */
   appId?: string;
   /** The App Store address as a square, for a screen that cannot install it. */
@@ -63,6 +66,10 @@ export default function OfferNudge({
   const [showing, setShowing] = useState<"offer" | "app" | null>(null);
   // A screen that cannot install an app is offered the square instead.
   const [onADesk, setOnADesk] = useState(false);
+
+  // One key for "there is an app worth mentioning", so dismissing the card
+  // stays dismissed and shipping the second app brings it back once.
+  const store = [appId, androidPackage].filter((one) => one !== "").join("+");
 
   const quiet = QUIET.some((start) => path === start || path.startsWith(start));
 
@@ -89,7 +96,7 @@ export default function OfferNudge({
     let next: "offer" | "app" | null = null;
     if (nudge && seen(OFFER_KEY) !== nudge.code && aside !== "offer") {
       next = "offer";
-    } else if (appId !== "" && seen(APP_KEY) !== appId && aside !== "app") {
+    } else if (store !== "" && seen(APP_KEY) !== store && aside !== "app") {
       const ua = window.navigator.userAgent;
       const iPhone = /iPad|iPhone|iPod/.test(ua);
       // No Android app yet, so an Android phone is told nothing: an App
@@ -101,7 +108,11 @@ export default function OfferNudge({
       // where most links are opened anyway.
       const realSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|GSA/.test(ua);
 
-      if (iPhone && !realSafari) {
+      if (iPhone && appId !== "" && !realSafari) {
+        next = "app";
+      } else if (android && androidPackage !== "") {
+        // There is an Android app now, so an Android phone is worth telling.
+        // Nothing draws a bar of its own there, so this is the only ask.
         next = "app";
       } else if (!iPhone && !android && appQr !== "") {
         // A laptop. It cannot install anything, so it holds up the square
@@ -117,7 +128,7 @@ export default function OfferNudge({
     // something in the way of the page loading.
     const timer = window.setTimeout(() => setUp(true), 1200);
     return () => window.clearTimeout(timer);
-  }, [quiet, nudge, appId, appQr, path]);
+  }, [quiet, nudge, store, appQr, path]);
 
   if (quiet || showing === null) return null;
 
@@ -133,7 +144,7 @@ export default function OfferNudge({
       if (forGood) {
         window.localStorage.setItem(
           showing === "offer" ? OFFER_KEY : APP_KEY,
-          showing === "offer" ? (nudge?.code ?? "") : appId
+          showing === "offer" ? (nudge?.code ?? "") : store
         );
       } else {
         window.sessionStorage.setItem(ASIDE_KEY, showing ?? "");
@@ -173,7 +184,7 @@ export default function OfferNudge({
                 {nudge?.where && <span className="font-bold"> from {nudge.where}</span>}
               </>
             ) : (
-              "Sudu is on the App Store"
+              "Sudu is on your phone"
             )}
           </p>
           <button
@@ -193,7 +204,7 @@ export default function OfferNudge({
           {showing === "offer"
             ? nudge?.detail
             : onADesk
-              ? "Point your phone's camera at this and it opens on the App Store."
+              ? "Point your phone's camera at this and it opens the right store for it."
               : "The same shop, on your home screen. Your orders and where they have got to, without signing in every time."}
         </p>
 
@@ -222,8 +233,7 @@ export default function OfferNudge({
             ))
           ) : (
             <a
-              href={`https://apps.apple.com/app/id${appId}`}
-              target="_blank"
+              href="/app"
               rel="noopener noreferrer"
               onClick={followed}
               className="rounded-full bg-brand px-3.5 py-2 text-sm font-extrabold text-white"

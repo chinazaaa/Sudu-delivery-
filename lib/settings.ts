@@ -31,8 +31,11 @@ export type Settings = {
   card_note: string;
   instagram_handle: string;
   /** The App Store id, digits only. Empty means the site never mentions an
-   *  app: no bar in Safari, no link in the footer. */
+   *  iPhone app: no bar in Safari, no link in the footer. */
   ios_app_id: string;
+  /** The Play Store package name, like store.sudu.app. Empty the same way:
+   *  nothing on the site says there is an Android app. */
+  android_package: string;
   /** "on" where somebody abroad can choose to pay in pounds or dollars.
    *  The card link is a Stripe one, sent by hand as every card link is. */
   abroad_on: string;
@@ -168,6 +171,7 @@ export const EMPTY: Settings = {
   card_note: "",
   instagram_handle: "",
   ios_app_id: "",
+  android_package: "",
   abroad_on: "",
   gbp_rate: "",
   usd_rate: "",
