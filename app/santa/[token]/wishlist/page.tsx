@@ -39,10 +39,10 @@ export default async function WishlistPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ problem?: string }>;
+  searchParams: Promise<{ problem?: string; saved?: string }>;
 }) {
   const { token } = await params;
-  const { problem } = await searchParams;
+  const { problem, saved } = await searchParams;
 
   const room = await roomByToken(token);
   if (!room) notFound();
@@ -81,6 +81,20 @@ export default async function WishlistPage({
       {problem ? (
         <p className="card mt-4 border-brand/30 bg-brand/5 font-semibold text-brand">
           {problem}
+        </p>
+      ) : null}
+
+      {saved && !problem ? (
+        <p className="card mt-4 border-mint/40 bg-mint/10 font-semibold">
+          {saved === "block"
+            ? me.hostel
+              ? `Saved. Your gift goes to ${me.hostel}.`
+              : "Saved."
+            : saved === "added"
+              ? "Added to your list."
+              : saved === "changed"
+                ? "Saved."
+                : "Taken off your list."}
         </p>
       ) : null}
 
@@ -280,7 +294,9 @@ export default async function WishlistPage({
         <input type="hidden" name="token" value={token} />
         <h2 className="font-bold">Where your gift goes</h2>
         <p className="text-sm text-muted">
-          So we know where to bring it.
+          {me.hostel
+            ? `So we know where to bring it. Yours goes to ${me.hostel}.`
+            : "So we know where to bring it."}
         </p>
         <div>
           <label className="label" htmlFor="hostel">
@@ -311,7 +327,21 @@ export default async function WishlistPage({
         <button type="submit" className="btn-quiet w-full">
           {me.hostel ? "Change it" : "Save"}
         </button>
-        {!me.hostel ? (
+        {saved && !problem ? (
+        <p className="card mt-4 border-mint/40 bg-mint/10 font-semibold">
+          {saved === "block"
+            ? me.hostel
+              ? `Saved. Your gift goes to ${me.hostel}.`
+              : "Saved."
+            : saved === "added"
+              ? "Added to your list."
+              : saved === "changed"
+                ? "Saved."
+                : "Taken off your list."}
+        </p>
+      ) : null}
+
+      {!me.hostel ? (
           <p className="text-sm font-semibold text-brand">
             We cannot deliver your gift without this.
           </p>
