@@ -280,9 +280,7 @@ export default async function WishlistPage({
         <input type="hidden" name="token" value={token} />
         <h2 className="font-bold">Where your gift goes</h2>
         <p className="text-sm text-muted">
-          Only read when we are driving your gift to you, and never shown to
-          whoever drew you. If they choose to hand it over themselves we take
-          it to them instead, so your block is not used at all.
+          So we know where to bring it.
         </p>
         <div>
           <label className="label" htmlFor="hostel">

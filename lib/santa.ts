@@ -399,6 +399,10 @@ export type Match = {
   wishes: Wish[];
   /** Which of them they have picked, if they have. */
   pickedWishId: string | null;
+  /** Their block. The giver already knows whose name they drew, so this
+   *  gives away nothing about the draw, and somebody handing a gift over
+   *  themselves has to know where to find them. */
+  hostel: string;
   budget: number;
   exchangeDate: string;
 };
@@ -428,12 +432,13 @@ export async function matchFor(roomId: string, phone: string): Promise<Match | n
 
   const { data: them } = await db()
     .from("santa_members")
-    .select("name")
+    .select("name, hostel")
     .eq("id", data.receiver_id)
     .maybeSingle();
 
   return {
     name: (them?.name as string) ?? "",
+    hostel: (them?.hostel as string) ?? "",
     wishes: await wishesOf(data.receiver_id as string),
     pickedWishId: (data.wish_id as string) ?? null,
     budget: here.budget,

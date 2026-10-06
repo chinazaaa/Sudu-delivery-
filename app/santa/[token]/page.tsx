@@ -174,10 +174,7 @@ export default async function RoomPage({
                   />
                 )}
                 <p className="mt-1.5 text-sm text-muted">
-                  Only read when we are driving your gift to you, and never
-                  shown to whoever drew you. If they choose to hand it over
-                  themselves we take it to them instead, so your block is not
-                  used at all. You can change it later.
+                  So we know where to bring it. You can change it later.
                 </p>
               </div>
               <button type="submit" className="btn-primary w-full">Join the room</button>
@@ -362,7 +359,12 @@ export default async function RoomPage({
       {/* After the draw. */}
       {match ? (
         <section className="card mt-6">
-          <h2 className="font-bold">You are buying for {match.name}</h2>
+          <h2 className="font-bold">
+            You are buying for {match.name}
+            {match.hostel ? (
+              <span className="font-normal text-muted"> · {match.hostel}</span>
+            ) : null}
+          </h2>
           <p className="mt-1 text-sm text-muted">
             Pick one thing. We will find it, and if it comes to more than{" "}
             {naira(match.budget)} we will ask you before buying anything.
