@@ -11,6 +11,7 @@ import {
   MOST_WISHES,
   memberIn,
   roomByToken,
+  fetchCost,
   santaDelivery,
   toBuyWith,
   wishesOf,
@@ -68,7 +69,7 @@ export default async function SantaPickPage({
   if (room.status !== "open") redirect(`/santa/${token}/wishlist`);
 
   const page = Math.max(1, Number(asked.page ?? 1) || 1);
-  const [{ products, total }, facets, mine, delivery] = await Promise.all([
+  const [{ products, total }, facets, mine, fee] = await Promise.all([
     browseProducts({
       query: asked.q,
       place: asked.place,
@@ -81,10 +82,11 @@ export default async function SantaPickPage({
     wishesOf(me.id),
     santaDelivery(),
   ]);
+  const delivery = fetchCost(1, fee);
 
   // One thing, fetched once. Each further thing takes another fetch out of
   // the same budget, so this is the ceiling for a single present.
-  const spend = toBuyWith(room.budget, 1, delivery);
+  const spend = toBuyWith(room.budget, 1, fee);
 
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
   const full = mine.length >= MOST_WISHES;
@@ -117,7 +119,7 @@ export default async function SantaPickPage({
           Anything here goes straight onto your list at the price on the tile,
           so whoever draws you knows exactly what they are getting.
           {delivery > 0
-            ? ` ${naira(spend)} of the ${naira(room.budget)} can go on one present: the other ${naira(delivery)} fetches it and brings it over.`
+            ? ` ${naira(spend)} of the ${naira(room.budget)} can go on presents: the other ${naira(delivery)} carries them, ${fee.included === 1 ? "" : `up to ${fee.included} things, `}and whoever draws you picks from the list.`
             : ""}
         </p>
       </header>

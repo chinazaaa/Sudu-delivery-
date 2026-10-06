@@ -13,6 +13,7 @@ import { hostelNames } from "@/lib/hostels";
 import {
   LEAST_MEMBERS,
   hasPaid,
+  fetchCost,
   santaDelivery,
   matchFor,
   memberIn,
@@ -78,7 +79,10 @@ export default async function RoomPage({
   const hostels = await hostelNames();
   // The budget is the whole of what somebody hands over, because that is
   // the number the group agreed out loud. Fetching comes out of it.
-  const delivery = await santaDelivery();
+  const fee = await santaDelivery();
+  // What carrying one person's gifts costs before anybody has chosen a
+  // second thing. It is what the pay card has to say out loud.
+  const delivery = fetchCost(1, fee);
   const due = room.budget;
   const chatToPay = whatsappLink(
     settings.whatsapp_number,
@@ -276,6 +280,9 @@ export default async function RoomPage({
                 <dd className="text-right">
                   up to {naira(room.budget - delivery)} on the gift, and{" "}
                   {naira(delivery)} to go and find it and bring it over
+                  {fee.included > 1
+                    ? ` (that carries up to ${fee.included} things${fee.extra > 0 ? `, then ${naira(fee.extra)} each` : ""})`
+                    : ""}
                 </dd>
               </div>
             ) : null}
@@ -521,7 +528,7 @@ export default async function RoomPage({
             will find them, and if they come to more than{" "}
             {naira(match.toSpend)} we will ask you before buying anything.
             {match.delivery > 0
-              ? ` Each thing is its own errand, so each one takes ${naira(match.delivery)} of the ${naira(match.budget)} to find and bring over.`
+              ? ` Carrying them takes ${naira(match.delivery)} of the ${naira(match.budget)} so far: ${naira(fee.base)} covers ${fee.included} ${fee.included === 1 ? "thing" : "things"}${fee.extra > 0 ? `, then ${naira(fee.extra)} each` : ""}.`
               : ""}
           </p>
 

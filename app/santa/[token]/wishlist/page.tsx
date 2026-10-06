@@ -9,6 +9,7 @@ import {
   MOST_WISHES,
   memberIn,
   roomByToken,
+  fetchCost,
   santaDelivery,
   toBuyWith,
   wishesOf,
@@ -64,15 +65,16 @@ export default async function WishlistPage({
   // where joining happens.
   if (!me || me.leftAt) redirect(`/santa/${token}`);
 
-  const [mine, hostels, delivery] = await Promise.all([
+  const [mine, hostels, fee] = await Promise.all([
     wishesOf(me.id),
     hostelNames(),
     santaDelivery(),
   ]);
+  const delivery = fetchCost(1, fee);
   // One thing, fetched once: what is left of the budget after that is what
   // a single present may cost. Whoever draws them may well buy three, and
   // each one takes another fetch out of the same budget.
-  const spend = toBuyWith(room.budget, 1, delivery);
+  const spend = toBuyWith(room.budget, 1, fee);
   const shut = room.status !== "open";
 
   return (
@@ -144,7 +146,7 @@ export default async function WishlistPage({
         {naira(spend)}: anything over and whoever draws you has to pay the
         difference, so they will probably pick something else.
         {delivery > 0
-          ? ` Everybody puts in ${naira(room.budget)}, and ${naira(delivery)} of it finds the gift and brings it over, so ${naira(spend)} is what one present can cost.`
+          ? ` Everybody puts in ${naira(room.budget)}, and ${naira(delivery)} of it finds your gift and brings it over, so ${naira(spend)} is what it can cost. Whoever draws you can buy ${fee.included === 1 ? "more than one thing" : `up to ${fee.included} things`} for that same ${naira(delivery)}.`
           : ""}
       </p>
 

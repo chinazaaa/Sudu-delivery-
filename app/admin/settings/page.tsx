@@ -1,3 +1,4 @@
+import { naira } from "@/lib/money";
 import SaveButton from "@/components/SaveButton";
 import PageHeader from "@/components/admin/PageHeader";
 import BandEditor from "@/components/admin/BandEditor";
@@ -488,28 +489,72 @@ export default async function SettingsAdmin() {
       <form action={saveSettings} className="card space-y-3">
         <h2 className="font-semibold">Secret Santa delivery</h2>
         <p className="text-sm text-muted">
-          What one gift costs to fetch and deliver. Every gift is its own
-          errand: they come from different shops, on different days, and the
-          one car on the exchange day is the last step of ten separate
-          journeys rather than the whole of one. So it is charged once per
-          gift, against that giver&apos;s budget, whatever the gift is and
-          wherever it comes from. Zero adds nothing.
+          What carrying one person&apos;s gifts costs, taken out of their
+          budget. Charged once against the giver, not once per thing: their
+          gifts all go to one person on one day, so a chicken, a pizza and a
+          bag of rice off the same list are one errand&apos;s worth of
+          carrying. Past the few the first number covers, each thing is
+          another bag in the boot. Zero costs nothing.
         </p>
-        <div className="max-w-xs">
-          <label className="label" htmlFor="santa_delivery">
-            Per gift
-          </label>
-          <input
-            id="santa_delivery"
-            name="santa_delivery"
-            type="number"
-            min={0}
-            step={100}
-            defaultValue={settings.santa_delivery || ""}
-            className="field"
-            placeholder="0"
-          />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label className="label" htmlFor="santa_delivery">
+              Carrying
+            </label>
+            <input
+              id="santa_delivery"
+              name="santa_delivery"
+              type="number"
+              min={0}
+              step={100}
+              defaultValue={settings.santa_delivery || ""}
+              className="field"
+              placeholder="4000"
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="santa_delivery_included">
+              Covers this many
+            </label>
+            <input
+              id="santa_delivery_included"
+              name="santa_delivery_included"
+              type="number"
+              min={0}
+              step={1}
+              defaultValue={settings.santa_delivery_included}
+              className="field"
+              placeholder="3"
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="santa_delivery_extra">
+              Each one after
+            </label>
+            <input
+              id="santa_delivery_extra"
+              name="santa_delivery_extra"
+              type="number"
+              min={0}
+              step={100}
+              defaultValue={settings.santa_delivery_extra || ""}
+              className="field"
+              placeholder="500"
+            />
+          </div>
         </div>
+        {settings.santa_delivery > 0 ? (
+          <p className="text-sm text-muted">
+            So three things costs {naira(settings.santa_delivery)}, and five
+            costs{" "}
+            {naira(
+              settings.santa_delivery +
+                Math.max(0, 5 - settings.santa_delivery_included) *
+                  settings.santa_delivery_extra
+            )}
+            .
+          </p>
+        ) : null}
         <SaveButton>Save</SaveButton>
       </form>
 

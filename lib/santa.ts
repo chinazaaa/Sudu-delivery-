@@ -433,7 +433,7 @@ export type Match = {
   /** Everything they have picked off it. More than one is normal when the
    *  list is five thousand naira things and the budget is sixty. */
   pickedWishIds: string[];
-  /** What one fetch costs, out of the budget. */
+  /** What carrying their gifts costs so far, out of the budget. */
   delivery: number;
   /** What is left to buy with, after fetching what they have chosen. */
   toSpend: number;
@@ -484,7 +484,7 @@ export async function matchFor(roomId: string, phone: string): Promise<Match | n
     wishes: await wishesOf(data.receiver_id as string),
     pickedWishIds: picked,
     budget: here.budget,
-    delivery,
+    delivery: fetchCost(Math.max(1, picked.length), delivery),
     toSpend: toBuyWith(here.budget, Math.max(1, picked.length), delivery),
     exchangeDate: here.exchangeDate,
   };
@@ -531,7 +531,12 @@ export async function moneyHeld(roomId: string): Promise<{
     refunded_at: string | null;
   }[];
 
-  const fees = ((picks ?? []) as { assignment_id: string }[]).length * delivery;
+  // Once per giver, with the ladder applied to how many they chose.
+  const chosen = new Map<string, number>();
+  for (const one of (picks ?? []) as { assignment_id: string }[]) {
+    chosen.set(one.assignment_id, (chosen.get(one.assignment_id) ?? 0) + 1);
+  }
+  const fees = [...chosen.values()].reduce((sum, many) => sum + fetchCost(many, delivery), 0);
   const spent = rows.reduce((sum, one) => sum + Number(one.sourced_price ?? 0), 0);
   const refunded = rows
     .filter((one) => one.refunded_at)
@@ -1076,30 +1081,57 @@ export async function deleteRoom(roomId: string, force = false): Promise<Done> {
   return error ? { ok: false, error: "Could not delete that room." } : { ok: true };
 }
 
+/** What the shop charges to carry one person's gifts. */
+export type Fetching = {
+  /** The first few, together. */
+  base: number;
+  /** How many things that covers. */
+  included: number;
+  /** Each thing past that. */
+  extra: number;
+};
+
 /**
- * What is left to buy with, once the fetching is paid for.
+ * What carrying somebody's gifts costs.
+ *
+ * Once per giver, not once per thing. One giver's gifts go to one person on
+ * one day, so a chicken, a pizza and a bag of rice off the same list are
+ * one errand's worth of carrying rather than three. Past the few the base
+ * covers, a thing is another bag in the boot: it costs something, nowhere
+ * near a whole trip.
+ */
+export function fetchCost(gifts: number, fee: Fetching): number {
+  if (fee.base <= 0) return 0;
+  const over = Math.max(0, Math.max(1, Math.round(gifts)) - Math.max(0, fee.included));
+  return Math.round(fee.base) + over * Math.max(0, Math.round(fee.extra));
+}
+
+/**
+ * What is left to buy with, once the carrying is paid for.
  *
  * The budget is the whole of what somebody hands over: a room that calls
  * itself sixty thousand is sixty thousand out of pocket, because that is
  * the number the group agreed out loud and the one everybody budgets
- * against. Fetching comes out of it rather than on top of it.
- *
- * Every gift is its own errand, from its own shop, so every gift costs a
- * fetch: two things off the same list is two journeys, not one.
+ * against. Carrying comes out of it rather than on top of it.
  */
-export function toBuyWith(budget: number, gifts: number, delivery: number): number {
-  const fetches = Math.max(1, Math.round(gifts)) * Math.max(0, Math.round(delivery));
-  return Math.round(budget) - fetches;
+export function toBuyWith(budget: number, gifts: number, fee: Fetching): number {
+  return Math.round(budget) - fetchCost(gifts, fee);
 }
 
-/** What the shop charges to fetch and deliver one gift. Zero until set. */
-export async function santaDelivery(): Promise<number> {
+/** What the shop charges to carry one person's gifts. Zero until set. */
+export async function santaDelivery(): Promise<Fetching> {
   const { data } = await db()
     .from("settings")
-    .select("santa_delivery")
+    .select("santa_delivery, santa_delivery_included, santa_delivery_extra")
     .eq("id", true)
     .maybeSingle();
-  return Math.max(0, Math.round(Number((data as any)?.santa_delivery ?? 0)));
+
+  const row = (data ?? {}) as Record<string, unknown>;
+  return {
+    base: Math.max(0, Math.round(Number(row.santa_delivery ?? 0))),
+    included: Math.max(0, Math.round(Number(row.santa_delivery_included ?? 3))),
+    extra: Math.max(0, Math.round(Number(row.santa_delivery_extra ?? 0))),
+  };
 }
 
 /**

@@ -35,7 +35,7 @@ export const dynamic = "force-dynamic";
  * exchange day. Grouping by room is how that gift ends up in the wrong car.
  */
 export default async function SantaAdminPage() {
-  const [list, open, delivery] = await Promise.all([jobs(), rooms(), santaDelivery()]);
+  const [list, open, fee] = await Promise.all([jobs(), rooms(), santaDelivery()]);
 
   const held = open.reduce((sum, one) => sum + one.held, 0);
   // The errand fees inside that, which are takings rather than somebody's
@@ -61,11 +61,11 @@ export default async function SantaAdminPage() {
       {/* The one number that decides what a budget actually buys, said here
         * because this is the page somebody is on when they wonder. */}
       <p className="mb-4 text-sm text-muted">
-        {delivery > 0
-          ? `Fetching one gift takes ${naira(delivery)} out of the budget.`
-          : "Fetching a gift takes nothing out of the budget yet."}{" "}
+        {fee.base > 0
+          ? `Carrying somebody's gifts takes ${naira(fee.base)} out of their budget, for up to ${fee.included} ${fee.included === 1 ? "thing" : "things"}${fee.extra > 0 ? `, then ${naira(fee.extra)} each` : ""}.`
+          : "Carrying a gift takes nothing out of the budget yet."}{" "}
         <Link className="font-semibold text-brand underline" href="/admin/settings">
-          {delivery > 0 ? "Change it in Settings" : "Set it in Settings"}
+          {fee.base > 0 ? "Change it in Settings" : "Set it in Settings"}
         </Link>
       </p>
 
