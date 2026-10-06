@@ -57,7 +57,9 @@ export type Wish = {
   id: string;
   memberId: string;
   title: string;
-  photoUrl: string;
+  /** Up to two: the front and the back, or the thing and its size label.
+   *  Empty slots are dropped, so this is never a list of blanks. */
+  photos: string[];
   note: string;
   estPrice: number;
   sortOrder: number;
@@ -98,7 +100,9 @@ const wish = (row: Record<string, any>): Wish => ({
   id: row.id,
   memberId: row.member_id,
   title: row.title,
-  photoUrl: row.photo_url ?? "",
+  photos: [row.photo_url ?? "", row.photo_url_2 ?? ""]
+    .map((one: string) => one.trim())
+    .filter((one: string) => one !== ""),
   note: row.note ?? "",
   estPrice: Number(row.est_price ?? 0),
   sortOrder: Number(row.sort_order ?? 0),
@@ -309,7 +313,7 @@ export async function memberIn(roomId: string, phone: string): Promise<Member | 
 export async function wishesOf(memberId: string): Promise<Wish[]> {
   const { data } = await db()
     .from("santa_wishes")
-    .select("id, member_id, title, photo_url, note, est_price, sort_order")
+    .select("id, member_id, title, photo_url, photo_url_2, note, est_price, sort_order")
     .eq("member_id", memberId)
     .order("sort_order", { ascending: true });
   return ((data ?? []) as Record<string, any>[]).map(wish);
@@ -495,7 +499,8 @@ export async function addWish(args: {
   roomId: string;
   phone: string;
   title: string;
-  photoUrl?: string;
+  /** Nothing, one, or two. Anything past the second is dropped. */
+  photos?: string[];
   note?: string;
   estPrice?: number;
 }): Promise<Done> {
@@ -518,7 +523,8 @@ export async function addWish(args: {
   const { error } = await db().from("santa_wishes").insert({
     member_id: me.id,
     title,
-    photo_url: (args.photoUrl ?? "").trim(),
+    photo_url: (args.photos?.[0] ?? "").trim(),
+    photo_url_2: (args.photos?.[1] ?? "").trim(),
     note: (args.note ?? "").trim(),
     est_price: Math.max(0, Math.round(args.estPrice ?? 0)),
     sort_order: mine.length,
@@ -824,7 +830,7 @@ export async function editWish(args: {
   title: string;
   note?: string;
   estPrice?: number;
-  photoUrl?: string;
+  photos?: string[];
 }): Promise<Done> {
   const here = await roomById(args.roomId);
   if (!here || here.status !== "open") {
@@ -843,9 +849,10 @@ export async function editWish(args: {
     note: (args.note ?? "").trim(),
     est_price: Math.max(0, Math.round(args.estPrice ?? 0)),
   };
-  // Only when a new one was actually uploaded: an empty file input must not
-  // wipe the picture they added last week.
-  if (args.photoUrl) patch.photo_url = args.photoUrl;
+  // Only the slots a new file actually arrived in: an empty file input must
+  // not wipe the picture they added last week.
+  if (args.photos?.[0]) patch.photo_url = args.photos[0];
+  if (args.photos?.[1]) patch.photo_url_2 = args.photos[1];
 
   const { error } = await db()
     .from("santa_wishes")

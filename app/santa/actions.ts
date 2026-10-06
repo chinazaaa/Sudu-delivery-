@@ -114,26 +114,39 @@ async function me(token: string): Promise<string> {
   return phone;
 }
 
+/**
+ * The pictures off one of these forms.
+ *
+ * A screenshot is how half of what students want is described, so these are
+ * the fields that matter most on the form, and two of them because a thing
+ * has a front and a back. Failing to upload must not lose the rest of what
+ * they typed, and an empty slot must stay empty rather than shuffling the
+ * second picture into the first: the slots are how an edit knows which one
+ * is being replaced.
+ */
+async function pictures(form: FormData): Promise<string[]> {
+  const one = async (field: string): Promise<string> => {
+    try {
+      return (await uploadImage(fileFrom(form, field), "santa")) ?? "";
+    } catch {
+      return "";
+    }
+  };
+  return [await one("photo"), await one("photo2")];
+}
+
 export async function addWishAction(form: FormData): Promise<void> {
   const token = said(form, "token");
   const here = await roomByToken(token);
   if (!here) return;
 
-  // A screenshot is how half of what students want is described, so the
-  // photograph is the field that matters most on this form. Failing to
-  // upload must not lose the rest of what they typed.
-  let photoUrl = "";
-  try {
-    photoUrl = (await uploadImage(fileFrom(form, "photo"), "santa")) ?? "";
-  } catch {
-    photoUrl = "";
-  }
+  const photos = await pictures(form);
 
   const done = await addWish({
     roomId: here.id,
     phone: await me(token),
     title: said(form, "title"),
-    photoUrl,
+    photos,
     note: said(form, "note"),
     estPrice: Number(said(form, "estPrice") || 0),
   });
@@ -233,12 +246,7 @@ export async function editWishAction(form: FormData): Promise<void> {
   const here = await roomByToken(token);
   if (!here) return;
 
-  let photoUrl = "";
-  try {
-    photoUrl = (await uploadImage(fileFrom(form, "photo"), "santa")) ?? "";
-  } catch {
-    photoUrl = "";
-  }
+  const photos = await pictures(form);
 
   const done = await editWish({
     roomId: here.id,
@@ -247,7 +255,7 @@ export async function editWishAction(form: FormData): Promise<void> {
     title: said(form, "title"),
     note: said(form, "note"),
     estPrice: Number(said(form, "estPrice") || 0),
-    photoUrl,
+    photos,
   });
 
   revalidatePath(`/santa/${token}/wishlist`);

@@ -1,0 +1,11 @@
+-- A second picture per wish.
+--
+-- One was never enough: a thing has a front and a back, a shoe has a size
+-- written inside it, and a screenshot of a listing is not a photograph of
+-- the colour. Two is where it stops, because a wishlist is meant to be read
+-- by somebody in a hurry.
+--
+-- A second column rather than an array: two is the whole range, and an
+-- array would have every read and write in the shop learning a new shape
+-- for the sake of a number that is not going to change.
+alter table santa_wishes add column if not exists photo_url_2 text not null default '';

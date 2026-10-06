@@ -438,13 +438,18 @@ export default async function RoomPage({
               {match.wishes.map((one) => (
                 <li key={one.id} className="flex items-start justify-between gap-3 border-t pt-2">
                   <div className="flex items-start gap-3">
-                    {one.photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={one.photoUrl}
-                        alt=""
-                        className="h-16 w-16 shrink-0 rounded-lg object-cover"
-                      />
+                    {one.photos.length > 0 ? (
+                      <span className="flex shrink-0 gap-1">
+                        {one.photos.map((shot) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            key={shot}
+                            src={shot}
+                            alt=""
+                            className="h-16 w-16 rounded-lg object-cover"
+                          />
+                        ))}
+                      </span>
                     ) : null}
                     <div>
                     <p className="font-semibold">{one.title}</p>

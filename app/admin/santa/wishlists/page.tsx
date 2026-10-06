@@ -132,13 +132,18 @@ export default async function SantaWishlistsPage({
           {shown.map((one) => (
             <li key={one.id} className="card">
               <div className="flex items-start gap-3">
-                {one.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={one.photoUrl}
-                    alt=""
-                    className="h-20 w-20 shrink-0 rounded-xl object-cover"
-                  />
+                {one.photos.length > 0 ? (
+                  <span className="flex shrink-0 gap-1">
+                    {one.photos.map((shot) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={shot}
+                        src={shot}
+                        alt=""
+                        className="h-20 w-20 rounded-xl object-cover"
+                      />
+                    ))}
+                  </span>
                 ) : (
                   <span className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-shell text-2xl">
                     🎁

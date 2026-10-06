@@ -144,6 +144,16 @@ export default async function WishlistPage({
           </div>
 
           <div>
+            <label className="label" htmlFor="photo2">
+              A second picture
+            </label>
+            <input id="photo2" name="photo2" className="field" type="file" accept="image/*" />
+            <p className="mt-1.5 text-sm text-muted">
+              For the back of it, or the size written inside. Two is the most.
+            </p>
+          </div>
+
+          <div>
             <label className="label" htmlFor="note">
               A link, or how to know it is the right one
             </label>
@@ -185,13 +195,18 @@ export default async function WishlistPage({
             <li key={one.id} className="card">
               <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3">
-                {one.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={one.photoUrl}
-                    alt=""
-                    className="h-16 w-16 shrink-0 rounded-xl object-cover"
-                  />
+                {one.photos.length > 0 ? (
+                  <span className="flex shrink-0 gap-1">
+                    {one.photos.map((shot) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={shot}
+                        src={shot}
+                        alt=""
+                        className="h-16 w-16 rounded-xl object-cover"
+                      />
+                    ))}
+                  </span>
                 ) : (
                   <span className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-shell text-xl">
                     🎁
@@ -260,17 +275,25 @@ export default async function WishlistPage({
                         defaultValue={one.estPrice || ""}
                       />
                     </div>
+                    {/* Two slots, and they stay slots: replacing the back
+                      * must not shuffle it into the front. */}
                     <div>
                       <label className="label">
-                        {one.photoUrl ? "Replace the picture" : "Add a picture"}
+                        {one.photos[0] ? "Replace the first picture" : "Add a picture"}
                       </label>
                       <input name="photo" className="field" type="file" accept="image/*" />
-                      {one.photoUrl ? (
-                        <p className="mt-1.5 text-sm text-muted">
-                          Leave it empty to keep the one you have.
-                        </p>
-                      ) : null}
                     </div>
+                    <div>
+                      <label className="label">
+                        {one.photos[1] ? "Replace the second picture" : "Add a second picture"}
+                      </label>
+                      <input name="photo2" className="field" type="file" accept="image/*" />
+                    </div>
+                    {one.photos.length > 0 ? (
+                      <p className="text-sm text-muted">
+                        Leave either empty to keep the picture you have.
+                      </p>
+                    ) : null}
                     <button type="submit" className="btn-primary w-full">
                       Save changes
                     </button>

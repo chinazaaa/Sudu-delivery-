@@ -31,7 +31,9 @@ async function planFor(memberId: string): Promise<WishPlan[]> {
     id: row.id,
     memberId: row.member_id,
     title: row.title,
-    photoUrl: row.photo_url ?? "",
+    photos: [row.photo_url ?? "", row.photo_url_2 ?? ""]
+      .map((one: string) => one.trim())
+      .filter((one: string) => one !== ""),
     note: row.note ?? "",
     estPrice: Number(row.est_price ?? 0),
     sortOrder: Number(row.sort_order ?? 0),
@@ -293,7 +295,9 @@ export async function wishLines(): Promise<WishLine[]> {
       id: row.id,
       memberId: row.member_id,
       title: row.title,
-      photoUrl: row.photo_url ?? "",
+      photos: [row.photo_url ?? "", row.photo_url_2 ?? ""]
+      .map((one: string) => one.trim())
+      .filter((one: string) => one !== ""),
       note: row.note ?? "",
       estPrice,
       sortOrder: Number(row.sort_order ?? 0),
