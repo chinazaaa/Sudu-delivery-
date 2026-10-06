@@ -5,7 +5,7 @@ import Stat from "@/components/admin/Stat";
 import { naira } from "@/lib/money";
 import { runDateLabel } from "@/lib/time";
 import { jobs, rooms } from "@/lib/santa-admin";
-import { hasPaid, LEAST_MEMBERS } from "@/lib/santa";
+import { hasPaid, LEAST_MEMBERS, santaDelivery } from "@/lib/santa";
 import {
   addMember,
   markMemberPaid,
@@ -35,7 +35,7 @@ export const dynamic = "force-dynamic";
  * exchange day. Grouping by room is how that gift ends up in the wrong car.
  */
 export default async function SantaAdminPage() {
-  const [list, open] = await Promise.all([jobs(), rooms()]);
+  const [list, open, delivery] = await Promise.all([jobs(), rooms(), santaDelivery()]);
 
   const held = open.reduce((sum, one) => sum + one.held, 0);
   // The errand fees inside that, which are takings rather than somebody's
@@ -57,6 +57,17 @@ export default async function SantaAdminPage() {
         backHref="/admin"
         backLabel="Dashboard"
       />
+
+      {/* The one number that decides what a budget actually buys, said here
+        * because this is the page somebody is on when they wonder. */}
+      <p className="mb-4 text-sm text-muted">
+        {delivery > 0
+          ? `Fetching one gift takes ${naira(delivery)} out of the budget.`
+          : "Fetching a gift takes nothing out of the budget yet."}{" "}
+        <Link className="font-semibold text-brand underline" href="/admin/settings">
+          {delivery > 0 ? "Change it in Settings" : "Set it in Settings"}
+        </Link>
+      </p>
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat
@@ -245,120 +256,135 @@ export default async function SantaAdminPage() {
         <ul className="space-y-3">
           {open.map((room) => (
             <li key={room.id} className="card">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="font-bold">{room.name}</p>
-                <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
-                  <span>
-                    {room.status} · closes {runDateLabel(room.closeDate)} · exchanged{" "}
-                    {runDateLabel(room.exchangeDate)}
-                  </span>
-                  {/* For the rooms made to find out whether it works, where
-                    * the money was marked paid to see whether the screen
-                    * adds up. The confirm says the amount out loud, because
-                    * on a real room that amount is somebody's. */}
-                  <form action={removeRoom}>
-                    <input type="hidden" name="roomId" value={room.id} />
-                    <input type="hidden" name="force" value="1" />
-                    <ConfirmButton
-                      tone="bare"
-                      className="text-xs font-semibold text-brand underline"
-                      confirm={
-                        room.held > 0
-                          ? `Delete, and forget the ${naira(room.held)} it is holding?`
-                          : `Delete ${room.name} and everything in it?`
-                      }
-                    >
-                      Delete
-                    </ConfirmButton>
-                  </form>
-                </p>
-              </div>
-              <p className="text-sm text-muted">
-                {naira(room.budget)} each · {room.members} in ·{" "}
-                <span className="font-semibold">{room.paidCount} paid</span> ·{" "}
-                {room.withLists} with lists · {room.picked} picked · holding{" "}
-                {naira(room.held - room.fees)}
-                {room.fees > 0 ? ` · ${naira(room.fees)} in fees` : ""}
+              {/* A room is a name, four numbers and a list of people, and on
+                * a phone all of it was one run-on sentence of dot-separated
+                * fragments. The name gets a line, the numbers get a grid,
+                * and each person gets a block with their own white space. */}
+              <p className="text-lg font-bold">{room.name}</p>
+              <p className="mt-0.5 text-sm text-muted">
+                {room.status} · closes {runDateLabel(room.closeDate)}
+                <br />
+                exchanged {runDateLabel(room.exchangeDate)}
               </p>
 
-              {/* Who is in, and who has actually paid. The number sits
-                * beside the name because a bank statement gives a name that
-                * is half the time somebody's father's, and an amount that
-                * everybody in the room has also paid. */}
-              <ul className="mt-3 space-y-1">
+              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
+                <div>
+                  <dt className="text-xs text-muted">Each</dt>
+                  <dd className="font-bold">{naira(room.budget)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted">In the room</dt>
+                  <dd className="font-bold">
+                    {room.paidCount} paid
+                    <span className="font-normal text-muted"> of {room.members}</span>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted">Lists written</dt>
+                  <dd className="font-bold">
+                    {room.withLists}
+                    <span className="font-normal text-muted"> · {room.picked} picked</span>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted">Holding for them</dt>
+                  <dd className="font-bold">
+                    {naira(room.held - room.fees)}
+                    {room.fees > 0 ? (
+                      <span className="font-normal text-muted">
+                        {" "}
+                        · {naira(room.fees)} ours
+                      </span>
+                    ) : null}
+                  </dd>
+                </div>
+              </dl>
+
+              {/* Who is in, and who has actually paid. The number sits under
+                * the name because a bank statement gives a name that is half
+                * the time somebody's father's, and an amount that everybody
+                * in the room has also paid. */}
+              <ul className="mt-4 space-y-3">
                 {room.people.map((one) => (
-                  <li key={one.id} className="border-t pt-2 text-sm first:border-t-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold">{one.name}</span>
-                    <span className="text-muted">{one.phone}</span>
-                    <span className="font-mono text-xs text-muted">{one.reference}</span>
-                    {one.hostel ? (
-                      <span className="text-xs text-muted">{one.hostel}</span>
-                    ) : (
-                      <span className="text-xs font-semibold text-brand">no block</span>
-                    )}
-                    {hasPaid(one) ? (
-                      <>
-                        <span className="chip border-mint/40 bg-mint/10 py-0.5 text-xs text-mint">
+                  <li key={one.id} className="rounded-xl bg-shell/60 p-3 text-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-bold">{one.name}</p>
+                        <p className="text-muted">{one.phone}</p>
+                        <p className="font-mono text-xs tracking-wider text-muted">
+                          {one.reference}
+                        </p>
+                      </div>
+                      {hasPaid(one) ? (
+                        <span className="chip shrink-0 border-mint/40 bg-mint/10 py-0.5 text-xs text-mint">
                           paid
                         </span>
-                        {room.status === "open" ? (
-                          <form action={markMemberUnpaid}>
-                            <input type="hidden" name="memberId" value={one.id} />
-                            <button className="text-xs font-semibold text-muted underline">
-                              undo
-                            </button>
-                          </form>
-                        ) : null}
-                      </>
-                    ) : (
-                      <span className="chip border-brand/40 bg-brand/10 py-0.5 text-xs text-brand">
-                        not paid
-                      </span>
-                    )}
-                    {/* Somebody who changed their mind rang us, not the
-                      * room. Before the draw only: afterwards it is a ring
-                      * and taking a link out of it breaks two gifts. */}
-                    {room.status === "open" ? (
-                      <form action={removeMember}>
-                        <input type="hidden" name="memberId" value={one.id} />
-                        <ConfirmButton
-                          tone="bare"
-                          className="text-xs font-semibold text-brand underline"
-                          confirm={
-                            hasPaid(one)
-                              ? "Take out, and send their money back?"
-                              : "Sure? Take them out"
-                          }
-                        >
-                          Take out
-                        </ConfirmButton>
-                      </form>
-                    ) : null}
+                      ) : (
+                        <span className="chip shrink-0 border-brand/40 bg-brand/10 py-0.5 text-xs text-brand">
+                          not paid
+                        </span>
+                      )}
                     </div>
 
-                    {/* Just the shape of it. What it costs us, what we
-                      * charge and where it comes from is an afternoon's
-                      * work with every list in front of you, so it lives
-                      * on its own page rather than squeezed in here. */}
-                    {one.wishes.length > 0 ? (
-                      <p className="mt-1 text-xs text-muted">
-                        {one.wishes.length}{" "}
-                        {one.wishes.length === 1 ? "thing" : "things"} on their
-                        list ·{" "}
-                        {one.wishes.filter((item) => item.costPrice > 0 && item.sellPrice > 0)
-                          .length}{" "}
-                        priced ·{" "}
+                    <p className="mt-1.5 text-xs">
+                      {one.hostel ? (
+                        <span className="text-muted">{one.hostel}</span>
+                      ) : (
+                        <span className="font-semibold text-brand">no block yet</span>
+                      )}
+                      {one.wishes.length > 0 ? (
+                        <span className="text-muted">
+                          {" · "}
+                          {one.wishes.length}{" "}
+                          {one.wishes.length === 1 ? "thing" : "things"},{" "}
+                          {one.wishes.filter((item) => item.costPrice > 0 && item.sellPrice > 0)
+                            .length}{" "}
+                          priced
+                        </span>
+                      ) : (
+                        <span className="text-muted"> · no list yet</span>
+                      )}
+                    </p>
+
+                    {/* The things that change something, on their own row,
+                      * so a thumb aiming at one does not land on another. */}
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                      {one.wishes.length > 0 ? (
                         <Link
-                          className="font-semibold text-brand underline"
+                          className="text-xs font-semibold text-brand underline"
                           href={`/admin/santa/wishlists?q=${encodeURIComponent(one.phone)}`}
                         >
-                          open the list
+                          Open the list
                         </Link>
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-xs text-muted">No list yet.</p>
-                    )}
+                      ) : null}
+                      {hasPaid(one) && room.status === "open" ? (
+                        <form action={markMemberUnpaid}>
+                          <input type="hidden" name="memberId" value={one.id} />
+                          <button className="text-xs font-semibold text-muted underline">
+                            Undo paid
+                          </button>
+                        </form>
+                      ) : null}
+                      {/* Somebody who changed their mind rang us, not the
+                        * room. Before the draw only: afterwards it is a ring
+                        * and taking a link out of it breaks two gifts. */}
+                      {room.status === "open" ? (
+                        <form action={removeMember}>
+                          <input type="hidden" name="memberId" value={one.id} />
+                          <ConfirmButton
+                            tone="bare"
+                            className="text-xs font-semibold text-brand underline"
+                            confirm={
+                              hasPaid(one)
+                                ? "Take out, and send their money back?"
+                                : "Sure? Take them out"
+                            }
+                          >
+                            Take out
+                          </ConfirmButton>
+                        </form>
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ul>

@@ -291,17 +291,64 @@ export async function wishLines(): Promise<WishLine[]> {
       db().from("santa_wishes").select("*").order("sort_order", { ascending: true }),
       db().from("santa_members").select("*"),
       db().from("santa_rooms").select("id, name, budget, status, exchange_date, share_token"),
-      db().from("santa_assignments").select("giver_id, wish_id").not("wish_id", "is", null),
+      db().from("santa_picks").select("assignment_id, wish_id"),
     ]);
+
+  /*
+   * What we already know about the ones that are ours.
+   *
+   * A thing off our own menu has a price and a shop written down already,
+   * and typing them back into three boxes is both work and a chance to
+   * disagree with the shop. So they arrive filled in, and saving is what
+   * makes them the wish's own: until then they are what the menu says.
+   */
+  const itemIds = [
+    ...new Set(
+      ((wishRows ?? []) as Record<string, any>[])
+        .map((one) => one.item_id)
+        .filter((one): one is string => Boolean(one))
+    ),
+  ];
+  const { data: itemRows } = itemIds.length
+    ? await db()
+        .from("menu_items")
+        .select("id, price_food, restaurant_id")
+        .in("id", itemIds)
+    : { data: [] as Record<string, any>[] };
+
+  const placeIds = [
+    ...new Set(((itemRows ?? []) as Record<string, any>[]).map((one) => one.restaurant_id)),
+  ];
+  const { data: placeRows } = placeIds.length
+    ? await db().from("restaurants").select("id, name").in("id", placeIds)
+    : { data: [] as Record<string, any>[] };
+  const placeNamed = new Map(
+    ((placeRows ?? []) as Record<string, any>[]).map((one) => [one.id, String(one.name ?? "")])
+  );
+  const ours = new Map(
+    ((itemRows ?? []) as Record<string, any>[]).map((one) => [
+      one.id as string,
+      {
+        price: Number(one.price_food ?? 0),
+        from: placeNamed.get(one.restaurant_id) ?? "",
+      },
+    ])
+  );
 
   const who = new Map(
     ((memberRows ?? []) as Record<string, any>[]).map((one) => [one.id, one])
   );
   const roomOf = new Map(((roomRows ?? []) as Record<string, any>[]).map((one) => [one.id, one]));
+  const { data: drawnRows } = await db()
+    .from("santa_assignments")
+    .select("id, giver_id");
+  const giverOf = new Map(
+    ((drawnRows ?? []) as Record<string, any>[]).map((one) => [one.id, one.giver_id])
+  );
   const buyerOf = new Map(
     ((pickRows ?? []) as Record<string, any>[]).map((one) => [
       one.wish_id as string,
-      who.get(one.giver_id)?.name ?? "",
+      who.get(giverOf.get(one.assignment_id))?.name ?? "",
     ])
   );
 
@@ -313,9 +360,11 @@ export async function wishLines(): Promise<WishLine[]> {
     const room = roomOf.get(owner.room_id);
     if (!room) continue;
 
-    const costPrice = Number(row.cost_price ?? 0);
-    const sellPrice = Number(row.sell_price ?? 0);
+    const mine = row.item_id ? ours.get(row.item_id as string) : undefined;
+    const costPrice = Number(row.cost_price ?? 0) || (mine?.price ?? 0);
+    const sellPrice = Number(row.sell_price ?? 0) || (mine?.price ?? 0);
     const estPrice = Number(row.est_price ?? 0);
+    const source = (row.source ?? "") || (mine?.from ?? "");
 
     out.push({
       id: row.id,
@@ -330,7 +379,7 @@ export async function wishLines(): Promise<WishLine[]> {
       itemId: row.item_id ?? null,
       costPrice,
       sellPrice,
-      source: row.source ?? "",
+      source,
       roomId: room.id,
       roomName: room.name,
       budget: Number(room.budget ?? 0),
