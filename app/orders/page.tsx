@@ -42,7 +42,7 @@ export default async function OrdersPage({
         </h1>
         <p className="text-ink/75">
           {back
-            ? "We already know this number, and your PIN is what proves it is yours. It came on WhatsApp with your first order."
+            ? "We already know this number, and your PIN is what proves it is yours. If you have never been sent one, ask below and it goes to your number."
             : "Your phone number and PIN bring back everything you have ordered. No account, no password."}
         </p>
         <PinForm

@@ -201,15 +201,21 @@ export default async function RoomPage({
               {/* A different phone, or a browser that lost the cookie. The
                 * room cannot tell them apart from a stranger, and joining
                 * again would only say they are already in. */}
+              {/* A PIN is written for everybody, but we have no way of
+                * sending one by itself: it goes out by hand, to the number
+                * it belongs to. So somebody who has never ordered has one
+                * they have never seen, and the honest instruction is to
+                * ask us for it rather than to go looking. */}
               <p className="text-sm text-muted">
                 Joined already, on another phone?{" "}
                 <Link
                   className="font-semibold text-brand underline"
                   href={`/orders?next=${encodeURIComponent(`/santa/${token}`)}`}
                 >
-                  Sign in with your PIN
+                  Sign in with your number and PIN
                 </Link>
-                .
+                . Never been sent a PIN? Ask us there and we will send it to
+                your number.
               </p>
             </>
           )}
