@@ -48,20 +48,61 @@ export type Funnel = {
   paid: number;
 };
 
-type ViewRow = { path: string; visitor: string; referrer: string; created_at: string };
+type Summary = {
+  views: number;
+  visitors: number;
+  reachedCart: number;
+  perDay: { date: string; views: number; visitors: number }[];
+  pages: { path: string; views: number }[];
+  sources: { source: string; views: number }[];
+  channels: { channel: string; visitors: number }[];
+  ids: string[];
+};
 
-/** Null means the table is not there yet, which reads differently from zero. */
-async function readViews(days: number): Promise<ViewRow[] | null> {
-  const since = new Date(Date.now() - days * 86400_000).toISOString();
+/**
+ * The counting, done in the database.
+ *
+ * It used to read every row of the window and count them here, on the
+ * reasoning that the numbers were small and one query beat six. The numbers
+ * stopped being small, and the API hands back at most a thousand rows
+ * however large a limit is asked for, so views read exactly 1000 week after
+ * week: not a busy shop, a full bucket. Every other number off the same rows
+ * was cut by the same wall, and all of them read low rather than wrong,
+ * which is the kind of wrong nobody goes looking for.
+ *
+ * Null still means the counting is not there at all, which reads
+ * differently from zero.
+ */
+async function readSummary(days: number): Promise<Summary | null> {
   try {
-    const { data, error } = await db()
-      .from("page_views")
-      .select("path, visitor, referrer, created_at")
-      .gte("created_at", since)
-      .order("created_at", { ascending: false })
-      .limit(20000);
+    const { data, error } = await db().rpc("analytics_summary", { days });
     if (error) throw new Error(error.message);
-    return (data ?? []) as ViewRow[];
+    if (!data) return null;
+
+    const row = data as Record<string, any>;
+    return {
+      views: Number(row.views ?? 0),
+      visitors: Number(row.visitors ?? 0),
+      reachedCart: Number(row.reached_cart ?? 0),
+      perDay: ((row.per_day ?? []) as Record<string, any>[]).map((one) => ({
+        date: String(one.date),
+        views: Number(one.views ?? 0),
+        visitors: Number(one.visitors ?? 0),
+      })),
+      pages: ((row.pages ?? []) as Record<string, any>[]).map((one) => ({
+        path: String(one.path),
+        views: Number(one.views ?? 0),
+      })),
+      sources: ((row.sources ?? []) as Record<string, any>[]).map((one) => ({
+        source: String(one.source ?? ""),
+        views: Number(one.views ?? 0),
+      })),
+      channels: ((row.channels ?? []) as Record<string, any>[]).map((one) => ({
+        channel: String(one.channel ?? ""),
+        visitors: Number(one.visitors ?? 0),
+      })),
+      ids: ((row.ids ?? []) as string[]).map((one) => String(one)),
+    };
   } catch {
     return null;
   }
@@ -93,17 +134,12 @@ function label(path: string, names: Map<string, string>): string {
  * numbers are small and one query beats six.
  */
 export async function traffic(days = 7): Promise<Traffic | null> {
-  const rows = await readViews(days);
-  if (rows === null) return null;
+  const sum = await readSummary(days);
+  if (sum === null) return null;
 
   // Names for the ids in the paths, so the list reads like a menu.
   const ids = [
-    ...new Set(
-      rows
-        .filter((row) => row.path.startsWith("/r/") || row.path.startsWith("/p/"))
-        .map((row) => row.path.split("/")[2])
-        .filter(Boolean)
-    ),
+    ...new Set(sum.ids.map((path) => path.split("/")[2]).filter(Boolean)),
   ].slice(0, 200);
 
   const names = new Map<string, string>();
@@ -121,37 +157,26 @@ export async function traffic(days = 7): Promise<Traffic | null> {
     }
   }
 
-  const byPath = new Map<string, number>();
+  // Referrers are tidied here rather than in SQL: the same host arrives with
+  // and without a www, and two rows for one place is not a source list.
   const bySource = new Map<string, number>();
-  const byDay = new Map<string, { views: number; visitors: Set<string> }>();
-
-  for (const row of rows) {
-    byPath.set(row.path, (byPath.get(row.path) ?? 0) + 1);
-
-    const source = row.referrer.replace(/^www\./, "") || "Typed or a link";
-    bySource.set(source, (bySource.get(source) ?? 0) + 1);
-
-    const date = row.created_at.slice(0, 10);
-    const day = byDay.get(date) ?? { views: 0, visitors: new Set<string>() };
-    day.views += 1;
-    day.visitors.add(row.visitor);
-    byDay.set(date, day);
+  for (const one of sum.sources) {
+    const source = one.source.replace(/^www\./, "") || "Typed or a link";
+    bySource.set(source, (bySource.get(source) ?? 0) + one.views);
   }
 
   return {
     days,
-    views: rows.length,
-    visitors: new Set(rows.map((row) => row.visitor)).size,
-    perDay: [...byDay.entries()]
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([date, day]) => ({ date, views: day.views, visitors: day.visitors.size })),
-    pages: [...byPath.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 12)
-      .map(([path, views]) => ({ path, label: label(path, names), views })),
+    views: sum.views,
+    visitors: sum.visitors,
+    perDay: sum.perDay,
+    pages: sum.pages.map((one) => ({
+      path: one.path,
+      label: label(one.path, names),
+      views: one.views,
+    })),
     sources: [...bySource.entries()]
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
       .map(([source, views]) => ({ source, views })),
   };
 }
@@ -202,27 +227,15 @@ export async function funnel(days = 7): Promise<Funnel> {
     /* As above. */
   }
 
-  const rows = await readViews(days);
-  const seen = rows ?? [];
-
-  // Reaching the cart is a real step and the views know it. Counting the
-  // carts table for this called somebody who typed their number a cart, which
-  // put the second step of the funnel below the last one and made the whole
-  // shape a lie.
-  const reached = (...prefixes: string[]) =>
-    new Set(
-      seen
-        .filter((row) => prefixes.some((prefix) => row.path.startsWith(prefix)))
-        .map((row) => row.visitor)
-    ).size;
+  const sum = await readSummary(days);
 
   return {
-    visitors: new Set(seen.map((row) => row.visitor)).size,
+    visitors: sum?.visitors ?? 0,
     // Both baskets. The skincare shelf has a basket of its own and its
     // orders are counted in the step below, so leaving it out put more
     // orders in the funnel than people who reached a cart, which is a shape
     // that cannot happen and made the whole thing read as a lie.
-    openedCart: reached("/cart", "/skincare"),
+    openedCart: sum?.reachedCart ?? 0,
     gaveNumber: carts,
     orders,
     paid,
@@ -653,23 +666,12 @@ export async function channels(days = 28): Promise<Channel[] | null> {
 
   // How many people each channel put on the site at all, so a channel that
   // brings a crowd and no orders is visibly doing that rather than missing.
-  try {
-    const { data } = await db()
-      .from("page_views")
-      .select("visitor, came_from")
-      .gte("created_at", since)
-      .limit(20000);
-    const seen = new Map<string, Set<string>>();
-    for (const row of (data ?? []) as { visitor: string; came_from: string }[]) {
-      const channel = row.came_from ?? "";
-      const set = seen.get(channel) ?? new Set<string>();
-      set.add(row.visitor);
-      seen.set(channel, set);
-    }
-    for (const [channel, set] of seen) of(channel).visitors = set.size;
-  } catch {
-    /* Visits are the nice-to-have here. The orders are the point. */
-  }
+  // Counted in the database for the same reason as everything else off this
+  // table: reading the rows to count them stopped at a thousand of them, and
+  // a channel that brought two thousand people read as one that brought part
+  // of a week.
+  const sum = await readSummary(days);
+  for (const one of sum?.channels ?? []) of(one.channel).visitors = one.visitors;
 
   return [...counts.values()]
     .filter((one) => one.orders > 0 || one.visitors > 0)
