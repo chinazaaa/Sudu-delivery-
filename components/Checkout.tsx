@@ -23,6 +23,7 @@ import {
   type Area,
 } from "@/lib/areas";
 import { runCarries } from "@/lib/run-places";
+import { DAY_NAMES, opensOn, weekdayOf } from "@/lib/open-days";
 import { offerShare, pickOffer, type LiveOffer } from "@/lib/offers";
 import { normalisePhone } from "@/lib/phone";
 import { OPENED, TRAP } from "@/lib/guard";
@@ -87,6 +88,7 @@ export default function Checkout({
   areas,
   areaOf,
   valueBandsOf,
+  openDaysOf = {},
   offers,
   hostels,
   promoters,
@@ -115,6 +117,9 @@ export default function Checkout({
   /** The kitchens that price by what the shopping comes to rather than by
    *  how many things it is, by id. A market is one; a restaurant is not. */
   valueBandsOf: Record<string, ValueBand[]>;
+  /** The days each restaurant opens, for the few that do not open every
+   *  day. Missing means all seven. */
+  openDaysOf?: Record<string, string>;
   /** Promotions on today. The same rule that prices the order judges them
    *  here, so what is quoted is what is charged. */
   offers: LiveOffer[];
@@ -153,11 +158,65 @@ export default function Checkout({
   const sameDayBands = withExtra(baseSameDayBands, area.sameDayExtra);
   // One thing from a far area makes the whole order a run: a car cannot be
   // in two places in three hours.
-  const sameDaySlots = canGoSameDay(cartAreas) ? allSlots : [];
+  // A car of its own goes today, so a counter shut today cannot be fetched
+  // from either. Offering the slots and refusing the order afterwards is
+  // the worst of both.
+  const shutToday = [...new Set(
+    cart
+      .filter((line) => !opensOn(openDaysOf[line.restaurantId], today))
+      .map((line) => line.restaurantName)
+  )];
+  const sameDaySlots =
+    canGoSameDay(cartAreas) && shutToday.length === 0 ? allSlots : [];
+
+  /*
+   * A counter that will be shut when that car goes.
+   *
+   * D.O Bowls opens Monday to Friday, so Saturday's run cannot fetch from
+   * it however much room is in the car. Treated exactly like a run that
+   * does not stop at the right counter: the run drops out of the list and
+   * a sentence says why and which one does work, rather than the order
+   * being refused at the end for a reason nobody could have known.
+   */
+  const shutNames = (date: string) =>
+    [...new Set(
+      cart
+        .filter((line) => !opensOn(openDaysOf[line.restaurantId], date))
+        .map((line) => line.restaurantName)
+    )];
+
+  const runOpen = (b: BatchView) => shutNames(b.runDate).length === 0;
 
   const openable = batches.filter(
-    (b) => !b.closed && !b.full && runCovers(b.areas, cartAreas) && runCarries(b.onlyPlaces, kitchens)
+    (b) =>
+      !b.closed &&
+      !b.full &&
+      runCovers(b.areas, cartAreas) &&
+      runCarries(b.onlyPlaces, kitchens) &&
+      runOpen(b)
   );
+
+  // The runs that only fail because somebody is closed that day, and what
+  // is closed on the soonest of them. Said in their words: "DO Bowls is
+  // closed on Saturdays."
+  const shutRuns = batches.filter(
+    (b) =>
+      !b.closed &&
+      !b.full &&
+      runCovers(b.areas, cartAreas) &&
+      runCarries(b.onlyPlaces, kitchens) &&
+      !runOpen(b)
+  );
+  const shutSoonest = shutRuns.reduce<BatchView | null>(
+    (best, one) => (best === null || one.runDate < best.runDate ? one : best),
+    null
+  );
+  const shutThere = shutSoonest ? shutNames(shutSoonest.runDate) : [];
+  const shutSaid =
+    shutThere.length === 1
+      ? shutThere[0]
+      : `${shutThere.slice(0, -1).join(", ")} and ${shutThere[shutThere.length - 1]}`;
+  const shutDayWord = shutSoonest ? DAY_NAMES[weekdayOf(shutSoonest.runDate)] : "";
 
   // Runs that are open, going the right way, and stopping at counters this
   // cart does not need. Some nights are one counter's run: the car queues at
@@ -916,6 +975,18 @@ export default function Checkout({
         {/* A run kept to one counter, said before somebody wonders where the
             usual runs went. The headline above already names when this cart
             can actually come; this says why it is not sooner. */}
+        {shutSoonest !== null && (
+          <p className="text-sm text-brand-dark">
+            <span className="font-semibold">
+              {shutSaid} {shutThere.length === 1 ? "is" : "are"} closed on{" "}
+              {shutDayWord}s.
+            </span>{" "}
+            {openable.length > 0
+              ? `So ${shutDayWord}'s run is not on the list. The next one that works is ${goingThere?.label ?? "the one below"}.`
+              : "Pick another day, or take those things out of the cart."}
+          </p>
+        )}
+
         {wrongCounter.length > 0 && (
           <p className="text-sm text-brand-dark">
             <span className="font-semibold">

@@ -17,7 +17,7 @@ import { existingLoad } from "@/lib/orders";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
 import { normalisePhone } from "@/lib/phone";
-import { allAreas, areaOfEach, valueBandsOfEach } from "@/lib/areas-server";
+import { allAreas, areaOfEach, valueBandsOfEach, openDaysOfEach } from "@/lib/areas-server";
 import { toBatchView, toClosedBatchView } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -123,6 +123,7 @@ export default async function CheckoutPage({
       // The kitchens that charge by what the shopping comes to rather than
       // by how many things it is. A market trip is one trip and two bags.
       valueBandsOf={await valueBandsOfEach()}
+      openDaysOf={await openDaysOfEach()}
       // The promotions on today, with their rules, so the checkout quotes the
       // price it is about to charge rather than the ladder it is replacing.
       offers={await liveOffers()}

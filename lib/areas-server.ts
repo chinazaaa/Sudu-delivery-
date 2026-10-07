@@ -155,3 +155,21 @@ export async function valueBandsOfEach(): Promise<Record<string, ValueBand[]>> {
   return found;
 }
 
+
+/**
+ * The days each restaurant opens, for the ones that do not open every day.
+ *
+ * Only the exceptions are returned, so a shop where nothing ever closes
+ * sends an empty object and the checkout behaves exactly as it always has.
+ */
+export async function openDaysOfEach(): Promise<Record<string, string>> {
+  const { data, error } = await db().from("restaurants").select("id, name, open_days");
+  if (error) return {};
+
+  const found: Record<string, string> = {};
+  for (const one of (data ?? []) as { id: string; open_days?: string }[]) {
+    const said = (one.open_days ?? "").trim();
+    if (said !== "") found[one.id] = said;
+  }
+  return found;
+}
