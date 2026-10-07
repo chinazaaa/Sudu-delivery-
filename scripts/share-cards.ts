@@ -163,10 +163,10 @@ const cards: Card[] = [
      * moves, and this one is forwarded for a week rather than printed, so
      * the one number on it is the one we are promising.
      */
-    key: "saturday",
-    kicker: "This Saturday",
+    key: "friday",
+    kicker: "This Friday",
     head: ["₦1,000 off", "your delivery."],
-    sub: "Order before 10am, Saturday 10 October",
+    sub: "Order before 10am, Friday 9 October",
     panel: [
       "D.O Bowls",
       "Yin Yang",
@@ -175,9 +175,9 @@ const cards: Card[] = [
       "KFC",
     ],
     note: "And every other restaurant you already order from.",
-    code: "SATURDAY",
+    code: "FRIDAY",
     codeNote: "Type it in at checkout.",
-    ask: "One run, Saturday. Order before 10am.",
+    ask: "One run, Friday. Order before 10am.",
   },
   {
     /*
