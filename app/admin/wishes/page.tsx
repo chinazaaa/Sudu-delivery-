@@ -3,7 +3,7 @@ import Stat from "@/components/admin/Stat";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { whatsappTo } from "@/lib/messages";
 import { formatPhone } from "@/lib/phone";
-import { dayWord } from "@/lib/time";
+import { placedLabel } from "@/lib/time";
 import { wishes } from "@/lib/wishes";
 import { removeWish } from "./actions";
 
@@ -57,7 +57,11 @@ export default async function WishesPage() {
             <li key={one.id} className="card">
               <p className="font-semibold">{one.wanted}</p>
               <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-                <span>{dayWord(one.createdAt.slice(0, 10))}</span>
+                {/* The same wording as an order card: the clock alone for
+                  * today, the day in front of it once it is not. "Today"
+                  * reads fine until tomorrow, when every one of them still
+                  * says today and none of them says when. */}
+                <span>{placedLabel(one.createdAt)}</span>
                 {one.cameFrom ? <span>· {one.cameFrom}</span> : null}
                 {one.phone ? <span>· {formatPhone(one.phone)}</span> : null}
               </p>
