@@ -180,6 +180,31 @@ const cards: Card[] = [
     ask: "One run, Saturday. Order before 10am.",
   },
   {
+    /*
+     * A question rather than an offer.
+     *
+     * The whole card is asking for one reply, so it carries no price, no
+     * date and nothing to tap: anything else on it is a second thing to
+     * decide, and a card with two asks gets neither. The examples are there
+     * because "what do you want?" asked cold gets silence, and four
+     * concrete ones are enough to start somebody off without fencing them
+     * in.
+     */
+    key: "wishlist",
+    kicker: "One question",
+    head: ["What do you wish", "you could order", "to campus?"],
+    sub: "Tell us and we will go and find out if we can get it.",
+    panel: [
+      "A restaurant we do not have yet",
+      "Something from the market",
+      "Skincare, hair or nails",
+      "From a pharmacy",
+      "Anything somebody has to go and buy",
+    ],
+    note: "We already carry food, parcels, errands and skincare.",
+    ask: "Just reply to this message. No form, no link.",
+  },
+  {
     key: "promoters",
     kicker: "Promoters wanted",
     head: ["Get paid for", "every order", "you bring."],
