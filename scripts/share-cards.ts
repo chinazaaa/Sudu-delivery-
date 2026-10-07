@@ -68,6 +68,12 @@ type Card = {
   rows?: { name: string; what: string; price: number }[];
   /** Grey, under the panel. */
   note?: string;
+  /** A code somebody has to type. Drawn as a box rather than a line,
+   *  because the whole card is asking for those few letters and a word in
+   *  a sentence is a word people read past. */
+  code?: string;
+  /** The line under the code box, saying where it goes. */
+  codeNote?: string;
   /** The sentence the card is for, in black, above the footer. */
   ask: string;
 };
@@ -147,6 +153,31 @@ const cards: Card[] = [
     ],
     note: "Each one feeds four to five. Delivery is in the price.",
     ask: "Order by 11am and it beats the whistle.",
+  },
+  {
+    /*
+     * The week's flyer. Four or five names people recognise, a day, a
+     * deadline and a code: everything else is the website's job.
+     *
+     * No prices. A card with prices on it is out of date the moment a menu
+     * moves, and this one is forwarded for a week rather than printed, so
+     * the one number on it is the one we are promising.
+     */
+    key: "saturday",
+    kicker: "This Saturday",
+    head: ["₦1,000 off", "your delivery."],
+    sub: "Order before 10am, Saturday 10 October",
+    panel: [
+      "D.O Bowls",
+      "Yin Yang",
+      "Burger King",
+      "Chicken Republic",
+      "KFC",
+    ],
+    note: "And every other restaurant you already order from.",
+    code: "SATURDAY",
+    codeNote: "Type it in at checkout.",
+    ask: "One run, Saturday. Order before 10am.",
   },
   {
     key: "promoters",
@@ -251,7 +282,10 @@ async function card(one: Card): Promise<void> {
   // The note is a line of its own under the panel, and the gap plus the
   // line is 76. Counting only the gap is how a five row panel printed its
   // note straight through the sentence above the footer.
-  const blockHeight = panelHeight + (one.note ? 76 : 0);
+  // The code box and its line, when there is one: 20 above it, 88 of box,
+  // and 40 more for the line under it.
+  const codeHeight = one.code ? 20 + 88 + (one.codeNote ? 40 : 0) : 0;
+  const blockHeight = panelHeight + (one.note ? 76 : 0) + codeHeight;
   const room = askAt - 30 - y;
   const panelTop = y + Math.max(28, Math.round((room - blockHeight) / 2));
 
@@ -277,6 +311,19 @@ async function card(one: Card): Promise<void> {
     parts.push(text(panelTop + panelHeight + 44, one.note, 26, "normal", MUTED));
   }
 
+  if (one.code) {
+    const top = panelTop + panelHeight + (one.note ? 76 : 0) + 20;
+    const wide = 440;
+    parts.push(
+      `<rect x="${(W - wide) / 2}" y="${top}" width="${wide}" height="88" rx="22" ` +
+        `fill="none" stroke="${DEEP}" stroke-width="5" stroke-dasharray="14 10"/>`
+    );
+    parts.push(text(top + 60, one.code, 50, "800", DEEP));
+    if (one.codeNote) {
+      parts.push(text(top + 88 + 32, one.codeNote, 24, "normal", MUTED));
+    }
+  }
+
   parts.push(text(askAt, one.ask, 32, "800", INK));
   parts.push(text(siteAt, SITE, 44, "800", INK));
   parts.push(text(reachAt, `WhatsApp ${PHONE}`, 28, "normal", MUTED));
@@ -294,7 +341,7 @@ async function card(one: Card): Promise<void> {
   console.log(`${one.key.padEnd(16)} ${path}`);
 
   // The panel's last line and the sentence above the footer must not meet.
-  const bottomOfNote = panelTop + panelHeight + (one.note ? 76 : 0);
+  const bottomOfNote = panelTop + panelHeight + (one.note ? 76 : 0) + codeHeight;
   if (bottomOfNote > askAt - 24) {
     console.log(`  ${one.key}: the words are too tall for the card.`);
   }
