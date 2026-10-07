@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { onTheMenu } from "./shelf";
+import { closedWord } from "./open-days";
 import { db } from "./supabase";
 import { pctOf } from "./containers";
 import type { ItemView, MenuView, OptionGroupView } from "./view";
@@ -62,6 +63,7 @@ async function readMenu(): Promise<MenuView[]> {
       logoUrl: restaurant.logo_url ?? "",
       bannerUrl: restaurant.banner_url ?? "",
       brandHex: restaurant.brand_hex ?? "",
+      closedDays: closedWord(restaurant.open_days),
     },
     categories: categoryRows
       .filter((c) => c.restaurant_id === restaurant.id)
@@ -261,6 +263,7 @@ async function readMenuFor(ref: string): Promise<MenuView | null> {
       logoUrl: restaurant.logo_url ?? "",
       bannerUrl: restaurant.banner_url ?? "",
       brandHex: restaurant.brand_hex ?? "",
+      closedDays: closedWord(restaurant.open_days),
     },
     categories: categoryRows.map((c) => ({ id: c.id, name: c.name })),
     items: menuItems.map(

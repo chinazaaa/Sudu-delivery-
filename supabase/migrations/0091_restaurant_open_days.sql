@@ -1,0 +1,18 @@
+-- The days a restaurant actually opens.
+--
+-- Nearly all of them open every day, and D.O Bowls does not: Monday to
+-- Friday only. Nothing on the site knew that, so a Saturday run would take
+-- an order for a counter that would be shut when the car got there, and the
+-- first anybody heard of it was a driver standing outside it.
+--
+-- A run can already be told which restaurants it carries, one run at a time.
+-- That is the right tool for "the Domino's near us is shut for repairs this
+-- week" and the wrong one for this: a weekday is a fact about the
+-- restaurant, not about Tuesday's car, and setting it per run means
+-- remembering it every Saturday for as long as the shop exists.
+--
+-- Stored as the weekday numbers it is open, Sunday being 0, the same
+-- convention the skincare drop already uses. Empty means every day, which
+-- is what every restaurant was before this column and what nearly all of
+-- them will stay.
+alter table restaurants add column if not exists open_days text not null default '';

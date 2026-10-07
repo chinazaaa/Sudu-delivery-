@@ -23,6 +23,9 @@ export type Restaurant = {
   /** Delivery priced by what the shopping comes to, as JSON. Empty is every
    *  restaurant today, and means the ordinary ladder counting containers. */
   value_bands?: string;
+  /** The weekday numbers it opens, Sunday being 0. Empty is every day,
+   *  which is nearly all of them. */
+  open_days?: string;
 };
 
 export type MenuCategory = {

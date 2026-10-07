@@ -16,6 +16,8 @@ export type MenuView = {
     logoUrl: string;
     bannerUrl: string;
     brandHex: string;
+    /** "Closed Saturdays and Sundays", or empty where it opens every day. */
+    closedDays: string;
   };
   categories: { id: string; name: string }[];
   items: ItemView[];

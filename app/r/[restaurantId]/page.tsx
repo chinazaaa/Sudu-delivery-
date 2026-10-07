@@ -204,6 +204,12 @@ export default async function RestaurantPage({
             <p className="text-sm text-white/75">
               {place.items.length} item{place.items.length === 1 ? "" : "s"} on
               the menu
+              {/* Said here because it decides whether to read the rest of
+                  the page at all, and finding it out at checkout is finding
+                  it out after choosing dinner. */}
+              {place.restaurant.closedDays
+                ? ` · ${place.restaurant.closedDays}`
+                : ""}
             </p>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DAY_NAMES, openDays } from "@/lib/open-days";
 import { notFound } from "next/navigation";
 import AdminItemFilter from "@/components/AdminItemFilter";
 import Thumb from "@/components/Thumb";
@@ -140,6 +141,32 @@ export default async function RestaurantAdmin({
             On the site
           </label>
         </div>
+        {/* Which days it opens at all. Nearly every restaurant is all
+            seven, so all seven ticked is stored as "every day" and nothing
+            has to be set for the ones that never close. D.O Bowls is the
+            reason this exists: Monday to Friday, and a Saturday run used to
+            take the order anyway. */}
+        <div>
+          <p className="label mb-1">Open on</p>
+          <div className="flex flex-wrap gap-3">
+            {DAY_NAMES.map((name, day) => (
+              <label key={name} className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  name="open_days"
+                  value={day}
+                  defaultChecked={openDays(restaurant.open_days).includes(day)}
+                />
+                {name.slice(0, 3)}
+              </label>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            Nothing from a restaurant can go on a car that drives on a day it
+            is shut. Leave all seven ticked unless it really closes.
+          </p>
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="label">Address</label>

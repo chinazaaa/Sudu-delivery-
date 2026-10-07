@@ -2,6 +2,7 @@
 
 import { tidyHandle } from "@/lib/came-from";
 import { normalisePhone } from "@/lib/phone";
+import { openDaysText } from "@/lib/open-days";
 import { redirect } from "next/navigation";
 import { revalidatePath, updateTag } from "next/cache";
 import { isSignedIn, passwordMatches, signIn, signOut } from "@/lib/admin-auth";
@@ -2479,6 +2480,9 @@ export async function updateRestaurant(form: FormData): Promise<void> {
       ...(slug !== "" ? { slug } : {}),
       address: String(form.get("address") ?? "").trim(),
       closes_at: String(form.get("closes_at") ?? "").trim() || undefined,
+      // All seven, or none ticked, both mean "every day": a restaurant
+      // nobody has thought about must behave exactly as it always has.
+      open_days: openDaysText(form.getAll("open_days").map((one) => Number(one))),
       logo_url:
         (await uploadImage(fileFrom(form, "logo"), "logos")) ??
         String(form.get("logo_url") ?? "").trim(),

@@ -35,6 +35,7 @@ import { containersIn, pctOf } from "./containers";
 import { isExampleNumber, ordersLately, TOO_MANY } from "./guard";
 import { areasOfRun, runCovers } from "./areas";
 import { runCarries } from "./run-places";
+import { shutOn } from "./open-days";
 import { stageIndex } from "./stages";
 import { deliverySlots, sameInstant, type Slot } from "./same-day";
 import { normalisePhone } from "./phone";
@@ -366,6 +367,33 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // Some runs are one counter's run: a car queuing at Domino's all evening
   // is not also fetching from Chicken Republic. Runs only, because a car of
   // its own goes wherever the person who paid for it asked.
+  /*
+   * A counter that will be shut when the car gets there.
+   *
+   * D.O Bowls opens Monday to Friday, and nothing anywhere knew it, so a
+   * Saturday run would take the order and the first anybody heard of the
+   * problem was a driver standing outside a locked door. Checked against
+   * the day the car actually goes, which is the delivery date on a same
+   * day trip and the run's date on a shared one.
+   */
+  const goingOn =
+    batch.kind === "same_day" && batch.deliver_at
+      ? String(batch.deliver_at).slice(0, 10)
+      : batch.run_date;
+
+  const closed = await shutOn(placesIn(priced.lines), goingOn, async (ids) => {
+    const { data } = await db().from("restaurants").select("name, open_days").in("id", ids);
+    return (data ?? []) as { name: string; open_days?: string | null }[];
+  });
+  if (closed) {
+    return {
+      ok: false,
+      error:
+        `${closed.name} is closed on ${closed.day}s, so nothing from there can ` +
+        `come on this one. Pick another day, or take those things out.`,
+    };
+  }
+
   if (
     !sameDay &&
     !isSkincareBatch(batch) &&
