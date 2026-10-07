@@ -193,16 +193,23 @@ const cards: Card[] = [
     key: "wishlist",
     kicker: "One question",
     head: ["What do you wish", "you could order", "to campus?"],
-    sub: "Tell us and we will go and find out if we can get it.",
     panel: [
       "A restaurant we do not have yet",
       "Something from the market",
-      "Skincare, hair or nails",
-      "From a pharmacy",
+      "Skincare, hair, nails, a pharmacy",
       "Anything somebody has to go and buy",
     ],
     note: "We already carry food, parcels, errands and skincare.",
-    ask: "Just reply to this message. No form, no link.",
+    /*
+     * An address rather than "reply to this".
+     *
+     * A reply works in a chat and not on a status: a status reply goes to
+     * whoever posted it, so with promoters carrying this, every answer
+     * would land in twelve different inboxes and none of them ours.
+     */
+    code: "sudu.store/wish",
+    codeNote: "One box. Type it in and you are done.",
+    ask: "Tell us there, or just reply to this.",
   },
   {
     key: "promoters",
@@ -338,12 +345,15 @@ async function card(one: Card): Promise<void> {
 
   if (one.code) {
     const top = panelTop + panelHeight + (one.note ? 76 : 0) + 20;
-    const wide = 440;
+    // Wide enough for the longest thing we put in it, and the words
+    // shrink rather than the box growing into the footer.
+    const size = one.code.length > 10 ? 40 : 50;
+    const wide = Math.max(440, one.code.length * size * 0.62 + 72);
     parts.push(
       `<rect x="${(W - wide) / 2}" y="${top}" width="${wide}" height="88" rx="22" ` +
         `fill="none" stroke="${DEEP}" stroke-width="5" stroke-dasharray="14 10"/>`
     );
-    parts.push(text(top + 60, one.code, 50, "800", DEEP));
+    parts.push(text(top + 58, one.code, size, "800", DEEP));
     if (one.codeNote) {
       parts.push(text(top + 88 + 32, one.codeNote, 24, "normal", MUTED));
     }

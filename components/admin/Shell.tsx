@@ -20,6 +20,7 @@ const NAV = [
   { href: "/admin/skincare", label: "Skincare", icon: "✿" },
   { href: "/admin/parcels", label: "Parcels", icon: "▣" },
   { href: "/admin/requests", label: "Asked for", icon: "?" },
+  { href: "/admin/wishes", label: "Wishes", icon: "✧" },
   { href: "/admin/money", label: "Other money", icon: "₦" },
   { href: "/admin/profit", label: "Profit", icon: "↗" },
   { href: "/admin/home", label: "Home page", icon: "▣" },
