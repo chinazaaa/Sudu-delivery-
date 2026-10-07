@@ -118,10 +118,21 @@ export default function SiteFooter({
           </div>
         </div>
 
-        <p className="mt-8 border-t border-black/5 pt-5 text-xs text-muted">
-          © {new Date().getFullYear()} Sudu · Delivering to Pan-Atlantic
-          University, Ibeju-Lekki, Lagos
-        </p>
+        <div className="mt-8 space-y-2 border-t border-black/5 pt-5 text-xs text-muted">
+          <p>
+            © {new Date().getFullYear()} Sudu · Delivering to Pan-Atlantic
+            University, Ibeju-Lekki, Lagos
+          </p>
+          {/* Said once, plainly, because the home page is a row of other
+              people's logos and nothing anywhere said whose shop this is.
+              We name the restaurants because we carry their food, which is
+              what any courier does, and that is the whole of the claim. */}
+          <p>
+            Sudu is an independent delivery service. Restaurant names and logos
+            belong to their owners, and we are not affiliated with or endorsed
+            by them.
+          </p>
+        </div>
       </div>
     </footer>
   );
