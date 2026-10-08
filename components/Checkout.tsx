@@ -23,7 +23,7 @@ import {
   type Area,
 } from "@/lib/areas";
 import { runCarries } from "@/lib/run-places";
-import { DAY_NAMES, opensOn, weekdayOf } from "@/lib/open-days";
+import { DAY_NAMES, nextOpenDay, opensOn, weekdayOf } from "@/lib/open-days";
 import { offerShare, pickOffer, type LiveOffer } from "@/lib/offers";
 import { normalisePhone } from "@/lib/phone";
 import { OPENED, TRAP } from "@/lib/guard";
@@ -217,6 +217,32 @@ export default function Checkout({
       ? shutThere[0]
       : `${shutThere.slice(0, -1).join(", ")} and ${shutThere[shutThere.length - 1]}`;
   const shutDayWord = shutSoonest ? DAY_NAMES[weekdayOf(shutSoonest.runDate)] : "";
+
+  // The rest of the cart, which is usually most of it: somebody with a
+  // bucket of chicken and one bowl should be told the chicken is fine.
+  const stillFine = shutSoonest
+    ? [...new Set(
+        cart
+          .filter((line) => opensOn(openDaysOf[line.restaurantId], shutSoonest.runDate))
+          .map((line) => line.restaurantName)
+      )]
+    : [];
+  const stillFineSaid =
+    stillFine.length === 1
+      ? stillFine[0]
+      : `${stillFine.slice(0, -1).join(", ")} and ${stillFine[stillFine.length - 1]}`;
+
+  // When the closed one opens again, for the case where no run at all can
+  // carry this cart: "Pick another day" is useless without the day.
+  const openAgainWord = (() => {
+    if (!shutSoonest) return "";
+    const shut = cart.find(
+      (line) => !opensOn(openDaysOf[line.restaurantId], shutSoonest.runDate)
+    );
+    if (!shut) return "";
+    const date = nextOpenDay(openDaysOf[shut.restaurantId], shutSoonest.runDate);
+    return date === today ? "today" : `on ${DAY_NAMES[weekdayOf(date)]}`;
+  })();
 
   // Runs that are open, going the right way, and stopping at counters this
   // cart does not need. Some nights are one counter's run: the car queues at
@@ -981,9 +1007,15 @@ export default function Checkout({
               {shutSaid} {shutThere.length === 1 ? "is" : "are"} closed on{" "}
               {shutDayWord}s.
             </span>{" "}
+            {/* What is still fine, and what taking it out would buy them.
+                "Closed" on its own reads as the whole cart being stuck,
+                when usually it is one line of it. */}
+            {stillFine.length > 0
+              ? `${stillFineSaid} ${stillFine.length === 1 ? "is" : "are"} open: take ${shutThere.length === 1 ? "it" : "them"} out and this can go on ${shutSoonest.label}. `
+              : ""}
             {openable.length > 0
-              ? `So ${shutDayWord}'s run is not on the list. The next one that works is ${goingThere?.label ?? "the one below"}.`
-              : "Pick another day, or take those things out of the cart."}
+              ? `Otherwise the next run that can carry everything is ${goingThere?.label ?? "the one below"}.`
+              : `${shutSaid} ${shutThere.length === 1 ? "opens" : "open"} again ${openAgainWord}.`}
           </p>
         )}
 

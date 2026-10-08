@@ -28,6 +28,7 @@ import {
 } from "@/lib/cart";
 import { feeFor, sameDayFee, type Band } from "@/lib/fees";
 import { nearMiss, pickOffer, type LiveOffer } from "@/lib/offers";
+import { DAY_NAMES, nextOpenDay, opensOn, weekdayOf } from "@/lib/open-days";
 import { naira } from "@/lib/money";
 import PayChoice from "./PayChoice";
 
@@ -44,6 +45,7 @@ export default function CartView({
   areas = [],
   areaOf = {},
   valueBandsOf = {},
+  openDaysOf = {},
   offers = [],
   nextRunId = "",
   startGroup = false,
@@ -56,6 +58,9 @@ export default function CartView({
   /** Today in Lagos, from the shop's clock, so the group can be put on
    *  whatever is going soonest without asking anybody. */
   today?: string;
+  /** The days each restaurant opens, for the few that do not open every
+   *  day. Missing means all seven. */
+  openDaysOf?: Record<string, string>;
   /** The blocks admin delivers to. Empty means anything typed is allowed. */
   hostels?: string[];
   /** The delivery price list in force, so the saving shown is the real one.
@@ -449,8 +454,38 @@ export default function CartView({
   // thing is a car of its own, and quoting the run ladder here had the cart
   // promising four thousand over a checkout that was going to charge six and
   // a half. The cart says what the checkout will say.
+  /*
+   * Something in the cart that is shut on the day this would go.
+   *
+   * The checkout says this properly, with the runs that work; here it is a
+   * warning, because the cart is where somebody still has their hand on the
+   * thing they would take out. Named against the soonest arrival, which is
+   * the day the cart is quoting for.
+   */
   const going = nextArrival(runs, slots, today);
   const onItsOwn = going !== null && !going.onARun;
+
+  // The day the cart is quoting for: the run it would go on, or today when
+  // the soonest thing is a car of its own.
+  const goingOn =
+    (going?.runId ? runs.find((one) => one.id === going.runId)?.runDate : "") || today;
+  const shutLines = cart.filter(
+    (line) => !opensOn(openDaysOf[line.restaurantId], goingOn)
+  );
+  const shutNames = [...new Set(shutLines.map((line) => line.restaurantName))];
+  const shutSaid =
+    shutNames.length === 1
+      ? shutNames[0]
+      : `${shutNames.slice(0, -1).join(", ")} and ${shutNames[shutNames.length - 1]}`;
+  const shutAgain =
+    shutLines.length > 0
+      ? nextOpenDay(openDaysOf[shutLines[0].restaurantId], goingOn)
+      : "";
+  const shutRest = [...new Set(
+    cart
+      .filter((line) => opensOn(openDaysOf[line.restaurantId], goingOn))
+      .map((line) => line.restaurantName)
+  )];
   const soonSlot = onItsOwn ? slots.find((one) => one.at === going.at) ?? null : null;
   const carFee =
     soonSlot && sameDayBands.length > 0
@@ -621,6 +656,27 @@ export default function CartView({
         <h2 className="text-sm font-extrabold uppercase tracking-wide text-muted">
           Yours
         </h2>
+      )}
+
+      {/* Shut on the day this cart is quoting for.
+          The checkout says it properly, with the runs that do work. Here it
+          is a warning, because the cart is the screen where somebody still
+          has their hand on the thing they would take out. */}
+      {shutLines.length > 0 && (
+        <div className="rounded-2xl border border-brand/30 bg-brand-tint px-4 py-3">
+          <p className="text-sm text-brand-dark">
+            <span className="font-bold">
+              {shutSaid} {shutNames.length === 1 ? "is" : "are"} closed on{" "}
+              {DAY_NAMES[weekdayOf(goingOn)]}s.
+            </span>{" "}
+            {shutRest.length > 0
+              ? `Everything else is fine for ${goingOn === today ? "today" : DAY_NAMES[weekdayOf(goingOn)]}. `
+              : ""}
+            {shutAgain && shutAgain !== goingOn
+              ? `${shutNames.length === 1 ? "It opens" : "They open"} again on ${DAY_NAMES[weekdayOf(shutAgain)]}, so order everything then, or take ${shutNames.length === 1 ? "it" : "them"} out and the rest goes sooner.`
+              : ""}
+          </p>
+        </div>
       )}
 
       {/* Names carried in from before they joined. In a group everybody

@@ -106,3 +106,25 @@ export async function shutOn(
   const shut = rows.find((one) => !opensOn(one.open_days, date));
   return shut ? { name: shut.name, day: DAY_NAMES[weekdayOf(date)] } : null;
 }
+
+/**
+ * The next day this restaurant is open, from a date onwards.
+ *
+ * Walked a day at a time rather than worked out, because a week is seven
+ * steps and the arithmetic version is where the off-by-one lives. Returns
+ * the date given when it is already an open day.
+ */
+export function nextOpenDay(text: string | null | undefined, from: string): string {
+  for (let ahead = 0; ahead < 8; ahead += 1) {
+    const date = addDays(from, ahead);
+    if (opensOn(text, date)) return date;
+  }
+  return from;
+}
+
+/** One day on, in the shop's own calendar. */
+function addDays(date: string, days: number): string {
+  const at = new Date(`${date}T12:00:00Z`);
+  at.setUTCDate(at.getUTCDate() + days);
+  return at.toISOString().slice(0, 10);
+}

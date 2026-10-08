@@ -1,7 +1,7 @@
 import CartView from "@/components/CartView";
 import HelpLine from "@/components/HelpLine";
 import ShelfNote from "@/components/ShelfNote";
-import { allAreas, areaOfEach, valueBandsOfEach } from "@/lib/areas-server";
+import { allAreas, areaOfEach, valueBandsOfEach, openDaysOfEach } from "@/lib/areas-server";
 import { dropLabel, nextDrop, skincareOn } from "@/lib/skincare";
 import { livePrices, openRestaurants } from "@/lib/menu";
 import Reprice from "@/components/Reprice";
@@ -84,6 +84,7 @@ export default async function CartPage({
       areas={await allAreas()}
       areaOf={await areaOfEach()}
       valueBandsOf={await valueBandsOfEach()}
+      openDaysOf={await openDaysOfEach()}
         startGroup={startGroup}
       />
       <HelpLine number={settings.whatsapp_number} about="my cart" page="Cart" />

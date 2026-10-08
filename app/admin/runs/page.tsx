@@ -27,6 +27,20 @@ import ActionButton from "@/components/admin/ActionButton";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * A same day car's window, without the day it was written with.
+ *
+ * The window is frozen when the order is placed, and "Today" was true that
+ * afternoon and a lie by Thursday: the list showed a car from Tuesday
+ * titled "Today". The date is printed in front of it instead, which is
+ * still true next year.
+ */
+const timeOnly = (said: string): string => {
+  const text = (said ?? "").trim();
+  if (text === "") return "Same day car";
+  return text.replace(/^(today|tomorrow)[,\s]+/i, "");
+};
+
 /** Days between today and the last day anything is open for. */
 function coverDays(until: string | null): number {
   if (!until) return 0;
@@ -416,7 +430,7 @@ export default async function RunsPage({
                       o'clock. It says what it is. */}
                   <p className="font-bold">
                     {batch.kind === "same_day"
-                      ? batch.delivery_window_text || "Same day car"
+                      ? `${runDateLabel(batch.run_date)} · ${timeOnly(batch.delivery_window_text)}`
                       : batch.kind === "skincare"
                         ? // A drop borrows a run's date and slot too, and
                           // titled like one it is the run, as far as anybody
