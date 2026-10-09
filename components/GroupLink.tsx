@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { naira } from "@/lib/money";
 import type { Slot } from "@/lib/same-day";
@@ -107,6 +108,7 @@ function announce(): void {
  */
 export default function GroupLink({
   openNow = false,
+  onChoice,
   runs,
   slots,
   today,
@@ -129,6 +131,9 @@ export default function GroupLink({
    *  it depends on who turns up and what they order, and a figure quoted
    *  before that is a promise nobody made. */
   alone?: number;
+  /** Told whenever the chosen way of arriving changes, so the page around
+   *  this can draw the ticket the board puts beside the form. */
+  onChoice?: (said: string) => void;
 }) {
   const [open, setOpen] = useState(openNow);
   const [name, setName] = useState("");
@@ -154,6 +159,13 @@ export default function GroupLink({
     window.addEventListener(PARTY_CHANGED, read);
     return () => window.removeEventListener(PARTY_CHANGED, read);
   }, []);
+
+  useEffect(() => {
+    onChoice?.(going?.said ?? "");
+    // The callback is whatever the page passed this render; following it
+    // would fire on every one of them.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [going?.said]);
 
   const start = async () => {
     setError("");
@@ -214,9 +226,19 @@ export default function GroupLink({
     );
   }
 
+  // Both ways of getting it here, as cards. Where there is only one, there
+  // is nothing to pick and the card simply says what is happening.
+  const ways = swap && other ? [decided!, other] : decided ? [decided] : [];
+
   return (
-    <div className="space-y-3 rounded-2xl border-2 border-brand/30 bg-brand-tint p-4">
-      <p className="font-bold text-brand-dark">Start a group</p>
+    <div
+      className={
+        openNow
+          ? "flex flex-col gap-5 rounded-2xl border-2 border-ink bg-paper p-6 shadow-lift sm:p-7 lg:shadow-[10px_10px_0_#15110e]"
+          : "space-y-3 rounded-2xl border-2 border-ink bg-paper p-4 shadow-card"
+      }
+    >
+      {!openNow && <p className="font-bold">Start a group</p>}
 
       <div>
         <label className="label" htmlFor="group_name">
@@ -226,45 +248,79 @@ export default function GroupLink({
           id="group_name"
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder="John Doe"
+          placeholder="e.g. Tolu"
           className="field"
+          autoComplete="given-name"
         />
-        <p className="mt-1 text-xs text-ink/70">So they know whose group they joined.</p>
+        <p className="mt-1.5 text-sm text-muted">
+          So the group knows who started it.
+        </p>
       </div>
 
-      {/* Said, not asked. The group goes on whatever is going soonest, which
-          is the same answer the checkout gives anybody ordering alone. */}
-      {going && (
-        <div>
-          <p className="label">When it arrives</p>
-          <p className="font-extrabold text-ink">Order now, get it {going.said}</p>
-          <p className="mt-1 text-xs text-ink/70">
-            {going.onARun
-              ? "It rides on the run going out then, which is why it costs less. Everybody who joins is told the same time."
-              : "A car of your own, because no run is going in time for this. Everybody who joins is told the same time."}
-          </p>
-          <p className="mt-1 text-xs text-ink/70">{ESTIMATE_NOTE}</p>
-
-          {/* The other way, and a way to take it. Saying it without a tap
-              would be telling somebody what they cannot have. */}
-          {swap && other && (
-            <button
-              type="button"
-              onClick={() => setTakeOther((was) => !was)}
-              className="mt-2 block w-full rounded-xl bg-paper px-3 py-2 text-left text-sm font-semibold text-brand-dark"
-            >
-              {/* Always words the one it would move to, so the sentence
-                  stays true whichever way round it currently is. */}
-              {(takeOther ? decided : other)?.onARun
-                ? `Rather pay less? A run gets it to you ${(takeOther ? decided : other)?.said}.`
-                : `In a hurry? A car of its own can be there ${(takeOther ? decided : other)?.said}, for more.`}{" "}
-              <span className="underline decoration-dotted underline-offset-4">
-                Tap to start the group on that instead.
-              </span>
-            </button>
-          )}
-        </div>
+      {ways.length > 0 && (
+        <fieldset className="flex flex-col gap-2.5 border-0 p-0">
+          <legend className="label mb-2.5">When it arrives</legend>
+          {ways.map((way) => {
+            const on = way.said === going?.said;
+            return (
+              <button
+                key={way.said}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setTakeOther(way !== decided)}
+                className={`flex items-start gap-3.5 rounded-2xl border-2 border-ink p-4 text-left transition ${
+                  on
+                    ? "bg-ink text-shell shadow-[4px_4px_0_#e5321d]"
+                    : "bg-paper"
+                }`}
+              >
+                <span
+                  aria-hidden
+                  className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-full ${
+                    on ? "bg-brand text-white" : "border-2 border-line"
+                  }`}
+                >
+                  {on && (
+                    <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12l5 5 9-10" />
+                    </svg>
+                  )}
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col gap-1">
+                  <span className="flex flex-wrap items-center justify-between gap-2.5">
+                    <span className="text-[17px] font-bold">
+                      {way.onARun ? "Shared run" : "Private car"}
+                    </span>
+                    <span
+                      className={`ticket px-2 py-1 ${
+                        on ? "bg-volt text-ink" : "border border-ink"
+                      }`}
+                    >
+                      {way.onARun ? "Cheapest" : "Faster"}
+                    </span>
+                  </span>
+                  <span className="font-display text-[26px] font-extrabold uppercase leading-none sm:text-[30px]">
+                    {way.said}
+                  </span>
+                  <span
+                    className={`text-sm leading-snug ${
+                      on ? "text-[#d8d1c7]" : "text-muted"
+                    }`}
+                  >
+                    {way.onARun
+                      ? "Rides the run going out then, so it costs less. Everybody who joins is told the same time."
+                      : "A car of its own, straight to you. Costs more. Everybody who joins is told the same time."}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </fieldset>
       )}
+
+      <p className="rounded-xl bg-brand-tint px-3.5 py-3 text-sm leading-snug">
+        {ESTIMATE_NOTE}
+      </p>
 
       {error !== "" && <p className="text-sm font-semibold text-brand-dark">{error}</p>}
 
@@ -272,10 +328,16 @@ export default function GroupLink({
         type="button"
         onClick={start}
         disabled={busy || name.trim().length < 2 || going === null}
-        className="btn-primary w-full"
+        className={`btn-primary w-full ${openNow ? "border-2 border-ink text-lg" : ""}`}
       >
         {busy ? "Starting…" : "Start the group"}
       </button>
+
+      {openNow && (
+        <Link href="/" className="text-center font-semibold">
+          Order on your own instead
+        </Link>
+      )}
     </div>
   );
 }

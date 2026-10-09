@@ -160,60 +160,102 @@ export default function OccasionBoxes({
         </p>
       )}
 
-      {/* The boxes themselves. One price each, delivery in it, and the price
-          moves with the car rather than pretending it does not. */}
-      <ul className="space-y-3">
-        {meals.map((one) => (
+      {/* The boxes themselves, as the board draws them: what is in it on
+          the left with a tick against every line, and what it costs on a
+          panel of its own down the right with the button on it.
+
+          One price each, delivery in it, and the price moves with the car
+          rather than pretending it does not. */}
+      <ul className="space-y-4">
+        {meals.map((one, at) => {
+          const on = one.id === picked;
+          return (
           <li key={one.id}>
-            <button
-              type="button"
-              onClick={() => setPicked(one.id === picked ? "" : one.id)}
-              className={`w-full rounded-2xl border-2 p-4 text-left transition active:scale-[0.99] ${
-                one.id === picked ? "border-brand bg-brand-tint" : "border-black/10"
+            <article
+              className={`flex flex-wrap overflow-hidden rounded-2xl border-2 transition ${
+                on ? "border-ink shadow-card" : "border-ink"
               }`}
             >
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="text-lg font-extrabold">{one.name}</span>
-                <span className="shrink-0 text-lg font-extrabold">
-                  {naira(priceOf(one))}
-                </span>
-              </div>
-              {one.serves !== "" && (
-                <span className="block text-sm text-muted">{one.serves}</span>
-              )}
-              {/* A list, in columns. Twenty things separated by dots is a
-                  paragraph, and nobody reads a paragraph to find out whether
-                  the milk is in it. */}
-              <span className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 text-sm text-ink/75 sm:grid-cols-3">
-                {one.lines.map((line) => (
-                  <span key={line.id} className="flex gap-1.5">
-                    <span aria-hidden className="text-brand">
-                      •
-                    </span>
-                    <span className="min-w-0">
-                      {line.qty > 1 && (
-                        <span className="font-semibold">{line.qty} × </span>
-                      )}
-                      {line.name}
-                    </span>
+              <div className="flex min-w-0 flex-[999_1_320px] flex-col gap-4 bg-paper p-5 sm:p-6">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="font-display text-2xl font-black leading-none text-brand">
+                    {String(at + 1).padStart(2, "0")}
                   </span>
-                ))}
-              </span>
-              {/* Said on the card, not left for whoever scrolls far enough to
-                  find the box that asks. A packed box reads as fixed, so the
-                  person who wanted it without the nuts closes the page
-                  instead of asking. */}
-              <span className="mt-2 flex flex-wrap items-center gap-1.5">
-                <span className="rounded-full bg-ink/5 px-2 py-0.5 text-xs font-bold text-ink/70">
-                  Fully customisable
-                </span>
-              </span>
-              <span className="mt-1 block text-sm font-semibold text-brand">
-                Delivery included
-              </span>
-            </button>
+                  {one.serves !== "" && (
+                    <span className="ticket bg-shell px-2 py-1">{one.serves}</span>
+                  )}
+                </div>
+
+                <h3 className="font-display text-[32px] font-extrabold uppercase leading-[0.9] sm:text-[40px]">
+                  {one.name}
+                </h3>
+
+                {/* A list, in columns, with a tick against each line.
+                    Twenty things separated by dots is a paragraph, and
+                    nobody reads a paragraph to find out whether the milk is
+                    in it. */}
+                <ul className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+                  {one.lines.map((line) => (
+                    <li
+                      key={line.id}
+                      className="flex items-start gap-2 text-[15px] leading-snug"
+                    >
+                      <span
+                        aria-hidden
+                        className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-brand text-white"
+                      >
+                        <svg viewBox="0 0 24 24" className="size-3" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 12l5 5 9-10" />
+                        </svg>
+                      </span>
+                      <span className="min-w-0">
+                        {line.qty > 1 && (
+                          <span className="font-semibold">{line.qty} × </span>
+                        )}
+                        {line.name}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="flex flex-[1_1_200px] flex-col justify-between gap-4 border-ink bg-[#f9f7f3] p-5 sm:border-l-2 sm:border-dashed sm:border-line sm:p-6">
+                <div className="flex flex-col">
+                  <span className="ticket text-muted">Delivery in it</span>
+                  <span className="font-display text-[40px] font-black leading-none sm:text-[48px]">
+                    {naira(priceOf(one))}
+                  </span>
+                </div>
+                <div className="flex flex-col items-start gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setPicked(on ? "" : one.id)}
+                    aria-pressed={on}
+                    className={`flex min-h-11 items-center gap-1.5 rounded-full border-2 border-ink px-5 font-bold transition ${
+                      on ? "bg-ink text-shell" : "bg-brand text-white shadow-press"
+                    }`}
+                  >
+                    {!on && (
+                      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
+                        <path d="M12 5v14" />
+                        <path d="M5 12h14" />
+                      </svg>
+                    )}
+                    {on ? "Picked" : "Add box"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPicked(one.id)}
+                    className="font-semibold underline-offset-4 hover:underline"
+                  >
+                    Swap something out
+                  </button>
+                </div>
+              </div>
+            </article>
           </li>
-        ))}
+          );
+        })}
       </ul>
 
       {box && !shut && (

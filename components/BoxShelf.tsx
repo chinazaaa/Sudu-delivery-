@@ -3,7 +3,6 @@ import Link from "next/link";
 import { liveOccasions, boxesAcross, isTimed, onShelf, type Shelf } from "@/lib/boxes";
 import { cheapestBoxes } from "@/lib/box-view";
 import { naira } from "@/lib/money";
-import Thumb from "./Thumb";
 import { whenLabel } from "@/lib/time";
 
 /**
@@ -98,7 +97,7 @@ export default async function BoxShelf({
           {lead && (
             <Link
               href={`${base}/${lead.slug}`}
-              className="flex min-h-[260px] flex-col justify-between gap-5 rounded-2xl border-2 border-ink bg-brand p-6 text-white shadow-lift sm:col-span-2 sm:p-7 lg:col-span-3"
+              className="flex min-h-[280px] flex-col justify-between gap-5 rounded-2xl border-2 border-ink bg-brand p-6 text-white shadow-[8px_8px_0_#15110e] sm:col-span-2 sm:p-7 lg:col-span-3"
             >
               <span className="ticket self-start bg-ink px-2.5 py-1 text-volt">
                 {lead.when_word} {whenLabel(lead.happens_at!)}
@@ -127,48 +126,58 @@ export default async function BoxShelf({
           {rest.map((one) => {
             const price = from.get(one.id);
             const boxCount = counts.get(one.id) ?? 0;
+            const timed = Boolean(isTimed(one) && one.happens_at);
 
             return (
               <Link
                 key={one.id}
                 href={`${base}/${one.slug}`}
-                className="flex min-h-[240px] flex-col gap-3 overflow-hidden rounded-2xl border-2 border-ink bg-paper transition active:translate-x-0.5 active:translate-y-0.5"
+                /* Anything else with a date on it is the board's Ink card:
+                   it is going to stop being true, and it should not look
+                   like the shelves that stand there all term. */
+                className={`flex min-h-[240px] flex-col gap-3 rounded-2xl border-2 border-ink p-6 transition active:translate-x-0.5 active:translate-y-0.5 ${
+                  timed ? "bg-ink text-shell" : "bg-paper"
+                }`}
               >
-                {/* The picture, where the shop has set one. A shelf of pure
-                    type reads as a list of links rather than a shop, and a
-                    card with a stretched placeholder on it reads worse than
-                    one with none, so it is the photo or nothing. */}
-                {one.image_url !== "" && (
-                  <span className="block aspect-[16/9] border-b-2 border-ink">
-                    <Thumb
-                      src={one.image_url}
-                      name={one.name}
-                      rounded=""
-                      variant="banner"
-                    />
+                {timed && one.happens_at && (
+                  <span className="ticket self-start bg-volt px-2.5 py-1 text-ink">
+                    {one.when_word} {whenLabel(one.happens_at)}
+                  </span>
+                )}
+                <span className="break-words font-display text-[34px] font-extrabold uppercase leading-[0.9] sm:text-[40px]">
+                  {one.name}
+                </span>
+                {one.blurb !== "" && (
+                  <span
+                    className={`leading-relaxed ${
+                      timed ? "text-[#d8d1c7]" : "text-ink/70"
+                    }`}
+                  >
+                    {one.blurb}
                   </span>
                 )}
 
-                <span className="flex flex-1 flex-col gap-3 p-5 pt-2">
-                  <span className="break-words font-display text-[34px] font-extrabold uppercase leading-[0.9] sm:text-[40px]">
-                    {one.name}
+                <span
+                  className={`mt-auto flex items-end justify-between gap-3 border-t-2 border-dashed pt-3 ${
+                    timed ? "border-[#4a423b]" : "border-line"
+                  }`}
+                >
+                  <span className="flex flex-col">
+                    <span
+                      className={`ticket ${timed ? "text-[#b9b0a5]" : "text-muted"}`}
+                    >
+                      From · delivery in it
+                    </span>
+                    <span className="font-display text-[30px] font-extrabold leading-none">
+                      {price === undefined ? "—" : naira(price)}
+                    </span>
                   </span>
-                  {one.blurb !== "" && (
-                    <span className="leading-relaxed text-ink/70">{one.blurb}</span>
-                  )}
-
-                  <span className="mt-auto flex items-end justify-between gap-3 border-t-2 border-dashed border-line pt-3">
-                    <span className="flex flex-col">
-                      <span className="ticket text-muted">
-                        From · delivery in it
-                      </span>
-                      <span className="font-display text-[30px] font-extrabold leading-none">
-                        {price === undefined ? "—" : naira(price)}
-                      </span>
-                    </span>
-                    <span className="ticket bg-ink px-2 py-1 text-volt">
-                      {boxCount} box{boxCount === 1 ? "" : "es"}
-                    </span>
+                  <span
+                    className={`ticket px-2 py-1 ${
+                      timed ? "bg-volt text-ink" : "bg-ink text-volt"
+                    }`}
+                  >
+                    {boxCount} box{boxCount === 1 ? "" : "es"}
                   </span>
                 </span>
               </Link>
@@ -178,7 +187,7 @@ export default async function BoxShelf({
           {/* Never a dead end: the menu, as a card of its own. */}
           <Link
             href="/products"
-            className="flex min-h-[240px] flex-col justify-between gap-3 rounded-2xl border-2 border-ink bg-volt p-5 text-ink transition active:translate-x-0.5 active:translate-y-0.5"
+            className="flex min-h-[240px] flex-col justify-between gap-3 rounded-2xl border-2 border-ink bg-volt p-6 text-ink transition active:translate-x-0.5 active:translate-y-0.5"
           >
             <span className="font-display text-[34px] font-extrabold uppercase leading-[0.9] sm:text-[40px]">
               Build your own box
@@ -195,7 +204,7 @@ export default async function BoxShelf({
 
       {/* The other shelf, and then the menu. Neither of these is a dead end. */}
       {worth.length > 0 && (
-        <section className="bleed border-y-2 border-ink bg-paper">
+        <section className="bleed border-t-2 border-ink bg-paper">
           <div className="shell flex flex-wrap items-center justify-between gap-5 py-10">
             <h2 className="section-title">Not seeing it?</h2>
             <div className="flex flex-wrap gap-3">

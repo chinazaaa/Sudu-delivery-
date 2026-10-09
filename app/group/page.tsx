@@ -1,5 +1,4 @@
 import GroupHub from "@/components/GroupHub";
-import HelpLine from "@/components/HelpLine";
 import { openBatches } from "@/lib/batches";
 import { hoursByDay, safeSettings } from "@/lib/settings";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
@@ -43,11 +42,7 @@ export default async function GroupPage() {
         .map(runArrival)}
       slots={slots}
       today={lagosToday()}
-      />
-      <HelpLine
-        number={settings.whatsapp_number}
-        about="ordering together"
-        page="Ordering together"
+      whatsapp={settings.whatsapp_number}
       />
     </>
   );

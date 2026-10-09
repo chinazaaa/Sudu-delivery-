@@ -90,51 +90,67 @@ export default async function BoxDetail({
   const sentBy = promoters.find((one) => one.code === fromLink)?.code ?? "";
 
   return (
-    <div className="-mt-4 space-y-4">
-      {/* The board's head for a shelf: the way back in ticket type, the name
-          of the thing as big as the page allows on the speed stripes, and
-          the date on it where there is one. */}
-      <header className="bleed relative overflow-hidden border-b-2 border-ink">
+    <div className="-mt-4">
+      {/* The board's head for a shelf: Ink with the speed stripes, the trail
+          back in ticket type, the name of the thing as big as the page
+          allows, and the three things that are true of every box on it. */}
+      <header className="bleed relative overflow-hidden bg-ink text-shell">
         <span
           aria-hidden
-          className="absolute inset-y-0 -right-10 w-[24%]"
+          className="absolute inset-y-0 -right-10 w-[34%] opacity-85"
           style={{
             background:
               "repeating-linear-gradient(-60deg,#e5321d 0 7px,transparent 7px 16px)",
           }}
         />
-        <div className="shell relative flex flex-col gap-3.5 pb-8 pt-6 sm:pb-10 sm:pt-10">
-          <Link href={base} className="ticket text-brand-dark hover:underline">
-            ← {back}
-          </Link>
-          {isTimed(occasion) && occasion.happens_at && (
-            <span className="sticker self-start px-2.5 py-1.5">
-              {occasion.when_word} {whenLabel(occasion.happens_at)}
-            </span>
-          )}
-          <h1 className="break-words font-display text-[min(16vw,7rem)] font-black uppercase leading-[0.86] sm:text-[clamp(3.5rem,8vw,7rem)]">
+        <div className="shell relative flex flex-col gap-4 pb-9 pt-6 sm:gap-5 sm:pb-12 sm:pt-7">
+          <nav aria-label="Breadcrumb" className="ticket flex gap-2 text-[#b9b0a5]">
+            <Link href="/" className="text-[#b9b0a5] hover:text-volt">
+              Home
+            </Link>
+            <span aria-hidden>/</span>
+            <Link href={base} className="text-[#b9b0a5] hover:text-volt">
+              {back}
+            </Link>
+            <span aria-hidden>/</span>
+            <span className="text-volt">{occasion.name}</span>
+          </nav>
+
+          <h1 className="break-words font-display text-[min(16vw,8rem)] font-black uppercase leading-[0.84] sm:text-[clamp(3.25rem,10vw,8rem)]">
             {occasion.name}
           </h1>
+
           {occasion.blurb !== "" && (
-            <p className="max-w-[560px] text-[17px] leading-relaxed text-ink/80 sm:text-lg">
+            <p className="max-w-[560px] text-[17px] leading-snug text-[#d8d1c7] sm:text-xl">
               {occasion.blurb}
             </p>
           )}
+
+          {/* What is true of every box on this shelf, said once at the top
+              rather than repeated on each of them. */}
+          <div className="flex flex-wrap gap-2">
+            {isTimed(occasion) && occasion.happens_at && (
+              <span className="ticket bg-brand px-2.5 py-1.5 text-white">
+                {occasion.when_word} {whenLabel(occasion.happens_at)}
+              </span>
+            )}
+            <span className="ticket bg-volt px-2.5 py-1.5 text-ink">
+              Delivery in every box
+            </span>
+            <span className="ticket border-2 border-shell px-2.5 py-1.5">
+              Fully customisable
+            </span>
+            {views.length > 0 && (
+              <span className="ticket border-2 border-shell px-2.5 py-1.5">
+                {views.length} box{views.length === 1 ? "" : "es"}
+              </span>
+            )}
+          </div>
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-3xl space-y-4">
-
-      {/* Above the boxes, not under them. Only on a collection: an occasion
-          is girls night and the football, and "ask your mum for the
-          all-nighter" is not a message anybody is going to send. */}
-      {kind === "collection" && views.length > 0 && (
-        <AskParents
-          what={occasion.name}
-          href={`${SITE}/collections/${occasion.slug}?utm_source=whatsapp`}
-        />
-      )}
-
+      <div className="flex flex-col gap-8 py-8 lg:flex-row lg:items-start lg:gap-8 lg:py-10">
+        <div className="min-w-0 flex-1 space-y-4">
       {views.length === 0 ? (
         <p className="card text-sm text-muted">
           Nothing is packed for this one yet.{" "}
@@ -173,7 +189,25 @@ export default async function BoxDetail({
         />
       )}
 
-      <HelpLine number={settings.whatsapp_number} about="a box" />
+        </div>
+
+        {/* The board's right column: the way to get somebody else to pay for
+            it, and the way to reach us about it. */}
+        <aside className="flex shrink-0 flex-col gap-4 lg:w-[320px]">
+          {/* Only on a collection: an occasion is girls night and the
+              football, and "ask your mum for the all-nighter" is not a
+              message anybody is going to send. */}
+          {kind === "collection" && views.length > 0 && (
+            <AskParents
+              what={occasion.name}
+              href={`${SITE}/collections/${occasion.slug}?utm_source=whatsapp`}
+            />
+          )}
+          <HelpLine number={settings.whatsapp_number} about="a box" card />
+          <Link href={elsewhere} className="btn-quiet w-full">
+            {kind === "collection" ? "What is on for an occasion" : "See the collections"}
+          </Link>
+        </aside>
       </div>
     </div>
   );
