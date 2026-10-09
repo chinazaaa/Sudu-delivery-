@@ -1555,8 +1555,31 @@ export default function Checkout({
 
       <aside
         aria-label="Order summary"
-        className="card space-y-1 text-sm lg:sticky lg:top-24 lg:w-[360px] lg:shrink-0 lg:shadow-[8px_8px_0_#15110e]"
+        className="overflow-hidden rounded-2xl border-2 border-ink bg-paper text-sm shadow-card lg:sticky lg:top-24 lg:w-[360px] lg:shrink-0 lg:shadow-[8px_8px_0_#15110e]"
       >
+        {/* The ticket at the top of the summary: which run, and whose block
+            it is going to. Both are chosen in the form beside this, and the
+            board puts them here so the two halves of the answer are never
+            on different screens. */}
+        <div className="flex flex-col gap-2 bg-ink px-5 py-4 text-shell">
+          <span className="ticket text-volt">Your run</span>
+          <span className="font-display text-[28px] font-extrabold uppercase leading-none">
+            {noRunThere
+              ? "Nothing going yet"
+              : arriving !== ""
+                ? arriving
+                : "Pick a run"}
+          </span>
+          <div className="border-t-2 border-dashed border-[#4a423b]" />
+          <div className="flex justify-between gap-3">
+            <span className="text-[#b9b0a5]">Drop-off</span>
+            <span className="truncate font-semibold">
+              {hostel.trim() === "" ? "Pick your block" : hostel}
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-1 p-4">
         {/* The way back. Everything above is about what this order costs and
             when it lands, and the answer to both is often "take something
             out", which needed the browser's back button to act on. */}
@@ -1568,6 +1591,28 @@ export default function Checkout({
             Change the cart
           </Link>
         </div>
+
+        {/* What is actually in it. The summary used to give the number of
+            items and nothing else, so the only way to check the order was
+            the one thing it was asking you not to do: leave the page. */}
+        <ul className="space-y-1.5 py-1.5">
+          {cart.map((line) => (
+            <li key={line.key} className="flex justify-between gap-3">
+              <span className="min-w-0">
+                <span className="font-mono font-semibold">{line.qty}×</span>{" "}
+                {line.name}
+                <span className="text-muted"> · {line.restaurantName}</span>
+                {line.choices.length > 0 && (
+                  <span className="text-muted"> · {line.choices.join(", ")}</span>
+                )}
+              </span>
+              <span className="whitespace-nowrap font-semibold">
+                {naira(line.unitPrice * line.qty)}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <div className="border-t-2 border-dashed border-line" />
         <div className="flex justify-between text-muted">
           <span>Food</span>
           <span>{naira(subtotal)}</span>
@@ -1772,7 +1817,7 @@ export default function Checkout({
               : null
           }
         />
-
+        </div>
       </aside>
       </div>
 

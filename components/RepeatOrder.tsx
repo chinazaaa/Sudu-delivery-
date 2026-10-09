@@ -18,6 +18,7 @@ export default function RepeatOrder({
   note,
   carry,
   nothingLeft = "Nothing from this order is on the menu today.",
+  look = "btn-quiet w-full py-2.5 text-sm",
 }: {
   lines: RepeatLine[];
   /** Items that cannot come back, each with the reason why. */
@@ -32,6 +33,10 @@ export default function RepeatOrder({
   /** What "there is nothing to put back" is called here. A cleanser is on a
    *  shelf, not a menu. */
   nothingLeft?: string;
+  /** How the button looks where it sits. A row of past runs wants the
+   *  board's Tomato pill beside "View"; a card under an order wants the
+   *  full-width quiet one. */
+  look?: string;
 }) {
   const router = useRouter();
   const [done, setDone] = useState(false);
@@ -58,7 +63,7 @@ export default function RepeatOrder({
     <div className="space-y-1">
       <button
         type="button"
-        className="btn-quiet w-full py-2.5 text-sm"
+        className={look}
         onClick={() => {
           for (const line of lines) {
             addLine(

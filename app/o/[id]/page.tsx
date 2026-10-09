@@ -182,6 +182,30 @@ export default async function OrderPage({
             ? "Batch closed"
             : "Waiting on payment";
 
+  // The state of the order said as a sentence rather than as a label. The
+  // chip beside it already carries the label; this is the thing somebody
+  // reads from across the room.
+  const headline =
+    order.status === "refunded"
+      ? "Refunded"
+      : cancelledRun
+        ? isParcel
+          ? "This trip is not going out"
+          : "This run is not going out"
+        : order.status === "delivered" || order.batch.stage === "handed_out"
+          ? "Delivered. Enjoy."
+          : !paid
+            ? expired
+              ? "This run has gone"
+              : "Pay to lock in your run"
+            : order.batch.stage === "at_drop"
+              ? "At your block now"
+              : order.batch.stage === "on_the_road"
+                ? "On the way to PAU"
+                : order.batch.stage === "at_counter"
+                  ? "Collecting your food"
+                  : "You are on the run";
+
   return (
     <div className="mx-auto max-w-2xl space-y-4 pb-10">
       {(justPlaced || fromMyGroup) && (
@@ -208,89 +232,126 @@ export default async function OrderPage({
       )}
       {order.status !== "refunded" && order.batch.stage !== "handed_out" && <LiveOrder />}
 
-      <header
-        className={`rounded-3xl p-5 text-white ${
-          paid
-            ? "bg-gradient-to-br from-mint to-[#0b7c45]"
-            : "bg-gradient-to-br from-brand to-brand-dark"
-        }`}
-      >
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/75">
-          Order {ref} · {status}
-        </p>
-        <h1 className="mt-1 text-2xl font-extrabold leading-tight sm:text-3xl">
-          {naira(order.total)}
-        </h1>
-        {/* A box on a day of its own. Said here because it is the answer to
-            the only question they have: when. */}
-        {order.batch.kind === "box" && (
-          <p className="mt-1 text-sm font-semibold text-white/90">
-            {(order as { wanted_on?: string | null }).wanted_on
-              ? `For ${dayWord(String((order as { wanted_on?: string | null }).wanted_on))}`
-              : "We are agreeing a day with you"}
-            {(order as { repeat_every?: string }).repeat_every
-              ? ` · ${repeatSaid(String((order as { repeat_every?: string }).repeat_every)).toLowerCase()}`
-              : ""}
-          </p>
-        )}
+      {/* The board's order head: the state of it in words as big as the
+          page allows, on Ink with the speed stripes, and the run itself on
+          a ticket under it.
 
-        {/* They asked for something to be different, so this number is not
-            the one yet. Said here, on the number itself, rather than in a
-            line further down that nobody reads: a price that is going to
-            move and does not say so is the one that costs you the
-            customer. */}
-        {(order as { custom_pending?: boolean }).custom_pending && (
-          <p className="mt-1 rounded-xl bg-white/20 px-3 py-2 text-sm font-semibold">
-            Not the final price. You asked for a change, so we are working out
-            what it comes to and will message you on WhatsApp. This page
-            updates before you pay.
+          It was a gradient card leading with the total. The total is the
+          answer to one question, and only before it is paid; what somebody
+          opens this page for is "where is my food", so that is what it
+          says, and the money has its own panel below. */}
+      <header className="relative overflow-hidden rounded-2xl bg-ink p-5 text-shell sm:p-7">
+        <span
+          aria-hidden
+          className="absolute inset-y-0 -right-6 w-[34%] opacity-85"
+          style={{
+            background:
+              "repeating-linear-gradient(-60deg,#e5321d 0 6px,transparent 6px 14px)",
+          }}
+        />
+        <div className="relative flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="ticket text-[#b9b0a5]">Order {ref}</span>
+            <span
+              className={`ticket px-2.5 py-1 ${
+                order.status === "delivered" || order.batch.stage === "handed_out"
+                  ? "bg-mint text-white"
+                  : paid
+                    ? "bg-brand text-white"
+                    : "bg-volt text-ink"
+              }`}
+            >
+              {status}
+            </span>
+          </div>
+          <h1 className="font-display text-[min(13vw,4.5rem)] font-black uppercase leading-[0.88] sm:text-[clamp(2.75rem,6vw,4.5rem)]">
+            {headline}
+          </h1>
+          <p className="text-[16px] leading-relaxed text-[#d8d1c7] sm:text-[17px]">
+            {order.customer_name} ·{" "}
+            {isParcel
+              ? order.batch.delivery_window_text
+              : `${runLabel} · ${order.batch.delivery_window_text}`}
           </p>
-        )}
-        <p className="mt-1 text-sm text-white/85">
-          {/* A parcel has no slot anybody chose and, until the day is agreed,
-              no day either: "Friday, 25 Sept · afternoon" was the run label
-              printed over a trip nobody had scheduled. */}
-          {order.customer_name} ·{" "}
+
+          {/* A box on a day of its own. Said here because it is the answer to
+              the only question they have: when. */}
+          {order.batch.kind === "box" && (
+            <p className="font-semibold text-shell/90">
+              {(order as { wanted_on?: string | null }).wanted_on
+                ? `For ${dayWord(String((order as { wanted_on?: string | null }).wanted_on))}`
+                : "We are agreeing a day with you"}
+              {(order as { repeat_every?: string }).repeat_every
+                ? ` · ${repeatSaid(String((order as { repeat_every?: string }).repeat_every)).toLowerCase()}`
+                : ""}
+            </p>
+          )}
+
+          {/* They asked for something to be different, so this number is not
+              the one yet. Said here, on the order itself, rather than in a
+              line further down that nobody reads: a price that is going to
+              move and does not say so is the one that costs you the
+              customer. */}
+          {(order as { custom_pending?: boolean }).custom_pending && (
+            <p className="rounded-xl bg-white/15 px-3 py-2 text-sm font-semibold">
+              Not the final price. You asked for a change, so we are working out
+              what it comes to and will message you on WhatsApp. This page
+              updates before you pay.
+            </p>
+          )}
+        </div>
+      </header>
+
+      {/* The run, on a ticket of its own. */}
+      <section className="rounded-2xl border-2 border-ink bg-paper p-5 shadow-[5px_5px_0_#e5321d]">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="ticket text-brand-dark">Your run</span>
+          <span className="font-display text-[26px] font-extrabold leading-none">
+            {naira(order.total)}
+          </span>
+        </div>
+        <p className="mt-2 font-display text-[28px] font-extrabold uppercase leading-none sm:text-[32px]">
           {isParcel
             ? order.batch.delivery_window_text
             : `${runLabel} · ${order.batch.delivery_window_text}`}
         </p>
-
-        <div className="mt-4 flex flex-wrap gap-2 text-sm font-semibold">
-          <span className="rounded-full bg-white/20 px-3 py-1.5">{order.hostel}</span>
-          <span className="rounded-full bg-white/20 px-3 py-1.5">
-            {isParcel
-              ? // A parcel has no cut off worth printing until the shop has
-                // agreed the day: it was created with one set to that moment,
-                // and showing it read "Closes 11:55pm" on an order placed at
-                // 11:55pm, which is a deadline that had already gone.
-                order.batch.deliver_at
-                ? `Going out ${runDateLabel(order.batch.run_date)}`
-                : "Day not agreed yet"
-              : expired
-              ? "Closed"
-              : order.batch.kind === "same_day"
-                ? // A car of its own: it was made for this order and goes out
-                  // when it goes out. It has a cut off the way every batch
-                  // does, set to the moment it was created, and printing that
-                  // beside the delivery date read "closes 6:57pm" on a day it
-                  // had already closed.
-                  `Going out ${order.batch.delivery_window_text}`
-                : // The cut off's own day, not the run's. A group closing on
-                  // the cut off makes its orders moments later, and pairing
-                  // this evening's time with tomorrow's date said the run
-                  // closes at 6:57pm tomorrow.
-                  `Closes ${clockLabel(order.batch.cut_off_at)}, ${dayLabel(
-                    order.batch.cut_off_at
-                  )}`}
-          </span>
-          {paid && order.batch.stage !== "ordering" && (
-            <span className="rounded-full bg-white/20 px-3 py-1.5">
-              Updated {clockLabel(order.batch.stage_updated_at)}
-            </span>
-          )}
-        </div>
-      </header>
+        <div className="my-3.5 border-t-2 border-dashed border-line" />
+        <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+          <div className="flex flex-col gap-0.5">
+            <dt className="ticket text-muted">Drop-off</dt>
+            <dd className="font-bold">{order.hostel}</dd>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <dt className="ticket text-muted">For</dt>
+            <dd className="font-bold">{order.customer_name}</dd>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <dt className="ticket text-muted">
+              {isParcel || expired || order.batch.kind === "same_day"
+                ? "Going out"
+                : "Orders close"}
+            </dt>
+            <dd className="font-bold">
+              {isParcel
+                ? order.batch.deliver_at
+                  ? runDateLabel(order.batch.run_date)
+                  : "Day not agreed yet"
+                : expired
+                  ? "Closed"
+                  : order.batch.kind === "same_day"
+                    ? order.batch.delivery_window_text
+                    : `${clockLabel(order.batch.cut_off_at)}, ${dayLabel(
+                        order.batch.cut_off_at
+                      )}`}
+            </dd>
+          </div>
+        </dl>
+        {paid && order.batch.stage !== "ordering" && (
+          <p className="ticket mt-3 text-muted">
+            Updated {clockLabel(order.batch.stage_updated_at)}
+          </p>
+        )}
+      </section>
 
       {!paid && !waitingOnGroup && order.status !== "refunded" && expired && (
         <section className="card space-y-3 border-brand/30 bg-brand-tint">

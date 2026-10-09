@@ -44,7 +44,9 @@ export default async function OrdersPage({
   if (phone && back) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight">You are signed in</h1>
+        <h1 className="font-display text-[min(16vw,4.5rem)] font-black uppercase leading-[0.88] sm:text-[clamp(3rem,6vw,4.5rem)]">
+          You are signed in
+        </h1>
         <p className="text-ink/75">
           This phone is signed in as{" "}
           <span className="font-semibold">{formatPhone(phone)}</span>.
@@ -66,20 +68,37 @@ export default async function OrdersPage({
 
   if (!phone) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight">
-          {back ? "Your number and PIN" : "My orders"}
-        </h1>
-        <p className="text-ink/75">
-          {back
-            ? "We already know this number, and your PIN is what proves it is yours. If you have never been sent one, ask below and it goes to your number."
-            : "Your phone number and PIN bring back everything you have ordered. No account, no password."}
-        </p>
-        <PinForm
-          whatsapp={settings.whatsapp_number}
-          next={back || undefined}
-          label={back ? "Carry on" : undefined}
-        />
+      <div className="grid items-center gap-10 py-6 lg:grid-cols-2 lg:gap-14 lg:py-14">
+        <div className="flex flex-col gap-5">
+          <span className="ticket text-brand-dark">My orders</span>
+          <h1 className="font-display text-[min(18vw,6.5rem)] font-black uppercase leading-[0.86] sm:text-[clamp(3.5rem,7vw,6.5rem)]">
+            {back ? (
+              <>
+                Your number,
+                <br />
+                your PIN
+              </>
+            ) : (
+              <>
+                Your runs,
+                <br />
+                one PIN
+              </>
+            )}
+          </h1>
+          <p className="max-w-[460px] text-[17px] leading-relaxed text-ink/80 sm:text-lg">
+            {back
+              ? "We already know this number, and your PIN is what proves it is yours. If you have never been sent one, ask below and it goes to your number."
+              : "We sent your PIN on WhatsApp with your first order. Put it in to see every order, follow today's run, and order the same thing again in one tap."}
+          </p>
+        </div>
+        <div className="rounded-2xl border-2 border-ink bg-paper p-5 shadow-[6px_6px_0_#e5321d] sm:p-7 lg:shadow-[10px_10px_0_#e5321d]">
+          <PinForm
+            whatsapp={settings.whatsapp_number}
+            next={back || undefined}
+            label={back ? "Carry on" : undefined}
+          />
+        </div>
       </div>
     );
   }
@@ -89,10 +108,20 @@ export default async function OrdersPage({
   // with anything sold out left out and named.
   const repeats = await Promise.all(orders.map((order) => repeatLines(order)));
 
+  // What is still happening, and what has already been. An order sits at the
+  // top of the page until it has been handed over, because until then it is
+  // the only one anybody opened this page to look at.
+  const done = (order: (typeof orders)[number]) =>
+    order.status === "delivered" || order.status === "refunded";
+  const live = orders.filter((order) => !done(order));
+  const past = orders.filter(done);
+
   return (
     <div className="space-y-4">
       <div className="flex items-baseline justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">My orders</h1>
+        <h1 className="font-display text-[min(16vw,5.5rem)] font-black uppercase leading-[0.88] sm:text-[clamp(3.5rem,7vw,5.5rem)]">
+          My orders
+        </h1>
         <form action={forgetMe}>
           <button className="text-sm text-muted hover:underline">Not you?</button>
         </form>
@@ -122,42 +151,116 @@ export default async function OrdersPage({
           button to order the same thing again.
         </Empty>
       ) : (
-        <ul className="space-y-3">
-          {orders.map((order, index) => (
-            <li key={order.id} className="card space-y-3">
-              <Link href={`/o/${shortRef(order)}`} className="block">
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-medium">
-                    {dayWord(order.batch.run_date)} · {SLOT_LABEL[order.batch.slot]}
-                    {order.for_name && (
-                      <span className="text-muted"> · {order.for_name}&apos;s share</span>
-                    )}
-                  </span>
-                  <span className="font-semibold">{naira(order.total)}</span>
-                </div>
-                <p className="text-sm text-muted">
-                  {order.lines.map((l) => `${l.qty}× ${l.name}`).join(", ")}
-                </p>
-                <p className="mt-1 text-sm">
-                  <StatusLine order={order} />
-                </p>
-              </Link>
-              {gone(order) ? (
-                <Link
-                  href={`/o/${shortRef(order)}`}
-                  className="btn-quiet w-full py-2.5 text-sm"
-                >
-                  Move it to another run
-                </Link>
-              ) : (
-                <RepeatOrder
-                  lines={repeats[index].lines}
-                  blocked={repeats[index].blocked}
-                />
-              )}
-            </li>
-          ))}
-        </ul>
+        <div className="space-y-8">
+          {/* Still happening. On Ink with the speed stripes, because this is
+              the one thing on the page somebody opened it to look at, and a
+              row in a list of fifty is not where it belongs. */}
+          {live.length > 0 && (
+            <ul className="space-y-4">
+              {live.map((order) => (
+                <li key={order.id} className="space-y-2.5">
+                  <Link
+                    href={`/o/${shortRef(order)}`}
+                    className="relative flex flex-wrap items-center justify-between gap-5 overflow-hidden rounded-2xl bg-ink p-5 text-shell shadow-[6px_6px_0_#e5321d] sm:p-7 sm:shadow-[8px_8px_0_#e5321d]"
+                  >
+                    <span
+                      aria-hidden
+                      className="absolute inset-y-0 -right-6 w-[26%] opacity-85"
+                      style={{
+                        background:
+                          "repeating-linear-gradient(-60deg,#e5321d 0 6px,transparent 6px 14px)",
+                      }}
+                    />
+                    <span className="relative flex min-w-0 flex-col gap-2.5">
+                      <span className="flex flex-wrap items-center gap-2.5">
+                        <Chip order={order} />
+                        <span className="ticket text-[#b9b0a5]">
+                          #{shortRef(order)}
+                        </span>
+                      </span>
+                      <span className="font-display text-[clamp(2rem,8vw,3.25rem)] font-black uppercase leading-[0.9]">
+                        {dayWord(order.batch.run_date)} run
+                        {order.hostel ? ` → ${order.hostel}` : ""}
+                      </span>
+                      <span className="text-[#d8d1c7]">
+                        {order.lines.map((l) => `${l.qty}× ${l.name}`).join(", ")}
+                      </span>
+                    </span>
+                    <span className="relative flex items-center gap-4">
+                      <span className="font-display text-[32px] font-black leading-none sm:text-[40px]">
+                        {naira(order.total)}
+                      </span>
+                      <span className="flex min-h-12 shrink-0 items-center rounded-full bg-shell px-5 font-bold text-ink">
+                        {order.status === "pending" && !gone(order)
+                          ? "Pay"
+                          : "Track"}
+                      </span>
+                    </span>
+                  </Link>
+                  {gone(order) && (
+                    <Link
+                      href={`/o/${shortRef(order)}`}
+                      className="btn-quiet w-full py-2.5 text-sm"
+                    >
+                      Move it to another run
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {past.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="ticket text-muted">Past runs</h2>
+              <ul className="space-y-3">
+                {past.map((order) => (
+                  <li
+                    key={order.id}
+                    className="card flex flex-wrap items-center gap-x-6 gap-y-3 sm:p-5"
+                  >
+                    <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-1">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <Chip order={order} />
+                        <span className="ticket text-muted">
+                          {dayWord(order.batch.run_date)} ·{" "}
+                          {SLOT_LABEL[order.batch.slot]}
+                          {order.for_name ? ` · ${order.for_name}'s share` : ""}
+                        </span>
+                      </div>
+                      <Link
+                        href={`/o/${shortRef(order)}`}
+                        className="truncate text-[17px] font-bold hover:underline"
+                      >
+                        {order.lines.map((l) => `${l.qty}× ${l.name}`).join(", ")}
+                      </Link>
+                      {order.hostel !== "" && (
+                        <span className="text-sm text-muted">{order.hostel}</span>
+                      )}
+                    </div>
+                    <span className="font-display text-[30px] font-extrabold leading-none">
+                      {naira(order.total)}
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={`/o/${shortRef(order)}`}
+                        className="chip bg-transparent px-4"
+                      >
+                        View
+                      </Link>
+                      <RepeatOrder
+                        lines={repeats[orders.indexOf(order)].lines}
+                        blocked={repeats[orders.indexOf(order)].blocked}
+                        label="Order again"
+                        look="chip border-ink bg-brand px-4 text-white"
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
       )}
 
       {orders.length > 0 && (
@@ -184,21 +287,22 @@ function gone(order: Awaited<ReturnType<typeof ordersForPhone>>[number]): boolea
   return order.status === "pending" && !takesMoney(order.batch);
 }
 
-function StatusLine({
+/** What has happened to an order, in one word, coloured by which word. */
+function Chip({
   order,
 }: {
   order: Awaited<ReturnType<typeof ordersForPhone>>[number];
 }) {
-  if (order.status === "pending") {
-    // A run that has gone cannot be paid for, so saying "tap to pay" sends
-    // somebody to a page that will refuse their money.
-    return gone(order) ? (
-      <span className="text-brand">Run closed. Move it to another run to pay.</span>
-    ) : (
-      <span className="text-brand">Not paid yet. Tap to pay.</span>
-    );
-  }
-  if (order.status === "refunded") return <span className="text-muted">Refunded</span>;
-  if (order.status === "delivered") return <span className="text-green-700">Delivered</span>;
-  return <span className="text-green-700">Paid. {STAGE_LABEL[order.batch.stage]}</span>;
+  const [said, look] =
+    order.status === "pending"
+      ? gone(order)
+        ? (["Run closed", "bg-volt text-ink"] as const)
+        : (["Awaiting payment", "bg-volt text-ink"] as const)
+      : order.status === "refunded"
+        ? (["Refunded", "bg-[#4a423b] text-shell"] as const)
+        : order.status === "delivered"
+          ? (["Delivered", "bg-mint text-white"] as const)
+          : ([STAGE_LABEL[order.batch.stage], "bg-brand text-white"] as const);
+
+  return <span className={`ticket px-2 py-1 ${look}`}>{said}</span>;
 }
