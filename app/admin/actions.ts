@@ -2101,6 +2101,8 @@ export async function savePromoter(form: FormData): Promise<void> {
  * being blanked by a form that never showed it.
  */
 const SETTING_FIELDS = [
+  "google_profile",
+  "google_review",
   "terms_updated",
   "privacy_updated",
   "returns_updated",

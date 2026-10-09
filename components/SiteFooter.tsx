@@ -21,12 +21,15 @@ export default function SiteFooter({
   line,
   instagram,
   groupLink,
+  google = "",
   showPromoterLink,
 }: {
   /** Written in admin. Empty means the shop says nothing here. */
   line: string;
   instagram: string | null;
   groupLink: string;
+  /** The shop's Google Business Profile. Empty and it is not offered. */
+  google?: string;
   showPromoterLink: boolean;
 }) {
   const groups: Group[] = [
@@ -61,6 +64,7 @@ export default function SiteFooter({
         // where anybody can find them anyway.
         { href: "/support", said: "Contact us" },
         ...(groupLink ? [{ href: groupLink, said: "PAU WhatsApp group", away: true }] : []),
+        ...(google ? [{ href: google, said: "Find us on Google", away: true }] : []),
         { href: "/privacy", said: "Privacy" },
         { href: "/terms", said: "Terms" },
         { href: "/return-policy", said: "Returns and refunds" },

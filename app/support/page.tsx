@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { safeSettings, whatsappLink } from "@/lib/settings";
+import { googleLinks, safeSettings, whatsappLink } from "@/lib/settings";
 import PageHead from "@/components/PageHead";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +28,7 @@ export default async function SupportPage() {
   const chat = whatsapp
     ? whatsappLink(whatsapp, "Hello Sudu, I need help with my order.")
     : null;
+  const google = googleLinks(settings);
 
   return (
     <article className="-mt-4 pb-10">
@@ -171,6 +172,16 @@ export default async function SupportPage() {
             <Link href="/privacy" className="hover:text-brand-dark">
               Privacy
             </Link>
+            {google.profile !== "" && (
+              <a
+                href={google.profile}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-brand-dark"
+              >
+                Find us on Google
+              </a>
+            )}
           </div>
 
           <Link href="/products" className="btn-quiet self-start">

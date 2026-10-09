@@ -16,11 +16,16 @@ export default function RateOrder({
   orderId,
   rating,
   feedback,
+  google = "",
 }: {
   orderId: string;
   /** What they said last time, if they have already answered. */
   rating: number | null;
   feedback: string;
+  /** Where to leave a public review. Offered to everybody who has answered,
+   *  whatever they said: asking only the happy ones is against Google's own
+   *  rules and is the kind of thing that gets a profile taken down. */
+  google?: string;
 }) {
   const [state, action, pending] = useActionState<RatingState, FormData>(rateOrder, {
     error: null,
@@ -93,6 +98,29 @@ export default function RateOrder({
         <p className="rounded-lg bg-mint/10 px-3 py-2 text-sm font-semibold text-mint">
           Got it. Thank you.
         </p>
+      )}
+
+      {/* The public one, once they have said something here. A review from
+          somebody on this campus is worth more to the shop than anything on
+          the site, and this is the one moment they are holding the food. */}
+      {answered && google !== "" && (
+        <div className="flex flex-col gap-2 border-t-2 border-dashed border-line pt-3">
+          <span className="text-sm text-ink/75">
+            If you would say it where other students can see it, Google is the
+            one that counts.
+          </span>
+          <a
+            href={google}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-quiet w-full"
+          >
+            <span aria-hidden className="text-brand">
+              ★
+            </span>
+            Rate us on Google
+          </a>
+        </div>
       )}
     </form>
   );

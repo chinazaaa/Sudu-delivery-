@@ -141,6 +141,12 @@ export type Settings = {
   skincare_promise: string;
   /** When each page of small print last said something different, as the
    *  shop typed it. Empty means the page says what it is instead. */
+  /** The shop's Google Business Profile, and the link that opens straight
+   *  onto the write-a-review box. Empty means neither is offered. The
+   *  review link falls back to the profile, because somebody can leave one
+   *  from there too. */
+  google_profile: string;
+  google_review: string;
   terms_updated: string;
   privacy_updated: string;
   returns_updated: string;
@@ -226,6 +232,8 @@ export const EMPTY: Settings = {
   skincare_blurb: "",
   skincare_bands: "",
   skincare_promise: "",
+  google_profile: "",
+  google_review: "",
   terms_updated: "",
   privacy_updated: "",
   returns_updated: "",
@@ -270,6 +278,27 @@ export async function safeSettings(): Promise<Settings> {
  * wa.me wants international digits with no plus and no spaces, so a number
  * typed the Nigerian way (0803…) has to be rewritten.
  */
+/**
+ * Where to send somebody to leave a review, and where to send them to look
+ * the shop up. The review link falls back to the profile, because a profile
+ * page has a review button on it and one link set is better than a button
+ * that does nothing.
+ *
+ * Only http(s), because these go into a page as links and a setting is
+ * whatever somebody typed into it.
+ */
+export function googleLinks(settings: {
+  google_profile?: string;
+  google_review?: string;
+}): { profile: string; review: string } {
+  const safe = (said: string | undefined): string => {
+    const text = String(said ?? "").trim();
+    return /^https?:\/\//i.test(text) ? text : "";
+  };
+  const profile = safe(settings.google_profile);
+  return { profile, review: safe(settings.google_review) || profile };
+}
+
 export function whatsappLink(number: string, message: string): string | null {
   const digits = number.replace(/\D/g, "");
   if (digits.length < 10) return null;

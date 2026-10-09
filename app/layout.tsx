@@ -8,7 +8,7 @@ import GroupSync from "@/components/GroupSync";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import { offerNudge, publicOffer } from "@/lib/coupons";
-import { instagramLink, safeSettings } from "@/lib/settings";
+import { googleLinks, instagramLink, safeSettings } from "@/lib/settings";
 import { liveRibbon } from "@/lib/ribbon";
 import { qrSvg } from "@/lib/qr";
 import { siteUrl } from "@/lib/admin-templates";
@@ -76,6 +76,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     href: settings.ribbon_href,
   }));
   const instagram = instagramLink(settings.instagram_handle);
+  // Where the shop is on Google: the footer link, and the business details
+  // a search engine reads below.
+  const google = googleLinks(settings);
   const showPromoterLink = settings.hide_promoter_link !== "on";
   const showFooter = settings.hide_footer !== "on";
   // Read from the code itself, so the strip cannot outlive the offer.
@@ -104,9 +107,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // shop is a delivery service for one campus, and saying so plainly is the
   // difference between being a page about food and being the answer to
   // "delivery to PAU".
+  // A local business rather than an organisation in general. The shop
+  // carries food to one campus and nowhere else, and the thing that decides
+  // whether it is the answer to "food delivery PAU" is saying where it
+  // works, how to reach it, and which Google profile is the same shop.
+  //
+  // No street address and no opening hours: deliveries go out of one area
+  // rather than a shopfront anybody can walk into, and inventing one to
+  // satisfy a schema is the kind of thing that gets a profile suspended.
   const who = {
     "@context": "https://schema.org",
-    "@type": "Organization",
+    "@type": "LocalBusiness",
+    additionalType: "https://schema.org/FoodDelivery",
     "@id": `${SITE.origin}/#shop`,
     name: "Sudu",
     url: SITE.origin,
@@ -115,11 +127,24 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     logo: `${SITE.origin}/logo.png`,
     image: `${SITE.origin}/covers/sudu.png`,
     description: BLURB,
+    telephone: settings.whatsapp_number || undefined,
+    priceRange: "₦₦",
+    currenciesAccepted: "NGN",
+    paymentAccepted: "Bank transfer, Card",
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: "Ibeju-Lekki",
+      addressRegion: "Lagos",
+      addressCountry: "NG",
+    },
     areaServed: [
-      { "@type": "Place", name: "Pan-Atlantic University, Lagos" },
+      { "@type": "Place", name: "Pan-Atlantic University, Ibeju-Lekki, Lagos" },
       { "@type": "Place", name: "Sangotedo, Lagos" },
     ],
-    sameAs: instagram ? [instagram] : undefined,
+    // Every other page that is also this shop, so the ones that read this
+    // can tell the website and the Google profile apart from two shops with
+    // the same name.
+    sameAs: [instagram, google.profile].filter(Boolean),
   };
   const site = {
     "@context": "https://schema.org",
@@ -178,6 +203,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             line={settings.footer_line}
             instagram={instagram}
             groupLink={settings.whatsapp_group_link}
+            google={google.profile}
             showPromoterLink={showPromoterLink}
           />
         )}

@@ -734,6 +734,49 @@ export default async function SettingsAdmin() {
           <p className="mt-1 text-xs text-muted">Minutes untouched.</p>
         </div>
 
+        {/* The Google Business Profile. Two links rather than one, because
+            the one worth putting in front of somebody who has just been
+            handed their food is the one that opens the review box. */}
+        <div className="space-y-3 border-t border-black/10 pt-4">
+          <div>
+            <h2 className="font-semibold">Google</h2>
+            <p className="text-sm text-muted">
+              The profile goes in the footer, on Contact us, and into the
+              business details search engines read. The review link is what a
+              delivered order offers and what the handover message carries.
+              Leave the review link empty and it uses the profile.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="google_profile">
+                Your Google profile
+              </label>
+              <input
+                id="google_profile"
+                name="google_profile"
+                type="url"
+                defaultValue={settings.google_profile}
+                placeholder="https://share.google/…"
+                className="field"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="google_review">
+                Write-a-review link
+              </label>
+              <input
+                id="google_review"
+                name="google_review"
+                type="url"
+                defaultValue={settings.google_review}
+                placeholder="https://g.page/r/…/review"
+                className="field"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* The dates on the small print. Typed rather than read off the
             file, because restyling a page is not a change to the policy and
             a date that moves every deploy tells a reader nothing. */}

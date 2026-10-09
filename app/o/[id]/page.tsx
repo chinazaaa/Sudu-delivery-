@@ -38,6 +38,7 @@ import { STAGE_LABEL } from "@/lib/stages";
 import { clockLabel, dayLabel, dayWord, runDateLabel, weekdayLabel } from "@/lib/time";
 import { repeatSaid } from "@/lib/box-day";
 import {
+  googleLinks,
   activeBands,
   externalUrl,
   getSettings,
@@ -613,6 +614,7 @@ export default async function OrderPage({
             orderId={order.id}
             rating={order.rating ?? null}
             feedback={order.feedback ?? ""}
+            google={googleLinks(settings).review}
           />
         )}
 

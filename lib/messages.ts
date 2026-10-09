@@ -1,6 +1,6 @@
 import { shortRef } from "./links";
 import { naira, orderRef, shareRef } from "./money";
-import { externalUrl, type Settings } from "./settings";
+import { externalUrl, googleLinks, type Settings } from "./settings";
 
 /**
  * What to call somebody in a message.
@@ -102,7 +102,7 @@ export const TEMPLATE_DEFAULT: Record<TemplateKind, string> = {
     "Your {thing} is coming. I will message again when it is with you.",
   review:
     "Hi {name}, hope the {thing} was good. If you have a second, say how it was " +
-    "on your order page: {link}\n\nIt takes one tap and it helps a lot.",
+    "on your order page: {link}{google_line}\n\nIt takes one tap and it helps a lot.",
 };
 
 /** Everything a template can say, so the admin can rearrange the wording. */
@@ -121,6 +121,11 @@ export const TEMPLATE_TOKENS: { token: string; means: string }[] = [
   { token: "{pin_line}", means: "a whole sentence giving them their PIN" },
   { token: "{bank}", means: "your account details and the narration to use" },
   { token: "{card_link}", means: "the card link saved on that order" },
+  { token: "{google}", means: "your Google review link, on its own" },
+  {
+    token: "{google_line}",
+    means: "a whole sentence asking them to review you on Google",
+  },
 ];
 
 /**
@@ -254,6 +259,14 @@ export function template(args: {
     "{thing}": args.what ?? "food",
     "{window}": args.deliveryWindow,
     "{link}": `${siteUrl}/o/${shortRef(order)}`,
+    // The one place a review is worth asking for is the moment somebody has
+    // just been handed their food. Empty until the shop sets the link, and
+    // the whole sentence goes with it rather than leaving "or on Google:"
+    // dangling at the end of a message.
+    "{google}": googleLinks(settings).review,
+    "{google_line}": googleLinks(settings).review
+      ? `\n\nOr leave us a review on Google, which helps more than anything: ${googleLinks(settings).review}`
+      : "",
     "{site}": siteUrl,
     "{pin}": pin ?? "----",
     "{pin_line}": pin
