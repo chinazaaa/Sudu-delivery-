@@ -2,17 +2,14 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import Carousel from "./Carousel";
 import CartBar from "./CartBar";
 import ItemRow from "./ItemRow";
 import ItemSheet from "./ItemSheet";
 import ArrivalStrip from "./ArrivalStrip";
 import Thumb from "./Thumb";
 import { FOOD_KINDS, kindHref } from "@/lib/food-kinds";
-import TrustStrip from "./TrustStrip";
 import { naira } from "@/lib/money";
 import { useCart } from "@/lib/cart";
-import SplitPrompt from "./SplitPrompt";
 import type { ItemView, MenuView } from "@/lib/view";
 import type { Slide } from "@/lib/slides";
 
@@ -511,41 +508,16 @@ export default function Home({
             </div>
           </section>
 
-          <section className="shell space-y-6 py-12">
-            <TrustStrip pitch={pitch} />
-            <SplitPrompt />
-            {(iosAppId !== "" || androidPackage !== "") && (
-              <p className="text-center text-sm text-muted">
-                {iosAppId !== "" && androidPackage !== ""
-                  ? "On iPhone or Android? "
-                  : iosAppId !== ""
-                    ? "On an iPhone? "
-                    : "On Android? "}
-                <a href="/app" className="font-bold text-brand-dark underline">
-                  Get the app
-                </a>
-              </p>
-            )}
-            {slides.length > 0 && (
-              <Carousel>
-                {slides.map((slide) => (
-                  <Door
-                    key={slide.id}
-                    href={slide.link_url}
-                    title={slide.headline}
-                    line={slide.body}
-                    away={slide.link_url.startsWith("http")}
-                  />
-                ))}
-              </Carousel>
-            )}
-            <p className="text-center text-xs leading-relaxed text-muted">
-              Sudu delivers food, groceries, skincare and parcels to
-              Pan-Atlantic University students. Order from your favourite
-              restaurants around Sangotedo, Novare, Lekki and Ikoyi and get your
-              order delivered directly to your PAU hostel.
-            </p>
-          </section>
+          {/* The page ends where the board ends: the band for parents, then
+              the footer.
+
+              What stood here was four more things nobody asked for. A trust
+              strip saying "since 2018" and "award winning", which the hero
+              already says in its two badges. A prompt to split a delivery,
+              which the fee table says better, in the place somebody is
+              working out what it costs. A line about the app. And a
+              paragraph written for a search engine, under all of it, which
+              is the one thing on a page that no reader has ever wanted. */}
         </>
       )}
 

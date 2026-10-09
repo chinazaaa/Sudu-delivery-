@@ -17,10 +17,13 @@ export default function CartBar() {
   const subtotal = cartSubtotal(cart);
 
   return (
-    <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 p-3 sm:bottom-0">
+    /* A phone's bar. On a laptop the cart is a button in the header, and a
+       red slab floating over the middle of the page is a second one saying
+       the same thing over whatever somebody is reading. */
+    <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 p-3 sm:bottom-0 lg:hidden">
       <Link
         href="/cart"
-        className="mx-auto flex max-w-2xl items-center gap-3 rounded-2xl bg-brand px-4 py-3 text-white shadow-lift"
+        className="mx-auto flex max-w-2xl items-center gap-3 rounded-2xl border-2 border-ink bg-brand px-4 py-3 text-white shadow-hard"
       >
         <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/15 font-bold">
           {count}
