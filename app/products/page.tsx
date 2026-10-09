@@ -157,8 +157,15 @@ export default async function ProductsPage({
           people use and a filter behind a tap is one they never find. The
           kitchens are the smaller mono buttons: there are thirteen of them
           and they are names, not ideas. */}
-      <div className="bleed sticky top-[57px] z-20 border-b-2 border-ink bg-shell md:top-[65px]">
-        <div className="shell flex flex-col gap-2.5 py-3">
+      {/* Sticky on the outside, full width on the inside.
+
+          Both on one element does not work: .bleed sets left:50%, and on a
+          position:sticky element that is not an offset from where it sits,
+          it is the edge it sticks to. The bar went half a screen sideways
+          and took the width of the page with it. */}
+      <div className="sticky top-[57px] z-20 md:top-[65px]">
+        <div className="bleed border-b-2 border-ink bg-shell">
+          <div className="shell flex flex-col gap-2.5 py-3">
           {facets.categories.length > 0 && (
             <div
               aria-label="What kind"
@@ -217,6 +224,7 @@ export default async function ProductsPage({
                 </Link>
               ))}
             </div>
+          </div>
           </div>
         </div>
       </div>
