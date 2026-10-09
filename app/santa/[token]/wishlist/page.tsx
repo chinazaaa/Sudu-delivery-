@@ -5,6 +5,7 @@ import { currentCustomer } from "@/lib/customer-auth";
 import { naira } from "@/lib/money";
 import { runDateLabel } from "@/lib/time";
 import SantaHero from "@/components/SantaHero";
+import SantaRibbon from "@/components/SantaRibbon";
 import {
   MOST_WISHES,
   memberIn,
@@ -78,24 +79,32 @@ export default async function WishlistPage({
   const shut = room.status !== "open";
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-8">
-      {/* At the top as well as the bottom. The way out of a page should not
-        * be something you scroll a list of five things to reach. */}
-      <p className="mb-3">
-        <Link className="text-sm font-semibold text-brand" href={`/santa/${token}`}>
-          ‹ Back to the room
-        </Link>
-      </p>
-
+    <div className="-mt-4">
+      <SantaRibbon />
       <SantaHero
         kicker={room.name}
         title="Your wishlist"
+        lead={`Add up to ${MOST_WISHES} things you would love, each around ${naira(spend)}. Your Santa picks one and we buy it.`}
+        green
         chips={[
           `${mine.length} of ${MOST_WISHES}`,
-          shut ? "locked" : `edit until ${runDateLabel(room.closeDate)}`,
+          shut ? "Locked" : `Edit until ${runDateLabel(room.closeDate)}`,
           `${naira(spend)} on the gift`,
         ]}
-      />
+      >
+        {/* The way out, at the top as well as the bottom. It should not be
+            something you scroll a list of five things to reach. */}
+        <p>
+          <Link
+            className="font-semibold text-volt hover:underline"
+            href={`/santa/${token}`}
+          >
+            ‹ Back to the room
+          </Link>
+        </p>
+      </SantaHero>
+
+      <div className="mx-auto max-w-2xl py-7">
 
       {problem ? (
         <p className="card mt-4 border-brand/30 bg-brand/5 font-semibold text-brand">
@@ -438,6 +447,7 @@ export default async function WishlistPage({
           Back to the room
         </Link>
       </p>
+    </div>
     </div>
   );
 }

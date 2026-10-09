@@ -7,6 +7,7 @@ import { safeSettings, whatsappLink } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
 import CopyText from "@/components/CopyText";
 import SantaHero from "@/components/SantaHero";
+import SantaRibbon from "@/components/SantaRibbon";
 import SendLink from "@/components/SendLink";
 import { runDateLabel } from "@/lib/time";
 import { hostelNames } from "@/lib/hostels";
@@ -105,17 +106,117 @@ export default async function RoomPage({
   );
   const written = new Set(lists.filter((one) => one.has).map((one) => one.id));
 
+  // Where this person is in the room, for the board's three pills. Joining
+  // is one step, writing a list is the next, and waiting for the draw is the
+  // last: a room is the only page on the site somebody comes back to three
+  // times for three different reasons, so it says which one this is.
+  const step = !me ? 0 : mine.length === 0 ? 1 : 2;
+
+  // Whose room it is, by name rather than by number. Read off the member
+  // list, because the room only keeps the phone it was made from.
+  const starter =
+    people.find((one) => one.phone === room.creatorPhone)?.name ?? "";
+
   return (
-    <div className="mx-auto max-w-xl px-4 py-8">
+    <div className="-mt-4">
+      <SantaRibbon />
       <SantaHero
-        kicker="Secret Santa"
+        kicker={`Secret Santa room${
+          starter ? ` · started by ${starter}` : ""
+        }`}
         title={room.name}
-        chips={[
-          `${naira(due)} each`,
-          `${room.status === "open" ? "closes" : "closed"} ${runDateLabel(room.closeDate)}`,
-          `exchanged ${runDateLabel(room.exchangeDate)}`,
-        ]}
-      />
+        green
+      >
+        <ol className="mt-1 flex flex-wrap gap-2">
+          {["Join", "Wishlist", "The draw"].map((said, at) => (
+            <li
+              key={said}
+              aria-current={at === step ? "step" : undefined}
+              className={`flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3.5 text-sm font-semibold ${
+                at < step
+                  ? "bg-mint text-white"
+                  : at === step
+                    ? "bg-brand font-bold text-white"
+                    : "border border-[#4a423b] text-[#b9b0a5]"
+              }`}
+            >
+              <span
+                className={`grid size-6 shrink-0 place-items-center rounded-full font-display font-black ${
+                  at < step
+                    ? "bg-white text-mint"
+                    : at === step
+                      ? "bg-ink text-white"
+                      : "border border-[#4a423b]"
+                }`}
+              >
+                {at < step ? "✓" : at + 1}
+              </span>
+              {said}
+            </li>
+          ))}
+        </ol>
+      </SantaHero>
+
+      <div className="flex flex-col gap-6 py-7 lg:flex-row lg:items-start lg:gap-7">
+        {/* The room itself, on a ticket. It is the answer to every question
+            somebody arrives with: what it costs, who is in, and when the two
+            days are. */}
+        <aside className="flex flex-col gap-3.5 rounded-2xl border-2 border-ink bg-paper p-5 shadow-[8px_8px_0_#1e7a4c] lg:w-[340px] lg:shrink-0">
+          <div className="flex justify-between gap-3">
+            <span className="ticket text-brand-dark">The room</span>
+            <span className="ticket text-muted">
+              {room.status === "open" ? "Open" : "Drawn"}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-x-8 gap-y-3">
+            <div className="flex flex-col">
+              <span className="ticket text-muted">Budget each</span>
+              <span className="font-display text-[34px] font-black leading-none">
+                {naira(due)}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="ticket text-muted">Joined</span>
+              <span className="font-display text-[34px] font-black leading-none">
+                {people.length}
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
+            <div className="flex flex-col">
+              <span className="ticket text-muted">Names drawn</span>
+              <strong>{runDateLabel(room.closeDate)}</strong>
+            </div>
+            <div className="flex flex-col">
+              <span className="ticket text-muted">Exchange day</span>
+              <strong>{runDateLabel(room.exchangeDate)}</strong>
+            </div>
+          </div>
+          {people.length > 0 && (
+            <>
+              <div className="border-t-2 border-dashed border-line" />
+              <div className="flex flex-wrap gap-1.5" aria-label="Who is in">
+                {people.map((one) => (
+                  <span
+                    key={one.id}
+                    className="flex items-center gap-1.5 rounded-full bg-shell py-1 pl-1 pr-2.5 text-[13px] font-semibold"
+                  >
+                    <span className="grid size-6 shrink-0 place-items-center rounded-full bg-ink font-display text-sm font-black text-volt">
+                      {(one.name || "?").trim().charAt(0).toUpperCase()}
+                    </span>
+                    {one.name || "Someone"}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+          <span className="text-[13px] leading-snug text-muted">
+            A room needs {LEAST_MEMBERS} people to draw. Fewer by closing day
+            and everyone is refunded.
+          </span>
+        </aside>
+
+        <div className="min-w-0 flex-1 space-y-4">
 
       {problem ? (
         <p className="card mt-4 border-brand/30 bg-brand/5 font-semibold text-brand">
@@ -516,14 +617,29 @@ export default async function RoomPage({
 
       {/* After the draw. */}
       {match ? (
-        <section className="card mt-6">
-          <h2 className="font-bold">
-            You are buying for {match.name}
-            {match.hostel ? (
-              <span className="font-normal text-muted"> · {match.hostel}</span>
-            ) : null}
-          </h2>
-          <p className="mt-1 text-sm text-muted">
+        <section className="space-y-4">
+          <div className="relative overflow-hidden rounded-2xl bg-ink p-5 text-shell sm:p-7">
+            <span
+              aria-hidden
+              className="absolute inset-y-0 -right-8 w-[30%] opacity-90"
+              style={{
+                background:
+                  "repeating-linear-gradient(-60deg,#1e7a4c 0 7px,transparent 7px 16px)",
+              }}
+            />
+            <div className="relative flex flex-col gap-2">
+              <span className="ticket text-volt">The draw is done</span>
+              <span className="text-lg text-[#d8d1c7]">You are buying for</span>
+              <h2 className="break-words font-display text-[min(18vw,7rem)] font-black uppercase leading-[0.8] text-brand sm:text-[clamp(4rem,9vw,7rem)]">
+                {match.name}
+              </h2>
+              {match.hostel ? (
+                <span className="text-[#d8d1c7]">{match.hostel}</span>
+              ) : null}
+            </div>
+          </div>
+
+          <p className="text-sm text-muted">
             Pick anything off their list, as many as the budget carries. We
             will find them, and if they come to more than{" "}
             {naira(match.toSpend)} we will ask you before buying anything.
@@ -538,64 +654,93 @@ export default async function RoomPage({
               something good within the budget.
             </p>
           ) : (
-            <ul className="mt-3 space-y-2">
-              {match.wishes.map((one) => (
-                <li key={one.id} className="flex items-start justify-between gap-3 border-t pt-2">
-                  <div className="flex items-start gap-3">
+            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {match.wishes.map((one) => {
+                const picked = match.pickedWishIds.includes(one.id);
+                const over = one.estPrice > match.toSpend;
+                return (
+                  <li
+                    key={one.id}
+                    className="flex flex-col overflow-hidden rounded-2xl border-2 border-ink bg-paper"
+                  >
                     {one.photos.length > 0 ? (
-                      <span className="flex shrink-0 gap-1">
+                      <span className="flex h-40 gap-0.5 border-b-2 border-ink">
                         {one.photos.map((shot) => (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             key={shot}
                             src={shot}
                             alt=""
-                            className="h-16 w-16 rounded-lg object-cover"
+                            className="h-full min-w-0 flex-1 object-cover"
                           />
                         ))}
                       </span>
                     ) : null}
-                    <div>
-                    <p className="font-semibold">{one.title}</p>
-                    {one.itemId ? (
-                      <p className="text-xs font-semibold text-mint">
-                        We sell this, so it is here already
-                      </p>
-                    ) : null}
-                    {one.note ? <p className="text-sm text-muted">{one.note}</p> : null}
-                    {one.estPrice > 0 ? (
-                      <p className="text-sm text-muted">
-                        about {naira(one.estPrice)}
-                        {one.estPrice > match.toSpend ? (
-                          <span className="font-semibold text-brand">
-                            {" "}
-                            · over budget, you would pay the difference
-                          </span>
-                        ) : null}
-                      </p>
-                    ) : null}
+
+                    <div className="flex flex-1 flex-col gap-1.5 p-4">
+                      <span className="text-[17px] font-bold leading-snug">
+                        {one.title}
+                      </span>
+                      {one.itemId ? (
+                        <span className="ticket self-start bg-mint px-2 py-1 text-white">
+                          We sell this
+                        </span>
+                      ) : null}
+                      {one.note ? (
+                        <span className="text-sm text-muted">{one.note}</span>
+                      ) : null}
+                      {one.estPrice > 0 ? (
+                        <span className="font-display text-[30px] font-extrabold leading-none">
+                          {naira(one.estPrice)}
+                        </span>
+                      ) : null}
+
+                      <div className="mt-auto pt-2.5">
+                        {picked ? (
+                          <form action={unpickWishAction}>
+                            <input type="hidden" name="token" value={token} />
+                            <input type="hidden" name="wishId" value={one.id} />
+                            <button
+                              type="submit"
+                              aria-pressed="true"
+                              className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full border-2 border-ink bg-mint font-bold text-white"
+                            >
+                              ✓ Picked
+                            </button>
+                            <span className="mt-1 block text-center text-xs text-muted underline">
+                              Tap to take it off
+                            </span>
+                          </form>
+                        ) : over ? (
+                          <form action={pickWishAction}>
+                            <input type="hidden" name="token" value={token} />
+                            <input type="hidden" name="wishId" value={one.id} />
+                            <button
+                              type="submit"
+                              className="flex min-h-11 w-full items-center justify-center rounded-full border-2 border-dashed border-line text-sm font-semibold text-muted"
+                            >
+                              {naira(one.estPrice - match.toSpend)} over budget
+                            </button>
+                          </form>
+                        ) : (
+                          <form action={pickWishAction}>
+                            <input type="hidden" name="token" value={token} />
+                            <input type="hidden" name="wishId" value={one.id} />
+                            <button
+                              type="submit"
+                              className="flex min-h-11 w-full items-center justify-center rounded-full border-2 border-ink bg-brand font-bold text-white shadow-press"
+                            >
+                              {match.pickedWishIds.length > 0
+                                ? "Add this too"
+                                : "Pick this"}
+                            </button>
+                          </form>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  {match.pickedWishIds.includes(one.id) ? (
-                    <form action={unpickWishAction}>
-                      <input type="hidden" name="token" value={token} />
-                      <input type="hidden" name="wishId" value={one.id} />
-                      <span className="block text-sm font-bold text-mint">Picked</span>
-                      <button type="submit" className="text-xs text-muted underline">
-                        Take it off
-                      </button>
-                    </form>
-                  ) : (
-                    <form action={pickWishAction}>
-                      <input type="hidden" name="token" value={token} />
-                      <input type="hidden" name="wishId" value={one.id} />
-                      <button type="submit" className="text-sm font-semibold text-brand">
-                        {match.pickedWishIds.length > 0 ? "Add this too" : "Pick this"}
-                      </button>
-                    </form>
-                  )}
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
 
@@ -754,6 +899,8 @@ export default async function RoomPage({
           </div>
         </section>
       ) : null}
+        </div>
+      </div>
     </div>
   );
 }

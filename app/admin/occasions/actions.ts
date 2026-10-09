@@ -167,7 +167,6 @@ export async function removeBox(form: FormData): Promise<void> {
 function touch(): void {
   revalidatePath("/admin", "layout");
   revalidatePath("/collections", "layout");
-  revalidatePath("/collections", "layout");
   revalidatePath("/");
 }
 
