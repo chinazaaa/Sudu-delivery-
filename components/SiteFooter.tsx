@@ -35,7 +35,6 @@ export default function SiteFooter({
       links: [
         { href: "/products", said: "Food" },
         { href: "/collections", said: "Collections" },
-        { href: "/occasions", said: "Occasions" },
         { href: "/skincare", said: "Skincare" },
         { href: "/parcel", said: "Parcels" },
         { href: "/custom-order", said: "Anything else" },

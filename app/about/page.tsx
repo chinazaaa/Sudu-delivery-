@@ -134,7 +134,7 @@ export default async function AboutPage() {
             Collections
           </Link>
           <span className="text-muted">·</span>
-          <Link href="/occasions" className="font-extrabold text-brand">
+          <Link href="/collections" className="font-extrabold text-brand">
             Occasions
           </Link>
           <span className="text-muted">·</span>

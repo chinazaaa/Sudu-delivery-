@@ -29,7 +29,7 @@ export const dynamic = "force-dynamic";
 function appRoute(href: string): string {
   const path = (href || "").trim();
   const shelf = path.match(/^\/(?:collections|occasions)\/([a-z0-9-]+)$/i);
-  if (shelf) return `/occasions/${shelf[1]}`;
+  if (shelf) return `/collections/${shelf[1]}`;
   if (["/products", "/parcel", "/skincare", "/group", "/custom-order"].includes(path)) {
     return path === "/custom-order" ? "" : path;
   }

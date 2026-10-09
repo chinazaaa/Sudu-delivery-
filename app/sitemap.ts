@@ -57,7 +57,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Two shelves of boxes, each its own page since a care package and a
     // birthday are not the same search.
     { url: `${site}/collections`, changeFrequency: "weekly" as const, priority: 0.7 },
-    { url: `${site}/occasions`, changeFrequency: "weekly" as const, priority: 0.7 },
     // Written for the search rather than for the shop, so it has to be
     // findable: nothing in the header or the tab bar points at it.
     { url: `${site}/delivery-to-pau`, changeFrequency: "monthly" as const, priority: 0.8 },
@@ -145,7 +144,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...packed
         .filter((one) => one.slug)
         .map((one) => ({
-          url: `${site}/${one.kind === "occasion" ? "occasions" : "collections"}/${one.slug}`,
+          url: `${site}/collections/${one.slug}`,
           changeFrequency: "weekly" as const,
           priority: 0.7,
         })),

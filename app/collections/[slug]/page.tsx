@@ -42,10 +42,10 @@ export default async function CollectionPage({
   return (
     <BoxDetail
       slug={(await params).slug}
-      kind="collection"
+      kind="all"
       base="/collections"
-      elsewhere="/occasions"
-      back="All the collections"
+      elsewhere="/collections"
+      back="All the boxes"
     />
   );
 }

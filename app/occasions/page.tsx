@@ -1,39 +1,14 @@
-import BoxShelf from "@/components/BoxShelf";
-import { safeSettings } from "@/lib/settings";
-import HelpLine from "@/components/HelpLine";
+import { permanentRedirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "Food for an occasion",
-  description:
-    "A birthday, a match, a games night. Boxes packed for the day, at one " +
-    "price with delivery in it, to PAU.",
-  alternates: { canonical: "/occasions" },
-};
-
 /**
- * The shelf with a date on it.
+ * The old second shelf.
  *
- * An occasion passes. A match that has kicked off, a birthday that was last
- * week: the page has to be able to drop them, which is exactly what a
- * collection must never do. Same boxes, same cards, two shelves.
+ * Collections and occasions are one page now, so every link ever sent for
+ * this one goes there instead. Permanent, so a search engine moves the
+ * ranking across rather than keeping two pages that say the same thing.
  */
-export default async function OccasionsPage() {
-  const settings = await safeSettings();
-
-  return (
-    <div className="space-y-10">
-      <BoxShelf
-      kind="occasion"
-      base="/occasions"
-      title="Food for a room full of people"
-      blurb="A birthday, a match, a games night. Already worked out, one price with delivery in it, and nothing to decide but when you want it."
-      empty="Nothing is on just now."
-        ticket="What is on · delivery in every box"
-        other={{ href: "/collections", said: "See the collections" }}
-      />
-      <HelpLine number={settings.whatsapp_number} about="a box" />
-    </div>
-  );
+export default function OccasionsPage(): never {
+  permanentRedirect("/collections");
 }

@@ -53,7 +53,7 @@ export default async function BoxDetail({
 }: {
   slug: string;
   /** The shelf this route is for. Anything else here belongs at `elsewhere`. */
-  kind: Shelf;
+  kind: Shelf | "all";
   base: string;
   /** Where the other shelf keeps its things. */
   elsewhere: string;
@@ -62,7 +62,10 @@ export default async function BoxDetail({
 }) {
   const occasion = await occasionBySlug(slug);
   if (!occasion || !occasion.active) notFound();
-  if (occasion.kind !== kind) permanentRedirect(`${elsewhere}/${occasion.slug}`);
+  // One address for both kinds now, so there is nothing to send anybody to.
+  if (kind !== "all" && occasion.kind !== kind) {
+    permanentRedirect(`${elsewhere}/${occasion.slug}`);
+  }
 
   const boxes = await boxesOf(occasion.id);
   const signedIn = await currentCustomer();
@@ -208,7 +211,7 @@ export default async function BoxDetail({
           )}
           <HelpLine number={settings.whatsapp_number} about="a box" card />
           <Link href={elsewhere} className="btn-quiet w-full">
-            {kind === "collection" ? "What is on for an occasion" : "See the collections"}
+            All the boxes
           </Link>
         </aside>
       </div>

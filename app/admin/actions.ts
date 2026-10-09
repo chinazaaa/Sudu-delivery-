@@ -3141,7 +3141,7 @@ export async function sendDealPush(
   // is sending this is choosing where it lands, not what sort of place it
   // is.
   const path = where.startsWith("occasion:")
-    ? `/occasions/${where.slice(9)}`
+    ? `/collections/${where.slice(9)}`
     : where.startsWith("link:")
       ? `/c/${where.slice(5)}`
       : where === "skincare"

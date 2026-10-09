@@ -231,7 +231,6 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
             <nav aria-label="Menu" className="flex flex-col border-t-2 border-ink">
               {[
                 ...LINKS,
-                ["/occasions", "Occasions"],
                 ["/custom-order", "Anything else"],
                 ["/group", "Order together"],
                 ["/reorder", "Order again"],

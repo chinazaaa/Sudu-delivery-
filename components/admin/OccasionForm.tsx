@@ -85,7 +85,8 @@ export default function OccasionForm({
         <p className="mt-1 text-xs text-muted">
           A care package, a hostel pack or a restock is a collection. A
           birthday, a match or a games night is an occasion. Collections sit
-          at /collections and occasions at /occasions.
+          at /collections. Both kinds share the one public page now; the
+          kind only decides where it sits in admin.
         </p>
       </div>
 

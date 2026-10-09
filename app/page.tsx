@@ -110,7 +110,7 @@ export default async function HomePage() {
         const said =
           price !== undefined ? `From ${naira(price)}, delivery in it` : one.blurb;
         return {
-          href: `/${kind === "occasion" ? "occasions" : "collections"}/${one.slug}`,
+          href: `/collections/${one.slug}`,
           title: one.name,
           line: said,
           // The food on it, then its own drawing, then its shelf's. A
@@ -135,12 +135,11 @@ export default async function HomePage() {
     .flatMap((box) => {
       const shelf = byId.get(box.occasion_id);
       if (!shelf) return [];
-      const where = shelf.kind === "occasion" ? "occasions" : "collections";
       return [
         {
           title: box.name,
           line: `${shelf.name}${box.serves ? ` · ${box.serves}` : ""}`,
-          href: `/${where}/${shelf.slug}`,
+          href: `/collections/${shelf.slug}`,
         },
       ];
     });

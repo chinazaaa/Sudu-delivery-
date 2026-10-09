@@ -25,15 +25,14 @@ export default async function BoxShelf({
   other,
   ticket = "Packed & ready · delivery in every box",
 }: {
-  kind: Shelf;
+  kind: Shelf | "all";
   /** Where one of these lives, so a card links to its own word. */
   base: string;
   title: string;
   blurb: string;
   /** What to say when this shelf is bare. */
   empty: string;
-  /** The other shelf, offered rather than hidden: somebody who came for a
-   *  birthday box and found none should be told where the rest are. */
+  /** Where else to look when this shelf is bare. */
   other: { href: string; said: string };
   /** The small line over the headline. */
   ticket?: string;

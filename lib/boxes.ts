@@ -89,8 +89,12 @@ export type Occasion = {
 };
 
 /** The ones on one shelf, in the order they were already in. */
-export function onShelf(all: Occasion[], kind: Shelf): Occasion[] {
-  return all.filter((one) => one.kind === kind);
+export function onShelf(all: Occasion[], kind: Shelf | "all"): Occasion[] {
+  // "all" is the public shelf: one page holding both kinds, because one
+  // address is the one somebody can put on a flyer. The two kinds still
+  // exist in admin, where the difference between a thing with a date and a
+  // thing without one is worth keeping.
+  return kind === "all" ? all : all.filter((one) => one.kind === kind);
 }
 
 /** Whether this occasion has a time of its own that everybody shares. */

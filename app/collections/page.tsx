@@ -7,17 +7,23 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Collections",
   description:
-    "Care packages, hostel packs, restocks and study boxes, already put " +
-    "together at one price with delivery in it, to PAU.",
+    "Care packages, hostel packs, restocks, birthdays and match days, " +
+    "already put together at one price with delivery in it, to PAU.",
   alternates: { canonical: "/collections" },
 };
 
 /**
- * The standing shelves.
+ * Every shelf, on one page.
  *
- * A care package is not an occasion. Neither is a hostel pack or a restock:
- * they are there all term, and nothing about them expires. That is the whole
- * reason there are two of these pages and not one.
+ * There were two of these: the collections, which stand there all term, and
+ * the occasions, which have a date on them. The difference is real and it is
+ * still there in admin, but it was never a reason for two public pages.
+ * Nobody puts two addresses on a flyer, and "is a birthday a collection or
+ * an occasion" is a question only we were ever asking: anybody looking for a
+ * birthday box types the word birthday.
+ *
+ * So one shelf, one address, and /occasions sends anybody who has the old
+ * link here.
  */
 export default async function CollectionsPage() {
   const settings = await safeSettings();
@@ -25,13 +31,13 @@ export default async function CollectionsPage() {
   return (
     <div className="space-y-10">
       <BoxShelf
-      kind="collection"
-      base="/collections"
-      title="Boxes already put together"
-      blurb="Care packages, hostel packs, restocks. One price with delivery in it, and nothing to decide but when you want it."
-      empty="No collections are packed just now."
+        kind="all"
+        base="/collections"
+        title="Boxes for every moment"
+        blurb="Pick a box, we pack it and bring it to the block. Every price includes delivery, and every box can be swapped around."
+        empty="No boxes are packed just now."
         ticket="Packed and ready · delivery in every box"
-        other={{ href: "/occasions", said: "See what is on for an occasion" }}
+        other={{ href: "/products", said: "Put your own together" }}
       />
       <HelpLine number={settings.whatsapp_number} about="a box" />
     </div>

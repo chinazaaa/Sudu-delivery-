@@ -44,8 +44,8 @@ export default async function AdminOccasionsPage() {
             /collections
           </Link>{" "}
           and the ones with a date on them at{" "}
-          <Link href="/occasions" className="font-semibold text-brand">
-            /occasions
+          <Link href="/collections" className="font-semibold text-brand">
+            /collections
           </Link>
           . Each has its own card on the home page.
         </p>
@@ -150,7 +150,7 @@ export default async function AdminOccasionsPage() {
         {occasions.length === 0 && (
           <p className="card text-sm text-muted">
             Nothing yet. Add one above and it appears at /collections or
-            /occasions, whichever shelf you put it on.
+            /collections, whichever kind you put it on.
           </p>
         )}
       </div>
