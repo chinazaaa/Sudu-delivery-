@@ -8,6 +8,7 @@ import ItemRow from "./ItemRow";
 import ItemSheet from "./ItemSheet";
 import ArrivalStrip from "./ArrivalStrip";
 import Thumb from "./Thumb";
+import { FOOD_KINDS, kindHref } from "@/lib/food-kinds";
 import TrustStrip from "./TrustStrip";
 import { useCart } from "@/lib/cart";
 import SplitPrompt from "./SplitPrompt";
@@ -289,6 +290,38 @@ export default function Home({
               </ul>
             </section>
           )}
+
+          {/* What they came wanting, rather than who sells it.
+
+              The row above answers "I want KFC", which is half the people
+              who open this page. The other half have decided they want rice
+              and do not care whose, and for them the page was a search box,
+              which is a question rather than an answer. One tap lands them
+              on the everything list, already narrowed.
+
+              A row rather than a grid, for the same reason the restaurants
+              are: it costs one line of height whatever is in it, and the
+              one falling off the right edge is what says there are more. */}
+          <section className="-mx-4 space-y-2 px-4">
+            <h2 className="section-title">What are you after?</h2>
+            <ul className="flex snap-x gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {FOOD_KINDS.map((kind) => (
+                <li key={kind.label} className="snap-start">
+                  <Link
+                    href={kindHref(kind)}
+                    className="flex w-[4.5rem] flex-col items-center gap-1.5"
+                  >
+                    <span className="grid h-16 w-16 place-items-center rounded-full bg-paper text-2xl shadow-card">
+                      {kind.emoji}
+                    </span>
+                    <span className="text-center text-xs font-bold leading-tight">
+                      {kind.label}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
 
           {/* Seven years on one campus and an award from the school
               itself, said on the page people actually open.
