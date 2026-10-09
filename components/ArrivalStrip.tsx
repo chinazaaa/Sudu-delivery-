@@ -36,32 +36,37 @@ export default function ArrivalStrip({
   return (
     <Link
       href="/products"
-      className="flex items-center gap-3 rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-3 transition active:scale-[0.99]"
+      className="relative block rounded-2xl bg-ink p-5 text-shell shadow-[6px_6px_0_#e5321d] transition active:translate-x-0.5 active:translate-y-0.5 active:shadow-[4px_4px_0_#e5321d]"
     >
-      <span className="min-w-0 flex-1">
-        <span className="block text-lg font-extrabold text-ink">
-          Order now, get it {said}
-        </span>
-
-        {/* The deadline, between the promise and the alternative: it is the
-            reason to take the first one rather than read on. Says nothing
-            unless it is close enough to mean something. */}
-        {closesAt !== "" && <CutOff at={closesAt} />}
-
-        {also && (
-          <span className="mt-1 block text-sm text-ink/75">
-            {also.sooner
-              ? `In a hurry? A car of its own can be there ${also.said}, for more.`
-              : `Rather pay less? A run gets it to you ${also.said}.`}
-          </span>
-        )}
+      {/* A ticket, not a banner. The run is the one fact somebody opening a
+          food shop wants, and on Ink with a torn red edge behind it, it is
+          the thing on the page that cannot be scrolled past. */}
+      <span className="flex items-baseline justify-between gap-3">
+        <span className="ticket text-volt">Next run to PAU</span>
+        <span className="ticket text-shell/60">Tap to browse</span>
       </span>
 
-      {/* It used to go to the cart, which is where somebody goes when they
-          have already chosen. This is the top of the page: they have not.
-          Every other card here says what tapping it does, and the one that
-          said nothing was the one about food. */}
-      <span className="shrink-0 text-sm font-extrabold text-brand">Browse</span>
+      <span className="mt-2 block font-display text-4xl font-extrabold uppercase leading-[0.95] sm:text-5xl">
+        {said}
+      </span>
+
+      <span className="mt-4 block border-t-2 border-dashed border-shell/25" />
+
+      <span className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+        <span className="min-w-0">
+          {/* The deadline, between the promise and the alternative: it is
+              the reason to take the first one rather than read on. */}
+          {closesAt !== "" && <CutOff at={closesAt} tone="light" />}
+          {also && (
+            <span className="block text-shell/75">
+              {also.sooner
+                ? `In a hurry? A car of its own can be there ${also.said}, for more.`
+                : `Rather pay less? A run gets it to you ${also.said}.`}
+            </span>
+          )}
+        </span>
+        <span className="shrink-0 font-bold text-volt">Browse the menu</span>
+      </span>
     </Link>
   );
 }

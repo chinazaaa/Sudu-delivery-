@@ -16,6 +16,8 @@ import {
   hoursByDay,
 } from "@/lib/settings";
 import { toBatchView } from "@/lib/view";
+import { bandTable } from "@/lib/fees";
+import { parseAreas } from "@/lib/areas";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { nextArrival, runArrival } from "@/lib/arrival";
 import { dropLabel, nextDrop, skincareOn, skincareShop } from "@/lib/skincare";
@@ -278,6 +280,17 @@ export default async function HomePage() {
       // without a deploy. The shipped words are the two facts worth saying:
       // how long this has been running and who said it was any good.
       pitch={settings.pitch_line.trim()}
+      // The ladder as it is set, rather than a table written on the page.
+      // A home page quoting four thousand over a checkout about to charge
+      // six is worse than one that says nothing about the fee at all.
+      fees={bandTable(null, bands).map((row, at, all) => ({
+        label: row.label,
+        fee: row.fee,
+        each: at === all.length - 1 ? (bands[bands.length - 1]?.perItem ?? 0) : 0,
+      }))}
+      areaExtras={parseAreas(settings.delivery_areas)
+        .filter((one) => one.id !== "" && one.runExtra > 0)
+        .map((one) => ({ name: one.name, extra: one.runExtra }))}
       // The boxes by name, so a search for "care" finds the care package
       // rather than reporting that nothing matches.
       packs={packs}

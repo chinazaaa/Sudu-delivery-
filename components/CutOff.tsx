@@ -26,9 +26,13 @@ export default function CutOff({
   /** How near it has to be to be worth saying. Two hours: long enough to
    *  still be true when somebody is deciding, short enough to mean it. */
   within = 2 * 60 * 60 * 1000,
+  /** "light" for the Ink ticket, where Tomato Deep on near-black is
+   *  unreadable. Volt is the highlight colour on Ink. */
+  tone = "dark",
 }: {
   at: string;
   within?: number;
+  tone?: "dark" | "light";
 }) {
   const [left, setLeft] = useState<number | null>(null);
 
@@ -45,10 +49,22 @@ export default function CutOff({
   if (left === null || left <= 0 || left > within) return null;
 
   return (
-    <span className="mt-1 flex items-center gap-1.5 text-sm font-bold text-brand-dark">
+    <span
+      className={`mt-1 flex items-center gap-1.5 text-sm font-bold ${
+        tone === "light" ? "text-volt" : "text-brand-dark"
+      }`}
+    >
       <span className="relative flex size-2 shrink-0">
-        <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand opacity-75" />
-        <span className="relative inline-flex size-2 rounded-full bg-brand" />
+        <span
+          className={`absolute inline-flex size-full animate-ping rounded-full opacity-75 ${
+            tone === "light" ? "bg-volt" : "bg-brand"
+          }`}
+        />
+        <span
+          className={`relative inline-flex size-2 rounded-full ${
+            tone === "light" ? "bg-volt" : "bg-brand"
+          }`}
+        />
       </span>
       Orders close in {countdown(left)}
     </span>

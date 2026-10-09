@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import Mark from "./Mark";
+import Wordmark from "./Wordmark";
 import { countItems, useCart } from "@/lib/cart";
 
 /**
@@ -87,32 +87,28 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
   const deep = path !== "/";
 
   return (
-    <header className="sticky top-0 z-30 border-b border-black/5 bg-paper/95 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
+    <header className="sticky top-0 z-30 border-b-2 border-ink bg-paper">
+      <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-4">
         {deep ? (
           <button
             type="button"
             onClick={back}
             aria-label="Back"
-            className="-ml-1 grid size-9 shrink-0 place-items-center rounded-full text-lg hover:bg-black/[0.04]"
+            className="-ml-1 grid size-9 shrink-0 place-items-center rounded-full text-lg hover:bg-ink hover:text-paper"
           >
             ←
           </button>
         ) : (
           // The name beside it went home and the mark did not, which is not a
           // distinction anybody makes when they tap a logo.
-          <Link
-            href="/"
-            aria-label="Sudu home"
-            className="block size-9 shrink-0 overflow-hidden rounded-xl"
-          >
-            <Mark />
-          </Link>
+          <span className="shrink-0" />
         )}
 
-        <Link href="/" className="min-w-0 flex-1">
-          <span className="block truncate text-lg font-extrabold leading-none">Sudu</span>
-          <span className="block truncate text-xs text-muted">{tagline}</span>
+        {/* The name is the mark now: a bag beside the word "Sudu" was two
+            logos doing one job, and the word is the one people read. */}
+        <Link href="/" className="min-w-0 flex-1" aria-label="Sudu home">
+          <Wordmark size={28} />
+          <span className="mt-0.5 block truncate text-xs text-muted">{tagline}</span>
         </Link>
 
         <nav className="hidden items-center gap-1 sm:flex">
@@ -128,7 +124,7 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
               key={href}
               href={href}
               className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
-                path === href ? "bg-black/[0.06] text-ink" : "text-muted hover:text-ink"
+                path === href ? "bg-ink text-shell" : "text-ink hover:text-brand-dark"
               }`}
             >
               {label}
@@ -139,7 +135,7 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
         <Link
           href="/cart"
           aria-label={`Cart, ${count} item${count === 1 ? "" : "s"}`}
-          className="relative grid size-10 shrink-0 place-items-center rounded-full bg-black/[0.05] transition active:scale-95 hover:bg-black/[0.08]"
+          className="relative grid size-11 shrink-0 place-items-center rounded-full border-2 border-ink bg-paper transition active:scale-95 hover:bg-ink hover:text-paper"
         >
           <CartIcon />
           {count > 0 && (

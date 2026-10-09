@@ -10,6 +10,7 @@ import ArrivalStrip from "./ArrivalStrip";
 import Thumb from "./Thumb";
 import { FOOD_KINDS, kindHref } from "@/lib/food-kinds";
 import TrustStrip from "./TrustStrip";
+import { naira } from "@/lib/money";
 import { useCart } from "@/lib/cart";
 import SplitPrompt from "./SplitPrompt";
 import type { ItemView, MenuView } from "@/lib/view";
@@ -25,6 +26,15 @@ export type Bucket = {
   image?: string;
 };
 
+/** The first few kitchens, for the sentence under the headline. Read off
+ *  the menu, so a restaurant that comes off the shop comes off the page. */
+const said = (menu: MenuView[]): string => {
+  const names = menu.slice(0, 3).map((one) => one.restaurant.name);
+  if (names.length === 0) return "Restaurants";
+  if (names.length === 1) return names[0];
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+};
+
 export default function Home({
   menu,
   arriving,
@@ -36,6 +46,8 @@ export default function Home({
   iosAppId = "",
   androidPackage = "",
   pitch = "",
+  fees = [],
+  areaExtras = [],
 }: {
   menu: MenuView[];
   /** When something ordered right now would land, said as a sentence and
@@ -65,6 +77,12 @@ export default function Home({
    *  arrives. Written in admin; empty means the page says nothing, which is
    *  better than the page inventing something. */
   pitch?: string;
+  /** The delivery ladder as the shop has it set, so the page cannot quote a
+   *  fee the checkout is not going to charge. */
+  fees?: { label: string; fee: number; each?: number }[];
+  /** What going further out adds, named. Empty where everything is one
+   *  area, which is what it was before areas existed. */
+  areaExtras?: { name: string; extra: number }[];
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<{ item: ItemView; place: MenuView } | null>(null);
@@ -137,6 +155,33 @@ export default function Home({
       {/* One sentence, and nothing else, and first. Most people never
           scroll, so the first screen has to answer the only question a
           hungry person has, which is when they can eat. */}
+      {/* What the shop is, before what it is doing tonight.
+
+          The page used to open on the run, which answers "when can I eat"
+          for somebody who already knows what Sudu is, and says nothing at
+          all to the half of the campus who have been sent a link. The
+          headline is the promise in four words, and the run is directly
+          under it. */}
+      <section className="space-y-4 pt-2">
+        <span className="ticket inline-block border-2 border-ink px-2 py-1">
+          On PAU campus since 2018
+        </span>
+        <h1 className="font-display text-[clamp(3.5rem,16vw,5.5rem)] font-black uppercase leading-[0.86]">
+          Outside food.
+          <br />
+          <span className="text-brand">Inside PAU.</span>
+        </h1>
+        <p className="max-w-xl text-lg leading-relaxed text-ink/80">
+          {menu.length > 0
+            ? `${said(menu)} and more. Mix restaurants, pay once, collect at your hostel block.`
+            : "Mix restaurants, pay once, collect at your hostel block."}
+        </p>
+        <Link href="/products" className="btn-primary w-full text-lg sm:w-auto">
+          Start an order
+          <span aria-hidden>→</span>
+        </Link>
+      </section>
+
       {arriving !== "" && (
         <ArrivalStrip said={arriving} also={alsoArriving} closesAt={closesAt} />
       )}
@@ -256,37 +301,46 @@ export default function Home({
               A row rather than a grid: it costs one line of height whatever
               happens, and the one falling off the right edge is what says
               there are more. */}
+          {/* The kitchens, named.
+
+              A logo is what somebody recognises, and a row of them is what
+              this was; the canvas asks for the names set in the display
+              face, two up, which says thirteen of them in the space a
+              scrolling row said five. The last tile carries the rest. */}
           {menu.length > 0 && (
-            <section className="-mx-4 space-y-2 px-4">
-              <div className="flex items-baseline justify-between gap-3">
-                <h2 className="section-title">Order from</h2>
+            <section className="space-y-3">
+              <div className="flex items-end justify-between gap-3">
+                <h2 className="section-title">
+                  {menu.length} kitchen{menu.length === 1 ? "" : "s"}.
+                  <br />
+                  One run.
+                </h2>
                 <Link
                   href="/products"
-                  className="shrink-0 text-sm font-extrabold text-brand"
+                  className="shrink-0 pb-1 text-sm font-extrabold text-ink underline"
                 >
-                  All the food →
+                  See all
                 </Link>
               </div>
-              <ul className="flex snap-x gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {menu.map((place) => (
-                  <li key={place.restaurant.id} className="snap-start">
+              <ul className="grid grid-cols-2 gap-2">
+                {menu.slice(0, 5).map((place) => (
+                  <li key={place.restaurant.id}>
                     <Link
                       href={`/r/${place.restaurant.href}`}
-                      className="flex w-20 flex-col items-center gap-1.5"
+                      className="flex min-h-[72px] items-center rounded-[10px] border-2 border-ink bg-paper px-3.5 py-4 font-display text-2xl font-extrabold uppercase leading-[0.95]"
                     >
-                      <span className="h-16 w-16 overflow-hidden rounded-full bg-paper shadow-card">
-                        <Thumb
-                          src={place.restaurant.logoUrl}
-                          name={place.restaurant.name}
-                          rounded="rounded-full"
-                        />
-                      </span>
-                      <span className="line-clamp-2 text-center text-xs font-bold leading-tight">
-                        {place.restaurant.name}
-                      </span>
+                      {place.restaurant.name}
                     </Link>
                   </li>
                 ))}
+                <li>
+                  <Link
+                    href="/products"
+                    className="flex min-h-[72px] items-center rounded-[10px] border-2 border-ink bg-brand px-3.5 py-4 font-display text-2xl font-extrabold uppercase leading-[0.95] text-white"
+                  >
+                    {menu.length > 5 ? `+ ${menu.length - 5} more` : "All the food"}
+                  </Link>
+                </li>
               </ul>
             </section>
           )}
@@ -302,21 +356,16 @@ export default function Home({
               A row rather than a grid, for the same reason the restaurants
               are: it costs one line of height whatever is in it, and the
               one falling off the right edge is what says there are more. */}
-          <section className="-mx-4 space-y-2 px-4">
+          <section className="-mx-4 space-y-3 px-4">
             <h2 className="section-title">What are you after?</h2>
-            <ul className="flex snap-x gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {FOOD_KINDS.map((kind) => (
+            <ul className="flex snap-x gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {FOOD_KINDS.map((kind, at) => (
                 <li key={kind.label} className="snap-start">
                   <Link
                     href={kindHref(kind)}
-                    className="flex w-[4.5rem] flex-col items-center gap-1.5"
+                    className={`chip ${at === 0 ? "chip-on" : "bg-paper"}`}
                   >
-                    <span className="grid h-16 w-16 place-items-center rounded-full bg-paper text-2xl shadow-card">
-                      {kind.emoji}
-                    </span>
-                    <span className="text-center text-xs font-bold leading-tight">
-                      {kind.label}
-                    </span>
+                    {kind.label}
                   </Link>
                 </li>
               ))}
@@ -340,13 +389,13 @@ export default function Home({
           {/* A line over the grid, and the way to the whole shelf on the
               right of it. The grid only names six collections, and somebody
               who wants the seventh should not have to guess there is one. */}
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="section-title">What can we bring you?</h2>
+          <div className="flex items-end justify-between gap-3">
+            <h2 className="section-title">Not just food</h2>
             <Link
               href="/collections"
-              className="shrink-0 text-sm font-extrabold text-brand"
+              className="shrink-0 pb-1 text-sm font-extrabold text-ink underline"
             >
-              All collections →
+              See all
             </Link>
           </div>
 
@@ -375,10 +424,60 @@ export default function Home({
                 : iosAppId !== ""
                   ? "On an iPhone? "
                   : "On Android? "}
-              <a href="/app" className="font-bold text-brand underline">
+              <a href="/app" className="font-bold text-brand-dark underline">
                 Get the app
               </a>
             </p>
+          )}
+
+          {/* What carrying it costs, before anybody has to reach a
+              checkout to find out.
+
+              The numbers are the shop's own ladder rather than a table
+              written here: a page quoting four thousand over a checkout
+              about to charge six is worse than a page that says nothing.
+              It is the question every first-time customer asks, and it was
+              answered nowhere on the page they ask it on. */}
+          {fees.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="section-title">One fee per car</h2>
+              <div className="overflow-hidden rounded-xl border-2 border-ink bg-paper">
+                <table className="w-full border-collapse">
+                  <tbody>
+                    {fees.map((row) => (
+                      <tr key={row.label} className="border-b border-line last:border-0">
+                        <th scope="row" className="p-3.5 text-left font-medium">
+                          {row.label}
+                        </th>
+                        <td className="p-3.5 text-right">
+                          <span className="font-display text-2xl font-extrabold">
+                            {naira(row.fee)}
+                          </span>
+                          {row.each ? (
+                            <span className="block text-xs text-muted">
+                              + {naira(row.each)}/item
+                            </span>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))}
+                    {areaExtras.map((one) => (
+                      <tr key={one.name} className="border-b border-line bg-brand-tint last:border-0">
+                        <th scope="row" className="p-3.5 text-left font-medium">
+                          {one.name}
+                        </th>
+                        <td className="p-3.5 text-right font-display text-2xl font-extrabold">
+                          + {naira(one.extra)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-ink/75">
+                Order with roommates on the same run and split one fee.
+              </p>
+            </section>
           )}
 
           {/* Only ever slides somebody wrote.
@@ -487,7 +586,7 @@ function Door({
   away?: boolean;
 }) {
   const look =
-    "flex h-full flex-col overflow-hidden rounded-2xl bg-paper shadow-card transition active:scale-[0.99]";
+    "flex h-full flex-col overflow-hidden rounded-xl border-2 border-ink bg-paper transition active:translate-x-0.5 active:translate-y-0.5";
 
   // The picture leads, the way it does on the restaurants above and on every
   // shop anybody has ever ordered food from.
@@ -505,9 +604,11 @@ function Door({
       <span className="block aspect-[5/4] w-full overflow-hidden bg-shell">
         <Thumb src={image} name={title} rounded="" variant="banner" />
       </span>
-      <span className="flex flex-1 flex-col gap-1 p-3">
-        <span className="font-extrabold leading-tight">{title}</span>
-        <span className="line-clamp-2 text-sm leading-snug text-muted">{line}</span>
+      <span className="flex flex-1 flex-col gap-1.5 border-t-2 border-ink p-3.5">
+        <span className="font-display text-2xl font-extrabold uppercase leading-[0.95]">
+          {title}
+        </span>
+        <span className="ticket line-clamp-2 leading-snug text-muted">{line}</span>
       </span>
     </>
   );
