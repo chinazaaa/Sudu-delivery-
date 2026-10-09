@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { safeSettings, whatsappLink } from "@/lib/settings";
+import PageHead from "@/components/PageHead";
 
 export const dynamic = "force-dynamic";
 
@@ -29,38 +30,27 @@ export default async function SupportPage() {
     : null;
 
   return (
-    <article className="mx-auto max-w-2xl space-y-6 pb-10">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">Support</h1>
-        <p className="text-sm text-muted">
-          A person answers. Not a form, and not a robot.
-        </p>
-      </header>
-
-      <section className="card space-y-3">
-        <h2 className="font-bold">Message us</h2>
-        {whatsapp ? (
+    <article className="-mt-4 pb-10">
+      <PageHead
+        ticket="Help"
+        title={
           <>
-            <p className="text-sm text-ink/80">
-              WhatsApp is the fastest way to reach us, and the only one we watch
-              all day. Send the number you ordered with, and your order number if
-              you have it.
-            </p>
-            <p className="text-lg font-extrabold">{whatsapp}</p>
-            {chat && (
-              <a href={chat} target="_blank" rel="noopener noreferrer" className="btn-primary block w-full text-center">
-                Open WhatsApp
-              </a>
-            )}
+            Something wrong?
+            <br />
+            <span className="text-brand">Tell us.</span>
           </>
-        ) : (
-          <p className="text-sm text-ink/80">
-            Message us on the WhatsApp number shown on your order.
-          </p>
-        )}
-      </section>
+        }
+        lead="A person reads every message. Most problems are sorted the same day."
+      />
 
-      <Section title="My food is late">
+      <div className="flex flex-col gap-8 py-9 lg:flex-row lg:items-start">
+        <div className="min-w-0 flex-1 space-y-4">
+          <h2 className="font-display text-[40px] font-black uppercase leading-none">
+            Common problems
+          </h2>
+          <div className="flex flex-col border-t-2 border-ink">
+
+      <Section title="My food is late" open>
         <p>
           Check your order page first: it says where the order has got to, from
           paid, to being collected, to on the road, to at your block. If it has
@@ -138,20 +128,90 @@ export default async function SupportPage() {
         </p>
       </Section>
 
-      <p className="text-center text-sm text-muted">
-        <Link href="/" className="font-semibold text-brand">
-          Back to the menu
-        </Link>
-      </p>
+          </div>
+        </div>
+
+        <aside className="flex shrink-0 flex-col gap-4 lg:w-[320px]">
+          {whatsapp ? (
+            <div className="flex flex-col gap-3 rounded-2xl bg-ink p-6 text-shell shadow-[8px_8px_0_#e5321d]">
+              <span className="ticket text-volt">Fastest</span>
+              <span className="font-display text-[40px] font-black uppercase leading-none">
+                WhatsApp us
+              </span>
+              <span className="font-mono text-xl">{whatsapp}</span>
+              <span className="text-sm leading-relaxed text-[#d8d1c7]">
+                Message from the number you ordered with, and send a photo if
+                something is wrong.
+              </span>
+              {chat && (
+                <a
+                  href={chat}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex min-h-12 items-center justify-center rounded-full bg-volt font-bold text-ink"
+                >
+                  Open WhatsApp
+                </a>
+              )}
+            </div>
+          ) : (
+            <p className="card text-sm text-ink/80">
+              Message us on the WhatsApp number shown on your order.
+            </p>
+          )}
+
+          <div className="card flex flex-col gap-2">
+            <span className="font-bold">The fine print</span>
+            <Link href="/terms" className="hover:text-brand-dark">
+              Terms of service
+            </Link>
+            <Link href="/return-policy" className="hover:text-brand-dark">
+              Returns and refunds
+            </Link>
+            <Link href="/privacy" className="hover:text-brand-dark">
+              Privacy
+            </Link>
+          </div>
+
+          <Link href="/products" className="btn-quiet self-start">
+            Back to the menu
+          </Link>
+        </aside>
+      </div>
     </article>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+/**
+ * One question, folded away.
+ *
+ * Six questions open at once is a wall of text nobody reads; the board
+ * gives them a rule each and a Tomato plus on the end, and the one most
+ * people arrive with starts open.
+ */
+function Section({
+  title,
+  open = false,
+  children,
+}: {
+  title: string;
+  open?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="card space-y-2">
-      <h2 className="font-bold">{title}</h2>
-      <div className="space-y-2 text-sm text-ink/80">{children}</div>
-    </section>
+    <details open={open} className="group border-b-2 border-ink">
+      <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 py-4 text-lg font-bold [&::-webkit-details-marker]:hidden">
+        {title}
+        <span
+          aria-hidden
+          className="grid size-9 shrink-0 place-items-center rounded-full bg-brand font-display text-2xl text-white"
+        >
+          <span className="transition group-open:rotate-45">+</span>
+        </span>
+      </summary>
+      <div className="max-w-[720px] space-y-2.5 pb-5 leading-relaxed text-ink/75">
+        {children}
+      </div>
+    </details>
   );
 }

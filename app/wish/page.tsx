@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { safeSettings, whatsappLink } from "@/lib/settings";
+import PageHead from "@/components/PageHead";
 import { wishAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -61,58 +62,63 @@ export default async function WishPage({
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-4 py-8">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-extrabold tracking-tight">
-          What do you wish you could order to campus?
-        </h1>
-        <p className="text-ink/75">
-          Anything. A restaurant we do not have yet, something from the
-          market, skincare, a pharmacy run, or a thing somebody has to go out
-          and buy. Tell us and we will find out if we can get it.
-        </p>
-      </header>
+    <div className="-mt-4">
+      <PageHead
+        ticket="Wish list · one box · no account"
+        title="What do you wish you could order?"
+        lead="A restaurant, a snack, a brand, a thing from home. Tell us and we will find out if we can bring it to PAU."
+        rule={false}
+        narrow
+      >
+        {problem ? (
+          <p className="rounded-xl bg-brand-tint px-3.5 py-3 font-semibold text-brand-dark">
+            {problem}
+          </p>
+        ) : null}
 
-      {problem ? (
-        <p className="card border-brand/30 bg-brand/5 font-semibold text-brand">{problem}</p>
-      ) : null}
+        <form
+          action={wishAction}
+          className="mt-1 flex max-w-[640px] flex-col gap-4 rounded-2xl border-2 border-ink bg-paper p-6 shadow-lift sm:shadow-[10px_10px_0_#e5321d]"
+        >
+          <div>
+            <label className="label text-base" htmlFor="wanted">
+              Your wish
+            </label>
+            <textarea
+              id="wanted"
+              name="wanted"
+              rows={3}
+              required
+              autoFocus
+              className="field text-lg"
+              placeholder="e.g. Cold Stone, my mum's jollof…"
+            />
+          </div>
 
-      <form action={wishAction} className="card space-y-4">
-        <div>
-          <label className="label" htmlFor="wanted">
-            What is it?
-          </label>
-          <textarea
-            id="wanted"
-            name="wanted"
-            rows={3}
-            required
-            autoFocus
-            className="field"
-            placeholder="Shawarma from Sangotedo at night"
-          />
-        </div>
+          <div>
+            <label className="label" htmlFor="phone">
+              Your number, if you want telling when we get it
+            </label>
+            <input
+              id="phone"
+              name="phone"
+              inputMode="tel"
+              className="field"
+              placeholder="080… (optional)"
+            />
+          </div>
 
-        <div>
-          <label className="label" htmlFor="phone">
-            Your number, if you want telling when we get it
-          </label>
-          <input
-            id="phone"
-            name="phone"
-            inputMode="tel"
-            className="field"
-            placeholder="Optional"
-          />
-        </div>
-
-        <button type="submit" className="btn-primary w-full">
-          Send it
-        </button>
-        <p className="text-center text-xs text-muted">
-          No account, nothing to sign up for. One box and you are done.
-        </p>
-      </form>
+          <button
+            type="submit"
+            className="btn-primary w-full border-2 border-ink text-lg"
+          >
+            Send it
+          </button>
+          <p className="text-center text-sm text-muted">
+            No account, nothing to sign up for. One box and you are done.
+          </p>
+        </form>
+      </PageHead>
     </div>
   );
 }

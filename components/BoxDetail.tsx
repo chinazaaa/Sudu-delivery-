@@ -209,7 +209,12 @@ export default async function BoxDetail({
               href={`${SITE}${base}/${occasion.slug}?utm_source=whatsapp`}
             />
           )}
-          <HelpLine number={settings.whatsapp_number} about="a box" card />
+          <HelpLine
+            number={settings.whatsapp_number}
+            about="a box"
+            card
+            heading="Something wrong with a box?"
+          />
           <Link href={elsewhere} className="btn-quiet w-full">
             All the boxes
           </Link>

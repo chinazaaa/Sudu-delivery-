@@ -13,6 +13,7 @@ export default function HelpLine({
   about,
   page,
   card = false,
+  heading = "Something not right?",
 }: {
   number: string;
   /** What they were doing, so the chat opens knowing it. */
@@ -24,6 +25,9 @@ export default function HelpLine({
   /** The board's card in a sidebar, rather than one small line under a
    *  page. Same words, same link. */
   card?: boolean;
+  /** What the card calls it. The line under a page needs no heading; a
+   *  card in a sidebar does. */
+  heading?: string;
 }) {
   if (!number) return null;
   const link = whatsappLink(
@@ -34,7 +38,7 @@ export default function HelpLine({
   if (card) {
     return (
       <section className="card space-y-2">
-        <h2 className="text-lg font-bold">Something wrong with a box?</h2>
+        <h2 className="text-lg font-bold">{heading}</h2>
         <p className="text-[15px] text-ink/70">
           Call or WhatsApp us and we will sort it.
         </p>

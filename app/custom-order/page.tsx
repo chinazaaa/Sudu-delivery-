@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import HelpLine from "@/components/HelpLine";
+import PageHead from "@/components/PageHead";
 
 import AskForm from "@/components/AskForm";
 import { hostelNames } from "@/lib/hostels";
@@ -37,40 +38,69 @@ export default async function CustomOrderPage({
   const [hostels, settings] = await Promise.all([hostelNames(), safeSettings()]);
 
   return (
-    <div className="space-y-4 pb-10">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-extrabold leading-tight">
-          Can&apos;t find what you need?
-        </h1>
-        <p className="text-muted">
-          Anything, not only food. Tell us what you want and we bring it to
-          your block.
-        </p>
-      </header>
-
-      {sent ? (
-        <div className="card space-y-2">
-          <p className="font-bold text-mint">We have it.</p>
-          <p className="text-sm text-muted">
-            We will message you on WhatsApp with the price. Nothing is bought
-            until you say yes.
-          </p>
-        </div>
-      ) : (
-        <AskForm hostels={hostels} whatsapp={settings.whatsapp_number || null} />
-      )}
-
-      {/* Naming them is the whole job. "Anything" reads as nothing, and
-          nobody works out on their own that a hem taken up is a thing you
-          can ask a delivery shop for. A service is as orderable as it is
-          named, and these are the ones asked for most. */}
-      <p className="text-center text-sm text-muted">
-        We find it, send you the price, and buy nothing until you say yes.
-      </p>
-      <HelpLine
-        number={settings.whatsapp_number}
-        about="something I asked for"
+    <div className="-mt-4 pb-10">
+      <PageHead
+        ticket="Anything else"
+        title={
+          <>
+            Can&apos;t find it?
+            <br />
+            <span className="text-brand">We&apos;ll get it.</span>
+          </>
+        }
+        lead="Ask for anything that is not on the menu. We find it, price it, and bring it to your PAU hostel. Nothing is bought until you say yes."
       />
+
+      <div className="flex flex-col gap-7 py-8 lg:flex-row lg:items-start">
+        <div className="min-w-0 flex-1">
+          {sent ? (
+            <div className="rounded-2xl border-2 border-ink bg-paper p-6 shadow-lift lg:shadow-[10px_10px_0_#e5321d]">
+              <p className="font-display text-[32px] font-black uppercase leading-none text-mint">
+                We have it.
+              </p>
+              <p className="mt-2 text-ink/75">
+                We will message you on WhatsApp with the price. Nothing is
+                bought until you say yes.
+              </p>
+            </div>
+          ) : (
+            <AskForm hostels={hostels} whatsapp={settings.whatsapp_number || null} />
+          )}
+        </div>
+
+        {/* What happens after the button, which is the whole of what makes
+            this askable: nobody sends a stranger a request for something
+            without knowing whether they are about to be charged for it. */}
+        <aside className="flex shrink-0 flex-col gap-4 lg:w-[320px]">
+          <ol className="flex flex-col rounded-2xl bg-ink p-5 text-shell">
+            {[
+              ["Tell us", "What it is, roughly what you would pay, and your block."],
+              ["We find it", "We track it down and send you the price on WhatsApp."],
+              ["You say yes", "We only buy once you have approved the price."],
+              ["We bring it", "It comes to your block on the next run."],
+            ].map(([said, note], at) => (
+              <li
+                key={said}
+                className="flex gap-4 border-b border-[#3a322b] py-3.5 last:border-0"
+              >
+                <span className="font-display text-[30px] font-black leading-none text-brand">
+                  {String(at + 1).padStart(2, "0")}
+                </span>
+                <span className="flex flex-col gap-0.5">
+                  <span className="font-bold">{said}</span>
+                  <span className="text-sm text-[#d8d1c7]">{note}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+
+          <HelpLine
+            number={settings.whatsapp_number}
+            about="something I asked for"
+            card
+          />
+        </aside>
+      </div>
     </div>
   );
 }
