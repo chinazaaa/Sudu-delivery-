@@ -6,7 +6,6 @@ import { cheapestBoxes } from "@/lib/box-view";
 import { shelfPhotos } from "@/lib/shelf-photo";
 import { naira } from "@/lib/money";
 import { safeSettings, whatsappLink } from "@/lib/settings";
-import Thumb from "@/components/Thumb";
 
 /**
  * The page a parent is sent.
@@ -111,117 +110,186 @@ export default async function ParentsPage() {
   );
 
   return (
-    <article className="space-y-10 pb-12">
-      <header className="space-y-4">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand">
-          For parents
-        </p>
-        <h1 className="text-3xl font-extrabold leading-tight sm:text-4xl">
-          Send food to your child at Pan-Atlantic University
-        </h1>
-        <p className="text-lg text-ink/90">
-          The campus is a long way from the shops, and the ones nearby close
-          early. Pick a box below, pay once, and we deliver it to their hostel
-          and send you a photograph when it is in their hands.
-        </p>
+    <article className="-mt-4">
+      {/* The board's head for this page is Tomato, not Ink. It is the one
+          page written to somebody who is not a student, and the whole of
+          what it has to do in the first screen is look like a shop that
+          exists. */}
+      <header className="bleed bg-brand text-white">
+        <div className="shell flex flex-wrap items-center gap-9 py-10 sm:py-14">
+          <div className="flex min-w-0 flex-[1.4_1_380px] flex-col gap-5">
+            <span className="ticket text-[#ffe38a]">For parents</span>
+            <h1 className="font-display text-[min(15vw,7.5rem)] font-black uppercase leading-[0.85] sm:text-[clamp(3.5rem,8vw,7.5rem)]">
+              Send food to
+              <br />
+              your child at PAU
+            </h1>
+            <p className="max-w-[540px] text-[17px] leading-relaxed sm:text-lg">
+              Pick a box and pay once. We take it to their hostel and send you
+              a photo when it is handed over. Your child does not need to do a
+              thing.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href="#send"
+                className="btn bg-ink text-white shadow-[4px_4px_0_#ffd23f] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_#ffd23f]"
+              >
+                Choose a box <span aria-hidden>→</span>
+              </a>
+              {ask ? (
+                <a
+                  href={ask}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn border-2 border-white text-white"
+                >
+                  Set up monthly on WhatsApp
+                </a>
+              ) : null}
+            </div>
+          </div>
+        </div>
       </header>
 
       {/* Answering "who are you", before it is asked. A stranger on the
           internet asking for thirty thousand naira up front has to say
           something, and seven years on one campus is the strongest thing
           this shop can say. */}
-      <section className="grid gap-3 sm:grid-cols-3">
-        {[
-          { big: "Since 2018", small: "Delivering on the PAU campus" },
-          { big: "Award winning", small: "PAU Entrepreneurship Award, 2021" },
-          { big: "A photograph", small: "Sent to you the moment it arrives" },
-        ].map((one) => (
-          <div key={one.big} className="card p-4">
-            <p className="font-bold">{one.big}</p>
-            <p className="text-sm text-muted">{one.small}</p>
-          </div>
-        ))}
+      <section className="bleed border-b-2 border-ink bg-paper">
+        <ul className="shell grid gap-5 py-8 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["Since 2018", "Delivering on the PAU campus"],
+            ["Award 2021", "PAU Entrepreneurship Award"],
+            ["Photo proof", "A picture of the handover, sent to you"],
+            ["No extras", "Delivery is in the price. Nothing added at the end"],
+          ].map(([big, small]) => (
+            <li key={big} className="flex flex-col gap-1 border-l-4 border-brand pl-3.5">
+              <span className="font-display text-[30px] font-black uppercase leading-none">
+                {big}
+              </span>
+              <span className="text-[15px] text-ink/70">{small}</span>
+            </li>
+          ))}
+        </ul>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold">What you can send</h2>
+      <section id="send" className="flex flex-col gap-8 py-12 sm:py-16">
+        <div className="flex flex-col gap-3">
+          <span className="ticket text-brand-dark">
+            What you can send · delivery included
+          </span>
+          <h2 className="section-title">Pick a box</h2>
+        </div>
+
         {shelves.length === 0 ? (
           <p className="text-muted">
             Nothing is packed at the moment. Message us and we will put
             something together.
           </p>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {shelves.map((one) => (
               <Link
                 key={one.href}
                 href={one.href}
-                className="card group flex gap-4 p-3 transition hover:shadow-lift"
+                className="flex items-center justify-between gap-4 rounded-2xl border-2 border-ink bg-paper p-5 transition active:translate-x-0.5 active:translate-y-0.5"
               >
-                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl">
-                  <Thumb src={one.image} name={one.name} />
-                </div>
-                <div className="min-w-0 flex-1 self-center">
-                  <p className="font-bold">{one.name}</p>
-                  <p className="text-sm text-muted">{one.line}</p>
-                </div>
-                <span className="self-center text-brand" aria-hidden>
+                <span className="flex min-w-0 flex-col gap-1">
+                  <span className="break-words font-display text-[30px] font-extrabold uppercase leading-none">
+                    {one.name}
+                  </span>
+                  <span className="text-sm text-muted">{one.line}</span>
+                </span>
+                <span aria-hidden className="shrink-0 font-bold text-brand">
                   →
                 </span>
               </Link>
             ))}
           </div>
         )}
-        <p className="text-sm text-muted">
-          Every price above includes delivery to the hostel. There is nothing
-          added at the end.
-        </p>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold">How it works</h2>
-        <ol className="space-y-3">
-          {[
-            "Choose a box and tell us your child's name and hostel. You do not need their help to order.",
-            "Pay by transfer or card. One payment, delivery included.",
-            "We collect, deliver it to their hostel, and send you a photograph of the handover.",
-          ].map((step, index) => (
-            <li key={step} className="card flex gap-3 p-4">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-paper">
-                {index + 1}
-              </span>
-              <span className="self-center text-ink/90">{step}</span>
-            </li>
-          ))}
-        </ol>
+      <section className="bleed bg-ink text-shell">
+        <div className="shell flex flex-col gap-9 py-12 sm:py-16">
+          <h2 className="section-title">How it works</h2>
+          <ol className="grid gap-7 sm:grid-cols-3">
+            {[
+              [
+                "Choose a box",
+                "Give us your child's name and hostel. They do not need to help.",
+              ],
+              [
+                "Pay once",
+                "Bank transfer or card. Delivery is already in the price.",
+              ],
+              [
+                "We deliver, you see it",
+                "We take it to the hostel and send you a photo of the handover.",
+              ],
+            ].map(([said, note], at) => (
+              <li
+                key={said}
+                className="flex flex-col gap-2.5 border-t-4 border-brand pt-4"
+              >
+                <span className="font-display text-[64px] font-black leading-[0.8] text-brand">
+                  {String(at + 1).padStart(2, "0")}
+                </span>
+                <span className="text-xl font-bold">{said}</span>
+                <span className="leading-relaxed text-[#d8d1c7]">{note}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
       </section>
 
-      <section className="card space-y-3 bg-brand-tint p-5">
-        <h2 className="text-xl font-bold">Sending one every month</h2>
-        <p className="text-ink/90">
-          Most parents send the same thing at the same point each month. Tell
-          us on WhatsApp and we will set it up, remind you before each one and
-          deliver it without you having to remember.
-        </p>
-        {ask ? (
-          <a href={ask} className="btn-primary inline-block px-6">
-            Set it up on WhatsApp
-          </a>
-        ) : null}
-      </section>
+      <section className="grid gap-4 py-12 sm:py-14 lg:grid-cols-2">
+        <div className="flex flex-col gap-3 rounded-2xl border-2 border-ink bg-volt p-6">
+          <span className="ticket">Every month</span>
+          <h2 className="font-display text-[40px] font-black uppercase leading-[0.9]">
+            Send it monthly
+          </h2>
+          <p className="leading-relaxed">
+            Most parents send the same thing at the same point each month. Set
+            up a recurring order on WhatsApp and we remind you before each
+            delivery.
+          </p>
+          {ask ? (
+            <a
+              href={ask}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn self-start bg-ink text-white"
+            >
+              Set it up on WhatsApp
+            </a>
+          ) : null}
+        </div>
 
-      <section className="space-y-3">
-        <h2 className="text-2xl font-bold">Anything else</h2>
-        <p className="text-ink/90">
-          If what you want is not on this page — a birthday, medicine, a parcel
-          from the mainland, something from home — message us and we will get
-          it there.
-        </p>
-        {ask ? (
-          <a href={ask} className="btn-quiet px-6">
-            Message us on WhatsApp
-          </a>
-        ) : null}
+        <div className="flex flex-col gap-3 rounded-2xl border-2 border-ink bg-paper p-6">
+          <span className="ticket text-brand-dark">Anything else</span>
+          <h2 className="font-display text-[40px] font-black uppercase leading-[0.9]">
+            Not on the list?
+          </h2>
+          <p className="leading-relaxed text-ink/70">
+            A birthday, medicine, a parcel from the mainland, something from
+            home. Message us and we will sort it.
+          </p>
+          {ask ? (
+            <a
+              href={ask}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-quiet self-start"
+            >
+              Message us on WhatsApp
+            </a>
+          ) : null}
+          {settings.whatsapp_number ? (
+            <span className="font-mono text-[15px]">
+              {settings.whatsapp_number}
+            </span>
+          ) : null}
+        </div>
       </section>
     </article>
   );

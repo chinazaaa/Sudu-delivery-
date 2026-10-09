@@ -62,25 +62,45 @@ export default async function SkincarePage({
   const bands = skincareBands(settings);
 
   return (
-    <div className="space-y-4 pb-36">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-extrabold">{shop.name}</h1>
-        <p className="text-ink/75">
-          Order any day. It comes on {dropLabel(drop.date)}.
-        </p>
-        <p className="text-sm text-muted">
-          {settings.skincare_blurb ||
-            `One car a week. Order before ${settings.skincare_cut_off || "08:00"} that morning and you are on it, otherwise it is the week after.`}
-          {bands[0].fee > 0 && ` Delivery from ${naira(bands[0].fee)}.`}
-        </p>
-        {/* Where it comes from, and where it goes. Skincare is the one thing
-            people are right to be careful about, and a shelf that does not
-            answer that has answered it badly. Said above the products rather
-            than at the checkout alone, because by then somebody has already
-            decided. */}
-        <p className="text-sm font-semibold text-brand-dark">
-          {skincarePromise(settings)} To PAU, or anywhere in Lagos.
-        </p>
+    <div className="-mt-4 space-y-4 pb-36">
+      {/* The board's head: the claim in ticket type, the name of the thing
+          across two lines, and the two facts that decide whether somebody
+          orders today as pills under it. */}
+      <header className="bleed relative overflow-hidden border-b-2 border-ink">
+        <span
+          aria-hidden
+          className="absolute inset-y-0 -right-8 w-[18%]"
+          style={{
+            background:
+              "repeating-linear-gradient(-60deg,#e5321d 0 7px,transparent 7px 16px)",
+          }}
+        />
+        <div className="shell relative flex flex-col gap-4 pb-7 pt-7 sm:gap-5 sm:pb-8 sm:pt-11">
+          <span className="ticket text-brand-dark">
+            {shop.name} · {total} product{total === 1 ? "" : "s"} ·{" "}
+            {skincarePromise(settings)}
+          </span>
+          <h1 className="font-display text-[min(15vw,7rem)] font-black uppercase leading-[0.86] sm:text-[clamp(3.5rem,8vw,7rem)]">
+            Your fav brands.
+            <br />
+            To your block.
+          </h1>
+          <div className="flex flex-wrap gap-2.5">
+            <span className="flex items-center rounded-full bg-ink px-4 py-2 text-sm font-semibold text-shell">
+              One car a week · next drop {dropLabel(drop.date)}
+            </span>
+            {bands[0].fee > 0 && (
+              <span className="flex items-center rounded-full bg-volt px-4 py-2 text-sm font-semibold text-ink">
+                Delivery from {naira(bands[0].fee)}
+              </span>
+            )}
+          </div>
+          <p className="max-w-[640px] text-[15px] leading-relaxed text-ink/70">
+            {settings.skincare_blurb ||
+              `Order any day. Order before ${settings.skincare_cut_off || "08:00"} on the morning of the drop and you are on it, otherwise it is the week after.`}{" "}
+            To PAU, or anywhere in Lagos.
+          </p>
+        </div>
       </header>
 
       <Shelf

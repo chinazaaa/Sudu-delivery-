@@ -154,7 +154,7 @@ export default function Shelf({
           type="button"
           onClick={() => go({ shelf: "" })}
           className={`chip shrink-0 ${
-            picked.shelf === "" ? "border-ink bg-ink text-white" : "border-black/10 bg-white"
+            picked.shelf === "" ? "chip-on" : "bg-paper"
           }`}
         >
           Everything
@@ -165,9 +165,7 @@ export default function Shelf({
             type="button"
             onClick={() => go({ shelf: shelf.name })}
             className={`chip shrink-0 ${
-              picked.shelf === shelf.name
-                ? "border-ink bg-ink text-white"
-                : "border-black/10 bg-white"
+              picked.shelf === shelf.name ? "chip-on" : "bg-paper"
             }`}
           >
             {shelf.name}
@@ -197,20 +195,34 @@ export default function Shelf({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        <p className="ticket text-muted">
           {total} product{total === 1 ? "" : "s"}
         </p>
-        <select
-          value={picked.sort}
-          onChange={(event) => go({ sort: event.target.value })}
+        <div
           aria-label="Order by price"
-          className="field w-auto py-2 text-sm"
+          className="flex items-center gap-1 rounded-full border-2 border-ink bg-paper p-[3px]"
         >
-          <option value="">Our order</option>
-          <option value="cheap">Cheapest first</option>
-          <option value="dear">Dearest first</option>
-        </select>
+          {(
+            [
+              ["", "Our order"],
+              ["cheap", "Cheapest"],
+              ["dear", "Dearest"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={label}
+              type="button"
+              aria-pressed={picked.sort === value}
+              onClick={() => go({ sort: value })}
+              className={`min-h-9 rounded-full px-3 text-sm font-semibold transition ${
+                picked.sort === value ? "bg-ink text-white" : "text-ink"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {products.length === 0 ? (
@@ -225,61 +237,77 @@ export default function Shelf({
           {products.map((product) => {
             const inCart = cart.find((one) => one.id === product.id);
             return (
-              <li key={product.id} className="card flex flex-col gap-2 p-3">
-                <div className="aspect-square">
-                  <Thumb src={product.imageUrl} name={product.name} />
+              <li
+                key={product.id}
+                className="flex flex-col overflow-hidden rounded-2xl border-2 border-ink bg-paper"
+              >
+                <div className="aspect-square border-b-2 border-ink">
+                  <Thumb src={product.imageUrl} name={product.name} rounded="" />
                 </div>
-                <div className="flex-1">
+                <div className="flex flex-1 flex-col gap-1.5 p-3">
                   {product.brand !== "" && (
                     <button
                       type="button"
                       onClick={() => go({ brand: product.brand })}
-                      className="block text-left text-xs font-bold uppercase tracking-wide text-muted"
+                      className="ticket block text-left text-brand-dark"
                     >
                       {product.brand}
                     </button>
                   )}
-                  <p className="line-clamp-2 text-sm font-semibold">{product.name}</p>
-                  <p className="font-extrabold">{naira(product.price)}</p>
-                </div>
+                  <p className="line-clamp-2 text-[15px] font-semibold leading-snug">
+                    {product.name}
+                  </p>
 
-                {inCart ? (
-                  <div className="flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      aria-label={`One less ${product.name}`}
-                      onClick={() => setShelfQty(product.id, inCart.qty - 1)}
-                      className="chip size-9 justify-center border-black/10 bg-white text-lg"
-                    >
-                      −
-                    </button>
-                    <span className="font-bold">{inCart.qty}</span>
-                    <button
-                      type="button"
-                      aria-label={`One more ${product.name}`}
-                      onClick={() => setShelfQty(product.id, inCart.qty + 1)}
-                      className="chip size-9 justify-center border-black/10 bg-white text-lg"
-                    >
-                      +
-                    </button>
+                  <div className="mt-auto flex items-center justify-between gap-2 pt-1.5">
+                    <span className="font-display text-2xl font-extrabold leading-none">
+                      {naira(product.price)}
+                    </span>
+
+                    {inCart ? (
+                      <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-ink p-0.5 text-white">
+                        <button
+                          type="button"
+                          aria-label={`One less ${product.name}`}
+                          onClick={() => setShelfQty(product.id, inCart.qty - 1)}
+                          className="grid size-9 place-items-center rounded-full text-lg leading-none"
+                        >
+                          −
+                        </button>
+                        <span className="min-w-4 text-center font-mono font-semibold">
+                          {inCart.qty}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`One more ${product.name}`}
+                          onClick={() => setShelfQty(product.id, inCart.qty + 1)}
+                          className="grid size-9 place-items-center rounded-full bg-brand text-lg leading-none"
+                        >
+                          +
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        aria-label={`Add ${product.name}`}
+                        onClick={() =>
+                          addToShelf({
+                            id: product.id,
+                            name: product.name,
+                            brand: product.brand,
+                            price: product.price,
+                            imageUrl: product.imageUrl,
+                          })
+                        }
+                        className="grid size-11 shrink-0 place-items-center rounded-full border-2 border-ink bg-brand text-white shadow-press"
+                      >
+                        <svg viewBox="0 0 24 24" className="size-[18px]" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
+                          <path d="M12 5v14" />
+                          <path d="M5 12h14" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      addToShelf({
-                        id: product.id,
-                        name: product.name,
-                        brand: product.brand,
-                        price: product.price,
-                        imageUrl: product.imageUrl,
-                      })
-                    }
-                    className="btn-quiet w-full py-2 text-sm"
-                  >
-                    Add
-                  </button>
-                )}
+                </div>
               </li>
             );
           })}
