@@ -127,6 +127,25 @@ export default function OccasionBoxes({
   const box = meals.find((one) => one.id === picked) ?? null;
   const rest = useRef<HTMLFormElement>(null);
 
+  // Down to what is in the box. Waits a moment because on the first pick
+  // the form is not on the page yet: it is drawn by the same render that
+  // chose the box.
+  const goToRest = (showSwaps = false) => {
+    setTimeout(() => {
+      rest.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Opened once, here, rather than held open by state: controlling it
+      // would spring every one of them back open on the next render, which
+      // is every time somebody picks a swap.
+      if (showSwaps) {
+        rest.current
+          ?.querySelectorAll<HTMLDetailsElement>("details[data-swap]")
+          .forEach((one) => {
+            one.open = true;
+          });
+      }
+    }, 60);
+  };
+
   // Picking a box moves you to what is in it, because the next thing to do
   // is below the fold on every phone and hunting for it reads as nothing
   // having happened. Only on opening one: closing it should leave the page
@@ -229,7 +248,13 @@ export default function OccasionBoxes({
                 <div className="flex flex-col items-start gap-2.5">
                   <button
                     type="button"
-                    onClick={() => setPicked(on ? "" : one.id)}
+                    onClick={() => {
+                      if (on) {
+                        setPicked("");
+                        return;
+                      }
+                      setPicked(one.id);
+                    }}
                     aria-pressed={on}
                     className={`flex min-h-11 items-center gap-1.5 rounded-full border-2 border-ink px-5 font-bold transition ${
                       on ? "bg-ink text-shell" : "bg-brand text-white shadow-press"
@@ -245,7 +270,10 @@ export default function OccasionBoxes({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPicked(one.id)}
+                    onClick={() => {
+                      setPicked(one.id);
+                      goToRest(true);
+                    }}
                     className="font-semibold underline-offset-4 hover:underline"
                   >
                     Swap something out
@@ -295,7 +323,7 @@ export default function OccasionBoxes({
                   </div>
 
                   {line.swaps.length > 0 && (
-                    <details className="mt-1">
+                    <details className="mt-1" data-swap>
                       <summary className="cursor-pointer list-none text-sm text-muted underline decoration-dotted underline-offset-4">
                         Swap
                       </summary>

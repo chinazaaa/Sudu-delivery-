@@ -194,13 +194,16 @@ export default async function BoxDetail({
         {/* The board's right column: the way to get somebody else to pay for
             it, and the way to reach us about it. */}
         <aside className="flex shrink-0 flex-col gap-4 lg:w-[320px]">
-          {/* Only on a collection: an occasion is girls night and the
-              football, and "ask your mum for the all-nighter" is not a
-              message anybody is going to send. */}
-          {kind === "collection" && views.length > 0 && (
+          {/* On every shelf, not only the collections. It was held back from
+              the occasions on the grounds that nobody asks their mother to
+              pay for the girls' night — which is true of some of them and
+              not of others, and the ones it is not true of were the ones
+              being denied the message. Somebody who does not want to send
+              it does not send it. */}
+          {views.length > 0 && (
             <AskParents
               what={occasion.name}
-              href={`${SITE}/collections/${occasion.slug}?utm_source=whatsapp`}
+              href={`${SITE}${base}/${occasion.slug}?utm_source=whatsapp`}
             />
           )}
           <HelpLine number={settings.whatsapp_number} about="a box" card />
