@@ -4,7 +4,18 @@
 
 :root {
   color-scheme: light;
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  /*
+   * Three faces, each with one job.
+   *
+   * Schibsted Grotesk is everything somebody reads: body, labels, buttons.
+   * Big Shoulders is condensed and shouted, for headlines and prices, and
+   * it is unreadable at body size, which is the point: it is only ever
+   * used big. IBM Plex Mono is the ticket voice, for run times, references
+   * and counters, where a number has to line up with the one under it.
+   */
+  --font-sans: "Schibsted Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
 }
 
 html {
@@ -37,34 +48,59 @@ body {
   h1,
   h2,
   h3 {
-    @apply tracking-[-0.02em];
+    @apply tracking-[-0.01em];
   }
 }
 
 @layer components {
+  /*
+   * Everything here is drawn rather than lit.
+   *
+   * The old look was soft: hairline borders at six percent black, long
+   * diffuse shadows, rounded corners that got rounder the bigger a thing
+   * was. This one is a 2px Ink outline and a solid block of Ink behind it,
+   * which prints, photographs and survives a phone in sunlight.
+   */
   .card {
-    @apply rounded-2xl border border-black/[0.06] bg-paper p-4 shadow-card;
+    @apply rounded-2xl border-2 border-ink bg-paper p-4 shadow-card;
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 font-bold transition active:scale-[0.98];
+    @apply inline-flex min-h-[52px] touch-manipulation items-center justify-center gap-2 rounded-full px-6 font-bold transition;
   }
+  /* The shadow collapses under the press rather than the whole button
+     shrinking: the thing being pressed is a physical object. */
   .btn-primary {
-    @apply btn bg-brand text-white shadow-[0_8px_20px_-10px_rgba(255,90,31,0.9)] hover:bg-brand-dark disabled:opacity-40 disabled:shadow-none;
+    @apply btn bg-brand text-white shadow-hard hover:bg-brand-dark active:translate-x-0.5 active:translate-y-0.5 active:shadow-press disabled:opacity-40 disabled:shadow-none;
   }
   .btn-quiet {
-    @apply btn border border-black/10 bg-paper hover:bg-black/[0.03] disabled:opacity-40;
+    @apply btn border-2 border-ink bg-transparent hover:bg-ink hover:text-paper disabled:opacity-40;
   }
   .field {
-    @apply w-full rounded-xl border border-black/10 bg-paper px-3.5 py-3 outline-none transition placeholder:text-muted/60 focus:border-brand focus:ring-4 focus:ring-brand/15;
+    @apply w-full rounded-[10px] border-2 border-ink bg-[#f9f7f3] px-3.5 py-3 outline-none transition placeholder:text-muted/60 focus:ring-[3px] focus:ring-volt;
   }
+  /* Visible, always, and in Ink rather than grey: a label this small in
+     muted grey was failing contrast on the cream ground. */
   .label {
-    @apply mb-1.5 block text-sm font-semibold text-muted;
+    @apply mb-1.5 block text-sm font-semibold text-ink;
   }
   .chip {
-    @apply inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-semibold transition touch-manipulation active:scale-[0.97];
+    @apply inline-flex min-h-[44px] shrink-0 touch-manipulation items-center gap-1.5 rounded-full border-2 border-ink px-4 text-sm font-semibold transition active:scale-[0.97];
+  }
+  /* Selected fills with Ink, which is the one state a chip has. */
+  .chip-on {
+    @apply border-ink bg-ink text-shell;
   }
   .section-title {
-    @apply text-xl font-extrabold sm:text-2xl;
+    @apply font-display text-3xl font-black uppercase leading-none sm:text-4xl;
+  }
+  /* The ticket voice: a run time, a reference, a counter. */
+  .ticket {
+    @apply font-mono text-xs font-semibold uppercase tracking-[0.1em];
+  }
+  /* One hook per screen, tilted so it reads as stuck on rather than
+     printed in. */
+  .sticker {
+    @apply ticket inline-block -rotate-2 bg-volt px-2 py-1 text-ink;
   }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -82,7 +118,7 @@ body {
    * page does not jump when it lands.
    */
   .sk {
-    @apply relative overflow-hidden rounded-xl bg-black/[0.075];
+    @apply relative overflow-hidden rounded-xl bg-ink/[0.075];
   }
   .sk::after {
     content: "";
@@ -99,7 +135,7 @@ body {
   }
   /* On a photograph or a banner, white on white says nothing. */
   .sk-dark {
-    @apply bg-black/[0.115];
+    @apply bg-ink/[0.115];
   }
 }
 

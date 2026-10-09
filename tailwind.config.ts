@@ -5,25 +5,49 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#14110f",
-        muted: "#6b6360",
+        /*
+         * The redesign palette, named as the design system names it.
+         *
+         * Ink is a near-black with warmth in it rather than a grey, because
+         * it is drawn as a 2px border on nearly everything and a true black
+         * outline reads as a wireframe. Tomato is the only loud colour and
+         * carries white text at 4.9:1; Tomato Deep is for hover and for red
+         * text on a light ground, where Tomato itself is too thin to read.
+         * Volt is a highlight on Ink and never a text colour on light.
+         */
+        ink: "#15110e",
+        muted: "#5e564e",
+        /** Hairlines, which were black at 6% and are now a colour of their
+         *  own: a border this heavy has to be drawn rather than implied. */
+        line: "#dcd6cc",
         paper: "#ffffff",
-        // The page behind white cards: a hint of warmth, not a cream wash.
-        shell: "#f6f5f3",
+        shell: "#f2efe9",
         brand: {
-          DEFAULT: "#ff5a1f",
-          dark: "#e0410c",
-          tint: "#fff1ea",
+          DEFAULT: "#e5321d",
+          dark: "#b8230f",
+          tint: "#fff6d6",
         },
-        mint: "#0f9d58",
+        volt: "#ffd23f",
+        mint: "#1e7a4c",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        /** Condensed, loud, all caps: headlines, prices, numbers. */
+        display: ["var(--font-display)", "Arial Narrow", "Impact", "sans-serif"],
+        /** Ticket labels, run times, counters. Uppercase and tracked. */
+        mono: ["var(--font-mono)", "ui-monospace", "Menlo", "monospace"],
       },
       boxShadow: {
-        card: "0 1px 2px rgba(20, 17, 15, 0.04), 0 10px 30px -18px rgba(20, 17, 15, 0.25)",
-        lift: "0 2px 6px rgba(20, 17, 15, 0.06), 0 18px 40px -20px rgba(20, 17, 15, 0.35)",
-        bar: "0 -8px 30px -18px rgba(20, 17, 15, 0.45)",
+        /*
+         * Hard shadows, not soft ones. The whole look is drawn rather than
+         * lit: a 2px outline with a solid offset block behind it, which is
+         * a printed sticker rather than a floating card.
+         */
+        card: "3px 3px 0 #15110e",
+        lift: "5px 5px 0 #15110e",
+        hard: "4px 4px 0 #15110e",
+        press: "2px 2px 0 #15110e",
+        bar: "0 -8px 30px -18px rgba(21, 17, 14, 0.45)",
       },
     },
   },
