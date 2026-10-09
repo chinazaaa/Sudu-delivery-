@@ -24,11 +24,15 @@ import { useEffect, useRef, useState, useTransition } from "react";
 export default function ProductSearch({
   start,
   to = "/products",
+  big = false,
 }: {
   start: string;
   /** The list this box narrows. The Secret Santa picker is the same list
    *  with a different button on every tile. */
   to?: string;
+  /** The board's own box: a pill the width of the hero with the hard
+   *  shadow under it, rather than the ordinary field. */
+  big?: boolean;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -74,21 +78,34 @@ export default function ProductSearch({
         if (waiting.current) clearTimeout(waiting.current);
         go(typed);
       }}
-      className="relative"
+      className={big ? "relative max-w-[640px]" : "relative"}
     >
       <input
         value={typed}
         onChange={(event) => setTyped(event.target.value)}
-        placeholder="Search wings, pizza, rice…"
+        placeholder={
+          big ? "Search jollof, wings, Krispy Kreme…" : "Search wings, pizza, rice…"
+        }
         aria-label="Search everything"
-        className="field py-3.5 pl-10 text-base"
+        className={
+          big
+            ? "field min-h-[58px] rounded-full border-2 border-ink bg-paper py-3 pl-[52px] pr-4 text-[17px] shadow-hard"
+            : "field py-3.5 pl-10 text-base"
+        }
       />
       <span
-        className={`pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted ${
-          working ? "animate-pulse" : ""
-        }`}
+        className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-muted ${
+          big ? "left-5" : "left-3.5"
+        } ${working ? "animate-pulse" : ""}`}
       >
-        ⌕
+        {big ? (
+          <svg viewBox="0 0 24 24" className="size-[22px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-4-4" />
+          </svg>
+        ) : (
+          "⌕"
+        )}
       </span>
       {typed !== "" && (
         <button
@@ -98,7 +115,9 @@ export default function ProductSearch({
             setTyped("");
             go("");
           }}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted"
+          className={`absolute top-1/2 -translate-y-1/2 text-sm font-semibold text-muted ${
+            big ? "right-5" : "right-3"
+          }`}
         >
           Clear
         </button>

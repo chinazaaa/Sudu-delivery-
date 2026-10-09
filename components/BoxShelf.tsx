@@ -51,11 +51,24 @@ export default async function BoxShelf({
 
   const worth = mine.filter((one) => (counts.get(one.id) ?? 0) > 0);
 
-  // The one with a date on it leads the shelf, the way the board leads with
-  // whatever is on this term. Everything else is standing stock and goes in
-  // the grid in the order admin put it in.
-  const lead = worth.find((one) => isTimed(one) && one.happens_at) ?? null;
-  const rest = worth.filter((one) => one !== lead);
+  // The shelf's own order decides the tiers, the way the board lays them
+  // out: the first across the whole width in Tomato, the next on Ink, and
+  // everything after that as the white cards.
+  //
+  // By position rather than by whether it has a date on it. Nearly nothing
+  // on the collections shelf has a date, so a rule about dates left that
+  // whole page as a flat grid of white cards and the lead card appeared on
+  // no page at all. Which one leads is the shop's decision, and the shop
+  // already has a way of saying it: the order it put them in.
+  const [lead = null, second = null, ...rest] = worth;
+
+  /** The small word on a card: the shop's own, or the date, or nothing. */
+  const tagOf = (one: (typeof worth)[number]): string =>
+    one.tag !== ""
+      ? one.tag
+      : isTimed(one) && one.happens_at
+        ? `${one.when_word} ${whenLabel(one.happens_at)}`
+        : "";
 
   return (
     <div className="-mt-4 space-y-0">
@@ -91,17 +104,18 @@ export default async function BoxShelf({
         </p>
       ) : (
         <div className="grid gap-4 py-8 sm:grid-cols-2 sm:py-10 lg:grid-cols-3">
-          {/* Whatever has a date on it, across the whole width and in
-              Tomato, because it is the one on this shelf that stops being
-              true. */}
+          {/* The one the shop put first, across the whole width and in
+              Tomato. */}
           {lead && (
             <Link
               href={`${base}/${lead.slug}`}
               className="flex min-h-[280px] flex-col justify-between gap-5 rounded-2xl border-2 border-ink bg-brand p-6 text-white shadow-[8px_8px_0_#15110e] sm:col-span-2 sm:p-7 lg:col-span-3"
             >
-              <span className="ticket self-start bg-ink px-2.5 py-1 text-volt">
-                {lead.when_word} {whenLabel(lead.happens_at!)}
-              </span>
+              {tagOf(lead) !== "" && (
+                <span className="ticket self-start bg-ink px-2.5 py-1 text-volt">
+                  {tagOf(lead)}
+                </span>
+              )}
               <span className="flex flex-col gap-3">
                 <span className="break-words font-display text-[clamp(3rem,7vw,6rem)] font-black uppercase leading-[0.85]">
                   {lead.name}
@@ -123,60 +137,60 @@ export default async function BoxShelf({
             </Link>
           )}
 
+          {second && (
+            <Link
+              href={`${base}/${second.slug}`}
+              className="flex min-h-[240px] flex-col gap-3 rounded-2xl border-2 border-ink bg-ink p-6 text-shell transition active:translate-x-0.5 active:translate-y-0.5"
+            >
+              {tagOf(second) !== "" && (
+                <span className="ticket self-start bg-volt px-2.5 py-1 text-ink">
+                  {tagOf(second)}
+                </span>
+              )}
+              <span className="break-words font-display text-[34px] font-extrabold uppercase leading-[0.9] sm:text-[40px]">
+                {second.name}
+              </span>
+              {second.blurb !== "" && (
+                <span className="leading-relaxed text-[#d8d1c7]">
+                  {second.blurb}
+                </span>
+              )}
+              <span className="mt-auto font-semibold text-volt">
+                {said(counts.get(second.id) ?? 0, from.get(second.id))}
+              </span>
+            </Link>
+          )}
+
           {rest.map((one) => {
             const price = from.get(one.id);
             const boxCount = counts.get(one.id) ?? 0;
-            const timed = Boolean(isTimed(one) && one.happens_at);
 
             return (
               <Link
                 key={one.id}
                 href={`${base}/${one.slug}`}
-                /* Anything else with a date on it is the board's Ink card:
-                   it is going to stop being true, and it should not look
-                   like the shelves that stand there all term. */
-                className={`flex min-h-[240px] flex-col gap-3 rounded-2xl border-2 border-ink p-6 transition active:translate-x-0.5 active:translate-y-0.5 ${
-                  timed ? "bg-ink text-shell" : "bg-paper"
-                }`}
+                className="flex min-h-[240px] flex-col gap-3 rounded-2xl border-2 border-ink bg-paper p-6 transition active:translate-x-0.5 active:translate-y-0.5"
               >
-                {timed && one.happens_at && (
-                  <span className="ticket self-start bg-volt px-2.5 py-1 text-ink">
-                    {one.when_word} {whenLabel(one.happens_at)}
+                {tagOf(one) !== "" && (
+                  <span className="ticket self-start bg-ink px-2.5 py-1 text-volt">
+                    {tagOf(one)}
                   </span>
                 )}
                 <span className="break-words font-display text-[34px] font-extrabold uppercase leading-[0.9] sm:text-[40px]">
                   {one.name}
                 </span>
                 {one.blurb !== "" && (
-                  <span
-                    className={`leading-relaxed ${
-                      timed ? "text-[#d8d1c7]" : "text-ink/70"
-                    }`}
-                  >
-                    {one.blurb}
-                  </span>
+                  <span className="leading-relaxed text-ink/70">{one.blurb}</span>
                 )}
 
-                <span
-                  className={`mt-auto flex items-end justify-between gap-3 border-t-2 border-dashed pt-3 ${
-                    timed ? "border-[#4a423b]" : "border-line"
-                  }`}
-                >
+                <span className="mt-auto flex items-end justify-between gap-3 border-t-2 border-dashed border-line pt-3">
                   <span className="flex flex-col">
-                    <span
-                      className={`ticket ${timed ? "text-[#b9b0a5]" : "text-muted"}`}
-                    >
-                      From · delivery in it
-                    </span>
+                    <span className="ticket text-muted">From · delivery in it</span>
                     <span className="font-display text-[30px] font-extrabold leading-none">
                       {price === undefined ? "—" : naira(price)}
                     </span>
                   </span>
-                  <span
-                    className={`ticket px-2 py-1 ${
-                      timed ? "bg-volt text-ink" : "bg-ink text-volt"
-                    }`}
-                  >
+                  <span className="ticket bg-ink px-2 py-1 text-volt">
                     {boxCount} box{boxCount === 1 ? "" : "es"}
                   </span>
                 </span>

@@ -115,8 +115,17 @@ export default async function ProductsPage({
   };
 
   return (
-    <div className="space-y-4 pb-10">
-      <header className="flex flex-col gap-3 pb-2">
+    <div className="-mt-4 space-y-4 pb-10">
+      <header className="bleed relative overflow-hidden border-b-2 border-ink">
+        <span
+          aria-hidden
+          className="absolute inset-y-0 -right-8 w-[26%] opacity-90"
+          style={{
+            background:
+              "repeating-linear-gradient(-60deg,#e5321d 0 7px,transparent 7px 16px)",
+          }}
+        />
+        <div className="shell relative flex flex-col gap-4 pb-8 pt-7 sm:gap-5 sm:pb-9 sm:pt-11">
         {/* Not "everything": the shop sells more than food now, and this is
             the food door. Calling it everything while skincare, boxes and
             parcels live behind their own cards was the one contradiction the
@@ -130,45 +139,87 @@ export default async function ProductsPage({
           <br />
           One list.
         </h1>
-        <p className="max-w-[560px] text-[17px] leading-relaxed text-ink/80 sm:text-lg">
-          Every restaurant together. One car carries all of it, so anything
-          here can go in the same order.
-        </p>
+          <p className="sr-only">
+            Every restaurant together. One car carries all of it, so anything
+            here can go in the same order.
+          </p>
+
+          <Suspense fallback={<div className="field min-h-[58px] max-w-[640px] rounded-full border-2 border-ink" />}>
+            <ProductSearch start={asked.q ?? ""} big />
+          </Suspense>
+        </div>
       </header>
 
-      <Suspense fallback={<div className="field py-3.5" />}>
-        <ProductSearch start={asked.q ?? ""} />
-      </Suspense>
+      {/* The board's filter bar, stuck to the top: what kind on one line,
+          which kitchen and the sort on the next.
 
-      {/* Chips rather than dropdowns, because a filter you can see is one
-          people use and a filter behind a tap is one they never find. */}
-      <Row label="Where from">
-        <Chip href={link({ place: "", category: "" })} on={!asked.place}>
-          Everywhere
-        </Chip>
-        {facets.places.map((one) => (
-          <Chip
-            key={one.id}
-            href={link({ place: one.id, category: "" })}
-            on={asked.place === one.id}
-          >
-            {one.name}
-          </Chip>
-        ))}
-      </Row>
+          Chips rather than dropdowns, because a filter you can see is one
+          people use and a filter behind a tap is one they never find. The
+          kitchens are the smaller mono buttons: there are thirteen of them
+          and they are names, not ideas. */}
+      <div className="bleed sticky top-[57px] z-20 border-b-2 border-ink bg-shell md:top-[65px]">
+        <div className="shell flex flex-col gap-2.5 py-3">
+          {facets.categories.length > 0 && (
+            <div
+              aria-label="What kind"
+              className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+            >
+              <Chip href={link({ category: "" })} on={!asked.category}>
+                Anything
+              </Chip>
+              {facets.categories.map((one) => (
+                <Chip key={one} href={link({ category: one })} on={asked.category === one}>
+                  {one}
+                </Chip>
+              ))}
+            </div>
+          )}
 
-      {facets.categories.length > 0 && (
-        <Row label="What kind">
-          <Chip href={link({ category: "" })} on={!asked.category}>
-            Anything
-          </Chip>
-          {facets.categories.map((one) => (
-            <Chip key={one} href={link({ category: one })} on={asked.category === one}>
-              {one}
-            </Chip>
-          ))}
-        </Row>
-      )}
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
+            <div
+              aria-label="Kitchen"
+              className="-mx-4 flex min-w-0 flex-[1_1_320px] gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+            >
+              <Kitchen href={link({ place: "", category: "" })} on={!asked.place}>
+                All kitchens
+              </Kitchen>
+              {facets.places.map((one) => (
+                <Kitchen
+                  key={one.id}
+                  href={link({ place: one.id, category: "" })}
+                  on={asked.place === one.id}
+                >
+                  {one.name}
+                </Kitchen>
+              ))}
+            </div>
+
+            <div
+              aria-label="Sort"
+              className="flex shrink-0 items-center gap-1 rounded-full border-2 border-ink bg-paper p-[3px]"
+            >
+              {(
+                [
+                  ["", "A–Z"],
+                  ["cheap", "Cheapest"],
+                  ["dear", "Dearest"],
+                ] as const
+              ).map(([value, label]) => (
+                <Link
+                  key={label}
+                  replace
+                  href={link({ sort: value })}
+                  className={`flex min-h-9 items-center rounded-full px-3 text-sm font-semibold transition ${
+                    (asked.sort ?? "") === value ? "bg-ink text-white" : "text-ink"
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Somebody has just told us what they want and been told we do not
           have it. There is no better moment to offer to go and find it. */}
@@ -185,36 +236,11 @@ export default async function ProductsPage({
         </Link>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted">
-          {total === 0
-            ? "Nothing matches that."
-            : `${total} ${total === 1 ? "thing" : "things"}`}
-        </p>
-        <div
-          aria-label="Sort"
-          className="flex items-center gap-1 rounded-full border-2 border-ink bg-paper p-[3px]"
-        >
-          {(
-            [
-              ["", "A–Z"],
-              ["cheap", "Cheapest"],
-              ["dear", "Dearest"],
-            ] as const
-          ).map(([value, label]) => (
-            <Link
-              key={label}
-              replace
-              href={link({ sort: value })}
-              className={`flex min-h-[38px] items-center rounded-full px-3.5 text-sm font-semibold transition ${
-                (asked.sort ?? "") === value ? "bg-ink text-white" : "text-ink"
-              }`}
-            >
-              {label}
-            </Link>
-          ))}
-        </div>
-      </div>
+      <p className="ticket text-muted">
+        {total === 0
+          ? "Nothing matches that"
+          : `${products.length} ${products.length === 1 ? "thing" : "things"} on this page`}
+      </p>
 
       {total === 0 ? (
         <p className="card text-sm text-muted">
@@ -261,13 +287,26 @@ export default async function ProductsPage({
   );
 }
 
-const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div>
-    <p className="label mb-1">{label}</p>
-    <div className="-mx-4 overflow-x-auto px-4">
-      <div className="flex gap-2 pb-1">{children}</div>
-    </div>
-  </div>
+/** A kitchen, by name. Smaller and squarer than a chip, because thirteen
+ *  names in a row of pills is a row nobody reads to the end of. */
+const Kitchen = ({
+  href,
+  on,
+  children,
+}: {
+  href: string;
+  on: boolean;
+  children: React.ReactNode;
+}) => (
+  <Link
+    replace
+    href={href}
+    className={`flex min-h-9 shrink-0 items-center whitespace-nowrap rounded-lg border-2 px-3 font-mono text-xs font-semibold tracking-[0.04em] transition ${
+      on ? "border-brand bg-brand text-white" : "border-line bg-paper text-ink"
+    }`}
+  >
+    {children}
+  </Link>
 );
 
 /**

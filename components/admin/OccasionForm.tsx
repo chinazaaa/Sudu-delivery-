@@ -21,6 +21,7 @@ export default function OccasionForm({
     name: string;
     blurb: string;
     when_word: string;
+    tag: string;
     happens_at: string | null;
     closes_at: string | null;
     batch_id: string | null;
@@ -136,6 +137,22 @@ export default function OccasionForm({
               className="field"
             />
           </div>
+        </div>
+
+        <div className="mt-3">
+          <label className="label">Card label</label>
+          <input
+            name="tag"
+            defaultValue={occasion?.tag ?? ""}
+            placeholder="This term"
+            maxLength={24}
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">
+            The small word on this shelf&apos;s card on the collections and
+            occasions pages. Leave it empty and the card says whatever its
+            date says, or nothing.
+          </p>
         </div>
 
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
