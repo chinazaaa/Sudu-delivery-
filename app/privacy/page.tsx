@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import LegalLayout, { Clause } from "@/components/LegalLayout";
+import { policyDate } from "@/lib/time";
 import { safeSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -22,9 +23,14 @@ export default async function PrivacyPage() {
   const settings = await safeSettings();
   const whatsapp = settings.whatsapp_number;
 
+  // The date the shop typed, spelt out. Empty and the page says what it is
+  // instead, which is better than a legal page carrying a date nobody set.
+  const said = policyDate(settings.privacy_updated);
+  const updated = said === "" ? "The small print · privacy" : `Last updated ${said}`;
+
   return (
     <LegalLayout
-      ticket="The small print · privacy"
+      ticket={updated}
       title="Privacy"
       lead="What we keep about you, who sees it, and how to have it deleted. Short and plain, on purpose."
       here="privacy"

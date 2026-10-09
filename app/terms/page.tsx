@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import LegalLayout, { Clause } from "@/components/LegalLayout";
+import { policyDate } from "@/lib/time";
 import Link from "next/link";
 import { safeSettings } from "@/lib/settings";
 import { parseAreas } from "@/lib/areas";
@@ -49,9 +50,14 @@ export default async function TermsPage() {
   const parcelPlaces = placesSaid(routes);
   const parcelCap = parcelSetup?.maxValue ?? 0;
 
+  // The date the shop typed, spelt out. Empty and the page says what it is
+  // instead, which is better than a legal page carrying a date nobody set.
+  const said = policyDate(settings.terms_updated);
+  const updated = said === "" ? "The small print · terms" : `Last updated ${said}`;
+
   return (
     <LegalLayout
-      ticket="The small print · terms"
+      ticket={updated}
       title="Terms of service"
       lead="What we do, what the kitchen does, and who pays when something goes wrong. Ordering from Sudu means agreeing to this."
       here="terms"

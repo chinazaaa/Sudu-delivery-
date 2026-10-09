@@ -38,6 +38,7 @@ export default function SiteFooter({
         { href: "/skincare", said: "Skincare" },
         { href: "/parcel", said: "Parcels" },
         { href: "/custom-order", said: "Anything else" },
+        { href: "/wish", said: "Wish we carried it?" },
       ],
     },
     {

@@ -139,6 +139,11 @@ export type Settings = {
   /** Where the products come from, in the shop's own words. Empty falls back
    *  to the line in the code, so this reads right before anybody sets it. */
   skincare_promise: string;
+  /** When each page of small print last said something different, as the
+   *  shop typed it. Empty means the page says what it is instead. */
+  terms_updated: string;
+  privacy_updated: string;
+  returns_updated: string;
   /** Carrying one person's Secret Santa gifts: what it costs, how many
    *  things that covers, and what each one past that adds. One giver's
    *  gifts go to one person on one day, so it is charged once against that
@@ -221,6 +226,9 @@ export const EMPTY: Settings = {
   skincare_blurb: "",
   skincare_bands: "",
   skincare_promise: "",
+  terms_updated: "",
+  privacy_updated: "",
+  returns_updated: "",
   santa_delivery: 0,
   santa_delivery_included: 3,
   santa_delivery_extra: 0,

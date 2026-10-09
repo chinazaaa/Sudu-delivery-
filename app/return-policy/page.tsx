@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import LegalLayout, { Clause } from "@/components/LegalLayout";
+import { policyDate } from "@/lib/time";
 import Link from "next/link";
 import { safeSettings, whatsappLink } from "@/lib/settings";
 
@@ -34,9 +35,14 @@ export default async function ReturnPolicyPage() {
     "Hi Sudu, something was wrong with my order."
   );
 
+  // The date the shop typed, spelt out. Empty and the page says what it is
+  // instead, which is better than a legal page carrying a date nobody set.
+  const said = policyDate(settings.returns_updated);
+  const updated = said === "" ? "The small print · returns" : `Last updated ${said}`;
+
   return (
     <LegalLayout
-      ticket="The small print · returns"
+      ticket={updated}
       title="Returns and refunds"
       lead="When money comes back, how fast, and what is ours to put right rather than the restaurant's."
       here="returns"

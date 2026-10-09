@@ -15,6 +15,28 @@ const TIME_FMT = new Intl.DateTimeFormat("en-NG", {
 });
 
 /** "Friday, 19 Sep" for a YYYY-MM-DD run date. */
+/**
+ * A date on a page of small print: "9 October 2026".
+ *
+ * Spelt out with the year, unlike every other date on the site. The others
+ * are about this week and read better short; this one is about whether what
+ * somebody is reading is current, and a year is the whole of the answer.
+ * Empty in, empty out, so a page with no date set says nothing rather than
+ * printing the epoch.
+ */
+export function policyDate(iso: string): string {
+  const said = String(iso ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(said)) return "";
+  const at = new Date(`${said}T12:00:00Z`);
+  if (Number.isNaN(at.getTime())) return "";
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(at);
+}
+
 export function runDateLabel(runDate: string): string {
   return DATE_FMT.format(new Date(runDate + "T12:00:00Z"));
 }

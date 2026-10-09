@@ -733,6 +733,43 @@ export default async function SettingsAdmin() {
           />
           <p className="mt-1 text-xs text-muted">Minutes untouched.</p>
         </div>
+
+        {/* The dates on the small print. Typed rather than read off the
+            file, because restyling a page is not a change to the policy and
+            a date that moves every deploy tells a reader nothing. */}
+        <div className="space-y-3 border-t border-black/10 pt-4">
+          <div>
+            <h2 className="font-semibold">The small print</h2>
+            <p className="text-sm text-muted">
+              When each of these last said something different. Change the date
+              when you change the wording, not when the page is restyled. Empty
+              and the page carries no date at all.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {(
+              [
+                ["terms_updated", "Terms", settings.terms_updated],
+                ["privacy_updated", "Privacy", settings.privacy_updated],
+                ["returns_updated", "Returns", settings.returns_updated],
+              ] as const
+            ).map(([field, said, value]) => (
+              <div key={field}>
+                <label className="label" htmlFor={field}>
+                  {said}
+                </label>
+                <input
+                  id={field}
+                  name={field}
+                  type="date"
+                  defaultValue={value}
+                  className="field"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
         <SaveButton>Save</SaveButton>
       </form>
 

@@ -2101,6 +2101,9 @@ export async function savePromoter(form: FormData): Promise<void> {
  * being blanked by a form that never showed it.
  */
 const SETTING_FIELDS = [
+  "terms_updated",
+  "privacy_updated",
+  "returns_updated",
   "bank_name",
   "bank_account_name",
   "bank_account_number",
