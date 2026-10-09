@@ -107,7 +107,8 @@ export default function ParcelForm({
 
   return (
     <form action={action} className="space-y-4">
-      <div className="card space-y-3">
+      <div className="card space-y-3 sm:p-6">
+        <Step at="01">Which way?</Step>
         <div>
           <label className="label" htmlFor="route">
             Where is it going?
@@ -297,8 +298,8 @@ export default function ParcelForm({
         </div>
       </div>
 
-      <div className="card space-y-3">
-        <h2 className="font-bold">You</h2>
+      <div className="card space-y-3 sm:p-6">
+        <Step at="03">Who is who</Step>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="label" htmlFor="name">
@@ -429,8 +430,8 @@ export default function ParcelForm({
           a student on campus and no use at all to the sister in London
           sending something home. */}
       {route && fee !== null && (
-        <div className="card space-y-3">
-          <p className="label">How are you paying?</p>
+        <div className="card space-y-3 sm:p-6">
+          <Step at="04">Pay</Step>
           <PayChoice value={method} onChange={setMethod} />
           <input type="hidden" name="payment_method" value={method} />
           {method === "card" && (
@@ -472,5 +473,17 @@ export default function ParcelForm({
         We agree the day with you on WhatsApp once it is paid.
       </p>
     </form>
+  );
+}
+
+/** A step's heading, the way the board sets one. */
+function Step({ at, children }: { at: string; children: React.ReactNode }) {
+  return (
+    <h2 className="flex items-center gap-3 text-[17px] font-bold sm:text-xl">
+      <span className="font-display text-[30px] font-black leading-none text-brand sm:text-4xl">
+        {at}
+      </span>
+      {children}
+    </h2>
   );
 }
