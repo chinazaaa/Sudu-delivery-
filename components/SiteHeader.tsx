@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Wordmark from "./Wordmark";
 import { countItems, useCart } from "@/lib/cart";
 
@@ -15,6 +15,7 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
   const count = countItems(cart);
   const path = usePathname();
   const router = useRouter();
+  const [menu, setMenu] = useState(false);
 
   /*
    * The arrow went home from every page, so anyone who had come from their
@@ -77,6 +78,12 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
     }
   }, [path]);
 
+  // The drawer never survives a page. Tapping a link closes it, but the
+  // back button is a page change nothing else hears.
+  useEffect(() => {
+    setMenu(false);
+  }, [path]);
+
   const back = () => {
     if (depth.current > 0) router.back();
     else router.push("/");
@@ -86,15 +93,26 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
 
   const deep = path !== "/";
 
+  const LINKS: [string, string][] = [
+    ["/products", "Menu"],
+    ["/collections", "Collections"],
+    ["/parcel", "Parcels"],
+    ["/skincare", "Skincare"],
+    ["/parents", "For parents"],
+  ];
+
   return (
     <header className="sticky top-0 z-30 border-b-2 border-ink bg-shell">
-      {/* The board's header, at every width.
+      {/* The board's header.
 
-          The nav does not disappear on a phone: it drops to a line of its
-          own and scrolls, the way the board's own stylesheet does it. The
-          two text links beside the cart are what go, because "Order again"
-          and "My orders" are both one tap inside the cart's own page. */}
-      <div className="shell flex flex-wrap items-center gap-x-8 gap-y-3 py-3.5">
+          On a phone it is the wordmark, search and a menu button, and
+          nothing else: five text links on a 390px line is the row that
+          scrolls off the side and gets read by nobody. The links are all
+          still there, one tap inside the menu button.
+
+          From md up the nav is on the bar itself, where there is room for
+          it, with the two account links and the cart pill. */}
+      <div className="shell flex items-center gap-x-8 py-2.5 md:py-3.5">
         {/* Back, on a phone only. On a laptop the nav is right there, and
             an arrow beside five links is an arrow nobody presses. */}
         {deep && (
@@ -102,28 +120,22 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
             type="button"
             onClick={back}
             aria-label="Back"
-            className="-ml-1 grid size-10 shrink-0 place-items-center rounded-full text-lg hover:bg-ink hover:text-paper md:hidden"
+            className="-ml-1 mr-1 grid size-10 shrink-0 place-items-center rounded-full text-lg hover:bg-ink hover:text-paper md:hidden"
           >
             ←
           </button>
         )}
 
         <Link href="/" className="shrink-0" aria-label="Sudu home">
-          <Wordmark size={34} />
+          <Wordmark size={32} />
           <span className="sr-only">{tagline}</span>
         </Link>
 
         <nav
           aria-label="Main"
-          className="order-3 -mb-1 flex w-full flex-none gap-6 overflow-x-auto pb-1 font-semibold [scrollbar-width:none] md:order-none md:mb-0 md:w-auto md:flex-1 md:overflow-visible md:pb-0 [&::-webkit-scrollbar]:hidden"
+          className="hidden flex-1 gap-6 font-semibold md:flex"
         >
-          {[
-            ["/products", "Menu"],
-            ["/collections", "Collections"],
-            ["/parcel", "Parcels"],
-            ["/skincare", "Skincare"],
-            ["/parents", "For parents"],
-          ].map(([href, label]) => (
+          {LINKS.map(([href, label]) => (
             <Link
               key={href}
               href={href}
@@ -136,10 +148,10 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-1 md:gap-3">
           <Link
             href="/reorder"
-            className="hidden items-center gap-1.5 font-semibold sm:flex"
+            className="hidden items-center gap-1.5 font-semibold md:flex"
           >
             <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M4 12a8 8 0 0 1 14-5.3L20 9" />
@@ -149,14 +161,39 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
             </svg>
             Order again
           </Link>
-          <Link href="/orders" className="hidden font-semibold sm:block">
+          <Link href="/orders" className="hidden font-semibold md:block">
             My orders
           </Link>
+
+          {/* The phone's pair. Search goes to the menu, which is where the
+              search box lives and always has. */}
+          <Link
+            href="/products"
+            aria-label="Search the menu"
+            className="grid size-11 place-items-center rounded-full md:hidden"
+          >
+            <svg viewBox="0 0 24 24" className="size-[22px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-4-4" />
+            </svg>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setMenu(true)}
+            aria-label="Open menu"
+            className="grid size-11 place-items-center rounded-full md:hidden"
+          >
+            <svg viewBox="0 0 24 24" className="size-[22px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+              <path d="M4 7h16" />
+              <path d="M4 12h16" />
+              <path d="M4 17h10" />
+            </svg>
+          </button>
 
           <Link
             href="/cart"
             aria-label={`Cart, ${count} item${count === 1 ? "" : "s"}`}
-            className="flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-ink px-[18px] font-bold text-shell transition active:scale-95"
+            className="hidden min-h-11 shrink-0 items-center gap-2 rounded-full bg-ink px-[18px] font-bold text-shell transition active:scale-95 md:flex"
           >
             <CartIcon />
             Cart
@@ -168,6 +205,69 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
           </Link>
         </div>
       </div>
+
+      {/* The menu button's drawer. Everything the bar cannot hold on a
+          phone, at thumb size, over the page rather than pushing it down. */}
+      {menu && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={() => setMenu(false)}
+            className="absolute inset-0 bg-ink/50"
+          />
+          <div className="absolute inset-x-0 top-0 max-h-full overflow-y-auto border-b-2 border-ink bg-shell pb-6">
+            <div className="flex items-center justify-between px-4 py-2.5">
+              <Wordmark size={32} />
+              <button
+                type="button"
+                onClick={() => setMenu(false)}
+                aria-label="Close menu"
+                className="grid size-11 place-items-center rounded-full text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            <nav aria-label="Menu" className="flex flex-col border-t-2 border-ink">
+              {[
+                ...LINKS,
+                ["/occasions", "Occasions"],
+                ["/custom-order", "Anything else"],
+                ["/group", "Order together"],
+                ["/reorder", "Order again"],
+                ["/orders", "My orders"],
+              ].map(([href, label]) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMenu(false)}
+                  className="flex min-h-[54px] items-center justify-between border-b border-line px-4 font-display text-[26px] font-extrabold uppercase leading-none"
+                >
+                  {label}
+                  <span aria-hidden className="text-brand">
+                    →
+                  </span>
+                </Link>
+              ))}
+            </nav>
+            <div className="px-4 pt-5">
+              <Link
+                href="/cart"
+                onClick={() => setMenu(false)}
+                className="btn-primary w-full"
+              >
+                <CartIcon />
+                Cart
+                {count > 0 && (
+                  <span className="grid size-[22px] shrink-0 place-items-center rounded-full bg-ink font-mono text-xs text-white">
+                    {count}
+                  </span>
+                )}
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

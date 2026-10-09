@@ -64,6 +64,7 @@ async function readMenu(): Promise<MenuView[]> {
       bannerUrl: restaurant.banner_url ?? "",
       brandHex: restaurant.brand_hex ?? "",
       closedDays: closedWord(restaurant.open_days),
+      areaId: (restaurant.area ?? "").trim(),
     },
     categories: categoryRows
       .filter((c) => c.restaurant_id === restaurant.id)
@@ -264,6 +265,7 @@ async function readMenuFor(ref: string): Promise<MenuView | null> {
       bannerUrl: restaurant.banner_url ?? "",
       brandHex: restaurant.brand_hex ?? "",
       closedDays: closedWord(restaurant.open_days),
+      areaId: (restaurant.area ?? "").trim(),
     },
     categories: categoryRows.map((c) => ({ id: c.id, name: c.name })),
     items: menuItems.map(

@@ -18,6 +18,10 @@ export type MenuView = {
     brandHex: string;
     /** "Closed Saturdays and Sundays", or empty where it opens every day. */
     closedDays: string;
+    /** Which area it sits in, as a row holds it. Empty is the home area.
+     *  The name is looked up where the page is drawn, because the names
+     *  are the shop's to change in admin. */
+    areaId: string;
   };
   categories: { id: string; name: string }[];
   items: ItemView[];

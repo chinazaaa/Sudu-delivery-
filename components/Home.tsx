@@ -153,7 +153,7 @@ export default function Home({
   }
 
   return (
-    <div className="bleed">
+    <div className="bleed -mt-4">
       {found !== null ? (
         <section className="shell space-y-4 py-8">
           <div className="flex items-center justify-between gap-3">
@@ -182,12 +182,13 @@ export default function Home({
               </span>
             </Link>
           ) : (
-            <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
               {found.map(({ item, place }) => (
                 <ItemRow
                   key={item.id}
                   item={item}
                   inCart={countFor(item.id)}
+                  restaurant={place.restaurant}
                   onOpen={() => setOpen({ item, place })}
                 />
               ))}
@@ -200,39 +201,44 @@ export default function Home({
               the right: the page used to open on the run alone, which says
               nothing to the half of campus who were sent a link. */}
           <section className="border-b-2 border-ink">
-            <div className="shell grid gap-14 py-16 lg:grid-cols-2 lg:items-center">
-              <div className="flex flex-col gap-7">
+            <div className="shell grid gap-8 py-7 sm:py-12 lg:grid-cols-2 lg:items-center lg:gap-14 lg:py-16">
+              <div className="flex flex-col gap-4 sm:gap-7">
                 <div className="flex flex-wrap gap-2">
                   <span className="ticket inline-block border-2 border-ink px-2.5 py-1.5">
                     On PAU campus since 2018
                   </span>
                   {award !== "" && (
-                    <span className="sticker px-2.5 py-1.5">{award}</span>
+                    <span className="sticker hidden px-2.5 py-1.5 sm:inline-block">
+                      {award}
+                    </span>
                   )}
                 </div>
-                <h1 className="font-display text-[clamp(4rem,9vw,8rem)] font-black uppercase leading-[0.86] tracking-[-0.005em]">
+                <h1 className="font-display text-[min(19.5vw,4.75rem)] font-black uppercase leading-[0.86] tracking-[-0.005em] sm:text-[clamp(4rem,9vw,8rem)]">
                   Outside food.
                   <br />
                   <span className="text-brand">Inside PAU.</span>
                 </h1>
-                <p className="max-w-[520px] text-xl leading-normal text-ink/80">
+                <p className="max-w-[520px] text-[17px] leading-normal text-ink/80 sm:text-xl">
                   {said(menu)} and more{where !== "" ? ` from ${where}` : ""}.
                   Mix restaurants in one order, pay once, and collect it at your
                   hostel block.
                 </p>
                 <div className="flex flex-wrap gap-3">
-                  <Link href="/products" className="btn-primary text-lg">
+                  <Link href="/products" className="btn-primary w-full text-lg sm:w-auto">
                     Start an order
                     <span aria-hidden>→</span>
                   </Link>
-                  <a href="#fees" className="btn-quiet text-lg">
+                  {/* On a phone the fee table is two swipes down and the
+                      ticket under this already links to it. One button
+                      here is what gets pressed. */}
+                  <a href="#fees" className="btn-quiet hidden text-lg sm:inline-flex">
                     See delivery fees
                   </a>
                 </div>
               </div>
 
               {arriving !== "" && (
-                <div className="relative pl-7 pt-7">
+                <div className="relative pl-4 pt-4 sm:pl-7 sm:pt-7">
                   <span
                     aria-hidden
                     className="absolute left-0 top-0 h-[70%] w-[72%] opacity-90"

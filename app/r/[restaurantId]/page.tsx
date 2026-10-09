@@ -8,6 +8,14 @@ import { dealsAt } from "@/lib/coupons";
 import { isSkincare } from "@/lib/skincare";
 import Deals from "@/components/Deals";
 import { photoOf } from "@/lib/product-photo";
+import { openBatches } from "@/lib/batches";
+import { toBatchView } from "@/lib/view";
+import { nextArrival, runArrival } from "@/lib/arrival";
+import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
+import { hoursByDay, safeSettings } from "@/lib/settings";
+import { parseAreas } from "@/lib/areas";
+import { activeBands } from "@/lib/settings";
+import { lagosToday } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +81,43 @@ export default async function RestaurantPage({
   // Everything on offer here, in one place somebody can look on purpose
   // rather than find by accident.
   const deals = await dealsAt(place.restaurant.id, place.restaurant.name);
+
+  // The three things the board puts under the name.
+  //
+  // Where the kitchen is, by the area's own name as admin writes it, so a
+  // restaurant that moves area is a dropdown rather than a deploy. And when
+  // the next car goes, worked out by exactly the rule the front page and the
+  // checkout use, so no two pages of ours can promise different days.
+  const [settings, batches, bands] = await Promise.all([
+    safeSettings(),
+    openBatches(),
+    activeBands(),
+  ]);
+  const areas = parseAreas(settings.delivery_areas);
+  const area =
+    place.restaurant.areaId === ""
+      ? ""
+      : areas.find((one) => one.id === place.restaurant.areaId)?.name ?? "";
+
+  const slots =
+    settings.same_day_on === "on"
+      ? slotsWorthOffering(
+          deliverySlots(new Date(), await hoursByDay()),
+          batches.map((one) => ({
+            run_date: one.run_date,
+            window: one.delivery_window_text,
+          }))
+        )
+      : [];
+  const arriving =
+    nextArrival(
+      batches
+        .map(toBatchView)
+        .filter((one) => !one.closed && !one.full)
+        .map(runArrival),
+      slots,
+      lagosToday()
+    )?.said ?? "";
 
   // What they sell, in their own words: the menu's own sections, lower
   // cased, up to four. Read from the menu so it can never describe a
@@ -170,50 +215,75 @@ export default async function RestaurantPage({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="-mt-4 space-y-5">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
       />
-      <div className="relative -mx-4 h-52 overflow-hidden sm:mx-0 sm:h-64 sm:rounded-2xl">
-        <Thumb
-          src={place.restaurant.bannerUrl}
-          name={place.restaurant.name}
-          rounded="rounded-none"
-          variant="banner"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/40 to-transparent" />
+      {/* The name, as big as the board draws it, on Ink.
 
-        <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 p-4 text-white">
-          <span className="size-14 shrink-0 overflow-hidden rounded-2xl border-2 border-white/80">
-            <Thumb
-              src={place.restaurant.logoUrl}
-              name={place.restaurant.name}
-              rounded="rounded-none"
-            />
+          It was a photograph of the shopfront with the name over a
+          gradient, which is every delivery app and reads as somebody
+          else's brand rather than ours. The board puts the name in the
+          display face on a black band with the speed stripes behind it,
+          and the three things somebody needs before they read a menu
+          underneath: where it is, when the next car goes, and that mixing
+          kitchens costs nothing extra. */}
+      <section className="bleed relative overflow-hidden bg-ink text-shell">
+        <span
+          aria-hidden
+          className="absolute inset-y-0 -right-10 w-[38%] opacity-85"
+          style={{
+            background:
+              "repeating-linear-gradient(-60deg,#e5321d 0 7px,transparent 7px 16px)",
+          }}
+        />
+        <div className="shell relative flex flex-col gap-3 pb-6 pt-5 sm:gap-4 sm:pb-11 sm:pt-7">
+          <nav aria-label="Breadcrumb" className="ticket flex gap-2 text-[#b9b0a5]">
+            <Link href="/" className="text-[#b9b0a5] hover:text-volt">
+              Home
+            </Link>
+            <span aria-hidden>/</span>
+            <Link href="/products" className="text-[#b9b0a5] hover:text-volt">
+              Restaurants
+            </Link>
+            <span aria-hidden>/</span>
+            <span className="text-volt">{place.restaurant.name}</span>
+          </nav>
+
+          <h1 className="font-display text-[min(21.5vw,5.25rem)] font-black uppercase leading-[0.85] sm:text-[clamp(4rem,9vw,7.5rem)]">
+            {place.restaurant.name}
+          </h1>
+          {/* The sentence a search engine needs, which the headline used
+              to carry at the cost of being four words long. */}
+          <span className="sr-only">
+            {place.restaurant.name} delivery to Pan-Atlantic University
           </span>
-          <div className="min-w-0">
-            {/* The name and what this page is: a search for "does KFC
-                deliver to PAU" should find a heading that answers it,
-                rather than a heading that only says KFC. Clamped to two
-                lines, because a long restaurant name plus the rest is more
-                than one line on a phone. */}
-            <h1 className="line-clamp-2 text-2xl font-extrabold sm:text-3xl">
-              {place.restaurant.name} delivery to PAU
-            </h1>
-            <p className="text-sm text-white/75">
-              {place.items.length} item{place.items.length === 1 ? "" : "s"} on
-              the menu
-              {/* Said here because it decides whether to read the rest of
-                  the page at all, and finding it out at checkout is finding
-                  it out after choosing dinner. */}
-              {place.restaurant.closedDays
-                ? ` · ${place.restaurant.closedDays}`
-                : ""}
-            </p>
+
+          <div className="flex flex-wrap gap-1.5 text-[13px] sm:gap-2 sm:text-sm">
+            {area !== "" && (
+              <span className="flex items-center gap-1.5 rounded-full border border-[#4a423b] px-2.5 py-1 sm:px-3 sm:py-1.5">
+                <Pin />
+                {area}
+              </span>
+            )}
+            {arriving !== "" && (
+              <span className="flex items-center gap-1.5 rounded-full border border-[#4a423b] px-2.5 py-1 sm:px-3 sm:py-1.5">
+                <Clock />
+                Next run {arriving}
+              </span>
+            )}
+            {place.restaurant.closedDays !== "" && (
+              <span className="flex items-center gap-1.5 rounded-full border border-[#4a423b] px-2.5 py-1 sm:px-3 sm:py-1.5">
+                {place.restaurant.closedDays}
+              </span>
+            )}
+            <span className="rounded-full bg-volt px-2.5 py-1 font-semibold text-ink sm:px-3 sm:py-1.5">
+              Mix with any other kitchen, same fee
+            </span>
           </div>
         </div>
-      </div>
+      </section>
 
       {deals.length > 0 && <Deals deals={deals} />}
 
@@ -221,7 +291,7 @@ export default async function RestaurantPage({
           menu, and the answer to "when" belongs at checkout where it is
           actually chosen. */}
 
-      <RestaurantMenu place={place} />
+      <RestaurantMenu place={place} bands={bands} />
 
       {/* Under the menu, on purpose. The relationship between a restaurant,
           this shop and the campus is the thing people search for, and a list
@@ -235,5 +305,43 @@ export default async function RestaurantPage({
         one delivery is shared between everybody on the run.
       </p>
     </div>
+  );
+}
+
+/** Where it is. */
+function Pin() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="size-4 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </svg>
+  );
+}
+
+/** When the next car goes. */
+function Clock() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="size-4 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
   );
 }

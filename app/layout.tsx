@@ -172,7 +172,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             thing on the page, which is the footer: put on the main it opens
             a hole between the end of the content and the footer instead, and
             on a wide screen that hole was most of a screen of nothing. */}
-        <main className="mx-auto max-w-5xl px-4 pb-6 pt-4">{children}</main>
+        <main className="mx-auto w-full max-w-[1240px] px-4 pt-4 sm:px-8">{children}</main>
         {showFooter && (
           <SiteFooter
             line={settings.footer_line}

@@ -16,27 +16,43 @@ export default function CartBar() {
   // or free, and both are worse than a bar that simply does not say.
   const subtotal = cartSubtotal(cart);
 
+  // Whose food it is, the way the board writes it: "1 item · KFC", and the
+  // count of kitchens once there is more than one, because naming the first
+  // of three is worse than naming none.
+  const places = Array.from(new Set(cart.map((l) => l.restaurantName).filter(Boolean)));
+  const from =
+    places.length === 1
+      ? places[0]
+      : places.length > 1
+        ? `${places.length} kitchens`
+        : "";
+
   return (
     /* A phone's bar. On a laptop the cart is a button in the header, and a
        red slab floating over the middle of the page is a second one saying
-       the same thing over whatever somebody is reading. */
-    <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 p-3 sm:bottom-0 lg:hidden">
+       the same thing over whatever somebody is reading.
+
+       It clears the tab bar below it, and on anything wider than a phone
+       there is no tab bar to clear. */
+    <div className="fixed inset-x-3 bottom-[calc(72px+env(safe-area-inset-bottom))] z-30 sm:inset-x-4 sm:bottom-4 lg:hidden">
       <Link
         href="/cart"
-        className="mx-auto flex max-w-2xl items-center gap-3 rounded-2xl border-2 border-ink bg-brand px-4 py-3 text-white shadow-hard"
+        className="mx-auto flex max-w-2xl items-center justify-between gap-3 rounded-2xl border-2 border-ink bg-brand py-2.5 pl-[18px] pr-2.5 text-white shadow-hard"
       >
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/15 font-bold">
-          {count}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-bold">View cart</span>
-          <span className="block truncate text-sm text-white/80">
-            Delivery added at checkout
+        <span className="flex min-w-0 flex-col">
+          <span className="ticket truncate text-[11px] text-white/90">
+            {count} item{count === 1 ? "" : "s"}
+            {from !== "" ? ` · ${from}` : ""}
           </span>
+          {subtotal > 0 && (
+            <span className="truncate text-lg font-bold leading-tight">
+              {naira(subtotal)}
+            </span>
+          )}
         </span>
-        {subtotal > 0 && (
-          <span className="shrink-0 font-bold">{naira(subtotal)}</span>
-        )}
+        <span className="flex min-h-11 shrink-0 items-center rounded-full bg-ink px-[18px] font-bold text-white">
+          View cart
+        </span>
       </Link>
     </div>
   );
