@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 
 import { countdown } from "@/lib/api";
-import { T } from "@/lib/theme";
+import { F, T } from "@/lib/theme";
 
 /**
  * How long is left to order for the run at the top of the page.
@@ -19,9 +19,12 @@ import { T } from "@/lib/theme";
 export default function CutOff({
   at,
   within = 2 * 60 * 60 * 1000,
+  tone = "dark",
 }: {
   at: string;
   within?: number;
+  /** "light" where it is sitting on Ink, which is most of the time now. */
+  tone?: "dark" | "light";
 }) {
   const [left, setLeft] = useState<number | null>(null);
 
@@ -40,9 +43,20 @@ export default function CutOff({
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
       <View
-        style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: T.brand }}
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: tone === "light" ? T.volt : T.brand,
+        }}
       />
-      <Text style={{ color: T.brandDark, fontWeight: "700", fontSize: 13 }}>
+      <Text
+        style={{
+          color: tone === "light" ? T.volt : T.brandDark,
+          fontFamily: F.bodySemi,
+          fontSize: 13,
+        }}
+      >
         Orders close in {countdown(left)}
       </Text>
     </View>

@@ -26,7 +26,9 @@ import CutOff from "@/components/CutOff";
 import OfferNudge from "@/components/OfferNudge";
 import Thumb from "@/components/Thumb";
 import AskUs from "@/components/AskUs";
-import { T } from "@/lib/theme";
+import { F, T } from "@/lib/theme";
+import { tileAt } from "@/lib/tiles";
+import { Display, Stripes, Ticket } from "@/components/ui";
 
 /**
  * The shop, and above it whatever is happening with the last order.
@@ -383,33 +385,35 @@ export default function Home() {
                have not. */
             onPress={() => router.push("/products" as never)}
             style={{
-              borderWidth: 2,
-              borderColor: "rgba(255,90,31,0.3)",
-              backgroundColor: T.tint,
-              borderRadius: T.radius,
-              padding: 14,
+              position: "relative",
+              overflow: "hidden",
+              backgroundColor: T.ink,
+              borderRadius: 18,
+              paddingVertical: 16,
+              paddingHorizontal: 18,
               flexDirection: "row",
               alignItems: "center",
               gap: 10,
             }}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink }}>
-                {arriving !== "" ? `Order now, get it ${arriving}` : "Order now"}
-              </Text>
+            {/* The speed stripes down the right, the way the board draws
+                this ticket. */}
+            <Stripes style={{ right: -10, width: "34%", opacity: 0.8 }} />
+            <View style={{ flex: 1, gap: 6 }}>
+              <Ticket colour={T.volt}>Next run to PAU</Ticket>
+              <Display size={34} colour={T.shell}>
+                {arriving !== "" ? arriving : "Working out when…"}
+              </Display>
               {/* Holds the line the arrival sentence will take, so filling it
                   in does not move the page under somebody's thumb. */}
-              {arriving === "" && (
-                <Text style={{ color: T.ink, opacity: 0.45, marginTop: 4 }}>
-                  Working out when…
-                </Text>
-              )}
+
               {/* The deadline, between the promise and the alternative,
                   exactly where the website puts it. Only a run has a queue
                   to make: a car of its own is three hours from whenever it
                   is asked for, so there is nothing to be late for. */}
               {decided?.onARun && (
                 <CutOff
+                  tone="light"
                   at={
                     (shop?.runs ?? []).find((one) => one.id === decided.runId)?.cutOffISO ?? ""
                   }
@@ -417,14 +421,14 @@ export default function Home() {
               )}
 
               {also && (
-                <Text style={{ color: T.ink, opacity: 0.75, marginTop: 4 }}>
+                <Text style={{ color: T.onInk, marginTop: 2 }}>
                   {decided?.onARun
                     ? `In a hurry? A car of its own can be there ${also.said}, for more.`
                     : `Rather pay less? A run gets it to you ${also.said}.`}
                 </Text>
               )}
             </View>
-            <Text style={{ color: T.brand, fontWeight: "800" }}>Browse</Text>
+            <Text style={{ fontFamily: F.bodyBold, color: T.volt }}>Browse</Text>
           </Pressable>
         )}
 
@@ -439,56 +443,67 @@ export default function Home() {
 
 
 
-        {found === null &&
-          shop?.menu.map((place) => (
-          <Link key={place.restaurant.id} href={`/r/${place.restaurant.id}`} asChild>
-            <Pressable style={{ borderRadius: T.radius, overflow: "hidden", backgroundColor: T.paper }}>
-              {place.restaurant.bannerUrl !== "" && (
-                <Image
-                  source={{ uri: place.restaurant.bannerUrl }}
-                  style={{ width: "100%", height: 140 }}
-                  resizeMode="cover"
-                />
-              )}
-              <View style={{ padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
-                {place.restaurant.logoUrl !== "" && (
-                  <Image
-                    source={{ uri: place.restaurant.logoUrl }}
-                    style={{ width: 44, height: 44, borderRadius: 12 }}
-                  />
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink }}>
-                    {place.restaurant.name}
-                  </Text>
-                  <Text style={{ color: T.muted }}>
-                    {place.items.length} item{place.items.length === 1 ? "" : "s"} on the menu
-                  </Text>
-                </View>
+        {/* The kitchens, as the board's tiles: two to a row, the name as
+            big as the tile allows, and our own colours rotating through
+            them. Never the restaurant's: a tile in KFC's red with KFC's
+            name on it is a shop claiming a relationship it does not have,
+            and we are a courier rather than a franchise. */}
+        {found === null && (shop?.menu.length ?? 0) > 0 && (
+          <View style={{ gap: 10 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+              }}
+            >
+              <Display size={30}>Kitchens</Display>
+              <Pressable onPress={() => router.push("/products" as never)}>
+                <Text style={{ fontFamily: F.bodySemi, color: T.ink }}>
+                  See all {shop!.menu.length}
+                </Text>
+              </Pressable>
+            </View>
 
-                {/* What delivery costs here when a promotion is pricing it.
-                    The number is the reason to tap, so it goes on the
-                    outside rather than behind the word "offer". */}
-                {shop?.offers?.[place.restaurant.id]?.badge ? (
-                  <View
-                    style={{
-                      borderRadius: 999,
-                      borderWidth: 1,
-                      borderColor: T.brand + "55",
-                      backgroundColor: T.tint,
-                      paddingHorizontal: 10,
-                      paddingVertical: 5,
-                    }}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+              {shop!.menu.map((place, at) => {
+                const tile = tileAt(at);
+                const badge = shop?.offers?.[place.restaurant.id]?.badge ?? "";
+                return (
+                  <Link
+                    key={place.restaurant.id}
+                    href={`/r/${place.restaurant.id}`}
+                    asChild
                   >
-                    <Text style={{ color: T.brandDark, fontWeight: "800", fontSize: 12 }}>
-                      {shop.offers[place.restaurant.id].badge}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            </Pressable>
-          </Link>
-        ))}
+                    <Pressable
+                      style={{
+                        flexBasis: "48%",
+                        flexGrow: 1,
+                        minHeight: 86,
+                        borderWidth: 2,
+                        borderColor: T.ink,
+                        borderRadius: 14,
+                        backgroundColor: tile.bg,
+                        padding: 12,
+                        justifyContent: "space-between",
+                        gap: 8,
+                      }}
+                    >
+                      <Display size={22} colour={tile.text}>
+                        {place.restaurant.name}
+                      </Display>
+                      <Ticket colour={tile.text}>
+                        {badge !== ""
+                          ? badge
+                          : `${place.items.length} thing${place.items.length === 1 ? "" : "s"}`}
+                      </Ticket>
+                    </Pressable>
+                  </Link>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* The doors, under the food rather than over it.
 
