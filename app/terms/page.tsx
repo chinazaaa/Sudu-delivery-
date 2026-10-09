@@ -310,6 +310,10 @@ export default async function TermsPage() {
         </p>
         <p className="text-muted">
           See also our{" "}
+          <Link href="/return-policy" className="font-semibold text-brand">
+            returns and refunds page
+          </Link>
+          , our{" "}
           <Link href="/privacy" className="font-semibold text-brand">
             privacy policy
           </Link>{" "}

@@ -62,6 +62,7 @@ export default function SiteFooter({
         ...(groupLink ? [{ href: groupLink, said: "PAU WhatsApp group", away: true }] : []),
         { href: "/privacy", said: "Privacy" },
         { href: "/terms", said: "Terms" },
+        { href: "/return-policy", said: "Returns and refunds" },
       ],
     },
   ];

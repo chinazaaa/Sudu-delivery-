@@ -67,6 +67,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${site}/support`, changeFrequency: "monthly" as const, priority: 0.3 },
     { url: `${site}/privacy`, changeFrequency: "monthly" as const, priority: 0.3 },
     { url: `${site}/terms`, changeFrequency: "monthly" as const, priority: 0.3 },
+    // A card provider or a store asks for this one by address.
+    { url: `${site}/return-policy`, changeFrequency: "monthly" as const, priority: 0.3 },
   ];
 
   try {
