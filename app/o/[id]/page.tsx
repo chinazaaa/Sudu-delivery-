@@ -165,9 +165,16 @@ export default async function OrderPage({
   // A run that is not going out says so before anything else. Cancelled, it
   // used to read "Paid and on the run", which is the one thing it is not.
   const cancelledRun = order.batch.status === "cancelled";
+  // Cancelled or refunded: there is nothing to pay, nothing to move, nothing
+  // to rate and nothing on its way. Every test below that used to ask only
+  // about a refund asks about both, because a cancelled order answered "no"
+  // to all of them and was then handed to whichever branch came next.
+  const over = order.status === "refunded" || order.status === "cancelled";
   const status =
-    order.status === "delivered"
-      ? "Delivered"
+    order.status === "cancelled"
+      ? "Cancelled"
+      : order.status === "delivered"
+        ? "Delivered"
       : cancelledRun
         ? isParcel
           ? "This trip is not going out"
@@ -186,14 +193,21 @@ export default async function OrderPage({
   // chip beside it already carries the label; this is the thing somebody
   // reads from across the room.
   const headline =
-    order.status === "refunded"
-      ? "Refunded"
-      : cancelledRun
-        ? isParcel
-          ? "This trip is not going out"
-          : "This run is not going out"
-        : order.status === "delivered" || order.batch.stage === "handed_out"
-          ? "Delivered. Enjoy."
+    order.status === "cancelled"
+      ? "This order was cancelled"
+      : order.status === "refunded"
+        ? "Refunded"
+        : cancelledRun
+          ? isParcel
+            ? "This trip is not going out"
+            : "This run is not going out"
+          // Handed out is a fact about the run, not about this order. An
+          // order pulled off a run that then went without it is not
+          // delivered, and saying so to somebody whose money came back is
+          // the worst sentence on the site.
+          : order.status === "delivered" ||
+              (paid && order.batch.stage === "handed_out")
+            ? "Delivered. Enjoy."
           : !paid
             ? expired
               ? "This run has gone"
@@ -230,7 +244,7 @@ export default async function OrderPage({
           </Link>
         </section>
       )}
-      {order.status !== "refunded" && order.batch.stage !== "handed_out" && <LiveOrder />}
+      {!over && order.batch.stage !== "handed_out" && <LiveOrder />}
 
       {/* The board's order head: the state of it in words as big as the
           page allows, on Ink with the speed stripes, and the run itself on
@@ -254,11 +268,14 @@ export default async function OrderPage({
             <span className="ticket text-[#b9b0a5]">Order {ref}</span>
             <span
               className={`ticket px-2.5 py-1 ${
-                order.status === "delivered" || order.batch.stage === "handed_out"
-                  ? "bg-mint text-white"
-                  : paid
-                    ? "bg-brand text-white"
-                    : "bg-volt text-ink"
+                over
+                  ? "bg-[#4a423b] text-shell"
+                  : order.status === "delivered" ||
+                      (paid && order.batch.stage === "handed_out")
+                    ? "bg-mint text-white"
+                    : paid
+                      ? "bg-brand text-white"
+                      : "bg-volt text-ink"
               }`}
             >
               {status}
@@ -353,7 +370,7 @@ export default async function OrderPage({
         )}
       </section>
 
-      {!paid && !waitingOnGroup && order.status !== "refunded" && expired && (
+      {!paid && !waitingOnGroup && !over && expired && (
         <section className="card space-y-3 border-brand/30 bg-brand-tint">
           <div>
             <h2 className="font-bold">This run has gone. Do not pay it.</h2>
@@ -374,7 +391,7 @@ export default async function OrderPage({
       )}
 
       {/* Paying comes first while it is unpaid, and drops away once it is not. */}
-      {!paid && !waitingOnGroup && order.status !== "refunded" && !expired && (
+      {!paid && !waitingOnGroup && !over && !expired && (
         <section className="card space-y-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-lg font-extrabold">Pay {naira(order.total)}</h2>
@@ -537,7 +554,7 @@ export default async function OrderPage({
       {canStillMove &&
         !isParcel &&
         !isPaid(order.status) &&
-        order.status !== "refunded" && (
+        !over && (
         <ShareDelivery
           url={`${site}/join/${order.shared_with ?? order.id}`}
           name={(order.for_name ?? order.customer_name).split(" ")[0]}
@@ -591,7 +608,7 @@ export default async function OrderPage({
           holding this order's own link. In a group each share asks separately,
           because each share is one person's bag. */}
       {(order.status === "delivered" || order.batch.stage === "handed_out") &&
-        order.status !== "refunded" && (
+        !over && (
           <RateOrder
             orderId={order.id}
             rating={order.rating ?? null}
@@ -831,6 +848,20 @@ export default async function OrderPage({
           <p className="mt-1 text-sm text-ink/75">
             Your group got smaller, so the delivery fee dropped a band. The
             difference comes back to you.
+          </p>
+        </section>
+      )}
+
+      {order.status === "cancelled" && (
+        <section className="card">
+          <h2 className="font-bold">Cancelled</h2>
+          <p className="mt-1 text-sm text-ink/75">
+            This order was cancelled, so nothing was collected and nothing is
+            owed. If you were charged, message us and we will put it back.{" "}
+            <Link href="/" className="font-semibold text-brand underline">
+              Order into the next run
+            </Link>
+            .
           </p>
         </section>
       )}

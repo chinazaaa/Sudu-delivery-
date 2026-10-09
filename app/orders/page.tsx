@@ -112,7 +112,9 @@ export default async function OrdersPage({
   // top of the page until it has been handed over, because until then it is
   // the only one anybody opened this page to look at.
   const done = (order: (typeof orders)[number]) =>
-    order.status === "delivered" || order.status === "refunded";
+    order.status === "delivered" ||
+    order.status === "refunded" ||
+    order.status === "cancelled";
   const live = orders.filter((order) => !done(order));
   const past = orders.filter(done);
 
@@ -298,11 +300,13 @@ function Chip({
       ? gone(order)
         ? (["Run closed", "bg-volt text-ink"] as const)
         : (["Awaiting payment", "bg-volt text-ink"] as const)
-      : order.status === "refunded"
-        ? (["Refunded", "bg-[#4a423b] text-shell"] as const)
-        : order.status === "delivered"
-          ? (["Delivered", "bg-mint text-white"] as const)
-          : ([STAGE_LABEL[order.batch.stage], "bg-brand text-white"] as const);
+      : order.status === "cancelled"
+        ? (["Cancelled", "bg-[#4a423b] text-shell"] as const)
+        : order.status === "refunded"
+          ? (["Refunded", "bg-[#4a423b] text-shell"] as const)
+          : order.status === "delivered"
+            ? (["Delivered", "bg-mint text-white"] as const)
+            : ([STAGE_LABEL[order.batch.stage], "bg-brand text-white"] as const);
 
   return <span className={`ticket px-2 py-1 ${look}`}>{said}</span>;
 }

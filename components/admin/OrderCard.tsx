@@ -199,9 +199,23 @@ export default function OrderCard({
                 Day to agree
               </span>
             )}
-            {order.status !== "pending" && order.runStage !== "ordering" && (
+            {/* What is on their own page, worked out their way.
+                It used to print the run's stage for any order that was not
+                pending, so a cancelled order on a run that went out without
+                it read "They see: Delivered". The run was delivered. The
+                order was not, and the customer is being told it was. */}
+            {order.status !== "pending" && (
               <span className="rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold text-muted">
-                They see: {STAGE_LABEL[order.runStage]}
+                They see:{" "}
+                {order.status === "cancelled"
+                  ? "Cancelled"
+                  : order.status === "refunded"
+                    ? "Refunded"
+                    : order.status === "delivered"
+                      ? "Delivered"
+                      : order.runStage === "ordering"
+                        ? "Paid and on the run"
+                        : STAGE_LABEL[order.runStage]}
               </span>
             )}
             {order.source !== "" && (
