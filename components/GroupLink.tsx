@@ -133,7 +133,7 @@ export default function GroupLink({
   alone?: number;
   /** Told whenever the chosen way of arriving changes, so the page around
    *  this can draw the ticket the board puts beside the form. */
-  onChoice?: (said: string) => void;
+  onChoice?: (said: string, onARun: boolean) => void;
 }) {
   const [open, setOpen] = useState(openNow);
   const [name, setName] = useState("");
@@ -161,11 +161,11 @@ export default function GroupLink({
   }, []);
 
   useEffect(() => {
-    onChoice?.(going?.said ?? "");
+    onChoice?.(going?.said ?? "", going?.onARun ?? true);
     // The callback is whatever the page passed this render; following it
     // would fire on every one of them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [going?.said]);
+  }, [going?.said, going?.onARun]);
 
   const start = async () => {
     setError("");

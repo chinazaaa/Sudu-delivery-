@@ -34,6 +34,7 @@ export default function GroupHub({
   // What the form beside the ticket currently has chosen, so the ticket can
   // say it. The board puts the two side by side and they have to agree.
   const [chosen, setChosen] = useState("");
+  const [shared, setShared] = useState(true);
 
   useEffect(() => {
     const look = () => {
@@ -47,44 +48,43 @@ export default function GroupHub({
 
   return (
     <div className="-mt-4 space-y-5">
-      {/* The board's head. "Start a group" is the thing to do here, so that
-          is what the page is called, as big as it will go. */}
-      <header className="flex flex-col gap-4 pt-7">
-        <span className="ticket text-brand-dark">
-          Group order · one car · one fee
-        </span>
-        <h1 className="font-display text-[min(19vw,8.75rem)] font-black uppercase leading-[0.84] sm:text-[clamp(4rem,10vw,8.75rem)]">
-          Start a
-          <br />
-          <span className="text-brand">group</span>
-        </h1>
-        <p className="max-w-[480px] text-[17px] leading-relaxed text-ink/80 sm:text-lg">
-          Everyone adds their own food from any kitchen, it all comes in one
-          car, and you split one delivery fee.
-        </p>
-      </header>
-
-      <div className="grid items-start gap-10 py-2 lg:grid-cols-2 lg:gap-12">
+      {/* The board's two columns, with the headline inside the left one.
+          Above the grid it pushed the form down a whole screen, so a page
+          whose entire job is one form opened on no form at all. */}
+      <div className="grid items-start gap-10 pt-7 lg:grid-cols-2 lg:gap-12">
         <div className="flex flex-col gap-6">
-      {read && group !== "" && (
-        <Link
-          href={`/g/${group}`}
-          className="flex items-center justify-between gap-3 rounded-2xl border-2 border-ink bg-ink px-5 py-4 text-shell shadow-[5px_5px_0_#e5321d]"
-        >
-          <span>
-            <span className="ticket block text-volt">You are in a group</span>
-            <span className="mt-1 block font-display text-[28px] font-extrabold uppercase leading-none">
-              Open your car
-            </span>
-            <span className="mt-1 block text-sm text-[#d8d1c7]">
-              See who is in it and what it is costing.
-            </span>
+          <span className="ticket text-brand-dark">
+            Group order · one car · one fee
           </span>
-          <span aria-hidden className="shrink-0 text-xl font-bold text-volt">
-            →
-          </span>
-        </Link>
-      )}
+          <h1 className="font-display text-[min(19vw,8.75rem)] font-black uppercase leading-[0.84] sm:text-[clamp(4rem,10vw,8.75rem)]">
+            Start a
+            <br />
+            <span className="text-brand">group</span>
+          </h1>
+          <p className="max-w-[480px] text-[17px] leading-relaxed text-ink/80 sm:text-lg">
+            Everyone adds their own food from any kitchen, it all comes in one
+            car, and you split one delivery fee.
+          </p>
+
+          {read && group !== "" && (
+            <Link
+              href={`/g/${group}`}
+              className="flex items-center justify-between gap-3 rounded-2xl border-2 border-ink bg-ink px-5 py-4 text-shell shadow-[5px_5px_0_#e5321d]"
+            >
+              <span>
+                <span className="ticket block text-volt">You are in a group</span>
+                <span className="mt-1 block font-display text-[28px] font-extrabold uppercase leading-none">
+                  Open your car
+                </span>
+                <span className="mt-1 block text-sm text-[#d8d1c7]">
+                  See who is in it and what it is costing.
+                </span>
+              </span>
+              <span aria-hidden className="shrink-0 text-xl font-bold text-volt">
+                →
+              </span>
+            </Link>
+          )}
 
           {/* The run everybody in the car gets, on the board's ticket with
               the speed stripes behind it. It follows the form beside it,
@@ -101,13 +101,15 @@ export default function GroupHub({
                 }}
               />
               <div className="relative flex flex-col gap-3 rounded-2xl bg-ink p-5 text-shell shadow-[8px_8px_0_#e5321d]">
-                <span className="ticket text-volt">Shared run to PAU</span>
+                <span className="ticket text-volt">
+                  {shared ? "Shared run to PAU" : "Private car to PAU"}
+                </span>
                 <span className="font-display text-[clamp(1.9rem,6vw,2.5rem)] font-extrabold uppercase leading-[0.95]">
                   {chosen}
                 </span>
                 <div className="border-t-2 border-dashed border-[#4a423b]" />
                 <div className="flex flex-wrap justify-between gap-3 text-sm">
-                  <span>One car, one fee</span>
+                  <span>{shared ? "One car, one fee" : "A car of your own"}</span>
                   <span className="text-[#b9b0a5]">Same time for everyone</span>
                 </div>
               </div>
@@ -124,7 +126,10 @@ export default function GroupHub({
           runs={runs}
           slots={slots}
           today={today}
-          onChoice={setChosen}
+          onChoice={(said, onARun) => {
+            setChosen(said);
+            setShared(onARun);
+          }}
         />
       </div>
 
