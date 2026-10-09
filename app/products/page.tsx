@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import ProductGrid from "@/components/ProductGrid";
+import { optionGroupsFor } from "@/lib/menu";
 
 import { browseProducts, productFacets, PER_PAGE } from "@/lib/products";
-import { naira } from "@/lib/money";
-import Thumb from "@/components/Thumb";
 import ProductSearch from "@/components/ProductSearch";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +74,35 @@ export default async function ProductsPage({
     productFacets(asked.place),
   ]);
 
+  // What each thing on this page asks before it can go in a cart. Looked up
+  // for the twenty-four on screen rather than for the whole shop, so a card
+  // can add a bottle of water in one tap and still send a pizza to the sheet
+  // that asks which size.
+  const groups = await optionGroupsFor(products.map((one) => one.id));
+  const cards = products.map((one) => ({
+    item: {
+      id: one.id,
+      name: one.name,
+      price: one.price,
+      available: true,
+      imageUrl: one.imageUrl,
+      description: one.description,
+      categoryId: one.categoryId,
+      containerPct: one.containerPct,
+      groups: groups.get(one.id) ?? [],
+    },
+    restaurant: {
+      id: one.restaurantId,
+      href: one.slug || one.restaurantId,
+      name: one.restaurant,
+      logoUrl: "",
+      bannerUrl: "",
+      brandHex: "",
+      closedDays: "",
+      areaId: "",
+    },
+  }));
+
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
   const link = (change: Partial<Asked>) => {
     const now = new URLSearchParams();
@@ -87,13 +116,21 @@ export default async function ProductsPage({
 
   return (
     <div className="space-y-4 pb-10">
-      <header className="space-y-1">
+      <header className="flex flex-col gap-3 pb-2">
         {/* Not "everything": the shop sells more than food now, and this is
             the food door. Calling it everything while skincare, boxes and
             parcels live behind their own cards was the one contradiction the
             front page could not afford. */}
-        <h1 className="text-2xl font-extrabold">All the food, in one list</h1>
-        <p className="text-sm text-muted">
+        <span className="ticket text-brand-dark">
+          {total} thing{total === 1 ? "" : "s"} · {facets.places.length} kitchen
+          {facets.places.length === 1 ? "" : "s"} · one run
+        </span>
+        <h1 className="font-display text-[min(16vw,6.5rem)] font-black uppercase leading-[0.86] sm:text-[clamp(3.5rem,8vw,6.5rem)]">
+          Every menu.
+          <br />
+          One list.
+        </h1>
+        <p className="max-w-[560px] text-[17px] leading-relaxed text-ink/80 sm:text-lg">
           Every restaurant together. One car carries all of it, so anything
           here can go in the same order.
         </p>
@@ -154,16 +191,28 @@ export default async function ProductsPage({
             ? "Nothing matches that."
             : `${total} ${total === 1 ? "thing" : "things"}`}
         </p>
-        <div className="flex gap-2">
-          <Chip href={link({ sort: "" })} on={!asked.sort}>
-            A to Z
-          </Chip>
-          <Chip href={link({ sort: "cheap" })} on={asked.sort === "cheap"}>
-            Cheapest
-          </Chip>
-          <Chip href={link({ sort: "dear" })} on={asked.sort === "dear"}>
-            Dearest
-          </Chip>
+        <div
+          aria-label="Sort"
+          className="flex items-center gap-1 rounded-full border-2 border-ink bg-paper p-[3px]"
+        >
+          {(
+            [
+              ["", "A–Z"],
+              ["cheap", "Cheapest"],
+              ["dear", "Dearest"],
+            ] as const
+          ).map(([value, label]) => (
+            <Link
+              key={label}
+              replace
+              href={link({ sort: value })}
+              className={`flex min-h-[38px] items-center rounded-full px-3.5 text-sm font-semibold transition ${
+                (asked.sort ?? "") === value ? "bg-ink text-white" : "text-ink"
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
         </div>
       </div>
 
@@ -176,25 +225,7 @@ export default async function ProductsPage({
           .
         </p>
       ) : (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {products.map((one) => (
-            <li key={one.id}>
-              <Link
-                href={`/p/${one.id}`}
-                className="block overflow-hidden rounded-2xl bg-paper shadow-card transition active:scale-[0.99]"
-              >
-                <span className="block aspect-[4/3]">
-                  <Thumb src={one.imageUrl} name={one.name} rounded="" />
-                </span>
-                <span className="block p-3">
-                  <span className="block text-sm font-bold leading-tight">{one.name}</span>
-                  <span className="mt-0.5 block text-xs text-muted">{one.restaurant}</span>
-                  <span className="mt-1 block font-extrabold">{naira(one.price)}</span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <ProductGrid items={cards} />
       )}
 
       {pages > 1 && (
@@ -262,7 +293,7 @@ const Chip = ({
     replace
     href={href}
     className={`chip shrink-0 whitespace-nowrap text-sm ${
-      on ? "border-brand bg-brand-tint font-bold text-brand-dark" : ""
+      on ? "chip-on" : "bg-paper"
     }`}
   >
     {children}

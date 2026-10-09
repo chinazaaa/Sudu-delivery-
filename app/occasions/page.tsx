@@ -23,13 +23,14 @@ export default async function OccasionsPage() {
   const settings = await safeSettings();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-10">
       <BoxShelf
       kind="occasion"
       base="/occasions"
       title="Food for a room full of people"
       blurb="A birthday, a match, a games night. Already worked out, one price with delivery in it, and nothing to decide but when you want it."
       empty="Nothing is on just now."
+        ticket="What is on · delivery in every box"
         other={{ href: "/collections", said: "See the collections" }}
       />
       <HelpLine number={settings.whatsapp_number} about="a box" />

@@ -30,6 +30,9 @@ export type Product = {
   slug: string;
   categoryId: string | null;
   category: string;
+  /** How much of the car it takes. Carried so a card on this page can put
+   *  the thing straight in the cart and have the fee come out right. */
+  containerPct: number;
 };
 
 export type Browse = {
@@ -198,6 +201,7 @@ export async function browseProducts(
         slug: place?.slug ?? "",
         categoryId: one.category_id ?? null,
         category: names.get(one.category_id ?? "") ?? "",
+        containerPct: pctOf(one),
       };
     }),
     total: count ?? 0,

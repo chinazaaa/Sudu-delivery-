@@ -153,7 +153,7 @@ export default function Home({
   }
 
   return (
-    <div className="bleed -mt-4">
+    <div className="bleed -mb-12 -mt-4">
       {found !== null ? (
         <section className="shell space-y-4 py-8">
           <div className="flex items-center justify-between gap-3">

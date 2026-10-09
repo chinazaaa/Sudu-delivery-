@@ -23,13 +23,14 @@ export default async function CollectionsPage() {
   const settings = await safeSettings();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-10">
       <BoxShelf
       kind="collection"
       base="/collections"
       title="Boxes already put together"
       blurb="Care packages, hostel packs, restocks. One price with delivery in it, and nothing to decide but when you want it."
       empty="No collections are packed just now."
+        ticket="Packed and ready · delivery in every box"
         other={{ href: "/occasions", said: "See what is on for an occasion" }}
       />
       <HelpLine number={settings.whatsapp_number} about="a box" />

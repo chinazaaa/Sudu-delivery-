@@ -90,19 +90,40 @@ export default async function BoxDetail({
   const sentBy = promoters.find((one) => one.code === fromLink)?.code ?? "";
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
-      <div>
-        <Link href={base} className="text-sm font-semibold text-brand">
-          ← {back}
-        </Link>
-        <h1 className="mt-1 text-2xl font-extrabold">{occasion.name}</h1>
-        {occasion.blurb !== "" && <p className="mt-1 text-muted">{occasion.blurb}</p>}
-        {isTimed(occasion) && occasion.happens_at && (
-          <p className="mt-2 font-bold text-brand-dark">
-            {occasion.when_word} {whenLabel(occasion.happens_at)}
-          </p>
-        )}
-      </div>
+    <div className="-mt-4 space-y-4">
+      {/* The board's head for a shelf: the way back in ticket type, the name
+          of the thing as big as the page allows on the speed stripes, and
+          the date on it where there is one. */}
+      <header className="bleed relative overflow-hidden border-b-2 border-ink">
+        <span
+          aria-hidden
+          className="absolute inset-y-0 -right-10 w-[24%]"
+          style={{
+            background:
+              "repeating-linear-gradient(-60deg,#e5321d 0 7px,transparent 7px 16px)",
+          }}
+        />
+        <div className="shell relative flex flex-col gap-3.5 pb-8 pt-6 sm:pb-10 sm:pt-10">
+          <Link href={base} className="ticket text-brand-dark hover:underline">
+            ← {back}
+          </Link>
+          {isTimed(occasion) && occasion.happens_at && (
+            <span className="sticker self-start px-2.5 py-1.5">
+              {occasion.when_word} {whenLabel(occasion.happens_at)}
+            </span>
+          )}
+          <h1 className="break-words font-display text-[min(16vw,7rem)] font-black uppercase leading-[0.86] sm:text-[clamp(3.5rem,8vw,7rem)]">
+            {occasion.name}
+          </h1>
+          {occasion.blurb !== "" && (
+            <p className="max-w-[560px] text-[17px] leading-relaxed text-ink/80 sm:text-lg">
+              {occasion.blurb}
+            </p>
+          )}
+        </div>
+      </header>
+
+      <div className="mx-auto w-full max-w-3xl space-y-4">
 
       {/* Above the boxes, not under them. Only on a collection: an occasion
           is girls night and the football, and "ask your mum for the
@@ -153,6 +174,7 @@ export default async function BoxDetail({
       )}
 
       <HelpLine number={settings.whatsapp_number} about="a box" />
+      </div>
     </div>
   );
 }
