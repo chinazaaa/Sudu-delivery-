@@ -2,7 +2,7 @@ import { Image, Text, View } from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { cart, countItems, shelf, shelfCount, useStored } from "@/lib/store";
-import { T } from "@/lib/theme";
+import { F, T } from "@/lib/theme";
 
 /**
  * The four places worth going, along the bottom where a thumb already is.
@@ -21,14 +21,17 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: T.paper },
-        headerTitleStyle: { fontWeight: "800", color: T.ink },
-        headerTintColor: T.brand,
+        headerStyle: { backgroundColor: T.shell },
+        headerTitleStyle: { fontFamily: F.bodyBold, color: T.ink },
+        headerTintColor: T.ink,
+        headerShadowVisible: false,
         sceneStyle: { backgroundColor: T.shell },
+        // The board's bar: Chalk with a hairline over it, the tab you are
+        // on in Tomato and the rest in a quiet brown.
         tabBarActiveTintColor: T.brand,
-        tabBarInactiveTintColor: T.muted,
-        tabBarStyle: { backgroundColor: T.paper, borderTopColor: T.line },
-        tabBarLabelStyle: { fontWeight: "700" },
+        tabBarInactiveTintColor: "#7a716a",
+        tabBarStyle: { backgroundColor: T.shell, borderTopColor: T.line },
+        tabBarLabelStyle: { fontFamily: F.bodySemi, fontSize: 10 },
       }}
     >
       <Tabs.Screen
@@ -44,7 +47,16 @@ export default function TabsLayout() {
                 source={require("@/assets/icon.png")}
                 style={{ width: 26, height: 26, borderRadius: 7 }}
               />
-              <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink }}>Sudu</Text>
+              <Text
+                style={{
+                  fontFamily: F.display,
+                  fontSize: 28,
+                  color: T.ink,
+                  transform: [{ skewX: "-10deg" }],
+                }}
+              >
+                SUDU
+              </Text>
             </View>
           ),
           tabBarLabel: "Home",
@@ -73,7 +85,12 @@ export default function TabsLayout() {
           title: "Your cart",
           tabBarLabel: "Cart",
           tabBarBadge: items > 0 ? items : undefined,
-          tabBarBadgeStyle: { backgroundColor: T.brand, color: T.paper, fontWeight: "800" },
+          tabBarBadgeStyle: {
+            backgroundColor: T.brand,
+            color: T.paper,
+            fontFamily: F.mono,
+            fontSize: 11,
+          },
           tabBarIcon: ({ color, size }) => <Ionicons name="bag-handle" size={size} color={color} />,
         }}
       />

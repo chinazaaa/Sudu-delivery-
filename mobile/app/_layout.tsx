@@ -8,7 +8,19 @@ import { BASE } from "@/lib/api";
 import { handledInApp, landingFor } from "@/lib/landing";
 import { greetPush } from "@/lib/push";
 import { me } from "@/lib/store";
-import { T } from "@/lib/theme";
+import { F, T } from "@/lib/theme";
+import {
+  BigShouldersDisplay_800ExtraBold,
+  BigShouldersDisplay_900Black,
+} from "@expo-google-fonts/big-shoulders-display";
+import { IBMPlexMono_600SemiBold } from "@expo-google-fonts/ibm-plex-mono";
+import {
+  SchibstedGrotesk_400Regular,
+  SchibstedGrotesk_500Medium,
+  SchibstedGrotesk_600SemiBold,
+  SchibstedGrotesk_700Bold,
+  useFonts,
+} from "@expo-google-fonts/schibsted-grotesk";
 
 // A notification that lands while somebody is looking at the app should still
 // be seen: they are usually in the app because they are waiting for it.
@@ -38,6 +50,22 @@ export const unstable_settings = { initialRouteName: "(tabs)" };
 
 export default function Layout() {
   const router = useRouter();
+
+  // The three faces the shop is set in. Bundled with the app rather than
+  // fetched, so the first screen is never a flash of the system font.
+  //
+  // Nothing waits on them: a screen drawn in the system face for one frame
+  // is a smaller problem than a white screen on a slow phone, and React
+  // Native redraws once they land.
+  useFonts({
+    BigShouldersDisplay_900Black,
+    BigShouldersDisplay_800ExtraBold,
+    SchibstedGrotesk_400Regular,
+    SchibstedGrotesk_500Medium,
+    SchibstedGrotesk_600SemiBold,
+    SchibstedGrotesk_700Bold,
+    IBMPlexMono_600SemiBold,
+  });
 
   // Tells the shop this phone is still here, and which number it belongs to
   // now. Nothing is ever asked for: a phone that has not allowed
@@ -76,9 +104,10 @@ export default function Layout() {
       <Track />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: T.paper },
-          headerTitleStyle: { fontWeight: "800", color: T.ink },
-          headerTintColor: T.brand,
+          headerStyle: { backgroundColor: T.shell },
+          headerTitleStyle: { fontFamily: F.bodyBold, color: T.ink },
+          headerTintColor: T.ink,
+          headerShadowVisible: false,
           contentStyle: { backgroundColor: T.shell },
         }}
       >
