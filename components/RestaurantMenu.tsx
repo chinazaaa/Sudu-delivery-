@@ -49,6 +49,10 @@ export default function RestaurantMenu({
         )
       : null;
 
+  // What each item is filed under, for the drawing a card with no
+  // photograph wears.
+  const named = new Map(place.categories.map((one) => [one.id, one.name]));
+
   const countFor = (itemId: string) =>
     cart.filter((l) => l.itemId === itemId).reduce((n, l) => n + l.qty, 0);
 
@@ -245,6 +249,7 @@ export default function RestaurantMenu({
                   item={item}
                   inCart={countFor(item.id)}
                   restaurant={place.restaurant}
+                  category={named.get(item.categoryId ?? "") ?? ""}
                   onOpen={() => setOpen(item)}
                 />
               ))}

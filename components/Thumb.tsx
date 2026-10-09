@@ -1,8 +1,15 @@
+import Drawing from "./Drawing";
+import { drawingFor } from "@/lib/drawing";
+
 /**
- * A picture if there is one, and something deliberate if there is not. An
- * empty grey box on every card would look worse than no pictures at all, so
- * the fallback is a tint derived from the name: stable, never ugly, and
- * obviously a placeholder to whoever is filling the menu in.
+ * A picture if there is one, and one of the shop's own drawings if there is
+ * not.
+ *
+ * It used to be a tinted square with the first letter in it, which read as
+ * a thing waiting for a photograph. The drawing is picked off the name and
+ * the category, so a bottle of water gets a cup and a pizza gets a slice,
+ * and a menu with no photographs at all still looks like a shop rather than
+ * a spreadsheet. A real photograph always wins the moment there is one.
  */
 export default function Thumb({
   src,
@@ -10,11 +17,15 @@ export default function Thumb({
   className = "",
   rounded = "rounded-xl",
   variant = "tile",
+  category = "",
 }: {
   src: string;
   name: string;
   className?: string;
   rounded?: string;
+  /** What the menu files it under, which is the shop's own decision and
+   *  usually righter about what a thing is than one word in its name. */
+  category?: string;
   /** "banner" drops the initial and goes darker, for wide hero images. */
   variant?: "tile" | "banner";
 }) {
@@ -47,16 +58,16 @@ export default function Thumb({
     );
   }
 
+  // One of the five tile colours rather than a hue off the name, so a wall
+  // of drawings is the shop's palette rather than a rainbow.
+  const WASH = ["#fff6d6", "#f2efe9", "#ffe9e4", "#eaf3ec", "#fdf3d9"];
+
   return (
     <div
-      className={`${rounded} ${className} flex h-full w-full items-center justify-center`}
-      style={{
-        background: `linear-gradient(135deg, hsl(${hue} 70% 92%), hsl(${(hue + 40) % 360} 65% 84%))`,
-      }}
+      className={`${rounded} ${className} flex h-full w-full items-center justify-center overflow-hidden`}
+      style={{ background: WASH[hue % WASH.length] }}
     >
-      <span className="text-2xl font-bold" style={{ color: `hsl(${hue} 45% 35%)` }}>
-        {name.slice(0, 1).toUpperCase()}
-      </span>
+      <Drawing name={drawingFor(name, category)} size="72%" />
     </div>
   );
 }

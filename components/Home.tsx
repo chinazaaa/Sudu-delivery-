@@ -6,6 +6,8 @@ import CartBar from "./CartBar";
 import ItemRow from "./ItemRow";
 import ItemSheet from "./ItemSheet";
 import ArrivalStrip from "./ArrivalStrip";
+import Drawing from "./Drawing";
+import { kitchenTile } from "@/lib/drawing";
 import Thumb from "./Thumb";
 import { FOOD_KINDS, kindHref } from "@/lib/food-kinds";
 import { naira } from "@/lib/money";
@@ -189,6 +191,10 @@ export default function Home({
                   item={item}
                   inCart={countFor(item.id)}
                   restaurant={place.restaurant}
+                  category={
+                    place.categories.find((one) => one.id === item.categoryId)
+                      ?.name ?? ""
+                  }
                   onOpen={() => setOpen({ item, place })}
                 />
               ))}
@@ -273,21 +279,34 @@ export default function Home({
                 </Link>
               </div>
               <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {menu.map((place) => (
+                {menu.map((place, at) => {
+                  // Our colours and our drawings, never the restaurant's
+                  // own. A tile in KFC's red with KFC's name on it is a
+                  // shop claiming a relationship it does not have.
+                  const tile = kitchenTile(place.restaurant.name, at);
+                  return (
                   <li key={place.restaurant.id}>
                     <Link
                       href={`/r/${place.restaurant.href}`}
-                      className="flex h-full items-center justify-between gap-3 rounded-xl border-2 border-ink bg-paper p-5 transition active:translate-x-0.5 active:translate-y-0.5"
+                      className="relative flex h-full min-h-[110px] flex-col justify-between gap-3 overflow-hidden rounded-xl border-2 border-ink p-5 transition active:translate-x-0.5 active:translate-y-0.5"
+                      style={{ background: tile.bg, color: tile.text }}
                     >
-                      <span className="font-display text-[28px] font-extrabold uppercase leading-none">
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute -bottom-3 -right-3 size-[86px] -rotate-[8deg]"
+                      >
+                        <Drawing name={tile.drawing} />
+                      </span>
+                      <span className="relative font-display text-[28px] font-extrabold uppercase leading-none">
                         {place.restaurant.name}
                       </span>
-                      <span aria-hidden className="shrink-0 font-bold text-brand">
+                      <span aria-hidden className="relative font-bold">
                         →
                       </span>
                     </Link>
                   </li>
-                ))}
+                  );
+                })}
                 <li>
                   <Link
                     href="/products"

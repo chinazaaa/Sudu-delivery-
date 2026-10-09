@@ -80,6 +80,7 @@ export default async function ProductsPage({
   // that asks which size.
   const groups = await optionGroupsFor(products.map((one) => one.id));
   const cards = products.map((one) => ({
+    category: one.category,
     item: {
       id: one.id,
       name: one.name,

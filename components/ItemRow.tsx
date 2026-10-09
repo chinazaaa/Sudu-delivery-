@@ -19,6 +19,7 @@ export default function ItemRow({
   inCart,
   onOpen,
   restaurant,
+  category = "",
 }: {
   item: ItemView;
   inCart: number;
@@ -28,6 +29,9 @@ export default function ItemRow({
    *  line, so every press opens the sheet instead, which is what the
    *  search results on the front page want anyway. */
   restaurant?: MenuView["restaurant"];
+  /** What the menu files it under, so a card with no photograph can pick
+   *  the right drawing. */
+  category?: string;
 }) {
   const cart = useCart();
 
@@ -81,7 +85,12 @@ export default function ItemRow({
         aria-label={item.name}
         className="relative w-[104px] shrink-0 sm:h-[170px] sm:w-full"
       >
-        <Thumb src={item.imageUrl} name={item.name} rounded="rounded-none" />
+        <Thumb
+          src={item.imageUrl}
+          name={item.name}
+          category={category}
+          rounded="rounded-none"
+        />
       </button>
 
       <div className="flex min-w-0 flex-1 flex-col gap-2 py-3 pl-3.5 pr-3 sm:gap-3 sm:px-[18px] sm:pb-[18px] sm:pt-4">
