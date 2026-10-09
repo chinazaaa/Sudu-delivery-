@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import PageHead from "@/components/PageHead";
+import GoogleSays from "@/components/GoogleSays";
+import Stars from "@/components/Stars";
 
 import { boxesAcross, liveOccasions, onShelf, type Occasion } from "@/lib/boxes";
 import { cheapestBoxes } from "@/lib/box-view";
 import { shelfPhotos } from "@/lib/shelf-photo";
 import { naira } from "@/lib/money";
-import { safeSettings, whatsappLink } from "@/lib/settings";
+import { googleLinks, googleQuotes, safeSettings, whatsappLink } from "@/lib/settings";
 
 /**
  * The page a parent is sent.
@@ -104,6 +107,13 @@ export default async function ParentsPage() {
   // second copy rather than a rule with an exception in it.
   const shelves = live("collection");
 
+  const google = {
+    ...googleLinks(settings),
+    rating: Number(settings.google_rating) || 0,
+    count: Number(settings.google_reviews) || 0,
+    quotes: googleQuotes(settings.google_quotes),
+  };
+
   const ask = whatsappLink(
     settings.whatsapp_number,
     "Hello, I am a parent at PAU and I would like to send something to my child."
@@ -118,7 +128,20 @@ export default async function ParentsPage() {
       <header className="bleed bg-brand text-white">
         <div className="shell flex flex-wrap items-center gap-9 py-10 sm:py-14">
           <div className="flex min-w-0 flex-[1.4_1_380px] flex-col gap-5">
-            <span className="ticket text-[#ffe38a]">For parents</span>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="ticket text-[#ffe38a]">For parents</span>
+              {google.rating > 0 && (google.profile || google.review) !== "" && (
+                <a
+                  href={google.profile || google.review}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ticket flex items-center gap-1.5 border-2 border-white px-2.5 py-1.5"
+                >
+                  <Stars out={google.rating} size={13} tone="light" />
+                  {google.rating.toFixed(1)} on Google
+                </a>
+              )}
+            </div>
             <h1 className="font-display text-[min(15vw,7.5rem)] font-black uppercase leading-[0.85] sm:text-[clamp(3.5rem,8vw,7.5rem)]">
               Send food to
               <br />
@@ -241,6 +264,14 @@ export default async function ParentsPage() {
           </ol>
         </div>
       </section>
+
+      <GoogleSays
+        profile={google.profile}
+        review={google.review}
+        rating={google.rating}
+        count={google.count}
+        quotes={google.quotes}
+      />
 
       <section className="grid gap-4 py-12 sm:py-14 lg:grid-cols-2">
         <div className="flex flex-col gap-3 rounded-2xl border-2 border-ink bg-volt p-6">

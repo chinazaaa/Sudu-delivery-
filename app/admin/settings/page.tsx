@@ -10,7 +10,7 @@ import ConfirmButton from "@/components/admin/ConfirmButton";
 import { parseBands, SAME_DAY_BANDS, URGENT_EXTRA } from "@/lib/fees";
 import { missingSettings } from "@/lib/health";
 import { muted } from "@/lib/email";
-import { getSettings } from "@/lib/settings";
+import { getSettings, googleQuotes } from "@/lib/settings";
 import { allAccounts } from "@/lib/banks";
 import {
   PAID_NOTE_DEFAULT,
@@ -43,6 +43,8 @@ export const dynamic = "force-dynamic";
 
 export default async function SettingsAdmin() {
   const settings = await getSettings();
+  // The three review slots, as the form draws them.
+  const quotes = googleQuotes(settings.google_quotes);
   const hostels = await listHostels(true);
   // Asked up front, so a box whose column is not there says why rather than
   // taking a line and throwing on save.
@@ -774,6 +776,86 @@ export default async function SettingsAdmin() {
                 className="field"
               />
             </div>
+          </div>
+
+          {/* What the profile says, typed in rather than fetched. The
+              Places API charges per call and a rating that moves by a tenth
+              is not worth a request on every page view. */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="google_rating">
+                Rating out of 5
+              </label>
+              <input
+                id="google_rating"
+                name="google_rating"
+                type="number"
+                min={0}
+                max={5}
+                step={0.1}
+                defaultValue={settings.google_rating || ""}
+                placeholder="0"
+                className="field"
+              />
+              <p className="mt-1 text-xs text-muted">
+                Empty or 0 and no rating is shown anywhere.
+              </p>
+            </div>
+            <div>
+              <label className="label" htmlFor="google_reviews">
+                How many reviews
+              </label>
+              <input
+                id="google_reviews"
+                name="google_reviews"
+                type="number"
+                min={0}
+                defaultValue={settings.google_reviews || ""}
+                placeholder="0"
+                className="field"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm text-muted">
+              Three reviews, copied word for word off your profile. Change
+              nothing, not even a typo. A review nobody wrote is the one thing
+              on this site worth taking the whole site down over. Leave them
+              empty and no quotes are shown.
+            </p>
+            {[0, 1, 2].map((at) => {
+              const quote = quotes[at] ?? { said: "", who: "" };
+              return (
+                <div key={at} className="grid gap-2 sm:grid-cols-[2fr_1fr]">
+                  <div>
+                    <label className="label" htmlFor={`quote_said_${at}`}>
+                      Review {at + 1}
+                    </label>
+                    <textarea
+                      id={`quote_said_${at}`}
+                      name={`quote_said_${at}`}
+                      rows={2}
+                      defaultValue={quote.said}
+                      placeholder="Paste it exactly as they wrote it"
+                      className="field"
+                    />
+                  </div>
+                  <div>
+                    <label className="label" htmlFor={`quote_who_${at}`}>
+                      Who said it
+                    </label>
+                    <input
+                      id={`quote_who_${at}`}
+                      name={`quote_who_${at}`}
+                      defaultValue={quote.who}
+                      placeholder="Temi · Pearl"
+                      className="field"
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 

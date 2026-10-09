@@ -7,6 +7,8 @@ import ItemRow from "./ItemRow";
 import ItemSheet from "./ItemSheet";
 import ArrivalStrip from "./ArrivalStrip";
 import Drawing from "./Drawing";
+import GoogleSays, { GoogleChip } from "./GoogleSays";
+import type { GoogleQuote } from "@/lib/settings";
 import { kitchenTile } from "@/lib/drawing";
 import Thumb from "./Thumb";
 import { FOOD_KINDS, kindHref } from "@/lib/food-kinds";
@@ -50,6 +52,7 @@ export default function Home({
   award = "",
   where = "",
   runFrom = "",
+  google,
 }: {
   menu: MenuView[];
   /** When something ordered right now would land, said as a sentence and
@@ -94,6 +97,15 @@ export default function Home({
   /** The home area, for the ticket and the fee table's caption: the ladder
    *  is that run's, and the others add to it. */
   runFrom?: string;
+  /** What the shop's Google profile says, typed in by the shop. Every part
+   *  of it hides itself when it is not set. */
+  google: {
+    profile: string;
+    review: string;
+    rating: number;
+    count: number;
+    quotes: GoogleQuote[];
+  };
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<{ item: ItemView; place: MenuView } | null>(null);
@@ -218,6 +230,11 @@ export default function Home({
                       {award}
                     </span>
                   )}
+                  <GoogleChip
+                    rating={google.rating}
+                    count={google.count}
+                    href={google.profile || google.review}
+                  />
                 </div>
                 <h1 className="font-display text-[min(19.5vw,4.75rem)] font-black uppercase leading-[0.86] tracking-[-0.005em] sm:text-[clamp(4rem,9vw,8rem)]">
                   Outside food.
@@ -454,6 +471,14 @@ export default function Home({
               </ol>
             </div>
           </section>
+
+          <GoogleSays
+            profile={google.profile}
+            review={google.review}
+            rating={google.rating}
+            count={google.count}
+            quotes={google.quotes}
+          />
 
           {/* What carrying it costs, from the shop's own ladder. */}
           {fees.length > 0 && (

@@ -317,6 +317,10 @@ export type CustomerRow = {
    *  knowing before pushing an app at somebody who already has it, or
    *  sending a link to somebody who never opens the website. */
   uses: "app" | "web" | "mixed" | "";
+  /** Whether they have left a Google review, ticked by hand. Google never
+   *  says who wrote what, so the only point of this is to stop the list
+   *  asking the same person twice. */
+  reviewed: boolean;
 };
 
 /**
@@ -341,7 +345,9 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
   // not had the migration run on it still shows the customer book.
   const full = await db()
     .from("customers")
-    .select("phone, name, hostel, pin, admin_note, payment_method, promoter_code, calls_them")
+    .select(
+      "phone, name, hostel, pin, admin_note, payment_method, promoter_code, calls_them, reviewed_at"
+    )
     .order("name");
 
   const { data, error } = full.error
@@ -377,6 +383,7 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
         : "transfer") as "transfer" | "card",
       promoterCode: ((row as { promoter_code?: string | null }).promoter_code ?? null),
       callsThem: ((row as { calls_them?: string }).calls_them ?? ""),
+      reviewed: Boolean((row as { reviewed_at?: string | null }).reviewed_at),
       orders: mine.length,
       uses: doorFor(mine.map((order) => String((order as { source?: string }).source ?? ""))),
       spend: paid.reduce((total, order) => total + (order.total as number), 0),

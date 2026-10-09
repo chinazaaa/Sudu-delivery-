@@ -1608,6 +1608,25 @@ export async function saveCustomerNote(form: FormData): Promise<void> {
 }
 
 /**
+ * Whether somebody has left a Google review.
+ *
+ * Ticked by hand, because Google never says who wrote what. The only point
+ * of keeping it is so the next time somebody works down the customer list
+ * asking for reviews, the people who have already given one are not asked
+ * again.
+ */
+export async function setCustomerReviewed(form: FormData): Promise<void> {
+  await assertAdmin();
+  const on = form.get("reviewed") === "true";
+  await db()
+    .from("customers")
+    .update({ reviewed_at: on ? new Date().toISOString() : null })
+    .eq("phone", String(form.get("phone")));
+
+  revalidatePath("/admin/customers");
+}
+
+/**
  * What to greet somebody as.
  *
  * Messages open with a first name, and the first word of a saved name is
@@ -2103,6 +2122,9 @@ export async function savePromoter(form: FormData): Promise<void> {
 const SETTING_FIELDS = [
   "google_profile",
   "google_review",
+  "google_rating",
+  "google_reviews",
+  "google_quotes",
   "terms_updated",
   "privacy_updated",
   "returns_updated",
@@ -2215,6 +2237,19 @@ export async function saveSettings(form: FormData): Promise<void> {
     if (form.get(askedName(field)) !== null) {
       patch[field] = form.get(field) !== null ? "on" : "";
     }
+  }
+
+  // The three review slots arrive as three pairs of fields and are kept as
+  // one column, because they are a list rather than three settings. Only
+  // the ones with words in them are kept, so clearing a box removes it.
+  if (form.get("quote_said_0") !== null) {
+    const quotes = [0, 1, 2]
+      .map((at) => ({
+        said: String(form.get(`quote_said_${at}`) ?? "").trim(),
+        who: String(form.get(`quote_who_${at}`) ?? "").trim(),
+      }))
+      .filter((one) => one.said !== "");
+    patch.google_quotes = quotes.length > 0 ? JSON.stringify(quotes) : "";
   }
 
   // Tick boxes say what to send; the setting holds what to stop. Unticked

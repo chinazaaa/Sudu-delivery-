@@ -12,6 +12,8 @@ import { menuView } from "@/lib/menu";
 import { listSlides } from "@/lib/slides";
 import {
   activeBands,
+  googleLinks,
+  googleQuotes,
   safeSettings,
   hoursByDay,
 } from "@/lib/settings";
@@ -236,6 +238,15 @@ export default async function HomePage() {
 
   return (
     <Home
+      // What the shop's own Google profile says, as the shop typed it in.
+      // Nothing is fetched: every part of this hides itself when it is not
+      // set, so the page can never show a rating nobody gave.
+      google={{
+        ...googleLinks(settings),
+        rating: Number(settings.google_rating) || 0,
+        count: Number(settings.google_reviews) || 0,
+        quotes: googleQuotes(settings.google_quotes),
+      }}
       iosAppId={settings.ios_app_id}
       androidPackage={settings.android_package}
       menu={menu}

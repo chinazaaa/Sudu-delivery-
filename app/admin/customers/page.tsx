@@ -2,7 +2,7 @@ import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import { customerRows } from "@/lib/admin-data";
 import { errandsBy } from "@/lib/other-money";
-import { getSettings } from "@/lib/settings";
+import { getSettings, googleLinks } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
 import { firstName, whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
@@ -14,8 +14,10 @@ import {
   saveCustomerName,
   saveCustomerNote,
   setCustomerPromoter,
+  setCustomerReviewed,
 } from "../actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
+import ActionButton from "@/components/admin/ActionButton";
 import { hostelNames } from "@/lib/hostels";
 import { namedPromoters } from "@/lib/promoters";
 import { santaRooms } from "@/lib/santa-admin";
@@ -36,6 +38,10 @@ export default async function CustomersPage({
     namedPromoters(),
     santaRooms(),
   ]);
+
+  // Where to send somebody to leave a review. Empty and neither the ask nor
+  // the tick is offered at all.
+  const google = googleLinks(settings);
 
   // Narrowed to one promoter, so "who brought who" is a question the book
   // can answer rather than something to be worked out by reading every card.
@@ -194,6 +200,21 @@ export default async function CustomersPage({
                 `Open ${url}/orders, put in your number and that PIN, and every ` +
                 `order you have placed is there.`
             );
+            // The review ask, written out so it is one tap rather than
+            // something to compose twenty times in an evening. Only for
+            // somebody who has actually been delivered to: asking a person
+            // who has never ordered to review us is how a profile gets
+            // reported.
+            const askReview =
+              google.review !== "" && row.orders > 0
+                ? whatsappTo(
+                    row.phone,
+                    `Hi ${firstName(row.name, row.callsThem)}, hope the last one was good.\n\n` +
+                      `If you have a minute, a review on Google helps us more than ` +
+                      `anything else: ${google.review}\n\n` +
+                      `Thank you.`
+                  )
+                : "";
             return (
               <article key={row.phone} className="card">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -261,6 +282,40 @@ export default async function CustomersPage({
                   >
                     Call
                   </a>
+                  {/* Asking for a review, and remembering who has given
+                      one. Google never says who wrote what, so the tick is
+                      by hand and its only job is to stop the same person
+                      being asked twice. */}
+                  {askReview !== "" && !row.reviewed && (
+                    <a
+                      href={askReview}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="chip border-black/10 bg-white hover:border-ink/30"
+                    >
+                      Ask for a review
+                    </a>
+                  )}
+                  {google.review !== "" && row.orders > 0 && (
+                    <form action={setCustomerReviewed}>
+                      <input type="hidden" name="phone" value={row.phone} />
+                      <input
+                        type="hidden"
+                        name="reviewed"
+                        value={String(!row.reviewed)}
+                      />
+                      <ActionButton
+                        className={`chip py-1.5 ${
+                          row.reviewed
+                            ? "border-mint/40 bg-mint/10 text-mint"
+                            : "border-black/10 bg-white"
+                        }`}
+                        done="Done ✓"
+                      >
+                        {row.reviewed ? "Reviewed ✓" : "Mark reviewed"}
+                      </ActionButton>
+                    </form>
+                  )}
                   <a
                     href={`/admin/orders?status=all&q=${encodeURIComponent(row.phone)}`}
                     className="chip border-black/10 bg-white hover:border-ink/30"

@@ -147,6 +147,12 @@ export type Settings = {
    *  from there too. */
   google_profile: string;
   google_review: string;
+  /** What the profile says, typed in by the shop. Zero and empty mean the
+   *  pages show no rating and no quotes at all, only the button. */
+  google_rating: number;
+  google_reviews: number;
+  /** Real reviews copied word for word, as JSON. Nothing else. */
+  google_quotes: string;
   terms_updated: string;
   privacy_updated: string;
   returns_updated: string;
@@ -234,6 +240,9 @@ export const EMPTY: Settings = {
   skincare_promise: "",
   google_profile: "",
   google_review: "",
+  google_rating: 0,
+  google_reviews: 0,
+  google_quotes: "",
   terms_updated: "",
   privacy_updated: "",
   returns_updated: "",
@@ -297,6 +306,31 @@ export function googleLinks(settings: {
   };
   const profile = safe(settings.google_profile);
   return { profile, review: safe(settings.google_review) || profile };
+}
+
+/** One review, as the shop pasted it. */
+export type GoogleQuote = { said: string; who: string };
+
+/**
+ * The quotes, parsed.
+ *
+ * Anything that is not a list of {said, who} reads as none, because a
+ * half-parsed review is a made-up review and this is the one part of the
+ * site where that is unforgivable.
+ */
+export function googleQuotes(json: string | null | undefined): GoogleQuote[] {
+  try {
+    const raw = JSON.parse(String(json ?? "") || "[]") as GoogleQuote[];
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((one) => ({
+        said: String(one?.said ?? "").trim(),
+        who: String(one?.who ?? "").trim(),
+      }))
+      .filter((one) => one.said !== "");
+  } catch {
+    return [];
+  }
 }
 
 export function whatsappLink(number: string, message: string): string | null {
