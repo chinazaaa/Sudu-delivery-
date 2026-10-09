@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import PageHead from "@/components/PageHead";
 
 import { openRestaurants } from "@/lib/menu";
 import { activeBands } from "@/lib/settings";
@@ -205,64 +206,29 @@ export default async function DeliveryToPauPage() {
   };
 
   return (
-    <article className="space-y-8 pb-10">
+    <article className="-mt-4 pb-10">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
       />
 
-      <header className="space-y-3">
-        <h1 className="text-3xl font-extrabold leading-tight">
-          Food delivery to Pan-Atlantic University (PAU)
-        </h1>
+      <PageHead
+        ticket="Delivery to PAU · Ibeju-Lekki, Lagos"
+        title="Food delivery to PAU, done properly"
+        lead={`${
+          places.length > 0 ? `${places.length} kitchens` : "Every kitchen"
+        }, one car, one fee, handed over at your hostel block.`}
+        tone="ink"
+      >
+        <Link
+          href="/products"
+          className="btn-primary mt-1 self-start border-2 border-ink text-[17px]"
+        >
+          Start an order <span aria-hidden>→</span>
+        </Link>
+      </PageHead>
 
-        {/* The relationship said outright, in the first thing under the
-            heading: who we are, who it is for, where from, where to. A list
-            of restaurants leaves all four to be inferred, and something
-            reading the page on somebody's behalf should not have to infer
-            any of them. */}
-        <p className="text-ink/90">
-          Sudu is a food delivery service for Pan-Atlantic University (PAU)
-          students in Lagos. Order from your favourite restaurants around
-          Sangotedo, Novare, Lekki and Ikoyi and have your food delivered directly
-          to your
-          PAU hostel.
-        </p>
-
-        <p className="text-muted">
-          Sudu has been running food onto the PAU campus since 2018.
-          Everything is collected together and brought in on one car, handed
-          to you at your block.
-          {areaNames.length > 0
-            ? ` ${areaNames.join(" and ")} too, on the runs that go that way.`
-            : ""}{" "}
-          Skincare and parcels go the same way, each on its own trip.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/products"
-            className="rounded-full bg-brand px-4 py-2.5 text-sm font-extrabold text-white"
-          >
-            See the menu
-          </Link>
-          {skincare && (
-            <Link
-              href="/skincare"
-              className="rounded-full bg-paper px-4 py-2.5 text-sm font-extrabold text-brand shadow-card"
-            >
-              Skincare
-            </Link>
-          )}
-          {routes.length > 0 && (
-            <Link
-              href="/parcel"
-              className="rounded-full bg-paper px-4 py-2.5 text-sm font-extrabold text-brand shadow-card"
-            >
-              Send a parcel
-            </Link>
-          )}
-        </div>
-      </header>
+      <div className="space-y-8 py-8">
 
       <Section title="What you can order">
         <p>
@@ -448,6 +414,7 @@ export default async function DeliveryToPauPage() {
           Start an order
         </Link>
       </p>
+      </div>
     </article>
   );
 }
@@ -464,9 +431,13 @@ function Reason({ title, children }: { title: string; children: React.ReactNode 
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-2">
-      <h2 className="text-xl font-extrabold">{title}</h2>
-      <div className="space-y-2 leading-relaxed text-ink/90">{children}</div>
+    <section className="space-y-3">
+      <h2 className="font-display text-[32px] font-black uppercase leading-none sm:text-[40px]">
+        {title}
+      </h2>
+      <div className="max-w-[760px] space-y-2.5 leading-relaxed text-ink/80">
+        {children}
+      </div>
     </section>
   );
 }

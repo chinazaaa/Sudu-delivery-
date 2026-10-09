@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import PageHead from "@/components/PageHead";
+import { hostelNames } from "@/lib/hostels";
 
 import { openRestaurants } from "@/lib/menu";
 import { safeSettings } from "@/lib/settings";
@@ -35,11 +37,15 @@ export const metadata: Metadata = {
 };
 
 export default async function AboutPage() {
-  const [places, settings, parcelSetup] = await Promise.all([
+  const [places, settings, parcelSetup, hostels] = await Promise.all([
     openRestaurants(),
     safeSettings(),
     parcels(),
+    hostelNames(),
   ]);
+  // Counted rather than written down, so the number cannot go stale the
+  // next time a block is added in admin.
+  const blocks = hostels.length;
   const routes = liveRoutes(parcelSetup.routes);
   const skincare = skincareOn(settings);
 
@@ -65,83 +71,137 @@ export default async function AboutPage() {
   };
 
   return (
-    <article className="space-y-8 pb-10">
+    <article className="-mt-4">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
       />
 
-      <header className="space-y-3">
-        <h1 className="text-3xl font-extrabold leading-tight">
-          About Sudu, PAU&apos;s student delivery service
-        </h1>
-        <p className="text-ink/90">
-          Sudu is a delivery service for Pan-Atlantic University students. We
-          collect from restaurants around Sangotedo, Novare, Lekki and Ikoyi and
-          bring the
-          order onto campus, to the block you named.
-        </p>
-      </header>
+      <PageHead
+        ticket="About Sudu · 速度 means fast"
+        title="Bridging the gap between outside and PAU"
+        lead="PAU is a long way from the restaurants, shops and markets students actually want. Sudu goes out, gets it, and brings it back to your hostel block, in one run, for one fee."
+        tone="ink"
+      />
 
-      <section className="space-y-2">
-        <h2 className="text-xl font-extrabold">How it started</h2>
-        <p className="leading-relaxed text-muted">
-          Sudu began in 2018, run by students, for students on this campus. In
-          2021 it won Pan-Atlantic University&apos;s entrepreneurship award. It
-          has been through quiet stretches and busy ones, and it is running
-          now.
-        </p>
+      {/* The three numbers that answer "who are you". A stranger asking for
+          money up front has to say something, and seven years on one campus
+          is the strongest thing this shop can say. */}
+      <section className="bleed border-b-2 border-ink bg-paper">
+        <ul className="shell grid gap-6 py-9 sm:grid-cols-3">
+          {[
+            ["2018", "Delivering on the PAU campus since"],
+            ["2021", "Winner, PAU Entrepreneurship Award"],
+            [String(blocks), "Hostel blocks we hand over at"],
+          ].map(([big, small]) => (
+            <li key={small} className="flex flex-col gap-1 border-l-4 border-brand pl-4">
+              <span className="font-display text-[56px] font-black leading-none sm:text-[72px]">
+                {big}
+              </span>
+              <span className="text-[15px] text-ink/70">{small}</span>
+            </li>
+          ))}
+        </ul>
       </section>
 
-      <section className="space-y-2">
-        <h2 className="text-xl font-extrabold">What Sudu does today</h2>
-        <p className="leading-relaxed text-muted">
-          Food from{" "}
-          {places.length > 0
-            ? `${places.length} restaurants, among them ${places
-                .slice(0, 5)
-                .map((one) => one.name)
-                .join(", ")}`
-            : "the restaurants around Sangotedo, Novare, Lekki and Ikoyi"}
-          , collected together and brought in on one car. Several kitchens can
-          go in one order, and the delivery is one fee rather than one each.
-          Order with friends and it splits between you.
-          {skincare && " There is a skincare shelf, which travels on its own day."}
-          {routes.length > 0 &&
-            " Parcels move both ways between campus and Sangotedo, Lekki, Ikoyi, the mainland and Ikorodu."}
-        </p>
+      <section className="flex flex-col gap-8 py-12 sm:py-16">
+        <h2 className="section-title">What we bring in</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            [
+              "/products",
+              "Food",
+              places.length > 0
+                ? `${places
+                    .slice(0, 3)
+                    .map((one) => one.name)
+                    .join(", ")} and more, mixed in one run.`
+                : "The restaurants around Sangotedo and Lekki, mixed in one run.",
+            ],
+            [
+              "/collections",
+              "Collections",
+              "Boxes packed for matric, exams, move-in and more.",
+            ],
+            ...(skincare
+              ? ([
+                  [
+                    "/skincare",
+                    "Skincare",
+                    "Your brands from authorised Lagos retailers, weekly.",
+                  ],
+                ] as [string, string, string][])
+              : []),
+            ...(routes.length > 0
+              ? ([
+                  [
+                    "/parcel",
+                    "Parcels",
+                    "To and from PAU, sealed and photographed.",
+                  ],
+                ] as [string, string, string][])
+              : []),
+            [
+              "/custom-order",
+              "Anything else",
+              "Tell us what you need and we will find it.",
+            ],
+            [
+              "/group",
+              "Group orders",
+              "One car, one fee, split between friends.",
+            ],
+          ].map(([href, said, note]) => (
+            <Link
+              key={href}
+              href={href}
+              className="flex flex-col gap-1.5 rounded-2xl border-2 border-ink bg-paper p-5 transition active:translate-x-0.5 active:translate-y-0.5"
+            >
+              <span className="font-display text-[30px] font-extrabold uppercase leading-none">
+                {said}
+              </span>
+              <span className="text-[15px] text-ink/70">{note}</span>
+            </Link>
+          ))}
+        </div>
       </section>
 
-      <section className="space-y-2">
-        <h2 className="text-xl font-extrabold">How to order</h2>
-        <p className="leading-relaxed text-muted">
-          Everything is on the website and in the app. Pick what you want,
-          choose the run you want to be on, say which block you are in, and pay
-          by bank transfer or by a card link we send on WhatsApp. It arrives in
-          the window you were given, handed to you rather than left anywhere.
-        </p>
-        {/* The shelves as well as the menu. Somebody who read this far is
-            being told what the shop is, and the boxes are half of it; a page
-            about the shop that only links to the food leaves them thinking
-            the food is all there is. Wraps rather than runs off the edge,
-            which four links on a phone otherwise do. */}
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-1 text-sm">
-          <Link href="/products" className="font-extrabold text-brand">
-            See the menu
+      <section className="bleed bg-brand text-white">
+        <div className="shell grid gap-6 py-12 sm:grid-cols-3 sm:py-14">
+          {[
+            [
+              "One payment, one run",
+              "Mix restaurants and shops in one order. One fee per car, split with whoever is on it.",
+            ],
+            [
+              "To your block, not the gate",
+              "We hand it over where you live, in the delivery window.",
+            ],
+            [
+              "Independent",
+              "We are not owned by or affiliated with the restaurants we buy from. We just go and get it.",
+            ],
+          ].map(([said, note]) => (
+            <div key={said} className="flex flex-col gap-2">
+              <span className="font-display text-[30px] font-black uppercase leading-none">
+                {said}
+              </span>
+              <span className="leading-relaxed">{note}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="flex flex-wrap items-center justify-between gap-5 py-12 sm:py-14">
+        <h2 className="section-title">Hungry already?</h2>
+        <div className="flex flex-wrap gap-3">
+          <Link href="/products" className="btn-primary border-2 border-ink">
+            Browse the menu <span aria-hidden>→</span>
           </Link>
-          <span className="text-muted">·</span>
-          <Link href="/collections" className="font-extrabold text-brand">
-            Collections
+          <Link href="/delivery-to-pau" className="btn-quiet">
+            How delivery works
           </Link>
-          <span className="text-muted">·</span>
-          <Link href="/collections" className="font-extrabold text-brand">
-            Occasions
-          </Link>
-          <span className="text-muted">·</span>
-          <Link href="/delivery-to-pau" className="font-extrabold text-brand">
-            Delivery to PAU
-          </Link>
-        </p>
+        </div>
       </section>
     </article>
   );

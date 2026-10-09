@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import LegalLayout, { Clause } from "@/components/LegalLayout";
 import Link from "next/link";
 import { safeSettings, whatsappLink } from "@/lib/settings";
 
@@ -34,17 +35,24 @@ export default async function ReturnPolicyPage() {
   );
 
   return (
-    <article className="mx-auto max-w-2xl space-y-6 pb-10">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">Returns and refunds</h1>
-        <p className="text-sm text-muted">
-          What happens when an order is wrong, late, or never turns up. Food is
-          not a thing anybody can send back, so almost all of this is about
-          money rather than returning anything.
-        </p>
-      </header>
+    <LegalLayout
+      ticket="The small print · returns"
+      title="Returns and refunds"
+      lead="When money comes back, how fast, and what is ours to put right rather than the restaurant's."
+      here="returns"
+      sections={[
+          "The short version",
+          "Cancelling before we have shopped",
+          "What we refund ourselves",
+          "What we take up with the restaurant",
+          "Things that are not food",
+          "How the money comes back",
+          "If a run does not happen",
+          "Telling us",
+        ]}
+    >
 
-      <Section title="The short version">
+      <Clause n={1} title="The short version">
         <p className="font-semibold text-ink">
           If it is our doing, we refund you. If it is the kitchen&apos;s doing,
           the refund is theirs, and we are the ones who go and ask for it.
@@ -53,9 +61,9 @@ export default async function ReturnPolicyPage() {
           Tell us the same day, on WhatsApp, with a photo if you have one.
           Nobody can settle an argument about food a week after it was eaten.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Cancelling before we have shopped">
+      <Clause n={2} title="Cancelling before we have shopped">
         <p>
           While the run is still open and nothing has been bought, you can
           cancel and get <span className="font-semibold">everything</span>{" "}
@@ -67,9 +75,9 @@ export default async function ReturnPolicyPage() {
           Tell us anyway and we will do what we can: if a restaurant will take
           something back, we pass that on.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="What we refund ourselves">
+      <Clause n={3} title="What we refund ourselves">
         <p>
           No chasing anybody, and no argument about whose fault it was. We pay
           these back:
@@ -87,9 +95,9 @@ export default async function ReturnPolicyPage() {
           Where the whole order is our fault, the delivery fee goes back with
           it. Where part of it is, you get that part back.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="What we take up with the restaurant">
+      <Clause n={4} title="What we take up with the restaurant">
         <p>
           We carry a sealed bag and we did not cook what is in it. These are
           the kitchen&apos;s, and we put them to the kitchen on your behalf
@@ -107,9 +115,9 @@ export default async function ReturnPolicyPage() {
           pretend a kitchen refused when it agreed, and we will not promise you
           a refund we have not been given.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Things that are not food">
+      <Clause n={5} title="Things that are not food">
         <p>
           Skincare, market shopping, a thing we went out and found for you: if
           it arrives damaged, or it is not what you asked for, tell us the same
@@ -121,9 +129,9 @@ export default async function ReturnPolicyPage() {
           order for one person is bought with your money at your ask, so it
           cannot be returned simply because it was no longer wanted.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="How the money comes back">
+      <Clause n={6} title="How the money comes back">
         <p>
           To the account you paid from, by transfer, in{" "}
           <span className="font-semibold">two working days</span> of us
@@ -134,17 +142,17 @@ export default async function ReturnPolicyPage() {
           We do not hold credit, points or a wallet balance. Your money comes
           back as money.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="If a run does not happen">
+      <Clause n={7} title="If a run does not happen">
         <p>
           Weather, a road, a car, or a restaurant that is shut when we get
           there. If a run cannot go, we tell you and we refund everything you
           paid for it, the delivery fee included, without being asked.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Telling us">
+      <Clause n={8} title="Telling us">
         <p>
           The same day, on the WhatsApp number on your order, with a photo
           where there is something to photograph. A person answers.
@@ -164,16 +172,7 @@ export default async function ReturnPolicyPage() {
           , and nothing here takes away any right you have under Nigerian
           consumer law.
         </p>
-      </Section>
-    </article>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="card space-y-2">
-      <h2 className="font-bold">{title}</h2>
-      <div className="space-y-2 text-sm text-ink/80">{children}</div>
-    </section>
+      </Clause>
+    </LegalLayout>
   );
 }

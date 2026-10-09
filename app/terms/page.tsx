@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import LegalLayout, { Clause } from "@/components/LegalLayout";
 import Link from "next/link";
 import { safeSettings } from "@/lib/settings";
 import { parseAreas } from "@/lib/areas";
@@ -49,16 +50,32 @@ export default async function TermsPage() {
   const parcelCap = parcelSetup?.maxValue ?? 0;
 
   return (
-    <article className="mx-auto max-w-2xl space-y-6 pb-10">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">Terms of service</h1>
-        <p className="text-sm text-muted">
-          What we do, what the kitchen does, and who pays when something goes
-          wrong. Ordering from Sudu means agreeing to this.
-        </p>
-      </header>
+    <LegalLayout
+      ticket="The small print · terms"
+      title="Terms of service"
+      lead="What we do, what the kitchen does, and who pays when something goes wrong. Ordering from Sudu means agreeing to this."
+      here="terms"
+      sections={[
+          "What Sudu is",
+          "Prices",
+          "Delivery",
+          "Paying",
+          "What we are responsible for",
+          "What the kitchen is responsible for",
+          "When something is wrong",
+          "Allergies and what is in the food",
+          "Changing or cancelling",
+          "Your number and your PIN",
+          "Offers, codes and promoter links",
+          "Parcels",
+          "Things outside our hands",
+          "Using the site and the app",
+          "Changes to these terms",
+          "The law and talking to us",
+        ]}
+    >
 
-      <Section title="What Sudu is">
+      <Clause n={1} title="What Sudu is">
         <p>
           Sudu is a delivery and errand service for Pan-Atlantic University. We
           do not cook. We buy what you asked for from a restaurant, a market or
@@ -84,9 +101,9 @@ export default async function TermsPage() {
           The kitchen whose name is on the menu is the one that makes the food.
           We are the ones who fetch it and bring it.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Prices">
+      <Clause n={2} title="Prices">
         <p>
           The price beside a dish is what that restaurant charges for it. When
           they put their prices up, ours go up with them, which is the only
@@ -98,9 +115,9 @@ export default async function TermsPage() {
           before anything is bought, and you can say no and have your money
           back in full.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Delivery">
+      <Clause n={3} title="Delivery">
         <p>
           One car, one fee, shared between everybody on that run. What you pay
           depends on how much room your order takes, or on what the shopping
@@ -117,9 +134,9 @@ export default async function TermsPage() {
           Lagos traffic, a kitchen running behind and campus security are all
           real and none of them are ours to command.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Paying">
+      <Clause n={4} title="Paying">
         <p>
           You pay by bank transfer to the account we show you, or by a card
           link we send you by hand. We never ask for your card details, your
@@ -130,9 +147,9 @@ export default async function TermsPage() {
           An order is not on the car until it is paid for. We shop against
           paid orders, so an unpaid one is a place held, not a thing bought.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="What we are responsible for">
+      <Clause n={5} title="What we are responsible for">
         <ul className="list-disc space-y-1 pl-5">
           <li>Collecting what you actually ordered.</li>
           <li>Everything on your list being in the bag when it reaches you.</li>
@@ -140,9 +157,9 @@ export default async function TermsPage() {
           <li>Bringing it to the block you gave us, on the run you paid for.</li>
           <li>Telling you where it has got to, and telling you when it is late.</li>
         </ul>
-      </Section>
+      </Clause>
 
-      <Section title="What the kitchen is responsible for">
+      <Clause n={6} title="What the kitchen is responsible for">
         <ul className="list-disc space-y-1 pl-5">
           <li>What goes into the food, and how it is cooked.</li>
           <li>How it tastes, how big it is, and how it is presented.</li>
@@ -155,9 +172,9 @@ export default async function TermsPage() {
           We choose who we buy from and we stop buying from anybody who keeps
           getting it wrong, but we cannot stand in their kitchen.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="When something is wrong">
+      <Clause n={7} title="When something is wrong">
         <p className="font-semibold text-ink">
           If it is our doing, we refund you. If it is the kitchen&apos;s doing,
           the refund is theirs, and we are the ones who go and ask for it.
@@ -190,9 +207,9 @@ export default async function TermsPage() {
           Anything we refund goes back to the account you paid from. Nothing
           here takes away any right you have under Nigerian consumer law.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Allergies and what is in the food">
+      <Clause n={8} title="Allergies and what is in the food">
         <p>
           Tell us in the note on your order and we will tell the kitchen, but
           we are carrying a sealed bag and we did not cook what is in it. We
@@ -200,9 +217,9 @@ export default async function TermsPage() {
           shellfish or anything else. If a reaction would be serious, ask the
           restaurant yourself before you order.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Changing or cancelling">
+      <Clause n={9} title="Changing or cancelling">
         <p>
           Before we have shopped, cancel and get everything back, the delivery
           fee included. Message us and we will do it.
@@ -220,18 +237,18 @@ export default async function TermsPage() {
           What we cannot do is keep food warm, hold a car up while everybody
           else on it waits, or leave a bag outside a room.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Your number and your PIN">
+      <Clause n={10} title="Your number and your PIN">
         <p>
           Your phone number is your account here and the four digit PIN we sent
           you is what opens it. Keep it to yourself. Anybody with both can see
           your orders, so we only ever send a PIN to the number it belongs to,
           and we will never ask you to read it out to us.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Offers, codes and promoter links">
+      <Clause n={11} title="Offers, codes and promoter links">
         <p>
           One offer applies to an order. A code you type and an offer already
           on your cart do not stack, and the checkout says which one is on.
@@ -247,9 +264,9 @@ export default async function TermsPage() {
           first order discount again is not on, and we can refuse an order or
           take a discount back off one where it is obvious.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Parcels">
+      <Clause n={12} title="Parcels">
         <p>
           A parcel is somebody handing us something to carry, not something we
           bought, so we cannot say what is in it or what it is worth.
@@ -263,35 +280,35 @@ export default async function TermsPage() {
           damaged in our hands. We do not carry money, documents that cannot be
           replaced, or anything illegal.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Things outside our hands">
+      <Clause n={13} title="Things outside our hands">
         <p>
           A restaurant closing unexpectedly, a campus lock down, a fuel queue,
           a flood, a strike, a network outage that stops payments: where one of
           these stops a run, we tell you and we refund anything you paid for
           food that was never bought, and the delivery fee with it.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Using the site and the app">
+      <Clause n={14} title="Using the site and the app">
         <p>
           Order for yourself or for somebody you actually know. Do not place
           orders in other people&apos;s names, do not try to get into anybody
           else&apos;s order history, and do not try to break the site. We can
           refuse service to a number that does any of this.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Changes to these terms">
+      <Clause n={15} title="Changes to these terms">
         <p>
           If this changes we change this page. It is the only copy, so it is
           always the current one, and the version that counts for your order is
           the one that was here when you placed it.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="The law and talking to us">
+      <Clause n={16} title="The law and talking to us">
         <p>
           These terms are under the law of the Federal Republic of Nigeria, and
           anything neither of us can settle between ourselves goes to the
@@ -323,16 +340,7 @@ export default async function TermsPage() {
           </Link>
           .
         </p>
-      </Section>
-    </article>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="card space-y-2">
-      <h2 className="font-bold">{title}</h2>
-      <div className="space-y-2 text-sm text-ink/80">{children}</div>
-    </section>
+      </Clause>
+    </LegalLayout>
   );
 }

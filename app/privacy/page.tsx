@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import LegalLayout, { Clause } from "@/components/LegalLayout";
 import { safeSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -22,15 +23,24 @@ export default async function PrivacyPage() {
   const whatsapp = settings.whatsapp_number;
 
   return (
-    <article className="mx-auto max-w-2xl space-y-6 pb-10">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">Privacy</h1>
-        <p className="text-sm text-muted">
-          What we keep about you, why we keep it, and how to have it deleted.
-        </p>
-      </header>
+    <LegalLayout
+      ticket="The small print · privacy"
+      title="Privacy"
+      lead="What we keep about you, who sees it, and how to have it deleted. Short and plain, on purpose."
+      here="privacy"
+      sections={[
+          "There are no accounts",
+          "What we keep",
+          "What we never keep",
+          "Who else sees it",
+          "Messages you get",
+          "Having it deleted",
+          "Children",
+          "Changes",
+        ]}
+    >
 
-      <Section title="There are no accounts">
+      <Clause n={1} title="There are no accounts">
         <p>
           You never make an account with Sudu and you never give us a password.
           Your phone number is who you are. When you order for the first time we
@@ -38,9 +48,9 @@ export default async function PrivacyPage() {
           that is ever needed to see your own orders again, on the website or in
           the app.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="What we keep">
+      <Clause n={2} title="What we keep">
         <ul className="list-disc space-y-1 pl-5">
           <li>Your name, phone number and the block you are delivered to.</li>
           <li>
@@ -68,9 +78,9 @@ export default async function PrivacyPage() {
             number, and it tells us how many people looked, never who.
           </li>
         </ul>
-      </Section>
+      </Clause>
 
-      <Section title="What we never keep">
+      <Clause n={3} title="What we never keep">
         <p>
           We never see or store your card details or your bank login. A bank
           transfer happens in your own banking app, and a card payment happens
@@ -78,9 +88,9 @@ export default async function PrivacyPage() {
           do not track your location, we do not read your contacts, and we do
           not use your camera or microphone.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Who else sees it">
+      <Clause n={4} title="Who else sees it">
         <ul className="list-disc space-y-1 pl-5">
           <li>
             The restaurant sees only the food. It does not get your number or
@@ -99,9 +109,9 @@ export default async function PrivacyPage() {
             advertising.
           </li>
         </ul>
-      </Section>
+      </Clause>
 
-      <Section title="Messages you get">
+      <Clause n={5} title="Messages you get">
         <p>
           We message you about your own order: that it was received, that the
           payment landed, that the food is on the road, that it has arrived. If
@@ -109,9 +119,9 @@ export default async function PrivacyPage() {
           notifications instead. Turn them off in your phone settings at any
           time and the app keeps working.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Having it deleted">
+      <Clause n={6} title="Having it deleted">
         <p>
           Message us on WhatsApp from the number you order with and ask, and we
           delete your name, number, block and PIN. We keep the bare record of
@@ -123,30 +133,21 @@ export default async function PrivacyPage() {
             That number is <span className="font-semibold">{whatsapp}</span>.
           </p>
         )}
-      </Section>
+      </Clause>
 
-      <Section title="Children">
+      <Clause n={7} title="Children">
         <p>
           Sudu delivers to a university campus and is not meant for children
           under 13. We do not knowingly keep anything about them.
         </p>
-      </Section>
+      </Clause>
 
-      <Section title="Changes">
+      <Clause n={8} title="Changes">
         <p>
           If this changes we will change this page. It is the only copy, so it
           is always the current one.
         </p>
-      </Section>
-    </article>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="card space-y-2">
-      <h2 className="font-bold">{title}</h2>
-      <div className="space-y-2 text-sm text-ink/80">{children}</div>
-    </section>
+      </Clause>
+    </LegalLayout>
   );
 }
