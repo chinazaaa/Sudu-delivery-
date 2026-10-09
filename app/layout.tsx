@@ -183,7 +183,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         )}
         {/* The footer carried the clearance for the tab bar and the sticky
             cart. With it hidden, that space still has to be there. */}
-        {!showFooter && <div aria-hidden className="pb-44 sm:pb-32" />}
+        {!showFooter && <div aria-hidden className="pb-28 sm:pb-32 lg:pb-16" />}
         <BottomNav />
         {/* A small card in the corner, once per offer, never over the cart
             or the checkout. */}

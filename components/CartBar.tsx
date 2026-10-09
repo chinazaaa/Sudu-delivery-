@@ -28,13 +28,19 @@ export default function CartBar() {
         : "";
 
   return (
-    /* A phone's bar. On a laptop the cart is a button in the header, and a
-       red slab floating over the middle of the page is a second one saying
-       the same thing over whatever somebody is reading.
-
-       It clears the tab bar below it, and on anything wider than a phone
-       there is no tab bar to clear. */
-    <div className="fixed inset-x-3 bottom-[calc(72px+env(safe-area-inset-bottom))] z-30 sm:inset-x-4 sm:bottom-4 lg:hidden">
+    /*
+     * Only where nothing else carries the cart.
+     *
+     * On a phone the tab bar along the bottom already has a Cart tab with
+     * the count on it, so this was a second cart control stacked on top of
+     * the first, floating over whatever somebody was reading and covering
+     * the button at the end of a section. One of the two had to go, and the
+     * tab bar is the one that is always exactly where a thumb is.
+     *
+     * From sm up there is no tab bar, so this is the cart until a laptop,
+     * where the header's own pill takes over.
+     */
+    <div className="fixed inset-x-4 bottom-4 z-30 hidden sm:block lg:hidden">
       <Link
         href="/cart"
         className="mx-auto flex max-w-2xl items-center justify-between gap-3 rounded-2xl border-2 border-ink bg-brand py-2.5 pl-[18px] pr-2.5 text-white shadow-hard"

@@ -73,7 +73,7 @@ export default function SiteFooter({
     // the tab bar on a phone, the cart bar on everything, and the offer
     // nudge above both. The footer has to end above them or its links
     // cannot be tapped.
-    <footer className="bleed bg-ink pb-80 pt-16 text-[#e9e3da] sm:pb-64">
+    <footer className="bleed bg-ink pb-28 pt-16 text-[#e9e3da] sm:pb-32 lg:pb-16">
       <div className="shell">
         <div className="grid gap-8 sm:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div className="space-y-4">
