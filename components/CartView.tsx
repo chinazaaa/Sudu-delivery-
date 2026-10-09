@@ -288,7 +288,7 @@ export default function CartView({
         others.map((one) => (
           <section key={one.name} className="space-y-3">
             <div className="flex items-baseline justify-between gap-2">
-              <h2 className="text-sm font-extrabold uppercase tracking-wide text-muted">
+              <h2 className="ticket text-muted">
                 {one.name}
               </h2>
               <span
@@ -372,9 +372,11 @@ export default function CartView({
     // cart that makes sense and one that looks like the group lost something.
     if (group !== "") {
       return (
-        <div className="space-y-5 pb-10">
+        <div className="mx-auto max-w-3xl space-y-5 pb-10">
           <div className="flex items-baseline justify-between gap-3">
-            <h1 className="text-2xl font-extrabold">Your cart</h1>
+            <h1 className="font-display text-[min(16vw,5.5rem)] font-black uppercase leading-[0.88] sm:text-[clamp(3.5rem,7vw,5.5rem)]">
+              Your cart
+            </h1>
             <Link href={`/g/${group}`} className="text-sm font-bold text-brand">
               See the group
             </Link>
@@ -526,9 +528,11 @@ export default function CartView({
     .filter((group) => group.lines.length > 0);
 
   return (
-    <div className="space-y-5 pb-36">
+    <div className="mx-auto max-w-3xl space-y-5 pb-36">
       <div className="flex items-baseline justify-between gap-3">
-        <h1 className="text-2xl font-extrabold">Your cart</h1>
+        <h1 className="font-display text-[min(16vw,5.5rem)] font-black uppercase leading-[0.88] sm:text-[clamp(3.5rem,7vw,5.5rem)]">
+          Your cart
+        </h1>
         {group !== "" && (
           <Link href={`/g/${group}`} className="text-sm font-bold text-brand">
             See the group
@@ -653,7 +657,7 @@ export default function CartView({
 
 
       {group !== "" && (
-        <h2 className="text-sm font-extrabold uppercase tracking-wide text-muted">
+        <h2 className="ticket text-muted">
           Yours
         </h2>
       )}
@@ -703,9 +707,7 @@ export default function CartView({
       {groups.map((section) => (
         <section key={section.person || "me"} className="space-y-3">
           {people.length > 0 && (
-            <h2 className="text-sm font-extrabold uppercase tracking-wide text-muted">
-              {section.person || "You"}
-            </h2>
+            <h2 className="ticket text-muted">{section.person || "You"}</h2>
           )}
 
           {section.lines.map((line) => (
@@ -744,21 +746,25 @@ export default function CartView({
                 </p>
 
                 <div className="mt-2 flex items-center justify-between gap-2">
-                  <span className="font-extrabold">{naira(line.unitPrice * line.qty)}</span>
-                  <span className="flex items-center gap-1 rounded-full border border-black/10 p-1">
+                  <span className="font-display text-[26px] font-extrabold leading-none">
+                    {naira(line.unitPrice * line.qty)}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-ink p-0.5 text-white">
                     <button
                       type="button"
                       onClick={() => setQty(line.key, line.qty - 1)}
-                      className="size-8 rounded-full text-lg leading-none hover:bg-black/5"
+                      className="grid size-9 place-items-center rounded-full text-lg leading-none"
                       aria-label={`One less ${line.name}`}
                     >
                       −
                     </button>
-                    <span className="w-5 text-center font-bold">{line.qty}</span>
+                    <span className="w-5 text-center font-mono font-semibold">
+                      {line.qty}
+                    </span>
                     <button
                       type="button"
                       onClick={() => setQty(line.key, line.qty + 1)}
-                      className="size-8 rounded-full text-lg leading-none hover:bg-black/5"
+                      className="grid size-9 place-items-center rounded-full bg-brand text-lg leading-none"
                       aria-label={`One more ${line.name}`}
                     >
                       +
@@ -917,7 +923,7 @@ export default function CartView({
         </Sheet>
       )}
 
-      <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t border-black/5 bg-paper p-3 shadow-bar sm:bottom-0">
+      <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t-2 border-ink bg-shell px-4 pb-4 pt-3 sm:bottom-0">
         {problem !== "" && (
           <p className="mx-auto mb-2 max-w-2xl rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
             {problem}
@@ -925,11 +931,12 @@ export default function CartView({
         )}
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-sm text-muted">
+            <p className="ticket text-muted">
               {countItems(cart)} item{countItems(cart) === 1 ? "" : "s"}
-              {cart.length !== countItems(cart) && ` · ${cart.length} product${cart.length === 1 ? "" : "s"}`}
             </p>
-            <p className="truncate text-lg font-extrabold">{naira(cartSubtotal(cart))}</p>
+            <p className="truncate font-display text-[32px] font-black leading-none">
+              {naira(cartSubtotal(cart))}
+            </p>
           </div>
           {group !== "" ? (
             mine?.finalised && !mine.changed && !movedSinceFinalising ? (
@@ -946,14 +953,18 @@ export default function CartView({
               <button
                 type="button"
                 onClick={() => setAsking(true)}
-                className="btn-primary shrink-0 px-7 py-3.5"
+                className="btn-primary shrink-0 border-2 border-ink px-7 py-3.5"
               >
                 {mine?.finalised ? "Update my food" : "Finalise my food"}
               </button>
             )
           ) : (
-            <Link href="/checkout" className="btn-primary shrink-0 px-7 py-3.5">
+            <Link
+              href="/checkout"
+              className="btn-primary shrink-0 border-2 border-ink px-7 py-3.5"
+            >
               Checkout
+              <span aria-hidden>→</span>
             </Link>
           )}
         </div>

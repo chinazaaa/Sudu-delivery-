@@ -921,7 +921,14 @@ export default function Checkout({
       <input type="hidden" name="deliver_at" value={deliverAt} />
       <input type="hidden" name="people" value={JSON.stringify(people)} />
 
-      <h1 className="text-2xl font-extrabold">Checkout</h1>
+      <h1 className="font-display text-[min(16vw,5.5rem)] font-black uppercase leading-[0.88] sm:text-[clamp(3.5rem,7vw,5.5rem)]">
+        Book your run
+      </h1>
+
+      {/* The board's two columns: the form, and the order beside it. One
+          column at 1,200px wide is a form nobody can read across. */}
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:gap-8">
+        <div className="flex min-w-0 flex-1 flex-col gap-5">
 
       {adding && (
         <p className="rounded-2xl bg-brand-tint px-4 py-3 text-sm font-semibold text-brand-dark">
@@ -966,7 +973,7 @@ export default function Checkout({
             promise, and the line under the basket already says what is
             wrong and what to do about it. */}
         {!noRunThere && (
-          <h2 className="text-lg font-extrabold text-ink">Order now, get it {arriving}</h2>
+          <Step at="01">Order now, get it {arriving}</Step>
         )}
 
         {!noRunThere && (
@@ -1292,7 +1299,7 @@ export default function Checkout({
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           {/* In a group, the friends' details are already above, so this
               section has to say whose it is. */}
-          <h2 className="font-bold">{whereHeading}</h2>
+          <Step at="02">{whereHeading}</Step>
           <FillDetails
             phone={phone}
             onFilled={(me) => {
@@ -1355,21 +1362,44 @@ export default function Checkout({
           <label className="label" htmlFor="hostel">Hostel / block</label>
           {hostels.length > 0 ? (
             <>
-              <select
-                id="hostel"
-                name="hostel"
-                required
-                value={hostels.includes(hostel) ? hostel : ""}
-                onChange={(event) => setHostel(event.target.value)}
-                className="field"
-              >
-                <option value="">Pick your block</option>
+              {/* Blocks as chips rather than a dropdown. There are sixteen of
+                  them and the answer is always one somebody already knows, so
+                  a list you can see beats a list you have to open, scroll and
+                  pick out of on a phone.
+
+                  Real radios underneath, so the browser's own "pick one"
+                  still works and the form submits without any help from us. */}
+              <div role="radiogroup" aria-label="Hostel block" className="flex flex-wrap gap-1.5 sm:gap-2">
                 {hostels.map((name) => (
-                  <option key={name} value={name}>
+                  <label
+                    key={name}
+                    className={`chip min-h-11 cursor-pointer px-3 text-sm font-semibold sm:px-4 sm:text-[15px] ${
+                      hostel === name
+                        ? "border-ink bg-brand text-white"
+                        : "border-line bg-paper"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="hostel"
+                      value={name}
+                      required
+                      checked={hostel === name}
+                      onChange={() => setHostel(name)}
+                      className="sr-only"
+                    />
+                    {hostel === name && (
+                      <svg viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M5 12l5 5 9-10" />
+                      </svg>
+                    )}
                     {name}
-                  </option>
+                  </label>
                 ))}
-              </select>
+              </div>
+              <p className="mt-1.5 text-sm text-muted">
+                We hand it to you at this block, not the gate.
+              </p>
               {hostel !== "" && !hostels.includes(hostel) && (
                 <p className="mt-1 text-xs text-brand">
                   You used &quot;{hostel}&quot; last time, which is not on the
@@ -1445,7 +1475,7 @@ export default function Checkout({
       </section>
 
       <section className="card space-y-3">
-        <h2 className="font-bold">How are you paying?</h2>
+        <Step at="03">How are you paying?</Step>
         <div className="grid gap-2 sm:grid-cols-2">
           {(
             [
@@ -1459,12 +1489,21 @@ export default function Checkout({
               key={value}
               type="button"
               onClick={() => setMethod(value)}
-              className={`rounded-xl border p-3 text-left transition ${
-                method === value ? "border-brand bg-brand-tint" : "border-black/10"
+              aria-pressed={method === value}
+              className={`flex flex-col gap-1.5 rounded-xl border-2 border-ink p-4 text-left transition ${
+                method === value
+                  ? "bg-ink text-shell shadow-[4px_4px_0_#e5321d]"
+                  : "bg-paper"
               }`}
             >
-              <span className="block font-bold">{title}</span>
-              <span className="block text-sm text-muted">{detail}</span>
+              <span className="block text-[17px] font-bold">{title}</span>
+              <span
+                className={`block text-sm ${
+                  method === value ? "text-[#d8d1c7]" : "text-muted"
+                }`}
+              >
+                {detail}
+              </span>
             </button>
           ))}
         </div>
@@ -1512,7 +1551,12 @@ export default function Checkout({
         )}
       </section>
 
-      <section className="card space-y-1 text-sm">
+        </div>
+
+      <aside
+        aria-label="Order summary"
+        className="card space-y-1 text-sm lg:sticky lg:top-24 lg:w-[360px] lg:shrink-0 lg:shadow-[8px_8px_0_#15110e]"
+      >
         {/* The way back. Everything above is about what this order costs and
             when it lands, and the answer to both is often "take something
             out", which needed the browser's back button to act on. */}
@@ -1675,9 +1719,13 @@ export default function Checkout({
             the discount on the link. Only one offer applies at a time.
           </p>
         )}
-        <div className="flex justify-between border-t border-black/10 pt-2 text-lg font-extrabold">
-          <span>{shared ? "Food so far" : "Total"}</span>
-          <span>{naira(total)}</span>
+        <div className="flex items-baseline justify-between border-t-2 border-dashed border-line pt-3">
+          <span className="text-lg font-bold">
+            {shared ? "Food so far" : "Total"}
+          </span>
+          <span className="font-display text-[40px] font-black leading-none">
+            {naira(total)}
+          </span>
         </div>
         {/* The order is in naira and stays in naira: that is what is owed and
             what the books are kept in. Picking pounds changes what the card
@@ -1725,9 +1773,10 @@ export default function Checkout({
           }
         />
 
-      </section>
+      </aside>
+      </div>
 
-      <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t border-black/5 bg-paper p-3 shadow-bar sm:bottom-0">
+      <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t-2 border-ink bg-shell px-4 pb-4 pt-3 sm:bottom-0">
         <div className="mx-auto max-w-2xl space-y-2">
           {unresolved.length > 0 && (
             <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
@@ -1768,9 +1817,18 @@ export default function Checkout({
               {state.error}
             </p>
           )}
+          <div className="flex items-center gap-3">
+            <span className="flex shrink-0 flex-col">
+              <span className="ticket text-muted">
+                {shared ? "So far" : "Total"}
+              </span>
+              <span className="font-display text-[32px] font-black leading-none">
+                {naira(total)}
+              </span>
+            </span>
           <button
             type="submit"
-            className="btn-primary w-full py-4 text-base"
+            className="btn-primary flex-1 border-2 border-ink py-4 text-base"
             disabled={
               pending ||
               // A group brings its own car, so an empty run list is not a
@@ -1785,10 +1843,27 @@ export default function Checkout({
               ? "Placing…"
               : shared
                 ? "Put my food in"
-                : `Place order · ${naira(total)}`}
+                : `Place order · ${method === "card" ? "Card" : "Transfer"}`}
           </button>
+          </div>
         </div>
       </div>
     </form>
+  );
+}
+
+/**
+ * A step's heading, the way the board sets one: the number in the display
+ * face, in Tomato, beside the words. The numbers are what make four cards
+ * read as one form rather than as four separate questions.
+ */
+function Step({ at, children }: { at: string; children: React.ReactNode }) {
+  return (
+    <h2 className="flex items-center gap-3 text-[17px] font-bold sm:text-xl">
+      <span className="font-display text-[30px] font-black leading-none text-brand sm:text-4xl">
+        {at}
+      </span>
+      {children}
+    </h2>
   );
 }

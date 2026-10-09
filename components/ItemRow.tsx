@@ -31,15 +31,23 @@ export default function ItemRow({
 }) {
   const cart = useCart();
 
-  // The lines this dish has in the cart. One of them can be stepped from
-  // here; several means somebody ordered it two ways, and which of the two
-  // a minus button means is not a question a card can answer, so it opens
-  // the cart's own list instead.
+  // The lines this dish has in the cart.
+  //
+  // Exactly one can be stepped from the card, whether or not it had choices
+  // to make: one more of the large pepperoni already in the basket is the
+  // same thing again, and nothing needs asking. Two or more lines means
+  // somebody ordered it two ways, and which of the two a minus button means
+  // is not a question a card can answer, so that opens the sheet instead
+  // and the card just says how many there are.
   const lines = cart.filter((l) => l.itemId === item.id);
+  const one = lines.length === 1 ? lines[0] : null;
   const simple = item.groups.length === 0 && restaurant !== undefined;
-  const steppable = simple && lines.length <= 1;
 
   const add = () => {
+    if (one) {
+      setQty(one.key, one.qty + 1);
+      return;
+    }
     if (!simple || !restaurant) {
       onOpen();
       return;
@@ -58,8 +66,7 @@ export default function ItemRow({
   };
 
   const drop = () => {
-    const line = lines[0];
-    if (line) setQty(line.key, line.qty - 1);
+    if (one) setQty(one.key, one.qty - 1);
   };
 
   return (
@@ -100,7 +107,7 @@ export default function ItemRow({
             {naira(item.price)}
           </span>
 
-          {inCart > 0 && steppable ? (
+          {one ? (
             <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-ink p-0.5 text-white">
               <button
                 type="button"
@@ -128,7 +135,7 @@ export default function ItemRow({
               onClick={add}
               disabled={!item.available}
               aria-label={`Add ${item.name}`}
-              className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border-2 border-ink bg-brand px-0 font-bold text-white shadow-press disabled:opacity-40 disabled:shadow-none sm:px-[18px]"
+              className="relative flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border-2 border-ink bg-brand px-0 font-bold text-white shadow-press disabled:opacity-40 disabled:shadow-none sm:px-[18px]"
             >
               <span className="grid size-10 place-items-center sm:size-auto">
                 <Plus />
@@ -136,6 +143,15 @@ export default function ItemRow({
               <span className="hidden sm:inline">
                 {inCart > 0 ? `${inCart} in cart` : "Add"}
               </span>
+              {/* Two ways of ordering the same dish. The card cannot step
+                  either of them, but it must still say they are in there:
+                  without this, adding a large pepperoni left the card
+                  looking exactly as it did before. */}
+              {inCart > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 grid size-[22px] place-items-center rounded-full border-2 border-ink bg-volt font-mono text-xs text-ink sm:hidden">
+                  {inCart}
+                </span>
+              )}
             </button>
           )}
         </div>
