@@ -25,9 +25,15 @@ export const DAY_NAMES = [
 
 /** The days it opens. Empty text means all seven. */
 export function openDays(text: string | null | undefined): number[] {
+  // Emptied of blanks before anything is turned into a number, because
+  // Number("") is 0 and not NaN. Without this, the empty column that means
+  // "open every day" parsed as the list [0]: open on Sundays and shut the
+  // other six, for every restaurant that had never been given days at all.
   const said = String(text ?? "")
     .split(",")
-    .map((one) => Number(one.trim()))
+    .map((one) => one.trim())
+    .filter((one) => one !== "")
+    .map(Number)
     .filter((one) => Number.isInteger(one) && one >= 0 && one <= 6);
 
   const days = [...new Set(said)].sort((a, b) => a - b);
@@ -67,7 +73,9 @@ export function closedWord(text: string | null | undefined): string {
   const open = openDays(text);
   if (open.length === 7) return "";
 
-  const shut = [0, 1, 2, 3, 4, 5, 6].filter((one) => !open.includes(one));
+  // Monday first, so a weekend reads "Saturdays and Sundays" rather than
+  // "Sundays and Saturdays", which is the right list in the wrong order.
+  const shut = [1, 2, 3, 4, 5, 6, 0].filter((one) => !open.includes(one));
   if (shut.length === 0) return "";
 
   const names = shut.map((one) => `${DAY_NAMES[one]}s`);
