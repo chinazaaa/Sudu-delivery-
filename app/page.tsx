@@ -280,6 +280,17 @@ export default async function HomePage() {
       // without a deploy. The shipped words are the two facts worth saying:
       // how long this has been running and who said it was any good.
       pitch={settings.pitch_line.trim()}
+      // The hero's one sticker, and where the food comes from. Both read
+      // from the shop rather than written into the headline, so an area
+      // the shop stops serving stops being promised.
+      award="PAU Entrepreneurship Award 2021"
+      runFrom={parseAreas(settings.delivery_areas).find((one) => one.id === "")?.name ?? "Sangotedo"}
+      where={(() => {
+        const names = parseAreas(settings.delivery_areas).map((one) => one.name);
+        if (names.length === 0) return "Sangotedo";
+        if (names.length === 1) return names[0];
+        return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+      })()}
       // The ladder as it is set, rather than a table written on the page.
       // A home page quoting four thousand over a checkout about to charge
       // six is worse than one that says nothing about the fee at all.

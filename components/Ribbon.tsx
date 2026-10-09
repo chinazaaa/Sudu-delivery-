@@ -35,7 +35,7 @@ export default function Ribbon({
             Underlined, because white on black with no underline is a
             sentence rather than a link, and nobody taps a sentence. */}
         {text && href !== "" && (
-          <Link href={href} className="font-semibold underline underline-offset-2">
+          <Link href={href} className="font-semibold text-volt underline underline-offset-2">
             {text}
           </Link>
         )}
@@ -54,7 +54,7 @@ export default function Ribbon({
         {offer?.automatic && (
           <span className="flex items-center gap-1.5">
             <span className="text-white/80">{offer.line}</span>
-            <span className="rounded-full bg-brand px-2.5 py-0.5 text-xs font-extrabold tracking-wide">
+            <span className="ticket rounded-none bg-volt px-2 py-1 text-ink">
               No code needed
             </span>
           </span>

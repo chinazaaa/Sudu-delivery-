@@ -107,24 +107,26 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
         {/* The name is the mark now: a bag beside the word "Sudu" was two
             logos doing one job, and the word is the one people read. */}
         <Link href="/" className="min-w-0 flex-1" aria-label="Sudu home">
-          <Wordmark size={28} />
-          <span className="mt-0.5 block truncate text-xs text-muted">{tagline}</span>
+          <Wordmark size={34} />
+          <span className="sr-only">{tagline}</span>
         </Link>
 
-        <nav className="hidden items-center gap-1 sm:flex">
+        <nav className="hidden flex-1 items-center gap-6 lg:flex">
           {[
             // Everything there is, one list with filters, rather than the
             // front page's pick of restaurants. "Menu" is what somebody
             // presses when they want to see the lot.
             ["/products", "Menu"],
-            ["/orders", "My orders"],
-            ["/reorder", "Order again"],
+            ["/collections", "Collections"],
+            ["/parcel", "Parcels"],
+            ["/skincare", "Skincare"],
+            ["/parents", "For parents"],
           ].map(([href, label]) => (
             <Link
               key={href}
               href={href}
-              className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
-                path === href ? "bg-ink text-shell" : "text-ink hover:text-brand-dark"
+              className={`font-semibold transition ${
+                path === href ? "text-brand-dark underline" : "text-ink hover:text-brand-dark"
               }`}
             >
               {label}
@@ -133,13 +135,38 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
         </nav>
 
         <Link
+          href="/products"
+          aria-label="Search the menu"
+          className="grid size-11 shrink-0 place-items-center rounded-full text-ink transition hover:bg-ink hover:text-paper lg:hidden"
+        >
+          <svg viewBox="0 0 24 24" className="size-5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-4-4" />
+          </svg>
+        </Link>
+
+        <Link href="/reorder" className="hidden items-center gap-1.5 font-semibold lg:flex">
+          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M4 12a8 8 0 0 1 14-5.3L20 9" />
+            <path d="M20 4v5h-5" />
+            <path d="M20 12a8 8 0 0 1-14 5.3L4 15" />
+            <path d="M4 20v-5h5" />
+          </svg>
+          Order again
+        </Link>
+        <Link href="/orders" className="hidden font-semibold lg:block">
+          My orders
+        </Link>
+
+        <Link
           href="/cart"
           aria-label={`Cart, ${count} item${count === 1 ? "" : "s"}`}
-          className="relative grid size-11 shrink-0 place-items-center rounded-full border-2 border-ink bg-paper transition active:scale-95 hover:bg-ink hover:text-paper"
+          className="flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-ink px-4 font-bold text-shell transition active:scale-95"
         >
           <CartIcon />
+          <span className="hidden sm:inline">Cart</span>
           {count > 0 && (
-            <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full border-2 border-paper bg-brand px-1 text-[11px] font-bold text-white">
+            <span className="ticket grid size-[22px] place-items-center rounded-full bg-brand text-white">
               {count}
             </span>
           )}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Wordmark from "./Wordmark";
 
 /**
  * The foot of every page.
@@ -72,13 +73,13 @@ export default function SiteFooter({
     // the tab bar on a phone, the cart bar on everything, and the offer
     // nudge above both. The footer has to end above them or its links
     // cannot be tapped.
-    <footer className="mt-10 border-t border-black/5 bg-paper pb-80 pt-8 sm:pb-64">
-      <div className="mx-auto max-w-5xl px-4">
+    <footer className="bleed mt-10 bg-ink pb-80 pt-16 text-[#e9e3da] sm:pb-64">
+      <div className="shell">
         <div className="grid gap-8 sm:grid-cols-[1.4fr_1fr_1fr_1fr]">
-          <div className="space-y-2">
-            <p className="text-lg font-extrabold">Sudu</p>
+          <div className="space-y-4">
+            <Wordmark size={40} tone="light" />
             {line !== "" && (
-              <p className="max-w-xs text-sm leading-relaxed text-muted">{line}</p>
+              <p className="max-w-[360px] leading-relaxed">{line}</p>
             )}
           </div>
 
@@ -88,9 +89,7 @@ export default function SiteFooter({
           <div className="grid grid-cols-2 gap-8 sm:contents">
             {groups.map((group) => (
               <div key={group.heading} className="space-y-2.5">
-                <p className="text-xs font-bold uppercase tracking-wide text-muted">
-                  {group.heading}
-                </p>
+                <p className="ticket text-[#a79e93]">{group.heading}</p>
                 <ul className="space-y-2">
                   {group.links.map((one) => (
                     <li key={one.href}>
@@ -99,14 +98,14 @@ export default function SiteFooter({
                           href={one.href}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm font-semibold hover:text-brand"
+                          className="hover:text-volt"
                         >
                           {one.said}
                         </a>
                       ) : (
                         <Link
                           href={one.href}
-                          className="text-sm font-semibold hover:text-brand"
+                          className="hover:text-volt"
                         >
                           {one.said}
                         </Link>
@@ -119,7 +118,7 @@ export default function SiteFooter({
           </div>
         </div>
 
-        <div className="mt-8 space-y-2 border-t border-black/5 pt-5 text-xs text-muted">
+        <div className="mt-12 space-y-2 border-t border-white/10 pt-6 text-[13px] leading-relaxed text-[#a79e93]">
           <p>
             © {new Date().getFullYear()} Sudu · Delivering to Pan-Atlantic
             University, Ibeju-Lekki, Lagos

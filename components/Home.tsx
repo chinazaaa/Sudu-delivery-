@@ -48,6 +48,9 @@ export default function Home({
   pitch = "",
   fees = [],
   areaExtras = [],
+  award = "",
+  where = "",
+  runFrom = "",
 }: {
   menu: MenuView[];
   /** When something ordered right now would land, said as a sentence and
@@ -83,6 +86,15 @@ export default function Home({
   /** What going further out adds, named. Empty where everything is one
    *  area, which is what it was before areas existed. */
   areaExtras?: { name: string; extra: number }[];
+  /** The one tilted sticker the hero is allowed, written in admin. Empty
+   *  means the hero carries one badge rather than an invented second. */
+  award?: string;
+  /** Where the food comes from, named from the areas the shop really
+   *  delivers out of rather than written into the sentence. */
+  where?: string;
+  /** The home area, for the ticket and the fee table's caption: the ladder
+   *  is that run's, and the others add to it. */
+  runFrom?: string;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<{ item: ItemView; place: MenuView } | null>(null);
@@ -144,317 +156,317 @@ export default function Home({
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* A time, not a timetable. Somebody opening a food shop wants to know
-          when they can eat, and the run is a second answer to that which they
-          find at checkout. Two stacked bars is also how the first restaurant
-          ends up off the bottom of a short phone.
-          The run strip is still the answer when there is no time to offer,
-          because a page that says nothing about delivery is worse than one
-          that says the wrong thing first. */}
-      {/* One sentence, and nothing else, and first. Most people never
-          scroll, so the first screen has to answer the only question a
-          hungry person has, which is when they can eat. */}
-      {/* What the shop is, before what it is doing tonight.
-
-          The page used to open on the run, which answers "when can I eat"
-          for somebody who already knows what Sudu is, and says nothing at
-          all to the half of the campus who have been sent a link. The
-          headline is the promise in four words, and the run is directly
-          under it. */}
-      <section className="space-y-4 pt-2">
-        <span className="ticket inline-block border-2 border-ink px-2 py-1">
-          On PAU campus since 2018
-        </span>
-        <h1 className="font-display text-[clamp(3.5rem,16vw,5.5rem)] font-black uppercase leading-[0.86]">
-          Outside food.
-          <br />
-          <span className="text-brand">Inside PAU.</span>
-        </h1>
-        <p className="max-w-xl text-lg leading-relaxed text-ink/80">
-          {menu.length > 0
-            ? `${said(menu)} and more. Mix restaurants, pay once, collect at your hostel block.`
-            : "Mix restaurants, pay once, collect at your hostel block."}
-        </p>
-        <Link href="/products" className="btn-primary w-full text-lg sm:w-auto">
-          Start an order
-          <span aria-hidden>→</span>
-        </Link>
-      </section>
-
-      {arriving !== "" && (
-        <ArrivalStrip said={arriving} also={alsoArriving} closesAt={closesAt} />
-      )}
-
-      <div className="relative">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search chicken, pizza, wings…"
-          aria-label="Search the menu"
-          className="field py-4 pl-11 text-base"
-        />
-        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted">
-          ⌕
-        </span>
-        {query && (
-          <button
-            type="button"
-            onClick={() => setQuery("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full px-3 py-1 text-sm font-bold text-muted hover:bg-black/5"
-          >
-            Clear
-          </button>
-        )}
-      </div>
-
-      {found ? (
-        <section className="space-y-3 pb-28">
-          {/* What the shop has, before what the kitchens have. Somebody
-              searching "care" wants the care package, and burying it under
-              forty dishes is the same as not having it. */}
-          {elsewhere.length > 0 && (
-            <ul className="space-y-2">
-              {elsewhere.map((one) => (
-                <li key={`${one.title}|${one.href}`}>
-                  <Link
-                    href={one.href}
-                    className="flex items-center justify-between gap-3 rounded-2xl bg-paper p-3.5 shadow-card"
-                  >
-                    <span className="min-w-0">
-                      <span className="block font-bold leading-tight">
-                        {one.title}
-                      </span>
-                      <span className="mt-0.5 line-clamp-1 block text-sm text-muted">
-                        {one.line}
-                      </span>
-                    </span>
-                    <span aria-hidden className="shrink-0 text-muted">
-                      ›
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <h2 className="section-title">
-            {found.length} result{found.length === 1 ? "" : "s"} on the menu
-          </h2>
+    <div className="bleed">
+      {found !== null ? (
+        <section className="shell space-y-4 py-8">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="section-title">
+              {found.length} result{found.length === 1 ? "" : "s"}
+            </h2>
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="font-bold underline"
+            >
+              Clear
+            </button>
+          </div>
           {found.length === 0 ? (
-            <div className="space-y-3">
-              {elsewhere.length === 0 && (
-                <p className="text-muted">
-                  Nothing matches that. Try a shorter word, like chicken or
-                  pizza.
-                </p>
-              )}
-              {/* The best moment there is to offer this: somebody has just
-                  told us exactly what they want and we have just told them
-                  we do not have it. */}
-              <Link
-                href="/custom-order"
-                className="block rounded-2xl bg-paper p-4 shadow-card"
-              >
-                <span className="block font-bold">
-                  Still can&apos;t find it?
-                </span>
-                <span className="mt-1 block text-sm leading-snug text-muted">
-                  Tell us what you are looking for and we will find it, price
-                  it, and bring it to your block.
-                </span>
-                <span className="mt-2 block text-sm font-extrabold text-brand">
-                  Ask us to get it
-                </span>
-              </Link>
-            </div>
+            <Link href="/custom-order" className="card block">
+              <span className="block font-display text-2xl font-extrabold uppercase">
+                Still can&apos;t find it?
+              </span>
+              <span className="mt-1 block text-sm leading-snug text-ink/75">
+                Tell us what you are looking for and we will find it, price it,
+                and bring it to your block.
+              </span>
+              <span className="ticket mt-2 block text-brand-dark">
+                Ask us to get it
+              </span>
+            </Link>
           ) : (
-            found.map(({ item, place }) => (
-              <ItemRow
-                key={item.id}
-                item={item}
-                inCart={countFor(item.id)}
-                onOpen={() => setOpen({ item, place })}
-              />
-            ))
+            <div className="space-y-3">
+              {found.map(({ item, place }) => (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  inCart={countFor(item.id)}
+                  onOpen={() => setOpen({ item, place })}
+                />
+              ))}
+            </div>
           )}
         </section>
       ) : (
         <>
-          {/* Everything the shop does that is not tonight's dinner, in one
-              row you swipe rather than doors stacked down the page.
+          {/* Hero. What the shop is on the left, what it is doing tonight on
+              the right: the page used to open on the run alone, which says
+              nothing to the half of campus who were sent a link. */}
+          <section className="border-b-2 border-ink">
+            <div className="shell grid gap-14 py-16 lg:grid-cols-2 lg:items-center">
+              <div className="flex flex-col gap-7">
+                <div className="flex flex-wrap gap-2">
+                  <span className="ticket inline-block border-2 border-ink px-2.5 py-1.5">
+                    On PAU campus since 2018
+                  </span>
+                  {award !== "" && (
+                    <span className="sticker px-2.5 py-1.5">{award}</span>
+                  )}
+                </div>
+                <h1 className="font-display text-[clamp(4rem,9vw,8rem)] font-black uppercase leading-[0.86] tracking-[-0.005em]">
+                  Outside food.
+                  <br />
+                  <span className="text-brand">Inside PAU.</span>
+                </h1>
+                <p className="max-w-[520px] text-xl leading-normal text-ink/80">
+                  {said(menu)} and more{where !== "" ? ` from ${where}` : ""}.
+                  Mix restaurants in one order, pay once, and collect it at your
+                  hostel block.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Link href="/products" className="btn-primary text-lg">
+                    Start an order
+                    <span aria-hidden>→</span>
+                  </Link>
+                  <a href="#fees" className="btn-quiet text-lg">
+                    See delivery fees
+                  </a>
+                </div>
+              </div>
 
-              Stacked, each new thing the shop started pushed the restaurants
-              further down: occasions, then parcels, then skincare, and the menu
-              began below three screens of doors. A row costs the same height
-              whether there are two of these or five. */}
-          {/* The restaurants, by their own logos, before anything else.
+              {arriving !== "" && (
+                <div className="relative pl-7 pt-7">
+                  <span
+                    aria-hidden
+                    className="absolute left-0 top-0 h-[70%] w-[72%] opacity-90"
+                    style={{
+                      background:
+                        "repeating-linear-gradient(-60deg,#e5321d 0 7px,transparent 7px 16px)",
+                    }}
+                  />
+                  <ArrivalStrip
+                    said={arriving}
+                    also={alsoArriving}
+                    closesAt={closesAt}
+                    from={runFrom}
+                    feeFrom={fees[0]?.fee ?? 0}
+                  />
+                </div>
+              )}
+            </div>
+          </section>
 
-              The page named none of them. A shop whose whole promise is
-              "Domino's, to your hostel" opened on a search box and a card
-              saying "Food", and the one thing that does the persuading — a
-              logo somebody already trusts, already knows the prices of and
-              already wants — was two taps away behind a category name. A
-              student does not arrive wanting food in general. They arrive
-              wanting KFC.
-
-              A row rather than a grid: it costs one line of height whatever
-              happens, and the one falling off the right edge is what says
-              there are more. */}
-          {/* The kitchens, named.
-
-              A logo is what somebody recognises, and a row of them is what
-              this was; the canvas asks for the names set in the display
-              face, two up, which says thirteen of them in the space a
-              scrolling row said five. The last tile carries the rest. */}
+          {/* The kitchens, named. */}
           {menu.length > 0 && (
-            <section className="space-y-3">
-              <div className="flex items-end justify-between gap-3">
+            <section className="shell flex flex-col gap-8 pb-10 pt-16">
+              <div className="flex flex-wrap items-end justify-between gap-4">
                 <h2 className="section-title">
                   {menu.length} kitchen{menu.length === 1 ? "" : "s"}.
                   <br />
                   One run.
                 </h2>
-                <Link
-                  href="/products"
-                  className="shrink-0 pb-1 text-sm font-extrabold text-ink underline"
-                >
-                  See all
+                <Link href="/products" className="pb-1 font-bold underline">
+                  Browse the full menu
                 </Link>
               </div>
-              <ul className="grid grid-cols-2 gap-2">
-                {menu.slice(0, 5).map((place) => (
+              <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {menu.map((place) => (
                   <li key={place.restaurant.id}>
                     <Link
                       href={`/r/${place.restaurant.href}`}
-                      className="flex min-h-[72px] items-center rounded-[10px] border-2 border-ink bg-paper px-3.5 py-4 font-display text-2xl font-extrabold uppercase leading-[0.95]"
+                      className="flex h-full items-center justify-between gap-3 rounded-xl border-2 border-ink bg-paper p-5 transition active:translate-x-0.5 active:translate-y-0.5"
                     >
-                      {place.restaurant.name}
+                      <span className="font-display text-[28px] font-extrabold uppercase leading-none">
+                        {place.restaurant.name}
+                      </span>
+                      <span aria-hidden className="shrink-0 font-bold text-brand">
+                        →
+                      </span>
                     </Link>
                   </li>
                 ))}
                 <li>
                   <Link
                     href="/products"
-                    className="flex min-h-[72px] items-center rounded-[10px] border-2 border-ink bg-brand px-3.5 py-4 font-display text-2xl font-extrabold uppercase leading-[0.95] text-white"
+                    className="flex h-full items-center justify-between gap-3 rounded-xl border-2 border-ink bg-brand p-5 text-white transition active:translate-x-0.5 active:translate-y-0.5"
                   >
-                    {menu.length > 5 ? `+ ${menu.length - 5} more` : "All the food"}
+                    <span className="font-display text-[28px] font-extrabold uppercase leading-none">
+                      All the food
+                    </span>
+                    <span aria-hidden className="shrink-0 font-bold">
+                      →
+                    </span>
                   </Link>
                 </li>
               </ul>
             </section>
           )}
 
-          {/* What they came wanting, rather than who sells it.
-
-              The row above answers "I want KFC", which is half the people
-              who open this page. The other half have decided they want rice
-              and do not care whose, and for them the page was a search box,
-              which is a question rather than an answer. One tap lands them
-              on the everything list, already narrowed.
-
-              A row rather than a grid, for the same reason the restaurants
-              are: it costs one line of height whatever is in it, and the
-              one falling off the right edge is what says there are more. */}
-          <section className="-mx-4 space-y-3 px-4">
-            <h2 className="section-title">What are you after?</h2>
-            <ul className="flex snap-x gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {/* The kinds, wrapped rather than scrolled. */}
+          <section aria-label="What kind of food" className="shell pb-16 pt-4">
+            <div className="flex flex-wrap gap-2.5">
               {FOOD_KINDS.map((kind, at) => (
-                <li key={kind.label} className="snap-start">
-                  <Link
-                    href={kindHref(kind)}
-                    className={`chip ${at === 0 ? "chip-on" : "bg-paper"}`}
-                  >
-                    {kind.label}
-                  </Link>
-                </li>
+                <Link
+                  key={kind.label}
+                  href={kindHref(kind)}
+                  className={`chip px-5 ${at === 0 ? "chip-on" : "bg-transparent"}`}
+                >
+                  {kind.label}
+                </Link>
               ))}
-            </ul>
+            </div>
           </section>
 
-          {/* Seven years on one campus and an award from the school
-              itself, said on the page people actually open.
-
-              It was on /about, which is a page nobody opens. The single
-              hardest thing this shop asks of a first-time customer is money
-              up front for food that has not been bought yet, and the answer
-              to that was filed behind a link in the footer. */}
-          <TrustStrip pitch={pitch} />
-
-          {/* Under the food rather than over it. Splitting a delivery is a
-              way of paying, and it was standing between somebody who came
-              here hungry and the first picture of anything to eat. */}
-          <SplitPrompt />
-
-          {/* A line over the grid, and the way to the whole shelf on the
-              right of it. The grid only names six collections, and somebody
-              who wants the seventh should not have to guess there is one. */}
-          <div className="flex items-end justify-between gap-3">
-            <h2 className="section-title">Not just food</h2>
-            <Link
-              href="/collections"
-              className="shrink-0 pb-1 text-sm font-extrabold text-ink underline"
-            >
-              See all
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {buckets.map((one) => (
-              <Door
-                key={one.href}
-                href={one.href}
-                title={one.title}
-                line={one.line}
-                image={one.image ?? ""}
-              />
-            ))}
-          </div>
-
-          {/* Not a bucket: it is not a thing the shop sells, and standing it
-              beside the ones that are made it compete with them. One line
-              under the grid, for whoever is on the right phone. */}
-          {/* One link for both phones now. Naming one of them was right
-              while there was one app and is a way of telling half the
-              campus the shop is not for them. */}
-          {(iosAppId !== "" || androidPackage !== "") && (
-            <p className="text-center text-sm text-muted">
-              {iosAppId !== "" && androidPackage !== ""
-                ? "On iPhone or Android? "
-                : iosAppId !== ""
-                  ? "On an iPhone? "
-                  : "On Android? "}
-              <a href="/app" className="font-bold text-brand-dark underline">
-                Get the app
-              </a>
-            </p>
+          {/* The boxes, on Ink: already packed, already priced. */}
+          {packs.length > 0 && (
+            <section className="bg-ink text-shell">
+              <div className="shell flex flex-col gap-9 py-16">
+                <div className="flex flex-wrap items-end justify-between gap-4">
+                  <div className="flex flex-col gap-3">
+                    <span className="ticket text-volt">
+                      Packed &amp; ready · delivery included
+                    </span>
+                    <h2 className="section-title">Boxes for every moment</h2>
+                  </div>
+                  <Link href="/collections" className="pb-1 font-bold text-volt underline">
+                    All collections
+                  </Link>
+                </div>
+                <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {packs.slice(0, 7).map((one, at) => (
+                    <li key={one.href}>
+                      <Link
+                        href={one.href}
+                        className={`flex h-full min-h-[220px] flex-col justify-between gap-3.5 rounded-2xl p-6 ${
+                          at === 0
+                            ? "bg-brand text-white"
+                            : "border border-white/10 bg-[#26201b] text-shell"
+                        }`}
+                      >
+                        {at === 0 && (
+                          <span className="ticket self-start bg-ink px-2 py-1 text-volt">
+                            Most ordered
+                          </span>
+                        )}
+                        <span className="font-display text-[40px] font-extrabold uppercase leading-[0.9]">
+                          {one.title}
+                        </span>
+                        <span className={`font-semibold ${at === 0 ? "" : "text-volt"}`}>
+                          {one.line}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                  {packs.length > 7 && (
+                    <li>
+                      <Link
+                        href="/collections"
+                        className="flex h-full min-h-[220px] flex-col justify-between gap-3.5 rounded-2xl bg-volt p-6 text-ink"
+                      >
+                        <span className="font-display text-[40px] font-extrabold uppercase leading-[0.9]">
+                          Everything else, packed
+                        </span>
+                        <span className="font-semibold">
+                          {packs.length - 7} more boxes →
+                        </span>
+                      </Link>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </section>
           )}
 
-          {/* What carrying it costs, before anybody has to reach a
-              checkout to find out.
+          {/* Everything that is not tonight's dinner. */}
+          <section className="shell flex flex-col gap-9 py-16">
+            <div className="flex flex-col gap-3">
+              <span className="ticket text-brand-dark">Bridging the gap</span>
+              <h2 className="section-title">Not just food</h2>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {buckets.map((one) => (
+                <Door
+                  key={one.href}
+                  href={one.href}
+                  title={one.title}
+                  line={one.line}
+                />
+              ))}
+            </div>
+          </section>
 
-              The numbers are the shop's own ladder rather than a table
-              written here: a page quoting four thousand over a checkout
-              about to charge six is worse than a page that says nothing.
-              It is the question every first-time customer asks, and it was
-              answered nowhere on the page they ask it on. */}
+          {/* How a run works: the answer to handing money over first. */}
+          <section className="border-y-2 border-ink bg-paper">
+            <div className="shell flex flex-col gap-10 py-16">
+              <h2 className="section-title">How a run works</h2>
+              <ol className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  [
+                    "Fill your cart",
+                    "Add items from one restaurant or several. Two kitchens in one order is fine.",
+                  ],
+                  [
+                    "Pick a run and your block",
+                    "Choose the delivery run that suits you and the hostel block you are in.",
+                  ],
+                  [
+                    "Pay once",
+                    "Bank transfer, or ask us for a card link. Your order is confirmed once it lands.",
+                  ],
+                  [
+                    "Meet us at your block",
+                    "We collect everything, bring it onto campus together and hand it to you in the window.",
+                  ],
+                ].map(([title, line], at) => (
+                  <li
+                    key={title}
+                    className="flex flex-col gap-3 border-t-4 border-brand pt-5"
+                  >
+                    <span className="font-display text-[72px] font-black leading-[0.8] text-brand">
+                      {String(at + 1).padStart(2, "0")}
+                    </span>
+                    <span className="text-xl font-bold">{title}</span>
+                    <span className="leading-relaxed text-ink/75">{line}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </section>
+
+          {/* What carrying it costs, from the shop's own ladder. */}
           {fees.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="section-title">One fee per car</h2>
-              <div className="overflow-hidden rounded-xl border-2 border-ink bg-paper">
-                <table className="w-full border-collapse">
+            <section id="fees" className="shell grid gap-12 py-16 lg:grid-cols-2 lg:items-start">
+              <div className="flex flex-col gap-5">
+                <span className="ticket text-brand-dark">Delivery fees</span>
+                <h2 className="section-title">
+                  One fee per car.
+                  <br />
+                  Not per person.
+                </h2>
+                <p className="max-w-[460px] text-lg leading-relaxed text-ink/80">
+                  Order with your roommates on the same run and you split one
+                  fee. The more of you, the cheaper it gets.
+                </p>
+              </div>
+              <div className="overflow-hidden rounded-2xl border-2 border-ink bg-paper">
+                <table className="w-full border-collapse text-[17px]">
+                  {runFrom !== "" && (
+                    <caption className="ticket bg-ink px-6 py-4 text-left text-volt">
+                      {runFrom} run
+                    </caption>
+                  )}
                   <tbody>
                     {fees.map((row) => (
                       <tr key={row.label} className="border-b border-line last:border-0">
-                        <th scope="row" className="p-3.5 text-left font-medium">
+                        <th scope="row" className="p-5 text-left font-medium">
                           {row.label}
                         </th>
-                        <td className="p-3.5 text-right">
-                          <span className="font-display text-2xl font-extrabold">
+                        <td className="p-5 text-right">
+                          <span className="font-display text-[28px] font-extrabold">
                             {naira(row.fee)}
                           </span>
                           {row.each ? (
-                            <span className="block text-xs text-muted">
+                            <span className="ml-2 text-[15px] text-muted">
                               + {naira(row.each)}/item
                             </span>
                           ) : null}
@@ -463,10 +475,10 @@ export default function Home({
                     ))}
                     {areaExtras.map((one) => (
                       <tr key={one.name} className="border-b border-line bg-brand-tint last:border-0">
-                        <th scope="row" className="p-3.5 text-left font-medium">
-                          {one.name}
+                        <th scope="row" className="p-5 text-left font-medium">
+                          {one.name} restaurants
                         </th>
-                        <td className="p-3.5 text-right font-display text-2xl font-extrabold">
+                        <td className="p-5 text-right font-display text-[28px] font-extrabold">
                           + {naira(one.extra)}
                         </td>
                       </tr>
@@ -474,80 +486,66 @@ export default function Home({
                   </tbody>
                 </table>
               </div>
-              <p className="text-ink/75">
-                Order with roommates on the same run and split one fee.
-              </p>
             </section>
           )}
 
-          {/* Only ever slides somebody wrote.
+          {/* The people who pay and never eat it. */}
+          <section className="bg-brand text-white">
+            <div className="shell flex flex-wrap items-center justify-between gap-6 py-14">
+              <div className="flex max-w-[640px] flex-col gap-3">
+                <span className="ticket text-[#ffe38a]">For parents</span>
+                <h2 className="font-display text-[clamp(2.5rem,5vw,3.5rem)] font-black uppercase leading-[0.92]">
+                  Send a taste of home to their hostel
+                </h2>
+                <p className="text-lg leading-relaxed">
+                  Care packages and monthly foodstuff, paid for from anywhere
+                  and handed to your child at their block.
+                </p>
+              </div>
+              <Link
+                href="/parents"
+                className="btn bg-ink text-white shadow-[4px_4px_0_#ffd23f] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_#ffd23f]"
+              >
+                Send a care package
+              </Link>
+            </div>
+          </section>
 
-              It used to fall back to the buckets, which meant the bottom of
-              the page was the grid again, big, over a placeholder gradient,
-              under a row of text links that were the grid a third time. Three
-              goes at the same six destinations in three different shapes is
-              why the page stopped flowing where the food ended. A slider with
-              nothing of its own to say is not a slider. */}
-          {slides.length > 0 && (
-          <Carousel>
-              {slides
-                .map((slide) => ({
-                  key: slide.id,
-                  image: slide.image_url,
-                  name: slide.headline,
-                  headline: slide.headline,
-                  body: slide.body,
-                  href: slide.link_url,
-                  linkText: slide.link_text || "See the menu",
-                }))
-                .map((slide) => (
-                <div key={slide.key} className="relative h-52 sm:h-72 lg:h-80">
-                  <Thumb
-                    src={slide.image}
-                    name={slide.name}
-                    rounded="rounded-none"
-                    variant="banner"
+          <section className="shell space-y-6 py-12">
+            <TrustStrip pitch={pitch} />
+            <SplitPrompt />
+            {(iosAppId !== "" || androidPackage !== "") && (
+              <p className="text-center text-sm text-muted">
+                {iosAppId !== "" && androidPackage !== ""
+                  ? "On iPhone or Android? "
+                  : iosAppId !== ""
+                    ? "On an iPhone? "
+                    : "On Android? "}
+                <a href="/app" className="font-bold text-brand-dark underline">
+                  Get the app
+                </a>
+              </p>
+            )}
+            {slides.length > 0 && (
+              <Carousel>
+                {slides.map((slide) => (
+                  <Door
+                    key={slide.id}
+                    href={slide.link_url}
+                    title={slide.headline}
+                    line={slide.body}
+                    away={slide.link_url.startsWith("http")}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-ink/95 via-ink/60 to-ink/20" />
-                  {/* Every line is clamped and the block is allowed to overflow
-                      nowhere: a long restaurant name used to push the headline
-                      out through the top of the slide and lose half of it. */}
-                  <div className="absolute inset-0 flex flex-col justify-end gap-2 overflow-hidden p-4 pb-11 text-white sm:gap-3 sm:p-8 sm:pb-14">
-                    <h2 className="line-clamp-2 text-xl font-extrabold leading-tight sm:text-3xl lg:text-4xl">
-                      {slide.headline}
-                    </h2>
-                    {slide.body && (
-                      <p className="line-clamp-2 max-w-md text-sm text-white/80 sm:text-base">
-                        {slide.body}
-                      </p>
-                    )}
-                    {slide.href && (
-                      <Link
-                        href={slide.href}
-                        className="btn w-fit shrink-0 bg-paper px-5 py-2.5 text-sm text-ink sm:px-6 sm:py-3 sm:text-base"
-                      >
-                        {slide.linkText}
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </Carousel>
-          )}
-
-          {/* What this shop is, in the plainest words there are.
-              At the foot on purpose: somebody who is here already knows, and
-              the top of the page is for getting them fed. It is here for the
-              ones who are not here yet, and for whatever is reading the page
-              on their behalf, which needs the relationship between Sudu, PAU
-              and its students said outright rather than inferred from a list
-              of restaurants. */}
-          <p className="pt-2 text-center text-xs leading-relaxed text-muted">
-            Sudu delivers food, groceries, skincare and parcels to
-            Pan-Atlantic University students. Order from your favourite
-            restaurants around Sangotedo, Novare, Lekki and Ikoyi and get your order
-            delivered directly to your PAU hostel.
-          </p>
+                ))}
+              </Carousel>
+            )}
+            <p className="text-center text-xs leading-relaxed text-muted">
+              Sudu delivers food, groceries, skincare and parcels to
+              Pan-Atlantic University students. Order from your favourite
+              restaurants around Sangotedo, Novare, Lekki and Ikoyi and get your
+              order delivered directly to your PAU hostel.
+            </p>
+          </section>
         </>
       )}
 
@@ -574,42 +572,35 @@ function Door({
   href,
   title,
   line,
-  image = "",
   away = false,
 }: {
   href: string;
   title: string;
   line: string;
-  /** The picture at the top of the card. Empty falls back to a tint. */
-  image?: string;
   /** Somewhere that is not this site. Link would try to route it. */
   away?: boolean;
 }) {
   const look =
-    "flex h-full flex-col overflow-hidden rounded-xl border-2 border-ink bg-paper transition active:translate-x-0.5 active:translate-y-0.5";
+    "flex h-full flex-col gap-4 rounded-2xl border-2 border-ink bg-paper p-6 transition active:translate-x-0.5 active:translate-y-0.5";
 
-  // The picture leads, the way it does on the restaurants above and on every
-  // shop anybody has ever ordered food from.
-  //
-  // It was a badge the size of a stamp beside the name, with the blurb under
-  // it and the word "See" under that, which made every card a small notice
-  // and the grid a page of notices. Cards of the same shape, each showing
-  // the thing itself, is the difference between a list of links and a shop.
-  //
-  // The "See" is gone with it: a card with a photograph on it is plainly
-  // something to tap, and the word was a third line of type fighting the
-  // price for the eye. The price is the line that gets the tap.
+  /*
+   * A mark rather than a photograph.
+   *
+   * These are not things with a picture: a parcel, a group order and "tell
+   * us what you need" were all wearing a stock photo of something else,
+   * which made four cards that looked like food and were not. An Ink tile
+   * with one stroke in it says what kind of thing it is without pretending
+   * to show it.
+   */
   const inside = (
     <>
-      <span className="block aspect-[5/4] w-full overflow-hidden bg-shell">
-        <Thumb src={image} name={title} rounded="" variant="banner" />
+      <span className="grid size-13 shrink-0 place-items-center rounded-xl bg-ink text-volt">
+        <Glyph title={title} />
       </span>
-      <span className="flex flex-1 flex-col gap-1.5 border-t-2 border-ink p-3.5">
-        <span className="font-display text-2xl font-extrabold uppercase leading-[0.95]">
-          {title}
-        </span>
-        <span className="ticket line-clamp-2 leading-snug text-muted">{line}</span>
+      <span className="font-display text-[32px] font-extrabold uppercase leading-none">
+        {title}
       </span>
+      <span className="leading-relaxed text-ink/75">{line}</span>
     </>
   );
 
@@ -625,5 +616,34 @@ function Door({
     <Link href={href} className={look}>
       {inside}
     </Link>
+  );
+}
+
+/** One stroke per kind of thing, picked off its name. */
+function Glyph({ title }: { title: string }) {
+  const said = title.toLowerCase();
+  const path = said.includes("parcel")
+    ? "M3 7l9-4 9 4v10l-9 4-9-4V7zM3 7l9 4 9-4M12 11v10"
+    : said.includes("skin") || said.includes("beauty")
+      ? "M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"
+      : said.includes("group") || said.includes("split")
+        ? "M9 8a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c1.8.7 3 2.5 3.5 5.2"
+        : said.includes("market") || said.includes("grocer")
+          ? "M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"
+          : "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14M20 20l-4-4";
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="size-6.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d={path} />
+    </svg>
   );
 }

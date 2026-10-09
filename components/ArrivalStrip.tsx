@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import CutOff from "./CutOff";
+import { naira } from "@/lib/money";
 
 /**
  * The one thing worth saying at the top of a food shop: when it arrives.
@@ -25,8 +26,15 @@ export default function ArrivalStrip({
   said,
   also,
   closesAt = "",
+  from = "",
+  feeFrom = 0,
 }: {
   said: string;
+  /** Where the car leaves from, and what it costs at the first band. Both
+   *  read from the shop, so the ticket cannot promise a fee the checkout
+   *  will not charge. */
+  from?: string;
+  feeFrom?: number;
   /** The other way of getting it here, when there is one. */
   also?: { said: string; sooner: boolean } | null;
   /** When the run in the sentence above stops taking orders. Empty where
@@ -52,10 +60,25 @@ export default function ArrivalStrip({
 
       <span className="mt-4 block border-t-2 border-dashed border-shell/25" />
 
-      <span className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+      <span className="mt-4 grid grid-cols-3 gap-3 text-sm">
+        <span>
+          <span className="ticket block text-shell/60">From</span>
+          <span className="font-bold">{from || "Sangotedo"}</span>
+        </span>
+        <span>
+          <span className="ticket block text-shell/60">To</span>
+          <span className="font-bold">Your block</span>
+        </span>
+        <span>
+          <span className="ticket block text-shell/60">Fee from</span>
+          <span className="font-bold">
+            {feeFrom > 0 ? `${naira(feeFrom)} / car` : "see fees"}
+          </span>
+        </span>
+      </span>
+
+      <span className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm">
         <span className="min-w-0">
-          {/* The deadline, between the promise and the alternative: it is
-              the reason to take the first one rather than read on. */}
           {closesAt !== "" && <CutOff at={closesAt} tone="light" />}
           {also && (
             <span className="block text-shell/75">

@@ -102,6 +102,22 @@ body {
   .sticker {
     @apply ticket inline-block -rotate-2 bg-volt px-2 py-1 text-ink;
   }
+  /*
+   * Out of the page's container, to the full width of the window.
+   *
+   * The layout puts every page in a column, which is right for a menu and
+   * wrong for a home page built of full-width bands: an Ink band that stops
+   * short of the edges is a card, not a band.
+   */
+  .bleed {
+    position: relative;
+    left: 50%;
+    width: 100vw;
+    transform: translateX(-50%);
+  }
+  .shell {
+    @apply mx-auto w-full max-w-[1240px] px-4 sm:px-8;
+  }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
