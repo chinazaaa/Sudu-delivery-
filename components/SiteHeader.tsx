@@ -87,35 +87,37 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
   const deep = path !== "/";
 
   return (
-    <header className="sticky top-0 z-30 border-b-2 border-ink bg-paper">
-      <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-4">
-        {deep ? (
+    <header className="sticky top-0 z-30 border-b-2 border-ink bg-shell">
+      {/* The board's header, at every width.
+
+          The nav does not disappear on a phone: it drops to a line of its
+          own and scrolls, the way the board's own stylesheet does it. The
+          two text links beside the cart are what go, because "Order again"
+          and "My orders" are both one tap inside the cart's own page. */}
+      <div className="shell flex flex-wrap items-center gap-x-8 gap-y-3 py-3.5">
+        {/* Back, on a phone only. On a laptop the nav is right there, and
+            an arrow beside five links is an arrow nobody presses. */}
+        {deep && (
           <button
             type="button"
             onClick={back}
             aria-label="Back"
-            className="-ml-1 grid size-9 shrink-0 place-items-center rounded-full text-lg hover:bg-ink hover:text-paper"
+            className="-ml-1 grid size-10 shrink-0 place-items-center rounded-full text-lg hover:bg-ink hover:text-paper md:hidden"
           >
             ←
           </button>
-        ) : (
-          // The name beside it went home and the mark did not, which is not a
-          // distinction anybody makes when they tap a logo.
-          <span className="shrink-0" />
         )}
 
-        {/* The name is the mark now: a bag beside the word "Sudu" was two
-            logos doing one job, and the word is the one people read. */}
-        <Link href="/" className="min-w-0 flex-1" aria-label="Sudu home">
+        <Link href="/" className="shrink-0" aria-label="Sudu home">
           <Wordmark size={34} />
           <span className="sr-only">{tagline}</span>
         </Link>
 
-        <nav className="hidden flex-1 items-center gap-6 lg:flex">
+        <nav
+          aria-label="Main"
+          className="order-3 -mb-1 flex w-full flex-none gap-6 overflow-x-auto pb-1 font-semibold [scrollbar-width:none] md:order-none md:mb-0 md:w-auto md:flex-1 md:overflow-visible md:pb-0 [&::-webkit-scrollbar]:hidden"
+        >
           {[
-            // Everything there is, one list with filters, rather than the
-            // front page's pick of restaurants. "Menu" is what somebody
-            // presses when they want to see the lot.
             ["/products", "Menu"],
             ["/collections", "Collections"],
             ["/parcel", "Parcels"],
@@ -125,8 +127,8 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
             <Link
               key={href}
               href={href}
-              className={`font-semibold transition ${
-                path === href ? "text-brand-dark underline" : "text-ink hover:text-brand-dark"
+              className={`whitespace-nowrap transition ${
+                path === href ? "text-brand-dark underline" : "hover:text-brand-dark"
               }`}
             >
               {label}
@@ -134,54 +136,57 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
           ))}
         </nav>
 
-        <Link
-          href="/products"
-          aria-label="Search the menu"
-          className="grid size-11 shrink-0 place-items-center rounded-full text-ink transition hover:bg-ink hover:text-paper lg:hidden"
-        >
-          <svg viewBox="0 0 24 24" className="size-5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <circle cx="11" cy="11" r="7" />
-            <path d="M20 20l-4-4" />
-          </svg>
-        </Link>
+        <div className="ml-auto flex items-center gap-3">
+          <Link
+            href="/reorder"
+            className="hidden items-center gap-1.5 font-semibold sm:flex"
+          >
+            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M4 12a8 8 0 0 1 14-5.3L20 9" />
+              <path d="M20 4v5h-5" />
+              <path d="M20 12a8 8 0 0 1-14 5.3L4 15" />
+              <path d="M4 20v-5h5" />
+            </svg>
+            Order again
+          </Link>
+          <Link href="/orders" className="hidden font-semibold sm:block">
+            My orders
+          </Link>
 
-        <Link href="/reorder" className="hidden items-center gap-1.5 font-semibold lg:flex">
-          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M4 12a8 8 0 0 1 14-5.3L20 9" />
-            <path d="M20 4v5h-5" />
-            <path d="M20 12a8 8 0 0 1-14 5.3L4 15" />
-            <path d="M4 20v-5h5" />
-          </svg>
-          Order again
-        </Link>
-        <Link href="/orders" className="hidden font-semibold lg:block">
-          My orders
-        </Link>
-
-        <Link
-          href="/cart"
-          aria-label={`Cart, ${count} item${count === 1 ? "" : "s"}`}
-          className="flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-ink px-4 font-bold text-shell transition active:scale-95"
-        >
-          <CartIcon />
-          <span className="hidden sm:inline">Cart</span>
-          {count > 0 && (
-            <span className="ticket grid size-[22px] place-items-center rounded-full bg-brand text-white">
-              {count}
-            </span>
-          )}
-        </Link>
+          <Link
+            href="/cart"
+            aria-label={`Cart, ${count} item${count === 1 ? "" : "s"}`}
+            className="flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-ink px-[18px] font-bold text-shell transition active:scale-95"
+          >
+            <CartIcon />
+            Cart
+            {count > 0 && (
+              <span className="grid size-[22px] shrink-0 place-items-center rounded-full bg-brand font-mono text-xs text-white">
+                {count}
+              </span>
+            )}
+          </Link>
+        </div>
       </div>
     </header>
   );
 }
 
 function CartIcon() {
+  /* The board's bag, not a trolley. */
   return (
-    <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="10" cy="20" r="1.4" fill="currentColor" stroke="none" />
-      <circle cx="17.5" cy="20" r="1.4" fill="currentColor" stroke="none" />
+    <svg
+      viewBox="0 0 24 24"
+      className="size-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M6 7h12l-1 13H7L6 7z" />
+      <path d="M9 7a3 3 0 0 1 6 0" />
     </svg>
   );
 }

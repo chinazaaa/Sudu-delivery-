@@ -566,7 +566,7 @@ function Door({
    */
   const inside = (
     <>
-      <span className="grid size-13 shrink-0 place-items-center rounded-xl bg-ink text-volt">
+      <span className="grid size-[52px] shrink-0 place-items-center rounded-xl bg-ink text-volt">
         <Glyph title={title} />
       </span>
       <span className="font-display text-[32px] font-extrabold uppercase leading-none">
@@ -607,7 +607,7 @@ function Glyph({ title }: { title: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="size-6.5"
+      className="size-[26px]"
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
