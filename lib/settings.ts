@@ -154,6 +154,10 @@ export type Settings = {
   google_reviews: number;
   /** Real reviews copied word for word, as JSON. Nothing else. */
   google_quotes: string;
+  /** The Google tag id, so Merchant Center can be told when somebody buys.
+   *  Empty means no Google script loads anywhere on the site, which is how
+   *  it shipped. */
+  google_tag: string;
   terms_updated: string;
   privacy_updated: string;
   returns_updated: string;
@@ -245,6 +249,7 @@ export const EMPTY: Settings = {
   google_rating: 0,
   google_reviews: 0,
   google_quotes: "",
+  google_tag: "",
   terms_updated: "",
   privacy_updated: "",
   returns_updated: "",
@@ -298,6 +303,22 @@ export async function safeSettings(): Promise<Settings> {
  * Only http(s), because these go into a page as links and a setting is
  * whatever somebody typed into it.
  */
+/**
+ * The Google tag id, if one that could be real has been typed in.
+ *
+ * Google hands out several prefixes for what is the same script: G- for a
+ * tag made in Analytics, AW- for one made in Ads, and MC- or a bare number
+ * from Merchant Center. Which one is right is whichever was printed on the
+ * setup screen, so this checks the shape rather than the prefix: a stray
+ * sentence in the box must not become a script tag on every page.
+ */
+export function googleTagId(settings: { google_tag?: string }): string {
+  const said = String(settings.google_tag ?? "").trim();
+  return /^[A-Z]{1,4}-[A-Z0-9]{6,20}$/i.test(said) || /^\d{8,12}$/.test(said)
+    ? said
+    : "";
+}
+
 export function googleLinks(settings: {
   google_profile?: string;
   google_review?: string;

@@ -2132,6 +2132,7 @@ const SETTING_FIELDS = [
   "google_rating",
   "google_reviews",
   "google_quotes",
+  "google_tag",
   "terms_updated",
   "privacy_updated",
   "returns_updated",

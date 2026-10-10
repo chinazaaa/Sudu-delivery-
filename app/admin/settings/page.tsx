@@ -778,6 +778,28 @@ export default async function SettingsAdmin() {
             </div>
           </div>
 
+          {/* The one third-party script on the shop, and it only loads where
+              this is filled in. Merchant Center cannot report which product
+              listings led to an order without it. */}
+          <div>
+            <label className="label" htmlFor="google_tag">
+              Google tag id
+            </label>
+            <input
+              id="google_tag"
+              name="google_tag"
+              defaultValue={settings.google_tag}
+              placeholder="G-XXXXXXXXXX"
+              className="field font-mono"
+            />
+            <p className="mt-1 text-sm text-muted">
+              From Merchant Center, under General, Key event setup. Leave this
+              empty and no Google script loads anywhere on the site, which is
+              how it shipped. Auto-tagging has to be on there as well, or
+              nothing is counted whatever is typed here.
+            </p>
+          </div>
+
           {/* What the profile says, typed in rather than fetched. The
               Places API charges per call and a rating that moves by a tenth
               is not worth a request on every page view. */}

@@ -1,0 +1,13 @@
+-- The Google tag, for Merchant Center's purchase tracking.
+--
+-- Merchant Center can show which product listings actually led to an order,
+-- but only if it is told when one happens, and the only way to tell it is a
+-- tag on the site firing a purchase event. Nothing else on this shop needs
+-- Google's script, so it loads only where this is filled in.
+--
+-- The id itself rather than a switch, because Merchant Center, Analytics
+-- and Ads each hand out a different prefix and the right one is whichever
+-- Google printed on the setup screen. Empty means no tag loads at all,
+-- which is how the site shipped and how it stays until somebody pastes one
+-- in.
+alter table settings add column if not exists google_tag text not null default '';

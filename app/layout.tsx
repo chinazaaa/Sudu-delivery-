@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import BottomNav from "@/components/BottomNav";
 import Track from "@/components/Track";
+import GoogleTag from "@/components/GoogleTag";
 import Ribbon from "@/components/Ribbon";
 import OfferNudge from "@/components/OfferNudge";
 import GroupBar from "@/components/GroupBar";
@@ -8,7 +9,7 @@ import GroupSync from "@/components/GroupSync";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import { offerNudge, publicOffer } from "@/lib/coupons";
-import { googleLinks, instagramLink, safeSettings } from "@/lib/settings";
+import { googleLinks, googleTagId, instagramLink, safeSettings } from "@/lib/settings";
 import { liveRibbon } from "@/lib/ribbon";
 import { qrSvg } from "@/lib/qr";
 import { siteUrl } from "@/lib/admin-templates";
@@ -79,6 +80,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Where the shop is on Google: the footer link, and the business details
   // a search engine reads below.
   const google = googleLinks(settings);
+  // Nothing at all unless somebody has pasted a tag id into admin.
+  const tag = googleTagId(settings);
   const showPromoterLink = settings.hide_promoter_link !== "on";
   const showFooter = settings.hide_footer !== "on";
   // Read from the code itself, so the strip cannot outlive the offer.
@@ -221,6 +224,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
         {/* Counts a view after the page is up. Never in the way of anything. */}
         <Track />
+        {/* The only third-party script on the shop, and only where Merchant
+            Center has been given a tag to report purchases against. */}
+        <GoogleTag id={tag} />
       </body>
     </html>
   );

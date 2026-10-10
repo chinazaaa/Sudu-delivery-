@@ -83,6 +83,14 @@ export default async function PrivacyPage() {
             the app makes for itself. It is never kept beside your name or your
             number, and it tells us how many people looked, never who.
           </li>
+          <li>
+            If you found us through a product listing on Google, Google&apos;s
+            own tag runs on the website and is told when an order is paid for,
+            with the order&apos;s reference, what it came to and what was in
+            it. That is how Google can tell us a listing works. It is not told
+            your name, your number or your block, and the tag is the only
+            piece of anybody else&apos;s code on this site.
+          </li>
         </ul>
       </Clause>
 
@@ -109,6 +117,10 @@ export default async function PrivacyPage() {
           <li>
             Our hosting and database providers hold the data on our behalf, and
             our email provider sends the receipt. Nobody else.
+          </li>
+          <li>
+            Google is told that an order happened, as above, and nothing about
+            who placed it.
           </li>
           <li>
             We never sell your details, and we never hand them to anybody for

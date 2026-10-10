@@ -3,6 +3,7 @@ import { boxWhere } from "@/lib/boxes";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import ClearCart from "@/components/ClearCart";
+import PurchaseEvent from "@/components/PurchaseEvent";
 import { openGroupFor } from "@/lib/groups";
 import PayTo from "@/components/PayTo";
 import FeeBands from "@/components/FeeBands";
@@ -39,6 +40,7 @@ import { clockLabel, dayLabel, dayWord, runDateLabel, weekdayLabel } from "@/lib
 import { repeatSaid } from "@/lib/box-day";
 import {
   googleLinks,
+  googleTagId,
   activeBands,
   externalUrl,
   getSettings,
@@ -225,6 +227,23 @@ export default async function OrderPage({
     <div className="mx-auto max-w-2xl space-y-4 pb-10">
       {(justPlaced || fromMyGroup) && (
         <ClearCart remember={fromMyGroup ? (order.group_id ?? "") : ""} />
+      )}
+
+      {/* Merchant Center cannot tell a listing worked unless something says
+          an order was paid for. Only once it actually has been: an order
+          waiting on a transfer is not a sale, and plenty never become one.
+          Nothing renders at all where no tag has been set up. */}
+      {paid && googleTagId(settings) !== "" && (
+        <PurchaseEvent
+          reference={ref}
+          value={order.total}
+          items={order.lines.map((line) => ({
+            id: line.menu_item_id,
+            name: line.name,
+            price: line.unit_price_at_order,
+            qty: line.qty,
+          }))}
+        />
       )}
 
       {waitingOnGroup && (

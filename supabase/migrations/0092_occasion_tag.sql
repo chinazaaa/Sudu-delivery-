@@ -1,0 +1,12 @@
+-- The small word on a collection card.
+--
+-- The shelf tiers its cards by position rather than by date: the first is
+-- the big Tomato one, the second is Ink, the rest are white. What the board
+-- shows above each name is not a date at all but a word somebody chose:
+-- "THIS TERM", "MATCHDAY", "FRESHERS". Nothing on a collection carries a
+-- date, so the code was deriving a label from one that was never there and
+-- drawing nothing.
+--
+-- Empty falls back to the date label where there is one, and to nothing
+-- where there is not, which is every collection that existed before this.
+alter table occasions add column if not exists tag text not null default '';
