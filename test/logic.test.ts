@@ -9,6 +9,7 @@ import { isExtra } from "../lib/shelf";
 import { howLong, needsDoing } from "../lib/needs-doing";
 import { howPaid, orderStory } from "../lib/order-story";
 import { codeFrom } from "../lib/promoter-applications";
+import { toCsv } from "../lib/csv";
 import { templateFor } from "../lib/messages";
 import { EMPTY } from "../lib/settings";
 import { test } from "node:test";
@@ -2098,4 +2099,41 @@ test("a code comes off a name and never collides", () => {
   // Nothing usable in the name at all still produces something to type.
   assert.equal(codeFrom("陳", []), "promoter");
   assert.equal(codeFrom("", ["promoter"]), "promoter2");
+});
+
+/*
+ * The spreadsheet, and the two things that go wrong in one.
+ *
+ * A file opened in Excel is not a text file: a cell starting with an equals
+ * sign is a formula it will run, and a comma in a note is a new column
+ * unless the field is quoted.
+ */
+test("a csv survives Excel", () => {
+  // Numbers stay numbers, so the column can be added up.
+  assert.equal(
+    toCsv([{ Name: "Audrey", Spent: 84100 }]),
+    "Name,Spent\r\nAudrey,84100"
+  );
+  // A comma, a quote and a line break all mean the field has to be quoted,
+  // and a quote inside it is doubled.
+  assert.equal(
+    toCsv([{ Note: 'Calls, never messages' }]),
+    'Note\r\n"Calls, never messages"'
+  );
+  assert.equal(toCsv([{ Note: 'Said "later"' }]), 'Note\r\n"Said ""later"""');
+  assert.equal(toCsv([{ Note: "Two\nlines" }]), 'Note\r\n"Two\nlines"');
+  // The dangerous ones: a name or a note that Excel would otherwise run.
+  assert.equal(toCsv([{ Name: "=1+1" }]), "Name\r\n'=1+1");
+  assert.equal(toCsv([{ Name: "-Ada" }]), "Name\r\n'-Ada");
+  assert.equal(toCsv([{ Name: "@everyone" }]), "Name\r\n'@everyone");
+  // A real minus in a money column is a number, not text, so it is left.
+  assert.equal(toCsv([{ Profit: -3200 }]), "Profit\r\n-3200");
+  // Nothing at all is an empty file rather than a heading row, because a
+  // spreadsheet with only headings is the kind of thing somebody acts on.
+  assert.equal(toCsv([]), "");
+  // A row missing a column is an empty cell, never a shifted line.
+  assert.equal(
+    toCsv([{ Name: "Ada", Block: "Queen Mary" }, { Name: "Chisom" }]),
+    "Name,Block\r\nAda,Queen Mary\r\nChisom,"
+  );
 });

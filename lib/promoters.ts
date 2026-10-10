@@ -408,3 +408,32 @@ export async function typicalRate(): Promise<number> {
     return 500;
   }
 }
+
+/**
+ * What a packed box is typically worth to a promoter, for the same page.
+ *
+ * Read the same way as the rate, off the people already doing it, because
+ * the page that offers the job now says both figures and a box is the one
+ * worth more. A promoter with no box rate of their own is paid their
+ * ordinary rate for a box, so that is what counts here too.
+ */
+export async function typicalBoxRate(): Promise<number> {
+  try {
+    const { data } = await db()
+      .from("promoters")
+      .select("rate, box_rate")
+      .eq("active", true);
+    const rates = (data ?? [])
+      .map((one) => {
+        const row = one as { rate: number; box_rate?: number | null };
+        return Number(row.box_rate ?? row.rate) || Number(row.rate);
+      })
+      .filter((one) => Number.isFinite(one) && one > 0);
+    if (rates.length === 0) return 1000;
+    const seen = new Map<number, number>();
+    for (const rate of rates) seen.set(rate, (seen.get(rate) ?? 0) + 1);
+    return [...seen.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  } catch {
+    return 1000;
+  }
+}

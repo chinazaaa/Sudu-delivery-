@@ -122,24 +122,35 @@ export default async function ProfitPage({
 
   return (
     <div>
+      {/* The window on the screen, run by run, which is the shape anybody
+          sorts or charts. Carrying the dates matters: an export that
+          ignores the window somebody set is one they redo by hand. */}
       <PageHeader
         title="Profit"
         detail={`${runDateLabel(from)} to ${runDateLabel(to)}. Every figure here is money that moved, and you can see how each one is worked out.`}
         backHref="/admin"
         backLabel="Dashboard"
         actions={
-          /* The one tomato button on the screen, and only while there is a
-             run whose costs are still a guess: everything above is wrong
-             until they are in. */
-          estimated.length > 0 ? (
-            <Link href={`/admin/batch/${estimated[0].id}`} className="btn-admin-go">
-              Add a run&apos;s costs
-            </Link>
-          ) : (
-            <Link href="/admin/runs" className="btn-admin">
-              All runs
-            </Link>
-          )
+          <>
+            <a
+              href={`/api/admin/export?what=profit&from=${from}&to=${to}`}
+              className="btn-admin"
+            >
+              Export
+            </a>
+            {/* The one tomato button on the screen, and only while there is
+                a run whose costs are still a guess: everything above is
+                wrong until they are in. */}
+            {estimated.length > 0 ? (
+              <Link href={`/admin/batch/${estimated[0].id}`} className="btn-admin-go">
+                Add a run&apos;s costs
+              </Link>
+            ) : (
+              <Link href="/admin/runs" className="btn-admin">
+                All runs
+              </Link>
+            )}
+          </>
         }
       />
 

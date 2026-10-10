@@ -240,6 +240,17 @@ export default async function CustomersPage({
             <a href="#send-a-message" className="btn-admin">
               Send a message
             </a>
+            {/* The book as it is filtered on the screen. The bar above the
+                table exports the ticked rows instead, which is the other
+                question people ask of a list. */}
+            <a
+              href={`/api/admin/export?what=customers${
+                query.q ? `&q=${encodeURIComponent(query.q)}` : ""
+              }${by ? `&by=${encodeURIComponent(by)}` : ""}`}
+              className="btn-admin"
+            >
+              Export
+            </a>
           </>
         }
       />

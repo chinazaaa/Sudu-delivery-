@@ -101,6 +101,12 @@ export default async function ApplicationsAdmin({
             <Link href="/admin/promoters" className="btn-admin">
               Add somebody by hand
             </Link>
+            {/* Every application, whatever cut is on the screen: a
+                spreadsheet of only the waiting ones is a spreadsheet of
+                today, and nobody opens one of those twice. */}
+            <a href="/api/admin/export?what=applications" className="btn-admin">
+              Export
+            </a>
           </>
         }
       />

@@ -104,6 +104,19 @@ export default async function OrdersPage({
       <PageHeader
         title="Orders"
         detail="Every order ever placed, whatever run it belongs to."
+        actions={
+          /* With the filters that are on the screen still on it. Somebody
+             exporting while looking at the unpaid tab wants the unpaid
+             ones, not all two thousand. */
+          <a
+            href={`/api/admin/export?what=orders&status=${tab}${
+              query.q ? `&q=${encodeURIComponent(query.q)}` : ""
+            }${query.promoter ? `&promoter=${encodeURIComponent(query.promoter)}` : ""}`}
+            className="btn-admin"
+          >
+            Export
+          </a>
+        }
       />
 
       {/* Said here rather than on the order's own page, because that page is
