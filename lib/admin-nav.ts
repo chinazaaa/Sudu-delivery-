@@ -47,6 +47,9 @@ export const GROUPS: Group[] = [
   {
     name: "Requests",
     items: [
+      // Mail to the shop is somebody asking for something, which is what
+      // this heading is, rather than a thing the shop sends.
+      { href: "/admin/inbox", label: "Inbox" },
       { href: "/admin/applications", label: "Applications" },
       { href: "/admin/requests", label: "Asked for" },
       { href: "/admin/wishes", label: "Wishes" },

@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
 import { containersIn } from "../lib/containers";
 import { runShouldBe } from "../lib/run-follow";
+import { svixSigned } from "../lib/svix";
+import { addressOf, replySubject, senderName, snippet, vouchedFor } from "../lib/mail";
 import { tidyCode, whyNotACode } from "../lib/promoter-applications";
 import { adminStageLabel, adminStatusWord, STAGE_LABEL } from "../lib/stages";
 import { channelOfSite, tidyChannel, tidyHandle } from "../lib/came-from";
@@ -2893,4 +2895,97 @@ test("the code box answers what it can without asking the shop", () => {
   // An ordinary name is fine, and whether somebody already has it is a
   // question for the database rather than for this.
   assert.equal(whyNotACode("johndoe"), "");
+});
+
+test("a From header is read for the name and the address", () => {
+  assert.equal(senderName("Kayla <kayla@example.com>"), "Kayla");
+  assert.equal(senderName('"Okeke, Chi" <chi@example.com>'), "Okeke, Chi");
+  // No name is the address, which is still something to show in a list.
+  assert.equal(senderName("chi@example.com"), "chi@example.com");
+  assert.equal(senderName("<chi@example.com>"), "chi@example.com");
+
+  assert.equal(addressOf("Kayla <kayla@example.com>"), "kayla@example.com");
+  assert.equal(addressOf("  kayla@example.com "), "kayla@example.com");
+  // Nothing that could be replied to is an empty string rather than a guess,
+  // because the page offers a reply box off the back of this.
+  assert.equal(addressOf("Kayla"), "");
+  assert.equal(addressOf(""), "");
+});
+
+test("a reply is called Re: once, however often it goes back and forth", () => {
+  assert.equal(replySubject("My order"), "Re: My order");
+  assert.equal(replySubject("Re: My order"), "Re: My order");
+  // Clients that add their own are how a subject becomes Re: Re: Re:.
+  assert.equal(replySubject("RE: my order"), "RE: my order");
+  // A letter with no subject still needs one.
+  assert.equal(replySubject(""), "Re: your email");
+  assert.equal(replySubject("   "), "Re: your email");
+});
+
+test("a snippet is one flat line, cut where it runs long", () => {
+  assert.equal(snippet("Hi there\n\n  I wanted to ask"), "Hi there I wanted to ask");
+  assert.equal(snippet(""), "");
+  const long = "a".repeat(200);
+  assert.equal(snippet(long, 10).length, 10);
+  assert.ok(snippet(long, 10).endsWith("…"));
+  // Short enough is left exactly as it is, with no ellipsis bolted on.
+  assert.equal(snippet("Short one", 50), "Short one");
+});
+
+test("only a domain that vouched for itself counts as vouched for", () => {
+  assert.equal(vouchedFor({ spf: "pass", dkim: "pass", dmarc: "pass" }), true);
+  // Case is whatever the provider felt like sending.
+  assert.equal(vouchedFor({ spf: "PASS", dkim: "Pass", dmarc: "" }), true);
+  // Either one failing is a letter worth a second look.
+  assert.equal(vouchedFor({ spf: "fail", dkim: "pass", dmarc: "pass" }), false);
+  assert.equal(vouchedFor({ spf: "pass", dkim: "none", dmarc: "pass" }), false);
+  // Nothing said is not a pass.
+  assert.equal(vouchedFor({ spf: "", dkim: "", dmarc: "" }), false);
+});
+
+test("a webhook signature is checked the way the scheme says", () => {
+  /*
+   * The vector published in the Svix docs, which is what Resend signs with.
+   * Checking against somebody else's known answer rather than against our
+   * own output is the whole point: a signature check that only agrees with
+   * itself would pass while rejecting every real request.
+   */
+  const secret = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";
+  const id = "msg_p5jXN8AQM9LWM0D4loKWxJek";
+  const timestamp = "1614265330";
+  const body = '{"test": 2432232314}';
+  const signature = "v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=";
+  // The vector is from 2021, so the clock is told where it is meant to be.
+  const now = 1614265330;
+
+  assert.equal(svixSigned({ secret, id, timestamp, body, signature, now }), true);
+
+  // A changed body is the thing this exists to catch.
+  assert.equal(
+    svixSigned({ secret, id, timestamp, body: '{"test": 1}', signature, now }),
+    false
+  );
+  // So is somebody replaying a request captured an hour ago.
+  assert.equal(
+    svixSigned({ secret, id, timestamp, body, signature, now: now + 3600 }),
+    false
+  );
+  // A different secret, a different id, a missing header: all no.
+  assert.equal(
+    svixSigned({ secret: "whsec_aaaa", id, timestamp, body, signature, now }),
+    false
+  );
+  assert.equal(
+    svixSigned({ secret, id: "msg_other", timestamp, body, signature, now }),
+    false
+  );
+  assert.equal(svixSigned({ secret, id, timestamp, body, signature: "", now }), false);
+  assert.equal(svixSigned({ secret: "", id, timestamp, body, signature, now }), false);
+
+  // Several signatures arrive while a secret is being rotated, and any one
+  // of them matching is the provider.
+  assert.equal(
+    svixSigned({ secret, id, timestamp, body, signature: `v1,bm90 ${signature}`, now }),
+    true
+  );
 });

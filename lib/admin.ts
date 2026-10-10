@@ -1294,6 +1294,16 @@ export async function waitingCounts(): Promise<Record<string, number>> {
       .eq("status", "new");
     if (asking && asking > 0) out["/admin/applications"] = asking;
 
+    // Letters nobody has answered or put aside. Counted on what has been
+    // decided rather than on what has been read, because glancing at a
+    // letter on a phone is not answering it.
+    const { count: post } = await db()
+      .from("mail")
+      .select("id", { count: "exact", head: true })
+      .is("replied_at", null)
+      .is("done_at", null);
+    if (post && post > 0) out["/admin/inbox"] = post;
+
     return out;
   } catch {
     // A number on a menu is never worth failing a page over.

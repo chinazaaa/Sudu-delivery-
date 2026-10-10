@@ -48,6 +48,7 @@ import {
   wordsFrom,
   type Attachment,
 } from "@/lib/email";
+import { addressOf, READS_AT, replySubject } from "@/lib/mail";
 import { placesText } from "@/lib/run-places";
 import { newPin } from "@/lib/customer-auth";
 import { recordDeletion } from "@/lib/deletions";
@@ -1815,6 +1816,115 @@ export async function markManyReviewed(form: FormData): Promise<void> {
     // the day they actually left it rather than the day somebody tidied up.
     .is("reviewed_at", null);
 
+  revalidatePath("/admin", "layout");
+}
+
+/**
+ * Answering a letter.
+ *
+ * Out through the same Resend the shop sends everything else through, with
+ * the two headers that keep it in the same conversation: a reply with
+ * neither of them opens as a fresh email in their client, below the thing
+ * they asked about and with no sign it is an answer.
+ *
+ * Reply-To is hello@ rather than whatever this deployment sends from, so
+ * the next one comes back here instead of to a no-reply address.
+ */
+export async function replyToMail(
+  _previous: BulkState,
+  form: FormData
+): Promise<BulkState> {
+  await assertAdmin();
+
+  const id = String(form.get("mail_id") ?? "");
+  const body = String(form.get("body") ?? "").trim();
+  if (id === "") return { error: "No letter to answer.", done: null };
+  if (body === "") return { error: "Nothing written yet.", done: null };
+
+  const { data } = await db()
+    .from("mail")
+    .select("from_addr, subject, message_id")
+    .eq("id", id)
+    .maybeSingle();
+  const letter = data as
+    | { from_addr: string; subject: string; message_id: string }
+    | null;
+  if (!letter) return { error: "That letter is no longer here.", done: null };
+
+  const to = addressOf(letter.from_addr);
+  if (to === "") {
+    return { error: "There is no address to reply to on that one.", done: null };
+  }
+
+  const answer = await sendOneEmail({
+    to: [to],
+    subject: replySubject(letter.subject),
+    // Written as plain words in a box, so the markup is only what turns
+    // the line breaks into lines.
+    html: body
+      .split("\n")
+      .map((line) => `<p>${wordsFrom(line) || "&nbsp;"}</p>`)
+      .join(""),
+    text: body,
+    replyTo: READS_AT,
+    headers:
+      letter.message_id === ""
+        ? undefined
+        : {
+            "In-Reply-To": letter.message_id,
+            References: letter.message_id,
+          },
+  });
+
+  if (!answer.ok) return { error: answer.why, done: null };
+
+  await db().from("mail_replies").insert({
+    mail_id: id,
+    body,
+    sent_id: answer.id,
+  });
+  await db()
+    .from("mail")
+    .update({ replied_at: new Date().toISOString(), read_at: new Date().toISOString() })
+    .eq("id", id);
+
+  revalidatePath("/admin", "layout");
+  return { error: null, done: "Sent." };
+}
+
+/** Read, so the list stops shouting about it. Never undoes a reply. */
+export async function markMailRead(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("mail_id") ?? "");
+  if (id === "") return;
+  await db()
+    .from("mail")
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("read_at", null);
+  revalidatePath("/admin", "layout");
+}
+
+/**
+ * Put aside: dealt with, without an answer going out.
+ *
+ * Most of what arrives at a shop's public address needs no reply, and a
+ * list that only empties when somebody writes back is a list that is always
+ * full. Reversible, because deciding something needs nothing is a decision
+ * somebody can change their mind about.
+ */
+export async function setMailDone(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("mail_id") ?? "");
+  if (id === "") return;
+  const done = form.get("done") !== "false";
+  await db()
+    .from("mail")
+    .update({
+      done_at: done ? new Date().toISOString() : null,
+      ...(done ? { read_at: new Date().toISOString() } : {}),
+    })
+    .eq("id", id);
   revalidatePath("/admin", "layout");
 }
 

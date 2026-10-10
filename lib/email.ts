@@ -123,6 +123,15 @@ export async function sendOneEmail(args: {
   attachments?: Attachment[];
   /** Where a reply should go, when it is not the from address. */
   replyTo?: string;
+  /**
+   * Headers the message needs beyond the ordinary ones.
+   *
+   * Only really for In-Reply-To and References, which are what keep an
+   * answer in the same conversation in whoever's mail client is reading
+   * it. Without them a reply opens as a fresh email below the thing it
+   * answers, with nothing to say it is an answer.
+   */
+  headers?: Record<string, string>;
 }): Promise<SendResult> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return { ok: false, why: "No RESEND_API_KEY is set on this deployment." };
@@ -143,6 +152,9 @@ export async function sendOneEmail(args: {
         to: args.to,
         ...(args.cc && args.cc.length > 0 ? { cc: args.cc } : {}),
         ...(args.replyTo ? { reply_to: args.replyTo } : {}),
+        ...(args.headers && Object.keys(args.headers).length > 0
+          ? { headers: args.headers }
+          : {}),
         subject: args.subject,
         html: args.html,
         ...(args.text ? { text: args.text } : {}),
