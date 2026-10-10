@@ -629,12 +629,12 @@ export default async function RoomPage({
             />
             <div className="relative flex flex-col gap-2">
               <span className="ticket text-volt">The draw is done</span>
-              <span className="text-lg text-[#d8d1c7]">You are buying for</span>
+              <span className="text-lg text-rail-text">You are buying for</span>
               <h2 className="break-words font-display text-[min(18vw,7rem)] font-black uppercase leading-[0.8] text-brand sm:text-[clamp(4rem,9vw,7rem)]">
                 {match.name}
               </h2>
               {match.hostel ? (
-                <span className="text-[#d8d1c7]">{match.hostel}</span>
+                <span className="text-rail-text">{match.hostel}</span>
               ) : null}
             </div>
           </div>

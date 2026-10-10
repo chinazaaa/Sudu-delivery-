@@ -76,7 +76,7 @@ export default function GroupHub({
                 <span className="mt-1 block font-display text-[28px] font-extrabold uppercase leading-none">
                   Open your car
                 </span>
-                <span className="mt-1 block text-sm text-[#d8d1c7]">
+                <span className="mt-1 block text-sm text-rail-text">
                   See who is in it and what it is costing.
                 </span>
               </span>
@@ -166,7 +166,7 @@ export default function GroupHub({
                   {String(at + 1).padStart(2, "0")}
                 </span>
                 <span className="text-lg font-bold">{said}</span>
-                <span className="leading-relaxed text-[#d8d1c7]">{note}</span>
+                <span className="leading-relaxed text-rail-text">{note}</span>
               </li>
             ))}
           </ol>

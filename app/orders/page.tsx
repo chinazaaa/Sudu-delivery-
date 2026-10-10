@@ -184,7 +184,7 @@ export default async function OrdersPage({
                         {dayWord(order.batch.run_date)} run
                         {order.hostel ? ` → ${order.hostel}` : ""}
                       </span>
-                      <span className="text-[#d8d1c7]">
+                      <span className="text-rail-text">
                         {order.lines.map((l) => `${l.qty}× ${l.name}`).join(", ")}
                       </span>
                     </span>

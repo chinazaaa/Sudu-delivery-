@@ -77,7 +77,7 @@ export default function PageHead({
         {lead ? (
           <p
             className={`max-w-[580px] text-[17px] leading-relaxed sm:text-lg ${
-              dark ? "text-[#d8d1c7]" : "text-ink/80"
+              dark ? "text-rail-text" : "text-ink/80"
             }`}
           >
             {lead}

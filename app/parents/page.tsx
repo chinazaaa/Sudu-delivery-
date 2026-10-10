@@ -258,7 +258,7 @@ export default async function ParentsPage() {
                   {String(at + 1).padStart(2, "0")}
                 </span>
                 <span className="text-xl font-bold">{said}</span>
-                <span className="leading-relaxed text-[#d8d1c7]">{note}</span>
+                <span className="leading-relaxed text-rail-text">{note}</span>
               </li>
             ))}
           </ol>

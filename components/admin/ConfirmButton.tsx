@@ -11,7 +11,7 @@ export default function ConfirmButton({
   children,
   confirm,
   className = "",
-  tone = "quiet",
+  tone = "admin",
 }: {
   children: React.ReactNode;
   /** What the button says once it is asking. */

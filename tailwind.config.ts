@@ -43,6 +43,26 @@ const config: Config = {
          * cent over shell is not #DFF0E6, it is whatever the page happens
          * to be sitting on.
          */
+        /*
+         * The Ink rail, which is a palette of its own: nine greys that
+         * only ever appear on near-black. They were written out as hexes
+         * at every call site, so a change to the rail meant finding all
+         * of them.
+         */
+        rail: {
+          /** The text of a link that is not the page you are on. */
+          text: "#cfc7bc",
+          /** A group heading, and anything else deliberately quiet. */
+          dim: "#7e756a",
+          /** The pip beside a link. */
+          dot: "#4a443c",
+          /** The hairline above the foot of the rail. */
+          line: "#2c2721",
+          /** A badge that is waiting rather than urgent. */
+          quiet: "#3a332d",
+          /** Lettering on Ink that is a label rather than a word to read. */
+          faint: "#8a8178",
+        },
         amber: {
           /** The middle of the three severities: worth doing, not urgent. */
           DEFAULT: "#c9961b",

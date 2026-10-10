@@ -150,7 +150,7 @@ export default async function BoxShelf({
                 {second.name}
               </span>
               {second.blurb !== "" && (
-                <span className="leading-relaxed text-[#d8d1c7]">
+                <span className="leading-relaxed text-rail-text">
                   {second.blurb}
                 </span>
               )}

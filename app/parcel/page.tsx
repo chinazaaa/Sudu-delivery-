@@ -100,7 +100,7 @@ export default async function ParcelPage() {
               <br />
               to or from PAU
             </h1>
-            <p className="max-w-[540px] text-[17px] leading-relaxed text-[#d8d1c7] sm:text-lg">
+            <p className="max-w-[540px] text-[17px] leading-relaxed text-rail-text sm:text-lg">
               {setup.blurb ||
                 "We collect it sealed, carry it, and hand it over sealed, with a photo at each end."}
             </p>
@@ -113,7 +113,7 @@ export default async function ParcelPage() {
                   key={one.label}
                   className="flex flex-col gap-1 rounded-xl border border-[#3a322b] bg-[#26201b] p-4"
                 >
-                  <span className="text-sm text-[#d8d1c7]">
+                  <span className="text-sm text-rail-text">
                     {one.label} ↔ PAU
                   </span>
                   <span className="font-display text-[30px] font-extrabold leading-none">

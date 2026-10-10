@@ -75,12 +75,12 @@ export default function AdminShell({
       <Link
         href={item.href}
         className={`flex items-center gap-2.5 rounded-[9px] px-3 py-2 text-[14.5px] font-semibold transition ${
-          on ? "bg-brand text-white" : "text-[#cfc7bc] hover:bg-white/[0.06] hover:text-white"
+          on ? "bg-brand text-white" : "text-rail-text hover:bg-white/[0.06] hover:text-white"
         }`}
       >
         <span
           aria-hidden
-          className={`size-[7px] shrink-0 rounded-[2px] ${on ? "bg-white" : "bg-[#4a443c]"}`}
+          className={`size-[7px] shrink-0 rounded-[2px] ${on ? "bg-white" : "bg-rail-dot"}`}
         />
         {item.label}
         {count > 0 && (
@@ -90,7 +90,7 @@ export default function AdminShell({
               // that is merely waiting. A rail of red badges says nothing.
               item.href === "/admin/orders"
                 ? "bg-brand text-white"
-                : "bg-[#3a332d] text-[#cfc7bc]"
+                : "bg-rail-quiet text-rail-text"
             }`}
           >
             {count}
@@ -130,12 +130,12 @@ export default function AdminShell({
               type="button"
               onClick={() => setOpened(open ? "" : group.name)}
               aria-expanded={open}
-              className="flex w-full items-center gap-1.5 px-3 pb-1 pt-3.5 text-left font-mono text-[10.5px] font-bold uppercase tracking-[0.12em] text-[#7e756a] hover:text-[#cfc7bc]"
+              className="flex w-full items-center gap-1.5 px-3 pb-1 pt-3.5 text-left font-mono text-[10.5px] font-bold uppercase tracking-[0.12em] text-rail-dim hover:text-rail-text"
             >
               <span aria-hidden>{open ? "▾" : "▸"}</span>
               {group.name}
               {!open && under > 0 && (
-                <span className="ml-auto rounded-full bg-[#3a332d] px-[7px] font-mono text-[10.5px] leading-[1.5] text-[#cfc7bc]">
+                <span className="ml-auto rounded-full bg-rail-quiet px-[7px] font-mono text-[10.5px] leading-[1.5] text-rail-text">
                   {under}
                 </span>
               )}
@@ -154,7 +154,7 @@ export default function AdminShell({
   );
 
   const foot = (
-    <div className="mt-3.5 flex flex-col gap-0.5 border-t border-[#2c2721] pt-3.5">
+    <div className="mt-3.5 flex flex-col gap-0.5 border-t border-rail-line pt-3.5">
       <Link
         href="/"
         className="flex items-center gap-2.5 rounded-[9px] px-3 py-2 text-[14.5px] font-semibold text-volt hover:bg-white/[0.06]"
@@ -163,7 +163,7 @@ export default function AdminShell({
         View the shop ↗
       </Link>
       <form action={signOut} className="px-3 pt-1">
-        <button className="text-[13px] font-semibold text-[#7e756a] hover:text-[#cfc7bc]">
+        <button className="text-[13px] font-semibold text-rail-dim hover:text-rail-text">
           Sign out
         </button>
       </form>
@@ -180,7 +180,7 @@ export default function AdminShell({
       <span className="font-display text-[28px] font-black leading-none text-white [transform:skewX(-10deg)]">
         SUDU
       </span>
-      <span className="mt-2 font-mono text-[10px] tracking-[0.1em] text-[#7e756a]">
+      <span className="mt-2 font-mono text-[10px] tracking-[0.1em] text-rail-dim">
         ADMIN
       </span>
     </div>
@@ -202,7 +202,7 @@ export default function AdminShell({
         <span className="font-display text-[22px] font-black leading-none text-white [transform:skewX(-10deg)]">
           SUDU
         </span>
-        <span className="mt-1.5 font-mono text-[9.5px] tracking-[0.1em] text-[#8a8178]">
+        <span className="mt-1.5 font-mono text-[9.5px] tracking-[0.1em] text-rail-faint">
           ADMIN
         </span>
         <span className="sr-only">{current}</span>
@@ -210,7 +210,7 @@ export default function AdminShell({
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Open the full menu"
-          className="ml-auto grid size-[30px] shrink-0 place-items-center rounded-full bg-[#2c2721]"
+          className="ml-auto grid size-[30px] shrink-0 place-items-center rounded-full bg-rail-line"
         >
           <span aria-hidden className="space-y-[3px]">
             <span className="block h-0.5 w-3.5 rounded bg-shell" />

@@ -188,8 +188,13 @@ body {
       bottom: auto;
     }
   }
+  /* Thirty-eight pixels on a desk, which is what the boards draw, and
+     forty-four on a phone. The boards draw thirty-four there too, but the
+     sixth rule of the system they come with says nothing a thumb has to
+     hit goes under forty-four, and a missed tap on a filter in a moving
+     car is the case that rule is for. */
   .pill-admin {
-    @apply inline-flex min-h-[38px] items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-ink bg-paper px-3.5 text-sm font-semibold transition;
+    @apply inline-flex min-h-[44px] items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-ink bg-paper px-3.5 text-sm font-semibold transition sm:min-h-[38px];
   }
   .pill-admin-on {
     @apply bg-ink text-shell;

@@ -304,7 +304,7 @@ export default function GroupLink({
                   </span>
                   <span
                     className={`text-sm leading-snug ${
-                      on ? "text-[#d8d1c7]" : "text-muted"
+                      on ? "text-rail-text" : "text-muted"
                     }`}
                   >
                     {way.onARun

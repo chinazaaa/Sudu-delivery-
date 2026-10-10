@@ -88,7 +88,7 @@ export default async function CustomOrderPage({
                 </span>
                 <span className="flex flex-col gap-0.5">
                   <span className="font-bold">{said}</span>
-                  <span className="text-sm text-[#d8d1c7]">{note}</span>
+                  <span className="text-sm text-rail-text">{note}</span>
                 </span>
               </li>
             ))}

@@ -289,7 +289,7 @@ export default async function SantaPage({
                 </span>
                 <span className="flex flex-col gap-1.5">
                   <span className="text-lg font-bold">{said}</span>
-                  <span className="leading-relaxed text-[#d8d1c7]">{note}</span>
+                  <span className="leading-relaxed text-rail-text">{note}</span>
                 </span>
               </li>
             ))}

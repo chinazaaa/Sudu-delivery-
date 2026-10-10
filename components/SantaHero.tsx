@@ -42,7 +42,7 @@ export default function SantaHero({
           {title}
         </h1>
         {lead !== "" && (
-          <p className="max-w-[560px] text-[16px] leading-relaxed text-[#d8d1c7] sm:text-[17px]">
+          <p className="max-w-[560px] text-[16px] leading-relaxed text-rail-text sm:text-[17px]">
             {lead}
           </p>
         )}

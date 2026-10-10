@@ -148,10 +148,10 @@ export function Bar({
         </span>
 
         {showing === "move" && (
-          <span className="flex w-full flex-wrap items-center gap-2 border-t border-[#2c2721] pt-2.5">
+          <span className="flex w-full flex-wrap items-center gap-2 border-t border-rail-line pt-2.5">
             <select
               name="batch_id"
-              className="min-h-10 rounded-[10px] border-2 border-[#4a443c] bg-[#26201b] px-3 text-sm text-shell"
+              className="min-h-10 rounded-[10px] border-2 border-rail-dot bg-[#26201b] px-3 text-sm text-shell"
             >
               <option value="">Pick a run</option>
               {runs.map((run) => (
@@ -173,7 +173,7 @@ export function Bar({
       </form>
 
       {(showing === "review" || showing === "pin") && (
-        <div className="mt-2.5 w-full border-t border-[#2c2721] pt-2.5">
+        <div className="mt-2.5 w-full border-t border-rail-line pt-2.5">
           {/* One link each, opened by hand. A button claiming to have sent
               eight WhatsApp messages would be a button that sent none. */}
           <p className="mb-2 text-[12.5px] opacity-70">

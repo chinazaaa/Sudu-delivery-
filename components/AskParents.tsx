@@ -51,7 +51,7 @@ export default function AskParents({
       <h2 className="font-display text-[30px] font-black uppercase leading-none">
         Send it to a parent
       </h2>
-      <p className="leading-relaxed text-[#d8d1c7]">
+      <p className="leading-relaxed text-rail-text">
         Get a ready-made WhatsApp message with the link, so they can pay from
         anywhere.
       </p>

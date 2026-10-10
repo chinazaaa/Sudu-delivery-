@@ -304,7 +304,7 @@ export default async function OrderPage({
           <h1 className="font-display text-[min(13vw,4.5rem)] font-black uppercase leading-[0.88] sm:text-[clamp(2.75rem,6vw,4.5rem)]">
             {headline}
           </h1>
-          <p className="text-[16px] leading-relaxed text-[#d8d1c7] sm:text-[17px]">
+          <p className="text-[16px] leading-relaxed text-rail-text sm:text-[17px]">
             {order.customer_name} ·{" "}
             {isParcel
               ? order.batch.delivery_window_text

@@ -140,7 +140,7 @@ export default async function SupportPage() {
                 WhatsApp us
               </span>
               <span className="font-mono text-xl">{whatsapp}</span>
-              <span className="text-sm leading-relaxed text-[#d8d1c7]">
+              <span className="text-sm leading-relaxed text-rail-text">
                 Message from the number you ordered with, and send a photo if
                 something is wrong.
               </span>

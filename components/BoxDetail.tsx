@@ -124,7 +124,7 @@ export default async function BoxDetail({
           </h1>
 
           {occasion.blurb !== "" && (
-            <p className="max-w-[560px] text-[17px] leading-snug text-[#d8d1c7] sm:text-xl">
+            <p className="max-w-[560px] text-[17px] leading-snug text-rail-text sm:text-xl">
               {occasion.blurb}
             </p>
           )}

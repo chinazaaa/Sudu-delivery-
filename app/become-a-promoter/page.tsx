@@ -153,12 +153,12 @@ export default async function BecomeAPromoter() {
           {ask && (
             <section className="card bg-ink text-shell">
               <h2 className="section-title text-white">Just message us</h2>
-              <p className="mt-1.5 text-[15px] leading-relaxed text-[#d8d1c7]">
+              <p className="mt-1.5 text-[15px] leading-relaxed text-rail-text">
                 Quickest way in. Send this and we will do the rest:
               </p>
               {/* A card inside a card, so the words to send read as a
                   message rather than as more of the page. */}
-              <p className="soft my-3.5 border-[#3a332d] bg-[#2c2721] px-3.5 py-3 text-[14.5px] leading-relaxed">
+              <p className="soft my-3.5 border-rail-quiet bg-rail-line px-3.5 py-3 text-[14.5px] leading-relaxed">
                 &ldquo;Hi Sudu, I want to be a promoter. My name is{" "}
                 <strong className="text-volt">[name]</strong>, I&apos;m in{" "}
                 <strong className="text-volt">[hostel]</strong>, and I&apos;d like the
@@ -173,7 +173,7 @@ export default async function BecomeAPromoter() {
                 Open WhatsApp with this ready
               </a>
               {settings.whatsapp_number && (
-                <p className="hint mt-2.5 text-[#8a8178]">{settings.whatsapp_number}</p>
+                <p className="hint mt-2.5 text-rail-faint">{settings.whatsapp_number}</p>
               )}
             </section>
           )}

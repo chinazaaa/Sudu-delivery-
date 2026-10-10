@@ -1499,7 +1499,7 @@ export default function Checkout({
               <span className="block text-[17px] font-bold">{title}</span>
               <span
                 className={`block text-sm ${
-                  method === value ? "text-[#d8d1c7]" : "text-muted"
+                  method === value ? "text-rail-text" : "text-muted"
                 }`}
               >
                 {detail}

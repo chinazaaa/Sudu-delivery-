@@ -93,7 +93,7 @@ export default async function PromoterPage() {
     <div className="flex items-center gap-2.5 bg-ink px-4 py-2.5 text-shell sm:px-6 sm:py-3.5">
       <Wordmark size={22} tone="light" className="sm:hidden" />
       <Wordmark size={28} tone="light" className="hidden sm:inline-flex" />
-      <span className="mt-1.5 font-mono text-[9.5px] tracking-[0.1em] text-[#8a8178] sm:text-[10px]">
+      <span className="mt-1.5 font-mono text-[9.5px] tracking-[0.1em] text-rail-faint sm:text-[10px]">
         PROMOTER
       </span>
       {earnings && (
