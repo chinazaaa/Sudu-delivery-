@@ -77,7 +77,7 @@ export default function SendSheet({
       <button
         type="button"
         onClick={() => setAsking(false)}
-        className="w-full py-1 text-sm font-semibold text-muted sm:w-auto"
+        className="btn-admin btn-admin-sm w-full sm:w-auto"
       >
         Cancel
       </button>

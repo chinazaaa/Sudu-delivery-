@@ -18,7 +18,9 @@ export default function ShortGroups({ groups }: { groups: GroupShortfall[] }) {
   return (
     <section className="card space-y-3">
       <div>
-        <h2 className="font-display text-[26px] font-black uppercase leading-none">
+        {/* This sits in the run sheet's right-hand column, which the board
+            sets at twenty-four pixels so the rail reads as the aside it is. */}
+        <h2 className="font-display text-[19px] font-black uppercase leading-none sm:text-[24px]">
           Groups you are covering
         </h2>
         <p className="hint mt-1">
@@ -77,7 +79,9 @@ export default function ShortGroups({ groups }: { groups: GroupShortfall[] }) {
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between gap-2 rounded-xl bg-wash px-3 py-2 text-sm"
+                /* A link somebody taps at a gate, so it keeps a thumb's
+                   height rather than the height of its own text. */
+                className="flex min-h-[44px] items-center justify-between gap-2 rounded-xl bg-wash px-3 py-2 text-sm"
               >
                 <span>
                   {person.name} · {formatPhone(person.phone)}

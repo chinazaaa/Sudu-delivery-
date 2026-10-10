@@ -21,6 +21,12 @@ export default function Checklist({
     text: string;
     detail?: string;
     /**
+     * The each-price, kept apart from the rest of the detail because the
+     * boards set it in the mono face. Money is always mono, and the figure
+     * you argue with at the till is the one that has to be unmistakable.
+     */
+    money?: string;
+    /**
      * The count, set apart from the name. At a counter the number is what
      * gets said out loud and the name only confirms it, so it is read first
      * and in the display face rather than buried in front of the words.
@@ -89,7 +95,7 @@ export default function Checklist({
                 /* ignore */
               }
             }}
-            className="text-xs font-semibold text-muted hover:text-brand"
+            className="btn-admin btn-admin-sm"
           >
             Clear ticks
           </button>
@@ -113,14 +119,20 @@ export default function Checklist({
                 {done || ticked[item.key] ? "✓" : ""}
               </span>
               {item.lead && (
-                <span className="min-w-[48px] shrink-0 font-display text-[30px] font-black leading-none">
+                <span className="min-w-[46px] shrink-0 font-display text-[34px] font-black leading-none sm:min-w-[48px] sm:text-[30px]">
                   {item.lead}
                 </span>
               )}
               <span className={`min-w-0 ${done || ticked[item.key] ? "line-through" : ""}`}>
-                <span className="block text-[15.5px] font-semibold">{item.text}</span>
-                {item.detail && (
-                  <span className="block text-[12.5px] text-muted">{item.detail}</span>
+                <span className="block text-[15px] font-semibold leading-[1.25] sm:text-[15.5px]">
+                  {item.text}
+                </span>
+                {(item.detail || item.money) && (
+                  <span className="block text-[12.5px] text-muted">
+                    {item.detail}
+                    {item.detail && item.money ? " · " : ""}
+                    {item.money && <span className="font-mono">{item.money}</span>}
+                  </span>
                 )}
               </span>
             </button>

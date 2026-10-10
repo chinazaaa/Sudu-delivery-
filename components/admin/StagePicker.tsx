@@ -83,7 +83,10 @@ export default function StagePicker({
           key={stage}
           defaultValue={stage}
           onChange={() => form.current?.requestSubmit()}
-          className="field h-[44px] w-auto py-0 text-sm font-semibold"
+          /* The board's box is forty-two pixels, which `field-admin` is;
+             the shop's `field` is forty-eight. A phone keeps forty-four,
+             because the six rules say nothing a thumb hits goes under it. */
+          className="field field-admin min-h-[44px] w-auto font-semibold sm:min-h-[42px]"
         >
           {STAGES.map((step) => (
             <option key={step} value={step}>

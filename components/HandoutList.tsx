@@ -5,16 +5,15 @@ import { useState } from "react";
 import ConfirmButton from "./admin/ConfirmButton";
 
 /**
- * A row action, at a thumb's size on a phone.
+ * The row action, for the links and buttons that are not a component.
  *
- * Thirty-four pixels is the design system's size for a mouse at a desk. The
- * six rules say nothing a thumb must hit goes under forty-four, and every
- * button in this list is hit with a thumb while holding a bag.
+ * `btn-admin-sm` is already forty-four pixels on a phone and thirty-four
+ * from `sm`, which is what the six rules ask for on a list worked through
+ * with a thumb while holding a bag. The heights were being written out a
+ * second time beside it, and a size kept in two places is a size that
+ * drifts.
  */
-const THUMB = "min-h-[44px] sm:min-h-[34px]";
-
-/** The whole row action, for the links that are not a component. */
-const ROW_ACTION = `btn-admin btn-admin-sm ${THUMB}`;
+const ROW_ACTION = "btn-admin btn-admin-sm";
 
 export type HandoutEntry = {
   id: string;
@@ -103,10 +102,10 @@ export default function HandoutList({
           with a boot full of bags. */}
       <div className="card border-ink bg-ink px-3.5 py-3 text-paper">
         <p className="flex items-baseline gap-2.5">
-          <span className="font-display text-[26px] font-black leading-none sm:text-[40px]">
+          <span className="font-display text-[40px] font-black leading-none">
             {done}
           </span>
-          <span className="text-sm opacity-75">of {entries.length} done</span>
+          <span className="text-sm text-rail-text">of {entries.length} done</span>
           {entries.length - done > 0 && (
             <span className="ml-auto font-mono text-[13px] font-semibold text-volt">
               {entries.length - done} left
@@ -115,7 +114,7 @@ export default function HandoutList({
         </p>
         <span
           aria-hidden
-          className="mt-2.5 block h-[7px] overflow-hidden rounded-full bg-paper/15"
+          className="mt-2.5 block h-[7px] overflow-hidden rounded-full bg-rail-line"
         >
           <span
             className="block h-full rounded-full bg-volt"
@@ -141,7 +140,7 @@ export default function HandoutList({
       </label>
 
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-display text-[19px] font-black uppercase leading-none sm:text-[24px]">
+        <h3 className="font-display text-[21px] font-black uppercase leading-none sm:text-[24px]">
           By block
         </h3>
         {/* Not "nearest first": nothing in the data knows how far a block is
@@ -174,7 +173,7 @@ export default function HandoutList({
             >
               <span
                 aria-hidden
-                className={`tick size-8 rounded-full text-base font-black ${
+                className={`tick size-[30px] rounded-full text-[15px] font-black ${
                   all ? "tick-done" : ""
                 }`}
               >
@@ -187,7 +186,7 @@ export default function HandoutList({
                 </span>
                 <span
                   aria-hidden
-                  className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-wash"
+                  className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-rule"
                 >
                   <span
                     className="block h-full rounded-full bg-mint"
@@ -276,7 +275,6 @@ export default function HandoutList({
                         <input type="hidden" name="delivered" value={String(!handedOut)} />
                         <ConfirmButton
                           tone="admin"
-                          className={THUMB}
                           confirm={
                             handedOut
                               ? `Yes, undo ${refs}`
@@ -300,7 +298,8 @@ export default function HandoutList({
                         >
                           View {order.ref}
                           <span className="text-muted">
-                            {order.status} · {order.total}
+                            {order.status} ·{" "}
+                            <span className="font-mono">{order.total}</span>
                           </span>
                         </Link>
                         <a
@@ -317,7 +316,6 @@ export default function HandoutList({
                             <input type="hidden" name="delivered" value="true" />
                             <ConfirmButton
                               tone="admin"
-                              className={THUMB}
                               confirm={`Yes, ${order.ref} only`}
                             >
                               Deliver {order.ref} only
@@ -328,12 +326,17 @@ export default function HandoutList({
                           <input type="hidden" name="order_id" value={order.id} />
                           <ConfirmButton
                             tone="bad"
-                            className={THUMB}
                             confirm={`Yes, refund ${order.ref}`}
                           >
                             Refund
                           </ConfirmButton>
                         </form>
+                        {/* The fifth rule: what is forever is written next
+                            to the button, not in a dialog after it. */}
+                        <span className="hint w-full">
+                          Refunding {order.ref} is forever. The money goes
+                          back and the order stops travelling on this run.
+                        </span>
                       </div>
                     ))}
                   </div>

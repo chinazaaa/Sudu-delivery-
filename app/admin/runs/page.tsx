@@ -25,6 +25,7 @@ import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
 import { clockLabel, lagosToday, runDateLabel } from "@/lib/time";
 import ActionButton from "@/components/admin/ActionButton";
+import { STAGES, STAGE_LABEL, stageIndex } from "@/lib/stages";
 
 export const dynamic = "force-dynamic";
 
@@ -185,6 +186,31 @@ export default async function RunsPage({
   const paid = live.reduce((total, batch) => total + batch.paidCount, 0);
   const profit = live.reduce((total, batch) => total + batch.profit, 0);
 
+  /**
+   * The run somebody is in the middle of.
+   *
+   * The phone board gives it a card of its own at the top, on Ink, because
+   * it is the reason the page is open: a run already being bought for is not
+   * one row of a week's list. It was only being lifted to the head of that
+   * list, which on a phone is a card the same shape as the four below it.
+   *
+   * Past ordering and not yet handed out, which is the window in which there
+   * is something to go back into.
+   */
+  const happening =
+    batches.find(
+      (batch) =>
+        batch.status !== "cancelled" &&
+        batch.kind !== "parcel" &&
+        batch.run_date === todayIs &&
+        stageIndex(batch.stage) > stageIndex("ordering") &&
+        batch.stage !== "handed_out"
+    ) ?? null;
+  /** How far through the stages it is, for the bar under the title. */
+  const howFar = happening
+    ? Math.round((stageIndex(happening.stage) / (STAGES.length - 1)) * 100)
+    : 0;
+
   /*
    * One Tomato button per screen, on whatever is actually the thing to do
    * next.
@@ -195,13 +221,17 @@ export default async function RunsPage({
    * and everything else is an outline.
    */
   const needsMonth = !until || coverDays(until) < 14;
-  const doNext = needsMonth
-    ? "month"
-    : hidden
-      ? "horizon"
-      : showForm
-        ? "create"
-        : "new";
+  // A run being driven comes first: whatever else the week needs, the thing
+  // to do now is the thing somebody is standing in.
+  const doNext = happening
+    ? "run"
+    : needsMonth
+      ? "month"
+      : hidden
+        ? "horizon"
+        : showForm
+          ? "create"
+          : "new";
   const go = (which: string) => (doNext === which ? "btn-admin-go" : "");
 
   return (
@@ -227,6 +257,49 @@ export default async function RunsPage({
           </>
         }
       />
+
+      {happening && (
+        <section className="card mb-4 border-ink bg-ink text-paper">
+          <p className="flex items-center gap-2">
+            <span className="ticket shrink-0 rounded bg-brand px-2 py-0.5 text-paper">
+              Happening now
+            </span>
+            <span className="ml-auto min-w-0 text-right text-[12.5px] text-rail-text">
+              {STAGE_LABEL[happening.stage]}
+            </span>
+          </p>
+          <h2 className="mt-2 font-display text-[27px] font-black uppercase leading-[1.05]">
+            {happening.kind === "same_day"
+              ? `${runDateLabel(happening.run_date)} · ${timeOnly(happening.delivery_window_text)}`
+              : happening.kind === "skincare"
+                ? `Skincare drop · ${runDateLabel(happening.run_date)}`
+                : `${runDateLabel(happening.run_date)} · ${SLOT_LABEL[happening.slot]}`}
+          </h2>
+          <p className="mt-1 text-[13px] text-rail-text">
+            {happening.paidCount} paid · <span className="font-mono">{naira(happening.gross)}</span>{" "}
+            in · {happening.orderCount} order
+            {happening.orderCount === 1 ? "" : "s"} on it
+          </p>
+          {/* Volt on Ink, which is the one place the palette allows it, and
+              the bar it stands on is the rail's own grey rather than an
+              opacity on the paper. */}
+          <span
+            aria-hidden
+            className="mt-3 block h-[7px] overflow-hidden rounded-full bg-rail-line"
+          >
+            <span
+              className="block h-full rounded-full bg-volt"
+              style={{ width: `${howFar}%` }}
+            />
+          </span>
+          <Link
+            href={`/admin/batch/${happening.id}`}
+            className={`btn-admin mt-3 min-h-[50px] w-full text-[15.5px] ${go("run")}`}
+          >
+            Back into the run →
+          </Link>
+        </section>
+      )}
 
       {trips.length > 0 && (
         <Panel
@@ -296,7 +369,7 @@ export default async function RunsPage({
           needsMonth ? "border-volt-line bg-brand-tint" : ""
         }`}
       >
-        <h2 className="font-display text-[22px] font-black uppercase leading-none">
+        <h2 className="font-display text-[21px] font-black uppercase leading-none sm:text-[26px]">
           {until
             ? `Ordering is open through ${runDateLabel(until)}`
             : "No runs are open"}
@@ -321,7 +394,7 @@ export default async function RunsPage({
           looks open, while the checkout quietly offers nobody a run. */}
       {hidden && (
         <div className="card mb-4 border-volt-line bg-brand-tint">
-          <h2 className="font-display text-[22px] font-black uppercase leading-none">
+          <h2 className="font-display text-[21px] font-black uppercase leading-none sm:text-[26px]">
             Nobody can order onto a run right now
           </h2>
           <p className="hint mt-1.5">
@@ -345,13 +418,20 @@ export default async function RunsPage({
           value={String(live.length)}
           detail={window === "all" ? "Every run so far" : "This week"}
         />
-        <Figure label="Orders" value={String(orders)} detail="Across the runs below" />
-        <Figure
-          label="Paid"
-          value={String(paid)}
-          tone="mint"
-          detail={orders - paid === 0 ? "Nothing outstanding" : `${orders - paid} unpaid`}
-        />
+        {/* `sm:contents` rather than a wrapper from the tablet up, so each
+            tile goes back to being the grid's own child and the row of four
+            lines up as it always did. */}
+        <div className="hidden sm:contents">
+          <Figure label="Orders" value={String(orders)} detail="Across the runs below" />
+          <Figure
+            label="Paid"
+            value={String(paid)}
+            tone="mint"
+            detail={
+              orders - paid === 0 ? "Nothing outstanding" : `${orders - paid} unpaid`
+            }
+          />
+        </div>
         {/* Only a profit in hand is coloured. A loss in mint reads as money
             made, which is the one thing it is not. */}
         <Figure
@@ -372,7 +452,7 @@ export default async function RunsPage({
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
                 <label className="label" htmlFor="run_date">Day</label>
-                <input id="run_date" name="run_date" type="date" required className="field" />
+                <input id="run_date" name="run_date" type="date" required className="field field-admin min-h-[44px] sm:min-h-[42px]" />
               </div>
               <div>
                 <label className="label" htmlFor="cut_off_time">Orders close</label>
@@ -382,12 +462,12 @@ export default async function RunsPage({
                   type="time"
                   defaultValue="12:00"
                   required
-                  className="field"
+                  className="field field-admin min-h-[44px] sm:min-h-[42px]"
                 />
               </div>
               <div>
                 <label className="label" htmlFor="slot">Which batch</label>
-                <select id="slot" name="slot" className="field" defaultValue="afternoon">
+                <select id="slot" name="slot" className="field field-admin min-h-[44px] sm:min-h-[42px]" defaultValue="afternoon">
                   <option value="afternoon">Afternoon</option>
                   <option value="night">Night</option>
                 </select>
@@ -401,7 +481,7 @@ export default async function RunsPage({
                 id="delivery_window_text"
                 name="delivery_window_text"
                 placeholder="On campus ~2:00pm"
-                className="field"
+                className="field field-admin min-h-[44px] sm:min-h-[42px]"
               />
             </div>
             <ActionButton
@@ -440,7 +520,7 @@ export default async function RunsPage({
           return (
             <li key={batch.id}>
               {index === 0 && isToday && (
-                <p className="ticket mb-2 text-brand">Today</p>
+                <p className="ticket mb-2 text-brand-dark">Today</p>
               )}
               {firstRest && (
                 <p className="ticket mb-2 mt-4 text-muted">The rest of the week</p>
@@ -538,8 +618,8 @@ export default async function RunsPage({
                   )}
                   {batch.paidCount > 0 && (
                     <p
-                      className={`mt-1 text-[13px] font-bold ${
-                        batch.profit >= 0 ? "text-mint" : "text-brand"
+                      className={`mt-1 font-mono text-[13px] font-bold ${
+                        batch.profit >= 0 ? "text-mint" : "text-brand-dark"
                       }`}
                     >
                       {naira(batch.profit)} profit

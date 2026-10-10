@@ -51,7 +51,7 @@ export default function SettleRun({
   if (open.length > 0) {
     return (
       <div className="card border-volt-line bg-brand-tint">
-        <h2 className="font-display text-[24px] font-black uppercase leading-none">
+        <h2 className="font-display text-[19px] font-black uppercase leading-none sm:text-[24px]">
           This run is not finished
         </h2>
         <ul className="mt-2 space-y-1 text-sm">
@@ -76,7 +76,7 @@ export default function SettleRun({
 
   return (
     <div className="card">
-      <h2 className="font-display text-[24px] font-black uppercase leading-none">
+      <h2 className="font-display text-[19px] font-black uppercase leading-none sm:text-[24px]">
         Everything on this run is settled
       </h2>
       <p className="hint mt-1">
@@ -140,7 +140,10 @@ export default function SettleRun({
       <button
         type="button"
         onClick={() => setShowing((was) => !was)}
-        className="mt-3 text-xs font-bold text-brand-dark"
+        /* A control, so it is drawn as one: the row action is forty-four
+           pixels on a phone and thirty-four from `sm`, and a line of small
+           bold text is neither. */
+        className="btn-admin btn-admin-sm mt-3"
       >
         {showing ? "Hide the working" : "Show the working"}
       </button>

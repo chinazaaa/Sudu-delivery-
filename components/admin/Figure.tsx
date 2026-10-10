@@ -11,6 +11,7 @@ export default function Figure({
   value,
   detail,
   tone = "ink",
+  deskOnly = false,
 }: {
   label: string;
   value: string;
@@ -25,6 +26,10 @@ export default function Figure({
    * worrying about has to look different from a figure worth knowing.
    */
   tone?: "ink" | "mint" | "brand";
+  /** Several phone boards draw the figure with no line under it, because
+   *  a phone has two tiles where a desk has four and the room goes to the
+   *  number. The hint is still in the page for a screen reader. */
+  deskOnly?: boolean;
 }) {
   return (
     <div className="card px-3.5 py-3 sm:p-4">
@@ -36,7 +41,9 @@ export default function Figure({
       >
         {value}
       </p>
-      {detail && <p className="hint mt-1">{detail}</p>}
+      {detail && (
+        <p className={`hint mt-1 ${deskOnly ? "hidden sm:block" : ""}`}>{detail}</p>
+      )}
     </div>
   );
 }

@@ -68,7 +68,7 @@ export default function ConfirmButton({
       <button
         type="button"
         onClick={() => setAsking(false)}
-        className="px-1 text-xs font-semibold text-muted"
+        className="min-h-[44px] px-2 text-xs font-semibold text-muted sm:min-h-0"
       >
         No
       </button>

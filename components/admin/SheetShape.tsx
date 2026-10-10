@@ -64,8 +64,11 @@ export default function SheetShape({
             type="button"
             onClick={() => setActive(section.id)}
             aria-pressed={current === section.id}
-            className={`pill-admin min-h-[44px] ${
-              current === section.id ? "pill-admin-on" : "bg-paper"
+            /* `pill-admin` is already forty-four pixels on a phone and
+               thirty-eight from `sm`, so the height was being set twice and
+               the second copy is what drifts. */
+            className={`pill-admin ${
+              current === section.id ? "pill-admin-on" : ""
             }`}
           >
             {section.label}
