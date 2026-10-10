@@ -7,6 +7,7 @@ import { monthOf, nextMonth } from "../lib/standing";
 import { googleTagId, numberOr } from "../lib/settings";
 import { isExtra } from "../lib/shelf";
 import { howLong, needsDoing } from "../lib/needs-doing";
+import { howPaid, orderStory } from "../lib/order-story";
 import { templateFor } from "../lib/messages";
 import { EMPTY } from "../lib/settings";
 import { test } from "node:test";
@@ -2013,4 +2014,66 @@ test("money owed to somebody else is money on the list", () => {
 
   // Nobody owed anything leaves the list empty rather than saying so.
   assert.deepEqual(needsDoing({ ...quiet, promoters: [{ name: "Ada", owed: 0, since: "" }] }), []);
+});
+
+/*
+ * How an order went, read down as steps.
+ *
+ * The page could say what an order is and never what had happened to it.
+ * The rule worth guarding is that nothing is invented: a step with no time
+ * against it says so rather than borrowing the one above it, because a
+ * timeline that guesses is worse than one with a gap in it.
+ */
+const plain = {
+  created_at: "2026-10-06T19:28:00Z",
+  paid_at: null,
+  done_at: null,
+  rated_at: null,
+  status: "pending",
+  payment_method: "transfer",
+  hostel: "Queen Mary",
+  batchStage: "ordering",
+};
+const at = (iso: string) => iso.slice(11, 16);
+
+test("an order nobody has paid for has one step behind it", () => {
+  const steps = orderStory(plain, at);
+  assert.deepEqual(steps.map((one) => one.done), [true, false, false, false, false]);
+  assert.equal(steps[0].when, "19:28");
+  // Not paid, so no time, and certainly not the time it was ordered.
+  assert.equal(steps[1].when, "");
+});
+
+test("the run's stage moves the steps the order itself cannot", () => {
+  const bought = orderStory(
+    { ...plain, status: "paid", paid_at: "2026-10-06T19:31:00Z", batchStage: "at_counter" },
+    at
+  );
+  assert.deepEqual(bought.map((one) => one.done), [true, true, true, false, false]);
+  // The run records which stage it is at, never the minute it changed, so
+  // this step says that it happened and does not pretend to know when.
+  assert.equal(bought[2].when, "");
+
+  const done = orderStory(
+    { ...plain, status: "delivered", paid_at: "x", done_at: "2026-10-09T17:04:00Z", batchStage: "handed_out" },
+    at
+  );
+  assert.equal(done[3].done, true);
+  assert.equal(done[3].when, "17:04");
+  // Nobody has asked for a review, which is the one most often forgotten.
+  assert.equal(done[4].done, false);
+});
+
+test("the counter is named where there is one, counted where there are many", () => {
+  assert.ok(orderStory({ ...plain, counters: ["DO Bowls"] }, at)[2].label === "Bought at DO Bowls");
+  assert.ok(
+    orderStory({ ...plain, counters: ["KFC", "Domino's"] }, at)[2].label === "Bought at 2 counters"
+  );
+  assert.ok(orderStory(plain, at)[2].label === "Bought at the counter");
+});
+
+test("how they paid names the account once there is one", () => {
+  assert.equal(howPaid({ payment_method: "transfer" }), "transfer");
+  assert.equal(howPaid({ payment_method: "transfer", paid_into: "GTBank" }), "transfer, GTBank");
+  assert.equal(howPaid({ payment_method: "card" }), "card");
 });
