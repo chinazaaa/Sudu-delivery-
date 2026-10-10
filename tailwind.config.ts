@@ -64,10 +64,27 @@ const config: Config = {
           faint: "#8a8178",
         },
         amber: {
-          /** The middle of the three severities: worth doing, not urgent. */
+          /*
+           * The middle of the three severities: worth doing, not urgent.
+           *
+           * A fill only. On paper this is 2.7:1, which fails even the
+           * threshold for large text, and this shop is read on a phone in
+           * sunlight. So bars, dots and chip grounds take it and no number
+           * or word ever does: those take amber-deep, which passes.
+           */
           DEFAULT: "#c9961b",
-          /** Readable on the amber chip ground, where the fill is not. */
+          /** Amber you can actually read, on paper or on the amber tint. */
           deep: "#8a5a00",
+        },
+        /*
+         * The green of a WhatsApp bubble, which is not a Sudu colour and is
+         * not meant to be. The message preview is a quotation of the app the
+         * message will be read in, and quoting it exactly is what makes the
+         * preview read as a message rather than as another card.
+         */
+        whatsapp: {
+          DEFAULT: "#e7f6d5",
+          line: "#cbe4ad",
         },
         volt: {
           DEFAULT: "#ffd23f",

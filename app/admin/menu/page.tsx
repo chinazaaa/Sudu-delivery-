@@ -91,7 +91,7 @@ export default async function RestaurantsAdmin() {
       // gaps are not worth the same: a missing description costs less than
       // a missing photograph, and the board draws this one in the amber the
       // palette carries for exactly that, the middle severity.
-      number: "text-amber",
+      number: "text-amber-deep",
       bar: "bg-amber",
       fix: "Write the descriptions",
     },

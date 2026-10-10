@@ -588,7 +588,7 @@ export function Broadcast({
                   whatever the card happens to be sitting on. An opacity over
                   the page ground is not a colour, it is two colours
                   depending on where the card lands. */}
-              <div className="mb-3 rounded-[14px] rounded-tr-[4px] border-[1.5px] border-mint bg-mint-tint p-3">
+              <div className="mb-3 rounded-[14px] rounded-tr-[4px] border-[1.5px] border-whatsapp-line bg-whatsapp p-3">
                 <p className="whitespace-pre-wrap text-sm leading-[1.45]">
                   {fill(held.draft, first)}
                 </p>
