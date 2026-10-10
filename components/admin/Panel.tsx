@@ -10,9 +10,14 @@ export default function Panel({
   aside,
   detail,
   children,
+  size = "lg",
   className = "",
 }: {
   title: string;
+  /** The board sets a main column's panel at 26px and a right column's at
+   *  24px, so the second column reads as the aside it is. Two columns of
+   *  26px headings shout at each other. */
+  size?: "lg" | "sm";
   aside?: React.ReactNode;
   /** The lead sentence. A node rather than a string: several of these
    *  want a figure or a link inside the sentence, and flattening those to
@@ -24,10 +29,16 @@ export default function Panel({
   return (
     <section className={`card p-5 ${className}`}>
       <div className="flex items-center justify-between gap-2.5">
-        <h2 className="font-display text-[26px] font-black uppercase leading-none">{title}</h2>
+        <h2
+          className={`font-display font-black uppercase leading-none ${
+            size === "sm" ? "text-[24px]" : "text-[26px]"
+          }`}
+        >
+          {title}
+        </h2>
         {aside}
       </div>
-      {detail && <p className="mb-1.5 mt-1 text-[12.5px] text-muted">{detail}</p>}
+      {detail && <p className="hint mb-1.5 mt-1">{detail}</p>}
       {children}
     </section>
   );

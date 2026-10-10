@@ -88,14 +88,40 @@ export type OrderCardData = {
   templates: { kind: string; label: string; href: string }[];
 };
 
+/** A state read off the order, not a control: the board's small tinted
+ *  `.chip`, which is our `tag` and is never pressable. */
+function Tag({
+  children,
+  tone = "wash",
+}: {
+  children: React.ReactNode;
+  tone?: "wash" | "brand" | "volt";
+}) {
+  const skin =
+    tone === "brand"
+      ? "bg-brand text-white"
+      : tone === "volt"
+        ? "bg-brand-tint text-brand-dark"
+        : "bg-wash text-ink";
+  return <span className={`tag ${skin}`}>{children}</span>;
+}
+
 /**
  * One order, everything about it in one place. Marking paid and messaging the
  * customer is a single tap: the order is updated and WhatsApp opens with the
  * confirmation already written.
+ *
+ * Sized to the admin board rather than the shop: the figure is the display
+ * face at twenty-eight pixels, the states are small tinted labels, and every
+ * action in the row is `.btn-admin-sm`. It used to be built out of the shop's
+ * forty-four pixel `chip`, which is a thumb target, and a row of eight of
+ * them is what made the list read as a blown-up version of itself.
  */
 export default function OrderCard({
   order,
   onList = true,
+  lead,
+  without = [],
   markPaid,
   markDelivered,
   refund,
@@ -108,6 +134,14 @@ export default function OrderCard({
   /** False on the order's own page, where a link to the page you are
    *  already reading is noise. */
   onList?: boolean;
+  /** The tick beside the order, where the list is picking several of them.
+   *  It sits inside the card because that is where the board draws it: a
+   *  checkbox floating outside the outline reads as belonging to nothing. */
+  lead?: React.ReactNode;
+  /** Message kinds the page already offers above the card, so the same
+   *  WhatsApp link is not handed over twice. The board puts the PIN and the
+   *  review at the top of the order's own page. */
+  without?: string[];
   markPaid: (form: FormData) => Promise<void>;
   markDelivered: (form: FormData) => Promise<void>;
   refund: (form: FormData) => Promise<void>;
@@ -118,139 +152,135 @@ export default function OrderCard({
 }) {
   const [open, setOpen] = useState(false);
   const confirmed = order.templates.find((t) => t.kind === "confirmed");
+  const offer = order.templates.filter((one) => !without.includes(one.kind));
 
   return (
-    <article className="card space-y-3">
+    <article className="card space-y-3 px-4 py-3.5">
       {/* On the order's own page the header, the stat row and the editor
           have already said who this is and what it comes to. Saying it a
           fourth time is what makes the page read as four cards about
           nothing. Here it is only the things to do. */}
       {onList && (
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="truncate font-bold">
-            <Link href={`/admin/orders/${order.id}`} className="hover:text-brand">
-              <span className="text-muted">{order.ref}</span>{" "}
-              {order.forName ?? order.name}
-            </Link>
-          </h3>
-          {order.groupRef && (
-            <Link
-              href={`/admin/orders?status=all&q=${order.groupRef}`}
-              className="mt-0.5 inline-block text-sm font-semibold text-brand"
-            >
-              Part of group #{order.groupRef} · {order.groupSize} parts
-              {order.forName && order.forName !== order.name && (
-                <span className="font-normal text-muted"> · {order.name} started it</span>
-              )}
-            </Link>
-          )}
-          <p className="text-sm text-muted">
-            {order.batchLabel} · {order.hostel} · {formatPhone(order.phone)}
-          </p>
-          {/* When it came in, which is not the day it is for. The email can
-              be missed, and then the only question is how long this has been
-              sitting here unpaid. */}
-          {order.createdAt ? (
-            <p className="text-sm text-muted">
-              Ordered {placedLabel(order.createdAt)}
-            </p>
-          ) : null}
-          {/* Everything that used to be six stacked lines, as one wrapped
-              row of chips. A card in a list is scanned, not read: the eye
-              wants the name, the money and the state of it, and the rest is
-              detail that should take up the space detail deserves. */}
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            {order.parcel && (
-              <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-bold text-brand-dark">
-                Parcel · {order.parcel.route}
-              </span>
-            )}
-            {/* Before the link is made, not after: a Stripe link in the
-                wrong currency is a payment that has to be sent back. */}
-            {order.payCurrency !== "" && (
-              <span className="rounded-full bg-brand px-2.5 py-1 text-xs font-extrabold text-white">
-                Card link in {order.payCurrency}
-                {order.payRoughly ? ` · ${order.payRoughly}` : ""}
-              </span>
-            )}
-            <span
-              className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                order.paymentMethod !== "card"
-                  ? "bg-black/5 text-muted"
-                  : order.paymentLink
-                    ? "bg-mint/10 text-mint"
-                    : "bg-amber-100 text-amber-800"
-              }`}
-            >
-              {order.paymentMethod !== "card"
-                ? "Transfer"
-                : order.paymentLink
-                  ? "Card link saved"
-                  : "Wants a card link"}
-            </span>
-            {order.repeats !== "" && (
-              <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-extrabold text-brand-dark">
-                {order.repeats}
-              </span>
-            )}
-            {order.dayToAgree && (
-              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-extrabold text-amber-900">
-                Day to agree
-              </span>
-            )}
-            {/* What is on their own page, worked out their way.
-                It used to print the run's stage for any order that was not
-                pending, so a cancelled order on a run that went out without
-                it read "They see: Delivered". The run was delivered. The
-                order was not, and the customer is being told it was. */}
-            {order.status !== "pending" && (
-              <span className="rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold text-muted">
-                They see:{" "}
-                {order.status === "cancelled"
-                  ? "Cancelled"
-                  : order.status === "refunded"
-                    ? "Refunded"
-                    : order.status === "delivered"
-                      ? "Delivered"
-                      : order.runStage === "ordering"
-                        ? "Paid and on the run"
-                        : STAGE_LABEL[order.runStage]}
-              </span>
-            )}
-            {order.source !== "" && (
-              <span className="rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold text-muted">
-                {order.source === "app" ? "App" : "Website"}
-              </span>
-            )}
-            {order.promoter && (
+        <div className="flex items-start gap-3.5">
+          {lead}
+          <div className="min-w-0 flex-1">
+            {/* One baseline row: the reference, the name, the day. The board
+                reads it left to right in one glance, which three stacked
+                lines of the same words never did. */}
+            <div className="flex flex-wrap items-baseline gap-2.5">
               <Link
-                href={`/admin/orders?status=all&promoter=${encodeURIComponent(
-                  order.promoter.code
-                )}`}
-                className="rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold text-muted hover:text-brand"
+                href={`/admin/orders/${order.id}`}
+                className="font-mono text-[13px] text-muted hover:text-brand"
               >
-                Via {order.promoter.name}
+                {order.ref}
+              </Link>
+              <strong className="text-[17px]">{order.forName ?? order.name}</strong>
+              <span className="text-[13.5px] text-muted">
+                {order.batchLabel} · {order.hostel}
+              </span>
+            </div>
+            {/* The number to ring, and when it came in, which is not the day
+                it is for. The email can be missed, and then the only
+                question is how long this has been sitting here unpaid. */}
+            <p className="hint mt-0.5">
+              {formatPhone(order.phone)}
+              {order.createdAt ? ` · ordered ${placedLabel(order.createdAt)}` : ""}
+            </p>
+            {order.groupRef && (
+              <Link
+                href={`/admin/orders?status=all&q=${order.groupRef}`}
+                className="mt-0.5 inline-block text-[13.5px] font-semibold text-brand"
+              >
+                Part of group #{order.groupRef} · {order.groupSize} parts
+                {order.forName && order.forName !== order.name && (
+                  <span className="font-normal text-muted"> · {order.name} started it</span>
+                )}
               </Link>
             )}
+            {/* Everything that used to be six stacked lines, as one wrapped
+                row of tinted labels. A card in a list is scanned, not read:
+                the eye wants the name, the money and the state of it, and
+                the rest is detail that should take up the space detail
+                deserves. */}
+            <div className="mt-[7px] flex flex-wrap items-center gap-1.5">
+              {order.parcel && <Tag tone="volt">Parcel · {order.parcel.route}</Tag>}
+              {/* Before the link is made, not after: a Stripe link in the
+                  wrong currency is a payment that has to be sent back. */}
+              {order.payCurrency !== "" && (
+                <Tag tone="brand">
+                  Card link in {order.payCurrency}
+                  {order.payRoughly ? ` · ${order.payRoughly}` : ""}
+                </Tag>
+              )}
+              <Tag tone={order.paymentMethod === "card" && !order.paymentLink ? "volt" : "wash"}>
+                {order.paymentMethod !== "card"
+                  ? "Transfer"
+                  : order.paymentLink
+                    ? "Card link saved"
+                    : "Wants a card link"}
+              </Tag>
+              {order.repeats !== "" && <Tag tone="volt">{order.repeats}</Tag>}
+              {order.dayToAgree && <Tag tone="volt">Day to agree</Tag>}
+              {/* What is on their own page, worked out their way.
+                  It used to print the run's stage for any order that was not
+                  pending, so a cancelled order on a run that went out
+                  without it read "They see: Delivered". The run was
+                  delivered. The order was not, and the customer is being
+                  told it was. */}
+              {order.status !== "pending" && (
+                <Tag>
+                  They see:{" "}
+                  {order.status === "cancelled"
+                    ? "Cancelled"
+                    : order.status === "refunded"
+                      ? "Refunded"
+                      : order.status === "delivered"
+                        ? "Delivered"
+                        : order.runStage === "ordering"
+                          ? "Paid and on the run"
+                          : STAGE_LABEL[order.runStage]}
+                </Tag>
+              )}
+              {order.source !== "" && (
+                <Tag>{order.source === "app" ? "App" : "Website"}</Tag>
+              )}
+              {order.promoter && (
+                <Link
+                  href={`/admin/orders?status=all&promoter=${encodeURIComponent(
+                    order.promoter.code
+                  )}`}
+                  className="tag bg-wash text-ink hover:text-brand"
+                >
+                  Via {order.promoter.name}
+                </Link>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-none flex-col items-end gap-[7px] text-right">
+            <span className="font-display text-[28px] font-black leading-none">
+              {naira(order.total)}
+            </span>
+            <StatusPill status={order.status} />
+            {/* The way in. The order number at the top has always been a
+                link, but a number does not look like one, so the page that
+                holds the photographs, the run it is on and the notes was
+                reachable only by somebody who already knew it was there. */}
+            <Link href={`/admin/orders/${order.id}`} className="btn-admin btn-admin-sm">
+              Open →
+            </Link>
           </div>
         </div>
-        <div className="text-right">
-          <p className="font-extrabold">{naira(order.total)}</p>
-          <StatusPill status={order.status} />
-        </div>
-      </div>
       )}
 
       {order.customerNote && (
-        <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm text-brand-dark">
-          <span className="font-bold">They asked: </span>
+        <p className="rounded-r-lg border-l-4 border-volt bg-brand-tint px-[11px] py-2 text-[13.5px]">
+          <span className="font-bold text-brand-dark">They asked: </span>
           {order.customerNote}
         </p>
       )}
 
       {order.status === "pending" && (
-        <div className="rounded-2xl bg-brand-tint p-3">
+        <div className="soft bg-brand-tint p-3.5">
           <form action={savePaymentLink} className="space-y-1.5">
             <label className="label" htmlFor={`link-${order.id}`}>
               Card payment link
@@ -261,14 +291,17 @@ export default function OrderCard({
                 name="payment_link"
                 defaultValue={order.paymentLink ?? ""}
                 placeholder="Paste the link you generated"
-                className="field grow py-2 text-sm"
+                className="field min-h-[42px] grow border-[1.5px] border-line bg-paper px-3 py-0 text-[14.5px]"
               />
               <input type="hidden" name="order_id" value={order.id} />
-              <SaveButton className="shrink-0 px-4 py-2 text-sm">
+              {/* A pill, not a blob: the save button inherited the shop's
+                  fifty-two pixel height with small side padding, which drew
+                  a round red lozenge taller than the field beside it. */}
+              <SaveButton className="min-h-[38px] shrink-0 px-4 text-[13px]">
                 Save
               </SaveButton>
             </div>
-            <p className="text-xs text-muted">
+            <p className="hint">
               Saved against this order. &quot;Send card link&quot; then sends
               this one, and their own page turns it into a pay button.
               {order.paymentMethod !== "card" &&
@@ -281,15 +314,15 @@ export default function OrderCard({
       {/* Marking this paid now would take food money and no delivery, because
           the fee is not worked out until the group closes. */}
       {order.awaitingGroup && order.status === "pending" && (
-        <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          <span className="font-bold">Their group has not closed yet.</span> There is
-          no delivery fee on this order, so {naira(order.total)} is the food alone.
-          Wait for the group to close, or you will be marking it paid for less than
-          it will cost.
+        <p className="rounded-r-lg border-l-4 border-volt bg-brand-tint px-[11px] py-2 text-[13.5px]">
+          <span className="font-bold text-brand-dark">Their group has not closed yet.</span>{" "}
+          There is no delivery fee on this order, so {naira(order.total)} is the food
+          alone. Wait for the group to close, or you will be marking it paid for less
+          than it will cost.
         </p>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {order.status === "pending" ? (
           <form
             action={markPaid}
@@ -300,51 +333,33 @@ export default function OrderCard({
             }}
           >
             <input type="hidden" name="order_id" value={order.id} />
-            <ConfirmButton
-              className="px-4 py-2 text-sm"
-              confirm={`Yes, ${naira(order.total)} received`}
-            >
+            <ConfirmButton tone="admin" confirm={`Yes, ${naira(order.total)} received`}>
               Mark paid and message
             </ConfirmButton>
           </form>
         ) : order.status === "cancelled" ? null : order.status === "paid" ? (
           <form action={markDelivered}>
             <input type="hidden" name="order_id" value={order.id} />
-            <ConfirmButton className="px-4 py-2 text-sm" confirm="Yes, delivered">
-              Mark delivered
-            </ConfirmButton>
+            <ConfirmButton tone="admin" confirm="Yes, delivered">Mark delivered</ConfirmButton>
           </form>
         ) : null}
 
-        {order.templates.map((item) => (
+        {offer.map((item) => (
           <a
             key={item.kind}
             href={item.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="chip border-black/10 bg-white hover:border-ink/30"
+            className="btn-admin btn-admin-sm"
           >
             {item.label}
           </a>
         ))}
 
-        {/* The way in. The order number at the top has always been a link,
-            but a number does not look like one, so the page that holds the
-            photographs, the run it is on and the notes was reachable only by
-            somebody who already knew it was there. */}
-        {onList && (
-          <Link
-            href={`/admin/orders/${order.id}`}
-            className="chip border-ink/20 bg-white font-bold hover:border-ink/40"
-          >
-            Open this order
-          </Link>
-        )}
-
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="chip border-black/10 bg-white hover:border-ink/30"
+          className="btn-admin btn-admin-sm"
         >
           {open
             ? "Hide details"
@@ -355,16 +370,16 @@ export default function OrderCard({
       </div>
 
       {open && (
-        <div className="space-y-3 border-t border-black/5 pt-3">
+        <div className="space-y-3 border-t-[1.5px] border-rule pt-3.5">
           {/* Nothing is bought on a parcel, so there are no lines: what there
               is instead is where to go, what to ask for and what to hand
               over. Everything the trip needs, in the order it is needed. */}
           {order.parcel && (
-            <dl className="space-y-2 rounded-xl bg-shell p-3 text-sm">
+            <dl className="soft space-y-2 p-3.5">
               {order.parcel.answers.map((one) => (
                 <div key={one.question}>
-                  <dt className="text-xs text-muted">{one.question}</dt>
-                  <dd className="font-semibold text-ink">{one.answer}</dd>
+                  <dt className="ticket text-muted">{one.question}</dt>
+                  <dd className="text-[14.5px] font-semibold text-ink">{one.answer}</dd>
                 </div>
               ))}
             </dl>
@@ -373,99 +388,98 @@ export default function OrderCard({
               controls to change them. Two lists of the same twenty things is
               how somebody edits the one that is not editable. */}
           {onList && (
-          <ul className="space-y-2 text-sm">
-            {order.lines.map((line) => (
-              <li key={line.id} className="flex justify-between gap-3">
-                <span className="min-w-0">
-                  <span className="font-semibold">
-                    <span className="text-muted">{line.qty} ×</span> {line.name}
+            <ul className="text-[14.5px]">
+              {order.lines.map((line) => (
+                <li
+                  key={line.id}
+                  className="flex justify-between gap-3 border-t-[1.5px] border-rule py-2.5 first:border-t-0 first:pt-0"
+                >
+                  <span className="min-w-0">
+                    <span className="font-semibold">
+                      <span className="text-muted">{line.qty} ×</span> {line.name}
+                    </span>
+                    {/* The choices under the name, not trailed after it. On a
+                        pizza they are the only thing telling two lines
+                        apart, and run into one sentence they are
+                        unreadable. */}
+                    {line.choices.length > 0 && (
+                      <span className="hint mt-0.5 block">{line.choices.join(" · ")}</span>
+                    )}
+                    <span className="hint block">{line.restaurant}</span>
+                    {(line.for_name || order.lines.some((l) => l.for_name)) && (
+                      <span className="text-muted"> · for {line.for_name ?? order.name}</span>
+                    )}
+                    {/* Where to go and get it, for the things no restaurant
+                        makes: a cake, flowers, a bucket. The moment anybody
+                        needs this is the moment they are looking at the
+                        order. */}
+                    {(line.source ?? "") !== "" && (
+                      <span className="mt-0.5 block text-[12.5px] font-semibold text-brand-dark">
+                        Get it: {line.source}
+                      </span>
+                    )}
                   </span>
-                  {/* The choices under the name, not trailed after it. On a
-                      pizza they are the only thing telling two lines apart,
-                      and run into one sentence they are unreadable. */}
-                  {line.choices.length > 0 && (
-                    <span className="mt-0.5 block text-xs text-muted">
-                      {line.choices.join(" · ")}
-                    </span>
-                  )}
-                  <span className="block text-xs text-muted">{line.restaurant}</span>
-                  {(line.for_name || order.lines.some((l) => l.for_name)) && (
-                    <span className="text-muted">
-                      {" "}· for {line.for_name ?? order.name}
-                    </span>
-                  )}
-                  {/* Where to go and get it, for the things no restaurant
-                      makes: a cake, flowers, a bucket. The moment anybody
-                      needs this is the moment they are looking at the
-                      order. */}
-                  {(line.source ?? "") !== "" && (
-                    <span className="mt-0.5 block text-xs font-semibold text-brand-dark">
-                      Get it: {line.source}
-                    </span>
-                  )}
-                </span>
-                <span>{naira(line.qty * line.unit_price_at_order)}</span>
-              </li>
-            ))}
-          </ul>
+                  <span className="font-mono font-semibold">
+                    {naira(line.qty * line.unit_price_at_order)}
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
 
-          <dl className="space-y-1 text-sm text-muted">
+          {/* The ticket label over the money, which is how the board writes
+              every row of figures: a muted sentence on the left and a
+              number on the right read as two columns of prose, and nobody
+              could tell the food from the fee at a glance. */}
+          <dl className="text-[14.5px]">
             {/* Nothing is bought on a parcel, so "Food ₦0" is a line about
                 something that never happened. */}
             {!order.parcel && (
-              <div className="flex justify-between">
-                <dt>Food</dt>
-                <dd>{naira(order.food)}</dd>
-              </div>
+              <Money label="Food" value={naira(order.food)} />
             )}
-            <div className="flex justify-between">
-              <dt>
-                {order.parcel
+            <Money
+              label={
+                order.parcel
                   ? "Carrying it"
                   : order.joinedDelivery
-                  ? "Delivery, sharing a car with a friend"
+                    ? "Delivery, sharing a car"
+                    : "Delivery"
+              }
+              detail={
+                order.joinedDelivery
+                  ? "Sharing a car with a friend"
                   : order.otherItems > 0
-                    ? `Delivery (${order.otherItems} more item${
+                    ? `${order.otherItems} more item${
                         order.otherItems === 1 ? "" : "s"
-                      } on this number, charged on its own order)`
-                    : "Delivery"}
-              </dt>
-              <dd>{naira(order.fee)}</dd>
-            </div>
+                      } on this number, charged on its own order`
+                    : ""
+              }
+              value={naira(order.fee)}
+            />
             {/* Without this the food and the delivery do not add up to the
-                total, and somebody watching the bank is looking for the wrong
-                amount. */}
+                total, and somebody watching the bank is looking for the
+                wrong amount. */}
             {order.discount > 0 && (
-              <div className="flex justify-between">
-                <dt>
-                  Discount
-                  {order.couponCode && (
-                    <span className="font-semibold text-ink"> · {order.couponCode}</span>
-                  )}
-                </dt>
-                <dd className="font-semibold text-ink">−{naira(order.discount)}</dd>
-              </div>
+              <Money
+                label="Discount"
+                detail={order.couponCode ?? ""}
+                value={`−${naira(order.discount)}`}
+              />
             )}
-            <div className="flex justify-between">
-              <dt>Pays by</dt>
-              <dd>{order.paymentMethod === "card" ? "Card link" : "Transfer"}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt>Narration to look for</dt>
-              <dd className="font-semibold text-ink">{order.narration}</dd>
-            </div>
+            <Money
+              label="Pays by"
+              value={order.paymentMethod === "card" ? "Card link" : "Transfer"}
+            />
+            <Money label="Narration to look for" value={order.narration} />
             {order.pin && (
-              <div className="flex justify-between">
-                {/* A PIN belongs to a phone number, not to a group. In a
-                    one-payer group this is the buyer's, and the friends have
-                    none of their own until they order themselves. */}
-                <dt>
-                  PIN for {formatPhone(order.phone)}
-                  {order.inGroup && " (whoever placed this)"}
-                </dt>
-                <dd className="font-semibold text-ink">{order.pin}</dd>
-              </div>
+              /* A PIN belongs to a phone number, not to a group. In a
+                 one-payer group this is the buyer's, and the friends have
+                 none of their own until they order themselves. */
+              <Money
+                label={`PIN for ${formatPhone(order.phone)}`}
+                detail={order.inGroup ? "Whoever placed this" : ""}
+                value={order.pin}
+              />
             )}
           </dl>
 
@@ -479,21 +493,21 @@ export default function OrderCard({
                 name="admin_note"
                 defaultValue={order.adminNote}
                 placeholder="Paid in cash at the gate, wants it early"
-                className="field grow py-2 text-sm"
+                className="field min-h-[42px] grow border-[1.5px] border-line bg-paper px-3 py-0 text-[14.5px]"
               />
               <input type="hidden" name="order_id" value={order.id} />
-              <SaveButton className="shrink-0 px-4 py-2 text-sm">
+              <SaveButton className="min-h-[38px] shrink-0 px-4 text-[13px]">
                 Save
               </SaveButton>
             </div>
-            <p className="text-xs text-muted">Only you see this.</p>
+            <p className="hint">Only you see this.</p>
           </form>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             <Link
               href={`/o/${order.id}`}
               target="_blank"
-              className="chip border-black/10 bg-white"
+              className="btn-admin btn-admin-sm"
             >
               Open customer page
             </Link>
@@ -504,14 +518,14 @@ export default function OrderCard({
             {order.status === "pending" ? (
               <form action={cancel}>
                 <input type="hidden" name="order_id" value={order.id} />
-                <ConfirmButton tone="brand" confirm="Yes, cancel it">
+                <ConfirmButton tone="bad" confirm="Yes, cancel it">
                   Cancel this order
                 </ConfirmButton>
               </form>
             ) : order.status !== "refunded" && order.status !== "cancelled" ? (
               <form action={refund}>
                 <input type="hidden" name="order_id" value={order.id} />
-                <ConfirmButton tone="brand" confirm={`Yes, refund ${naira(order.total)}`}>
+                <ConfirmButton tone="bad" confirm={`Yes, refund ${naira(order.total)}`}>
                   Refund
                 </ConfirmButton>
               </form>
@@ -530,7 +544,7 @@ export default function OrderCard({
             {order.status === "cancelled" && (
               <form action={remove}>
                 <input type="hidden" name="order_id" value={order.id} />
-                <ConfirmButton tone="brand" confirm="Yes, delete it for good">
+                <ConfirmButton tone="bad" confirm="Yes, delete it for good">
                   Delete
                 </ConfirmButton>
               </form>
@@ -542,16 +556,41 @@ export default function OrderCard({
   );
 }
 
+/** One row of the ticket: what it is in the board's `.k` label, what it
+ *  comes to on the right, with the hairline rule between rows. */
+function Money({
+  label,
+  detail = "",
+  value,
+}: {
+  label: string;
+  /** The qualification that used to be folded into the label itself, which
+   *  is how one row grew to three lines of parenthesis. */
+  detail?: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 border-t-[1.5px] border-rule py-2 first:border-t-0 first:pt-0">
+      <dt className="min-w-0">
+        <span className="ticket block text-muted">{label}</span>
+        {detail !== "" && <span className="hint block">{detail}</span>}
+      </dt>
+      <dd className="shrink-0 font-mono text-[14.5px] font-semibold text-ink">{value}</dd>
+    </div>
+  );
+}
+
 function StatusPill({ status }: { status: string }) {
+  /* The board's own tints: green for done, volt for paid and waiting,
+     tomato for money that has not arrived, and grey for an order that is
+     no longer going anywhere. */
   const tone =
     status === "pending"
-      ? "bg-brand-tint text-brand-dark"
-      : status === "refunded" || status === "cancelled"
-        ? "bg-black/5 text-muted"
-        : "bg-mint/10 text-mint";
-  return (
-    <span className={`mt-1 inline-block rounded-full px-2.5 py-1 text-xs font-bold ${tone}`}>
-      {status === "pending" ? "Unpaid" : status}
-    </span>
-  );
+      ? "bg-brand/15 text-brand-dark"
+      : status === "paid"
+        ? "bg-volt text-ink"
+        : status === "refunded" || status === "cancelled"
+          ? "bg-wash text-muted"
+          : "bg-mint/10 text-mint";
+  return <span className={`tag ${tone}`}>{status === "pending" ? "unpaid" : status}</span>;
 }

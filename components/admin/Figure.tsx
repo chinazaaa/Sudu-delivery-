@@ -36,7 +36,7 @@ export default function Figure({
       >
         {value}
       </p>
-      {detail && <p className="mt-1 text-[12.5px] leading-[1.35] text-muted">{detail}</p>}
+      {detail && <p className="hint mt-1">{detail}</p>}
     </div>
   );
 }

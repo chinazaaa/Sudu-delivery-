@@ -124,6 +124,11 @@ body {
   .btn-admin-bad {
     @apply border-brand-dark text-brand-dark hover:bg-brand-tint hover:text-brand-dark;
   }
+  /* The same button standing on the Ink bar, where a 2px Ink outline is
+     invisible and white fill would be a row of headlights. */
+  .btn-admin-dark {
+    @apply border-[#4a443c] bg-transparent text-shell hover:bg-white/10;
+  }
   .pill-admin {
     @apply inline-flex min-h-[38px] items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-ink bg-paper px-3.5 text-sm font-semibold transition;
   }

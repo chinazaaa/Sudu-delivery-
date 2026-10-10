@@ -17,20 +17,29 @@ export default function ConfirmButton({
   /** What the button says once it is asking. */
   confirm: string;
   className?: string;
-  /** "bare" drops the chip styling, for the small inline × and Remove links. */
-  tone?: "quiet" | "brand" | "bare";
+  /** "bare" drops the chip styling, for the small inline × and Remove
+   *  links. "admin" and "bad" are the board's own sizes, thirty-four pixels
+   *  rather than the shop's forty-four, for an action that sits inside a row
+   *  of other actions; "bad" is the destructive one, which the design system
+   *  draws as an outline and never filled. */
+  tone?: "quiet" | "brand" | "bare" | "admin" | "bad";
 }) {
   const [asking, setAsking] = useState(false);
   const { pending } = useFormStatus();
+
+  const small = tone === "admin" || tone === "bad";
+  const resting = small
+    ? `btn-admin btn-admin-sm ${tone === "bad" ? "btn-admin-bad" : ""}`
+    : tone === "bare"
+      ? ""
+      : "chip border-black/10 bg-white";
 
   if (!asking) {
     return (
       <button
         type="button"
         onClick={() => setAsking(true)}
-        className={`${tone === "bare" ? "" : "chip border-black/10 bg-white"} ${
-          tone === "brand" ? "text-brand" : ""
-        } ${className}`}
+        className={`${resting} ${tone === "brand" ? "text-brand" : ""} ${className}`}
       >
         {children}
       </button>
@@ -42,9 +51,17 @@ export default function ConfirmButton({
       <button
         type="submit"
         disabled={pending}
-        className={`chip border-transparent ${
-          tone === "brand" ? "bg-brand text-white" : "bg-ink text-white"
-        }`}
+        className={
+          small
+            ? `btn-admin btn-admin-sm ${
+                tone === "bad"
+                  ? "border-brand-dark bg-brand-dark text-white hover:bg-brand-dark"
+                  : "border-ink bg-ink text-white hover:bg-ink"
+              }`
+            : `chip border-transparent ${
+                tone === "brand" ? "bg-brand text-white" : "bg-ink text-white"
+              }`
+        }
       >
         {pending ? "…" : confirm}
       </button>

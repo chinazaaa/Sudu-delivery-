@@ -120,28 +120,28 @@ export function Bar({
             name="what"
             value="paid"
             disabled={busy}
-            className="rounded-full border-[1.5px] border-[#4a443c] px-3 py-1.5 text-[13px] font-bold disabled:opacity-50"
+            className="btn-admin btn-admin-sm btn-admin-dark font-bold disabled:opacity-50"
           >
             {busy ? "Working…" : "Mark paid"}
           </button>
           <button
             type="button"
             onClick={() => setShowing(showing === "move" ? "" : "move")}
-            className="rounded-full border-[1.5px] border-[#4a443c] px-3 py-1.5 text-[13px] font-bold"
+            className="btn-admin btn-admin-sm btn-admin-dark font-bold"
           >
             Move to a run
           </button>
           <button
             type="button"
             onClick={() => setShowing(showing === "review" ? "" : "review")}
-            className="rounded-full border-[1.5px] border-[#4a443c] px-3 py-1.5 text-[13px] font-bold"
+            className="btn-admin btn-admin-sm btn-admin-dark font-bold"
           >
             Ask for a review
           </button>
           <button
             type="button"
             onClick={() => setShowing(showing === "pin" ? "" : "pin")}
-            className="rounded-full border-[1.5px] border-[#4a443c] px-3 py-1.5 text-[13px] font-bold"
+            className="btn-admin btn-admin-sm btn-admin-dark font-bold"
           >
             Send PINs
           </button>
@@ -164,7 +164,7 @@ export function Bar({
               name="what"
               value="move"
               disabled={busy}
-              className="rounded-full border-2 border-shell bg-brand px-4 py-1.5 text-[13px] font-bold text-white disabled:opacity-50"
+              className="btn-admin btn-admin-sm border-brand bg-brand text-white disabled:opacity-50"
             >
               Move {ids.length}
             </button>
@@ -192,7 +192,7 @@ export function Bar({
                   href={href}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-full border-[1.5px] border-[#4a443c] px-3 py-1.5 text-[13px] font-semibold"
+                  className="btn-admin btn-admin-sm btn-admin-dark"
                 >
                   {who.name} ↗
                 </a>

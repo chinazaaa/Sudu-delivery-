@@ -109,7 +109,7 @@ export default async function OrdersPage({
       {/* Said here rather than on the order's own page, because that page is
           the one thing that no longer exists. */}
       {query.deleted && (
-        <p className="card mb-4 border-mint/40 bg-mint/10 text-sm font-semibold text-mint">
+        <p className="mb-4 rounded-r-lg border-l-4 border-volt bg-brand-tint px-[11px] py-2.5 text-[13.5px] font-semibold text-brand-dark">
           {query.deleted} is deleted. It is in the deletions log with who did
           it, and everything it held is written down there.
         </p>
@@ -132,7 +132,7 @@ export default async function OrdersPage({
           <Figure
             label="Unpaid"
             value={naira(unpaidTotal)}
-            tone={unpaidTotal > 0 ? "ink" : "mint"}
+            tone={unpaidTotal > 0 ? "brand" : "mint"}
             detail={`${orders.filter((one) => one.status === "pending").length} in this view`}
           />
         )}
@@ -151,12 +151,11 @@ export default async function OrdersPage({
       {/* Arrived here from a promoter. Say so plainly, and give one tap back
           out of it, so a short list is never mistaken for a quiet week. */}
       {query.promoter && (
-        <p className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl bg-brand-tint px-4 py-3 text-sm text-brand-dark">
+        <p className="mb-3 flex flex-wrap items-center gap-2.5 rounded-r-lg border-l-4 border-volt bg-brand-tint px-[11px] py-2.5 text-[13.5px] text-brand-dark">
           <span className="font-semibold">
-            Only orders brought in by{" "}
-            {promoterName ?? query.promoter}
+            Only orders brought in by {promoterName ?? query.promoter}
           </span>
-          <Link href={link({ promoter: "" })} className="chip border-black/10 bg-white">
+          <Link href={link({ promoter: "" })} className="btn-admin btn-admin-sm">
             Show everyone
           </Link>
         </p>
@@ -183,11 +182,7 @@ export default async function OrdersPage({
             <Link
               key={item.value}
               href={link({ status: item.value })}
-              className={`chip px-3.5 text-sm ${
-                tab === item.value
-                  ? "border-ink bg-ink text-shell"
-                  : "border-ink bg-paper"
-              }`}
+              className={`pill-admin ${tab === item.value ? "pill-admin-on" : ""}`}
             >
               {item.label}
               {count !== null && (
@@ -198,7 +193,7 @@ export default async function OrdersPage({
         })}
       </div>
 
-      <form className="mb-4 flex flex-wrap gap-2" action="/admin/orders">
+      <form className="mb-4 flex flex-wrap gap-2.5" action="/admin/orders">
         <input type="hidden" name="status" value={tab} />
         {query.promoter && (
           <input type="hidden" name="promoter" value={query.promoter} />
@@ -207,12 +202,12 @@ export default async function OrdersPage({
           name="q"
           defaultValue={query.q ?? ""}
           placeholder="Name, number or block"
-          className="field grow py-2 text-sm sm:max-w-xs"
+          className="field min-h-[42px] grow border-[1.5px] border-line bg-paper px-3 py-0 text-[14.5px] sm:max-w-xs"
         />
         <select
           name="batch"
           defaultValue={query.batch ?? ""}
-          className="field w-auto grow py-2 text-sm sm:max-w-xs"
+          className="field min-h-[42px] w-auto grow border-[1.5px] border-line bg-paper px-3 py-0 text-[14.5px] sm:max-w-xs"
         >
           <option value="">Every run</option>
           {batches.map((batch) => (
@@ -221,11 +216,11 @@ export default async function OrdersPage({
             </option>
           ))}
         </select>
-        <button className="btn-quiet px-4 py-2 text-sm">Filter</button>
+        <button className="btn-admin">Filter</button>
       </form>
 
       {orders.length === 0 ? (
-        <p className="card text-sm text-muted">
+        <p className="card text-[14.5px] text-muted">
           Nothing here yet. Orders appear the moment somebody checks out.
         </p>
       ) : (
@@ -270,21 +265,20 @@ export default async function OrdersPage({
 
           <div className="space-y-3">
             {orders.map((order) => (
-              <div key={order.id} className="flex gap-3">
-                <Tick id={order.id} total={order.total} name={order.customer_name} />
-                <div className="min-w-0 flex-1">
-                  <OrderCard
-                    order={toCard(order, settings, url, bank)}
-                    markPaid={markPaid}
-                    markDelivered={markDelivered}
-                    refund={refundOrder}
-                    cancel={cancelOrder}
-                    remove={deleteOrder}
-                    savePaymentLink={savePaymentLink}
-                    saveNote={saveOrderNote}
-                  />
-                </div>
-              </div>
+              <OrderCard
+                key={order.id}
+                order={toCard(order, settings, url, bank)}
+                lead={
+                  <Tick id={order.id} total={order.total} name={order.customer_name} />
+                }
+                markPaid={markPaid}
+                markDelivered={markDelivered}
+                refund={refundOrder}
+                cancel={cancelOrder}
+                remove={deleteOrder}
+                savePaymentLink={savePaymentLink}
+                saveNote={saveOrderNote}
+              />
             ))}
           </div>
         </Picking>
