@@ -1149,6 +1149,14 @@ export async function waitingCounts(): Promise<Record<string, number>> {
       .is("handled_at", null);
     if (left && left > 0) out["/admin/carts"] = left;
 
+    // Somebody asking to promote the shop and waiting on an answer. An
+    // application nobody answered is worse than one turned down.
+    const { count: asking } = await db()
+      .from("promoter_applications")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "new");
+    if (asking && asking > 0) out["/admin/applications"] = asking;
+
     return out;
   } catch {
     // A number on a menu is never worth failing a page over.

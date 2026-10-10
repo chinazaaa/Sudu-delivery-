@@ -38,6 +38,8 @@ import {
 } from "@/lib/skincare-import";
 import { skincareShelves } from "@/lib/skincare";
 import { areaText } from "@/lib/areas";
+import { codeFrom } from "@/lib/promoter-applications";
+import { typicalRate } from "@/lib/promoters";
 import {
   ATTACHMENT_LIMIT,
   emailList,
@@ -4263,4 +4265,70 @@ export async function doManyOrders(
   }
 
   return { error: "That is not something this can do.", done: null };
+}
+
+/**
+ * Answering somebody who asked to promote the shop.
+ *
+ * Approving writes a promoters row and marks the application approved; the
+ * two are kept apart so an application is a record of what was asked and
+ * decided, not a half-made promoter. Declining keeps the row too, so next
+ * term somebody can see who was turned down and why they might say yes now.
+ *
+ * The PIN and the link are not sent from here. They go out on WhatsApp like
+ * every other message this shop sends, from the promoters page, by hand.
+ */
+export async function decideApplication(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const id = String(form.get("id") ?? "");
+  const yes = String(form.get("decision") ?? "") === "approve";
+  if (id === "") return;
+
+  const { data } = await db()
+    .from("promoter_applications")
+    .select("name, phone, status")
+    .eq("id", id)
+    .maybeSingle();
+  const asked = data as { name: string; phone: string; status: string } | null;
+  if (!asked || asked.status !== "new") return;
+
+  let code = "";
+
+  if (yes) {
+    const { data: already } = await db().from("promoters").select("code");
+    const taken = ((already ?? []) as { code: string }[]).map((one) =>
+      one.code.toLowerCase()
+    );
+    code = codeFrom(asked.name, taken);
+
+    const { error } = await db()
+      .from("promoters")
+      .insert({
+        code: code.toUpperCase(),
+        handle: code,
+        name: asked.name,
+        phone: asked.phone,
+        rate: await typicalRate(),
+        active: true,
+        pin: String(Math.floor(1000 + Math.random() * 9000)),
+        bank_name: "",
+        bank_account_name: "",
+        bank_account_number: "",
+      });
+    // A code that collided in the moment between reading and writing leaves
+    // the application alone rather than marking it answered.
+    if (error) return;
+  }
+
+  await db()
+    .from("promoter_applications")
+    .update({
+      status: yes ? "approved" : "declined",
+      code: code.toUpperCase(),
+      decided_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  revalidatePath("/admin", "layout");
 }

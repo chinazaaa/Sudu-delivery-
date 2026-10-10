@@ -45,6 +45,7 @@ const GROUPS: Group[] = [
   {
     name: "Requests",
     items: [
+      { href: "/admin/applications", label: "Applications" },
       { href: "/admin/requests", label: "Asked for" },
       { href: "/admin/wishes", label: "Wishes" },
       { href: "/admin/links", label: "Checkout links" },
