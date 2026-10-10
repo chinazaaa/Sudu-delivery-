@@ -1,7 +1,14 @@
 import PageHeader from "@/components/admin/PageHeader";
 import AdminLive from "@/components/admin/AdminLive";
 import Link from "next/link";
-import { abandonedCarts, closedCarts, type SavedCart } from "@/lib/carts";
+import {
+  abandonedCarts,
+  closedCarts,
+  hushedCarts,
+  hushNote,
+  QUIET_DAYS,
+  type SavedCart,
+} from "@/lib/carts";
 import { getSettings } from "@/lib/settings";
 import { isOrderable } from "@/lib/batches";
 import { db } from "@/lib/supabase";
@@ -9,7 +16,13 @@ import type { Batch } from "@/lib/types";
 import { whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
 import { agoLabel, countdown } from "@/lib/time";
-import { closeCart, deleteCart, deleteClosedCarts, reopenCart } from "../actions";
+import {
+  closeCart,
+  deleteCart,
+  deleteClosedCarts,
+  nudgeNumberAgain,
+  reopenCart,
+} from "../actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import ActionButton from "@/components/admin/ActionButton";
 
@@ -21,13 +34,12 @@ const CHART_DAYS = 28;
 /**
  * What happened, and what saying so actually does.
  *
- * The board writes a consequence under three of these, and two of those
- * consequences are not built: nothing stops nudging a person for a fortnight
- * and nothing marks a number bad, because both would have to happen inside
- * the query that finds abandoned carts and that lives outside this page. So
- * the hint says what closing really does, rather than promising a rule that
- * does not exist. The price one is worded to the thing that is true: the
- * reason is kept, and the chart at the foot of the page counts it.
+ * Two of these promise a consequence, and both are now carried out in the
+ * query that finds abandoned carts rather than here: not interested holds
+ * the number quiet for a fortnight, and a wrong number is left alone for
+ * good. They are worded as the promises they are again, because they are
+ * kept. The price one is worded to the thing that is true of it: the reason
+ * is kept, and the chart at the foot of the page counts it.
  */
 const REASONS = [
   {
@@ -36,7 +48,7 @@ const REASONS = [
   },
   {
     label: "Not interested",
-    hint: "They said no. The cart comes off the list and nothing more is sent.",
+    hint: `They said no. Nothing is nudged to them for ${QUIET_DAYS / 7} weeks.`,
   },
   {
     label: "Ordered another way",
@@ -48,7 +60,7 @@ const REASONS = [
   },
   {
     label: "Wrong number",
-    hint: "The number does not work, so nothing more is sent to this cart.",
+    hint: "The number does not work. It is never nudged again.",
   },
 ];
 
@@ -80,9 +92,10 @@ export default async function CartsPage({
   const settings = await getSettings();
   const minutes = settings.abandon_minutes || 45;
 
-  const [unhandled, done] = await Promise.all([
+  const [unhandled, done, hushed] = await Promise.all([
     abandonedCarts(minutes),
     closedCarts(),
+    hushedCarts(),
   ]);
 
   /*
@@ -339,6 +352,12 @@ export default async function CartsPage({
                   ) : (
                     <span className="tag bg-wash text-ink">run closed</span>
                   )}
+                  {/* Why this number will not be on the open list again,
+                      said on the card that took it off. Somebody looking for
+                      a person who has stopped appearing starts here. */}
+                  {hushNote(cart) !== "" && (
+                    <span className="tag bg-wash text-ink">{hushNote(cart)}</span>
+                  )}
                   {cart.alerted_at && (
                     <span className="hint ml-auto">In the recap</span>
                   )}
@@ -503,6 +522,61 @@ export default async function CartsPage({
             </ConfirmButton>
           </form>
         </div>
+      )}
+
+      {/*
+        Who is not being nudged, and the way back.
+
+        Two of the five reasons take a number off the chase list: for a
+        fortnight, or for good. Neither is visible anywhere else, and a rule
+        that quietly removes people is only honest if it can be seen and
+        undone. The obvious case is the number that was typed wrong: the
+        nudge never arrives, the number gets marked, and that cart would
+        never come back without this.
+
+        Folded, with the count in the summary, because on most days the
+        answer is a number and not a list.
+      */}
+      {hushed.length > 0 && (
+        <details className="soft mt-3.5 p-3.5 [&_summary::-webkit-details-marker]:hidden">
+          <summary className="cursor-pointer list-none">
+            <span className="block text-sm font-bold">
+              {hushed.length} number{hushed.length === 1 ? "" : "s"} not being
+              nudged
+            </span>
+            <span className="hint mt-1 block">
+              Closed as not interested, or as a wrong number. They are left
+              off every list on this page and out of the recap. ▾
+            </span>
+          </summary>
+          <ul className="mt-2.5 space-y-2.5 border-t-[1.5px] border-rule pt-2.5">
+            {hushed.map((cart) => (
+              <li key={cart.id} className="flex flex-wrap items-center gap-2">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[14.5px] font-semibold">
+                    {cart.name || "No name given"}
+                  </span>
+                  <span className="hint block">
+                    {cart.phone} · {hushNote(cart)}
+                  </span>
+                </span>
+                <form action={nudgeNumberAgain}>
+                  <input type="hidden" name="cart_id" value={cart.id} />
+                  <ActionButton
+                    className="btn-admin btn-admin-sm min-h-[44px] px-3"
+                    done="Back on ✓"
+                  >
+                    Nudge again
+                  </ActionButton>
+                </form>
+              </li>
+            ))}
+          </ul>
+          <p className="hint mt-2.5 leading-[1.5]">
+            Nudging again clears the mark on that number and leaves the cart
+            closed. A number typed wrong is the usual reason to.
+          </p>
+        </details>
       )}
 
       {/* Why they get left, read off the reasons that were actually stored.

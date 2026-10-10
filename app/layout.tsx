@@ -13,6 +13,7 @@ import SiteFooter from "@/components/SiteFooter";
 import { offerNudge, publicOffer } from "@/lib/coupons";
 import { googleLinks, googleTagId, instagramLink, safeSettings } from "@/lib/settings";
 import { liveRibbon } from "@/lib/ribbon";
+import { closureNotice, closureSaid } from "@/lib/closures";
 import { qrSvg } from "@/lib/qr";
 import { siteUrl } from "@/lib/admin-templates";
 import { cookies } from "next/headers";
@@ -83,6 +84,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     text: settings.ribbon_text,
     href: settings.ribbon_href,
   }));
+  // A break the shop is on, or one starting inside the days anybody can
+  // order into. Caught rather than left to throw: every page of the site
+  // renders through here, and a list of days off is not worth taking the
+  // shop down over.
+  const closed = await closureNotice(settings.order_horizon_days || 7).catch(
+    () => null
+  );
   const instagram = instagramLink(settings.instagram_handle);
   // Where the shop is on Google: the footer link, and the business details
   // a search engine reads below.
@@ -195,6 +203,27 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             it in admin and it goes. */}
         <ShopOnly>
           <Ribbon text={ribbon?.text ?? ""} href={ribbon?.href ?? ""} offer={offer} />
+          {/* A break, said on the way in.
+
+              Without it the shop simply has fewer days in its selector,
+              which reads as a shop that has stopped working rather than one
+              that is shut for the week, and the difference matters to
+              somebody deciding whether to come back. Under the ribbon
+              rather than instead of it: an offer and a closure are both
+              true, and the closure is the one about today, so it sits
+              closer to the page.
+
+              Only ever a closure that is on now or starts inside the days a
+              customer can order into. Further out than that it is not news,
+              and a line along the top of every page learns to be scrolled
+              past before the week it is about. */}
+          {closed && (
+            <div className="border-b-2 border-ink bg-volt px-4 py-2 text-center text-ink">
+              <p className="mx-auto max-w-5xl text-xs font-semibold sm:text-sm">
+                {closureSaid(closed)}
+              </p>
+            </div>
+          )}
         </ShopOnly>
         {/* Above the header, because it is about why they are here at all
             rather than about anything on the page under it. */}

@@ -1,5 +1,6 @@
 import { db } from "./supabase";
 import { naira } from "./money";
+import { dayLabel } from "./time";
 
 export type SavedCart = {
   id: string;
@@ -14,6 +15,10 @@ export type SavedCart = {
   alerted_at: string | null;
   handled_at: string | null;
   handled_reason: string;
+  /** Nothing is nudged to this number until this moment has passed. */
+  quiet_until: string | null;
+  /** The number does not work, so nothing is ever nudged to it again. */
+  bad_number: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -100,10 +105,84 @@ export async function cartConverted(phone: string, batchId: string): Promise<voi
     .is("handled_at", null);
 }
 
+/** How long "not interested" lasts, in days. A fortnight, as the board says. */
+export const QUIET_DAYS = 14;
+
+/** The moment a fortnight of quiet ends, counted from now. */
+export function quietUntil(now: Date = new Date()): string {
+  return new Date(now.getTime() + QUIET_DAYS * 86_400_000).toISOString();
+}
+
+/**
+ * Numbers nobody is to be nudged on, worked out from the marks on their
+ * carts.
+ *
+ * By phone rather than by cart, because that is what the two promises are
+ * about: somebody who said they were not interested on Tuesday has not
+ * changed their mind because they filled another cart on Thursday, and a
+ * number that does not ring does not start ringing because a different run
+ * came round. One cart of theirs carrying either mark is enough to leave
+ * every cart of theirs alone.
+ *
+ * A fortnight that has run out is not quiet any more, which is the whole
+ * point of its being a date and not a flag: nothing has to run at night to
+ * put anybody back on the list.
+ */
+export function hushedPhones(
+  rows: { phone: string; quiet_until: string | null; bad_number: boolean }[],
+  now: Date = new Date()
+): Set<string> {
+  const hushed = new Set<string>();
+  for (const row of rows) {
+    if (row.bad_number) {
+      hushed.add(row.phone);
+      continue;
+    }
+    const until = row.quiet_until ? new Date(row.quiet_until).getTime() : NaN;
+    if (Number.isFinite(until) && until > now.getTime()) hushed.add(row.phone);
+  }
+  return hushed;
+}
+
+/**
+ * Every cart carrying either mark, which is a handful of rows out of all of
+ * them.
+ *
+ * Two plain queries rather than one with an either/or in it. The marks are
+ * read on every pass over the abandoned carts, and the cost of a filter
+ * this layer gets subtly wrong is a promise that quietly stops being kept:
+ * two conditions nobody can misread are worth the second round trip.
+ */
+async function markedCarts(): Promise<SavedCart[]> {
+  const [bad, quiet] = await Promise.all([
+    db().from("carts").select("*").eq("bad_number", true).limit(500),
+    db().from("carts").select("*").not("quiet_until", "is", null).limit(500),
+  ]);
+
+  const rows = new Map<string, SavedCart>();
+  for (const row of [
+    ...((bad.data ?? []) as SavedCart[]),
+    ...((quiet.data ?? []) as SavedCart[]),
+  ]) {
+    rows.set(row.id, row);
+  }
+  // Newest decision first, so the list of numbers being left alone reads
+  // down from the one that was just made.
+  return [...rows.values()].sort((a, b) =>
+    (b.handled_at ?? b.updated_at).localeCompare(a.handled_at ?? a.updated_at)
+  );
+}
+
 /**
  * Carts left untouched for long enough to count as abandoned. A cart is only
  * abandoned once: it is left alone if it converted, if it was already handled,
  * or if the run it belonged to has closed.
+ *
+ * And it is left alone if its number is not to be nudged. Two of the reasons
+ * a cart gets closed promise exactly that, so the promise is kept here rather
+ * than on any one page: the dashboard's left behind figure, the card that
+ * offers to nudge everybody, the nightly recap and the chase list on the
+ * carts page all read this one function, and all four follow from it.
  */
 export async function abandonedCarts(
   minutes: number,
@@ -121,9 +200,30 @@ export async function abandonedCarts(
     .limit(200);
   if (onlyUnalerted) query = query.is("alerted_at", null);
 
-  const { data, error } = await query;
+  const [{ data, error }, marked] = await Promise.all([query, markedCarts()]);
   if (error) throw new Error(error.message);
-  return (data ?? []) as SavedCart[];
+  const hushed = hushedPhones(marked);
+  return ((data ?? []) as SavedCart[]).filter(
+    (cart) => !hushed.has(cart.phone)
+  );
+}
+
+/**
+ * The numbers being left alone, one row each, newest decision first.
+ *
+ * Drawn on the carts page, because that is where somebody wonders why a
+ * person they remember never appears on the list any more. A promise that
+ * quietly removes people is only honest if it can be seen and undone.
+ */
+export async function hushedCarts(): Promise<SavedCart[]> {
+  const marked = await markedCarts();
+  const hushed = hushedPhones(marked);
+  const seen = new Set<string>();
+  return marked.filter((cart) => {
+    if (!hushed.has(cart.phone) || seen.has(cart.phone)) return false;
+    seen.add(cart.phone);
+    return true;
+  });
 }
 
 /** Carts already dealt with, newest first, so a decision can be undone. */
@@ -152,4 +252,51 @@ export function cartLine(cart: SavedCart): string {
     `${cart.name || "Someone"} ${cart.phone} · ${naira(cart.value)} · ` +
     `${cart.items} item${cart.items === 1 ? "" : "s"}: ${cart.summary}`
   );
+}
+
+/**
+ * Puts a number back in the nudging, however it came out of it.
+ *
+ * There has to be a way back. The commonest reason a number is marked wrong
+ * is that it was typed wrong, and the person who typed it is the person who
+ * finds out: a digit short, a nudge that never arrives, and a cart that will
+ * never appear on the list again because of it.
+ *
+ * Both marks go at once, and across every cart that number has, because
+ * that is how they are read. Clearing one cart's would leave the rule in
+ * place wherever the other copy of it sat.
+ */
+export async function freeNumber(cartId: string): Promise<string> {
+  const { data } = await db()
+    .from("carts")
+    .select("phone")
+    .eq("id", cartId)
+    .maybeSingle();
+  const phone = ((data?.phone as string | undefined) ?? "").trim();
+  if (phone === "") return "";
+
+  await db()
+    .from("carts")
+    .update({ quiet_until: null, bad_number: false })
+    .eq("phone", phone);
+  return phone;
+}
+
+/**
+ * Why a number is being left alone, in the words the page prints, and empty
+ * when it is not being left alone at all.
+ *
+ * A date rather than "for two weeks", because the fortnight started whenever
+ * somebody closed that cart and nobody remembers when that was.
+ */
+export function hushNote(
+  cart: { quiet_until: string | null; bad_number: boolean },
+  now: Date = new Date()
+): string {
+  if (cart.bad_number) return "Number marked wrong";
+  const until = cart.quiet_until ? new Date(cart.quiet_until).getTime() : NaN;
+  if (Number.isFinite(until) && until > now.getTime()) {
+    return `Quiet until ${dayLabel(cart.quiet_until as string)}`;
+  }
+  return "";
 }

@@ -41,9 +41,10 @@ type Template = {
  * the same reason: this is the one control in admin with no undo. A starting
  * point, so nobody writes the closing-soon line from scratch for the
  * fortieth time; the phone preview, because the only place a title is too
- * long is on a lock screen, not in a text box; and the list of what has
- * already gone, so two people at two counters do not send the same thing
- * twice in an hour.
+ * long is on a lock screen, not in a text box; and how long ago the last
+ * one went, so two people at two counters do not send the same thing twice
+ * in an hour. The sends themselves are listed beside this form, off the
+ * real history rather than off what this browser has done.
  *
  * On a phone the send button leaves the form and stands on the bottom bar,
  * where the thumb is, which is what every mobile board does with the one
@@ -55,6 +56,7 @@ export default function DealPush({
   links = [],
   skincare = false,
   audience,
+  lastSent = "",
 }: {
   restaurants: Restaurant[];
   /** Boxes somebody has packed, which is the thing most worth a notification:
@@ -66,6 +68,15 @@ export default function DealPush({
   /** How many phones this would reach, so the button can say what pressing
    *  it does rather than "Send it". */
   audience?: number;
+  /**
+   * "Last one went 7 days ago", worked out on the page from the newest send
+   * there is. A sentence rather than a date, because the card it stands in
+   * is a warning and the warning is about how often, not about when.
+   *
+   * Empty until something has been sent, and the card then keeps the advice
+   * it has always carried: there is nothing to be told about yet.
+   */
+  lastSent?: string;
 }) {
   const [state, action, pending] = useActionState<DealPushState, FormData>(sendDealPush, {
     error: null,
@@ -84,37 +95,23 @@ export default function DealPush({
   const [body, setBody] = useState("");
 
   /*
-   * What has gone since this page was opened.
+   * Emptying the boxes once something has gone.
    *
-   * Nothing records a sent deal anywhere, so this is honest about its own
-   * limits: it is what this browser has sent, not a history, and it empties
-   * on a reload. It is still the thing worth having, because the mistake it
-   * prevents is the one that actually happens: sending the same line twice
-   * within the hour while somebody else is doing the same from the counter.
+   * This used to keep its own list of what this browser had sent, because
+   * nothing wrote a send down anywhere. Something does now, and the page
+   * draws the real history beside this form, so the only thing left for the
+   * browser to do is clear the boxes: a second press of the same button
+   * would otherwise send the same line twice.
    */
-  const [gone, setGone] = useState<{ title: string; sent: number; at: string }[]>([]);
   const last = useRef<DealPushState | null>(null);
 
   useEffect(() => {
     if (last.current === state) return;
     last.current = state;
     if (state.sent === null || state.error) return;
-    setGone((before) => [
-      {
-        title,
-        sent: state.sent as number,
-        at: new Date().toLocaleTimeString("en-NG", {
-          hour: "numeric",
-          minute: "2-digit",
-        }),
-      },
-      ...before,
-    ]);
-    // Cleared so the next one starts empty rather than resending what has
-    // just gone on a second press of the same button.
     setTitle("");
     setBody("");
-  }, [state, title]);
+  }, [state]);
 
   /*
    * The board's starting points, built out of what this shop actually has.
@@ -384,38 +381,16 @@ export default function DealPush({
         not an error.
       */}
       <div className="soft border-volt-line bg-brand-tint p-3.5">
-        <p className="text-sm font-bold">Send these sparingly</p>
+        {/* How long ago the last one went, once there is a send to read it
+            off. A fact beats advice: "sparingly" is a thing to agree with
+            and forget, and "went today" is the thing that stops a second
+            one this afternoon. The advice stays underneath either way. */}
+        <p className="text-sm font-bold">{lastSent || "Send these sparingly"}</p>
         <p className="hint mt-1">
           More than about two a week and people turn them off in the app.
           There is no undo once one has gone.
         </p>
       </div>
-
-      {gone.length > 0 && (
-        <div className="card">
-          <p className="ticket text-muted">Sent since you opened this page</p>
-          {gone.map((one, index) => (
-            <div
-              key={`${one.at}-${index}`}
-              className="flex items-start gap-2.5 border-t-[1.5px] border-rule py-3"
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold leading-[1.3]">
-                  {one.title || "No title"}
-                </span>
-                <span className="hint block">
-                  {one.at} · {one.sent} phone{one.sent === 1 ? "" : "s"}
-                </span>
-              </span>
-              <span className="tag shrink-0 bg-mint-tint text-mint">gone</span>
-            </div>
-          ))}
-          <p className="hint mt-2 leading-[1.5]">
-            This browser only, and it empties on a reload. Nothing keeps a
-            record of a sent notification yet.
-          </p>
-        </div>
-      )}
 
       {/* The bar stands above the tab bar and holds the one thing this
           screen is for. The page adds the bottom padding it needs. */}

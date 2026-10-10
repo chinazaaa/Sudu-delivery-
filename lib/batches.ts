@@ -1,5 +1,6 @@
 import { db } from "./supabase";
 import { NOT_ORDERS_SQL } from "./orders";
+import { closedDates } from "./closures";
 import { deliveryWindows, safeSettings } from "./settings";
 import { runSchedule } from "./schedule";
 import { RUN_HORIZON_DAYS, TZ } from "./config";
@@ -171,10 +172,18 @@ export async function openRunsBetween(from: string, to: string): Promise<number>
   // deleted Friday was back within the minute. A skip is how "I do not want
   // that one" survives the next page load.
   const skipped = await skippedRuns(from, to);
+  // Whole days off, which a skip cannot say. A skip is one date and one
+  // slot, so a week away was ten of them typed by hand and a new slot added
+  // to the week filled the holes back in. A closure is the range said once,
+  // it covers every slot in it, and opening a month deliberately leaves it
+  // alone rather than clearing it: a month is opened because the week
+  // changed, not because the break is cancelled.
+  const shut = await closedDates(from, to);
   const missing = rows.filter(
     (row) =>
       !already.has(`${row.run_date}|${row.slot}`) &&
-      !skipped.has(`${row.run_date}|${row.slot}`)
+      !skipped.has(`${row.run_date}|${row.slot}`) &&
+      !shut.has(row.run_date)
   );
   if (missing.length === 0) return 0;
 

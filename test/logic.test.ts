@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
+import { closureSaid, isOn, rangeLabel } from "../lib/closures";
 import { containersIn } from "../lib/containers";
 import { channelOfSite, tidyChannel, tidyHandle } from "../lib/came-from";
 import { weekAround } from "../lib/time";
@@ -41,6 +42,14 @@ import {
   pickOffer,
 } from "../lib/offers";
 import { sameInstant, slotsWorthOffering, windowPhrase } from "../lib/same-day";
+import {
+  daysSince,
+  lastSentLine,
+  ordersAfter,
+  outcomeChip,
+  sendStamp,
+} from "../lib/deal-sends";
+import { hushNote, hushedPhones, quietUntil, QUIET_DAYS } from "../lib/carts";
 import { sayWindow } from "../lib/settings";
 import { sheetAsText } from "../lib/sheet-text";
 import { template, whatsappTo } from "../lib/messages";
@@ -2466,6 +2475,129 @@ test("an iPhone is told about the Home Screen and a desktop is not", () => {
   assert.equal(isApple("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"), false);
 });
 
+
+test("orders are counted only inside the six hours after a send", () => {
+  // The whole claim the notifications page makes is this window, so the
+  // edges of it are the thing worth pinning down. An order placed in the
+  // same second as the send counts, and one placed six hours later to the
+  // second belongs to whatever was sent after it rather than to this one.
+  const sent = "2026-10-03T10:00:00Z";
+  const counted = ordersAfter(sent, [
+    { created_at: "2026-10-03T09:59:59Z", total: 9000 },
+    { created_at: "2026-10-03T10:00:00Z", total: 1000 },
+    { created_at: "2026-10-03T13:30:00Z", total: 2500 },
+    { created_at: "2026-10-03T16:00:00Z", total: 7000 },
+  ]);
+  assert.deepEqual(counted, { orders: 2, value: 3500 });
+});
+
+test("a send with nothing readable on it counts nothing", () => {
+  // A row with a broken moment on it must not count every order the shop
+  // has ever taken, which is what a NaN window would have done.
+  assert.deepEqual(
+    ordersAfter("not a date", [{ created_at: "2026-10-03T10:00:00Z", total: 1000 }]),
+    { orders: 0, value: 0 }
+  );
+  // An order with a broken moment is skipped rather than counted as zero.
+  assert.deepEqual(
+    ordersAfter("2026-10-03T10:00:00Z", [{ created_at: "", total: 1000 }]),
+    { orders: 0, value: 0 }
+  );
+});
+
+test("the outcome chip says orders came after, never that they came from", () => {
+  // It is a correlation and the wording has to stay one: the orders were
+  // placed after the send, which is not the same as because of it.
+  const some = outcomeChip({ orders: 3, value: 12400 });
+  assert.equal(some.label, "3 orders after \u00b7 \u20a612,400");
+  assert.equal(some.good, true);
+  // One order is said as one order, because "1 orders after" is the kind of
+  // thing that makes a reader stop trusting the number beside it.
+  assert.equal(outcomeChip({ orders: 1, value: 900 }).label, "1 order after \u00b7 \u20a6900");
+  // Nothing came of it, which is a quiet night and not an error, so the
+  // chip says so plainly and the page draws it on wash rather than in mint.
+  assert.deepEqual(outcomeChip({ orders: 0, value: 0 }), {
+    label: "No orders after",
+    good: false,
+  });
+});
+
+test("a send is stamped the way the board writes one", () => {
+  // The day first because the list is read downwards, and the clock closed
+  // up because it sits in a line of small print. Lagos time, which is where
+  // the shop and everybody reading this page is.
+  assert.equal(sendStamp("2026-10-03T10:02:00Z"), "Sat 3 Oct, 11:02am");
+  // Nothing readable in, nothing out, so a bad row prints nothing rather
+  // than the epoch.
+  assert.equal(sendStamp("never"), "");
+});
+
+test("the card says how long ago the last one went, and nothing until there is one", () => {
+  const now = new Date("2026-10-10T12:00:00Z");
+  assert.equal(daysSince("2026-10-03T12:00:00Z", now), 7);
+  assert.equal(lastSentLine("2026-10-03T12:00:00Z", now), "Last one went 7 days ago");
+  // Today and yesterday are said as words, because "0 days ago" is not a
+  // thing anybody says out loud.
+  assert.equal(lastSentLine("2026-10-10T08:00:00Z", now), "Last one went today");
+  assert.equal(lastSentLine("2026-10-09T08:00:00Z", now), "Last one went yesterday");
+  // Nothing sent ever, so the card keeps the advice it has always carried
+  // rather than reporting on a send that does not exist.
+  assert.equal(lastSentLine(null, now), "");
+});
+
+test("a number is left alone for a fortnight, and put back by the clock alone", () => {
+  // Not interested means two weeks of quiet. The fortnight is a date on the
+  // cart rather than a flag, so nothing has to run at night to put somebody
+  // back on the list: the moment passes and they are back.
+  const now = new Date("2026-10-10T12:00:00Z");
+  assert.equal(QUIET_DAYS, 14);
+  assert.equal(quietUntil(now), "2026-10-24T12:00:00.000Z");
+
+  const inside = { phone: "08011112222", quiet_until: "2026-10-24T12:00:00Z", bad_number: false };
+  const over = { phone: "08033334444", quiet_until: "2026-10-01T12:00:00Z", bad_number: false };
+  const bad = { phone: "08055556666", quiet_until: null, bad_number: true };
+  const plain = { phone: "08077778888", quiet_until: null, bad_number: false };
+
+  const hushed = hushedPhones([inside, over, bad, plain], now);
+  assert.deepEqual([...hushed].sort(), ["08011112222", "08055556666"]);
+});
+
+test("one cart carrying the mark leaves every cart of that number alone", () => {
+  // The two promises are about a person, not about a cart. Somebody who said
+  // no on Tuesday has not changed their mind because they filled another
+  // cart on Thursday, and the Thursday cart carries no mark of its own.
+  const now = new Date("2026-10-10T12:00:00Z");
+  const hushed = hushedPhones(
+    [
+      { phone: "08011112222", quiet_until: null, bad_number: true },
+      { phone: "08011112222", quiet_until: null, bad_number: false },
+    ],
+    now
+  );
+  assert.equal(hushed.has("08011112222"), true);
+});
+
+test("the carts page can say why a number never appears again", () => {
+  // A rule that quietly removes people is only honest if it can be read, so
+  // every mark has a sentence and anything unmarked has none.
+  const now = new Date("2026-10-10T12:00:00Z");
+  assert.equal(
+    hushNote({ quiet_until: null, bad_number: true }, now),
+    "Number marked wrong"
+  );
+  assert.equal(
+    hushNote({ quiet_until: "2026-10-24T12:00:00Z", bad_number: false }, now),
+    "Quiet until Saturday, 24 Oct"
+  );
+  // A fortnight that has run out is not a reason for anything, so it says
+  // nothing and the cart is back on the list.
+  assert.equal(
+    hushNote({ quiet_until: "2026-10-01T12:00:00Z", bad_number: false }, now),
+    ""
+  );
+  assert.equal(hushNote({ quiet_until: null, bad_number: false }, now), "");
+});
+
 test("no server page imports a value out of a client component", () => {
   /*
    * The bug this catches took the customer book down in production and
@@ -2530,4 +2662,56 @@ test("no server page imports a value out of a client component", () => {
     }
   }
   assert.deepEqual(wrong, []);
+});
+
+test("a closure says its dates the way somebody would read them", () => {
+  // A range inside one month says the month once.
+  assert.equal(rangeLabel("2026-10-26", "2026-10-30", "2026-10-10"), "26 to 30 October");
+  // One day is one date, not a range of it against itself.
+  assert.equal(rangeLabel("2026-10-30", "2026-10-30", "2026-10-10"), "30 October");
+  // Across a month, both months.
+  assert.equal(
+    rangeLabel("2026-10-30", "2026-11-02", "2026-10-10"),
+    "30 October to 2 November"
+  );
+  // Next year is worth saying. This year is not.
+  assert.equal(
+    rangeLabel("2027-01-04", "2027-01-08", "2026-10-10"),
+    "4 to 8 January 2027"
+  );
+  // A date nobody can read is nothing, never a crash.
+  assert.equal(rangeLabel("", "", "2026-10-10"), "");
+});
+
+test("a closure on now counts down, and one ahead names its days", () => {
+  const off = {
+    id: "1",
+    name: "Mid-semester break",
+    starts_on: "2026-10-26",
+    ends_on: "2026-10-30",
+    note: "",
+  };
+
+  assert.equal(isOn(off, "2026-10-27"), true);
+  assert.equal(isOn(off, "2026-10-26"), true);
+  // Both ends are days off, so the last one is still on.
+  assert.equal(isOn(off, "2026-10-30"), true);
+  assert.equal(isOn(off, "2026-10-31"), false);
+  assert.equal(isOn(off, "2026-10-25"), false);
+
+  // Ahead of it, the whole range. Inside it, when it lifts, because that is
+  // the only part anybody standing in it wants.
+  assert.equal(
+    closureSaid(off, "2026-10-20"),
+    "No runs 26 to 30 October · Mid-semester break"
+  );
+  assert.equal(
+    closureSaid(off, "2026-10-27"),
+    "No runs until 30 October · Mid-semester break"
+  );
+  // Unnamed is the days and nothing invented.
+  assert.equal(
+    closureSaid({ ...off, name: "  " }, "2026-10-20"),
+    "No runs 26 to 30 October"
+  );
 });

@@ -140,6 +140,19 @@ export default function SiteFooter({
             belong to their owners, and we are not affiliated with or endorsed
             by them.
           </p>
+          {/* The one door back into admin from the shop.
+              An installed home screen icon opens wherever its manifest says,
+              and the shop's says the front page, so the owner who had
+              installed it from the dashboard landed here with no way back:
+              every link on this page is a customer's. Quiet and at the
+              bottom, because it is one person's door and not a section of
+              the site, and safe to say out loud because what is behind it is
+              a password. */}
+          <p>
+            <Link href="/admin" className="underline underline-offset-2" rel="nofollow">
+              Staff sign in
+            </Link>
+          </p>
         </div>
       </div>
     </footer>

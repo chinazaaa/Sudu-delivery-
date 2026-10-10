@@ -4,6 +4,13 @@ import Panel from "@/components/admin/Panel";
 import SaveButton from "@/components/SaveButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { openUntil } from "@/lib/batches";
+import {
+  bookedInside,
+  closures,
+  isOn,
+  rangeLabel,
+  type Closure,
+} from "@/lib/closures";
 import { runSchedule, WEEKDAYS } from "@/lib/schedule";
 import { DELIVERY_WINDOWS, RUN_HORIZON_DAYS, SLOT_LABEL } from "@/lib/config";
 import { profitBetween, type RunLine } from "@/lib/profit";
@@ -14,8 +21,10 @@ import { areasOfRun } from "@/lib/areas";
 import { lagosToday, runDateLabel } from "@/lib/time";
 import ActionButton from "@/components/admin/ActionButton";
 import {
+  deleteClosure,
   deleteScheduleRun,
   generateRuns,
+  saveClosure,
   saveScheduleRun,
   toggleScheduleRun,
 } from "../actions";
@@ -97,6 +106,88 @@ function nextMonths(count: number): { value: string; label: string }[] {
   });
 }
 
+/** A closure with however many of its runs already have orders on them. */
+type Shut = Closure & { booked: number };
+
+/**
+ * The three questions a closure asks, in one place.
+ *
+ * The add form and every edit form ask exactly the same thing, and a closure
+ * whose name box is called something different in one of them is a closure
+ * that saves blank from one of them.
+ */
+function ClosureFields({ closure }: { closure: Shut | null }) {
+  const at = closure?.id ?? "new";
+  return (
+    <>
+      <div>
+        <label className="label" htmlFor={`closure-name-${at}`}>
+          What to call it
+        </label>
+        <input
+          id={`closure-name-${at}`}
+          name="name"
+          defaultValue={closure?.name ?? ""}
+          placeholder="Mid-semester break"
+          maxLength={80}
+          className="field field-admin"
+        />
+        <p className="hint mt-1">
+          Customers read this, so it is worth saying what it is rather than
+          just that nothing is going.
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="label" htmlFor={`closure-from-${at}`}>
+            First day off
+          </label>
+          <input
+            id={`closure-from-${at}`}
+            name="starts_on"
+            type="date"
+            required
+            defaultValue={closure?.starts_on ?? ""}
+            className="field field-admin"
+          />
+        </div>
+        <div>
+          <label className="label" htmlFor={`closure-to-${at}`}>
+            Last day off
+          </label>
+          <input
+            id={`closure-to-${at}`}
+            name="ends_on"
+            type="date"
+            defaultValue={closure?.ends_on ?? ""}
+            className="field field-admin"
+          />
+          {/* Both ends are days off, which is how anybody says a date range
+              out loud, and the second one empty is one day. */}
+          <p className="hint mt-1">
+            This day is off too. Left empty, it is the one day above.
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <label className="label" htmlFor={`closure-note-${at}`}>
+          Note to yourself
+        </label>
+        <input
+          id={`closure-note-${at}`}
+          name="note"
+          defaultValue={closure?.note ?? ""}
+          maxLength={300}
+          className="field field-admin"
+        />
+        <p className="hint mt-1">Yours only. Never shown to anybody.</p>
+      </div>
+    </>
+  );
+}
+
 /**
  * The pattern every week follows, and how far ahead it is open.
  *
@@ -113,6 +204,16 @@ export default async function SchedulePage() {
   const months = nextMonths(4);
   const horizon = (await safeSettings()).order_horizon_days || 7;
   const areas = await allAreas();
+
+  // Days off, with what is already booked inside each of them: saving a
+  // closure deletes the empty runs in its range and leaves the rest, so the
+  // row has to be able to say that rather than implying the days are clear.
+  const shut: Shut[] = await Promise.all(
+    (await closures()).map(async (off) => ({
+      ...off,
+      booked: await bookedInside(off.starts_on, off.ends_on),
+    }))
+  );
 
   // The week, grouped the way it is read. Days with nothing on them are left
   // out rather than drawn empty: a card saying "Tuesday, no runs" is a card
@@ -515,6 +616,113 @@ export default async function SchedulePage() {
         ))}
       </div>
 
+      {/*
+        Days off, as the board draws them: one row per closure with its
+        dates, and a row at the end for a new one.
+
+        A closure lives here rather than on the runs page because it is a
+        fact about the diary and not about any one run. The week above says
+        what normally happens; this says when it does not.
+      */}
+      <p className="ticket mb-2 mt-3.5 text-muted">Days off</p>
+
+      <div className="card p-3.5 pb-1 sm:px-5 sm:pt-5">
+        {shut.length === 0 && (
+          <p className="hint pb-3">
+            Nothing is closed. Runs open from the week above, {RUN_HORIZON_DAYS}{" "}
+            days ahead, including through a break.
+          </p>
+        )}
+
+        {shut.map((off) => (
+          <details
+            key={off.id}
+            className="border-t-[1.5px] border-rule [&_summary::-webkit-details-marker]:hidden"
+          >
+            <summary className="flex min-h-[48px] cursor-pointer list-none items-center gap-2.5 py-2.5">
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">
+                  {off.name.trim() || "Closed"}
+                </span>
+                <span className="hint block">
+                  {rangeLabel(off.starts_on, off.ends_on)} · no runs
+                  {isOn(off) ? ", on now" : ""}
+                  {off.booked > 0
+                    ? ` · ${off.booked} ${off.booked === 1 ? "run has" : "runs have"} orders on them`
+                    : ", site says so"}
+                </span>
+              </span>
+              <span className="text-[17px] text-muted">›</span>
+            </summary>
+
+            <form action={saveClosure} className="space-y-3 pb-3.5">
+              <input type="hidden" name="closure_id" value={off.id} />
+              <ClosureFields closure={off} />
+              <SaveButton look="btn-admin">Save this closure</SaveButton>
+            </form>
+
+            {/* A run with orders on it is nobody's to delete from here, so
+                the page says what is standing rather than leaving it to be
+                found on the day. */}
+            {off.booked > 0 && (
+              <p className="hint border-t-[1.5px] border-rule py-3">
+                {off.booked === 1 ? "One run" : `${off.booked} runs`} in these
+                days {off.booked === 1 ? "has" : "have"} orders on{" "}
+                {off.booked === 1 ? "it" : "them"} and {off.booked === 1 ? "was" : "were"}{" "}
+                left alone. Cancel or move{" "}
+                {off.booked === 1 ? "it" : "them"} from the{" "}
+                <Link href="/admin/runs" className="font-semibold underline">
+                  runs page
+                </Link>
+                .
+              </p>
+            )}
+
+            <form
+              action={deleteClosure}
+              className="flex items-center gap-2.5 border-t-[1.5px] border-rule py-3"
+            >
+              <input type="hidden" name="closure_id" value={off.id} />
+              <p className="hint flex-1">
+                Removing is forever. The days come back on their own, inside{" "}
+                {RUN_HORIZON_DAYS} days, and further out by opening the month
+                below.
+              </p>
+              <ConfirmButton
+                tone="bad"
+                className="min-h-[44px] shrink-0"
+                confirm="Yes, remove it"
+              >
+                Remove
+              </ConfirmButton>
+            </form>
+          </details>
+        ))}
+
+        <details
+          id="closure"
+          className="scroll-mt-4 border-t-[1.5px] border-rule [&_summary::-webkit-details-marker]:hidden"
+        >
+          <summary className="flex min-h-[48px] cursor-pointer list-none items-center gap-2.5 py-2.5">
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold">Add a closure</span>
+              <span className="hint block">Holidays, exams, travel</span>
+            </span>
+            <span className="text-[19px] text-muted">+</span>
+          </summary>
+
+          <form action={saveClosure} className="space-y-3 pb-3.5">
+            <ClosureFields closure={null} />
+            <SaveButton look="btn-admin">Add these days off</SaveButton>
+            <p className="hint">
+              No run opens on these days and the shop says why on every page.
+              Runs already open inside them are deleted if nothing has been
+              ordered on them, and left alone if anything has.
+            </p>
+          </form>
+        </details>
+      </div>
+
       <div className="mt-3.5 grid items-start gap-[18px] xl:grid-cols-2">
         <Panel
           title="Add a slot"
@@ -644,7 +852,9 @@ export default async function SchedulePage() {
               Opens every run your week calls for across that month. Runs already
               open are left exactly as they are, cancellations included, so this
               is safe to press twice. It also brings back any single run you
-              deleted inside that month.
+              deleted inside that month. Days off are left off: a month is
+              opened because the week changed, not because the break is
+              cancelled.
             </p>
           </form>
         </Panel>

@@ -61,6 +61,8 @@ import { tripForBox } from "@/lib/box-day";
 import { naira, orderRef } from "@/lib/money";
 import { namedPromoters, realPromoter } from "@/lib/promoters";
 import { pushDeal, pushToPhone, tellDelivered } from "@/lib/push";
+import { recordDealSend } from "@/lib/deal-sends";
+import { freeNumber, quietUntil } from "@/lib/carts";
 
 async function assertAdmin(): Promise<void> {
   if (!(await isSignedIn())) throw new Error("Not signed in.");
@@ -1228,6 +1230,113 @@ export async function deleteRun(form: FormData): Promise<void> {
   redirect("/admin/runs");
 }
 
+/*
+ * A stretch of days with no runs on it: a break, exams, a week away.
+ *
+ * Taking a day off one run at a time nearly worked and quietly did not. A
+ * skip is one date and one slot, so a week away is ten of them deleted by
+ * hand, nothing anywhere says why, and the day a night run joins the week
+ * the opener fills every one of those holes back in. A closure is the range
+ * said once: it covers every slot in it, the opener passes over it, opening
+ * a month leaves it alone, and the shop has a name to show for it.
+ *
+ * Saving one also clears what is already open inside it, because a closure
+ * that only stops future runs leaves the three days of this week's runs
+ * sitting there taking orders. Only the empty ones: a run with somebody's
+ * dinner on it is not tidying, and it is left exactly where it is with a
+ * line on the page saying so.
+ */
+export async function saveClosure(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const id = String(form.get("closure_id") ?? "").trim();
+  const name = String(form.get("name") ?? "").trim().slice(0, 80);
+  const note = String(form.get("note") ?? "").trim().slice(0, 300);
+  let from = String(form.get("starts_on") ?? "").trim();
+  let to = String(form.get("ends_on") ?? "").trim();
+
+  const day = /^\d{4}-\d{2}-\d{2}$/;
+  if (!day.test(from)) throw new Error("A closure needs a first day.");
+  // One day off is a closure too, and leaving the second box empty is how
+  // anybody would say so.
+  if (!day.test(to)) to = from;
+  // Typed the wrong way round rather than meant: the dates are what they are
+  // whichever box they went in, and refusing it teaches nothing.
+  if (to < from) [from, to] = [to, from];
+
+  const row = { name, note, starts_on: from, ends_on: to };
+  const { error } = id === ""
+    ? await db().from("run_closures").insert(row)
+    : await db().from("run_closures").update(row).eq("id", id);
+  if (error) throw new Error(`Could not save that closure: ${error.message}`);
+
+  await clearRunsBetween(from, to);
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
+  updateTag("menu");
+}
+
+/**
+ * The empty runs inside a closure, removed.
+ *
+ * Runs with orders on them are left alone and never counted as a problem
+ * here: the page the closure was saved from says how many there are, and
+ * what to do about somebody's dinner is a decision rather than housekeeping.
+ *
+ * Same day cars and parcels are somebody's one trip at a time they chose,
+ * not a run the week called for, so a closure has nothing to say about them.
+ */
+async function clearRunsBetween(from: string, to: string): Promise<void> {
+  const ask = (byKind: boolean) => {
+    const query = db()
+      .from("batches")
+      .select("id")
+      .gte("run_date", from)
+      .lte("run_date", to);
+    return byKind ? query.eq("kind", "run") : query;
+  };
+  let found = await ask(true);
+  if (found.error) found = await ask(false);
+
+  const ids = (found.data ?? []).map((one) => one.id as string);
+  const empty: string[] = [];
+  for (const id of ids) {
+    if ((await orderCount(id)) === 0) empty.push(id);
+  }
+  if (empty.length === 0) return;
+
+  // Failure is not worth throwing over: the closure itself is saved, it
+  // already stops anything new opening, and the runs it could not take are
+  // on the page to be deleted by hand.
+  await removeBatches(empty);
+}
+
+/**
+ * A closure called off.
+ *
+ * Deleting it is all there is to do: the opener makes every run the week
+ * calls for inside three weeks, so the days come back on their own. Further
+ * out than that, the month is opened from the schedule the same way it
+ * always is.
+ */
+export async function deleteClosure(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("closure_id") ?? "").trim();
+  if (id === "") return;
+
+  const { error } = await db().from("run_closures").delete().eq("id", id);
+  if (error) throw new Error(`Could not remove that closure: ${error.message}`);
+
+  // The near days straight away, so the page that comes back has them on it
+  // rather than looking as though nothing happened.
+  await ensureUpcomingBatches();
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
+  updateTag("menu");
+}
+
 /** A real capacity cap. Only set this when the car genuinely fills up. */
 /**
  * Close the books on a run.
@@ -1661,11 +1770,34 @@ export async function saveCustomerName(form: FormData): Promise<void> {
  */
 export async function closeCart(form: FormData): Promise<void> {
   await assertAdmin();
+  const reason = String(form.get("reason") ?? "").trim().slice(0, 120);
+
+  /*
+   * Two of the five reasons promise something, and this is where the promise
+   * is kept.
+   *
+   * "Not interested" means stop nudging this person for a fortnight, so a
+   * date a fortnight out is written down; "Wrong number" means never nudge
+   * this number again, so the number is marked. Everything else closes the
+   * cart and nothing more, which is what those hints say.
+   *
+   * Written against the exact words on the card on purpose. A reason typed
+   * into the box underneath carries no promise, so it carries no
+   * consequence either, even if somebody types the same three syllables.
+   */
+  const consequence =
+    reason === "Not interested"
+      ? { quiet_until: quietUntil() }
+      : reason === "Wrong number"
+        ? { bad_number: true }
+        : {};
+
   await db()
     .from("carts")
     .update({
       handled_at: new Date().toISOString(),
-      handled_reason: String(form.get("reason") ?? "").trim().slice(0, 120),
+      handled_reason: reason,
+      ...consequence,
     })
     .eq("id", String(form.get("cart_id")));
 
@@ -1849,11 +1981,31 @@ export async function cancelGroup(
 /** Closed by mistake, or they came back. It goes back on the list. */
 export async function reopenCart(form: FormData): Promise<void> {
   await assertAdmin();
+  const cartId = String(form.get("cart_id"));
   await db()
     .from("carts")
     .update({ handled_at: null, handled_reason: "" })
-    .eq("id", String(form.get("cart_id")));
+    .eq("id", cartId);
 
+  // Back on the list has to mean back on the list. Two of the reasons stop
+  // the number being nudged at all, and a cart put back with either still
+  // standing would have come off the list again on the way to drawing it.
+  await freeNumber(cartId);
+
+  revalidatePath("/admin", "layout");
+}
+
+/**
+ * Nudge this number again, without reopening anything.
+ *
+ * The cart itself is closed and should stay closed: the fortnight of quiet
+ * and the bad number outlive it, and the thing being undone is the rule, not
+ * the decision about that one cart. A number typed wrong is the case this
+ * exists for.
+ */
+export async function nudgeNumberAgain(form: FormData): Promise<void> {
+  await assertAdmin();
+  await freeNumber(String(form.get("cart_id")));
   revalidatePath("/admin", "layout");
 }
 
@@ -3245,6 +3397,18 @@ export async function sendDealPush(
   if (result.of === 0) {
     return { error: "No phone has the app with deals switched on yet.", sent: null };
   }
+
+  // Written down after it has gone, and never in the way of it going. The
+  // phones have already buzzed by this line: a history that failed the send
+  // it was recording would be worse than no history at all, so the write
+  // swallows everything it can go wrong with.
+  await recordDealSend({
+    title,
+    body,
+    path,
+    sent: result.sent,
+    audience: result.of,
+  });
 
   revalidatePath("/admin/notifications");
   return { error: null, sent: result.sent };
