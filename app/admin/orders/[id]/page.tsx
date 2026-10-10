@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import PageHeader from "@/components/admin/PageHeader";
+import Figure from "@/components/admin/Figure";
+import Panel from "@/components/admin/Panel";
 import Stat from "@/components/admin/Stat";
+import { howPaid, orderStory } from "@/lib/order-story";
 import OrderCard from "@/components/admin/OrderCard";
 import { orderFeed } from "@/lib/admin-data";
 import { getOrder } from "@/lib/orders";
@@ -152,56 +154,108 @@ async function orderPage(id: string, said: string) {
 
   return (
     <div>
-      <PageHeader
-        // The same wording as the card below it and the transfer narration:
-        // #1001a, not #1001 on one screen and #1001a on the next.
-        title={`Order ${shareRef(order, order.shares.length > 0 ? order.shares : [order])}`}
-        // Two people on a gift, and the driver needs the second one. Whoever
-        // paid stays first, because they are who is chased for money.
-        detail={
-          order.deliver_to_name
-            ? `Paid by ${order.customer_name} · ${formatPhone(order.customer_phone)} — ` +
-              `goes to ${order.deliver_to_name} · ${formatPhone(
-                order.deliver_to_phone ?? ""
-              )} · ${order.hostel}`
-            : `${order.customer_name} · ${formatPhone(order.customer_phone)} · ${order.hostel}`
-        }
-        backHref="/admin/orders"
-        backLabel="All orders"
-        actions={
-          <Link
-            href={`/admin/batch/${order.batch_id}`}
-            className="btn-quiet px-4 py-2.5 text-sm"
-          >
-            {runLabel === "" ? "Open its run" : `On ${runLabel}`}
-          </Link>
-        }
-      />
+      <Link
+        href="/admin/orders"
+        className="text-[13.5px] font-semibold text-muted hover:text-brand"
+      >
+        ← All orders
+      </Link>
+
+      <header className="mb-[22px] mt-1.5 flex flex-wrap items-start justify-between gap-3.5">
+        <div className="min-w-0">
+          {/* The same wording as the card below it and the transfer
+              narration: #1001a, not #1001 on one screen and #1001a on the
+              next. */}
+          <h1 className="font-display text-[46px] font-black uppercase leading-[0.95]">
+            Order {shareRef(order, order.shares.length > 0 ? order.shares : [order])}
+          </h1>
+          {/* Two people on a gift, and the driver needs the second one.
+              Whoever paid stays first, because they are who is chased. */}
+          <p className="mt-1.5 text-[14.5px] text-muted">
+            {order.deliver_to_name
+              ? `Paid by ${order.customer_name} · ${formatPhone(order.customer_phone)}, ` +
+                `goes to ${order.deliver_to_name} · ${formatPhone(
+                  order.deliver_to_phone ?? ""
+                )} · ${order.hostel}`
+              : `${order.customer_name} · ${formatPhone(order.customer_phone)} · ${order.hostel}`}
+            {runLabel === "" ? "" : ` · on ${runLabel}`}
+          </p>
+        </div>
+        <Link
+          href={`/admin/batch/${order.batch_id}`}
+          className="btn-quiet px-4 py-2.5 text-sm"
+        >
+          {runLabel === "" ? "Open its run" : `On ${runLabel}`}
+        </Link>
+      </header>
 
       <div
-        className={`mb-4 grid grid-cols-2 gap-3 ${
-          order.discount > 0 ? "sm:grid-cols-5" : "sm:grid-cols-4"
+        className={`mb-[18px] grid gap-3.5 sm:grid-cols-2 ${
+          order.discount > 0 ? "xl:grid-cols-5" : "xl:grid-cols-4"
         }`}
       >
-        <Stat label="Total" value={order.total} money />
-        <Stat label="Food" value={order.subtotal_food} money />
-        <Stat label="Delivery" value={order.fee} money />
+        <Figure label="Total" value={naira(order.total)} />
+        <Figure label="Food" value={naira(order.subtotal_food)} />
+        <Figure label="Delivery" value={naira(order.fee)} />
         {/* Only when there is one, so an ordinary order is not four fifths
-            zeroes. The code is the hint, because the amount alone does not say
-            which offer it came from. */}
+            zeroes. The code is the hint, because the amount alone does not
+            say which offer it came from. */}
         {order.discount > 0 && (
-          <Stat
+          <Figure
             label="Discount"
             value={`−${naira(order.discount)}`}
-            hint={order.coupon_code ?? "No code, taken off by hand"}
+            detail={order.coupon_code ?? "No code, taken off by hand"}
           />
         )}
-        <Stat
+        <Figure
           label="Status"
           value={order.status === "pending" ? "Unpaid" : order.status}
-          tone={order.status === "pending" ? "warn" : "good"}
+          tone={order.status === "pending" ? "ink" : "mint"}
         />
       </div>
+
+      {/* How it went, which the page could never say before: it could tell
+          you what an order is and never what had happened to it. */}
+      <Panel title="How it went" className="mb-4">
+        <ol className="mt-1">
+          {orderStory(
+            {
+              created_at: order.created_at,
+              paid_at: order.paid_at,
+              done_at: order.done_at,
+              rated_at: order.rated_at,
+              status: order.status,
+              payment_method: order.payment_method,
+              paid_into: (order as { paid_into?: string }).paid_into ?? "",
+              hostel: order.hostel,
+              batchStage: order.batch?.stage ?? "",
+              counters: [...new Set(order.lines.map((line) => line.restaurant))],
+            },
+            (iso) => lagosClock(iso)
+          ).map((step, at, all) => (
+            <li key={step.label} className="flex gap-3">
+              <span className="flex flex-none flex-col items-center">
+                <span
+                  className={`size-3.5 rounded-full border-2 border-ink ${
+                    step.done ? "bg-mint" : "border-line bg-line"
+                  }`}
+                />
+                {at < all.length - 1 && (
+                  <span className="min-h-[26px] w-0.5 flex-1 bg-line" />
+                )}
+              </span>
+              <span className="pb-3.5">
+                <span className="block text-[14.5px] font-semibold">{step.label}</span>
+                <span className="block text-[12.5px] text-muted">
+                  {step.label === "Paid" && step.done
+                    ? `${step.when} · ${howPaid(order)}`
+                    : step.when || (step.done ? "Done" : "Not yet")}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </Panel>
 
       {/* Not on a parcel: there are no lines in it to change. */}
       {!order.parcel_route && (
