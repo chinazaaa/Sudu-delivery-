@@ -13,6 +13,8 @@ import { toBatchView } from "@/lib/view";
 import { nextArrival, runArrival } from "@/lib/arrival";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { hoursByDay, safeSettings } from "@/lib/settings";
+import { deliveryIn } from "@/lib/offer-shipping";
+import { parseBands } from "@/lib/fees";
 import { parseAreas } from "@/lib/areas";
 import { activeBands } from "@/lib/settings";
 import { lagosToday } from "@/lib/time";
@@ -94,6 +96,15 @@ export default async function RestaurantPage({
     activeBands(),
   ]);
   const areas = parseAreas(settings.delivery_areas);
+  // What delivery costs from this counter, for the offers below. Every one
+  // of them has to say where it delivers to: an offer that does not is an
+  // offer Google guesses the country of, and it guessed four it has never
+  // heard of us in.
+  const shipping = deliveryIn(
+    parseBands(settings.fee_bands)
+      .map((band) => band.fee)
+      .filter((fee) => fee > 0)
+  );
   const area =
     place.restaurant.areaId === ""
       ? ""
@@ -194,6 +205,7 @@ export default async function RestaurantPage({
                 ? "https://schema.org/InStock"
                 : "https://schema.org/OutOfStock",
               seller: { "@type": "Organization", name: "Sudu" },
+              shippingDetails: shipping,
             },
           },
         })),

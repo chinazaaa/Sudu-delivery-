@@ -10,6 +10,7 @@ import { valueBandsOfEach } from "@/lib/areas-server";
 import { productNotes, safeSettings } from "@/lib/settings";
 import { naira } from "@/lib/money";
 import { photoOf } from "@/lib/product-photo";
+import { deliveryIn } from "@/lib/offer-shipping";
 
 export const dynamic = "force-dynamic";
 
@@ -108,51 +109,7 @@ export default async function ProductPage({
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
       seller: { "@type": "Organization", name: "Sudu" },
-      shippingDetails: {
-        "@type": "OfferShippingDetails",
-        shippingRate: {
-          "@type": "MonetaryAmount",
-          currency: "NGN",
-          minValue: fees.length > 0 ? Math.min(...fees) : 0,
-          maxValue: fees.length > 0 ? Math.max(...fees) : 0,
-        },
-        shippingDestination: {
-          "@type": "DefinedRegion",
-          addressCountry: "NG",
-          addressRegion: "Lagos",
-        },
-        deliveryTime: {
-          "@type": "ShippingDeliveryTime",
-          /*
-           * The waiting is all in the handling, and none of it is in the
-           * transit.
-           *
-           * These two mean different things and the difference is the whole
-           * of how this shop works. Handling is order placed to shipment
-           * ready, which here is waiting for the next car: nothing at all
-           * before the midday cut-off, and at most until tomorrow for an
-           * order placed after it. Transit is the drive, and the drive is
-           * Sangotedo to PAU on the same afternoon, every time.
-           *
-           * It used to say nought to two days of transit, which described
-           * a courier we are not. The same pair of numbers is set on the
-           * shipping service in Merchant Center, because two different
-           * answers to one question is its own kind of wrong.
-           */
-          handlingTime: {
-            "@type": "QuantitativeValue",
-            minValue: 0,
-            maxValue: 1,
-            unitCode: "DAY",
-          },
-          transitTime: {
-            "@type": "QuantitativeValue",
-            minValue: 0,
-            maxValue: 0,
-            unitCode: "DAY",
-          },
-        },
-      },
+      shippingDetails: deliveryIn(fees),
     },
   };
 
