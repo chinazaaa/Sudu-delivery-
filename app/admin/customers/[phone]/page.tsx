@@ -14,7 +14,14 @@ import { formatPhone } from "@/lib/phone";
 import { SLOT_LABEL } from "@/lib/config";
 import { runDateLabel } from "@/lib/time";
 import { namedPromoters } from "@/lib/promoters";
-import { saveCustomerName, saveCustomerNote, setCustomerPromoter, setCustomerReviewed } from "../../actions";
+import ConfirmButton from "@/components/admin/ConfirmButton";
+import {
+  deleteCustomer,
+  saveCustomerName,
+  saveCustomerNote,
+  setCustomerPromoter,
+  setCustomerReviewed,
+} from "../../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -25,16 +32,21 @@ function Tag({
   tone = "shell",
 }: {
   children: React.ReactNode;
-  tone?: "shell" | "mint" | "warn" | "volt";
+  /** The board's five chip grounds. A chip ground is a colour of its own
+   *  rather than a solid at ten per cent, which is the solid over whatever
+   *  the page happens to be sitting on. */
+  tone?: "shell" | "mint" | "quiet" | "volt" | "bad";
 }) {
   const skin =
     tone === "mint"
-      ? "bg-mint/10 text-mint"
-      : tone === "warn"
-        ? "bg-brand-tint text-brand-dark"
-        : tone === "volt"
-          ? "bg-volt text-ink"
-          : "bg-shell text-muted";
+      ? "bg-mint-tint text-mint"
+      : tone === "quiet"
+        ? "bg-brand-tint text-amber-deep"
+        : tone === "bad"
+          ? "bg-brand-wash text-brand-dark"
+          : tone === "volt"
+            ? "bg-volt text-ink"
+            : "bg-wash text-ink";
   return <span className={`tag ${skin}`}>{children}</span>;
 }
 
@@ -125,19 +137,24 @@ export default async function CustomerPage({
         actions={
           <>
             {person.pin !== "" && (
-              <a href={sendPin} target="_blank" rel="noopener noreferrer" className="btn-quiet">
+              <a href={sendPin} target="_blank" rel="noopener noreferrer" className="btn-admin">
                 Send their PIN
               </a>
             )}
             {askReview !== "" && !person.reviewed && (
-              <a href={askReview} target="_blank" rel="noopener noreferrer" className="btn-quiet">
+              <a href={askReview} target="_blank" rel="noopener noreferrer" className="btn-admin">
                 Ask for a review
               </a>
             )}
-            <a href={`tel:${person.phone}`} className="btn-quiet">
+            <a href={`tel:${person.phone}`} className="btn-admin">
               Call
             </a>
-            <a href={message} target="_blank" rel="noopener noreferrer" className="btn">
+            <a
+              href={message}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-admin-go"
+            >
               Message {greeting || "them"}
             </a>
           </>
@@ -156,7 +173,7 @@ export default async function CustomerPage({
         {person.orders.length === 0 ? (
           <Tag>No orders yet</Tag>
         ) : quiet !== null && quiet > 30 ? (
-          <Tag tone="warn">{quiet} days quiet</Tag>
+          <Tag tone="quiet">{quiet} days quiet</Tag>
         ) : person.orders.length > 1 ? (
           <Tag tone="mint">Regular</Tag>
         ) : (
@@ -235,9 +252,19 @@ export default async function CustomerPage({
         <Panel
           title="Every order"
           aside={
-            <span className="text-[12.5px] text-muted">
-              {person.orders.length} order{person.orders.length === 1 ? "" : "s"}
-              {person.refunded > 0 && ` · ${person.refunded} refunded`}
+            <span className="flex items-center gap-2.5">
+              <span className="hint">
+                {person.orders.length} order{person.orders.length === 1 ? "" : "s"}
+                {person.refunded > 0 && ` · ${person.refunded} refunded`}
+              </span>
+              {/* The same orders in the orders book, where they can be worked
+                  on rather than only read. */}
+              <Link
+                href={`/admin/orders?status=all&q=${encodeURIComponent(person.phone)}`}
+                className="btn-admin btn-admin-sm"
+              >
+                In the orders book
+              </Link>
             </span>
           }
         >
@@ -273,7 +300,7 @@ export default async function CustomerPage({
                           <Tag
                             tone={
                               order.status === "refunded"
-                                ? "warn"
+                                ? "bad"
                                 : order.status === "pending"
                                   ? "shell"
                                   : "mint"
@@ -288,7 +315,7 @@ export default async function CustomerPage({
                         <td className="py-[11px] text-right">
                           <Link
                             href={`/admin/orders/${order.id}`}
-                            className="chip border-black/10 bg-white py-1.5 text-[13px]"
+                            className="btn-admin btn-admin-sm"
                           >
                             Open →
                           </Link>
@@ -318,7 +345,7 @@ export default async function CustomerPage({
                 </div>
                 <Link
                   href={`/admin/customers?by=${encodeURIComponent(promoter.code)}`}
-                  className="chip shrink-0 border-black/10 bg-white py-1.5 text-[13px]"
+                  className="btn-admin btn-admin-sm shrink-0"
                 >
                   Open →
                 </Link>
@@ -418,7 +445,7 @@ export default async function CustomerPage({
                 placeholder="Allergic to nothing, calls rather than messages"
                 className="field min-h-[76px] py-2.5"
               />
-              <SaveButton>Save note</SaveButton>
+              <SaveButton look="btn-admin btn-admin-sm">Save note</SaveButton>
             </form>
           </Panel>
 
@@ -434,7 +461,7 @@ export default async function CustomerPage({
                 placeholder="What to call them"
                 className="field grow py-2 text-sm"
               />
-              <SaveButton className="shrink-0 px-4 py-2 text-sm">Save</SaveButton>
+              <SaveButton look="btn-admin btn-admin-sm" className="shrink-0">Save</SaveButton>
             </form>
           </Panel>
 
@@ -458,7 +485,7 @@ export default async function CustomerPage({
                     </option>
                   ))}
                 </select>
-                <SaveButton className="shrink-0 px-4 py-2 text-sm">Save</SaveButton>
+                <SaveButton look="btn-admin btn-admin-sm" className="shrink-0">Save</SaveButton>
               </form>
             </Panel>
           )}
@@ -468,14 +495,34 @@ export default async function CustomerPage({
               <input type="hidden" name="phone" value={person.phone} />
               <input type="hidden" name="reviewed" value={String(!person.reviewed)} />
               <ActionButton
-                className={`chip py-2 ${
-                  person.reviewed ? "border-mint/40 bg-mint/10 text-mint" : "border-black/10 bg-white"
+                className={`btn-admin btn-admin-sm ${
+                  person.reviewed ? "border-mint bg-mint-tint text-mint" : ""
                 }`}
                 done="Done ✓"
               >
                 {person.reviewed ? "Reviewed ✓" : "Mark reviewed on Google"}
               </ActionButton>
             </form>
+          )}
+
+          {/* Testing a checkout makes a customer, so a shop that has been
+              tested has a book mostly of itself. Anybody who has ordered
+              stays: their orders point at this number, and the action refuses
+              them anyway. It lives here rather than in the book's table
+              because a row of eight people is the wrong place to put the one
+              button that cannot be undone. */}
+          {person.orders.length === 0 && (
+            <Panel title="Delete them" detail="Only while there is no order behind them.">
+              <form action={deleteCustomer} className="mt-1">
+                <input type="hidden" name="phone" value={person.phone} />
+                <ConfirmButton
+                  tone="bad"
+                  confirm={`Yes, delete ${person.name || person.phone}`}
+                >
+                  Delete {person.name || formatPhone(person.phone)}
+                </ConfirmButton>
+              </form>
+            </Panel>
           )}
         </div>
       </div>

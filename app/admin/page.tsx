@@ -188,7 +188,7 @@ export default async function AdminHome() {
   const topped = Math.max(1, ...(stats?.topItems ?? []).map((one) => one.qty));
   const dot = {
     red: "bg-brand-dark",
-    amber: "bg-[#c9961b]",
+    amber: "bg-amber",
     ink: "bg-ink",
     volt: "bg-volt",
   } as const;
@@ -206,11 +206,14 @@ export default async function AdminHome() {
         }
         actions={
           <>
-            <Link href="/admin/runs?new=1" className="btn-quiet px-4 py-2.5 text-sm">
+            {/* The board's two sizes: an outline button for the second thing,
+                and the one tomato button on the screen for the run being
+                driven. */}
+            <Link href="/admin/runs?new=1" className="btn-admin">
               New run
             </Link>
             {working && (
-              <Link href={`/admin/batch/${working.id}`} className="btn-primary px-4 py-2.5 text-sm">
+              <Link href={`/admin/batch/${working.id}`} className="btn-admin-go">
                 Open {workingLabel.toLowerCase()} →
               </Link>
             )}
@@ -254,13 +257,11 @@ export default async function AdminHome() {
           detail="Everything here costs you money if it is left. Clearing the list is the whole job."
           aside={
             jobs.length > 0 ? (
-              <span className="chip border-0 bg-[#fbe0dc] px-2.5 py-0.5 text-xs text-brand-dark">
+              <span className="tag bg-brand-wash text-brand-dark">
                 {jobs.length} thing{jobs.length === 1 ? "" : "s"}
               </span>
             ) : (
-              <span className="chip border-0 bg-[#dff0e6] px-2.5 py-0.5 text-xs text-mint">
-                All clear
-              </span>
+              <span className="tag bg-mint-tint text-mint">All clear</span>
             )
           }
         >
@@ -278,13 +279,9 @@ export default async function AdminHome() {
                 <span aria-hidden className={`size-2.5 shrink-0 rounded-full ${dot[job.tone]}`} />
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-bold">{job.title}</p>
-                  <p className="text-[12.5px] text-muted">{job.detail}</p>
+                  <p className="hint">{job.detail}</p>
                 </div>
-                <Link
-                  href={job.action.href}
-                  className="btn-quiet shrink-0 px-3 text-[13px]"
-                  style={{ minHeight: 34 }}
-                >
+                <Link href={job.action.href} className="btn-admin btn-admin-sm shrink-0">
                   {job.action.label}
                 </Link>
               </div>
@@ -315,17 +312,13 @@ export default async function AdminHome() {
                 <span className="block font-bold">
                   {runDateLabel(batch.run_date)} · {SLOT_LABEL[batch.slot]}
                 </span>
-                <span className="block text-[12.5px] text-muted">
-                  Closes {clockLabel(batch.cut_off_at)}
-                </span>
+                <span className="hint block">Closes {clockLabel(batch.cut_off_at)}</span>
               </span>
               <span className="text-right">
                 <span className="block font-mono text-sm font-semibold">
                   {batch.paidCount} paid
                 </span>
-                <span className="chip border-0 bg-[#dff0e6] px-2 py-0.5 text-xs text-mint">
-                  open
-                </span>
+                <span className="tag bg-mint-tint text-mint">open</span>
               </span>
             </Link>
           ))}
@@ -357,6 +350,48 @@ export default async function AdminHome() {
           ))}
         </Panel>
 
+        <Panel
+          title="By day of the week"
+          detail="Last 28 days, busiest first. A day near the bottom is a car that went out half full."
+        >
+          {(stats?.byWeekday ?? []).length === 0 ? (
+            <p className="pt-2 text-[14.5px] text-muted">
+              Nothing has been paid for yet, so no day has a figure against it.
+            </p>
+          ) : (
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <th className="pb-2 pr-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                    Day and slot
+                  </th>
+                  <th className="pb-2 pr-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                    Orders
+                  </th>
+                  <th className="pb-2 text-right text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                    Money in
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {(stats?.byWeekday ?? []).slice(0, 7).map((day) => (
+                  <tr key={day.label} className="border-t-[1.5px] border-rule">
+                    <td className="py-[11px] pr-2.5 text-[14.5px] font-bold capitalize">
+                      {day.label}
+                    </td>
+                    <td className="py-[11px] pr-2.5 text-right font-mono text-[14.5px] text-muted">
+                      {day.orders}
+                    </td>
+                    <td className="py-[11px] text-right font-mono text-[14.5px] font-semibold">
+                      {naira(day.gross)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Panel>
+
         <div className="flex flex-col gap-[18px]">
           <Panel title="Profit per run">
             {ran.length === 0 ? (
@@ -381,7 +416,7 @@ export default async function AdminHome() {
                     </div>
                   ))}
                 </div>
-                <p className="border-t-[1.5px] border-rule pt-2 text-[12.5px] text-muted">
+                <p className="hint border-t-[1.5px] border-rule pt-2">
                   Best of these: <strong>{naira(best)}</strong>. Fuller cars, same cost.
                 </p>
               </>
@@ -390,18 +425,16 @@ export default async function AdminHome() {
 
           <Link
             href="/admin/money"
-            className="flex items-center gap-3 rounded-xl border-[1.5px] border-volt-line bg-brand-tint px-4 py-3.5"
+            className="soft flex items-center gap-3 border-volt-line bg-brand-tint px-4 py-3.5"
           >
             <span className="flex-1">
               <strong className="text-[14.5px]">Other money</strong>
-              <span className="block text-[12.5px] text-muted">
+              <span className="hint block">
                 {aside.length} entr{aside.length === 1 ? "y" : "ies"} in the last 28 days,{" "}
                 {naira(asideTotals.made)}
               </span>
             </span>
-            <span className="btn-quiet px-3 text-[13px]" style={{ minHeight: 34 }}>
-              Add one
-            </span>
+            <span className="btn-admin btn-admin-sm">Add one</span>
           </Link>
         </div>
       </div>

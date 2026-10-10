@@ -5,7 +5,7 @@ import { otherMoneyTotals, type OtherMoney } from "./other-money";
 // own copies, and they drifted: food nobody typed into a sheet was counted
 // as having cost nothing, so a half-reconciled run read as a large saving
 // and this page claimed a profit the dashboard never agreed with.
-import { commissionFor, overMenu } from "./admin";
+import { commissionByRun, overMenu } from "./admin";
 import type { Batch, Order } from "./types";
 
 /**
@@ -46,6 +46,37 @@ export type Profit = {
   runs: number;
   /** Every line of other money in the window, newest first. */
   aside: OtherMoney[];
+  /** One line per run in the window, newest first, so the figures above can
+   *  be taken apart by the thing that caused them. */
+  byRun: RunLine[];
+};
+
+/**
+ * One run, and where its money went.
+ *
+ * Took, less what the counters charged, less what the car and the promoters
+ * cost, is the profit on the line: the same arithmetic as the page's working,
+ * at the size somebody can check against a run sheet.
+ */
+export type RunLine = {
+  id: string;
+  runDate: string;
+  slot: Batch["slot"];
+  kind: Batch["kind"];
+  /** Paid orders on it, which is what the money is from. */
+  orders: number;
+  took: number;
+  /** What the counters charged: the menu price, plus anything over it where
+   *  the run has been reconciled. */
+  food: number;
+  /** What is left of the orders after the menu price of the food. */
+  delivery: number;
+  /** Fuel, driver, transport, and the commission earned on it. */
+  costs: number;
+  /** Nothing has been typed in for the car yet, so the profit on this line
+   *  is the best case rather than the figure. */
+  estimated: boolean;
+  profit: number;
 };
 
 const money = (rows: { [key: string]: unknown }[], field: string): number =>
@@ -70,6 +101,7 @@ export async function profitBetween(from: string, to: string): Promise<Profit> {
     profit: 0,
     runs: 0,
     aside: [],
+    byRun: [],
   };
 
   const { data: batchRows } = await db()
@@ -111,16 +143,48 @@ export async function profitBetween(from: string, to: string): Promise<Profit> {
     0
   );
 
-  const [overByRun, commission, aside] = await Promise.all([
+  const [overByRun, owedByRun, aside] = await Promise.all([
     overMenu(batches as unknown as Batch[], orders),
-    commissionFor(paid).then((one) => one.total),
+    commissionByRun(paid),
     asideBetween(from, to),
   ]);
   const over = [...overByRun.values()].reduce((sum, one) => sum + one, 0);
+  const commission = [...owedByRun.values()].reduce((sum, one) => sum + one, 0);
 
   const totals = otherMoneyTotals(aside);
   const margin = gross - foodAtMenu;
   const profit = margin - over - commission - runCosts + totals.made;
+
+  // Newest first: the run somebody is asking about is nearly always the
+  // last one, and a window can be a year long.
+  const byRun: RunLine[] = batches
+    .map((one) => {
+      const id = String(one.id);
+      const mine = paid.filter((order) => String(order.batch_id) === id);
+      const took = money(mine, "total");
+      const menu = money(mine, "subtotal_food");
+      const carried =
+        Number(one.fuel_cost ?? 0) +
+        Number(one.driver_cost ?? 0) +
+        Number(one.transport_cost ?? 0) +
+        Number(one.other_cost ?? 0);
+      const owed = owedByRun.get(id) ?? 0;
+      const beyond = overByRun.get(id) ?? 0;
+      return {
+        id,
+        runDate: String(one.run_date),
+        slot: one.slot as Batch["slot"],
+        kind: one.kind as Batch["kind"],
+        orders: mine.length,
+        took,
+        food: menu + beyond,
+        delivery: took - menu,
+        costs: carried + owed,
+        estimated: carried === 0,
+        profit: Math.round(took - menu - beyond - owed - carried),
+      };
+    })
+    .sort((a, b) => b.runDate.localeCompare(a.runDate));
 
   return {
     from,
@@ -137,6 +201,7 @@ export async function profitBetween(from: string, to: string): Promise<Profit> {
     profit,
     runs: batches.length,
     aside,
+    byRun,
   };
 }
 

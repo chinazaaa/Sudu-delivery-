@@ -7,17 +7,21 @@ export default function CopyText({
   value,
   label,
   className = "",
+  look = "btn-quiet",
 }: {
   value: string;
   label: string;
   className?: string;
+  /** The button underneath. Admin draws its own smaller sizes, so a copy
+   *  button there is `btn-admin btn-admin-sm` rather than the shop's. */
+  look?: string;
 }) {
   const [copied, setCopied] = useState(false);
 
   return (
     <button
       type="button"
-      className={`btn-quiet ${className}`}
+      className={`${look} ${className}`}
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(value);

@@ -427,7 +427,69 @@ export async function commissionFor(
   orders: Pick<Order, "customer_phone" | "box_id">[]
 ): Promise<{ total: number; by: Commission[] }> {
   if (orders.length === 0) return { total: 0, by: [] };
+  const earns = await earningRule(orders);
 
+  const tally = new Map<string, Commission>();
+  for (const order of orders) {
+    const earned = earns(order);
+    if (!earned) continue;
+
+    const now = tally.get(earned.code) ?? {
+      code: earned.code,
+      name: earned.name,
+      orders: 0,
+      amount: 0,
+    };
+    tally.set(earned.code, {
+      ...now,
+      orders: now.orders + 1,
+      amount: now.amount + earned.amount,
+    });
+  }
+
+  const by = [...tally.values()].sort((a, b) => b.amount - a.amount);
+  return { total: by.reduce((sum, one) => sum + one.amount, 0), by };
+}
+
+/**
+ * The same commission, totalled per run.
+ *
+ * The profit page shows a run-by-run table, and every run on it owes its own
+ * commission. Asking `commissionFor` once per run is two queries a run, and
+ * the window on that page can be a year, so the rule is read once here and
+ * the orders are tallied against it in memory.
+ */
+export async function commissionByRun(
+  orders: Pick<Order, "batch_id" | "customer_phone" | "box_id">[]
+): Promise<Map<string, number>> {
+  const owed = new Map<string, number>();
+  if (orders.length === 0) return owed;
+  const earns = await earningRule(orders);
+
+  for (const order of orders) {
+    const earned = earns(order);
+    if (!earned) continue;
+    const key = String(order.batch_id);
+    owed.set(key, (owed.get(key) ?? 0) + earned.amount);
+  }
+  return owed;
+}
+
+/**
+ * Who earns what on an order, read from the database once.
+ *
+ * An order earns for the promoter whose customer it is, at that promoter's
+ * own rate, and an order that came from nobody costs nothing. One copy of
+ * that rule, because the two callers above disagreeing about it is how the
+ * profit page and the run list came to show different money.
+ */
+async function earningRule(
+  orders: Pick<Order, "customer_phone" | "box_id">[]
+): Promise<
+  (order: Pick<Order, "customer_phone" | "box_id">) =>
+    | { code: string; name: string; amount: number }
+    | null
+> {
   const phones = [...new Set(orders.map((one) => one.customer_phone))];
   const [{ data: customers }, { data: promoters }] = await Promise.all([
     db().from("customers").select("phone, promoter_code").in("phone", phones),
@@ -451,33 +513,18 @@ export async function commissionFor(
     ).map((one) => [one.code, one])
   );
 
-  const tally = new Map<string, Commission>();
-  for (const order of orders) {
+  return (order) => {
     const code = broughtBy.get(order.customer_phone) ?? "";
     const promoter = code ? rates.get(code) : undefined;
-    if (!promoter) continue;
-
-    const now = tally.get(code) ?? {
-      code,
-      name: promoter.name || code,
-      orders: 0,
-      amount: 0,
-    };
+    if (!promoter) return null;
     // A box pays its own rate, which is what the promoter's own earnings
     // page has always paid them. Costing it at the ordinary rate here meant
     // the shop's profit was short of what it actually owed.
-    const earns = order.box_id
+    const amount = order.box_id
       ? Number(promoter.box_rate ?? promoter.rate) || promoter.rate
       : promoter.rate;
-    tally.set(code, {
-      ...now,
-      orders: now.orders + 1,
-      amount: now.amount + earns,
-    });
-  }
-
-  const by = [...tally.values()].sort((a, b) => b.amount - a.amount);
-  return { total: by.reduce((sum, one) => sum + one.amount, 0), by };
+    return { code, name: promoter.name || code, amount };
+  };
 }
 
 function sum<T>(rows: T[], pick: (row: T) => number): number {

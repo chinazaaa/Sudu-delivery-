@@ -8,6 +8,11 @@ import { useTransition } from "react";
  * Reordering is the sort of thing you do while looking at the list, on a
  * phone, deciding as you go. Typing 3 into a field and working out what that
  * does to everything else is not that.
+ *
+ * The pair is drawn as the board's row action, which is `btn-admin-sm`: a
+ * 1.5px outline at thirty-four pixels. It used to be a hairline grey square
+ * belonging to no part of the design system, and it sat in a card whose
+ * outline is 2px Ink, so the one control in the row read as a disabled one.
  */
 export default function Reorder({
   action,
@@ -44,13 +49,13 @@ export default function Reorder({
   }
 
   return (
-    <span className="flex shrink-0 flex-col gap-1">
+    <span className="flex shrink-0 flex-col gap-[3px]">
       <button
         type="button"
         onClick={() => move("up")}
         disabled={first || pending}
         aria-label={`Move ${label} up`}
-        className="grid size-8 place-items-center rounded-lg border border-black/10 bg-white text-sm font-bold disabled:opacity-30"
+        className="btn-admin btn-admin-sm px-2 disabled:opacity-30"
       >
         ↑
       </button>
@@ -59,7 +64,7 @@ export default function Reorder({
         onClick={() => move("down")}
         disabled={last || pending}
         aria-label={`Move ${label} down`}
-        className="grid size-8 place-items-center rounded-lg border border-black/10 bg-white text-sm font-bold disabled:opacity-30"
+        className="btn-admin btn-admin-sm px-2 disabled:opacity-30"
       >
         ↓
       </button>

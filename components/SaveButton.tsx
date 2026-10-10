@@ -19,9 +19,19 @@ import { useFormStatus } from "react-dom";
 export default function SaveButton({
   children = "Save",
   className = "",
+  look = "btn-primary",
 }: {
   children?: React.ReactNode;
   className?: string;
+  /**
+   * The button underneath, for pages whose buttons are not the shop's.
+   *
+   * Admin is drawn at its own sizes, forty-four pixels rather than the
+   * shop's fifty-two, so a save button on an admin page has to be able to
+   * be `btn-admin-go` instead. It stays the shop's orange button unless a
+   * page says otherwise, which is every caller that existed before this.
+   */
+  look?: string;
 }) {
   const { pending } = useFormStatus();
   const [saved, setSaved] = useState(false);
@@ -40,7 +50,7 @@ export default function SaveButton({
     <button
       type="submit"
       disabled={pending}
-      className={`btn-primary ${className} ${
+      className={`${look} ${className} ${
         saved ? "!bg-mint !text-white !border-transparent" : ""
       }`}
     >

@@ -78,7 +78,8 @@ export default async function RestaurantsAdmin() {
       items: noPhoto,
       // Tomato Deep rather than Tomato, because this is a number being read
       // on a light ground rather than a button being pressed.
-      colour: "#b8230f",
+      number: "text-brand-dark",
+      bar: "bg-brand-dark",
       fix: "Add the photos",
     },
     {
@@ -86,9 +87,13 @@ export default async function RestaurantsAdmin() {
       count: noWords.length,
       said: "with no description",
       items: noWords,
-      // Amber sits between the two, which is the point: a missing
-      // description costs less than a missing photograph.
-      colour: "#c9961b",
+      // Volt rather than Tomato Deep, because the point is that the two
+      // gaps are not worth the same: a missing description costs less than
+      // a missing photograph. The board draws an amber here and there is no
+      // amber token, so the number stays in Ink and the bar carries the
+      // colour: Volt is a fill in this palette and never text on light.
+      number: "text-ink",
+      bar: "bg-volt",
       fix: "Write the descriptions",
     },
   ].filter((gap) => gap.count > 0);
@@ -102,13 +107,15 @@ export default async function RestaurantsAdmin() {
           <>
             {/* Taking one thing off sale does not need any of this page. It
                 needs a search box, and that is somewhere else. */}
-            <Link href="/admin/stock" className="btn-quiet px-4 py-2.5 text-sm">
+            <Link href="/admin/stock" className="btn-admin">
               Something sold out?
             </Link>
-            {/* The form is at the bottom, under however many restaurants there
-                are, which is the right place for it and the wrong place to have
-                to scroll to. */}
-            <a href="#add" className="btn-primary px-4 py-2.5 text-sm">
+            {/* The board's one red button, and the only thing on this page
+                that is not just looking at what is already here. The form
+                itself is at the bottom, under however many restaurants there
+                are, which is the right place for it and the wrong place to
+                have to scroll to. */}
+            <a href="#add" className="btn-admin-go">
               Add a restaurant
             </a>
           </>
@@ -122,11 +129,13 @@ export default async function RestaurantsAdmin() {
             <h2 className="font-display text-[26px] font-black uppercase leading-none">
               Start with the launch two
             </h2>
-            <p className="mb-3 mt-1 text-[12.5px] text-muted">
+            <p className="hint mb-3 mt-1">
               Adds KFC Novare and Domino&apos;s with their usual items at placeholder
               prices.
             </p>
-            <SaveButton className="w-full">Add KFC and Domino&apos;s</SaveButton>
+            <SaveButton look="btn-admin-go" className="w-full">
+              Add KFC and Domino&apos;s
+            </SaveButton>
           </form>
         </div>
       )}
@@ -139,44 +148,45 @@ export default async function RestaurantsAdmin() {
         >
           <div className="grid items-center gap-[18px] xl:grid-cols-[1fr_auto]">
             <div className="grid gap-3.5 sm:grid-cols-2">
-              {gaps.map((gap) => (
-                <div
-                  key={gap.key}
-                  className="rounded-xl border-[1.5px] border-line bg-paper px-3.5 py-3"
-                >
-                  <div className="flex items-baseline gap-2">
-                    <span
-                      className="font-display text-[34px] font-black leading-none"
-                      style={{ color: gap.colour }}
-                    >
-                      {gap.count}
-                    </span>
-                    <strong className="text-sm">{gap.said}</strong>
-                  </div>
-                  <div className="my-2.5 h-[9px] rounded-full bg-rule">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        background: gap.colour,
-                        width: `${
-                          onSale.length === 0
-                            ? 0
-                            : Math.min(100, Math.round((gap.count / onSale.length) * 100))
-                        }%`,
-                      }}
-                    />
-                  </div>
-                  {/* Which kitchens, and worst first, because the list is a
-                      work order rather than a tally: the one with sixty
-                      missing photographs is the afternoon's job. */}
-                  <p className="text-[12.5px] leading-[1.5] text-muted">
-                    {[...new Set(gap.items.map((item) => item.restaurant_id))]
-                      .map((id) => ({
-                        id,
-                        count: gap.items.filter((item) => item.restaurant_id === id).length,
-                      }))
-                      .sort((a, b) => b.count - a.count)
-                      .map((one, index, all) => (
+              {gaps.map((gap) => {
+                // Worst first, because the list is a work order rather than a
+                // tally: the one with sixty missing photographs is the
+                // afternoon's job, and it is also where the button goes.
+                const byKitchen = [
+                  ...new Set(gap.items.map((item) => item.restaurant_id)),
+                ]
+                  .map((id) => ({
+                    id,
+                    count: gap.items.filter((item) => item.restaurant_id === id).length,
+                  }))
+                  .sort((a, b) => b.count - a.count);
+                return (
+                  <div key={gap.key} className="soft px-3.5 py-3">
+                    <div className="flex items-baseline gap-2">
+                      <span
+                        className={`font-display text-[34px] font-black leading-none ${gap.number}`}
+                      >
+                        {gap.count}
+                      </span>
+                      <strong className="text-sm">{gap.said}</strong>
+                    </div>
+                    <div className="mb-[9px] mt-2 h-[9px] rounded-full bg-rule">
+                      <div
+                        className={`h-full rounded-full ${gap.bar}`}
+                        style={{
+                          width: `${
+                            onSale.length === 0
+                              ? 0
+                              : Math.min(
+                                  100,
+                                  Math.round((gap.count / onSale.length) * 100)
+                                )
+                          }%`,
+                        }}
+                      />
+                    </div>
+                    <p className="hint">
+                      {byKitchen.map((one, index) => (
                         <span key={one.id}>
                           <Link
                             href={`/admin/menu/${one.id}`}
@@ -185,12 +195,24 @@ export default async function RestaurantsAdmin() {
                             {nameOf(one.id)}
                           </Link>{" "}
                           {one.count}
-                          {index < all.length - 1 ? " · " : ""}
+                          {index < byKitchen.length - 1 ? " · " : ""}
                         </span>
                       ))}
-                  </p>
-                </div>
-              ))}
+                    </p>
+                    {/* The board draws an action in the tile. It goes to the
+                        kitchen with the most of them missing, which is where
+                        anybody doing this work would start. */}
+                    {byKitchen[0] && (
+                      <Link
+                        href={`/admin/menu/${byKitchen[0].id}`}
+                        className="btn-admin btn-admin-sm mt-2.5"
+                      >
+                        {gap.fix}
+                      </Link>
+                    )}
+                  </div>
+                );
+              })}
             </div>
             {/* The brand's stripes, which the design system asks a page to
                 carry somewhere. Decorative only, so it is hidden from a
@@ -198,23 +220,22 @@ export default async function RestaurantsAdmin() {
                 worth more than the mark. */}
             <div
               aria-hidden
-              className="hidden h-[150px] w-[112px] rounded-xl border-2 border-ink xl:block"
-              style={{
-                background:
-                  "repeating-linear-gradient(-60deg,#e5321d 0 7px,transparent 7px 16px)",
-              }}
+              className="hidden h-[150px] w-[112px] rounded-xl border-2 border-ink bg-[repeating-linear-gradient(-60deg,theme(colors.brand.DEFAULT)_0_7px,transparent_7px_16px)] xl:block"
             />
           </div>
         </Panel>
       )}
 
-      <p className="mb-2.5 text-[12.5px] text-muted">
+      <p className="hint mb-2.5">
         Up and down to reorder. This is the order a customer sees on the home page.
       </p>
 
       <ul className="mb-[18px] grid gap-3 xl:grid-cols-2">
         {list.map((restaurant, index) => (
-          <li key={restaurant.id} className="card flex items-center gap-3 px-4 py-3.5">
+          <li
+            key={restaurant.id}
+            className="card flex items-center gap-3 px-[15px] py-[13px]"
+          >
             <Link
               href={`/admin/menu/${restaurant.id}`}
               className="flex min-w-0 flex-1 items-center gap-3"
@@ -230,7 +251,7 @@ export default async function RestaurantsAdmin() {
                 <span className="block truncate text-base font-bold">
                   {restaurant.name}
                 </span>
-                <span className="block text-[12.5px] text-muted">
+                <span className="hint block">
                   {countFor(restaurant.id)} item
                   {countFor(restaurant.id) === 1 ? "" : "s"} · closes{" "}
                   {restaurant.closes_at.slice(0, 5)}
@@ -240,10 +261,9 @@ export default async function RestaurantsAdmin() {
             {/* The word as well as the colour. Green on its own is unreadable
                 in sunlight, which is where this page gets opened. */}
             <span
-              className={`chip shrink-0 border-0 px-2.5 py-0.5 text-xs ${
-                restaurant.active ? "bg-[#dff0e6] text-mint" : "bg-wash text-ink"
+              className={`tag shrink-0 ${
+                restaurant.active ? "bg-mint/10 text-mint" : "bg-wash text-ink"
               }`}
-              style={{ minHeight: 0 }}
             >
               {restaurant.active ? "on the site" : "off"}
             </span>
@@ -305,7 +325,7 @@ export default async function RestaurantsAdmin() {
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-muted">
+            <p className="hint mt-1">
               {areas.length === 0
                 ? "Add areas under Settings to put a restaurant further out."
                 : "Decides what delivery costs from here, and whether a car of its own can go at all."}
@@ -313,7 +333,7 @@ export default async function RestaurantsAdmin() {
           </div>
         </div>
         <div className="mt-3.5">
-          <SaveButton>Add restaurant</SaveButton>
+          <SaveButton look="btn-admin-go">Add restaurant</SaveButton>
         </div>
       </form>
     </div>

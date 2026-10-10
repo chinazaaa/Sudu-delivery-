@@ -33,6 +33,21 @@ const config: Config = {
           DEFAULT: "#e5321d",
           dark: "#b8230f",
           tint: "#fff6d6",
+          /** The ground under a red chip: unpaid, refunded, cancelled. */
+          wash: "#fbe0dc",
+        },
+        /*
+         * The three tints the boards fill chips and bars with, which were
+         * being written out as hexes or approximated with an opacity on the
+         * solid colour. A chip ground is its own colour: mint at ten per
+         * cent over shell is not #DFF0E6, it is whatever the page happens
+         * to be sitting on.
+         */
+        amber: {
+          /** The middle of the three severities: worth doing, not urgent. */
+          DEFAULT: "#c9961b",
+          /** Readable on the amber chip ground, where the fill is not. */
+          deep: "#8a5a00",
         },
         volt: {
           DEFAULT: "#ffd23f",
@@ -40,7 +55,10 @@ const config: Config = {
            *  make a note read as an error. */
           line: "#e8d9a8",
         },
-        mint: "#1e7a4c",
+        mint: {
+          DEFAULT: "#1e7a4c",
+          tint: "#dff0e6",
+        },
       },
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
