@@ -1117,3 +1117,29 @@ export function stillOpen(sheet: BatchSheet): string[] {
 export function notPriced(sheet: BatchSheet): number {
   return sheet.summary.reconciled.of - sheet.summary.reconciled.lines;
 }
+
+/**
+ * What is waiting, by the section that deals with it.
+ *
+ * The rail carries a number beside Orders and a dot beside the heading
+ * hiding anything else, so the back of the shop says what needs doing from
+ * whichever page you are on. Counts only, by the cheapest query that
+ * answers them: this runs on every admin page and must never be the reason
+ * one is slow.
+ *
+ * A badge on everything is a badge on nothing, so only the things that cost
+ * money if they are left get one.
+ */
+export async function waitingCounts(): Promise<Record<string, number>> {
+  try {
+    const { count } = await db()
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending");
+
+    return count && count > 0 ? { "/admin/orders": count } : {};
+  } catch {
+    // A number on a menu is never worth failing a page over.
+    return {};
+  }
+}
