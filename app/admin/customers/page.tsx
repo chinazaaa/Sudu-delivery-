@@ -183,6 +183,7 @@ export default async function CustomersPage({
     pin: row.pin,
     spend: row.spend,
     orders: row.orders,
+    reviewed: row.reviewed,
   }));
 
   /*

@@ -120,6 +120,7 @@ export default async function BroadcastPage({
     pin: row.pin,
     spend: row.spend,
     orders: row.orders,
+    reviewed: row.reviewed,
   }));
 
   /*

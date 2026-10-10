@@ -215,6 +215,19 @@ export function Bar({
   };
 
   const phones = picked.map((one) => one.phone);
+  /*
+   * Where the tick stands for the people who are picked.
+   *
+   * It used to be an empty box whatever they were, and marking only ever
+   * went one way, so ticking somebody already ticked did exactly nothing
+   * and looked broken doing it. A box has to say what is true of what it is
+   * pointed at, and then it has to do the other thing when pressed.
+   *
+   * Everybody picked, not some of them: a half-ticked set is not reviewed,
+   * and pressing it should finish the job rather than undo the part already
+   * done.
+   */
+  const allReviewed = picked.length > 0 && picked.every((one) => one.reviewed);
   const asking = held.patterns.some((one) => one.kind === "google")
     ? "google"
     : held.patterns.some((one) => one.kind === "review")
@@ -244,11 +257,18 @@ export function Bar({
             {phones.map((phone) => (
               <input key={phone} type="hidden" name="phone" value={phone} />
             ))}
+            <input type="hidden" name="reviewed" value={String(!allReviewed)} />
             <button
               type="submit"
+              aria-pressed={allReviewed}
               className="flex min-h-[42px] items-center gap-1.5 px-1 text-[13px] font-bold"
             >
-              <span aria-hidden className="tick size-6 text-[13px]" />
+              <span
+                aria-hidden
+                className={`tick size-6 text-[13px] ${allReviewed ? "tick-done" : ""}`}
+              >
+                {allReviewed ? "✓" : ""}
+              </span>
               Reviewed
             </button>
           </form>
@@ -290,11 +310,15 @@ export function Bar({
               {phones.map((phone) => (
                 <input key={phone} type="hidden" name="phone" value={phone} />
               ))}
+              <input type="hidden" name="reviewed" value={String(!allReviewed)} />
               <button
                 type="submit"
-                className="btn-admin btn-admin-sm btn-admin-dark font-bold"
+                aria-pressed={allReviewed}
+                className={`btn-admin btn-admin-sm font-bold ${
+                  allReviewed ? "border-mint bg-mint-tint text-mint" : "btn-admin-dark"
+                }`}
               >
-                Mark reviewed
+                {allReviewed ? "Reviewed ✓" : "Mark reviewed"}
               </button>
             </form>
           )}

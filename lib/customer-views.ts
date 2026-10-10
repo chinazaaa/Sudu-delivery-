@@ -34,6 +34,10 @@ export type Picked = {
   pin: string;
   spend: number;
   orders: number;
+  /** Whether they have been ticked off as having left a Google review, so
+   *  the bar can show the tick as it really stands rather than as an empty
+   *  box over people who are all already ticked. */
+  reviewed: boolean;
 };
 
 /** A template the owner can drop into the box, as the settings have it. */

@@ -1789,16 +1789,23 @@ export async function setCustomerReviewed(form: FormData): Promise<void> {
  * with the reviews that came in this week and works down the list. Doing
  * that one person at a time is the page reloading nine times.
  *
- * Only ever on, never off. Taking a tick back is a correction and
- * corrections are made one at a time, where you can see who you are
- * correcting: a bulk untick is nine mistakes made at once and no way to
- * know which nine.
+ * It goes both ways, because the box beside it says which way it is about
+ * to go. It began as on only, and a tick that cannot come off is a tick
+ * that does nothing at all when the people picked are already ticked, which
+ * is a control you press twice and then report as broken.
  */
 export async function markManyReviewed(form: FormData): Promise<void> {
   await assertAdmin();
 
   const phones = form.getAll("phone").map(String).filter(Boolean);
   if (phones.length === 0) return;
+  const on = form.get("reviewed") !== "false";
+
+  if (!on) {
+    await db().from("customers").update({ reviewed_at: null }).in("phone", phones);
+    revalidatePath("/admin", "layout");
+    return;
+  }
 
   await db()
     .from("customers")
