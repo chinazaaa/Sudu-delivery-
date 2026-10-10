@@ -123,6 +123,22 @@ export default async function ProductPage({
         },
         deliveryTime: {
           "@type": "ShippingDeliveryTime",
+          /*
+           * The waiting is all in the handling, and none of it is in the
+           * transit.
+           *
+           * These two mean different things and the difference is the whole
+           * of how this shop works. Handling is order placed to shipment
+           * ready, which here is waiting for the next car: nothing at all
+           * before the midday cut-off, and at most until tomorrow for an
+           * order placed after it. Transit is the drive, and the drive is
+           * Sangotedo to PAU on the same afternoon, every time.
+           *
+           * It used to say nought to two days of transit, which described
+           * a courier we are not. The same pair of numbers is set on the
+           * shipping service in Merchant Center, because two different
+           * answers to one question is its own kind of wrong.
+           */
           handlingTime: {
             "@type": "QuantitativeValue",
             minValue: 0,
@@ -132,7 +148,7 @@ export default async function ProductPage({
           transitTime: {
             "@type": "QuantitativeValue",
             minValue: 0,
-            maxValue: 2,
+            maxValue: 0,
             unitCode: "DAY",
           },
         },
