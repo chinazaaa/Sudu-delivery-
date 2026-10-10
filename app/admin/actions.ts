@@ -3039,6 +3039,11 @@ export async function setItemStock(form: FormData): Promise<void> {
   const asked = String(form.get("q") ?? "").trim();
   const back = new URLSearchParams();
   if (asked !== "") back.set("q", asked);
+  // And the cut somebody is working through. Switching an item off from
+  // inside "No photo" used to land back on the resting list, which loses
+  // the place in the one list that was being worked down.
+  const show = String(form.get("show") ?? "").trim();
+  if (show !== "") back.set("show", show);
   back.set("changed", String(form.get("item_id")));
 
   redirect(`/admin/stock?${back.toString()}`);
