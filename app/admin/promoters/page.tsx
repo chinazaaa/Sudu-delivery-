@@ -35,13 +35,22 @@ export default async function PromotersAdmin({
 }: {
   /** One promoter, or all of them. It lives in the address so a page about
    *  one person can be come back to and reloaded. */
-  searchParams: Promise<{ who?: string }>;
+  searchParams: Promise<{ who?: string; owed?: string }>;
 }) {
-  const who = (await searchParams).who ?? "";
+  const asked = await searchParams;
+  const who = asked.who ?? "";
+  // Arrived from the dashboard with money to hand over. It narrows the page
+  // to the people owed something and nothing else; it never pays anybody.
+  // Paying is a transfer made by hand in a banking app, which is why what
+  // this page owes you is their account number, not a button.
+  const payingOut = asked.owed === "1";
   const schema = await promoterSchema();
   const everybody = schema.ok ? await promoterRows() : [];
-  const promoters =
-    who === "" ? everybody : everybody.filter((one) => one.code === who);
+  const promoters = payingOut
+    ? everybody.filter((one) => one.owed > 0)
+    : who === ""
+      ? everybody
+      : everybody.filter((one) => one.code === who);
   // Run by run, from the same place each promoter sees it, so the two agree.
   const perRun = new Map(
     await Promise.all(
@@ -61,9 +70,28 @@ export default async function PromotersAdmin({
   return (
     <div>
       <PageHeader
-        title="Promoters"
-        detail="A customer belongs to whoever brought them, for life, and every order they pay for counts at that promoter's rate."
+        title={payingOut ? "Owed" : "Promoters"}
+        detail={
+          payingOut
+            ? "Everybody with money waiting, and the account to send it to. Nothing here pays anybody: the transfer is made in your banking app, and this is where the account number is."
+            : "A customer belongs to whoever brought them, for life, and every order they pay for counts at that promoter's rate."
+        }
       />
+
+      {payingOut && (
+        <p className="card mb-4 flex flex-wrap items-center gap-3 border-[#e8d9a8] bg-brand-tint text-sm">
+          <span className="font-semibold">
+            {promoters.length === 0
+              ? "Nobody is owed anything."
+              : `${promoters.length} ${promoters.length === 1 ? "person is" : "people are"} owed ${naira(
+                  promoters.reduce((total, one) => total + one.owed, 0)
+                )}.`}
+          </span>
+          <Link href="/admin/promoters" className="font-semibold text-brand-dark underline">
+            Show everybody
+          </Link>
+        </p>
+      )}
 
       {!schema.ok && (
         <div className="mb-4">

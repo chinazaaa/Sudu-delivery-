@@ -1999,11 +1999,14 @@ test("money owed to somebody else is money on the list", () => {
   assert.equal(jobs.length, 1);
   assert.equal(jobs[0].title, "You owe 2 promoters ₦1,000");
   assert.ok(jobs[0].detail.includes("Onize ₦500 since Friday"), jobs[0].detail);
-  assert.equal(jobs[0].action.label, "Pay them all");
+  // It opens the list and the account numbers. It never pays anybody: the
+  // transfer is made by hand, and a one-tap "pay" is the last thing this
+  // list should carry.
+  assert.equal(jobs[0].action.href, "/admin/promoters?owed=1");
+  assert.ok(!jobs[0].action.label.toLowerCase().startsWith("pay"), jobs[0].action.label);
 
   // One of them is paid, not paid all.
   const one = needsDoing({ ...quiet, promoters: [{ name: "Onize", owed: 500, since: "" }] });
-  assert.equal(one[0].action.label, "Pay them");
   assert.equal(one[0].title, "You owe 1 promoter ₦500");
 
   // Nobody owed anything leaves the list empty rather than saying so.
