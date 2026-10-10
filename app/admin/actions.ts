@@ -2238,7 +2238,12 @@ const askedName = (field: string) => `${field}__asked`;
  * as a number: it rejected the whole update, the retry loop could not find a
  * column name in "invalid input syntax for type numeric", and saving the
  * legal page dates failed because two unrelated boxes further up the form
- * were blank. Blank means nobody has said, which is null.
+ * were blank.
+ *
+ * Blank saves as zero rather than as null, because both columns are NOT NULL
+ * with a default of zero, and zero is already what the rest of the code reads
+ * as "nobody has said": the rating and the review count each hide themselves
+ * at zero rather than printing it.
  */
 const SETTING_NUMBERS: Record<string, "whole" | "decimal"> = {
   google_rating: "decimal",
@@ -2248,7 +2253,7 @@ const SETTING_NUMBERS: Record<string, "whole" | "decimal"> = {
 export async function saveSettings(form: FormData): Promise<void> {
   await assertAdmin();
 
-  const patch: Record<string, string | number | null> = {};
+  const patch: Record<string, string | number> = {};
   for (const field of SETTING_FIELDS) {
     const value = form.get(field);
     if (value === null) continue;
@@ -2259,7 +2264,7 @@ export async function saveSettings(form: FormData): Promise<void> {
       const number = Number(said);
       patch[field] =
         said === "" || !Number.isFinite(number)
-          ? null
+          ? 0
           : kind === "whole"
             ? Math.round(number)
             : number;
@@ -2302,7 +2307,7 @@ export async function saveSettings(form: FormData): Promise<void> {
 
   if (Object.keys(patch).length === 0) return;
 
-  const write = (fields: Record<string, string | number | null>) =>
+  const write = (fields: Record<string, string | number>) =>
     db()
       .from("settings")
       .update({ ...fields, updated_at: new Date().toISOString() })
