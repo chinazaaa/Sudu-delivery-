@@ -6,6 +6,12 @@ import { useState } from "react";
  * Removing a day from the week, asked twice. It is one tap from a schedule
  * that quietly stops opening runs, which nobody would notice until a Friday
  * with nothing on it.
+ *
+ * Drawn as the board's destructive row action: thirty-four pixels, outlined
+ * in Tomato Deep and never filled until it is asking. It used to be the
+ * shop's forty-four pixel chip, which is a control the admin does not own,
+ * so an admin page could not use this at all without putting a shop button
+ * on itself.
  */
 export default function ConfirmRemove({
   id,
@@ -27,7 +33,7 @@ export default function ConfirmRemove({
       <button
         type="button"
         onClick={() => setAsking(true)}
-        className="chip border-black/10 bg-white py-1.5 text-xs text-brand"
+        className="btn-admin btn-admin-sm btn-admin-bad"
       >
         Remove
       </button>
@@ -41,7 +47,7 @@ export default function ConfirmRemove({
         name={field}
         value={id}
         formAction={action}
-        className="chip border-transparent bg-brand py-1.5 text-xs text-white"
+        className="btn-admin btn-admin-sm border-brand-dark bg-brand-dark text-white hover:bg-brand-dark"
       >
         Yes, remove it
       </button>

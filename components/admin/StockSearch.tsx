@@ -49,7 +49,12 @@ export default function StockSearch({ start = "" }: { start?: string }) {
       placeholder="Find any item, from any restaurant"
       aria-label="Find any item"
       autoFocus
-      className="field w-full"
+      // The board gives this box fifty-two pixels and sixteen point type,
+      // taller than an ordinary admin field, because on the stock page the
+      // box is the page: it is typed into standing at a counter with one
+      // hand, and everything under it is the answer. Sixteen point also
+      // stops iOS zooming the whole page in on the tap.
+      className="field w-full min-h-[52px] py-0 text-[16px]"
     />
   );
 }

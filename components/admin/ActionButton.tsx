@@ -9,12 +9,19 @@ import { useFormStatus } from "react-dom";
  *
  * SaveButton is the same idea for forms that save a value; this one is for
  * the rest: adding, removing, toggling, closing.
+ *
+ * It is the board's row action by default, thirty-four pixels and a 1.5px
+ * outline, because that is what it almost always is: one of several things
+ * you can do to a row. The default used to be the shop's forty-four pixel
+ * chip, which meant every admin caller had to say `btn-admin btn-admin-sm`
+ * to get the size it should have had anyway, and the ones that forgot put a
+ * shop control on an admin page without anybody noticing.
  */
 export default function ActionButton({
   children,
   busy = "Working…",
   done = "Done ✓",
-  className = "chip border-black/10 bg-white",
+  className = "btn-admin btn-admin-sm",
   ...rest
 }: {
   children: React.ReactNode;
