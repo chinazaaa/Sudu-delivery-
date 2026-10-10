@@ -13,6 +13,7 @@ import { promoterSchema } from "@/lib/health";
 import { naira } from "@/lib/money";
 import { whatsappTo } from "@/lib/messages";
 import { formatPhone } from "@/lib/phone";
+import { agoLabel } from "@/lib/time";
 import { siteUrl } from "@/lib/admin-templates";
 import { publicOffer } from "@/lib/coupons";
 import { safeSettings } from "@/lib/settings";
@@ -777,6 +778,11 @@ async function OnePromoter({
    * about. It is still only ever a WhatsApp: admin cannot confirm a payout
    * landed, because only the promoter knows whether it did.
    */
+  // Sent and still unanswered, newest first. Read at the top of the page as
+  // well as on each payout's own row, because it is the only thing here
+  // with a question still open.
+  const unconfirmed = payouts.filter((one) => !one.confirmed_at);
+
   const chaseFor = (payout: { amount: number; confirmed_at: string | null }) =>
     payout.confirmed_at || !promoter.phone
       ? null
@@ -951,6 +957,58 @@ async function OnePromoter({
           }
         />
       </div>
+
+      {/*
+        Money sent and never confirmed, at the top where it is read.
+
+        The Chase was only ever on the payout's own row, four rows down a
+        panel with the rest folded behind an "All 8", so the one thing on
+        this page with a question still open was the thing you had to go
+        looking for. Nobody scrolls to find out they are owed an answer.
+
+        Only ever a WhatsApp. Admin cannot confirm a payout landed, because
+        only the promoter knows whether it did, which is the whole reason
+        this sits unanswered in the first place.
+      */}
+      {unconfirmed.length > 0 && (
+        <div className="soft mb-3 border-volt-line bg-brand-tint p-3.5">
+          <p className="text-sm font-bold">
+            {unconfirmed.length === 1
+              ? `${naira(unconfirmed[0].amount)} sent, not confirmed`
+              : `${unconfirmed.length} payouts not confirmed`}
+          </p>
+          <p className="hint mt-1">
+            {unconfirmed.length === 1
+              ? `Sent ${agoLabel(unconfirmed[0].paid_at)}. ${first} has not said it landed, so your record and theirs do not agree yet.`
+              : `${naira(unconfirmed.reduce((all, one) => all + one.amount, 0))} in all. ${first} has not said any of them landed, so your record and theirs do not agree yet.`}
+          </p>
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            {unconfirmed.slice(0, 3).map((payout) => {
+              const href = chaseFor(payout);
+              return href === null ? null : (
+                <a
+                  key={payout.id}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-admin min-h-[44px]"
+                >
+                  {unconfirmed.length === 1
+                    ? "Ask them to confirm"
+                    : `Ask about ${naira(payout.amount)}`}
+                </a>
+              );
+            })}
+          </div>
+          {/* No number, no message. Said rather than drawn as a button that
+              opens WhatsApp asking which chat. */}
+          {!promoter.phone && (
+            <p className="hint mt-2">
+              No number saved for them, so there is nobody to send this to yet.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="grid items-start gap-3 sm:gap-[18px] xl:grid-cols-[1.5fr_1fr]">
         <div className="flex flex-col gap-3 sm:gap-4">
