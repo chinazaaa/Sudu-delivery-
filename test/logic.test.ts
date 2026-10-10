@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
 import { containersIn } from "../lib/containers";
 import { runShouldBe } from "../lib/run-follow";
+import { tidyCode, whyNotACode } from "../lib/promoter-applications";
 import { adminStageLabel, adminStatusWord, STAGE_LABEL } from "../lib/stages";
 import { channelOfSite, tidyChannel, tidyHandle } from "../lib/came-from";
 import { weekAround } from "../lib/time";
@@ -2864,4 +2865,32 @@ test("the last step of an order says whether a review came back", () => {
   // The stars win the line where somebody has done both, because only one
   // of the two happened at a time anybody can name.
   assert.equal(last({ ...base, rated_at: "2026-10-09T22:00:00Z", reviewed: true }).when, "19:29");
+});
+
+test("a wanted code is tidied to what the shop would really store", () => {
+  // Capitals, spaces and punctuation all go, because a code is one word.
+  assert.equal(tidyCode("John Doe"), "johndoe");
+  assert.equal(tidyCode("  Chi-Chi  "), "chichi");
+  // Pasting the whole address back is the commonest thing anybody does with
+  // a box that has the address printed beside it.
+  assert.equal(tidyCode("sudu.store/s/kayla"), "kayla");
+  assert.equal(tidyCode("https://sudu.store/s/kayla"), "kayla");
+  // Digits stay, since a collision at approval time appends one.
+  assert.equal(tidyCode("kayla2"), "kayla2");
+  // Sixteen is the most, the same as the length a name is cut to.
+  assert.equal(tidyCode("abcdefghijklmnopqrstuvwxyz"), "abcdefghijklmnop");
+  assert.equal(tidyCode(""), "");
+});
+
+test("the code box answers what it can without asking the shop", () => {
+  // Nothing typed is not an objection.
+  assert.equal(whyNotACode(""), "");
+  assert.equal(whyNotACode("ab"), "A bit short, three letters at least.");
+  assert.equal(whyNotACode("abc"), "");
+  // The shop's own words are not anybody's to take.
+  assert.equal(whyNotACode("admin"), "That one is the shop's own.");
+  assert.equal(whyNotACode("sudu"), "That one is the shop's own.");
+  // An ordinary name is fine, and whether somebody already has it is a
+  // question for the database rather than for this.
+  assert.equal(whyNotACode("johndoe"), "");
 });

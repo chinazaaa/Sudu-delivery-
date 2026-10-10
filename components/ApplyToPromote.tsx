@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { askToPromote, type ApplyState } from "@/app/actions-apply";
+import WantedCode from "./WantedCode";
 
 /**
  * The form, under the card that says to message us instead.
@@ -68,20 +69,10 @@ export default function ApplyToPromote() {
           <input name="hostel" className="field" maxLength={80} placeholder="Queen Mary" />
         </label>
 
-        <label className="block">
-          <span className="label">The code you want</span>
-          {/* The address around it, shown rather than explained, so it is
-              obvious that the box takes one short word and not a link. */}
-          <span className="flex items-center gap-1.5">
-            <span className="shrink-0 whitespace-nowrap font-mono text-[13.5px] text-muted">
-              sudu.store/s/
-            </span>
-            <input name="wanted_code" className="field" maxLength={24} placeholder="johndoe" />
-          </span>
-          <span className="mt-1 block text-xs text-muted">
-            We will tell you if it is taken.
-          </span>
-        </label>
+        {/* The box answers for itself now: it said we would tell them if it
+            was taken, and meant in the reply, a day or two after they had
+            settled on that spelling. */}
+        <WantedCode />
 
         <label className="block">
           <span className="label">Who will you share it with?</span>

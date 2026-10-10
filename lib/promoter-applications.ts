@@ -115,3 +115,38 @@ export function codeFrom(name: string, taken: string[]): string {
   }
   return `${base}${Date.now().toString().slice(-4)}`;
 }
+
+/**
+ * A code as the shop would actually store it.
+ *
+ * Somebody types "John Doe", or pastes the whole link back, or puts a
+ * capital on it. All three mean the same code, and the box should show them
+ * what they would really get rather than refusing what they typed.
+ */
+export function tidyCode(said: string): string {
+  return String(said ?? "")
+    .trim()
+    // Pasting the whole address back is the commonest thing anybody does
+    // with a field that has the address printed beside it.
+    .replace(/^.*\//, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .slice(0, 16);
+}
+
+/** Words nobody gets, because the shop already uses them. */
+const SPOKEN_FOR = ["admin", "promoter", "promoters", "sudu", "orders", "santa", "shop"];
+
+/**
+ * Why a code cannot be had, or an empty string where it can.
+ *
+ * Length and the reserved words only. Whether somebody else already has it
+ * is a question for the database, and this is the half that can be answered
+ * without one, so the box can say "too short" the moment it is true.
+ */
+export function whyNotACode(code: string): string {
+  if (code === "") return "";
+  if (code.length < 3) return "A bit short, three letters at least.";
+  if (SPOKEN_FOR.includes(code)) return "That one is the shop's own.";
+  return "";
+}
