@@ -84,14 +84,16 @@ export default function AlertCard({
               </Link>
               <span className="hint block">
                 {naira(one.total)} · ordered {agoLabel(one.createdAt)}
-                {one.shared > 0
-                  ? ` · ${one.shared} name word${one.shared === 1 ? "" : "s"} match`
-                  : " · no name in common"}
+                {one.named
+                  ? " · this order's number is in the alert"
+                  : one.shared > 0
+                    ? ` · ${one.shared} name word${one.shared === 1 ? "" : "s"} match`
+                    : " · no name in common"}
               </span>
             </span>
             <ConfirmButton
               tone="admin"
-              className={`min-h-[44px] shrink-0 ${one.shared > 0 ? "btn-admin-go" : ""}`}
+              className={`min-h-[44px] shrink-0 ${one.named || one.shared > 0 ? "btn-admin-go" : ""}`}
               confirm={`Yes, #${one.orderNo ?? "?"} is paid`}
             >
               Mark paid

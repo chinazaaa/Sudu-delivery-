@@ -135,7 +135,33 @@ export type Candidate = {
   createdAt: string;
   /** Words shared between the paying account and the name on the order. */
   shared: number;
+  /** This order's number appears in the alert itself. Dormant today,
+   *  because Catlog does not pass the narration on, and true the moment it
+   *  starts to. */
+  named: boolean;
 };
+
+/**
+ * Whether an order's number is written anywhere in the alert.
+ *
+ * The shop asks people to type their order number into the transfer and
+ * Catlog does not pass it on, so this finds nothing today. It is here
+ * because the asking stays, and the day the narration comes through this
+ * turns a suggestion into a near certainty without anybody changing
+ * anything.
+ *
+ * Looked for as a number on its own rather than under a label, because the
+ * label is the part nobody can predict: whatever Catlog ends up calling it,
+ * 1036 is still 1036. Whole numbers only, so an order number cannot be
+ * found inside the digits of a wallet balance.
+ */
+export function mentions(text: string, orderNo: number | null): boolean {
+  if (orderNo === null || !Number.isFinite(orderNo)) return false;
+  // Commas out first: a narration of "1036" is plain, but the amounts
+  // around it are grouped, and 1,036 should read as this number too.
+  const flat = String(text ?? "").replace(/,/g, "");
+  return new RegExp(`(?<![\\d.])${orderNo}(?![\\d.])`).test(flat);
+}
 
 /**
  * The orders an alert could be about, best first.
@@ -159,7 +185,10 @@ export function likelyOrders(
     total: number;
     created_at: string;
   }[],
-  at: number = Date.now()
+  at: number = Date.now(),
+  /** The alert's own words, for finding an order number in them. Left out
+   *  where there are none to read, which changes nothing today. */
+  words = ""
 ): Candidate[] {
   return orders
     .filter((order) => Number(order.total) === alert.amount)
@@ -170,8 +199,11 @@ export function likelyOrders(
       total: Number(order.total),
       createdAt: order.created_at,
       shared: nameOverlap(alert.payer, order.customer_name),
+      named: mentions(words, order.order_no),
     }))
     .sort((a, b) => {
+      // An order named in the alert is the one, whatever the names say.
+      if (a.named !== b.named) return a.named ? -1 : 1;
       if (b.shared !== a.shared) return b.shared - a.shared;
       const near = (one: Candidate) => {
         const when = new Date(one.createdAt).getTime();

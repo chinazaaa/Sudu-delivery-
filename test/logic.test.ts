@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
 import { containersIn } from "../lib/containers";
 import { runShouldBe } from "../lib/run-follow";
-import { likelyOrders, nameOverlap, readAlert } from "../lib/alerts";
+import { likelyOrders, mentions, nameOverlap, readAlert } from "../lib/alerts";
 import { svixSigned } from "../lib/svix";
 import { addressOf, isAlert, replySubject, senderName, snippet, vouchedFor } from "../lib/mail";
 import { tidyCode, whyNotACode } from "../lib/promoter-applications";
@@ -3069,4 +3069,39 @@ test("two spellings of one name are compared on their words", () => {
   // suggestion that matches everybody is noise.
   assert.equal(nameOverlap("A B Okeke", "A B Danjuma"), 0);
   assert.equal(nameOverlap("", "BEST"), 0);
+});
+
+test("an order number in the alert outranks the names, when there ever is one", () => {
+  /*
+   * Catlog does not pass the narration on today, so this finds nothing and
+   * the names decide. The shop keeps asking people to type their order
+   * number into the transfer, against the day it comes through, and this is
+   * what happens when it does.
+   */
+  const alert = { amount: 11700, payer: "BEST ETI-INYENE IDONGESIT" };
+  const orders = [
+    { id: "a", order_no: 1036, customer_name: "BEST", total: 11700, created_at: "2026-10-10T08:36:58Z" },
+    { id: "b", order_no: 1040, customer_name: "Ada Obi", total: 11700, created_at: "2026-10-10T09:00:00Z" },
+  ];
+  const at = Date.parse("2026-10-10T09:38:00Z");
+
+  // Nothing to read: the shared name wins, which is today.
+  assert.deepEqual(likelyOrders(alert, orders, at, "").map((one) => one.orderNo), [1036, 1040]);
+
+  // The narration names the other one. It is the one, whatever the names
+  // say, because a number somebody typed beats a word they share.
+  const named = likelyOrders(alert, orders, at, "Narration: 1040");
+  assert.deepEqual(named.map((one) => one.orderNo), [1040, 1036]);
+  assert.equal(named[0].named, true);
+  assert.equal(named[1].named, false);
+
+  // A number cannot be found inside another number: a wallet balance of
+  // 11,760.25 does not name order 1176, and the amount does not name 1170.
+  assert.equal(mentions("Your wallet balance is now NGN 11,760.25", 1176), false);
+  assert.equal(mentions("NGN 11,700.00", 1170), false);
+  // Written with or without the grouping, it is the same number.
+  assert.equal(mentions("Ref 1036", 1036), true);
+  assert.equal(mentions("Ref 1,036", 1036), true);
+  assert.equal(mentions("Ref 1036", 1037), false);
+  assert.equal(mentions("anything", null), false);
 });

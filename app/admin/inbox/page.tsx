@@ -44,7 +44,16 @@ export default async function InboxPage({
       letter,
       amount: said?.amount ?? null,
       payer: said?.payer ?? "",
-      candidates: said ? likelyOrders(said, unpaid, Date.parse(letter.receivedAt)) : [],
+      candidates: said
+        ? likelyOrders(
+            said,
+            unpaid,
+            Date.parse(letter.receivedAt),
+            // The whole letter, so an order number typed into a transfer is
+            // found wherever Catlog ends up putting it. Nothing today.
+            `${letter.subject} ${letter.text}`
+          )
+        : [],
     };
   });
   const waiting = post.filter((one) => !one.repliedAt && !one.doneAt);
