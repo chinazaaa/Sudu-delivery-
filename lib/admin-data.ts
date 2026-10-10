@@ -566,3 +566,37 @@ async function feeGiven(
   }
   return given;
 }
+
+/**
+ * How many orders sit behind each tab, for the numbers on the filter pills.
+ *
+ * The tabs used to be seven words with nothing to choose between them, so
+ * finding the three unpaid orders meant opening tabs until one had rows in
+ * it. One grouped read answers all seven.
+ *
+ * Card payers are unpaid orders narrowed by how they said they would pay,
+ * so they are counted separately and stay inside the unpaid number: an
+ * order waiting on a card link is still money on the table.
+ */
+export async function statusCounts(): Promise<Record<string, number>> {
+  const out: Record<string, number> = {};
+  try {
+    const { data, error } = await db()
+      .from("orders")
+      .select("status, payment_method")
+      .limit(5000);
+    if (error) throw new Error(error.message);
+
+    const rows = (data ?? []) as { status: string; payment_method: string | null }[];
+    for (const row of rows) {
+      out[row.status] = (out[row.status] ?? 0) + 1;
+      if (row.status === "pending" && row.payment_method === "card") {
+        out.card = (out.card ?? 0) + 1;
+      }
+    }
+    out.all = rows.length;
+  } catch {
+    // A number on a tab is never worth failing the page it labels.
+  }
+  return out;
+}

@@ -1,15 +1,15 @@
 import Link from "next/link";
-import PageHeader from "@/components/admin/PageHeader";
 import AdminLive from "@/components/admin/AdminLive";
-import Stat from "@/components/admin/Stat";
+import Figure from "@/components/admin/Figure";
 import OrderCard from "@/components/admin/OrderCard";
-import { orderFeed } from "@/lib/admin-data";
+import { orderFeed, statusCounts } from "@/lib/admin-data";
 import { batchOverview } from "@/lib/admin";
 import { getSettings } from "@/lib/settings";
 import { payableAccounts } from "@/lib/banks";
 import { siteUrl, toCard } from "@/lib/admin-templates";
 import { SLOT_LABEL } from "@/lib/config";
 import { runDateLabel } from "@/lib/time";
+import { naira } from "@/lib/money";
 import {
   cancelOrder,
   markPaid,
@@ -51,7 +51,7 @@ export default async function OrdersPage({
   // Card payers are unpaid orders, narrowed by how they said they would pay.
   const status = (tab === "card" ? "pending" : tab) as OrderStatus | "all";
 
-  const [orders, batches, settings, url] = await Promise.all([
+  const [orders, batches, settings, url, counts] = await Promise.all([
     orderFeed({
       status,
       batchId: query.batch ?? null,
@@ -62,6 +62,7 @@ export default async function OrdersPage({
     batchOverview(),
     getSettings(),
     siteUrl(),
+    statusCounts(),
   ]);
   // The account every payment message quotes: the first on the list.
   const bank = (await payableAccounts(settings))[0] ?? null;
@@ -96,10 +97,17 @@ export default async function OrdersPage({
   return (
     <div>
       <AdminLive />
-      <PageHeader
-        title="Orders"
-        detail="Every order ever placed, whatever run it belongs to."
-      />
+
+      <header className="mb-[22px] flex flex-wrap items-start justify-between gap-3.5">
+        <div className="min-w-0">
+          <h1 className="font-display text-[46px] font-black uppercase leading-[0.95]">
+            Orders
+          </h1>
+          <p className="mt-1.5 text-[14.5px] text-muted">
+            Every order ever placed, whatever run it belongs to.
+          </p>
+        </div>
+      </header>
 
       {/* Said here rather than on the order's own page, because that page is
           the one thing that no longer exists. */}
@@ -110,23 +118,36 @@ export default async function OrdersPage({
         </p>
       )}
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Stat label="Showing" value={orders.length} />
-        {/* Only where the view can hold an unpaid order. Filtered to paid, it
+      <div className="mb-4 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+        <Figure
+          label="Showing"
+          value={String(orders.length)}
+          detail={TABS.find((one) => one.value === tab)?.label ?? ""}
+        />
+        <Figure
+          label="Value"
+          value={naira(orders.reduce((total, order) => total + order.total, 0))}
+          detail="Food and delivery"
+        />
+        {/* Only where the view can hold an unpaid order. Filtered to paid it
             was a card reporting zero every time, which is not news. */}
         {canBeUnpaid && (
-          <Stat
-            label="Money on the table"
-            value={unpaidTotal}
-            money
-            tone={unpaidTotal > 0 ? "warn" : undefined}
-            hint="Unpaid in this view"
+          <Figure
+            label="Unpaid"
+            value={naira(unpaidTotal)}
+            tone={unpaidTotal > 0 ? "ink" : "mint"}
+            detail={`${orders.filter((one) => one.status === "pending").length} in this view`}
           />
         )}
-        <Stat
-          label="Value"
-          value={orders.reduce((total, order) => total + order.total, 0)}
-          money
+        <Figure
+          label="Average order"
+          value={naira(
+            orders.length === 0
+              ? 0
+              : orders.reduce((total, order) => total + order.total, 0) / orders.length
+          )}
+          tone="mint"
+          detail="Across what is showing"
         />
       </div>
 
@@ -150,19 +171,34 @@ export default async function OrdersPage({
           button "sometimes does not click". Two rows of chips cost a little
           height and nothing else. */}
       <div className="mb-3 flex flex-wrap gap-2">
-        {TABS.map((item) => (
-          <Link
-            key={item.value}
-            href={link({ status: item.value })}
-            className={`chip ${
-              tab === item.value
-                ? "border-ink bg-ink text-white"
-                : "border-black/10 bg-white"
-            }`}
-          >
-            {item.label}
-          </Link>
-        ))}
+        {TABS.map((item) => {
+          // The tab's own count, so the three unpaid orders can be found
+          // without opening tabs until one has rows in it. "Everything" is
+          // the only one without, because a number there is just the total
+          // said twice.
+          const count =
+            item.value === "all"
+              ? null
+              : item.value === "card"
+                ? (counts.card ?? 0)
+                : (counts[item.value] ?? 0);
+          return (
+            <Link
+              key={item.value}
+              href={link({ status: item.value })}
+              className={`chip px-3.5 text-sm ${
+                tab === item.value
+                  ? "border-ink bg-ink text-shell"
+                  : "border-ink bg-paper"
+              }`}
+            >
+              {item.label}
+              {count !== null && (
+                <span className="font-mono opacity-60">{count}</span>
+              )}
+            </Link>
+          );
+        })}
       </div>
 
       <form className="mb-4 flex flex-wrap gap-2" action="/admin/orders">
