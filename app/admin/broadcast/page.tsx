@@ -10,13 +10,11 @@ import {
   type TemplateKind,
 } from "@/lib/messages";
 import { formatPhone } from "@/lib/phone";
-import {
-  Broadcast,
-  Picking,
-  VIEWS,
-  type Pattern,
-  type Picked,
-} from "@/components/admin/CustomerBulk";
+// The cuts and the types come from a plain module, not from the composer:
+// a server page that dots into a client module is handed a reference to
+// something that only exists in the browser, and the render throws.
+import { VIEWS, type Pattern, type Picked } from "@/lib/customer-views";
+import { Broadcast, Picking } from "@/components/admin/CustomerBulk";
 
 export const dynamic = "force-dynamic";
 
