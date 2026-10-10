@@ -155,26 +155,26 @@ export default function OrderCard({
   const offer = order.templates.filter((one) => !without.includes(one.kind));
 
   return (
-    <article className="card space-y-3 px-4 py-3.5">
+    <article className="card space-y-2.5 px-3.5 py-3 sm:space-y-3 sm:px-4 sm:py-3.5">
       {/* On the order's own page the header, the stat row and the editor
           have already said who this is and what it comes to. Saying it a
           fourth time is what makes the page read as four cards about
           nothing. Here it is only the things to do. */}
       {onList && (
-        <div className="flex items-start gap-3.5">
+        <div className="flex items-start gap-2.5 sm:gap-3.5">
           {lead}
           <div className="min-w-0 flex-1">
             {/* One baseline row: the reference, the name, the day. The board
                 reads it left to right in one glance, which three stacked
                 lines of the same words never did. */}
-            <div className="flex flex-wrap items-baseline gap-2.5">
+            <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
               <Link
                 href={`/admin/orders/${order.id}`}
                 className="font-mono text-[13px] text-muted hover:text-brand"
               >
                 {order.ref}
               </Link>
-              <strong className="text-[17px]">{order.forName ?? order.name}</strong>
+              <strong className="text-[15.5px] sm:text-[17px]">{order.forName ?? order.name}</strong>
               <span className="text-[13.5px] text-muted">
                 {order.batchLabel} · {order.hostel}
               </span>
@@ -257,7 +257,7 @@ export default function OrderCard({
             </div>
           </div>
           <div className="flex flex-none flex-col items-end gap-[7px] text-right">
-            <span className="font-display text-[28px] font-black leading-none">
+            <span className="font-display text-[23px] font-black leading-none sm:text-[28px]">
               {naira(order.total)}
             </span>
             <StatusPill status={order.status} />

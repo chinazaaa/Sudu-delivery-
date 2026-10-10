@@ -164,7 +164,8 @@ async function orderPage(id: string, said: string) {
   const review = shown?.templates.find((one) => one.kind === "review") ?? null;
 
   return (
-    <div>
+    /* Room under the last card for the bar standing over it on a phone. */
+    <div className="pb-[76px] lg:pb-0">
       <PageHeader
         backHref="/admin/orders"
         backLabel="All orders"
@@ -197,12 +198,15 @@ async function orderPage(id: string, said: string) {
             <Link href={`/admin/batch/${order.batch_id}`} className="btn-admin">
               {runLabel === "" ? "Open its run" : `On ${runLabel}`}
             </Link>
+            {/* These two stand in the bar at the bottom on a phone, which is
+                where the board puts them and where the thumb is. Here from
+                `lg`, where the mouse is already in the header. */}
             {pin && (
               <a
                 href={pin.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-admin"
+                className="btn-admin hidden lg:inline-flex"
               >
                 {pin.label}
               </a>
@@ -212,7 +216,7 @@ async function orderPage(id: string, said: string) {
                 href={review.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-admin-go"
+                className="btn-admin-go hidden lg:inline-flex"
               >
                 {review.label}
               </a>
@@ -221,8 +225,30 @@ async function orderPage(id: string, said: string) {
         }
       />
 
+      {/* Ringing them, and the chat with no template in it.
+          A phone is a phone: the board puts these two across the top of an
+          order because half of what this page is opened for is a question
+          that has to be asked out loud. On a desk they are a number to read
+          off, which the header already prints. */}
+      <div className="mb-3 flex gap-2 lg:hidden">
+        <a href={`tel:${order.customer_phone}`} className="btn-admin min-h-[48px] flex-1">
+          Call
+        </a>
+        <a
+          href={whatsappTo(order.customer_phone, "")}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-admin min-h-[48px] flex-1"
+        >
+          WhatsApp
+        </a>
+      </div>
+
       <div
-        className={`mb-[18px] grid gap-3.5 sm:grid-cols-2 ${
+        /* Two up on a phone, as the board draws every figure row. The
+           figure card carries its own phone size now, so nothing here has
+           to lean on it. */
+        className={`mb-[18px] grid grid-cols-2 gap-3.5 ${
           order.discount > 0 ? "xl:grid-cols-5" : "xl:grid-cols-4"
         }`}
       >
@@ -599,6 +625,35 @@ async function orderPage(id: string, said: string) {
           )}
         </div>
       </div>
+
+      {/* The board's bar: the one or two messages this order is actually
+          waiting on, standing over the page where the thumb is. The same two
+          links are in the header from `lg`, so neither width is short of
+          them and neither has them twice. */}
+      {(pin || review) && (
+        <div className="phone-bar flex gap-2">
+          {pin && (
+            <a
+              href={pin.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-admin min-h-[50px] flex-1"
+            >
+              {pin.label}
+            </a>
+          )}
+          {review && (
+            <a
+              href={review.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-admin-go min-h-[50px] flex-[1.3]"
+            >
+              {review.label}
+            </a>
+          )}
+        </div>
+      )}
     </div>
   );
 }
