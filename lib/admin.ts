@@ -3,6 +3,7 @@ import { feeFor } from "./fees";
 import { activeBands } from "./settings";
 import { getBatch } from "./batches";
 import { lagosToday } from "./time";
+import { ALERTS_AT } from "./mail";
 import { isGone, isPaid, NOT_ORDERS_SQL } from "./orders";
 import { groupShortfalls, refundsOwed, settleGroupFees, type GroupShortfall } from "./groups";
 import { linesFor, type OrderLine } from "./orders";
@@ -1301,7 +1302,11 @@ export async function waitingCounts(): Promise<Record<string, number>> {
       .from("mail")
       .select("id", { count: "exact", head: true })
       .is("replied_at", null)
-      .is("done_at", null);
+      .is("done_at", null)
+      // Forwarded bank alerts are not letters waiting on an answer. One a
+      // payment would put a number on the rail that never goes down and
+      // means nothing when it moves.
+      .not("to_addr", "ilike", `%${ALERTS_AT}%`);
     if (post && post > 0) out["/admin/inbox"] = post;
 
     return out;

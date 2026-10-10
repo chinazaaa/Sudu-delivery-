@@ -18,6 +18,29 @@ import { db } from "./supabase";
  */
 export const READS_AT = process.env.MAIL_REPLY_TO || "hello@sudu.store";
 
+/**
+ * Where bank alerts are forwarded, which is not where people write from.
+ *
+ * Both arrive through the same webhook, because Resend receives for the
+ * whole domain, and both are worth reading in the same place. They are not
+ * worth reading in the same list: a shop gets a handful of letters a week
+ * and an alert per payment, so mixed together the letters are buried by the
+ * end of a Saturday.
+ */
+export const ALERTS_AT = process.env.MAIL_ALERTS_AT || "payments@sudu.store";
+
+/**
+ * Whether a letter is a forwarded alert rather than somebody writing.
+ *
+ * Read off who it was sent to. The From line is the bank, or Gmail, or
+ * whatever the forwarding did to it, and none of those is a thing to sort
+ * on; the address it was sent to is the decision the shop made.
+ */
+export function isAlert(to: string): boolean {
+  const at = ALERTS_AT.toLowerCase();
+  return at !== "" && String(to ?? "").toLowerCase().includes(at);
+}
+
 export type Attachment = {
   id: string;
   filename: string;
@@ -83,7 +106,7 @@ function toLetter(row: Record<string, unknown>): Letter {
  * on a page somebody opens: no mail is the right answer for a shop that has
  * not had the migration run, because that shop has none.
  */
-export async function inbox(limit = 100): Promise<Letter[]> {
+export async function everything(limit = 200): Promise<Letter[]> {
   try {
     const { data, error } = await db()
       .from("mail")
@@ -95,6 +118,16 @@ export async function inbox(limit = 100): Promise<Letter[]> {
   } catch {
     return [];
   }
+}
+
+/** Letters somebody wrote. Alerts are their own list. */
+export async function inbox(limit = 200): Promise<Letter[]> {
+  return (await everything(limit)).filter((one) => !isAlert(one.to));
+}
+
+/** Forwarded bank alerts, newest first. */
+export async function alerts(limit = 200): Promise<Letter[]> {
+  return (await everything(limit)).filter((one) => isAlert(one.to));
 }
 
 export async function oneLetter(id: string): Promise<Letter | null> {

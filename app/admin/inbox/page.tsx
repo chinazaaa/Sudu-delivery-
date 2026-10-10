@@ -1,7 +1,7 @@
 import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import Figure from "@/components/admin/Figure";
-import { inbox, senderName, snippet, READS_AT } from "@/lib/mail";
+import { alerts, inbox, senderName, snippet, type Letter, ALERTS_AT, READS_AT } from "@/lib/mail";
 import { agoLabel } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -17,8 +17,15 @@ export const dynamic = "force-dynamic";
  * page that is a job. Everything else is a record, and a record reads
  * newest first.
  */
-export default async function InboxPage() {
-  const post = await inbox();
+export default async function InboxPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  const query = await searchParams;
+  const onAlerts = query.view === "alerts";
+
+  const [post, banked] = await Promise.all([inbox(), alerts()]);
   const waiting = post.filter((one) => !one.repliedAt && !one.doneAt);
   const dealt = post.filter((one) => one.repliedAt || one.doneAt);
 
@@ -26,10 +33,76 @@ export default async function InboxPage() {
     <div>
       <PageHeader
         title="Inbox"
-        detail={`Everything sent to ${READS_AT}. Replies go back from here and land in the same conversation.`}
+        detail={
+          onAlerts
+            ? `Forwarded to ${ALERTS_AT}. Read only: nothing here marks anything paid.`
+            : `Everything sent to ${READS_AT}. Replies go back from here and land in the same conversation.`
+        }
       />
 
-      {post.length === 0 && (
+      {/*
+        Two piles, one page.
+
+        Both arrive through the same webhook, because the domain receives
+        for every address, and both are worth reading in the same place.
+        They are not worth reading in the same list: a shop gets a handful
+        of letters a week and an alert per payment, so mixed together the
+        letters are buried by the end of a Saturday.
+      */}
+      {banked.length > 0 && (
+        <div className="mb-3.5 flex rounded-full border-2 border-ink bg-wash p-[3px]">
+          <Link
+            href="/admin/inbox"
+            aria-current={onAlerts ? undefined : "page"}
+            className={`flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-full text-[14.5px] font-bold ${
+              onAlerts ? "text-muted" : "bg-ink text-shell"
+            }`}
+          >
+            Letters
+            {waiting.length > 0 && (
+              <span
+                className={`rounded-full px-[7px] py-px font-mono text-[11px] ${
+                  onAlerts ? "bg-brand text-white" : "bg-paper text-brand"
+                }`}
+              >
+                {waiting.length}
+              </span>
+            )}
+          </Link>
+          <Link
+            href="/admin/inbox?view=alerts"
+            aria-current={onAlerts ? "page" : undefined}
+            className={`flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-full text-[14.5px] font-bold ${
+              onAlerts ? "bg-ink text-shell" : "text-muted"
+            }`}
+          >
+            Bank alerts
+            <span className="hint">{banked.length}</span>
+          </Link>
+        </div>
+      )}
+
+      {onAlerts && (
+        <>
+          {/* Said plainly, because this is the screen where somebody will
+              eventually expect it to do the work for them. */}
+          <div className="soft mb-3.5 border-volt-line bg-brand-tint p-3.5">
+            <p className="text-sm font-bold">These do not mark anything paid</p>
+            <p className="hint mt-1">
+              An alert is a message, and anybody who learns this address can
+              send one. Forwarding also breaks the check that would tell a
+              real one from a forgery. Marking an order paid stays yours.
+            </p>
+          </div>
+          <ul className="space-y-2.5">
+            {banked.map((letter) => (
+              <Row key={letter.id} letter={letter} />
+            ))}
+          </ul>
+        </>
+      )}
+
+      {!onAlerts && post.length === 0 && (
         <div className="soft mb-3.5 border-volt-line bg-brand-tint p-3.5">
           <p className="text-sm font-bold">Nothing here yet</p>
           <p className="hint mt-1">
@@ -40,7 +113,7 @@ export default async function InboxPage() {
         </div>
       )}
 
-      {post.length > 0 && (
+      {!onAlerts && post.length > 0 && (
         <div className="mb-3.5 grid grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-4">
           <Figure
             label="Waiting"
@@ -52,7 +125,7 @@ export default async function InboxPage() {
         </div>
       )}
 
-      {waiting.length > 0 && (
+      {!onAlerts && waiting.length > 0 && (
         <>
           <p className="ticket mb-2 text-muted">Waiting on you</p>
           <ul className="mb-3.5 space-y-2.5">
@@ -63,7 +136,7 @@ export default async function InboxPage() {
         </>
       )}
 
-      {dealt.length > 0 && (
+      {!onAlerts && dealt.length > 0 && (
         <>
           <p className="ticket mb-2 text-muted">Dealt with</p>
           <ul className="space-y-2.5">
@@ -78,7 +151,7 @@ export default async function InboxPage() {
 }
 
 /** One letter in the list: who, what, when, and how far it has got. */
-function Row({ letter }: { letter: Awaited<ReturnType<typeof inbox>>[number] }) {
+function Row({ letter }: { letter: Letter }) {
   const done = Boolean(letter.repliedAt || letter.doneAt);
   return (
     <li>

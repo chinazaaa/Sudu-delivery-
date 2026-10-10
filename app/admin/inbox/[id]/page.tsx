@@ -5,7 +5,7 @@ import Panel from "@/components/admin/Panel";
 import ReplyBox from "@/components/admin/ReplyBox";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { oneLetter, repliesTo, senderName, addressOf, vouchedFor } from "@/lib/mail";
-import { markMailRead, setMailDone } from "../../actions";
+import { deleteMail, markMailRead, setMailDone } from "../../actions";
 import { agoLabel, whenLabel } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -193,6 +193,33 @@ export default async function LetterPage({
                 confirm={letter.doneAt ? "Yes, put it back" : "Yes, nothing needed"}
               >
                 {letter.doneAt ? "Put it back" : "Nothing needed"}
+              </ConfirmButton>
+            </form>
+          </Panel>
+
+          {/*
+            Gone, rather than put aside.
+
+            "Nothing needed" is the ordinary answer and keeps the letter,
+            because a record of what the shop was asked is worth having.
+            This is for the rest: spam, a test, a newsletter nobody signed
+            up for. It is written into the deleted log with its words, and
+            the original is still at Resend, so this is the shop's copy and
+            not the last one.
+          */}
+          <Panel title="Delete it" size="sm">
+            <form action={deleteMail} className="mt-2 flex items-center gap-2.5">
+              <input type="hidden" name="mail_id" value={letter.id} />
+              <p className="hint flex-1">
+                Forever here. It stays in the deleted log, and the original is
+                still in Resend.
+              </p>
+              <ConfirmButton
+                tone="bad"
+                className="min-h-[44px] shrink-0"
+                confirm="Yes, delete it"
+              >
+                Delete
               </ConfirmButton>
             </form>
           </Panel>

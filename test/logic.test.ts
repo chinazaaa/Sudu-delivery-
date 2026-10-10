@@ -6,7 +6,7 @@ import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
 import { containersIn } from "../lib/containers";
 import { runShouldBe } from "../lib/run-follow";
 import { svixSigned } from "../lib/svix";
-import { addressOf, replySubject, senderName, snippet, vouchedFor } from "../lib/mail";
+import { addressOf, isAlert, replySubject, senderName, snippet, vouchedFor } from "../lib/mail";
 import { tidyCode, whyNotACode } from "../lib/promoter-applications";
 import { adminStageLabel, adminStatusWord, STAGE_LABEL } from "../lib/stages";
 import { channelOfSite, tidyChannel, tidyHandle } from "../lib/came-from";
@@ -2988,4 +2988,16 @@ test("a webhook signature is checked the way the scheme says", () => {
     svixSigned({ secret, id, timestamp, body, signature: `v1,bm90 ${signature}`, now }),
     true
   );
+});
+
+test("an alert is told from a letter by who it was sent to", () => {
+  // The address the shop chose, not the From line: a forwarded alert is
+  // from the bank, or from Gmail, or from whatever the forwarding did to
+  // it, and none of those is a thing to sort on.
+  assert.equal(isAlert("payments@sudu.store"), true);
+  assert.equal(isAlert("Payments@Sudu.Store"), true);
+  // Several recipients, one of them ours.
+  assert.equal(isAlert("someone@else.com, payments@sudu.store"), true);
+  assert.equal(isAlert("hello@sudu.store"), false);
+  assert.equal(isAlert(""), false);
 });

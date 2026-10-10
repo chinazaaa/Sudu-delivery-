@@ -1892,6 +1892,42 @@ export async function replyToMail(
   return { error: null, done: "Sent." };
 }
 
+/**
+ * A letter, gone.
+ *
+ * "Nothing needed" is the ordinary answer and keeps the letter, because a
+ * record of what the shop was asked is worth having. This is for the rest:
+ * spam, a test, a newsletter nobody signed up for. Written down in the
+ * deleted log on the way out, with the words in it, so a letter deleted in
+ * a hurry can still be read back.
+ *
+ * The original stays at Resend either way. Nothing here reaches into their
+ * store, so this is the shop's copy and not the last one.
+ */
+export async function deleteMail(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("mail_id") ?? "");
+  if (id === "") return;
+
+  const { data } = await db().from("mail").select("*").eq("id", id).maybeSingle();
+  const letter = data as Record<string, unknown> | null;
+  if (!letter) return;
+
+  const { error } = await db().from("mail").delete().eq("id", id);
+  if (error) throw new Error(`Could not delete that letter: ${error.message}`);
+
+  await recordDeletion({
+    kind: "mail",
+    label: `${String(letter.from_addr ?? "")} · ${String(letter.subject ?? "no subject")}`,
+    who: "admin",
+    detail: "Admin, inbox",
+    body: letter,
+  });
+
+  revalidatePath("/admin", "layout");
+  redirect("/admin/inbox");
+}
+
 /** Read, so the list stops shouting about it. Never undoes a reply. */
 export async function markMailRead(form: FormData): Promise<void> {
   await assertAdmin();
