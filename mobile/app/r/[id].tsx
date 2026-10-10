@@ -13,9 +13,10 @@ import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { api, naira, type Item, type Place } from "@/lib/api";
-import { cart, countItems, useStored, type Line } from "@/lib/store";
+import { cart, cartTotal, countItems, useStored, type Line } from "@/lib/store";
 import Thumb from "@/components/Thumb";
-import { T } from "@/lib/theme";
+import { F, T } from "@/lib/theme";
+import { AddButton, Display, FloatingBar, Stripes, Ticket } from "@/components/ui";
 import Deals, { type Deal } from "@/components/Deals";
 
 /** One restaurant: its menu, and a sheet for the questions a meal asks. */
@@ -136,7 +137,38 @@ export default function Restaurant() {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 10 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        <View
+          style={{
+            position: "relative",
+            overflow: "hidden",
+            backgroundColor: T.ink,
+            paddingHorizontal: 16,
+            paddingTop: 18,
+            paddingBottom: 20,
+            gap: 10,
+          }}
+        >
+          <Stripes style={{ right: -10, width: "34%", opacity: 0.85 }} />
+          <Display size={60} colour={T.shell}>
+            {place.restaurant.name}
+          </Display>
+          <View
+            style={{
+              alignSelf: "flex-start",
+              backgroundColor: T.volt,
+              borderRadius: 999,
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+            }}
+          >
+            <Text style={{ fontFamily: F.bodySemi, fontSize: 13, color: T.ink }}>
+              Mix with any other kitchen, same fee
+            </Text>
+          </View>
+        </View>
+
+      <View style={{ padding: 16, gap: 10 }}>
         {offer && <Deals line={offer.line} deals={offer.deals} />}
 
         <TextInput
@@ -148,10 +180,13 @@ export default function Restaurant() {
           autoCorrect={false}
           style={{
             backgroundColor: T.paper,
-            borderRadius: T.radius,
-            paddingHorizontal: 16,
-            paddingVertical: 14,
+            borderWidth: 2,
+            borderColor: T.ink,
+            borderRadius: 999,
+            paddingHorizontal: 18,
+            minHeight: 50,
             fontSize: 16,
+            fontFamily: F.body,
             color: T.ink,
           }}
         />
@@ -172,12 +207,21 @@ export default function Restaurant() {
                   accessibilityState={{ selected: on }}
                   style={{
                     borderRadius: 999,
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    backgroundColor: on ? T.brand : T.paper,
+                    borderWidth: 2,
+                    borderColor: T.ink,
+                    paddingHorizontal: 16,
+                    minHeight: 40,
+                    justifyContent: "center",
+                    backgroundColor: on ? T.ink : "transparent",
                   }}
                 >
-                  <Text style={{ color: on ? T.paper : T.ink, fontWeight: "700" }}>
+                  <Text
+                    style={{
+                      color: on ? T.shell : T.ink,
+                      fontFamily: F.bodySemi,
+                      fontSize: 14,
+                    }}
+                  >
                     {category.name}
                   </Text>
                 </Pressable>
@@ -194,17 +238,7 @@ export default function Restaurant() {
 
         {sections.map((section) => (
           <View key={section.name} style={{ gap: 10, marginTop: 6 }}>
-            <Text
-              style={{
-                fontWeight: "800",
-                fontSize: 13,
-                letterSpacing: 0.6,
-                color: T.muted,
-                textTransform: "uppercase",
-              }}
-            >
-              {section.name}
-            </Text>
+            <Ticket>{section.name}</Ticket>
             {section.items.map((item) => (
               <Pressable
                 key={item.id}
@@ -213,59 +247,69 @@ export default function Restaurant() {
                   flexDirection: "row",
                   gap: 12,
                   backgroundColor: T.paper,
-                  borderRadius: T.radius,
-                  padding: 12,
+                  borderWidth: 2,
+                  borderColor: T.ink,
+                  borderRadius: 14,
+                  overflow: "hidden",
                   opacity: item.available ? 1 : 0.5,
                 }}
               >
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "800", color: T.ink }}>{item.name}</Text>
-                  {blurbOf(item) !== "" && (
-                    <Text numberOfLines={2} style={{ color: T.muted, marginTop: 2 }}>
-                      {blurbOf(item)}
-                    </Text>
-                  )}
-                  <Text style={{ fontWeight: "800", marginTop: 6, color: T.ink }}>
-                    {item.groups.length > 0 ? "from " : ""}
-                    {naira(item.price)}
-                  </Text>
-                  {!item.available && (
-                    <Text style={{ color: T.muted, fontWeight: "700", marginTop: 2 }}>
-                      Sold out today
-                    </Text>
-                  )}
-                </View>
                 {/* Always something. A row with no picture beside a row with
                     one reads as a broken image rather than an item nobody
                     has photographed, and on the Sudu Shop shelf almost
                     nothing is photographed. */}
-                <View style={{ width: 92 }}>
-                  <Thumb src={item.imageUrl} name={item.name} radius={12} ratio={1} />
+                <View style={{ width: 96 }}>
+                  <Thumb src={item.imageUrl} name={item.name} radius={0} ratio={1} />
+                </View>
+                <View
+                  style={{
+                    flex: 1,
+                    paddingVertical: 12,
+                    paddingRight: 12,
+                    gap: 8,
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text
+                    style={{ fontFamily: F.bodyBold, fontSize: 16, color: T.ink }}
+                  >
+                    {item.name}
+                  </Text>
+                  {!item.available && (
+                    <Ticket>Sold out today</Ticket>
+                  )}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 8,
+                    }}
+                  >
+                    <Display size={24}>
+                      {item.groups.length > 0 ? "from " : ""}
+                      {naira(item.price)}
+                    </Display>
+                    {item.available && (
+                      <AddButton name={item.name} onPress={() => setOpen(item)} />
+                    )}
+                  </View>
                 </View>
               </Pressable>
             ))}
           </View>
         ))}
+      </View>
       </ScrollView>
 
       {items > 0 && (
-        <Pressable
+        <FloatingBar
+          label={`${items} item${items === 1 ? "" : "s"}`}
+          total={naira(cartTotal(lines))}
+          action="View cart"
+          bottom={24}
           onPress={() => router.push("/cart")}
-          style={{
-            position: "absolute",
-            left: 16,
-            right: 16,
-            bottom: 24,
-            backgroundColor: T.brand,
-            borderRadius: 999,
-            paddingVertical: 16,
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: T.paper, fontWeight: "800", fontSize: 16 }}>
-            View cart · {items} item{items === 1 ? "" : "s"}
-          </Text>
-        </Pressable>
+        />
       )}
 
       <Modal

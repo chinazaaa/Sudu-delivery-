@@ -1168,7 +1168,18 @@ export default async function SettingsAdmin() {
           </ul>
         </div>
 
-        {(["confirmed", "payment", "card", "pin", "ready", "late"] as TemplateKind[]).map(
+        {(
+          [
+            "confirmed",
+            "payment",
+            "card",
+            "pin",
+            "ready",
+            "late",
+            "review",
+            "google",
+          ] as TemplateKind[]
+        ).map(
           (kind) => (
             <div key={kind}>
               <label className="label" htmlFor={`msg-${kind}`}>

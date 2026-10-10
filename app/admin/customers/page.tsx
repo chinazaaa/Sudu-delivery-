@@ -4,7 +4,7 @@ import { customerRows } from "@/lib/admin-data";
 import { errandsBy } from "@/lib/other-money";
 import { getSettings, googleLinks } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
-import { firstName, whatsappTo } from "@/lib/messages";
+import { firstName, template, whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import SaveButton from "@/components/SaveButton";
@@ -205,14 +205,26 @@ export default async function CustomersPage({
             // somebody who has actually been delivered to: asking a person
             // who has never ordered to review us is how a profile gets
             // reported.
+            //
+            // The wording is the "Ask for a Google review" template, so it
+            // is editable in Settings like every other message rather than
+            // being the one sentence on the shop nobody can change.
             const askReview =
               google.review !== "" && row.orders > 0
                 ? whatsappTo(
                     row.phone,
-                    `Hi ${firstName(row.name, row.callsThem)}, hope the last one was good.\n\n` +
-                      `If you have a minute, a review on Google helps us more than ` +
-                      `anything else: ${google.review}\n\n` +
-                      `Thank you.`
+                    template({
+                      kind: "google",
+                      order: {
+                        customer_name: row.name,
+                        callsThem: row.callsThem,
+                      } as Parameters<typeof template>[0]["order"],
+                      settings,
+                      pin: row.pin || null,
+                      siteUrl: url,
+                      batchLabel: "",
+                      deliveryWindow: "",
+                    })
                   )
                 : "";
             return (

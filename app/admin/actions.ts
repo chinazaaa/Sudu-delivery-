@@ -2150,6 +2150,7 @@ const SETTING_FIELDS = [
   "msg_ready",
   "msg_late",
   "msg_review",
+  "msg_google",
   "paid_note",
   "fee_bands",
   "same_day_bands",

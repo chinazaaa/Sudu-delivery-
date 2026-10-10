@@ -38,7 +38,8 @@ export type TemplateKind =
   | "pin"
   | "ready"
   | "late"
-  | "review";
+  | "review"
+  | "google";
 
 export const TEMPLATE_LABEL: Record<TemplateKind, string> = {
   confirmed: "Payment confirmed",
@@ -48,6 +49,7 @@ export const TEMPLATE_LABEL: Record<TemplateKind, string> = {
   ready: "Food is here",
   late: "Running late",
   review: "Ask for a review",
+  google: "Ask for a Google review",
 };
 
 /** What was ordered, in one word. The shop sells three things now. */
@@ -77,6 +79,7 @@ export const TEMPLATE_FIELD: Record<TemplateKind, keyof Settings> = {
   ready: "msg_ready",
   late: "msg_late",
   review: "msg_review",
+  google: "msg_google",
 };
 
 /** The wording used until the admin writes their own. */
@@ -103,6 +106,13 @@ export const TEMPLATE_DEFAULT: Record<TemplateKind, string> = {
   review:
     "Hi {name}, hope the {thing} was good. If you have a second, say how it was " +
     "on your order page: {link}{google_line}\n\nIt takes one tap and it helps a lot.",
+  // The public one, sent down the customer list rather than against an
+  // order. It names no order and no run on purpose: it goes to somebody
+  // who ordered a while ago as readily as to somebody who ate last night.
+  google:
+    "Hi {name}, hope the last one was good.\n\n" +
+    "If you have a minute, a review on Google helps us more than anything " +
+    "else: {google}\n\nThank you.",
 };
 
 /** Everything a template can say, so the admin can rearrange the wording. */
