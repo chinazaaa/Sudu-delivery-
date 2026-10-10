@@ -18,7 +18,8 @@ export default function PageHeader({
   actions,
   search = true,
 }: {
-  title: string;
+  /** A node, so a page whose heading differs by width says it once. */
+  title: React.ReactNode;
   /** The sentence under the title. A node, because several pages want a
    *  figure or a link inside it. */
   detail?: React.ReactNode;

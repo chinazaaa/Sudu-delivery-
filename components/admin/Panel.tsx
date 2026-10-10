@@ -13,7 +13,10 @@ export default function Panel({
   size = "lg",
   className = "",
 }: {
-  title: string;
+  /** A node, not a string: a phone and a desk do not always want the
+   *  same words, and two whole panels behind display:none to say one
+   *  heading two ways is a panel kept twice. */
+  title: React.ReactNode;
   /** The board sets a main column's panel at 26px and a right column's at
    *  24px, so the second column reads as the aside it is. Two columns of
    *  26px headings shout at each other. */
