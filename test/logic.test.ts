@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 
 import { containersIn } from "../lib/containers";
 import { channelOfSite, tidyChannel, tidyHandle } from "../lib/came-from";
@@ -6,7 +8,7 @@ import { weekAround } from "../lib/time";
 import { monthOf, nextMonth } from "../lib/standing";
 import { googleTagId, numberOr } from "../lib/settings";
 import { isExtra } from "../lib/shelf";
-import { howLong, needsDoing } from "../lib/needs-doing";
+import { cartsInTime, howLong, needsDoing } from "../lib/needs-doing";
 import { howPaid, orderStory } from "../lib/order-story";
 import { codeFrom } from "../lib/promoter-applications";
 import { toCsv } from "../lib/csv";
@@ -1926,24 +1928,37 @@ test("a morning with nothing waiting has an empty list, not a fabricated one", (
   assert.deepEqual(needsDoing(quiet), []);
 });
 
-test("the list is ordered by what it costs to leave", () => {
+test("the list is ordered as the board draws it", () => {
   const jobs = needsDoing({
     ...quiet,
     left: { value: 62100, count: 4, stillInTime: 3 },
     unpaid: { value: 41200, count: 3, runLabel: "Saturday afternoon", closesAt: "12:30" },
+    promoters: [{ name: "Onize", owed: 1000, since: "Friday" }],
     reviews: 2,
   });
-  // Money first, biggest first. Replying to a review costs nothing to defer,
-  // so it goes last however nice it is to do.
-  assert.deepEqual(jobs.map((one) => one.kind), ["left", "unpaid", "reviews"]);
+  // Left behind, then what is owed to somebody else, then what is owed to
+  // us, and the review nobody is out of pocket over at the bottom. Fixed
+  // rather than sorted by the figures: the promoters' thousand naira sits
+  // above the forty-one thousand unpaid, because a list whose rows move
+  // about between mornings has to be read from the top every time.
+  assert.deepEqual(jobs.map((one) => one.kind), ["left", "promoters", "unpaid", "reviews"]);
   assert.ok(jobs[0].title.includes("62,100"), jobs[0].title);
   assert.ok(jobs[0].detail.includes("3 can still make"), jobs[0].detail);
+  // Named for the carts worth a WhatsApp, which is what pressing it does.
+  assert.equal(jobs[0].action.label, "Nudge all 3");
+  assert.equal(jobs[2].action.label, "Chase");
 });
 
 test("a run is only worth saying when it is close enough to act on", () => {
   const far = needsDoing({
     ...quiet,
-    run: { label: "Tomorrow's run", closesInMinutes: 9 * 60, kitchens: 11, paid: 0 },
+    run: {
+      id: "b1",
+      label: "Tomorrow's run",
+      closesInMinutes: 9 * 60,
+      kitchens: 11,
+      paid: 0,
+    },
   });
   // Nine hours away is a timetable, and a dashboard that says so every
   // morning is one nobody reads by Thursday.
@@ -1951,15 +1966,21 @@ test("a run is only worth saying when it is close enough to act on", () => {
 
   const near = needsDoing({
     ...quiet,
-    run: { label: "Saturday's run", closesInMinutes: 134, kitchens: 11, paid: 0 },
+    run: { id: "b1", label: "Saturday's run", closesInMinutes: 134, kitchens: 11, paid: 0 },
   });
   assert.equal(near.length, 1);
   assert.ok(near[0].title.includes("2h 14m"), near[0].title);
   assert.ok(near[0].detail.includes("nothing ordered yet"), near[0].detail);
+  // The run named in the row, not the list of every run there has ever been.
+  assert.equal(near[0].action.label, "Open the run");
+  assert.equal(near[0].action.href, "/admin/batch/b1");
 
   // And a run already closed is not a thing to do either.
   assert.deepEqual(
-    needsDoing({ ...quiet, run: { label: "x", closesInMinutes: 0, kitchens: 1, paid: 0 } }),
+    needsDoing({
+      ...quiet,
+      run: { id: "b1", label: "x", closesInMinutes: 0, kitchens: 1, paid: 0 },
+    }),
     []
   );
 });
@@ -1973,6 +1994,43 @@ test("one of a thing is said as one, never as one(s)", () => {
   assert.ok(jobs[0].detail.startsWith("1 cart filled"), jobs[0].detail);
   assert.ok(jobs[0].detail.includes("None of them"), jobs[0].detail);
   assert.ok(jobs[1].title === "1 review to reply to", jobs[1].title);
+});
+
+test("a cart can only still make a run its own clock allows", () => {
+  // The dashboard said "3 can still make today's run" from a filter whose
+  // callback never read the cart, so it counted either none of them or every
+  // one of them. Each cart is tested against the cut-off on its own.
+  const closes = "2026-10-10T12:30:00+01:00";
+  const now = new Date("2026-10-10T11:00:00+01:00").getTime();
+  const carts = [
+    // Filled in this morning against no run yet: picking one is part of
+    // checking out, so this one can still be nudged onto it.
+    { updated_at: "2026-10-10T10:40:00+01:00", batch_id: null },
+    // Filled in against this very run, before it closes.
+    { updated_at: "2026-10-10T09:05:00+01:00", batch_id: "sat" },
+    // Somebody else's run, which this cut-off says nothing about.
+    { updated_at: "2026-10-10T09:05:00+01:00", batch_id: "sun" },
+  ];
+
+  assert.equal(cartsInTime(carts, { id: "sat", cutOffAt: closes }, now), 2);
+  // No run to make, so nobody can make it.
+  assert.equal(cartsInTime(carts, null, now), 0);
+  // The cut-off has gone: an hour later every one of them is an apology
+  // rather than a WhatsApp.
+  assert.equal(
+    cartsInTime(carts, { id: "sat", cutOffAt: closes }, new Date("2026-10-10T13:00:00+01:00").getTime()),
+    0
+  );
+  // A cart whose own last touch is past the cut-off is not on that run,
+  // even while the run is still taking orders from everybody else.
+  assert.equal(
+    cartsInTime(
+      [{ updated_at: "2026-10-10T12:45:00+01:00", batch_id: "sat" }],
+      { id: "sat", cutOffAt: closes },
+      new Date("2026-10-10T12:20:00+01:00").getTime()
+    ),
+    0
+  );
 });
 
 test("how long is said the way somebody would say it", () => {
@@ -2406,4 +2464,70 @@ test("an iPhone is told about the Home Screen and a desktop is not", () => {
   assert.equal(isApple("Mozilla/5.0 (Linux; Android 14; Pixel 8)"), false);
   // A Mac has no Home Screen, so the sentence would only confuse.
   assert.equal(isApple("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"), false);
+});
+
+test("no server page imports a value out of a client component", () => {
+  /*
+   * The bug this catches took the customer book down in production and
+   * nothing else in this suite could see it.
+   *
+   * A server component that imports a value from a "use client" module is
+   * not handed the value. The bundler gives it a reference to something
+   * that only exists in the browser, so the first time the server dots into
+   * it the render throws, while the build, the types and every other test
+   * pass: it fails only when somebody opens the page. The customers page
+   * read VIEWS and called broadcastHref straight out of the composer.
+   *
+   * The rule a client module can be held to is that everything a server
+   * file takes out of it by name is either a component, which is always
+   * PascalCase, or a type, which is erased before any of this matters.
+   * Data in SCREAMING_CASE and functions in camelCase belong in a module
+   * with no directive on it, where both halves get the real thing.
+   */
+  const dir = new URL("..", import.meta.url).pathname;
+  const walk = (at: string): string[] =>
+    readdirSync(join(dir, at), { withFileTypes: true }).flatMap((entry) =>
+      entry.isDirectory()
+        ? entry.name === "node_modules"
+          ? []
+          : walk(join(at, entry.name))
+        : /\.tsx?$/.test(entry.name)
+          ? [join(at, entry.name)]
+          : []
+    );
+
+  const source = (file: string) => readFileSync(join(dir, file), "utf8");
+  const onClient = (file: string) => /^\s*["']use client["']/.test(source(file));
+
+  const resolve = (spec: string, from: string): string | null => {
+    const base = spec.startsWith("@/")
+      ? spec.slice(2)
+      : spec.startsWith(".")
+        ? join(from, "..", spec)
+        : null;
+    if (base === null) return null;
+    for (const ext of [".tsx", ".ts"]) {
+      if (existsSync(join(dir, base + ext))) return base + ext;
+    }
+    return null;
+  };
+
+  const wrong: string[] = [];
+  for (const file of [...walk("app"), ...walk("components"), ...walk("lib")]) {
+    if (onClient(file)) continue;
+    for (const found of source(file).matchAll(
+      /import\s*\{([^}]*)\}\s*from\s*["']([^"']+)["']/g
+    )) {
+      const target = resolve(found[2], file);
+      if (target === null || !onClient(target)) continue;
+      for (const raw of found[1].split(",")) {
+        const name = raw.trim().split(/\s+as\s+/)[0].trim();
+        if (name === "" || name.startsWith("type ")) continue;
+        // A component. Anything else is data or a function.
+        if (/^[A-Z][a-z]/.test(name)) continue;
+        wrong.push(`${file} imports ${name} from ${found[2]}`);
+      }
+    }
+  }
+  assert.deepEqual(wrong, []);
 });

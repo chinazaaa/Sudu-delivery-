@@ -4,7 +4,7 @@ import Diagnostic from "@/components/Diagnostic";
 import AdminLive from "@/components/admin/AdminLive";
 import Figure from "@/components/admin/Figure";
 import Panel from "@/components/admin/Panel";
-import { howLong, needsDoing } from "@/lib/needs-doing";
+import { cartsInTime, needsDoing } from "@/lib/needs-doing";
 import { batchOverview, promoterRows } from "@/lib/admin";
 import { dashboard, orderFeed } from "@/lib/admin-data";
 import { abandonedCarts } from "@/lib/carts";
@@ -20,7 +20,7 @@ import {
   otherMoneyTotals,
   windowStart,
 } from "@/lib/other-money";
-import { clockLabel, lagosToday, runDateLabel } from "@/lib/time";
+import { clockLabel, lagosToday, runDateLabel, weekdayLabel } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -147,8 +147,12 @@ export default async function AdminHome() {
       : (new Date(working.cut_off_at).getTime() - Date.now()) / 60000;
 
   // Carts that could still make today's run: the ones worth a WhatsApp now
-  // rather than an apology later.
-  const inTime = working === null ? 0 : left.filter((cart) => closesIn > 0).length;
+  // rather than an apology later. Worked out per cart, from each cart's own
+  // last touch against the cut-off, rather than from the clock alone.
+  const inTime = cartsInTime(
+    left,
+    working ? { id: working.id, cutOffAt: working.cut_off_at } : null
+  );
 
   const jobs = needsDoing({
     left: {
@@ -164,6 +168,7 @@ export default async function AdminHome() {
     },
     run: working
       ? {
+          id: working.id,
           label: workingLabel,
           closesInMinutes: closesIn,
           kitchens: working.orderCount,
@@ -187,13 +192,21 @@ export default async function AdminHome() {
   const best = Math.max(1, ...ran.map((batch) => batch.profit));
   const topped = Math.max(1, ...(stats?.topItems ?? []).map((one) => one.qty));
   /*
-   * A panel as the mobile board draws it: a twenty-one pixel heading in a
-   * fourteen pixel card, back to the desk's twenty-six and twenty from sm.
-   *
-   * An override rather than a prop because Panel is shared with every other
-   * admin page and takes a single size for both widths; the change worth
-   * making there is a responsive heading inside the component itself.
+   * The last run that actually went, which the board draws under today's and
+   * tomorrow's as a settled row. Without it the panel only ever showed cars
+   * that have not left yet, so a morning after a good Friday said nothing
+   * about Friday.
    */
+  const went =
+    batches
+      .filter(
+        (batch) =>
+          batch.status === "delivered" &&
+          batch.kind !== "same_day" &&
+          batch.kind !== "parcel"
+      )
+      .sort((a, b) => a.run_date.localeCompare(b.run_date))
+      .at(-1) ?? null;
   const dot = {
     red: "bg-brand-dark",
     amber: "bg-amber",
@@ -201,52 +214,157 @@ export default async function AdminHome() {
     volt: "bg-volt",
   } as const;
 
+  // The weekday, which is the phone board's heading: somebody opening this in
+  // the morning knows what day it is in their hand, not what the page is
+  // called. The date under it drops the weekday the heading already says.
+  const weekday = weekdayLabel(lagosToday());
+  const dated = runDateLabel(lagosToday()).split(", ").at(-1) ?? "";
+  // "4 things need doing", "1 thing needs doing", or a morning with nothing
+  // in it, which is worth saying rather than leaving blank.
+  const needSaid =
+    jobs.length === 0
+      ? "nothing needs doing"
+      : jobs.length === 1
+        ? "1 thing needs doing"
+        : `${jobs.length} things need doing`;
+
+  // The list's rows, drawn once and used by both of the panels below. On a
+  // phone the board gives a row a title and a chevron: the detail sentence
+  // and the button are the desk's, and the whole row is the link instead.
+  const rows =
+    jobs.length === 0 ? (
+      <p className="border-t-[1.5px] border-rule pt-3.5 text-[14.5px] text-muted">
+        Nothing is waiting. Every cart has been paid for, every order is on a run, and
+        nobody is owed an answer.
+      </p>
+    ) : (
+      jobs.map((job) => (
+        <div
+          key={job.kind}
+          className="flex items-center gap-2.5 border-t-[1.5px] border-rule px-1 py-[11px] sm:gap-3 sm:py-3"
+        >
+          <span aria-hidden className={`size-2 shrink-0 rounded-full sm:size-2.5 ${dot[job.tone]}`} />
+          <Link href={job.action.href} className="min-w-0 flex-1 sm:pointer-events-none">
+            <span className="block text-sm font-bold sm:text-[15px]">{job.title}</span>
+            <span className="hint hidden sm:block">{job.detail}</span>
+          </Link>
+          {/* The thumb's whole row is the link on a phone, so the button is
+              the desk's and the chevron says the row goes somewhere. */}
+          <span aria-hidden className="shrink-0 text-[17px] text-muted sm:hidden">
+            ›
+          </span>
+          <Link
+            href={job.action.href}
+            className="btn-admin btn-admin-sm hidden shrink-0 sm:inline-flex"
+          >
+            {job.action.label}
+          </Link>
+        </div>
+      ))
+    );
+
   return (
     <div>
       <AdminLive />
 
-      <PageHeader
-        title="Dashboard"
-        detail={
-          <>
-            {runDateLabel(lagosToday())} · the last 28 days, and what needs doing today.
-          </>
-        }
-        actions={
-          <>
-            {/* The board's two sizes: an outline button for the second thing,
-                and the one tomato button on the screen for the run being
-                driven. */}
-            <Link href="/admin/runs?new=1" className="btn-admin flex-1 sm:flex-none">
-              New run
-            </Link>
-            {working && (
-              /* The board gives the phone one full width tomato button at
-                 fifty-four pixels, above everything else on the screen,
-                 because it is the thumb's first stop in the morning. On a
-                 desk it goes back to sitting beside New run. */
-              <Link
-                href={`/admin/batch/${working.id}`}
-                className="btn-admin-go order-first min-h-[54px] w-full text-base sm:order-none sm:min-h-[44px] sm:w-auto sm:text-[15px]"
-              >
-                Open {workingLabel.toLowerCase()} →
-              </Link>
+      {/* The phone's own top of page, which the board draws as the weekday
+          rather than as the word Dashboard, with the two things that are
+          costing money right now above the one red button.
+
+          Its own markup rather than the shared header because PageHeader
+          takes its title as a string and so cannot say one thing on a phone
+          and another on a desk. A responsive title belongs in that
+          component, and this is the note asking for it. */}
+      <div className="mb-3 sm:hidden">
+        <h1 className="font-display text-[36px] font-black uppercase leading-[0.95]">
+          {weekday}
+        </h1>
+        <p className="hint mt-1">
+          {dated} · {needSaid}
+        </p>
+
+        {/* The board's two urgent tiles. Hand-rolled on the card primitive
+            rather than built from Figure, because what makes them urgent is
+            the ground and the border and Figure carries neither. Each is
+            drawn only when there is something behind it: a tile reporting
+            nought left behind is a tile in the way. */}
+        {(left.length > 0 || owing.length > 0) && (
+          <div className="mt-[11px] grid grid-cols-2 gap-[9px]">
+            {left.length > 0 && (
+              <div className="card border-volt-line bg-brand-tint px-[13px] py-[11px]">
+                <p className="ticket text-muted">Left behind</p>
+                <p className="font-display text-[27px] font-black leading-none">
+                  {naira(left.reduce((total, cart) => total + cart.value, 0))}
+                </p>
+                <p className="hint">
+                  {left.length} cart{left.length === 1 ? "" : "s"}
+                  {inTime > 0 ? ` · ${inTime} still live` : ""}
+                </p>
+              </div>
             )}
-          </>
-        }
-      />
+            {owing.length > 0 && (
+              <div className="card border-brand-dark px-[13px] py-[11px]">
+                <p className="ticket text-brand-dark">You owe promoters</p>
+                <p className="font-display text-[27px] font-black leading-none text-brand-dark">
+                  {naira(owing.reduce((total, one) => total + one.owed, 0))}
+                </p>
+                <p className="hint">
+                  {owing.slice(0, 3).map((one) => one.name).join(", ")}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {working && (
+          /* The board gives the phone one full width tomato button at
+             fifty-four pixels, under the two tiles, because it is the
+             thumb's first stop in the morning. */
+          <Link
+            href={`/admin/batch/${working.id}`}
+            className="btn-admin-go mt-[11px] min-h-[54px] w-full text-base"
+          >
+            Open {workingLabel.toLowerCase()} →
+          </Link>
+        )}
+      </div>
+
+      <div className="hidden sm:block">
+        <PageHeader
+          title="Dashboard"
+          detail={
+            <>
+              {runDateLabel(lagosToday())} · the last 28 days, and what needs doing today.
+            </>
+          }
+          actions={
+            <>
+              {/* The board's two sizes: an outline button for the second thing,
+                  and the one tomato button on the screen for the run being
+                  driven. The phone has its own copy of this above. */}
+              <Link href="/admin/runs?new=1" className="btn-admin">
+                New run
+              </Link>
+              {working && (
+                <Link href={`/admin/batch/${working.id}`} className="btn-admin-go">
+                  Open {workingLabel.toLowerCase()} →
+                </Link>
+              )}
+            </>
+          }
+        />
+      </div>
 
       {problem && !problem.ok && (
         <Diagnostic title={problem.title} detail={problem.detail} />
       )}
 
       {stats && (
-        /* The board sets a phone's figure at twenty-five pixels in a two up
-           grid, not forty in a column: four tiles are then one glance
-           rather than most of the screen. Written as a descendant override
-           because Figure carries one size for both widths, and giving it a
-           responsive size is the change to make there. */
-        <div className="mb-3 grid grid-cols-2 gap-[9px] [&_.card]:px-[13px] [&_.card]:py-[11px] sm:mb-[18px] sm:gap-3.5 xl:grid-cols-4">
+        /* The desk's four. The phone board has no row of four here at all:
+           it carries the two urgent tiles above the red button and Money in
+           and Profit below the list, so these are hidden rather than shrunk.
+           Four across from lg, which is the width the boards describe. */
+        <div className="hidden sm:mb-[18px] sm:grid sm:grid-cols-2 sm:gap-3.5 lg:grid-cols-4">
           <Figure
             label="Paid orders"
             value={String(stats.paidOrders)}
@@ -271,47 +389,57 @@ export default async function AdminHome() {
         </div>
       )}
 
-      <div className="grid items-start gap-3 sm:gap-[18px] xl:grid-cols-[1.35fr_1fr]">
-        <Panel
-         
-          title="Needs doing today"
-          detail="Everything here costs you money if it is left. Clearing the list is the whole job."
-          aside={
-            jobs.length > 0 ? (
-              <span className="tag bg-brand-wash text-brand-dark">
-                {jobs.length} thing{jobs.length === 1 ? "" : "s"}
-              </span>
-            ) : (
-              <span className="tag bg-mint-tint text-mint">All clear</span>
-            )
-          }
-        >
-          {jobs.length === 0 ? (
-            <p className="border-t-[1.5px] border-rule pt-3.5 text-[14.5px] text-muted">
-              Nothing is waiting. Every cart has been paid for, every order is on a run, and
-              nobody is owed an answer.
-            </p>
-          ) : (
-            jobs.map((job) => (
-              <div
-                key={job.kind}
-                className="flex items-center gap-3 border-t-[1.5px] border-rule px-1 py-3"
-              >
-                <span aria-hidden className={`size-2.5 shrink-0 rounded-full ${dot[job.tone]}`} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-bold">{job.title}</p>
-                  <p className="hint">{job.detail}</p>
-                </div>
-                <Link href={job.action.href} className="btn-admin btn-admin-sm shrink-0">
-                  {job.action.label}
-                </Link>
-              </div>
-            ))
-          )}
-        </Panel>
+      <div className="grid items-start gap-3 sm:gap-[18px] lg:grid-cols-[1.35fr_1fr]">
+        {/* Two of them, one per width, because Panel's title is a string and
+            the boards head this panel differently: "Needs doing" on a phone,
+            where the chip is the bare number and a row is a line and a
+            chevron, and "Needs doing today" on a desk, where every row
+            carries its detail and its button. Only ever one is in the
+            layout, since the other is display:none and so not a grid item
+            at all. The rows themselves are written once, below. */}
+        <div className="sm:hidden">
+          <Panel
+            title="Needs doing"
+            aside={
+              jobs.length > 0 ? (
+                <span className="tag bg-brand-wash text-brand-dark">{jobs.length}</span>
+              ) : (
+                <span className="tag bg-mint-tint text-mint">All clear</span>
+              )
+            }
+          >
+            {rows}
+          </Panel>
+        </div>
+
+        <div className="hidden sm:block">
+          <Panel
+            title="Needs doing today"
+            detail="Everything here costs you money if it is left. Clearing the list is the whole job."
+            aside={
+              jobs.length > 0 ? (
+                <span className="tag bg-brand-wash text-brand-dark">
+                  {jobs.length} thing{jobs.length === 1 ? "" : "s"}
+                </span>
+              ) : (
+                <span className="tag bg-mint-tint text-mint">All clear</span>
+              )
+            }
+          >
+            {rows}
+          </Panel>
+        </div>
+
+        {/* The board puts these two under the list on a phone and in the row
+            of four on a desk, so here they are the phone's pair. */}
+        {stats && (
+          <div className="grid grid-cols-2 gap-[9px] sm:hidden">
+            <Figure label="Money in" value={naira(stats.gross)} detail="28 days" />
+            <Figure label="Profit" value={naira(profit)} tone="mint" detail="28 days" />
+          </div>
+        )}
 
         <Panel
-         
           title="Runs"
           aside={
             <Link href="/admin/runs" className="text-[13.5px] font-semibold text-brand-dark">
@@ -320,11 +448,21 @@ export default async function AdminHome() {
           }
         >
           {soon.length === 0 && !after && (
+            /* Still said when the settled row below is the only one there
+               is: a run that has been delivered is not a car going out. */
             <p className="border-t-[1.5px] border-rule pt-3 text-[14.5px] text-muted">
               Nothing is going today or tomorrow.
             </p>
           )}
-          {[...soon, ...(after && soon.length === 0 ? [after] : [])].map((batch) => (
+          {/* What is still to go, and then the last one that went. The row
+              says which it is rather than claiming every run is open, which
+              is what it used to do: the tag was hardcoded, so a settled run
+              could not have been drawn here even if one had been passed. */}
+          {[
+            ...soon,
+            ...(after && soon.length === 0 ? [after] : []),
+            ...(went ? [went] : []),
+          ].map((batch) => (
             <Link
               key={batch.id}
               href={`/admin/batch/${batch.id}`}
@@ -334,20 +472,27 @@ export default async function AdminHome() {
                 <span className="block font-bold">
                   {runDateLabel(batch.run_date)} · {SLOT_LABEL[batch.slot]}
                 </span>
-                <span className="hint block">Closes {clockLabel(batch.cut_off_at)}</span>
+                <span className="hint block">
+                  {batch.status === "open"
+                    ? `Closes ${clockLabel(batch.cut_off_at)}`
+                    : `Done · ${naira(batch.gross)} in`}
+                </span>
               </span>
               <span className="text-right">
                 <span className="block font-mono text-sm font-semibold">
-                  {batch.paidCount} paid
+                  {batch.status === "open" ? `${batch.paidCount} paid` : naira(batch.profit)}
                 </span>
-                <span className="tag bg-mint-tint text-mint">open</span>
+                {batch.status === "open" ? (
+                  <span className="tag bg-mint-tint text-mint">open</span>
+                ) : (
+                  <span className="tag bg-wash text-ink">settled</span>
+                )}
               </span>
             </Link>
           ))}
         </Panel>
 
         <Panel
-         
           title="What sells"
           detail="Last 28 days. Use it to decide which kitchens go on a run."
         >
@@ -371,49 +516,6 @@ export default async function AdminHome() {
               </div>
             </div>
           ))}
-        </Panel>
-
-        <Panel
-         
-          title="By day of the week"
-          detail="Last 28 days, busiest first. A day near the bottom is a car that went out half full."
-        >
-          {(stats?.byWeekday ?? []).length === 0 ? (
-            <p className="pt-2 text-[14.5px] text-muted">
-              Nothing has been paid for yet, so no day has a figure against it.
-            </p>
-          ) : (
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  <th className="pb-2 pr-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-                    Day and slot
-                  </th>
-                  <th className="pb-2 pr-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-                    Orders
-                  </th>
-                  <th className="pb-2 text-right text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-                    Money in
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {(stats?.byWeekday ?? []).slice(0, 7).map((day) => (
-                  <tr key={day.label} className="border-t-[1.5px] border-rule">
-                    <td className="py-[11px] pr-2.5 text-[14.5px] font-bold capitalize">
-                      {day.label}
-                    </td>
-                    <td className="py-[11px] pr-2.5 text-right font-mono text-[14.5px] text-muted">
-                      {day.orders}
-                    </td>
-                    <td className="py-[11px] text-right font-mono text-[14.5px] font-semibold">
-                      {naira(day.gross)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
         </Panel>
 
         <div className="flex flex-col gap-3 sm:gap-[18px]">

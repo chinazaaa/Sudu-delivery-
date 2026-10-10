@@ -92,7 +92,7 @@ export function Bar({
     return state.done || state.error ? (
       <p
         className={`mb-3.5 rounded-xl px-4 py-3 text-sm font-semibold ${
-          state.error ? "bg-brand-tint text-brand-dark" : "bg-[#dff0e6] text-mint"
+          state.error ? "bg-brand-tint text-brand-dark" : "bg-mint-tint text-mint"
         }`}
       >
         {state.error ?? state.done}

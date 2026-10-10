@@ -30,7 +30,7 @@ export const dynamic = "force-dynamic";
 
 const TABS: { value: string; label: string }[] = [
   { value: "pending", label: "Unpaid" },
-  { value: "card", label: "Waiting on a card link" },
+  { value: "card", label: "Card link" },
   { value: "paid", label: "Paid" },
   { value: "delivered", label: "Delivered" },
   { value: "refunded", label: "Refunded" },
@@ -190,7 +190,12 @@ export default async function OrdersPage({
             payment landed, on a page that cannot know, is worse than no
             card at all. */}
 
-        <div className="mb-3.5 grid grid-cols-2 gap-3.5 xl:grid-cols-4">
+        {/* The desk's only. The phone board goes title, cut, hint, then the
+            cards: a figure saying there are three orders waiting, above
+            three cards each of which says so, is a screen of the same
+            number. Four across from lg, which is the width the boards
+            describe. */}
+        <div className="mb-3.5 hidden sm:grid sm:grid-cols-2 sm:gap-3.5 lg:grid-cols-4">
           <Figure
             label="Waiting"
             value={String(waiting.length)}
@@ -204,18 +209,7 @@ export default async function OrdersPage({
           />
         </div>
 
-        {waiting.length === 0 ? (
-          <div className="soft px-3.5 py-3">
-            <strong className="text-[14px]">Everything else is paid</strong>
-            <p className="hint">
-              {closing
-                ? `${closing.orderCount} order${
-                    closing.orderCount === 1 ? "" : "s"
-                  } on this run, nothing outstanding.`
-                : "No order anywhere is waiting on money."}
-            </p>
-          </div>
-        ) : (
+        {waiting.length > 0 && (
           <div className="space-y-3">
             {waiting.map((order) => (
               <WaitingCard
@@ -228,6 +222,21 @@ export default async function OrdersPage({
             ))}
           </div>
         )}
+
+        {/* The board's running line under the cards, drawn whether or not
+            there are any: it is the answer to "is that everything", and as
+            an empty state it only ever appeared on the mornings when nobody
+            needed to ask. */}
+        <div className="soft mt-3 px-3.5 py-3">
+          <strong className="text-[14px]">Everything else is paid</strong>
+          <p className="hint">
+            {closing
+              ? `${closing.paidCount} order${
+                  closing.paidCount === 1 ? "" : "s"
+                } on this run paid for, nothing else outstanding.`
+              : "No other order anywhere is waiting on money."}
+          </p>
+        </div>
 
         {/* The way out of the cut, which the board puts at the bottom of it
             as well as in the control at the top: somebody who has dealt with
@@ -303,10 +312,10 @@ export default async function OrdersPage({
         </p>
       )}
 
-      {/* Two up on a phone, which is what the board draws and what the
-          figure card is now sized for: one number per row is four screens
-          of numbers before the first order. */}
-      <div className="mb-4 grid grid-cols-2 gap-3.5 xl:grid-cols-4">
+      {/* The desk's four. The phone board has no figures on this cut
+          either: it goes title, cut, hint, search, pills, cards. Four
+          across from lg, which is the width the boards describe. */}
+      <div className="mb-4 hidden sm:grid sm:grid-cols-2 sm:gap-3.5 lg:grid-cols-4">
         <Figure
           label="Showing"
           value={String(orders.length)}
@@ -317,16 +326,20 @@ export default async function OrdersPage({
           value={naira(orders.reduce((total, order) => total + order.total, 0))}
           detail="Food and delivery"
         />
-        {/* Only where the view can hold an unpaid order. Filtered to paid it
-            was a card reporting zero every time, which is not news. */}
-        {canBeUnpaid && (
-          <Figure
-            label="Unpaid"
-            value={naira(unpaidTotal)}
-            tone={unpaidTotal > 0 ? "brand" : "mint"}
-            detail={`${orders.filter((one) => one.status === "pending").length} in this view`}
-          />
-        )}
+        {/* Always, because the board's row is always four: dropping it on
+            the paid and delivered tabs left three tiles and a gap where
+            every other cut has a figure. Nought unpaid in a view that
+            cannot hold one is the answer to the question. */}
+        <Figure
+          label="Unpaid"
+          value={naira(unpaidTotal)}
+          tone={unpaidTotal > 0 ? "brand" : "mint"}
+          detail={
+            canBeUnpaid
+              ? `${orders.filter((one) => one.status === "pending").length} in this view`
+              : "Nothing in this view can be unpaid"
+          }
+        />
         <Figure
           label="Average order"
           value={naira(
@@ -352,68 +365,74 @@ export default async function OrdersPage({
         </p>
       )}
 
-      {/*
-       * Sideways on a phone, wrapped from `lg`.
-       *
-       * Seven of these do not fit a phone either way. Wrapped they are three
-       * rows of chips above the first order, which is the whole screen gone
-       * before anything worth reading; the board scrolls them instead and
-       * keeps the page. `no-scrollbar` because a scrollbar drawn over a 38px
-       * pill eats the bottom of its text, and the pills themselves say
-       * plainly that there are more of them off the right.
-       */}
-      <div className="no-scrollbar -mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0 lg:pb-0">
-        {TABS.map((item) => {
-          // The tab's own count, so the three unpaid orders can be found
-          // without opening tabs until one has rows in it. "Everything" is
-          // the only one without, because a number there is just the total
-          // said twice.
-          const count =
-            item.value === "all"
-              ? null
-              : item.value === "card"
-                ? (counts.card ?? 0)
-                : (counts[item.value] ?? 0);
-          return (
-            <Link
-              key={item.value}
-              href={link({ status: item.value })}
-              className={`pill-admin shrink-0 ${tab === item.value ? "pill-admin-on" : ""}`}
-            >
-              {item.label}
-              {count !== null && (
-                <span className="font-mono opacity-60">{count}</span>
-              )}
-            </Link>
-          );
-        })}
-      </div>
+      {/* The board puts these the other way round at each width: a phone
+          searches by name first and scrolls the pills under the field, a
+          desk picks a cut first and searches inside it. One of each, in
+          one column, reordered rather than drawn twice. */}
+      <div className="flex flex-col">
+        {/*
+         * Sideways on a phone, wrapped from `lg`.
+         *
+         * Seven of these do not fit a phone either way. Wrapped they are three
+         * rows of chips above the first order, which is the whole screen gone
+         * before anything worth reading; the board scrolls them instead and
+         * keeps the page. `no-scrollbar` because a scrollbar drawn over a 38px
+         * pill eats the bottom of its text, and the pills themselves say
+         * plainly that there are more of them off the right.
+         */}
+        <div className="no-scrollbar -mx-4 order-2 mb-3 flex gap-2 overflow-x-auto px-4 pb-1 sm:order-1 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0 lg:pb-0">
+          {TABS.map((item) => {
+            // The tab's own count, so the three unpaid orders can be found
+            // without opening tabs until one has rows in it. "Everything" is
+            // the only one without, because a number there is just the total
+            // said twice.
+            const count =
+              item.value === "all"
+                ? null
+                : item.value === "card"
+                  ? (counts.card ?? 0)
+                  : (counts[item.value] ?? 0);
+            return (
+              <Link
+                key={item.value}
+                href={link({ status: item.value })}
+                className={`pill-admin shrink-0 ${tab === item.value ? "pill-admin-on" : ""}`}
+              >
+                {item.label}
+                {count !== null && (
+                  <span className="font-mono opacity-60">{count}</span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
 
-      <form className="mb-4 flex flex-wrap gap-2.5" action="/admin/orders">
-        <input type="hidden" name="status" value={tab} />
-        {query.promoter && (
-          <input type="hidden" name="promoter" value={query.promoter} />
-        )}
-        <input
-          name="q"
-          defaultValue={query.q ?? ""}
-          placeholder="Name, number or block"
-          className="field field-admin w-full grow border-[1.5px] border-line bg-paper px-3 sm:w-auto sm:max-w-xs"
-        />
-        <select
-          name="batch"
-          defaultValue={query.batch ?? ""}
-          className="field field-admin w-auto grow border-[1.5px] border-line bg-paper px-3 sm:max-w-xs"
-        >
-          <option value="">Every run</option>
-          {batches.map((batch) => (
-            <option key={batch.id} value={batch.id}>
-              {runDateLabel(batch.run_date)} · {SLOT_LABEL[batch.slot]}
-            </option>
-          ))}
-        </select>
-        <button className="btn-admin">Filter</button>
-      </form>
+        <form className="order-1 mb-3 flex flex-wrap gap-2.5 sm:order-2 sm:mb-4" action="/admin/orders">
+          <input type="hidden" name="status" value={tab} />
+          {query.promoter && (
+            <input type="hidden" name="promoter" value={query.promoter} />
+          )}
+          <input
+            name="q"
+            defaultValue={query.q ?? ""}
+            placeholder="Name, number or block"
+            className="field field-admin w-full grow border-[1.5px] border-line bg-paper px-3 sm:w-auto sm:max-w-xs"
+          />
+          <select
+            name="batch"
+            defaultValue={query.batch ?? ""}
+            className="field field-admin w-auto grow border-[1.5px] border-line bg-paper px-3 sm:max-w-xs"
+          >
+            <option value="">Every run</option>
+            {batches.map((batch) => (
+              <option key={batch.id} value={batch.id}>
+                {runDateLabel(batch.run_date)} · {SLOT_LABEL[batch.slot]}
+              </option>
+            ))}
+          </select>
+          <button className="btn-admin">Filter</button>
+        </form>
+      </div>
 
       {orders.length === 0 ? (
         <p className="card text-[14.5px] text-muted">

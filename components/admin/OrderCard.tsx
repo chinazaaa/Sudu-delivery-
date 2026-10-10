@@ -152,7 +152,13 @@ export default function OrderCard({
 }) {
   const [open, setOpen] = useState(false);
   const confirmed = order.templates.find((t) => t.kind === "confirmed");
-  const offer = order.templates.filter((one) => !without.includes(one.kind));
+  // The board gives the row itself a PIN button, so it is taken out of the
+  // row of message buttons below: the same WhatsApp link offered twice on
+  // one card is the same message sent twice.
+  const pin = onList ? order.templates.find((one) => one.kind === "pin") ?? null : null;
+  const offer = order.templates.filter(
+    (one) => !without.includes(one.kind) && !(pin !== null && one.kind === "pin")
+  );
 
   return (
     <article className="card space-y-2.5 px-3.5 py-3 sm:space-y-3 sm:px-4 sm:py-3.5">
@@ -261,13 +267,29 @@ export default function OrderCard({
               {naira(order.total)}
             </span>
             <StatusPill status={order.status} />
-            {/* The way in. The order number at the top has always been a
-                link, but a number does not look like one, so the page that
-                holds the photographs, the run it is on and the notes was
-                reachable only by somebody who already knew it was there. */}
-            <Link href={`/admin/orders/${order.id}`} className="btn-admin btn-admin-sm">
-              Open →
-            </Link>
+            {/* The board's two row actions, side by side: their PIN, which
+                is the one message a row is opened for, and the way in.
+                The PIN used to be the first of a wrapped row of message
+                buttons under the card, and the order number at the top has
+                always been a link but a number does not look like one, so
+                the page that holds the photographs, the run it is on and
+                the notes was reachable only by somebody who already knew it
+                was there. */}
+            <div className="flex gap-1.5">
+              {pin && (
+                <a
+                  href={pin.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-admin btn-admin-sm"
+                >
+                  PIN
+                </a>
+              )}
+              <Link href={`/admin/orders/${order.id}`} className="btn-admin btn-admin-sm">
+                Open →
+              </Link>
+            </div>
           </div>
         </div>
       )}
@@ -580,17 +602,33 @@ function Money({
   );
 }
 
-function StatusPill({ status }: { status: string }) {
-  /* The board's own tints: green for done, volt for paid and waiting,
-     tomato for money that has not arrived, and grey for an order that is
-     no longer going anywhere. */
+/**
+ * What state an order is in, as the board's small tinted label.
+ *
+ * Exported because the order's own page shows the same state beside the
+ * total on a phone, and a second copy of these tones is how two screens
+ * come to disagree about what colour a refund is.
+ */
+export function StatusPill({ status }: { status: string }) {
+  /* The board's own tints, each of which is a colour in its own right: mint
+     for done, volt for paid and waiting, the red wash for money that has
+     not arrived or has gone back, and grey for an order that is no longer
+     going anywhere. A tint written as an opacity over the solid colour is
+     whatever the page happens to be sitting on rather than the board's
+     ground.
+
+     Refunded is red and only cancelled is grey, which is what the board
+     draws: money handed back is a figure somebody has to account for, and
+     the two lumped together said a refund cost nothing. */
   const tone =
     status === "pending"
-      ? "bg-brand/15 text-brand-dark"
+      ? "bg-brand-wash text-brand-dark"
       : status === "paid"
         ? "bg-volt text-ink"
-        : status === "refunded" || status === "cancelled"
-          ? "bg-wash text-muted"
-          : "bg-mint/10 text-mint";
+        : status === "refunded"
+          ? "bg-brand-wash text-brand-dark"
+          : status === "cancelled"
+            ? "bg-wash text-muted"
+            : "bg-mint-tint text-mint";
   return <span className={`tag ${tone}`}>{status === "pending" ? "unpaid" : status}</span>;
 }

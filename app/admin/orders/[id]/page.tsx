@@ -3,13 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Figure from "@/components/admin/Figure";
 import Panel from "@/components/admin/Panel";
-import Stat from "@/components/admin/Stat";
 import { howPaid, orderStory } from "@/lib/order-story";
-import OrderCard from "@/components/admin/OrderCard";
+import { StatusPill } from "@/components/admin/OrderCard";
 import { orderFeed } from "@/lib/admin-data";
+import { oneCustomer, shareOfProfit } from "@/lib/customer";
 import { getOrder } from "@/lib/orders";
 import { getBatch } from "@/lib/batches";
-import { SLOT_LABEL } from "@/lib/config";
+import { SLOT_LABEL, TZ } from "@/lib/config";
 import { getSettings } from "@/lib/settings";
 import { payableAccounts } from "@/lib/banks";
 import { siteUrl, toCard } from "@/lib/admin-templates";
@@ -25,15 +25,8 @@ import {
   addParcelPhoto,
   setBatchStage,
   agreeParcelDay,
-  markPaid,
-  markDelivered,
   moveOrderToAnother,
-  cancelOrder,
-  deleteOrder,
-  refundOrder,
-  savePaymentLink,
   removeParcelPhoto,
-  saveOrderNote,
   setBoxDay,
   orderAgain,
   setLineQty,
@@ -80,13 +73,17 @@ export default async function AdminOrderPage({
 
     const detail = error instanceof Error ? error : new Error(String(error));
     return (
-      <div className="card space-y-2 border-red-200 bg-red-50">
-        <h1 className="font-extrabold text-red-800">This order would not open</h1>
-        <p className="break-words text-sm text-red-900">{detail.message}</p>
-        <pre className="overflow-x-auto whitespace-pre-wrap rounded-xl bg-white/70 p-3 text-xs text-red-900">
+      /* In the palette's own red and on the admin's own button, rather than
+         Tailwind's default red ramp and the shop's fifty-two pixel one:
+         this is still an admin page, and a page that goes wrong is where
+         looking like somewhere else is least welcome. */
+      <div className="card space-y-2 border-brand-dark bg-brand-wash">
+        <h1 className="font-extrabold text-brand-dark">This order would not open</h1>
+        <p className="break-words text-sm text-brand-dark">{detail.message}</p>
+        <pre className="overflow-x-auto whitespace-pre-wrap rounded-xl bg-paper p-3 text-xs text-brand-dark">
           {(detail.stack ?? "").split("\n").slice(0, 6).join("\n")}
         </pre>
-        <Link href="/admin/orders" className="btn-quiet w-fit px-4 py-2 text-sm">
+        <Link href="/admin/orders" className="btn-admin w-fit">
           Back to orders
         </Link>
       </div>
@@ -163,67 +160,114 @@ async function orderPage(id: string, said: string) {
   const pin = shown?.templates.find((one) => one.kind === "pin") ?? null;
   const review = shown?.templates.find((one) => one.kind === "review") ?? null;
 
+  /*
+   * What this order left, after its food, the commission on it and its share
+   * of the car.
+   *
+   * The fourth tile used to be the status, which the chip beside the total
+   * already says and which set a word in the display face at forty pixels:
+   * the rule is that money is mono and the display face is never a word. The
+   * split is the one the customer page uses, narrowed to this one order, so
+   * the two pages cannot print different profits for the same food.
+   */
+  const earned = card
+    ? await shareOfProfit([card], card.subtotal_food ?? 0, card.total).catch(() => null)
+    : null;
+
+  // Who they are, for the two rows the board's person panel has that ours
+  // never had: how many orders they have placed and what they have spent.
+  const them = await oneCustomer(order.customer_phone).catch(() => null);
+
   return (
     /* Room under the last card for the bar standing over it on a phone. */
     <div className="pb-[76px] lg:pb-0">
-      <PageHeader
-        backHref="/admin/orders"
-        backLabel="All orders"
-        /* The same wording as the card below it and the transfer
-           narration: #1001a, not #1001 on one screen and #1001a on the
-           next. */
-        title={`Order ${shareRef(
-          order,
-          order.shares.length > 0 ? order.shares : [order]
-        )}`}
-        /* Two people on a gift, and the driver needs the second one.
-           Whoever paid stays first, because they are who is chased. */
-        detail={
-          <>
-            {order.deliver_to_name
-              ? `Paid by ${order.customer_name} · ${formatPhone(order.customer_phone)}, ` +
-                `goes to ${order.deliver_to_name} · ${formatPhone(
-                  order.deliver_to_phone ?? ""
-                )} · ${order.hostel}`
-              : `${order.customer_name} · ${formatPhone(order.customer_phone)} · ${order.hostel}`}
-            {runLabel === "" ? "" : ` · on ${runLabel}`}
-          </>
-        }
-        /* What the board puts at the top of an order: the run it is on,
-           their PIN, and the one thing to do next. The two messages are
-           not offered again on the card below, because the same WhatsApp
-           link handed over twice is a message sent twice. */
-        actions={
-          <>
-            <Link href={`/admin/batch/${order.batch_id}`} className="btn-admin">
-              {runLabel === "" ? "Open its run" : `On ${runLabel}`}
-            </Link>
-            {/* These two stand in the bar at the bottom on a phone, which is
-                where the board puts them and where the thumb is. Here from
-                `lg`, where the mouse is already in the header. */}
-            {pin && (
-              <a
-                href={pin.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-admin hidden lg:inline-flex"
-              >
-                {pin.label}
-              </a>
-            )}
-            {review && (
-              <a
-                href={review.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-admin-go hidden lg:inline-flex"
-              >
-                {review.label}
-              </a>
-            )}
-          </>
-        }
-      />
+      {/* The phone board heads an order with the person rather than with the
+          word Order: whoever is holding this already knows what they tapped,
+          and the name is what the next sentence out loud starts with. Its
+          own markup because PageHeader takes its title as a string and so
+          cannot say one thing on a phone and another on a desk; a responsive
+          title belongs in that component, and this is the note asking for
+          it. */}
+      <div className="mb-3 lg:hidden">
+        <Link
+          href="/admin/orders"
+          className="text-[12px] font-semibold text-muted hover:text-brand"
+        >
+          ← All orders
+        </Link>
+        <div className="flex flex-wrap items-baseline gap-2">
+          <h1 className="font-display text-[33px] font-black uppercase leading-none">
+            {order.deliver_to_name ?? order.customer_name}
+          </h1>
+          <span className="font-mono text-[13px] text-muted">
+            {shareRef(order, order.shares.length > 0 ? order.shares : [order])}
+          </span>
+        </div>
+        <p className="hint mt-1">
+          {[order.hostel, runLabel].filter(Boolean).join(" · ")}
+        </p>
+      </div>
+
+      <div className="hidden lg:block">
+        <PageHeader
+          backHref="/admin/orders"
+          backLabel="All orders"
+          /* The same wording as the card below it and the transfer
+             narration: #1001a, not #1001 on one screen and #1001a on the
+             next. */
+          title={`Order ${shareRef(
+            order,
+            order.shares.length > 0 ? order.shares : [order]
+          )}`}
+          /* Two people on a gift, and the driver needs the second one.
+             Whoever paid stays first, because they are who is chased. */
+          detail={
+            <>
+              {order.deliver_to_name
+                ? `Paid by ${order.customer_name} · ${formatPhone(order.customer_phone)}, ` +
+                  `goes to ${order.deliver_to_name} · ${formatPhone(
+                    order.deliver_to_phone ?? ""
+                  )} · ${order.hostel}`
+                : `${order.customer_name} · ${formatPhone(order.customer_phone)} · ${order.hostel}`}
+              {runLabel === "" ? "" : ` · on ${runLabel}`}
+            </>
+          }
+          /* What the board puts at the top of an order: the run it is on,
+             their PIN, and the one thing to do next. The two messages are
+             not offered again on the card below, because the same WhatsApp
+             link handed over twice is a message sent twice. */
+          actions={
+            <>
+              <Link href={`/admin/batch/${order.batch_id}`} className="btn-admin">
+                {runLabel === "" ? "Open its run" : `On ${runLabel}`}
+              </Link>
+              {/* These two stand in the bar at the bottom on a phone, which is
+                  where the board puts them and where the thumb is. Here from
+                  `lg`, where the mouse is already in the header. */}
+              {pin && (
+                <a
+                  href={pin.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-admin hidden lg:inline-flex"
+                >
+                  {pin.label}
+                </a>
+              )}
+              {review && (
+                <a
+                  href={review.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-admin-go hidden lg:inline-flex"
+                >
+                  {review.label}
+                </a>
+              )}
+            </>
+          }
+        />
+      </div>
 
       {/* Ringing them, and the chat with no template in it.
           A phone is a phone: the board puts these two across the top of an
@@ -244,12 +288,53 @@ async function orderPage(id: string, said: string) {
         </a>
       </div>
 
+      {/*
+       * The phone board's one card where the desk board has four tiles: the
+       * total and the state of it on one line, then the three figures under
+       * a rule in mono. Four cards of one number each is four fifths of the
+       * screen gone before the food.
+       */}
+      <div className="card mb-3 px-[15px] py-[13px] lg:hidden">
+        <div className="flex items-baseline justify-between gap-2.5">
+          <div className="min-w-0">
+            <p className="ticket text-muted">Total</p>
+            <p className="font-display text-[36px] font-black leading-none">
+              {naira(order.total)}
+            </p>
+          </div>
+          <StatusPill status={order.status} />
+        </div>
+        <div className="mt-[9px] flex gap-4 border-t-[1.5px] border-rule pt-[9px]">
+          <div>
+            <p className="ticket text-muted">Food</p>
+            <p className="font-mono text-[14.5px] font-semibold">{naira(order.subtotal_food)}</p>
+          </div>
+          <div>
+            <p className="ticket text-muted">Delivery</p>
+            <p className="font-mono text-[14.5px] font-semibold">{naira(order.fee)}</p>
+          </div>
+          {order.discount > 0 && (
+            <div>
+              <p className="ticket text-muted">Discount</p>
+              <p className="font-mono text-[14.5px] font-semibold">
+                −{naira(order.discount)}
+              </p>
+            </div>
+          )}
+          <div>
+            <p className="ticket text-muted">Profit</p>
+            <p className="font-mono text-[14.5px] font-semibold text-mint">
+              {earned ? naira(earned.profit) : "—"}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div
-        /* Two up on a phone, as the board draws every figure row. The
-           figure card carries its own phone size now, so nothing here has
-           to lean on it. */
-        className={`mb-[18px] grid grid-cols-2 gap-3.5 ${
-          order.discount > 0 ? "xl:grid-cols-5" : "xl:grid-cols-4"
+        /* The desk's tiles, four across from lg, which is the width the
+           boards describe. The phone has its one card above. */
+        className={`mb-[18px] hidden lg:grid lg:gap-3.5 ${
+          order.discount > 0 ? "lg:grid-cols-5" : "lg:grid-cols-4"
         }`}
       >
         <Figure label="Total" value={naira(order.total)} />
@@ -274,10 +359,21 @@ async function orderPage(id: string, said: string) {
             detail={order.coupon_code ?? "No code, taken off by hand"}
           />
         )}
+        {/* What it made, not what state it is in: the chip on the card and
+            the story on the right both say the state, and a word set in the
+            display face at forty pixels is money's own voice given to
+            something that is not money. */}
         <Figure
-          label="Status"
-          value={order.status === "pending" ? "Unpaid" : order.status}
-          tone={order.status === "pending" ? "ink" : "mint"}
+          label="Profit"
+          value={earned ? naira(earned.profit) : "—"}
+          tone="mint"
+          detail={
+            earned === null
+              ? "Worked out once this order is paid for"
+              : earned.runShare > 0
+                ? `After ${naira(earned.runShare)} of run costs`
+                : "After the food and the commission on it"
+          }
         />
       </div>
 
@@ -285,7 +381,7 @@ async function orderPage(id: string, said: string) {
           be done to it on the left, and the things you only read on the
           right. One stacked column put the story of the order below four
           cards of controls, where nobody scrolled to it. */}
-      <div className="grid items-start gap-[18px] xl:grid-cols-[1.5fr_1fr]">
+      <div className="grid items-start gap-[18px] lg:grid-cols-[1.5fr_1fr]">
         <div className="flex min-w-0 flex-col gap-4">
           {/* Not on a parcel: there are no lines in it to change. */}
           {!order.parcel_route && (
@@ -304,21 +400,6 @@ async function orderPage(id: string, said: string) {
               addOption={addLineOption}
               removeOption={removeLineOption}
               settle={settleCustom}
-            />
-          )}
-
-          {shown && (
-            <OrderCard
-              onList={false}
-              order={shown}
-              without={["pin", "review"]}
-              markPaid={markPaid}
-              markDelivered={markDelivered}
-              refund={refundOrder}
-              cancel={cancelOrder}
-              remove={deleteOrder}
-              savePaymentLink={savePaymentLink}
-              saveNote={saveOrderNote}
             />
           )}
 
@@ -522,7 +603,7 @@ async function orderPage(id: string, said: string) {
         <div className="flex min-w-0 flex-col gap-4">
           {/* How it went, which the page could never say before: it could
               tell you what an order is and never what had happened to it. */}
-          <Panel title="How it went">
+          <Panel size="sm" title="How it went">
             <ol className="mt-3">
               {orderStory(
                 {
@@ -566,8 +647,23 @@ async function orderPage(id: string, said: string) {
           {/* Who this is, and one way through to everything else they have
               ever ordered. The board ends the right column with it, and the
               page used to have no way out to the person at all. */}
-          <Panel title={order.deliver_to_name ?? order.customer_name}>
+          <Panel size="sm" title={order.deliver_to_name ?? order.customer_name}>
             <dl className="mt-3 text-[14.5px]">
+              {/* How many and how much, which is the whole of what the board
+                  asks this panel: a name and a phone number say nothing
+                  about whether this is somebody worth ringing back. */}
+              {them && them.paidOrders > 0 && (
+                <Detail
+                  label="Orders"
+                  value={
+                    `${them.paidOrders}` +
+                    (them.since ? ` · since ${monthWord(them.since)}` : "")
+                  }
+                />
+              )}
+              {them && them.spend > 0 && (
+                <Detail label="Spent" value={naira(them.spend)} />
+              )}
               <Detail label="Rings on" value={formatPhone(order.customer_phone)} />
               {order.deliver_to_name && (
                 <Detail
@@ -590,7 +686,7 @@ async function orderPage(id: string, said: string) {
           </Panel>
 
           {order.shares.length > 1 && (
-            <Panel title="The rest of this group">
+            <Panel size="sm" title="The rest of this group">
               <ul className="mt-3 text-[14.5px]">
                 {order.shares.map((share) => (
                   <li
@@ -656,6 +752,15 @@ async function orderPage(id: string, said: string) {
       )}
     </div>
   );
+}
+
+/** "Feb", for the month somebody's first order landed in. The board says
+ *  "6 · since Feb": the year is noise next to the count, and a person who
+ *  started last February is a regular either way. */
+function monthWord(iso: string): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return "";
+  return new Intl.DateTimeFormat("en-NG", { timeZone: TZ, month: "short" }).format(at);
 }
 
 /** One line of the person's card: the board's `.k` label on the left, what

@@ -204,8 +204,12 @@ async function howManyBrought(code: string): Promise<number> {
  *
  * The same four sums the profit page uses, narrowed to their orders, with
  * each run's costs split between the orders on it by what they paid.
+ *
+ * Exported because one order wants the same split: the order's own page says
+ * what it made, and working that out a second way there is how two pages
+ * come to print two different profits for the same food.
  */
-async function shareOfProfit(
+export async function shareOfProfit(
   paid: FeedOrder[],
   foodAtMenu: number,
   spend: number
