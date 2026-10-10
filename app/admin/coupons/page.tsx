@@ -1,6 +1,9 @@
 import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import ActionButton from "@/components/admin/ActionButton";
+import CopyText from "@/components/CopyText";
+import Figure from "@/components/admin/Figure";
+import Panel from "@/components/admin/Panel";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import CouponForm, {
   type CouponFormData,
@@ -14,19 +17,35 @@ import { deleteCoupon, toggleCoupon } from "../actions";
 import { batchOverview } from "@/lib/admin";
 import { menuView } from "@/lib/menu";
 import { type ScopeShop } from "@/components/admin/MenuScope";
-import { hoursSpan } from "@/lib/settings";
-import { clockOf } from "@/lib/same-day";
+import { siteUrl } from "@/lib/admin-templates";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * The cuts of the list, as the board names them.
+ *
+ * "Codes" against "Free delivery" is the division that matters: one is
+ * something a customer has to be told to type, the other applies itself and
+ * is only ever seen as a price that came out lower.
+ */
+const VIEWS = [
+  { value: "", label: "All" },
+  { value: "live", label: "Live" },
+  { value: "off", label: "Off" },
+  { value: "codes", label: "Codes" },
+  { value: "free", label: "Free delivery" },
+] as const;
 
 export default async function CouponsAdmin({
   searchParams,
 }: {
-  searchParams: Promise<{ new?: string }>;
+  searchParams: Promise<{ new?: string; view?: string }>;
 }) {
+  const asked = await searchParams;
   // The form opens at the top rather than waiting at the bottom of however
   // many offers there are.
-  const making = (await searchParams).new === "1";
+  const making = asked.new === "1";
+  const view = VIEWS.some((one) => one.value === asked.view) ? (asked.view as string) : "";
   const coupons = await listCoupons();
   // Only runs still ahead are worth attaching a code to.
   const runs = (await batchOverview()).filter(
@@ -116,6 +135,42 @@ export default async function CouponsAdmin({
     }
   }
 
+  // Which is which. An automatic offer applies itself and is never typed,
+  // which is the only real division in this list: everything else is a
+  // detail of one offer.
+  const typedCode = (one: (typeof coupons)[number]) => !one.automatic;
+  const freeDelivery = (one: (typeof coupons)[number]) =>
+    one.applies_to === "fee" && one.amount === 0;
+
+  const counts: Record<string, number> = {
+    "": coupons.length,
+    live: coupons.filter((one) => one.active).length,
+    off: coupons.filter((one) => !one.active).length,
+    codes: coupons.filter(typedCode).length,
+    free: coupons.filter(freeDelivery).length,
+  };
+  const shown = coupons.filter((one) =>
+    view === "live"
+      ? one.active
+      : view === "off"
+        ? !one.active
+        : view === "codes"
+          ? typedCode(one)
+          : view === "free"
+            ? freeDelivery(one)
+            : true
+  );
+  // How often any of this has actually been taken up, which is the figure
+  // that says whether an offer is working or just sitting there.
+  const taken = coupons.reduce((total, one) => total + one.used, 0);
+
+  // For sharing one: a code with no page to type it into is useless, so the
+  // link goes with it.
+  const url = await siteUrl();
+
+  const link = (next: string) =>
+    next === "" ? "/admin/coupons" : `/admin/coupons?view=${next}`;
+
   // One bundle for the form, whether it is making an offer or changing one.
   const formData: CouponFormData = {
     shops,
@@ -127,119 +182,237 @@ export default async function CouponsAdmin({
   };
 
   return (
-    <div>
+    /* Room under the last offer for the phone bar, which is fixed. */
+    <div className="pb-[76px] lg:pb-0">
       <PageHeader
         title="Offers"
         detail="Free delivery on a dish, a set price on a kitchen, or a code for a group chat."
+        /* On a phone this page is reached from More, and the board draws the
+           way back to it above the title. */
+        backHref="/admin/more"
+        backLabel="More"
         actions={
-          <Link
-            href={making ? "/admin/coupons" : "/admin/coupons?new=1"}
-            className="btn-primary px-4 py-2.5 text-sm"
-          >
-            {making ? "Close" : "New offer"}
-          </Link>
+          making ? (
+            <Link href="/admin/coupons" className="btn-admin">
+              Close the form
+            </Link>
+          ) : (
+            /* The screen's one red button, on the bar at the bottom of a
+               phone instead of up here. */
+            <Link href="/admin/coupons?new=1" className="btn-admin-go hidden lg:inline-flex">
+              New offer
+            </Link>
+          )
         }
       />
 
       {making && (
-        <section className="card mb-4 space-y-3">
-          <div>
-            <h2 className="font-bold">A new offer</h2>
-            <p className="text-sm text-muted">
-              Pick what kind it is and it asks only that kind&apos;s questions.
-              Everything here saves together.
-            </p>
-          </div>
-          <CouponForm values={null} data={formData} />
-        </section>
+        <div className="mb-3 sm:mb-4">
+          <Panel
+            title="A new offer"
+            detail="Three questions. Pick what kind it is and it asks only that kind's questions, and the rest fills itself in."
+          >
+            <CouponForm values={null} data={formData} />
+          </Panel>
+        </div>
       )}
 
-      <ul className="mb-4 space-y-3">
-        {coupons.map((coupon) => (
-          <li key={coupon.code} className="card space-y-3">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="font-extrabold tracking-wide">{coupon.code}</h2>
-                <p className="text-sm text-muted">
+      {coupons.length > 0 && (
+        /* Two up on a phone, as the mobile boards draw every row of
+           figures. */
+        <div className="mb-3 grid grid-cols-2 gap-2.5 sm:mb-4 sm:gap-3.5 xl:grid-cols-4">
+          <Figure
+            label="Live now"
+            value={String(counts.live)}
+            detail={`of ${coupons.length} offer${coupons.length === 1 ? "" : "s"}`}
+          />
+          <Figure
+            label="Taken up"
+            value={String(taken)}
+            tone={taken > 0 ? "mint" : "ink"}
+            detail={
+              taken === 0
+                ? "Nobody has used one yet"
+                : `order${taken === 1 ? "" : "s"} across every offer`
+            }
+          />
+          <Figure
+            label="Codes to type"
+            value={String(counts.codes)}
+            detail="The rest apply themselves"
+          />
+          <Figure
+            label="Switched off"
+            value={String(counts.off)}
+            detail="Kept, with what they were used for"
+          />
+        </div>
+      )}
+
+      {coupons.length > 1 && (
+        /* The cuts, scrolling sideways on a phone rather than wrapping onto
+           three lines above the offers themselves. */
+        <div className="-mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 pb-1.5 sm:mx-0 sm:mb-4 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0">
+          {VIEWS.map((cut) => (
+            <Link
+              key={cut.value || "all"}
+              href={link(cut.value)}
+              className={`pill-admin min-h-[34px] shrink-0 px-3 text-[13px] sm:min-h-[38px] sm:px-3.5 sm:text-sm ${
+                view === cut.value ? "pill-admin-on" : ""
+              }`}
+            >
+              {cut.label}
+              <span className="font-mono opacity-60">{counts[cut.value] ?? 0}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      <ul className="space-y-2.5 sm:space-y-3">
+        {shown.map((coupon) => (
+          <li
+            key={coupon.code}
+            /* Tighter on a phone, where the board gives a card fourteen
+               pixels of padding rather than sixteen, and a switched off
+               offer is faded rather than hidden: it is kept for what it
+               says about last term. */
+            className={`card p-3.5 sm:p-4 ${coupon.active ? "" : "opacity-[0.72]"}`}
+          >
+            <div className="flex items-start gap-2.5">
+              <div className="min-w-0 flex-1">
+                {/* The code in mono, because it is a thing somebody types
+                    character by character. */}
+                <h2 className="font-mono text-[15.5px] font-semibold tracking-[0.02em]">
+                  {coupon.code}
+                </h2>
+                <p className="mt-0.5 text-[14px] font-semibold">
                   {couponLabel(coupon)}
-                  {coupon.automatic && " · applies by itself"}
+                </p>
+                <p className="hint mt-0.5">
+                  {coupon.automatic ? "applies by itself" : "they type it"}
                   {coupon.first_order_only && " · first order only"}
                   {coupon.note && ` · ${coupon.note}`}
                 </p>
-                <p className="mt-0.5 text-sm text-muted">
-                  Used {coupon.used} time{coupon.used === 1 ? "" : "s"}
-                  {coupon.max_uses !== null && ` of ${coupon.max_uses}`}
-                  {" · "}
-                  {coupon.runs.length === 0
-                    ? "any run"
-                    : coupon.runs.map((run) => run.label).join(", ")}
-                </p>
-                {reach.get(coupon.code) && (
-                  <p
-                    className={`mt-0.5 text-sm font-semibold ${
-                      reach.get(coupon.code)!.missing.length > 0 ? "text-brand" : "text-mint"
-                    }`}
-                  >
-                    {(() => {
-                      const asked = choiceLabels(coupon.required_choice ?? "")
-                        .map((set) => set.join(" or "))
-                        .join(", and ");
-                      const found = reach.get(coupon.code)!;
-                      return found.missing.length === 0
-                        ? `${asked}: all ${found.of} of the dishes it covers offer it.`
-                        : `${asked}: ${found.matched} of ${found.of} dishes offer it. Not on: ${found.missing
-                            .slice(0, 4)
-                            .join(", ")}.`;
-                    })()}
-                  </p>
-                )}
               </div>
-              <span
-                className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                  coupon.active ? "bg-mint/10 text-mint" : "bg-black/5 text-muted"
-                }`}
-              >
-                {coupon.active ? "Live" : "Off"}
-              </span>
+              {/* A chip with the word on it, never colour on its own: this
+                  page is read in sunlight like every other. */}
+              {coupon.active ? (
+                <span className="tag bg-mint-tint text-mint">live</span>
+              ) : (
+                <span className="tag bg-wash text-ink">off</span>
+              )}
             </div>
 
-            <details>
-              <summary className="cursor-pointer text-sm font-bold text-brand">
-                Change this offer
+            {reach.get(coupon.code) && (
+              <p
+                className={`mt-1.5 text-[13px] font-semibold ${
+                  reach.get(coupon.code)!.missing.length > 0 ? "text-brand-dark" : "text-mint"
+                }`}
+              >
+                {(() => {
+                  const asked = choiceLabels(coupon.required_choice ?? "")
+                    .map((set) => set.join(" or "))
+                    .join(", and ");
+                  const found = reach.get(coupon.code)!;
+                  return found.missing.length === 0
+                    ? `${asked}: all ${found.of} of the dishes it covers offer it.`
+                    : `${asked}: ${found.matched} of ${found.of} dishes offer it. Not on: ${found.missing
+                        .slice(0, 4)
+                        .join(", ")}.`;
+                })()}
+              </p>
+            )}
+
+            <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t-[1.5px] border-rule pt-2.5">
+              <span className="hint min-w-0 flex-1">
+                Used {coupon.used} time{coupon.used === 1 ? "" : "s"}
+                {coupon.max_uses !== null && ` of ${coupon.max_uses}`}
+                {" · "}
+                {coupon.runs.length === 0
+                  ? "any run"
+                  : coupon.runs.map((run) => run.label).join(", ")}
+              </span>
+              {/* Sharing is a message somebody sends by hand, like every
+                  other message this shop sends, so it copies the offer and
+                  the page to use it on and nothing is sent from here. */}
+              <CopyText
+                value={
+                  coupon.automatic
+                    ? `${couponLabel(coupon)} at ${url}`
+                    : `Use ${coupon.code} at ${url} for ${couponLabel(coupon)}.`
+                }
+                label="Share"
+                look="btn-admin btn-admin-sm"
+              />
+              <form action={toggleCoupon}>
+                <input type="hidden" name="code" value={coupon.code} />
+                <input type="hidden" name="next_active" value={String(!coupon.active)} />
+                <ActionButton className="btn-admin btn-admin-sm" done="Done ✓">
+                  {coupon.active ? "Switch it off" : "Switch it on"}
+                </ActionButton>
+              </form>
+            </div>
+
+            {/* Editing is the whole form again, folded away: the list is
+                read far more often than it is changed. */}
+            <details className="mt-2">
+              <summary className="btn-admin btn-admin-sm inline-flex cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                Edit this offer
               </summary>
-              <div className="mt-3">
+              <div className="mt-2.5">
                 <CouponForm values={valuesOf(coupon)} data={formData} />
               </div>
             </details>
 
-            <div className="flex flex-wrap gap-2 border-t border-black/5 pt-3">
-              <form action={toggleCoupon}>
-                <input type="hidden" name="code" value={coupon.code} />
-                <input type="hidden" name="next_active" value={String(!coupon.active)} />
-                <ActionButton done="Done ✓">
-                  {coupon.active ? "Switch it off" : "Switch it on"}
-                </ActionButton>
-              </form>
+            <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t-[1.5px] border-rule pt-2.5">
               <form action={deleteCoupon}>
                 <input type="hidden" name="code" value={coupon.code} />
-                <ConfirmButton
-                  tone="bare"
-                  className="chip border-black/10 bg-white text-brand"
-                  confirm={`Yes, delete ${coupon.code}`}
-                >
+                <ConfirmButton tone="bad" confirm={`Yes, delete ${coupon.code}`}>
                   Delete
                 </ConfirmButton>
               </form>
+              {/* What is forever, written next to the button rather than in
+                  a dialog after it. */}
+              <span className="hint min-w-0 flex-1">
+                Deleting is forever, and takes the record of its{" "}
+                {coupon.used} use{coupon.used === 1 ? "" : "s"} with it. Switching it off
+                keeps both.
+              </span>
             </div>
           </li>
         ))}
+
         {coupons.length === 0 && (
-          <li className="card text-sm text-muted">
-            Nothing yet. The form below makes one.
+          <li className="card p-3.5 text-[14.5px] text-muted sm:p-4">
+            Nothing yet. A new offer is free delivery on a dish, a set price on a
+            kitchen, or a code for a group chat.
+          </li>
+        )}
+        {coupons.length > 0 && shown.length === 0 && (
+          <li className="card p-3.5 text-[14.5px] text-muted sm:p-4">
+            Nothing in that part of the list right now.
           </li>
         )}
       </ul>
 
+      <p className="hint mt-3 leading-[1.5]">
+        Switching one off is instant and shows on the site straight away.
+        Editing opens the whole form, and everything in it saves together.
+      </p>
+
+      {/* The board's bar: the one thing this screen is for. Not while the
+          form is open, because then the thing to do next is saving it, and
+          the form carries its own. */}
+      {!making && (
+        <div className="phone-bar">
+          <Link
+            href="/admin/coupons?new=1"
+            className="btn-admin-go min-h-[52px] w-full text-base"
+          >
+            + New offer
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

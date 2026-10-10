@@ -38,7 +38,13 @@ export function policyDate(iso: string): string {
 }
 
 export function runDateLabel(runDate: string): string {
-  return DATE_FMT.format(new Date(runDate + "T12:00:00Z"));
+  // An order whose run has gone carries an empty date, and Intl throws on a
+  // date it cannot read rather than returning anything. A label has no
+  // business taking a page down with it: the line that would have held a
+  // date simply holds nothing, and the rest of the page still renders.
+  const at = new Date(`${runDate}T12:00:00Z`);
+  if (Number.isNaN(at.getTime())) return "";
+  return DATE_FMT.format(at);
 }
 
 /**
@@ -60,18 +66,23 @@ export function dayWord(runDate: string, now: Date = new Date()): string {
 
 /** "Friday", used in the countdown lines. */
 export function weekdayLabel(runDate: string): string {
-  return new Intl.DateTimeFormat("en-NG", { timeZone: TZ, weekday: "long" })
-    .format(new Date(runDate + "T12:00:00Z"));
+  const at = new Date(`${runDate}T12:00:00Z`);
+  if (Number.isNaN(at.getTime())) return "";
+  return new Intl.DateTimeFormat("en-NG", { timeZone: TZ, weekday: "long" }).format(at);
 }
 
 /** "Friday, 19 Sep" for any ISO instant, in Lagos time. */
 export function dayLabel(iso: string): string {
-  return DATE_FMT.format(new Date(iso));
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return "";
+  return DATE_FMT.format(at);
 }
 
 /** "11:30 am" in Lagos time, for any ISO instant. */
 export function clockLabel(iso: string): string {
-  return TIME_FMT.format(new Date(iso));
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return "";
+  return TIME_FMT.format(at);
 }
 
 /**
@@ -150,12 +161,14 @@ export function whenLabel(iso: string): string {
  * cut-off set for midnight in Lagos opened at eleven in London.
  */
 export function lagosClock(iso: string): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return "";
   return new Intl.DateTimeFormat("en-GB", {
     timeZone: TZ,
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).format(new Date(iso));
+  }).format(at);
 }
 
 

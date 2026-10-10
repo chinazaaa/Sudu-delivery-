@@ -167,7 +167,8 @@ export default async function ProfitPage({
   };
 
   return (
-    <div>
+    /* Room under the last panel for the phone bar, which is fixed. */
+    <div className="pb-[72px] lg:pb-0">
       {/* The window on the screen, run by run, which is the shape anybody
           sorts or charts. Carrying the dates matters: an export that
           ignores the window somebody set is one they redo by hand. */}
@@ -186,9 +187,13 @@ export default async function ProfitPage({
             </a>
             {/* The one tomato button on the screen, and only while there is
                 a run whose costs are still a guess: everything above is
-                wrong until they are in. */}
+                wrong until they are in. On a phone it stands on the bar at
+                the bottom instead of up here. */}
             {estimated.length > 0 ? (
-              <Link href={`/admin/batch/${estimated[0].id}`} className="btn-admin-go">
+              <Link
+                href={`/admin/batch/${estimated[0].id}`}
+                className="btn-admin-go hidden lg:inline-flex"
+              >
                 Add a run&apos;s costs
               </Link>
             ) : (
@@ -204,46 +209,64 @@ export default async function ProfitPage({
           boxes beside them for anything else: a plain form, so it works
           before anything has loaded and the window stays in the address
           afterwards. */}
-      <div className="mb-[18px] flex flex-wrap items-center gap-2">
-        {every.map((one) => (
-          <Link
-            key={one.key}
-            href={link({ span: one.key })}
-            className={`pill-admin ${
-              !typed && one.key === chosen.key ? "pill-admin-on" : ""
-            }`}
+      <div className="mb-3 flex flex-col gap-1.5 sm:mb-[18px] sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
+        {/* Five presets wrap onto two lines on a phone, so they scroll
+            sideways instead, edge to edge. */}
+        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1.5 sm:mx-0 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0">
+          {every.map((one) => (
+            <Link
+              key={one.key}
+              href={link({ span: one.key })}
+              className={`pill-admin min-h-[34px] shrink-0 px-3 text-[13px] sm:min-h-[38px] sm:px-3.5 sm:text-sm ${
+                !typed && one.key === chosen.key ? "pill-admin-on" : ""
+              }`}
+            >
+              {one.label}
+            </Link>
+          ))}
+        </div>
+        {/* The two boxes side by side on a phone with the button under
+            them: a date box squeezed into a third of 390 pixels shows no
+            date. */}
+        <form
+          action="/admin/profit"
+          className="soft grid grid-cols-2 items-end gap-2 p-2 sm:flex sm:flex-wrap sm:items-center"
+        >
+          <label
+            className="flex flex-col gap-1 text-[13px] font-semibold sm:flex-row sm:items-center sm:gap-1.5"
+            htmlFor="from"
           >
-            {one.label}
-          </Link>
-        ))}
-        <form action="/admin/profit" className="soft flex flex-wrap items-center gap-2 p-2">
-          <label className="flex items-center gap-1.5 text-[13px] font-semibold" htmlFor="from">
             From
             <input
               id="from"
               name="from"
               type="date"
               defaultValue={from}
-              className="field h-[42px] w-auto px-3 py-0 text-[14.5px]"
+              className="field h-[42px] w-full px-3 py-0 text-[14.5px] sm:w-auto"
             />
           </label>
-          <label className="flex items-center gap-1.5 text-[13px] font-semibold" htmlFor="to">
+          <label
+            className="flex flex-col gap-1 text-[13px] font-semibold sm:flex-row sm:items-center sm:gap-1.5"
+            htmlFor="to"
+          >
             To
             <input
               id="to"
               name="to"
               type="date"
               defaultValue={to}
-              className="field h-[42px] w-auto px-3 py-0 text-[14.5px]"
+              className="field h-[42px] w-full px-3 py-0 text-[14.5px] sm:w-auto"
             />
           </label>
-          <button className="btn-admin btn-admin-sm">Show that</button>
+          <button className="btn-admin btn-admin-sm col-span-2 w-full sm:w-auto">
+            Show that
+          </button>
         </form>
       </div>
 
       {/* Money in, the margin the delivery itself earns, everything taken off
           and what is left: the four figures in the order they happen. */}
-      <div className="mb-[18px] grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:mb-[18px] sm:gap-3.5 xl:grid-cols-4">
         <Figure
           label="Money in"
           value={naira(sums.gross)}
@@ -273,8 +296,8 @@ export default async function ProfitPage({
         />
       </div>
 
-      <div className="grid items-start gap-[18px] xl:grid-cols-[1.5fr_1fr]">
-        <div className="flex flex-col gap-4">
+      <div className="grid items-start gap-3 sm:gap-[18px] xl:grid-cols-[1.5fr_1fr]">
+        <div className="flex flex-col gap-3 sm:gap-4">
           <Panel
             title="How it is worked out"
             detail="Every line is money that moved. Tap one to see the orders or runs behind it."
@@ -365,7 +388,53 @@ export default async function ProfitPage({
               </p>
             ) : (
               <>
-                <table className="w-full border-collapse">
+                {/* The same runs as rows below a desk, which is what the
+                    board draws: six columns on a phone is a sideways scroll
+                    and a table that sets the width of the page,
+                    and what is being read down the list is the profit. The
+                    run's own figures stay on the line under it, and a run
+                    still on estimates keeps its way in. */}
+                <div className="lg:hidden">
+                  {sums.byRun.map((run) => (
+                    <div
+                      key={run.id}
+                      className="flex items-center gap-2.5 border-t-[1.5px] border-rule py-3"
+                    >
+                      <Link
+                        href={`/admin/batch/${run.id}`}
+                        className="min-w-0 flex-1 hover:text-brand"
+                      >
+                        <strong className="block text-[14px]">
+                          {runDateLabel(run.runDate)} · {SLOT_LABEL[run.slot] ?? run.kind}
+                        </strong>
+                        <span className="hint block">
+                          {naira(run.took)} in · {naira(run.costs)} costs
+                          {run.estimated && " (est)"} · {run.orders} order
+                          {run.orders === 1 ? "" : "s"}
+                        </span>
+                      </Link>
+                      <span
+                        className={`font-mono text-[15px] font-semibold ${
+                          run.profit < 0 ? "text-brand-dark" : "text-mint"
+                        }`}
+                      >
+                        {run.profit < 0
+                          ? `−${naira(Math.abs(run.profit))}`
+                          : naira(run.profit)}
+                      </span>
+                      {run.estimated && (
+                        <Link
+                          href={`/admin/batch/${run.id}`}
+                          className="btn-admin btn-admin-sm shrink-0"
+                        >
+                          Add costs
+                        </Link>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <table className="hidden w-full border-collapse lg:table">
                   <thead>
                     <tr>
                       <Head>Run</Head>
@@ -485,7 +554,7 @@ export default async function ProfitPage({
           </Panel>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 sm:gap-4">
           {/* Food only. The delivery fee is one fee per car, so it belongs to
               the run and not to any one kitchen, and only the reconciled runs
               are in here: at the menu price every kitchen keeps nothing. */}
@@ -665,6 +734,25 @@ export default async function ProfitPage({
             </Panel>
           )}
         </div>
+      </div>
+
+      {/* The board's bar: the one thing this screen is for. While a run's
+          costs are still a guess that is putting them in, because every
+          figure above is wrong until they are; after that it is the way to
+          the runs themselves. */}
+      <div className="phone-bar">
+        {estimated.length > 0 ? (
+          <Link
+            href={`/admin/batch/${estimated[0].id}`}
+            className="btn-admin-go min-h-[50px] w-full text-[15.5px]"
+          >
+            Add a run&apos;s costs
+          </Link>
+        ) : (
+          <Link href="/admin/runs" className="btn-admin min-h-[50px] w-full text-[15.5px]">
+            All runs
+          </Link>
+        )}
       </div>
     </div>
   );

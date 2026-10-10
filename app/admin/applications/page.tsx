@@ -89,6 +89,10 @@ export default async function ApplicationsAdmin({
       <PageHeader
         title="Applications"
         detail="People asking to promote, from the page that offers it. Setting somebody up gives them a code, a PIN and their link."
+        /* On a phone this page is reached from More, and the board draws the
+           way back to it above the title. */
+        backHref="/admin/more"
+        backLabel="More"
         actions={
           <>
             <Link href="/become-a-promoter" className="btn-admin">
@@ -111,7 +115,10 @@ export default async function ApplicationsAdmin({
         }
       />
 
-      <div className="mb-4 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Two up on a phone, which is what the mobile board draws: four
+          figures down the screen is four screens of scrolling before the
+          first application. */}
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:mb-4 sm:gap-3.5 xl:grid-cols-4">
         <Figure
           label="Waiting on you"
           value={String(waiting.length)}
@@ -145,13 +152,20 @@ export default async function ApplicationsAdmin({
       </div>
 
       {/* The cuts as links rather than a dropdown: the counts are the point,
-          and a count inside a closed select is a count nobody reads. */}
-      <div className="mb-4 flex flex-wrap gap-2">
+          and a count inside a closed select is a count nobody reads.
+
+          On a phone they scroll sideways instead of wrapping, which is what
+          every mobile board does: four cuts wrapped onto two lines push the
+          first application off the screen, and the row runs to both edges so
+          it reads as something that moves. */}
+      <div className="-mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 pb-1.5 sm:mx-0 sm:mb-4 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0">
         {VIEWS.map((one) => (
           <Link
             key={one.value || "waiting"}
             href={one.value === "" ? "/admin/applications" : `/admin/applications?view=${one.value}`}
-            className={`pill-admin ${view === one.value ? "pill-admin-on" : ""}`}
+            className={`pill-admin min-h-[34px] shrink-0 px-3 text-[13px] sm:min-h-[38px] sm:px-3.5 sm:text-sm ${
+              view === one.value ? "pill-admin-on" : ""
+            }`}
           >
             {one.label}
             <span className="font-mono opacity-60">{counts[one.value] ?? 0}</span>
@@ -159,8 +173,8 @@ export default async function ApplicationsAdmin({
         ))}
       </div>
 
-      <div className="grid items-start gap-[18px] xl:grid-cols-[1.6fr_1fr]">
-        <div className="space-y-3">
+      <div className="grid items-start gap-3 sm:gap-[18px] xl:grid-cols-[1.6fr_1fr]">
+        <div className="space-y-2.5 sm:space-y-3">
           {order.length === 0 ? (
             <p className="card text-sm text-muted">
               {view === ""
@@ -177,9 +191,15 @@ export default async function ApplicationsAdmin({
               const open = one.status === "new";
               const first = one.name.split(" ")[0];
               return (
-                <article key={one.id} className={`card ${open ? "" : "opacity-[0.72]"}`}>
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <strong className="text-[17px]">{one.name}</strong>
+                <article
+                  key={one.id}
+                  /* Tighter on a phone, where the board gives a card thirteen
+                     pixels of padding rather than sixteen: four of these are
+                     meant to be read in one screen. */
+                  className={`card p-3.5 sm:p-4 ${open ? "" : "opacity-[0.72]"}`}
+                >
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+                    <strong className="text-[15.5px] sm:text-[17px]">{one.name}</strong>
                     {open ? (
                       <span className="tag bg-brand-tint text-amber-deep">waiting</span>
                     ) : one.status === "approved" ? (
@@ -210,23 +230,30 @@ export default async function ApplicationsAdmin({
                     </p>
                   )}
 
+                  {/* On a phone each of these buttons grows to share the
+                      line, so the two that matter sit side by side at full
+                      height rather than four small ones in a row a thumb
+                      cannot pick between. On a desk they are their own
+                      width, as they were. */}
                   {open && (
-                    <div className="mt-3 flex flex-wrap items-center gap-2 border-t-[1.5px] border-rule pt-3">
+                    <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t-[1.5px] border-rule pt-2.5 sm:mt-3 sm:pt-3">
                       {/* The one red thing on the page: it is what the page
                           exists to do. */}
-                      <form action={decideApplication}>
+                      <form action={decideApplication} className="flex-[1.4] sm:flex-none">
                         <input type="hidden" name="id" value={one.id} />
                         <input type="hidden" name="decision" value="approve" />
-                        <SaveButton look="btn-admin-go">Set them up</SaveButton>
+                        <SaveButton look="btn-admin-go" className="w-full sm:w-auto">
+                          Set them up
+                        </SaveButton>
                       </form>
-                      <a href={`tel:${one.phone}`} className="btn-admin">
+                      <a href={`tel:${one.phone}`} className="btn-admin flex-1 sm:flex-none">
                         Call
                       </a>
                       <a
                         href={whatsappTo(one.phone, `Hi ${first},`)}
                         target="_blank"
                         rel="noreferrer"
-                        className="btn-admin"
+                        className="btn-admin flex-1 sm:flex-none"
                       >
                         WhatsApp
                       </a>
@@ -235,10 +262,16 @@ export default async function ApplicationsAdmin({
                           down cut is where it is reconsidered. So it is a
                           quiet button on the far side rather than a red
                           one. */}
-                      <form action={decideApplication} className="sm:ml-auto">
+                      <form
+                        action={decideApplication}
+                        className="flex-1 sm:ml-auto sm:flex-none"
+                      >
                         <input type="hidden" name="id" value={one.id} />
                         <input type="hidden" name="decision" value="decline" />
-                        <SaveButton look="btn-admin" className="border-line text-muted">
+                        <SaveButton
+                          look="btn-admin"
+                          className="w-full border-line text-muted sm:w-auto"
+                        >
                           Not now
                         </SaveButton>
                       </form>
@@ -250,7 +283,7 @@ export default async function ApplicationsAdmin({
           )}
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 sm:gap-4">
           <Panel title="Setting somebody up" detail="What happens when you tap it.">
             <ol className="mt-1">
               {[

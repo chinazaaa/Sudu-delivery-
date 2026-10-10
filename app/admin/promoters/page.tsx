@@ -164,10 +164,14 @@ export default async function PromotersAdmin({
   }
 
   return (
-    <div>
+    /* Room under the last card for the phone bar, which is fixed and would
+       otherwise stand on top of whatever the page ends with. */
+    <div className={owed > 0 ? "pb-[72px] lg:pb-0" : ""}>
       <PageHeader
         title="Promoters"
         detail="A customer belongs to whoever brought them, for life, and every order they pay for counts at that promoter's rate."
+        backHref="/admin/more"
+        backLabel="More"
         actions={
           <>
             <a href="#add" className="btn-admin">
@@ -176,9 +180,13 @@ export default async function PromotersAdmin({
             {/* The board's one red button on this screen. Nothing is paid
                 from a list: it cuts the list down to whoever is owed, which
                 is the round of transfers to make, each settled on their own
-                screen where the account number is. */}
+                screen where the account number is.
+
+                On a phone it is on the bar at the bottom instead, where the
+                thumb already is, so it is hidden here rather than drawn
+                twice. */}
             {owed > 0 && (
-              <Link href={link({ view: "owed" })} className="btn-admin-go">
+              <Link href={link({ view: "owed" })} className="btn-admin-go hidden lg:inline-flex">
                 Pay everyone owed · {naira(owed)}
               </Link>
             )}
@@ -196,7 +204,9 @@ export default async function PromotersAdmin({
       )}
 
       {everybody.length > 0 && (
-        <div className="mb-4 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+        /* Two up on a phone, as the mobile boards draw every row of
+           figures. */
+        <div className="mb-3 grid grid-cols-2 gap-2.5 sm:mb-4 sm:gap-3.5 xl:grid-cols-4">
           <Figure
             label="Promoting"
             value={String(everybody.length)}
@@ -235,37 +245,130 @@ export default async function PromotersAdmin({
       )}
 
       {everybody.length > 1 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          {VIEWS.map((cut) => (
-            <Link
-              key={cut.value || "all"}
-              href={link({ view: cut.value || undefined })}
-              className={`pill-admin ${view === cut.value ? "pill-admin-on" : ""}`}
-            >
-              {cut.label}
-              <span className="font-mono opacity-60">{counts[cut.value] ?? 0}</span>
-            </Link>
-          ))}
+        <div className="mb-3 flex flex-col gap-1.5 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
+          {/* Five cuts wrap onto three lines on a phone and push the list
+              off the screen, so the board scrolls them sideways instead,
+              edge to edge, where a half-shown pill says there is more. */}
+          <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1.5 sm:mx-0 sm:flex-wrap sm:items-center sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0">
+            {VIEWS.map((cut) => (
+              <Link
+                key={cut.value || "all"}
+                href={link({ view: cut.value || undefined })}
+                className={`pill-admin min-h-[34px] shrink-0 px-3 text-[13px] sm:min-h-[38px] sm:px-3.5 sm:text-sm ${
+                  view === cut.value ? "pill-admin-on" : ""
+                }`}
+              >
+                {cut.label}
+                <span className="font-mono opacity-60">{counts[cut.value] ?? 0}</span>
+              </Link>
+            ))}
+          </div>
           {/* Narrowing by hand, which is how a list of twenty is used. The
               cut survives a search: searching inside "Owed" and landing back
-              on everybody is the filter undoing itself. */}
+              on everybody is the filter undoing itself.
+
+              Its own line on a phone, under the cuts: a box this narrow
+              beside a scrolling row of pills is a box nobody can type
+              in. */}
           <form action="/admin/promoters" className="flex gap-2 sm:ml-auto">
             {view !== "" && <input type="hidden" name="view" value={view} />}
             <input
               name="q"
               defaultValue={query}
               placeholder="Name or code"
-              className="field border-[1.5px] border-line py-2 text-sm sm:w-56"
+              className="field field-admin border-[1.5px] border-line sm:w-56"
             />
-            <button className="btn-admin">Search</button>
+            <button className="btn-admin shrink-0">Search</button>
           </form>
         </div>
       )}
 
-      <div className="grid items-start gap-[18px] xl:grid-cols-[1.6fr_1fr]">
-        <div className="space-y-3">
+      <div className="grid items-start gap-3 sm:gap-[18px] xl:grid-cols-[1.6fr_1fr]">
+        <div className="space-y-2.5 sm:space-y-3">
+          {/* Where the dashboard's "Pay them" lands. It carries ?owed=1,
+              which picks the Owed cut above, and this is the thing to be
+              looking at when the page opens: a page of nine promoters with
+              the two who are owed below the fold is a page that has to be
+              scrolled before it can be read. */}
+          <div id="owed" className="scroll-mt-4" />
+
+          {/* A card for each of them below a desk, because eight columns of
+              table on a three hundred and ninety pixel screen is not a
+              table read sideways, it is a page whose width the table sets:
+              the name off one edge, the owed figure off the other, and the
+              forms underneath cut in half. The same facts are here, and the
+              row's own two actions with them. */}
           {shown.length > 0 && (
-            <div className="card">
+            <ul className="grid gap-2.5 lg:hidden">
+              {shown.map((row) => (
+                <li key={row.code} className="card p-3.5">
+                  <Link href={`/admin/promoters?who=${encodeURIComponent(row.code)}`}>
+                    <span className="flex items-baseline justify-between gap-2">
+                      <strong className="truncate text-[15.5px]">
+                        {row.name || row.code}
+                      </strong>
+                      {/* Money is mono, even where the board sets a figure
+                          this size in the display face: a column of amounts
+                          only lines up in the one face that is
+                          monospaced. */}
+                      <span
+                        className={`shrink-0 font-mono text-[15px] font-semibold ${
+                          row.owed > 0 ? "text-brand-dark" : "text-mint"
+                        }`}
+                      >
+                        {row.owed > 0 ? naira(row.owed) : "settled"}
+                      </span>
+                    </span>
+                    <span className="hint block">
+                      {row.code} · PIN {row.pin || "not set"}
+                    </span>
+                    <span className="hint block">
+                      {peopleOf(row.code)} brought · {naira(worthOf(row.code))} spent ·{" "}
+                      {row.orders} order{row.orders === 1 ? "" : "s"} ·{" "}
+                      {naira(row.earned)} earned
+                    </span>
+                    <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      {row.active ? (
+                        <span className="tag bg-mint-tint text-mint">promoting</span>
+                      ) : (
+                        <span className="tag bg-wash text-ink">paused</span>
+                      )}
+                      {row.owed > 0 && (
+                        <span className="tag bg-brand-wash text-brand-dark">owed</span>
+                      )}
+                    </span>
+                  </Link>
+                  {/* The row's actions, as the table has them: red is money
+                      leaving, and both go to their own screen, which is
+                      where the account number and the run being settled
+                      are. */}
+                  <div className="mt-2 flex gap-2">
+                    {row.owed > 0 && (
+                      <Link
+                        href={`/admin/promoters?who=${encodeURIComponent(row.code)}`}
+                        className="btn-admin-go btn-admin-sm flex-[1.4]"
+                      >
+                        Pay {naira(row.owed)}
+                      </Link>
+                    )}
+                    <Link
+                      href={`/admin/promoters?who=${encodeURIComponent(row.code)}`}
+                      className="btn-admin btn-admin-sm flex-1"
+                    >
+                      Open →
+                    </Link>
+                  </div>
+                </li>
+              ))}
+              <li className="hint leading-[1.5]">
+                Sorted by what the people they brought have actually spent, not by how
+                many they signed up.
+              </li>
+            </ul>
+          )}
+
+          {shown.length > 0 && (
+            <div className="card hidden lg:block">
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -372,7 +475,7 @@ export default async function PromotersAdmin({
           </Panel>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 sm:gap-4">
           <Panel
             title="Is it worth it?"
             detail="What you have paid out against what those customers have spent."
@@ -472,6 +575,21 @@ export default async function PromotersAdmin({
           </Panel>
         </div>
       </div>
+
+      {/* The one thing this screen is for, on the bar at the bottom of a
+          phone. It pays nobody by itself: it cuts the list down to whoever
+          is owed, and each of those is settled on their own screen where
+          the account number is. */}
+      {owed > 0 && (
+        <div className="phone-bar">
+          <Link
+            href={link({ view: "owed" })}
+            className="btn-admin-go min-h-[50px] w-full text-[15.5px]"
+          >
+            Pay everyone owed · {naira(owed)}
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
@@ -529,7 +647,8 @@ async function OnePromoter({
   const first = promoter.name.split(" ")[0] || promoter.code;
 
   return (
-    <div>
+    /* Room under the last panel for the phone bar. */
+    <div className={promoter.owed > 0 ? "pb-[76px] lg:pb-0" : ""}>
       <PageHeader
         backHref="/admin/promoters"
         backLabel="All promoters"
@@ -576,9 +695,10 @@ async function OnePromoter({
             {/* The board gives this screen one red button, and it is the
                 money. It cannot pay anybody by itself, because paying is a
                 transfer in a banking app and each run is settled on its own
-                row, so it goes to the rows that do it. */}
+                row, so it goes to the rows that do it. On a phone it stands
+                on the bar at the bottom instead. */}
             {promoter.owed > 0 && (
-              <a href="#payout" className="btn-admin-go">
+              <a href="#payout" className="btn-admin-go hidden lg:inline-flex">
                 Pay {naira(promoter.owed)}
               </a>
             )}
@@ -593,7 +713,8 @@ async function OnePromoter({
         </p>
       )}
 
-      <div className="mb-[18px] grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Two up on a phone, which is the board's own grid for this screen. */}
+      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:mb-[18px] sm:gap-3.5 xl:grid-cols-4">
         <Figure
           label="Brought"
           value={String(people.length)}
@@ -622,8 +743,8 @@ async function OnePromoter({
         />
       </div>
 
-      <div className="grid items-start gap-[18px] xl:grid-cols-[1.5fr_1fr]">
-        <div className="flex flex-col gap-4">
+      <div className="grid items-start gap-3 sm:gap-[18px] xl:grid-cols-[1.5fr_1fr]">
+        <div className="flex flex-col gap-3 sm:gap-4">
           <Panel
             title="Every payout"
             className="scroll-mt-4"
@@ -635,7 +756,77 @@ async function OnePromoter({
             }
           >
             <div id="payout" />
-            <table className="mt-2 w-full border-collapse">
+
+            {/* The same payouts as rows on a phone, which is what the board
+                draws: four table columns on a phone put the amount and the
+                Pay button off the side of the screen, and the table sets the
+                width of everything under it. What is owed
+                first, then what has been sent, each against the run it
+                settles. */}
+            <div className="mt-1 lg:hidden">
+              {toSettle.map((run) => (
+                <div
+                  key={run.batchId}
+                  className="flex items-center gap-2.5 border-t-[1.5px] border-rule py-2.5"
+                >
+                  <span className="min-w-0 flex-1">
+                    <strong className="block text-[14px]">{run.label}</strong>
+                    <span className="hint block">
+                      {run.orders} order{run.orders === 1 ? "" : "s"}
+                      {run.paidOut > 0 && ` · ${naira(run.paidOut)} already paid`}
+                    </span>
+                  </span>
+                  <span className="font-mono text-[14px] font-semibold">
+                    {naira(run.earned - run.paidOut)}
+                  </span>
+                  <form action={recordPayout}>
+                    <input type="hidden" name="code" value={promoter.code} />
+                    <input type="hidden" name="batch_id" value={run.batchId} />
+                    <input type="hidden" name="amount" value={run.earned - run.paidOut} />
+                    <input type="hidden" name="note" value={run.label} />
+                    <SaveButton look="btn-admin-go btn-admin-sm">Pay</SaveButton>
+                  </form>
+                </div>
+              ))}
+              {payouts.map((payout) => (
+                <div
+                  key={payout.id}
+                  className="flex items-center gap-2.5 border-t-[1.5px] border-rule py-2.5"
+                >
+                  <span className="min-w-0 flex-1">
+                    <strong className="block truncate text-[14px]">
+                      {payout.runLabel ||
+                        payout.note ||
+                        new Date(payout.paid_at).toLocaleDateString("en-NG", {
+                          day: "numeric",
+                          month: "short",
+                        })}
+                    </strong>
+                    <span className="hint block">
+                      sent{" "}
+                      {new Date(payout.paid_at).toLocaleDateString("en-NG", {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </span>
+                  </span>
+                  <span className="font-mono text-[14px] font-semibold">
+                    {naira(payout.amount)}
+                  </span>
+                  {/* A label, not a button: only the promoter can say the
+                      money landed, on their own page. */}
+                  {payout.confirmed_at ? (
+                    <span className="tag bg-mint-tint text-mint">confirmed</span>
+                  ) : (
+                    <span className="tag bg-brand-tint text-amber-deep">
+                      sent · they confirm
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <table className="mt-2 hidden w-full border-collapse lg:table">
               <tbody>
                 {/* What is owed first, because it is the decision. One row
                     per run, and paying settles that run in particular, which
@@ -727,7 +918,7 @@ async function OnePromoter({
               <p className="ticket mb-2 text-muted">Anything that does not fit a run</p>
               <form action={recordPayout} className="flex flex-wrap items-end gap-2.5">
                 <input type="hidden" name="code" value={promoter.code} />
-                <div className="w-32">
+                <div className="w-full sm:w-32">
                   <label className="label" htmlFor={`amount-${promoter.code}`}>
                     Paid them
                   </label>
@@ -739,7 +930,7 @@ async function OnePromoter({
                     className="field py-2 text-sm"
                   />
                 </div>
-                <div className="grow">
+                <div className="w-full sm:grow">
                   <label className="label" htmlFor={`note-${promoter.code}`}>
                     Note
                   </label>
@@ -814,7 +1005,7 @@ async function OnePromoter({
           </Panel>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 sm:gap-4">
           <Panel title="Send it here">
             {promoter.bank_account_number ? (
               <div className="soft mt-2 flex items-center gap-3 bg-shell px-3.5 py-3">
@@ -927,6 +1118,19 @@ async function OnePromoter({
           </Panel>
         </div>
       </div>
+
+      {/* The board's bar: the money, and the run it settles, so the thumb
+          lands on the right one without scrolling back up. It jumps to the
+          payout rows rather than paying, because paying is a transfer in a
+          banking app and each run is settled on its own row. */}
+      {promoter.owed > 0 && (
+        <div className="phone-bar">
+          <a href="#payout" className="btn-admin-go min-h-[52px] w-full text-base">
+            Pay {naira(promoter.owed)}
+            {toSettle.length > 0 && ` · ${toSettle[0].label}`}
+          </a>
+        </div>
+      )}
     </div>
   );
 }
@@ -1003,7 +1207,7 @@ function PromoterForm({
               name="handle"
               defaultValue={promoter?.handle ?? ""}
               placeholder={promoter?.code.toLowerCase() ?? "tobi"}
-              className="field"
+              className="field min-w-0"
             />
           </div>
           <p className="hint mt-1">

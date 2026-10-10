@@ -101,21 +101,24 @@ export default function CouponForm({
       {editing && <input type="hidden" name="editing" value="1" />}
 
       <div>
-        <p className="label">What kind of offer</p>
+        {/* The board numbers the three questions, because on a phone only
+            one of them is on the screen at a time and the count is what
+            says how much of this is left. */}
+        <p className="ticket mb-1.5 text-muted">1 · What kind</p>
         <div className="grid gap-2 sm:grid-cols-3">
           {KINDS.map((one) => (
             <button
               key={one.value}
               type="button"
               onClick={() => setKind(one.value)}
-              className={`rounded-2xl border-2 p-3 text-left transition ${
+              className={`min-h-[56px] rounded-[13px] p-3.5 text-left transition ${
                 kind === one.value
-                  ? "border-brand bg-brand-tint"
-                  : "border-black/10 bg-white hover:border-ink/20"
+                  ? "border-2 border-brand bg-brand-tint"
+                  : "border-[1.5px] border-line bg-paper hover:border-ink/20"
               }`}
             >
-              <span className="block font-bold">{one.label}</span>
-              <span className="mt-0.5 block text-xs text-muted">{one.detail}</span>
+              <span className="block text-[15px] font-bold">{one.label}</span>
+              <span className="hint mt-0.5 block">{one.detail}</span>
             </button>
           ))}
         </div>
@@ -130,10 +133,12 @@ export default function CouponForm({
       )}
       {kind === "flat" && <input type="hidden" name="applies_to" value="fee" />}
 
+      <p className="ticket -mb-1.5 text-muted">2 · What it is, and what it covers</p>
+
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label className="label" htmlFor={id("code")}>
-            {sets ? "A name for it" : "The code they type"}
+            {sets ? "A name for it, so you can find it later" : "The code they type"}
           </label>
           <input
             id={id("code")}
@@ -142,17 +147,15 @@ export default function CouponForm({
             readOnly={editing}
             placeholder={sets ? "BBQFREE" : "SUDU500"}
             autoCapitalize="characters"
-            className={`field uppercase ${editing ? "bg-black/[0.03] text-muted" : ""}`}
+            className={`field field-admin uppercase ${editing ? "bg-wash text-muted" : ""}`}
           />
-          {sets && (
-            <p className="mt-1 text-xs text-muted">
-              Just so you can find it later. Nobody types this one.
-            </p>
-          )}
+          {sets && <p className="hint mt-1">Nobody types this one.</p>}
         </div>
 
         <div>
-          <label className="label" htmlFor={id("note")}>Note to yourself</label>
+          <label className="label" htmlFor={id("note")}>
+            Note to yourself
+          </label>
           <input
             id={id("note")}
             name="note"
@@ -160,7 +163,7 @@ export default function CouponForm({
             placeholder={
               kind === "free" ? "Free delivery on the BBQ mediums" : "Exam week push"
             }
-            className="field"
+            className="field field-admin"
           />
         </div>
 
@@ -173,7 +176,7 @@ export default function CouponForm({
               inputMode="numeric"
               defaultValue={money(values?.amount ?? null)}
               placeholder="2000"
-              className="field"
+              className="field field-admin"
             />
           </div>
         )}
@@ -188,7 +191,7 @@ export default function CouponForm({
                 inputMode="numeric"
                 defaultValue={money(values?.amount ?? null)}
                 placeholder="500"
-                className="field"
+                className="field field-admin"
               />
             </div>
             <div>
@@ -197,7 +200,7 @@ export default function CouponForm({
                 id={id("applies_to")}
                 name="applies_to"
                 defaultValue={values?.applies_to === "order" ? "order" : "delivery"}
-                className="field"
+                className="field field-admin"
               >
                 <option value="delivery">Delivery</option>
                 <option value="order">The whole order</option>
@@ -222,9 +225,9 @@ export default function CouponForm({
                 inputMode="numeric"
                 defaultValue={money(values?.included_items ?? null)}
                 placeholder="Any"
-                className="field"
+                className="field field-admin"
               />
-              <p className="mt-1 text-xs text-muted">
+              <p className="hint mt-1">
                 Blank means any number, so one item and fifteen cost the same
                 to deliver.
               </p>
@@ -239,9 +242,9 @@ export default function CouponForm({
                 inputMode="numeric"
                 defaultValue={money(values?.extra_per_item ?? null)}
                 placeholder="0"
-                className="field"
+                className="field field-admin"
               />
-              <p className="mt-1 text-xs text-muted">
+              <p className="hint mt-1">
                 For every item past the box on the left. 0 keeps it flat.
               </p>
             </div>
@@ -255,15 +258,15 @@ export default function CouponForm({
                 inputMode="numeric"
                 defaultValue={money(values?.min_per_person ?? null)}
                 placeholder="0"
-                className="field"
+                className="field field-admin"
               />
-              <p className="mt-1 text-xs text-muted">
+              <p className="hint mt-1">
                 A group splits this price. This is the floor each of them
                 reaches and stops at.
               </p>
             </div>
           </div>
-          <p className="-mt-2 rounded-xl bg-shell px-3 py-2 text-xs text-ink/75">
+          <p className="soft -mt-2 border-volt-line bg-brand-tint px-3 py-2.5 text-[13px] leading-[1.5]">
             <span className="font-bold">For example.</span> {naira(2000)}{" "}
             covering 3 items, {naira(500)} each after, floor {naira(1000)}: one
             person ordering five things pays {naira(3000)}. Five people sharing
@@ -273,7 +276,7 @@ export default function CouponForm({
       )}
 
       <div>
-        <p className="label">What it covers</p>
+        <p className="label">Which kitchens, and which part of the menu</p>
         <MenuScope
           shops={shops}
           restaurants={values?.places ?? []}
@@ -289,7 +292,7 @@ export default function CouponForm({
         <div>
           <p className="label">Or particular dishes</p>
           <DishPicker menu={dishes} chosen={values?.dishes ?? []} />
-          <p className="mt-1 text-xs text-muted">
+          <p className="hint mt-1">
             Instead of a section, not as well as one: pick any dishes here and
             they are the whole offer, whatever is ticked above. Two of them
             together still counts.
@@ -297,16 +300,47 @@ export default function CouponForm({
         </div>
       )}
 
+      <p className="ticket -mb-1.5 text-muted">3 · When it runs</p>
+
+      {runs.length > 0 && (
+        <div>
+          <p className="label">Which runs</p>
+          {/* Scrolling sideways on a phone: a term's worth of runs wrapped
+              is half a screen of pills above the boxes that follow. */}
+          <div className="-mx-3.5 flex gap-1.5 overflow-x-auto px-3.5 pb-1.5 sm:mx-0 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0">
+            {pickedRuns.map((id) => (
+              <input key={id} type="hidden" name="batch_id" value={id} />
+            ))}
+            {runs.map((run) => (
+              <button
+                key={run.id}
+                type="button"
+                onClick={() => toggle(run.id, pickedRuns, setPickedRuns)}
+                className={`pill-admin min-h-[36px] shrink-0 text-[13px] sm:min-h-[38px] sm:text-sm ${
+                  pickedRuns.includes(run.id) ? "pill-admin-on" : ""
+                }`}
+              >
+                {run.label}
+              </button>
+            ))}
+          </div>
+          <p className="hint mt-1">Pick none and it is every run.</p>
+        </div>
+      )}
+
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label className="label" htmlFor={id("expires_at")}>Last day</label>
+          <label className="label" htmlFor={id("expires_at")}>
+            Last day
+          </label>
           <input
             id={id("expires_at")}
             name="expires_at"
             type="date"
             defaultValue={values?.expires_at ? values.expires_at.slice(0, 10) : ""}
-            className="field"
+            className="field field-admin"
           />
+          <p className="hint mt-1">Blank and it runs until you switch it off.</p>
         </div>
         <div>
           <label className="label" htmlFor={id("max_uses")}>
@@ -318,39 +352,13 @@ export default function CouponForm({
             inputMode="numeric"
             defaultValue={money(values?.max_uses ?? null)}
             placeholder="No limit"
-            className="field"
+            className="field field-admin"
           />
-          <p className="mt-1 text-xs text-muted">
+          <p className="hint mt-1">
             {sets ? "Your boot, really. It stops itself once it is hit." : "Then it stops."}
           </p>
         </div>
       </div>
-
-      {runs.length > 0 && (
-        <div>
-          <p className="label">Which runs</p>
-          <div className="flex flex-wrap gap-2">
-            {pickedRuns.map((id) => (
-              <input key={id} type="hidden" name="batch_id" value={id} />
-            ))}
-            {runs.map((run) => (
-              <button
-                key={run.id}
-                type="button"
-                onClick={() => toggle(run.id, pickedRuns, setPickedRuns)}
-                className={`chip ${
-                  pickedRuns.includes(run.id)
-                    ? "border-brand bg-brand text-white"
-                    : "border-black/10 bg-white"
-                }`}
-              >
-                {run.label}
-              </button>
-            ))}
-          </div>
-          <p className="mt-1 text-xs text-muted">Pick none and it is every run.</p>
-        </div>
-      )}
 
       {/* A car somebody has to themselves costs what it costs. An offer built
           for a shared run does not cover one, so it only reaches same day
@@ -362,46 +370,81 @@ export default function CouponForm({
           <button
             type="button"
             onClick={() => setOnSameDay(false)}
-            className={`chip ${
-              !onSameDay ? "border-ink bg-ink text-white" : "border-black/10 bg-white"
-            }`}
+            className={`pill-admin ${!onSameDay ? "pill-admin-on" : ""}`}
           >
             Runs only
           </button>
           <button
             type="button"
             onClick={() => setOnSameDay(true)}
-            className={`chip ${
-              onSameDay ? "border-ink bg-ink text-white" : "border-black/10 bg-white"
-            }`}
+            className={`pill-admin ${onSameDay ? "pill-admin-on" : ""}`}
           >
             Also on same day
           </button>
         </div>
 
-        <p className="mt-1 text-xs text-muted">
+        <p className="hint mt-1">
           {onSameDay
             ? "When you can go is already set by your delivery hours. Worth knowing: a same day car is one trip for one person, so a flat price can cost you more than it brings."
             : "It applies on runs and never on a car somebody has to themselves."}
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-4 text-sm font-semibold">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="active" defaultChecked={values?.active ?? true} />
-          Live
+      {/* Two tick rows at the board's forty-six pixels rather than two
+          checkboxes on one line: on a phone the pair on one line gave each
+          of them half a thumb. */}
+      <div>
+        <label className="flex min-h-[46px] items-center gap-2.5 border-t-[1.5px] border-rule text-sm font-semibold">
+          <input
+            type="checkbox"
+            name="active"
+            defaultChecked={values?.active ?? true}
+            className="size-[19px] accent-brand"
+          />
+          <span className="flex-1">Live, from the moment it saves</span>
         </label>
-        <label className="flex items-center gap-2">
+        <label className="flex min-h-[46px] items-center gap-2.5 border-t-[1.5px] border-rule text-sm font-semibold">
           <input
             type="checkbox"
             name="first_order_only"
             defaultChecked={values?.first_order_only ?? false}
+            className="size-[19px] accent-brand"
           />
-          First order only
+          <span className="flex-1">First order only</span>
         </label>
       </div>
 
-      <SaveButton>{editing ? "Save this offer" : "Save the offer"}</SaveButton>
+      {/* The offer in a sentence, from the three answers this form holds
+          itself: what kind it is, which runs it is on, and whether it
+          reaches a car somebody has to themselves. */}
+      <p className="soft border-volt-line bg-brand-tint px-3.5 py-2.5 text-[14px] leading-[1.45]">
+        <span className="ticket mb-1 block text-muted">This offer, in a sentence</span>
+        <strong>{KINDS.find((one) => one.value === kind)?.label}</strong>, on{" "}
+        <strong>
+          {pickedRuns.length === 0
+            ? "every run"
+            : `${pickedRuns.length} picked run${pickedRuns.length === 1 ? "" : "s"}`}
+        </strong>
+        , {onSameDay ? "and on a car somebody has to themselves" : "and never on a same day car"}.
+      </p>
+
+      {/* In the page on a desk, where the mouse is already on the form; on
+          the bar at the bottom on a phone, which is the board. Only for the
+          offer being made: the editor inside a card is one of however many
+          offers there are, and that many fixed bars would stand on each
+          other. */}
+      <div className={editing ? "" : "hidden lg:block"}>
+        <SaveButton look="btn-admin-go">
+          {editing ? "Save this offer" : "Save the offer"}
+        </SaveButton>
+      </div>
+      {!editing && (
+        <div className="phone-bar">
+          <SaveButton look="btn-admin-go" className="min-h-[52px] w-full text-base">
+            Save the offer
+          </SaveButton>
+        </div>
+      )}
     </form>
   );
 }
