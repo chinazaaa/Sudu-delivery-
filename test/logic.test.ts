@@ -5,6 +5,7 @@ import { channelOfSite, tidyChannel, tidyHandle } from "../lib/came-from";
 import { weekAround } from "../lib/time";
 import { monthOf, nextMonth } from "../lib/standing";
 import { googleTagId, numberOr } from "../lib/settings";
+import { isExtra } from "../lib/shelf";
 import { test } from "node:test";
 import { groupForCounter } from "../lib/admin";
 import { normalisePhone, formatPhone } from "../lib/phone";
@@ -1801,4 +1802,35 @@ test("a search with a brace in it is nobody's search", () => {
   }
   // Nothing asked for at all is not a search either way.
   assert.equal(unfilled(undefined), false);
+});
+
+/*
+ * A pot of sauce is not a page.
+ *
+ * Every menu item has a page of its own, which is right for a dish and
+ * wrong for the things bought alongside one. Nobody searches for extra
+ * mozzarella, so those pages sat in the crawl queue ahead of dishes that
+ * had never been crawled at all. The rule reads the kitchen's own filing.
+ */
+test("extras are told apart from dishes by the category they are filed under", () => {
+  // Exactly the five categories the kitchens use for them.
+  for (const said of ["Extra toppings", "Add-ons", "Sauces", "Sauce Dips", "Dips & sides"]) {
+    assert.equal(isExtra(said), true, said);
+  }
+
+  // Everything somebody actually orders has to stay indexable.
+  for (const said of [
+    "Alacarte",
+    "Burgers",
+    "Pizzas",
+    "Chicken & Rice",
+    "Drinks",
+    "Bread",
+    "Desserts",
+    "Rice grains & pasta",
+    "",
+  ]) {
+    assert.equal(isExtra(said), false, said);
+  }
+  assert.equal(isExtra(null), false);
 });

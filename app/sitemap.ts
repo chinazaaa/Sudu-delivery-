@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { skincareFacets, skincareOn } from "@/lib/skincare";
 import { safeSettings } from "@/lib/settings";
-import { onTheMenu } from "@/lib/shelf";
+import { isExtra, onTheMenu } from "@/lib/shelf";
 import { db } from "@/lib/supabase";
 
 /**
@@ -89,14 +89,35 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (food.length === 0) return home;
 
     const ids = food.map((one) => one.id);
-    const items = await everyRow<{ id: string }>((from, to) =>
-      db()
-        .from("menu_items")
-        .select("id")
-        .in("restaurant_id", ids)
-        .order("id")
-        .range(from, to)
+
+    // The categories a dish is filed under, so the extras can be left out:
+    // a pot of sauce is bought alongside something, never searched for, and
+    // offering thirty-four of them puts them in the queue ahead of dishes.
+    const extras = new Set(
+      (
+        await db()
+          .from("menu_categories")
+          .select("id, name")
+          .overrideTypes<{ id: string; name: string }[]>()
+          .then(
+            (answer) => answer.data ?? [],
+            () => [] as { id: string; name: string }[]
+          )
+      )
+        .filter((one) => isExtra(one.name))
+        .map((one) => one.id)
     );
+
+    const items = (
+      await everyRow<{ id: string; category_id: string | null }>((from, to) =>
+        db()
+          .from("menu_items")
+          .select("id, category_id")
+          .in("restaurant_id", ids)
+          .order("id")
+          .range(from, to)
+      )
+    ).filter((item) => !(item.category_id && extras.has(item.category_id)));
 
     // Every collection and every occasion. Each is a real page with its own
     // boxes, its own price and its own share card, and none of them was

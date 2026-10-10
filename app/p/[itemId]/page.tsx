@@ -10,6 +10,7 @@ import { valueBandsOfEach } from "@/lib/areas-server";
 import { productNotes, safeSettings } from "@/lib/settings";
 import { naira } from "@/lib/money";
 import { photoOf } from "@/lib/product-photo";
+import { isExtra } from "@/lib/shelf";
 import { deliveryIn } from "@/lib/offer-shipping";
 
 export const dynamic = "force-dynamic";
@@ -46,10 +47,15 @@ export async function generateMetadata({
   const item = place?.items.find((i) => i.id === itemId);
   if (!place || !item) return {};
 
+  const filed = place.categories.find((one) => one.id === item.categoryId);
+
   return {
     title: `${item.name} from ${place.restaurant.name}`,
     description: saidAbout(item, place.restaurant.name),
     alternates: { canonical: `/p/${item.id}` },
+    // A pot of sauce is bought alongside a dish, never looked for. The page
+    // stays, because the menu links to it; it is just not offered up.
+    robots: isExtra(filed?.name) ? { index: false, follow: true } : undefined,
     openGraph: {
       title: `${item.name} from ${place.restaurant.name}`,
       // Left to fall through to the drawn card in app/opengraph-image.tsx
