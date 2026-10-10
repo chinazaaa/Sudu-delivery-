@@ -93,6 +93,17 @@ body {
   .section-title {
     @apply font-display text-3xl font-black uppercase leading-none sm:text-4xl;
   }
+  /*
+   * A label, not a control.
+   *
+   * `chip` is a 44px thing you tap. The boards also use a small tinted
+   * label that says what something is, and the two kept being confused
+   * because they share a word: every admin page was hand-rolling the small
+   * one. This is that one, and it is never pressable.
+   */
+  .tag {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
   /* The ticket voice: a run time, a reference, a counter. */
   .ticket {
     @apply font-mono text-xs font-semibold uppercase tracking-[0.1em];
