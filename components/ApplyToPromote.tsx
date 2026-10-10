@@ -47,7 +47,7 @@ export default function ApplyToPromote() {
       <form action={act} className="flex flex-col gap-3">
         <label className="block">
           <span className="label">Your name</span>
-          <input name="name" className="field" required maxLength={80} autoComplete="name" placeholder="Onize Aliyu" />
+          <input name="name" className="field" required maxLength={80} autoComplete="name" placeholder="John Doe" />
         </label>
 
         <label className="block">
@@ -76,7 +76,7 @@ export default function ApplyToPromote() {
             <span className="shrink-0 whitespace-nowrap font-mono text-[13.5px] text-muted">
               sudu.store/s/
             </span>
-            <input name="wanted_code" className="field" maxLength={24} placeholder="onize" />
+            <input name="wanted_code" className="field" maxLength={24} placeholder="johndoe" />
           </span>
           <span className="mt-1 block text-xs text-muted">
             We will tell you if it is taken.

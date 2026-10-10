@@ -1,16 +1,17 @@
 import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
-import Figure from "@/components/admin/Figure";
 import Panel from "@/components/admin/Panel";
 import SaveButton from "@/components/SaveButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { openUntil } from "@/lib/batches";
 import { runSchedule, WEEKDAYS } from "@/lib/schedule";
-import { DELIVERY_WINDOWS, SLOT_LABEL } from "@/lib/config";
+import { DELIVERY_WINDOWS, RUN_HORIZON_DAYS, SLOT_LABEL } from "@/lib/config";
+import { profitBetween, type RunLine } from "@/lib/profit";
+import { naira } from "@/lib/money";
 import { safeSettings } from "@/lib/settings";
 import { allAreas } from "@/lib/areas-server";
 import { areasOfRun } from "@/lib/areas";
-import { runDateLabel } from "@/lib/time";
+import { lagosToday, runDateLabel } from "@/lib/time";
 import ActionButton from "@/components/admin/ActionButton";
 import {
   deleteScheduleRun,
@@ -20,6 +21,66 @@ import {
 } from "../actions";
 
 export const dynamic = "force-dynamic";
+
+/*
+ * Reading a weekday's own money off the runs that have already gone.
+ *
+ * Ten weeks back finds six of any weekday even with a closure or two in the
+ * way, three is the fewest that is an average rather than one bad night, and
+ * six is what the card says it averaged.
+ */
+const WEEKS_BACK = 10;
+const FEWEST = 3;
+const MOST_BACK = 6;
+
+function addDays(date: string, days: number): string {
+  // Midday UTC, so adding days cannot slip across a midnight.
+  const at = new Date(`${date}T12:00:00Z`);
+  return new Date(at.getTime() + days * 86400000).toISOString().slice(0, 10);
+}
+
+/** Sunday is 0, which is how the schedule numbers its own weekdays. */
+function weekdayOf(runDate: string): number {
+  return new Date(`${runDate}T12:00:00Z`).getUTCDay();
+}
+
+type DayAverage = {
+  weekday: number;
+  /** How many of that weekday the average is actually over, because the
+   *  card says the number rather than claiming six. */
+  days: number;
+  orders: number;
+  /** Fuel, driver, transport and the commission earned on it. */
+  costs: number;
+  /** Negative is the whole point of looking. */
+  profit: number;
+};
+
+/**
+ * What one weekday averages, over its own last few occurrences.
+ *
+ * Averaged by date and not by run, because a weekday with an afternoon and a
+ * night is one day that either pays for its car or does not: the car goes
+ * out either way.
+ */
+function averageOf(rows: RunLine[], weekday: number): DayAverage | null {
+  const mine = rows.filter((run) => weekdayOf(run.runDate) === weekday);
+  // Newest first, which is the order profitBetween hands them back in.
+  const dates = [...new Set(mine.map((run) => run.runDate))].slice(0, MOST_BACK);
+  if (dates.length < FEWEST) return null;
+
+  const on = mine.filter((run) => dates.includes(run.runDate));
+  const per = (pick: (run: RunLine) => number) =>
+    on.reduce((sum, run) => sum + pick(run), 0) / dates.length;
+
+  return {
+    weekday,
+    days: dates.length,
+    orders: per((run) => run.orders),
+    costs: per((run) => run.costs),
+    profit: per((run) => run.profit),
+  };
+}
 
 /** The months worth offering to open: this one and the next few. */
 function nextMonths(count: number): { value: string; label: string }[] {
@@ -62,9 +123,9 @@ export default async function SchedulePage() {
     runs: schedule.filter((run) => run.weekday === index),
   })).filter((day) => day.runs.length > 0);
 
-  // Which day carries the week and which one barely does. Thinnest is worth
-  // a figure of its own because it is the one anybody would consider
-  // dropping, and it is not obvious from a list.
+  // Which day carries the week and which one barely does. Thinnest earns a
+  // number of its own because it is the day anybody would think about
+  // dropping, and it is not obvious from reading a list of runs.
   const live = week.map((day) => day.runs.filter((run) => run.active).length);
   const most = live.length > 0 ? Math.max(...live) : 0;
   const least = live.length > 0 ? Math.min(...live) : 0;
@@ -72,11 +133,43 @@ export default async function SchedulePage() {
   const thinnest = most === least ? null : week[live.indexOf(least)];
   const perWeek = schedule.filter((run) => run.active).length;
 
+  /*
+   * Whether a day of the week is costing more than it brings in.
+   *
+   * Only runs whose car has actually been typed in: `estimated` means
+   * nothing has been entered for fuel or the driver, so the run reads as
+   * pure profit, and averaging those in would hide exactly the day this is
+   * looking for.
+   */
+  const today = lagosToday();
+  // Caught rather than left to throw: the week is what this page is for, and
+  // a card about one day of it is not worth taking the schedule down over.
+  const money = await profitBetween(
+    addDays(today, -(WEEKS_BACK * 7 - 1)),
+    today
+  ).catch(() => null);
+  const settled = (money?.byRun ?? []).filter((run) => !run.estimated);
+
+  // Only a day the week actually runs, only one that still has a run on it
+  // to turn off, and only one that is genuinely losing money on average.
+  // Worst first, and nothing at all otherwise: a card that turns up every
+  // week to say everything is fine is a card nobody reads.
+  const losing =
+    week
+      .filter((day) => day.runs.some((run) => run.active))
+      .map((day) => averageOf(settled, day.index))
+      .filter((one): one is DayAverage => one !== null && one.profit < 0)
+      .sort((a, b) => a.profit - b.profit)[0] ?? null;
+  const losingDay = losing
+    ? (week.find((day) => day.index === losing.weekday) ?? null)
+    : null;
+  const losingRuns = losingDay ? losingDay.runs.filter((run) => run.active) : [];
+
   return (
     <div>
       <PageHeader
         title="Schedule"
-        detail="The pattern every week follows. Runs are opened from it automatically, and the shop only shows the ones closing soon."
+        detail={`The pattern every week follows. Runs are opened from it automatically, ${RUN_HORIZON_DAYS} days ahead.`}
         backHref="/admin/runs"
         backLabel="All runs"
         actions={
@@ -111,40 +204,88 @@ export default async function SchedulePage() {
             ? `Customers see the runs closing in the next ${horizon} days. The rest are yours to plan.`
             : "Nobody can order anything. Set your week below and open a month."}
         </p>
+
+        {/* The three numbers sit in this card rather than in tiles of their
+            own, because they are all answers to the sentence above them.
+            There were four: how far ahead the shop is open was the fourth,
+            and this card's first line already says it, with the date rather
+            than a count of days. */}
+        {week.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-x-7 gap-y-3 border-t-[1.5px] border-rule pt-3">
+            <div>
+              <p className="ticket text-muted">Runs a week</p>
+              <p className="font-display text-[25px] font-black leading-none sm:text-[30px]">
+                {perWeek}
+              </p>
+            </div>
+            <div>
+              <p className="ticket text-muted">Busiest</p>
+              <p className="font-display text-[25px] font-black leading-none sm:text-[30px]">
+                {busiest ? busiest.name.slice(0, 3) : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="ticket text-muted">Thinnest</p>
+              {/* In Tomato Deep when there is one, because the thinnest day
+                  is the one anybody would think about dropping. */}
+              <p
+                className={`font-display text-[25px] font-black leading-none sm:text-[30px] ${
+                  thinnest ? "text-brand-dark" : ""
+                }`}
+              >
+                {thinnest ? thinnest.name.slice(0, 3) : "Even"}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="mb-3.5 grid grid-cols-2 gap-3.5 xl:grid-cols-4">
-        <Figure
-          label="Runs a week"
-          value={String(perWeek)}
-          tone={perWeek === 0 ? "brand" : "ink"}
-          detail={
-            perWeek === 0
-              ? "Nothing opens by itself"
-              : `Across ${week.length} ${week.length === 1 ? "day" : "days"}`
-          }
-        />
-        <Figure
-          label="Busiest"
-          value={busiest ? busiest.name.slice(0, 3) : "—"}
-          detail={busiest ? `${most} ${most === 1 ? "run" : "runs"} that day` : "No days set"}
-        />
-        <Figure
-          label="Thinnest"
-          value={thinnest ? thinnest.name.slice(0, 3) : "Even"}
-          tone={thinnest ? "brand" : "ink"}
-          detail={
-            thinnest
-              ? `${least} ${least === 1 ? "run" : "runs"}, worth a look at the fuel`
-              : "Every day carries the same"
-          }
-        />
-        <Figure
-          label="Open ahead"
-          value={`${horizon} days`}
-          detail="How far forward the shop shows runs"
-        />
-      </div>
+      {/*
+        A day that is not paying for its own car.
+
+        Only ever drawn with figures that have been read off runs that have
+        gone, and only when the average is actually negative, so this is
+        never a nudge to turn something off that is working. Turning it off
+        is the same pause the run's own row carries, which is why it asks
+        first and says what it leaves alone.
+      */}
+      {losing && losingDay && losingRuns.length > 0 && (
+        <div className="soft mb-3.5 border-volt-line bg-brand-tint p-3.5">
+          <p className="text-sm font-bold">{losingDay.name} loses money</p>
+          <p className="hint mt-1">
+            The last {losing.days} {losingDay.name}s averaged{" "}
+            {losing.orders.toFixed(1)} {losing.orders === 1 ? "order" : "orders"}{" "}
+            against {naira(Math.round(losing.costs))} of car and commission,
+            which is {naira(Math.round(-losing.profit))} out of pocket each
+            time.
+          </p>
+          <p className="hint mt-1.5">
+            Turning it off stops new {losingDay.name} runs from opening.
+            Anything already open keeps its orders and goes as planned, and
+            the day can be switched back on from its row below.
+          </p>
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            {losingRuns.map((run) => (
+              <form action={toggleScheduleRun} key={run.id}>
+                <input type="hidden" name="schedule_id" value={run.id} />
+                <input type="hidden" name="next_active" value="false" />
+                {/* Pausing is per run, so a day with two runs on it gets a
+                    button each rather than one button that quietly does half
+                    the job. */}
+                <ConfirmButton
+                  tone="admin"
+                  className="min-h-[44px]"
+                  confirm={`Yes, pause ${losingDay.name} ${SLOT_LABEL[run.slot]}`}
+                >
+                  {losingRuns.length === 1
+                    ? `Turn ${losingDay.name} off`
+                    : `Turn off the ${SLOT_LABEL[run.slot]} run`}
+                </ConfirmButton>
+              </form>
+            ))}
+          </div>
+        </div>
+      )}
 
       {schedule.length === 0 && (
         <div className="soft mb-3.5 border-volt-line bg-brand-tint p-3.5">
