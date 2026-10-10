@@ -5,6 +5,8 @@ import Figure from "@/components/admin/Figure";
 import Panel from "@/components/admin/Panel";
 import { howPaid, orderStory } from "@/lib/order-story";
 import { StatusPill } from "@/components/admin/OrderCard";
+import ConfirmButton from "@/components/admin/ConfirmButton";
+import SaveButton from "@/components/SaveButton";
 import { orderFeed } from "@/lib/admin-data";
 import { oneCustomer, shareOfProfit } from "@/lib/customer";
 import { getOrder } from "@/lib/orders";
@@ -25,8 +27,15 @@ import {
   addParcelPhoto,
   setBatchStage,
   agreeParcelDay,
+  markPaid,
+  markDelivered,
   moveOrderToAnother,
+  cancelOrder,
+  deleteOrder,
+  refundOrder,
+  savePaymentLink,
   removeParcelPhoto,
+  saveOrderNote,
   setBoxDay,
   orderAgain,
   setLineQty,
@@ -159,6 +168,19 @@ async function orderPage(id: string, said: string) {
   const shown = card ? toCard(card, settings, url, bank) : null;
   const pin = shown?.templates.find((one) => one.kind === "pin") ?? null;
   const review = shown?.templates.find((one) => one.kind === "review") ?? null;
+  // The rest of them, for the actions panel: the PIN and the review ask are
+  // in the header and in the bar at the bottom, and the same WhatsApp link
+  // handed over twice is a message sent twice.
+  const offer = (shown?.templates ?? []).filter(
+    (one) => one.kind !== "pin" && one.kind !== "review"
+  );
+
+  // Which of the three that cannot be taken back this order is up for.
+  // Money that has moved is given back; money that never moved is only
+  // cancelled; and an order is deleted outright only once it is cancelled.
+  const canRefund = order.status === "paid" || order.status === "delivered";
+  const canCancel = order.status === "pending";
+  const canDelete = order.status === "cancelled";
 
   /*
    * What this order left, after its food, the commission on it and its share
@@ -181,48 +203,39 @@ async function orderPage(id: string, said: string) {
   return (
     /* Room under the last card for the bar standing over it on a phone. */
     <div className="pb-[76px] lg:pb-0">
-      {/* The phone board heads an order with the person rather than with the
-          word Order: whoever is holding this already knows what they tapped,
-          and the name is what the next sentence out loud starts with. Its
-          own markup because PageHeader takes its title as a string and so
-          cannot say one thing on a phone and another on a desk; a responsive
-          title belongs in that component, and this is the note asking for
-          it. */}
-      <div className="mb-3 lg:hidden">
-        <Link
-          href="/admin/orders"
-          className="text-[12px] font-semibold text-muted hover:text-brand"
-        >
-          ← All orders
-        </Link>
-        <div className="flex flex-wrap items-baseline gap-2">
-          <h1 className="font-display text-[33px] font-black uppercase leading-none">
-            {order.deliver_to_name ?? order.customer_name}
-          </h1>
-          <span className="font-mono text-[13px] text-muted">
-            {shareRef(order, order.shares.length > 0 ? order.shares : [order])}
-          </span>
-        </div>
-        <p className="hint mt-1">
-          {[order.hostel, runLabel].filter(Boolean).join(" · ")}
-        </p>
-      </div>
-
-      <div className="hidden lg:block">
-        <PageHeader
-          backHref="/admin/orders"
-          backLabel="All orders"
-          /* The same wording as the card below it and the transfer
-             narration: #1001a, not #1001 on one screen and #1001a on the
-             next. */
-          title={`Order ${shareRef(
-            order,
-            order.shares.length > 0 ? order.shares : [order]
-          )}`}
-          /* Two people on a gift, and the driver needs the second one.
-             Whoever paid stays first, because they are who is chased. */
-          detail={
-            <>
+      <PageHeader
+        backHref="/admin/orders"
+        backLabel="All orders"
+        /* The person on a phone, which is what the board heads an order
+           with: whoever is holding it already knows what they tapped, and
+           the name is what the next sentence out loud starts with. The
+           desk board heads it with the reference, in the same wording as
+           the transfer narration: #1001a, not #1001 on one screen and
+           #1001a on the next. */
+        title={
+          <>
+            <span className="lg:hidden">
+              {order.deliver_to_name ?? order.customer_name}{" "}
+              <span className="font-mono text-[13px] font-semibold normal-case text-muted">
+                {shareRef(order, order.shares.length > 0 ? order.shares : [order])}
+              </span>
+            </span>
+            <span className="hidden lg:inline">
+              Order {shareRef(order, order.shares.length > 0 ? order.shares : [order])}
+            </span>
+          </>
+        }
+        /* Two people on a gift, and the driver needs the second one.
+           Whoever paid stays first, because they are who is chased. */
+        detail={
+          <>
+            {/* The block and the run on a phone, where the name is the
+                heading above it and the number is one tap away in the
+                Call button under it. */}
+            <span className="lg:hidden">
+              {[order.hostel, runLabel].filter(Boolean).join(" · ")}
+            </span>
+            <span className="hidden lg:inline">
               {order.deliver_to_name
                 ? `Paid by ${order.customer_name} · ${formatPhone(order.customer_phone)}, ` +
                   `goes to ${order.deliver_to_name} · ${formatPhone(
@@ -230,44 +243,44 @@ async function orderPage(id: string, said: string) {
                   )} · ${order.hostel}`
                 : `${order.customer_name} · ${formatPhone(order.customer_phone)} · ${order.hostel}`}
               {runLabel === "" ? "" : ` · on ${runLabel}`}
-            </>
-          }
-          /* What the board puts at the top of an order: the run it is on,
-             their PIN, and the one thing to do next. The two messages are
-             not offered again on the card below, because the same WhatsApp
-             link handed over twice is a message sent twice. */
-          actions={
-            <>
-              <Link href={`/admin/batch/${order.batch_id}`} className="btn-admin">
-                {runLabel === "" ? "Open its run" : `On ${runLabel}`}
-              </Link>
-              {/* These two stand in the bar at the bottom on a phone, which is
-                  where the board puts them and where the thumb is. Here from
-                  `lg`, where the mouse is already in the header. */}
-              {pin && (
-                <a
-                  href={pin.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-admin hidden lg:inline-flex"
-                >
-                  {pin.label}
-                </a>
-              )}
-              {review && (
-                <a
-                  href={review.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-admin-go hidden lg:inline-flex"
-                >
-                  {review.label}
-                </a>
-              )}
-            </>
-          }
-        />
-      </div>
+            </span>
+          </>
+        }
+        /* What the board puts at the top of an order: the run it is on,
+           their PIN, and the one thing to do next. The two messages are
+           not offered again on the card below, because the same WhatsApp
+           link handed over twice is a message sent twice. */
+        actions={
+          <>
+            <Link href={`/admin/batch/${order.batch_id}`} className="btn-admin">
+              {runLabel === "" ? "Open its run" : `On ${runLabel}`}
+            </Link>
+            {/* These two stand in the bar at the bottom on a phone, which is
+                where the board puts them and where the thumb is. Here from
+                `lg`, where the mouse is already in the header. */}
+            {pin && (
+              <a
+                href={pin.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-admin hidden lg:inline-flex"
+              >
+                {pin.label}
+              </a>
+            )}
+            {review && (
+              <a
+                href={review.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-admin-go hidden lg:inline-flex"
+              >
+                {review.label}
+              </a>
+            )}
+          </>
+        }
+      />
 
       {/* Ringing them, and the chat with no template in it.
           A phone is a phone: the board puts these two across the top of an
@@ -402,6 +415,196 @@ async function orderPage(id: string, said: string) {
               settle={settleCustom}
             />
           )}
+
+          {/* A parcel has no lines to edit and so no editor, and what it has
+              instead is the sender's answers: where to go, what to ask for
+              and what to hand over. They went with the card, and they are
+              the whole of what the trip needs, so here they are in the
+              editor's place. */}
+          {shown?.parcel && (
+            <Panel title="What is in it" detail={`Parcel · ${shown.parcel.route}`}>
+              <dl className="border-t-[1.5px] border-rule pt-3">
+                {shown.parcel.answers.map((one) => (
+                  <div key={one.question} className="py-1.5">
+                    <dt className="ticket text-muted">{one.question}</dt>
+                    <dd className="text-[14.5px] font-semibold text-ink">{one.answer}</dd>
+                  </div>
+                ))}
+              </dl>
+              {order.customer_note && (
+                <p className="rounded-r-lg border-l-4 border-volt bg-brand-tint px-[11px] py-2 text-[13.5px]">
+                  <span className="font-bold text-brand-dark">They asked: </span>
+                  {order.customer_note}
+                </p>
+              )}
+            </Panel>
+          )}
+
+          {/*
+           * What can be done to this order, as a row of actions and the two
+           * fields rather than as a second copy of the order itself.
+           *
+           * The whole order card used to stand here, which said the name,
+           * the money and the state of it for a third time on one screen.
+           * Taking it away took the controls with it, and marking an order
+           * paid then meant going back to the list to find the row for the
+           * order already open in front of you. The boards are a sketch and
+           * not an inventory: a control may move, and it may not disappear.
+           */}
+          <Panel
+            title="What to do with it"
+            detail="Everything that changes this order. The money and the state of it are in the figures above."
+          >
+            {/* The three the figures above cannot say: how they said they
+                would pay, what to look for on the transfer, and the PIN
+                itself. The header sends the PIN in a message; somebody at
+                the gate reads it off the screen. */}
+            <dl className="mt-1 text-[14.5px]">
+              <Detail
+                label="Pays by"
+                value={order.payment_method === "card" ? "Card link" : "Transfer"}
+              />
+              {shown && shown.narration !== "" && (
+                <Detail label="Narration to look for" value={shown.narration} />
+              )}
+              {shown?.pin && (
+                /* A PIN belongs to a phone number rather than to a group: in
+                   a one-payer group this is the buyer's, and the friends
+                   have none of their own until they order themselves. */
+                <Detail
+                  label={`PIN for ${formatPhone(order.customer_phone)}`}
+                  value={shown.pin}
+                />
+              )}
+            </dl>
+
+            {order.status === "pending" && (
+              /* The reference goes above the button, not beside it, because
+                 it is typed before the button is pressed. The one red
+                 button on the screen: a review ask is the other candidate
+                 and an unpaid order has none to offer. */
+              <form
+                action={markPaid}
+                className="space-y-2 border-t-[1.5px] border-rule pt-3.5"
+              >
+                <input type="hidden" name="order_id" value={order.id} />
+                <label className="label" htmlFor={`ref-${order.id}`}>
+                  The reference on the transfer
+                </label>
+                <input
+                  id={`ref-${order.id}`}
+                  name="payment_ref"
+                  autoComplete="off"
+                  placeholder={
+                    shown && shown.narration !== ""
+                      ? `Reference, or ${shown.narration}`
+                      : "Reference on the transfer"
+                  }
+                  className="field field-admin border-[1.5px] border-line bg-paper px-3"
+                />
+                <ConfirmButton
+                  tone="admin"
+                  className="btn-admin-go min-h-[48px] w-full text-[15px] sm:min-h-[44px] sm:w-auto"
+                  confirm={`Yes, ${naira(order.total)} received`}
+                >
+                  Mark paid
+                </ConfirmButton>
+              </form>
+            )}
+
+            {order.status === "paid" && (
+              <form action={markDelivered} className="border-t-[1.5px] border-rule pt-3.5">
+                <input type="hidden" name="order_id" value={order.id} />
+                <ConfirmButton
+                  tone="admin"
+                  className="btn-admin-go min-h-[48px] w-full text-[15px] sm:min-h-[44px] sm:w-auto"
+                  confirm="Yes, delivered"
+                >
+                  Mark delivered
+                </ConfirmButton>
+              </form>
+            )}
+
+            {/* The messages this order is actually waiting on, less the two
+                the header and the phone bar already carry, and the page the
+                customer themselves is reading. */}
+            <div className="flex flex-wrap gap-1.5 border-t-[1.5px] border-rule pt-3.5">
+              {offer.map((one) => (
+                <a
+                  key={one.kind}
+                  href={one.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-admin btn-admin-sm"
+                >
+                  {one.label}
+                </a>
+              ))}
+              <Link
+                href={`/o/${order.id}`}
+                target="_blank"
+                className="btn-admin btn-admin-sm"
+              >
+                Open customer page
+              </Link>
+            </div>
+
+            {order.status === "pending" && (
+              /* Saved against the order, which is what turns their own page
+                 into a pay button and what "Send card link" then sends. */
+              <form
+                action={savePaymentLink}
+                className="space-y-1.5 border-t-[1.5px] border-rule pt-3.5"
+              >
+                <label className="label" htmlFor={`link-${order.id}`}>
+                  Card payment link
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id={`link-${order.id}`}
+                    name="payment_link"
+                    defaultValue={order.payment_link ?? ""}
+                    placeholder="Paste the link you generated"
+                    className="field field-admin grow border-[1.5px] border-line bg-paper px-3"
+                  />
+                  <input type="hidden" name="order_id" value={order.id} />
+                  {/* An outline save, because the red button on this screen
+                      is the one above it. */}
+                  <SaveButton look="btn-admin" className="shrink-0">
+                    Save
+                  </SaveButton>
+                </div>
+                <p className="hint">
+                  Their own page turns this into a pay button.
+                  {order.payment_method !== "card" &&
+                    " They asked to pay by transfer, so this is only needed if they change their mind."}
+                </p>
+              </form>
+            )}
+
+            <form
+              action={saveOrderNote}
+              className="space-y-1.5 border-t-[1.5px] border-rule pt-3.5"
+            >
+              <label className="label" htmlFor={`note-${order.id}`}>
+                Your note on this order
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id={`note-${order.id}`}
+                  name="admin_note"
+                  defaultValue={order.admin_note ?? ""}
+                  placeholder="Paid in cash at the gate, wants it early"
+                  className="field field-admin grow border-[1.5px] border-line bg-paper px-3"
+                />
+                <input type="hidden" name="order_id" value={order.id} />
+                <SaveButton look="btn-admin" className="shrink-0">
+                  Save
+                </SaveButton>
+              </div>
+              <p className="hint">Only you see this.</p>
+            </form>
+          </Panel>
 
           {/* A collection on a day of its own. Two things the shop has to be
               able to do by hand: agree the day, and raise the next one. */}
@@ -598,6 +801,92 @@ async function orderPage(id: string, said: string) {
               </button>
             </form>
           </Panel>
+
+          {/*
+           * The three that cannot be taken back, in one place and away from
+           * Mark paid: a destructive button sharing a row with the thing you
+           * press every day is one mis-tap from an order nobody can account
+           * for. Each says what is forever beside it rather than in a dialog
+           * afterwards, which is the rule, and each is an outline and never
+           * filled.
+           *
+           * Cancelling is for an order nobody paid for: a test, a duplicate,
+           * somebody who changed their mind before any money moved. Once
+           * money has moved it is a refund, which is a different thing, so
+           * the two are never offered together.
+           */}
+          {(canRefund || canCancel || canDelete) && (
+            <Panel
+              title="Undoing it"
+              detail="None of these can be taken back. What each one leaves behind is said beside it."
+            >
+              {canRefund && (
+                <form
+                  action={refundOrder}
+                  className="flex items-center gap-2.5 border-t-[1.5px] border-rule py-3"
+                >
+                  <input type="hidden" name="order_id" value={order.id} />
+                  <p className="hint flex-1">
+                    Refunding says the money went back. Sending it back is a
+                    transfer you make by hand, and this is the record of it.
+                  </p>
+                  <ConfirmButton
+                    tone="bad"
+                    className="min-h-[44px] shrink-0"
+                    confirm={`Yes, refund ${naira(order.total)}`}
+                  >
+                    Refund
+                  </ConfirmButton>
+                </form>
+              )}
+
+              {canCancel && (
+                <form
+                  action={cancelOrder}
+                  className="flex items-center gap-2.5 border-t-[1.5px] border-rule py-3"
+                >
+                  <input type="hidden" name="order_id" value={order.id} />
+                  <p className="hint flex-1">
+                    Cancelling keeps the order and what was in it, and their own
+                    page will say it is cancelled. Nobody has paid, so there is
+                    nothing to send back.
+                  </p>
+                  <ConfirmButton
+                    tone="bad"
+                    className="min-h-[44px] shrink-0"
+                    confirm="Yes, cancel it"
+                  >
+                    Cancel this order
+                  </ConfirmButton>
+                </form>
+              )}
+
+              {/* Cancelled ones only. A live order is somebody waiting for
+                  food, and going from waiting to gone in one press is how an
+                  order disappeared overnight with nobody able to say what had
+                  become of it. */}
+              {canDelete && (
+                <form
+                  action={deleteOrder}
+                  className="flex items-center gap-2.5 border-t-[1.5px] border-rule py-3"
+                >
+                  <input type="hidden" name="order_id" value={order.id} />
+                  <p className="hint flex-1">
+                    Deleting is forever. Cancelling leaves a row that says what
+                    happened; this really is gone, and what was in it goes with
+                    it.
+                  </p>
+                  <ConfirmButton
+                    tone="bad"
+                    className="min-h-[44px] shrink-0"
+                    confirm="Yes, delete it for good"
+                  >
+                    Delete
+                  </ConfirmButton>
+                </form>
+              )}
+            </Panel>
+          )}
         </div>
 
         <div className="flex min-w-0 flex-col gap-4">

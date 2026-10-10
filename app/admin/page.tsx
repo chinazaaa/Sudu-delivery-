@@ -267,29 +267,63 @@ export default async function AdminHome() {
     <div>
       <AdminLive />
 
-      {/* The phone's own top of page, which the board draws as the weekday
-          rather than as the word Dashboard, with the two things that are
-          costing money right now above the one red button.
+      <PageHeader
+        /* The weekday on a phone, which is what the board heads this page
+           with: somebody opening it in the morning knows what day it is in
+           their hand, not what the page is called. */
+        title={
+          <>
+            <span className="sm:hidden">{weekday}</span>
+            <span className="hidden sm:inline">Dashboard</span>
+          </>
+        }
+        detail={
+          <>
+            {/* The date without the weekday the heading already says, and
+                how much is waiting, which is the phone board's line. */}
+            <span className="sm:hidden">
+              {dated} · {needSaid}
+            </span>
+            <span className="hidden sm:inline">
+              {runDateLabel(lagosToday())} · the last 28 days, and what needs doing today.
+            </span>
+          </>
+        }
+        actions={
+          <>
+            {/* The board's two sizes: an outline button for the second
+                thing, and the one tomato button on the screen for the run
+                being driven. Neither is in the phone's header, where the
+                board puts the red one under the two urgent tiles instead,
+                so both are the desk's. */}
+            <Link href="/admin/runs?new=1" className="btn-admin hidden sm:inline-flex">
+              New run
+            </Link>
+            {working && (
+              <Link
+                href={`/admin/batch/${working.id}`}
+                className="btn-admin-go hidden sm:inline-flex"
+              >
+                Open {workingLabel.toLowerCase()} →
+              </Link>
+            )}
+          </>
+        }
+      />
 
-          Its own markup rather than the shared header because PageHeader
-          takes its title as a string and so cannot say one thing on a phone
-          and another on a desk. A responsive title belongs in that
-          component, and this is the note asking for it. */}
+      {/* What the board puts between the phone's heading and its one red
+          button: the two things costing money right now. Nothing here is
+          header content, so it is its own phone-only box rather than
+          something PageHeader has to carry.
+
+          The tiles are hand-rolled on the card primitive rather than built
+          from Figure, because what makes them urgent is the ground and the
+          border and Figure carries neither. Each is drawn only when there
+          is something behind it: a tile reporting nought left behind is a
+          tile in the way. */}
       <div className="mb-3 sm:hidden">
-        <h1 className="font-display text-[36px] font-black uppercase leading-[0.95]">
-          {weekday}
-        </h1>
-        <p className="hint mt-1">
-          {dated} · {needSaid}
-        </p>
-
-        {/* The board's two urgent tiles. Hand-rolled on the card primitive
-            rather than built from Figure, because what makes them urgent is
-            the ground and the border and Figure carries neither. Each is
-            drawn only when there is something behind it: a tile reporting
-            nought left behind is a tile in the way. */}
         {(left.length > 0 || owing.length > 0) && (
-          <div className="mt-[11px] grid grid-cols-2 gap-[9px]">
+          <div className="mb-[11px] grid grid-cols-2 gap-[9px]">
             {left.length > 0 && (
               <div className="card border-volt-line bg-brand-tint px-[13px] py-[11px]">
                 <p className="ticket text-muted">Left behind</p>
@@ -322,37 +356,11 @@ export default async function AdminHome() {
              thumb's first stop in the morning. */
           <Link
             href={`/admin/batch/${working.id}`}
-            className="btn-admin-go mt-[11px] min-h-[54px] w-full text-base"
+            className="btn-admin-go min-h-[54px] w-full text-base"
           >
             Open {workingLabel.toLowerCase()} →
           </Link>
         )}
-      </div>
-
-      <div className="hidden sm:block">
-        <PageHeader
-          title="Dashboard"
-          detail={
-            <>
-              {runDateLabel(lagosToday())} · the last 28 days, and what needs doing today.
-            </>
-          }
-          actions={
-            <>
-              {/* The board's two sizes: an outline button for the second thing,
-                  and the one tomato button on the screen for the run being
-                  driven. The phone has its own copy of this above. */}
-              <Link href="/admin/runs?new=1" className="btn-admin">
-                New run
-              </Link>
-              {working && (
-                <Link href={`/admin/batch/${working.id}`} className="btn-admin-go">
-                  Open {workingLabel.toLowerCase()} →
-                </Link>
-              )}
-            </>
-          }
-        />
       </div>
 
       {problem && !problem.ok && (
@@ -390,45 +398,39 @@ export default async function AdminHome() {
       )}
 
       <div className="grid items-start gap-3 sm:gap-[18px] lg:grid-cols-[1.35fr_1fr]">
-        {/* Two of them, one per width, because Panel's title is a string and
-            the boards head this panel differently: "Needs doing" on a phone,
-            where the chip is the bare number and a row is a line and a
-            chevron, and "Needs doing today" on a desk, where every row
-            carries its detail and its button. Only ever one is in the
-            layout, since the other is display:none and so not a grid item
-            at all. The rows themselves are written once, below. */}
-        <div className="sm:hidden">
-          <Panel
-            title="Needs doing"
-            aside={
-              jobs.length > 0 ? (
-                <span className="tag bg-brand-wash text-brand-dark">{jobs.length}</span>
-              ) : (
-                <span className="tag bg-mint-tint text-mint">All clear</span>
-              )
-            }
-          >
-            {rows}
-          </Panel>
-        </div>
-
-        <div className="hidden sm:block">
-          <Panel
-            title="Needs doing today"
-            detail="Everything here costs you money if it is left. Clearing the list is the whole job."
-            aside={
-              jobs.length > 0 ? (
-                <span className="tag bg-brand-wash text-brand-dark">
-                  {jobs.length} thing{jobs.length === 1 ? "" : "s"}
+        <Panel
+          /* One panel, two headings: the phone board heads it "Needs doing"
+             with the bare number beside it, and the desk board spells out
+             "today" and gives every row its sentence and its button. */
+          title={
+            <>
+              Needs doing<span className="hidden sm:inline"> today</span>
+            </>
+          }
+          aside={
+            jobs.length > 0 ? (
+              <span className="tag bg-brand-wash text-brand-dark">
+                {jobs.length}
+                <span className="hidden sm:inline">
+                  {" "}
+                  thing{jobs.length === 1 ? "" : "s"}
                 </span>
-              ) : (
-                <span className="tag bg-mint-tint text-mint">All clear</span>
-              )
-            }
-          >
-            {rows}
-          </Panel>
-        </div>
+              </span>
+            ) : (
+              <span className="tag bg-mint-tint text-mint">All clear</span>
+            )
+          }
+        >
+          {/* The lead sentence is the desk's. On a phone the board goes
+              straight from the heading into the rows, so this is a child
+              rather than the panel's `detail`: hidden, `detail` would still
+              leave the gap its own margins make. */}
+          <p className="hint mb-1.5 mt-1 hidden sm:block">
+            Everything here costs you money if it is left. Clearing the list is the whole
+            job.
+          </p>
+          {rows}
+        </Panel>
 
         {/* The board puts these two under the list on a phone and in the row
             of four on a desk, so here they are the phone's pair. */}
