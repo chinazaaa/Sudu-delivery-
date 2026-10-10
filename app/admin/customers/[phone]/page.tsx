@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import Figure from "@/components/admin/Figure";
 import Panel from "@/components/admin/Panel";
 import SaveButton from "@/components/SaveButton";
-import ActionButton from "@/components/admin/ActionButton";
 import { oneCustomer, type OneCustomer } from "@/lib/customer";
 import { getSettings, googleLinks } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
@@ -356,7 +355,43 @@ export default async function CustomerPage({
             {person.rating % 1 !== 0 && ` (${person.rating.toFixed(1)})`}
           </Tag>
         )}
-        {person.reviewed && <Tag tone="volt">Reviewed on Google</Tag>}
+        {/*
+          The Google tick, set from here rather than only shown here.
+
+          It was a tag that appeared once somebody had been ticked off
+          somewhere else, which left this page as the one place you look a
+          person up and the one place you could not record the thing you had
+          just been told. It is the same gesture as the tick on a delivered
+          order and the one in the book's bar, so wherever you are standing
+          when they tell you, it is one tap.
+
+          Shaped as the chip it already was. Off it is the page's plain
+          ground with an empty box, on it is volt with a tick, and either way
+          it sits in the row of chips rather than joining the buttons.
+        */}
+        {google.review !== "" && person.orders.length > 0 && (
+        <form action={setCustomerReviewed}>
+          <input type="hidden" name="phone" value={person.phone} />
+          <input type="hidden" name="reviewed" value={String(!person.reviewed)} />
+          <button
+            type="submit"
+            aria-pressed={person.reviewed}
+            className={`tag min-h-[34px] gap-1.5 ${
+              person.reviewed ? "bg-volt text-ink" : "bg-wash text-muted"
+            }`}
+          >
+            <span
+              aria-hidden
+              className={`flex size-[15px] items-center justify-center rounded-[5px] border-2 text-[10px] leading-none ${
+                person.reviewed ? "border-ink bg-ink text-volt" : "border-line"
+              }`}
+            >
+              {person.reviewed ? "✓" : ""}
+            </span>
+            {person.reviewed ? "Reviewed on Google" : "Mark reviewed"}
+          </button>
+        </form>
+        )}
         {/* The PIN is in the sentence under the title on a phone, so the tag
             is the desk's alone rather than the same fact twice. */}
         {person.pin !== "" && (
@@ -741,21 +776,6 @@ export default async function CustomerPage({
                 <SaveButton look="btn-admin btn-admin-sm" className="shrink-0">Save</SaveButton>
               </form>
             </Panel>
-          )}
-
-          {google.review !== "" && person.orders.length > 0 && (
-            <form action={setCustomerReviewed}>
-              <input type="hidden" name="phone" value={person.phone} />
-              <input type="hidden" name="reviewed" value={String(!person.reviewed)} />
-              <ActionButton
-                className={`btn-admin btn-admin-sm ${
-                  person.reviewed ? "border-mint bg-mint-tint text-mint" : ""
-                }`}
-                done="Done ✓"
-              >
-                {person.reviewed ? "Reviewed ✓" : "Mark reviewed on Google"}
-              </ActionButton>
-            </form>
           )}
 
           {/* Testing a checkout makes a customer, so a shop that has been
