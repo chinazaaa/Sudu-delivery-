@@ -28,18 +28,18 @@ const GROUPS: Group[] = [
     items: [
       { href: "/admin/carts", label: "Left behind" },
       { href: "/admin/groups", label: "Groups" },
-      { href: "/admin/parcels", label: "Parcels" },
-      { href: "/admin/stock", label: "Stock" },
       { href: "/admin/subscriptions", label: "Repeats" },
+      { href: "/admin/parcels", label: "Parcels" },
     ],
   },
   {
     name: "Catalogue",
     items: [
       { href: "/admin/menu", label: "Restaurants" },
+      { href: "/admin/stock", label: "Stock" },
       { href: "/admin/skincare", label: "Skincare" },
       { href: "/admin/occasions", label: "Collections" },
-      { href: "/admin/santa", label: "Secret Santa" },
+      { href: "/admin/coupons", label: "Offers" },
     ],
   },
   {
@@ -47,7 +47,7 @@ const GROUPS: Group[] = [
     items: [
       { href: "/admin/requests", label: "Asked for" },
       { href: "/admin/wishes", label: "Wishes" },
-      { href: "/admin/reviews", label: "Reviews" },
+      { href: "/admin/links", label: "Checkout links" },
     ],
   },
   {
@@ -55,6 +55,7 @@ const GROUPS: Group[] = [
     items: [
       { href: "/admin/customers", label: "Customers" },
       { href: "/admin/promoters", label: "Promoter" },
+      { href: "/admin/reviews", label: "Reviews" },
     ],
   },
   {
@@ -62,27 +63,23 @@ const GROUPS: Group[] = [
     items: [
       { href: "/admin/profit", label: "Profit" },
       { href: "/admin/money", label: "Other money" },
-      { href: "/admin/coupons", label: "Offers" },
-      { href: "/admin/links", label: "Checkout links" },
+      { href: "/admin/analytics", label: "Analytics" },
     ],
   },
   {
     name: "Site",
     items: [
       { href: "/admin/home", label: "Home page" },
-      { href: "/admin/analytics", label: "Analytics" },
-      { href: "/admin/notifications", label: "Notifications" },
+      { href: "/admin/santa", label: "Secret Santa" },
       { href: "/admin/email", label: "Email" },
+      { href: "/admin/notifications", label: "Notifications" },
+      { href: "/admin/settings", label: "Settings" },
+      { href: "/admin/deletions", label: "Deleted" },
     ],
   },
 ];
 
-const BOTTOM: Item[] = [
-  { href: "/admin/settings", label: "Settings" },
-  { href: "/admin/deletions", label: "Deleted" },
-];
-
-const EVERY = [...DAILY, ...GROUPS.flatMap((one) => one.items), ...BOTTOM];
+const EVERY = [...DAILY, ...GROUPS.flatMap((one) => one.items)];
 
 /**
  * The frame every admin page sits in: an Ink rail on a desktop, a drawer on
@@ -111,19 +108,6 @@ export default function AdminShell({
       ? path === "/admin"
       : // A run sheet lives under /admin/batch but belongs to Runs.
         path.startsWith(href) || (href === "/admin/runs" && path.startsWith("/admin/batch"));
-
-  // The heading holding the page you are on, opened so you can see where you
-  // are. Everything else starts shut.
-  const [shown, setShown] = useState<string>(
-    () => GROUPS.find((one) => one.items.some((item) => active(item.href)))?.name ?? ""
-  );
-
-  useEffect(() => {
-    const here = GROUPS.find((one) => one.items.some((item) => active(item.href)));
-    if (here) setShown(here.name);
-    // active() reads path, which is the dependency that matters.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path]);
 
   // A tap on a link changes the path; the drawer should not survive it.
   useEffect(() => setOpen(false), [path]);
@@ -176,7 +160,15 @@ export default function AdminShell({
         />
         {item.label}
         {count > 0 && (
-          <span className="ml-auto rounded-full bg-brand px-[7px] font-mono text-[10.5px] leading-[1.5] text-white">
+          <span
+            className={`ml-auto rounded-full px-[7px] font-mono text-[10.5px] leading-[1.5] ${
+              // Tomato for money nobody has paid, the quieter grey for work
+              // that is merely waiting. A rail of red badges says nothing.
+              item.href === "/admin/orders"
+                ? "bg-brand text-white"
+                : "bg-[#3a332d] text-[#cfc7bc]"
+            }`}
+          >
             {count}
           </span>
         )}
@@ -190,44 +182,24 @@ export default function AdminShell({
         <Row key={item.href} item={item} />
       ))}
 
-      {GROUPS.map((group) => {
-        const openHere = shown === group.name;
-        const inside = group.items.reduce(
-          (all, item) => all + (waiting[item.href] ?? 0),
-          0
-        );
-        return (
-          <div key={group.name}>
-            <button
-              type="button"
-              onClick={() => setShown(openHere ? "" : group.name)}
-              aria-expanded={openHere}
-              className="flex w-full items-center gap-1.5 px-3 pb-1 pt-3.5 text-left font-mono text-[10.5px] font-bold uppercase tracking-[0.12em] text-[#7e756a] hover:text-[#cfc7bc]"
-            >
-              <span aria-hidden>{openHere ? "▾" : "▸"}</span>
-              {group.name}
-              {inside > 0 && !openHere && (
-                <span className="ml-auto size-1.5 rounded-full bg-brand" />
-              )}
-            </button>
-            {openHere && (
-              <div className="flex flex-col gap-0.5">
-                {group.items.map((item) => (
-                  <Row key={item.href} item={item} />
-                ))}
-              </div>
-            )}
+      {GROUPS.map((group) => (
+        <div key={group.name}>
+          <p className="flex items-center gap-1.5 px-3 pb-1 pt-3.5 font-mono text-[10.5px] font-bold uppercase tracking-[0.12em] text-[#7e756a]">
+            <span aria-hidden>▾</span>
+            {group.name}
+          </p>
+          <div className="flex flex-col gap-0.5">
+            {group.items.map((item) => (
+              <Row key={item.href} item={item} />
+            ))}
           </div>
-        );
-      })}
+        </div>
+      ))}
     </nav>
   );
 
   const foot = (
-    <div className="mt-auto flex flex-col gap-0.5 border-t border-[#2c2721] pt-3.5">
-      {BOTTOM.map((item) => (
-        <Row key={item.href} item={item} />
-      ))}
+    <div className="mt-3.5 flex flex-col gap-0.5 border-t border-[#2c2721] pt-3.5">
       <Link
         href="/"
         className="flex items-center gap-2.5 rounded-[9px] px-3 py-2 text-[14.5px] font-semibold text-volt hover:bg-white/[0.06]"

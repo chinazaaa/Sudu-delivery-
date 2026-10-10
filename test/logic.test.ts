@@ -1985,3 +1985,27 @@ test("what the board never drew is still on the list", () => {
   });
   assert.deepEqual(withMoney.map((one) => one.kind), ["unpaid", "parcels"]);
 });
+
+test("money owed to somebody else is money on the list", () => {
+  const jobs = needsDoing({
+    ...quiet,
+    promoters: [
+      { name: "Onize", owed: 500, since: "Friday" },
+      { name: "Temmy", owed: 500, since: "Sunday" },
+      // Nothing owed is nothing to do, so this one must not be counted.
+      { name: "Ada", owed: 0, since: "" },
+    ],
+  });
+  assert.equal(jobs.length, 1);
+  assert.equal(jobs[0].title, "You owe 2 promoters ₦1,000");
+  assert.ok(jobs[0].detail.includes("Onize ₦500 since Friday"), jobs[0].detail);
+  assert.equal(jobs[0].action.label, "Pay them all");
+
+  // One of them is paid, not paid all.
+  const one = needsDoing({ ...quiet, promoters: [{ name: "Onize", owed: 500, since: "" }] });
+  assert.equal(one[0].action.label, "Pay them");
+  assert.equal(one[0].title, "You owe 1 promoter ₦500");
+
+  // Nobody owed anything leaves the list empty rather than saying so.
+  assert.deepEqual(needsDoing({ ...quiet, promoters: [{ name: "Ada", owed: 0, since: "" }] }), []);
+});

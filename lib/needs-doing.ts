@@ -13,7 +13,7 @@
  */
 export type Job = {
   /** Which it is, so the page can key and test them. */
-  kind: "left" | "unpaid" | "closing" | "reviews" | "parcels" | "asked";
+  kind: "left" | "unpaid" | "closing" | "reviews" | "parcels" | "asked" | "promoters";
   /** How loud the dot is: red costs money today, amber soon, ink is timing,
    *  volt is worth doing but nobody is out of pocket. */
   tone: "red" | "amber" | "ink" | "volt";
@@ -33,6 +33,9 @@ export function needsDoing(now: {
   run: { label: string; closesInMinutes: number; kitchens: number; paid: number } | null;
   /** Reviews nobody has answered. */
   reviews: number;
+  /** Commission earned and not yet handed over, by promoter. Somebody did
+   *  the work weeks ago and is still waiting to be paid for it. */
+  promoters?: { name: string; owed: number; since: string }[];
   /** Parcels promised for today. Not on the board, because the board was
    *  drawn for a food run, but somebody has paid for these and is waiting. */
   parcels?: number;
@@ -86,6 +89,28 @@ export function needsDoing(now: {
           : `${said(now.run.paid, "order")} paid for so far.`),
       action: { label: "Open the run", href: "/admin/runs" },
       weight: now.run.paid === 0 ? 1 : 0,
+    });
+  }
+
+  const owedTo = (now.promoters ?? []).filter((one) => one.owed > 0);
+  if (owedTo.length > 0) {
+    const owed = owedTo.reduce((all, one) => all + one.owed, 0);
+    jobs.push({
+      kind: "promoters",
+      tone: "amber",
+      title: `You owe ${said(owedTo.length, "promoter")} ${naira(owed)}`,
+      detail:
+        owedTo
+          .slice(0, 3)
+          .map((one) => `${one.name} ${naira(one.owed)}${one.since ? ` since ${one.since}` : ""}`)
+          .join(", ") + ". They brought these people in.",
+      action: {
+        label: owedTo.length === 1 ? "Pay them" : "Pay them all",
+        href: "/admin/promoters",
+      },
+      // Not the shop's money, and somebody is waiting on it. It sits with
+      // the rest of the money rather than below the nice-to-haves.
+      weight: owed,
     });
   }
 

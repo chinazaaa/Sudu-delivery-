@@ -4,7 +4,7 @@ import AdminLive from "@/components/admin/AdminLive";
 import Figure from "@/components/admin/Figure";
 import Panel from "@/components/admin/Panel";
 import { howLong, needsDoing } from "@/lib/needs-doing";
-import { batchOverview } from "@/lib/admin";
+import { batchOverview, promoterRows } from "@/lib/admin";
 import { dashboard, orderFeed } from "@/lib/admin-data";
 import { abandonedCarts } from "@/lib/carts";
 import { safeSettings } from "@/lib/settings";
@@ -132,6 +132,11 @@ export default async function AdminHome() {
   // Somebody asking for something we do not stock, waiting on an answer.
   // It arrives by email too, and an inbox is where things go to be missed.
   const asked = await newRequests().catch(() => 0);
+  // Commission earned and not handed over. Not the shop's money, and
+  // somebody did the work weeks ago and is still waiting for it.
+  const owing = (await promoterRows().catch(() => []))
+    .filter((one) => one.owed > 0)
+    .map((one) => ({ name: one.name || one.code, owed: one.owed, since: "" }));
 
   // How long the run being worked has left, for the one job on the list that
   // is about a clock rather than about money.
@@ -167,6 +172,7 @@ export default async function AdminHome() {
     // Replying is worth doing and nobody is out of pocket, so it sits at the
     // bottom of the list by design.
     reviews: 0,
+    promoters: owing,
     parcels: parcelsToday.length,
     asked,
   });

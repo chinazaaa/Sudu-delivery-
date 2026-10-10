@@ -1137,7 +1137,19 @@ export async function waitingCounts(): Promise<Record<string, number>> {
       .select("id", { count: "exact", head: true })
       .eq("status", "pending");
 
-    return count && count > 0 ? { "/admin/orders": count } : {};
+    const out: Record<string, number> = {};
+    if (count && count > 0) out["/admin/orders"] = count;
+
+    // Carts filled in and walked away from. The rail carries this one in the
+    // quieter grey: it is work waiting rather than money already owed.
+    const { count: left } = await db()
+      .from("saved_carts")
+      .select("id", { count: "exact", head: true })
+      .is("converted_at", null)
+      .is("handled_at", null);
+    if (left && left > 0) out["/admin/carts"] = left;
+
+    return out;
   } catch {
     // A number on a menu is never worth failing a page over.
     return {};
