@@ -1,8 +1,9 @@
 import Link from "next/link";
 import Diagnostic from "@/components/Diagnostic";
-import PageHeader from "@/components/admin/PageHeader";
 import AdminLive from "@/components/admin/AdminLive";
-import Stat from "@/components/admin/Stat";
+import Figure from "@/components/admin/Figure";
+import Panel from "@/components/admin/Panel";
+import { howLong, needsDoing } from "@/lib/needs-doing";
 import { batchOverview } from "@/lib/admin";
 import { dashboard, orderFeed } from "@/lib/admin-data";
 import { abandonedCarts } from "@/lib/carts";
@@ -132,350 +133,271 @@ export default async function AdminHome() {
   // It arrives by email too, and an inbox is where things go to be missed.
   const asked = await newRequests().catch(() => 0);
 
+  // How long the run being worked has left, for the one job on the list that
+  // is about a clock rather than about money.
+  const closesIn =
+    working === null
+      ? 0
+      : (new Date(working.cut_off_at).getTime() - Date.now()) / 60000;
+
+  // Carts that could still make today's run: the ones worth a WhatsApp now
+  // rather than an apology later.
+  const inTime = working === null ? 0 : left.filter((cart) => closesIn > 0).length;
+
+  const jobs = needsDoing({
+    left: {
+      value: left.reduce((total, cart) => total + cart.value, 0),
+      count: left.length,
+      stillInTime: inTime,
+    },
+    unpaid: {
+      value: unpaidValue,
+      count: unpaid.length,
+      runLabel: workingLabel.toLowerCase(),
+      closesAt: working ? clockLabel(working.cut_off_at) : "",
+    },
+    run: working
+      ? {
+          label: workingLabel,
+          closesInMinutes: closesIn,
+          kitchens: working.orderCount,
+          paid: working.paidCount,
+        }
+      : null,
+    // Replying is worth doing and nobody is out of pocket, so it sits at the
+    // bottom of the list by design.
+    reviews: 0,
+    parcels: parcelsToday.length,
+    asked,
+  });
+
+  // The last few runs that actually went, for the bars. Newest on the right,
+  // the way a week reads.
+  const ran = batches
+    .filter((batch) => batch.kind !== "same_day" && batch.kind !== "parcel" && batch.paidCount > 0)
+    .sort((a, b) => a.run_date.localeCompare(b.run_date))
+    .slice(-5);
+  const best = Math.max(1, ...ran.map((batch) => batch.profit));
+  const topped = Math.max(1, ...(stats?.topItems ?? []).map((one) => one.qty));
+  const dot = {
+    red: "bg-brand-dark",
+    amber: "bg-[#c9961b]",
+    ink: "bg-ink",
+    volt: "bg-volt",
+  } as const;
+
   return (
     <div>
       <AdminLive />
-      <PageHeader
-        title="Dashboard"
-        detail="The last four weeks, and what needs doing today."
-        actions={
-          <span className="flex flex-wrap items-center gap-2">
-            {/* The thing reached for most days, in the place it is looked
-                for, rather than down the page under everything else. */}
-            {working && (
-              <Link
-                href={`/admin/batch/${working.id}`}
-                className="btn-primary px-4 py-2.5 text-sm"
-              >
-                Open {workingLabel.toLowerCase()}
-              </Link>
-            )}
-            <Link
-              href="/admin/runs?new=1"
-              className={`${working ? "btn-quiet" : "btn-primary"} px-4 py-2.5 text-sm`}
-            >
-              New run
-            </Link>
-          </span>
-        }
-      />
 
-      {/* Parcels promised for today. A parcel is one person's bag on a day
-          you agreed with them, and five of them for a Saturday is five
-          chances to forget one. */}
-      {parcelsToday.length > 0 && (
-        <Link
-          href="/admin/parcels"
-          className="card mb-4 block border-brand/30 bg-brand-tint/40 hover:shadow-lift"
-        >
-          <p className="text-xs font-bold uppercase tracking-wide text-brand-dark">
-            Promised for today
+      <header className="mb-[22px] flex flex-wrap items-start justify-between gap-3.5">
+        <div className="min-w-0">
+          <h1 className="font-display text-[46px] font-black uppercase leading-[0.95]">
+            Dashboard
+          </h1>
+          <p className="mt-1.5 text-[14.5px] text-muted">
+            {runDateLabel(lagosToday())} · the last 28 days, and what needs doing today.
           </p>
-          <p className="mt-1 text-2xl font-extrabold">
-            {parcelsToday.length} parcel{parcelsToday.length === 1 ? "" : "s"}
-            {parcelsToday.filter((one) => one.stage !== "handed_out").length === 0
-              ? ", all handed over"
-              : `, ${parcelsToday.filter((one) => one.stage !== "handed_out").length} still to do`}
-          </p>
-          <p className="text-sm text-muted">
-            {parcelsToday.map((one) => one.route).slice(0, 3).join(", ")}
-          </p>
-        </Link>
-      )}
-
-      {/* What landed while nobody was looking. The page refreshes itself, so
-          this is the first thing seen on coming back to it. */}
-      {(today.filter(isRecent).length > 0 || left.length > 0) && (
-        <div className="mb-4 grid gap-3 sm:grid-cols-2">
-          {today.filter(isRecent).length > 0 && (
-            <Link
-              href="/admin/orders?status=all"
-              className="card border-mint/30 bg-mint/5 hover:shadow-lift"
-            >
-              <p className="text-xs font-bold uppercase tracking-wide text-mint">
-                In the last hour
-              </p>
-              <p className="mt-1 text-2xl font-extrabold">
-                {today.filter(isRecent).length} new order
-                {today.filter(isRecent).length === 1 ? "" : "s"}
-              </p>
-              <p className="text-sm text-muted">
-                {today
-                  .filter(isRecent)
-                  .map((order) => order.for_name ?? order.customer_name)
-                  .slice(0, 4)
-                  .join(", ")}
-              </p>
-            </Link>
-          )}
-
-          {left.length > 0 && (
-            <Link
-              href="/admin/carts"
-              className="card border-brand/30 bg-brand-tint hover:shadow-lift"
-            >
-              <p className="text-xs font-bold uppercase tracking-wide text-brand-dark">
-                Left behind
-              </p>
-              <p className="mt-1 text-2xl font-extrabold">
-                {naira(left.reduce((total, cart) => total + cart.value, 0))}
-              </p>
-              <p className="text-sm text-muted">
-                {left.length} cart{left.length === 1 ? "" : "s"} filled in and
-                never paid for. Chase them.
-              </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/admin/runs?new=1" className="btn-quiet px-4 py-2.5 text-sm">
+            New run
+          </Link>
+          {working && (
+            <Link href={`/admin/batch/${working.id}`} className="btn-primary px-4 py-2.5 text-sm">
+              Open {workingLabel.toLowerCase()} →
             </Link>
           )}
         </div>
+      </header>
+
+      {problem && !problem.ok && (
+        <Diagnostic title={problem.title} detail={problem.detail} />
       )}
 
       {stats && (
-        <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label="Paid orders" value={stats.paidOrders} hint="Last 28 days" />
-            <Stat label="Money in" value={stats.gross} money hint="Paid orders" />
-            <Stat
-              label="Delivery fees"
-              value={stats.fees}
-              money
-              hint={
-                stats.codesCost > 0
-                  ? `Your margin, after ${naira(stats.codesCost)} of codes`
-                  : "Your margin"
-              }
-            />
-            {/* A loss is not good news, whatever colour the card would rather
-                be. The tone follows the number. */}
-            <Stat
-              label="Profit"
-              value={profit}
-              money
-              tone={profit >= 0 ? "good" : "warn"}
-              hint={
-                asideTotals.count > 0
-                  ? `Last 28 days, after food, commission and costs. ` +
-                    `Includes ${naira(asideTotals.made)} off the runs.`
-                  : "Last 28 days, after food, commission and costs"
-              }
-            />
-          </div>
+        <div className="mb-[18px] grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+          <Figure
+            label="Paid orders"
+            value={String(stats.paidOrders)}
+            detail="Last 28 days"
+          />
+          <Figure label="Money in" value={naira(stats.gross)} detail="Across paid orders" />
+          <Figure
+            label="Delivery fees"
+            value={naira(stats.fees)}
+            detail={
+              stats.codesCost > 0
+                ? `Your margin, after ${naira(stats.codesCost)} of codes`
+                : "Your margin on the cars"
+            }
+          />
+          <Figure
+            label="Profit"
+            value={naira(profit)}
+            tone="mint"
+            detail="After food, commission and run costs"
+          />
+        </div>
+      )}
 
-          {/* Paid for something with no run behind it? It goes here rather
-              than as an invented order on a run nobody is driving. */}
-          <Link
-            href="/admin/profit"
-            className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-black/10 px-4 py-3 text-sm font-semibold hover:border-ink/30"
-          >
-            <span>
-              Profit
-              <span className="font-normal text-muted">
-                {" "}
-                · any month, any range, with the working shown
+      <div className="grid items-start gap-[18px] xl:grid-cols-[1.35fr_1fr]">
+        <Panel
+          title="Needs doing today"
+          detail="Everything here costs you money if it is left. Clearing the list is the whole job."
+          aside={
+            jobs.length > 0 ? (
+              <span className="chip border-0 bg-[#fbe0dc] px-2.5 py-0.5 text-xs text-brand-dark">
+                {jobs.length} thing{jobs.length === 1 ? "" : "s"}
               </span>
-            </span>
-            <span className="text-muted">Open</span>
-          </Link>
+            ) : (
+              <span className="chip border-0 bg-[#dff0e6] px-2.5 py-0.5 text-xs text-mint">
+                All clear
+              </span>
+            )
+          }
+        >
+          {jobs.length === 0 ? (
+            <p className="border-t-[1.5px] border-[#ece7df] pt-3.5 text-[14.5px] text-muted">
+              Nothing is waiting. Every cart has been paid for, every order is on a run, and
+              nobody is owed an answer.
+            </p>
+          ) : (
+            jobs.map((job) => (
+              <div
+                key={job.kind}
+                className="flex items-center gap-3 border-t-[1.5px] border-[#ece7df] px-1 py-3"
+              >
+                <span aria-hidden className={`size-2.5 shrink-0 rounded-full ${dot[job.tone]}`} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-bold">{job.title}</p>
+                  <p className="text-[12.5px] text-muted">{job.detail}</p>
+                </div>
+                <Link
+                  href={job.action.href}
+                  className="btn-quiet shrink-0 px-3 text-[13px]"
+                  style={{ minHeight: 34 }}
+                >
+                  {job.action.label}
+                </Link>
+              </div>
+            ))
+          )}
+        </Panel>
+
+        <Panel
+          title="Runs"
+          aside={
+            <Link href="/admin/runs" className="text-[13.5px] font-semibold text-brand-dark">
+              All runs
+            </Link>
+          }
+        >
+          {soon.length === 0 && !after && (
+            <p className="border-t-[1.5px] border-[#ece7df] pt-3 text-[14.5px] text-muted">
+              Nothing is going today or tomorrow.
+            </p>
+          )}
+          {[...soon, ...(after && soon.length === 0 ? [after] : [])].map((batch) => (
+            <Link
+              key={batch.id}
+              href={`/admin/batch/${batch.id}`}
+              className="flex items-center gap-3 border-t-[1.5px] border-[#ece7df] py-3"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block font-bold">
+                  {runDateLabel(batch.run_date)} · {SLOT_LABEL[batch.slot]}
+                </span>
+                <span className="block text-[12.5px] text-muted">
+                  Closes {clockLabel(batch.cut_off_at)}
+                </span>
+              </span>
+              <span className="text-right">
+                <span className="block font-mono text-sm font-semibold">
+                  {batch.paidCount} paid
+                </span>
+                <span className="chip border-0 bg-[#dff0e6] px-2 py-0.5 text-xs text-mint">
+                  open
+                </span>
+              </span>
+            </Link>
+          ))}
+        </Panel>
+
+        <Panel
+          title="What sells"
+          detail="Last 28 days. Use it to decide which kitchens go on a run."
+        >
+          {(stats?.topItems ?? []).length === 0 && (
+            <p className="pt-2 text-[14.5px] text-muted">Nothing has sold yet this month.</p>
+          )}
+          {(stats?.topItems ?? []).slice(0, 5).map((one) => (
+            <div key={`${one.name}|${one.restaurant}`} className="py-2.5">
+              <div className="flex justify-between gap-2.5 text-sm">
+                <span className="min-w-0 truncate">
+                  <strong>{one.name}</strong>{" "}
+                  <span className="text-muted">· {one.restaurant}</span>
+                </span>
+                <span className="font-mono shrink-0">{one.qty}</span>
+              </div>
+              <div className="mt-1.5 h-[7px] rounded-full bg-[#ece7df]">
+                <div
+                  className="h-full rounded-full bg-brand"
+                  style={{ width: `${Math.round((one.qty / topped) * 100)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </Panel>
+
+        <div className="flex flex-col gap-[18px]">
+          <Panel title="Profit per run">
+            {ran.length === 0 ? (
+              <p className="pt-2 text-[14.5px] text-muted">
+                No run has been paid for yet, so there is nothing to compare.
+              </p>
+            ) : (
+              <>
+                <div className="flex h-[120px] items-end gap-2.5 pb-1 pt-2.5">
+                  {ran.map((batch) => (
+                    <div key={batch.id} className="flex flex-1 flex-col items-center gap-1.5">
+                      <div
+                        className="w-full rounded-t-md border-2 border-ink bg-brand"
+                        style={{
+                          height: `${Math.max(6, Math.round((batch.profit / best) * 86))}px`,
+                        }}
+                        title={naira(batch.profit)}
+                      />
+                      <span className="font-mono text-[10.5px] text-muted">
+                        {runDateLabel(batch.run_date).slice(0, 3)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="border-t-[1.5px] border-[#ece7df] pt-2 text-[12.5px] text-muted">
+                  Best of these: <strong>{naira(best)}</strong>. Fuller cars, same cost.
+                </p>
+              </>
+            )}
+          </Panel>
 
           <Link
             href="/admin/money"
-            className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-black/10 px-4 py-3 text-sm font-semibold hover:border-ink/30"
+            className="flex items-center gap-3 rounded-xl border-[1.5px] border-[#e8d9a8] bg-brand-tint px-4 py-3.5"
           >
-            <span>
-              Other money
-              {asideTotals.count > 0 && (
-                <span className="font-normal text-muted">
-                  {" "}
-                  · {asideTotals.count} in the last 28 days, {naira(asideTotals.made)}
-                </span>
-              )}
+            <span className="flex-1">
+              <strong className="text-[14.5px]">Other money</strong>
+              <span className="block text-[12.5px] text-muted">
+                {aside.length} entr{aside.length === 1 ? "y" : "ies"} in the last 28 days,{" "}
+                {naira(asideTotals.made)}
+              </span>
             </span>
-            <span className="text-muted">Add one</span>
+            <span className="btn-quiet px-3 text-[13px]" style={{ minHeight: 34 }}>
+              Add one
+            </span>
           </Link>
-
-          {asked > 0 && (
-            <Link
-              href="/admin/requests"
-              className="mt-4 block rounded-2xl bg-brand-tint px-4 py-3 text-sm font-bold text-brand-dark"
-            >
-              {asked} {asked === 1 ? "person has" : "people have"} asked for
-              something we do not carry. Price it and tell them.
-            </Link>
-          )}
-
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <section className="card">
-              <div className="flex items-baseline justify-between gap-2">
-                <h2 className="font-bold">Waiting on payment</h2>
-                <Link
-                  href="/admin/orders?status=pending"
-                  className="text-sm font-semibold text-brand"
-                >
-                  All unpaid
-                </Link>
-              </div>
-              <p className="text-sm text-muted">
-                {naira(unpaidValue)} across {unpaid.length} order
-                {unpaid.length === 1 ? "" : "s"} shown.
-              </p>
-              <ul className="mt-3 space-y-2">
-                {unpaid.length === 0 && (
-                  <li className="text-sm text-muted">
-                    Nothing outstanding. Everyone has paid.
-                  </li>
-                )}
-                {unpaid.map((order) => (
-                  <li key={order.id} className="flex justify-between gap-3 text-sm">
-                    <span className="truncate">
-                      {order.for_name ?? order.customer_name}
-                      <span className="text-muted"> · {order.batchLabel}</span>
-                      {order.payment_method === "card" && (
-                        <span className="text-brand"> · card</span>
-                      )}
-                    </span>
-                    <span className="shrink-0 font-semibold">{naira(order.total)}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section className="card">
-              <div className="flex items-baseline justify-between gap-2">
-                <h2 className="font-bold">Today and tomorrow</h2>
-                <Link href="/admin/runs" className="text-sm font-semibold text-brand">
-                  All runs
-                </Link>
-              </div>
-              <ul className="mt-3 space-y-2">
-                {soon.length === 0 && (
-                  <li className="text-sm text-muted">
-                    {open.length === 0
-                      ? "No run is open at all. Create one and the shop starts taking orders."
-                      : after
-                        ? `Nothing today or tomorrow. The next one is ${runDateLabel(
-                            after.run_date
-                          )} · ${SLOT_LABEL[after.slot]}.`
-                        : "Nothing today or tomorrow."}
-                  </li>
-                )}
-                {soon.map((batch) => (
-                  <li key={batch.id}>
-                    <Link
-                      href={`/admin/batch/${batch.id}`}
-                      className="flex items-center justify-between gap-3 rounded-xl px-2 py-2 text-sm hover:bg-black/[0.03]"
-                    >
-                      <span>
-                        <span className="font-semibold">
-                          {batch.run_date === lagosToday() ? "Today" : "Tomorrow"} ·{" "}
-                          {SLOT_LABEL[batch.slot]}
-                        </span>
-                        <span className="block text-muted">
-                          Closes {clockLabel(batch.cut_off_at)}
-                        </span>
-                      </span>
-                      <span className="shrink-0 text-right">
-                        <span
-                          className={`block font-bold ${
-                            batch.paidCount === 0 ? "text-muted" : "text-mint"
-                          }`}
-                        >
-                          {batch.paidCount} paid
-                        </span>
-                        <span className="block text-xs text-muted">
-                          {batch.orderCount} ordered
-                        </span>
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section className="card">
-              <h2 className="font-bold">What sells</h2>
-              <ul className="mt-3 space-y-2">
-                {stats.topItems.length === 0 && (
-                  <li className="text-sm text-muted">Nothing paid for yet.</li>
-                )}
-                {stats.topItems.map((item) => (
-                  <li key={`${item.name}|${item.restaurant}`} className="text-sm">
-                    <div className="flex justify-between gap-3">
-                      <span className="truncate">
-                        {item.name}
-                        <span className="text-muted"> · {item.restaurant}</span>
-                      </span>
-                      <span className="shrink-0 font-semibold">{item.qty}</span>
-                    </div>
-                    <div className="mt-1 h-1.5 rounded-full bg-black/5">
-                      <div
-                        className="h-1.5 rounded-full bg-brand"
-                        style={{
-                          width: `${Math.round(
-                            (item.qty / stats.topItems[0].qty) * 100
-                          )}%`,
-                        }}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section className="card">
-              <div className="flex items-baseline justify-between gap-2">
-                <h2 className="font-bold">Profit per run</h2>
-                <Link href="/admin/runs" className="text-sm font-semibold text-brand">
-                  All runs
-                </Link>
-              </div>
-              <ul className="mt-3 space-y-2">
-                {batches.filter((batch) => batch.paidCount > 0).length === 0 && (
-                  <li className="text-sm text-muted">Nothing paid for yet.</li>
-                )}
-                {batches
-                  .filter((batch) => batch.paidCount > 0)
-                  // Newest first. The list came in run order, so four weeks
-                  // of runs put the middle of September at the top and
-                  // yesterday off the bottom of the card, which is the one
-                  // anybody opening a dashboard is looking for.
-                  .slice()
-                  .sort((one, two) => two.run_date.localeCompare(one.run_date))
-                  .map((batch) => (
-                    <li key={batch.id}>
-                      <Link
-                        href={`/admin/batch/${batch.id}`}
-                        className="flex items-center justify-between gap-3 rounded-xl px-2 py-2 text-sm hover:bg-black/[0.03]"
-                      >
-                        <span>
-                          {runDateLabel(batch.run_date)} · {SLOT_LABEL[batch.slot]}
-                          <span className="block text-muted">
-                            {batch.paidCount} paid · {naira(batch.gross)} in
-                          </span>
-                        </span>
-                        <span
-                          className={`shrink-0 font-bold ${
-                            batch.profit >= 0 ? "text-mint" : "text-brand"
-                          }`}
-                        >
-                          {naira(batch.profit)}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-              </ul>
-              <p className="mt-2 text-xs text-muted">
-                Put what each run cost on its Profit tab and these become the
-                real numbers.
-              </p>
-            </section>
-          </div>
-        </>
-      )}
-
-      {problem && !problem.ok && (
-        <div className="mt-4">
-          <Diagnostic title={problem.title} detail={problem.detail} />
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -1967,3 +1967,21 @@ test("how long is said the way somebody would say it", () => {
   assert.equal(howLong(0), "0m");
   assert.equal(howLong(-5), "0m");
 });
+
+test("what the board never drew is still on the list", () => {
+  // The board was drawn for a food run. Parcels and requests are real work
+  // the old dashboard surfaced, and a redesign that quietly drops them is a
+  // redesign that loses somebody's paid-for errand.
+  const jobs = needsDoing({ ...quiet, parcels: 2, asked: 3 });
+  assert.deepEqual(jobs.map((one) => one.kind), ["parcels", "asked"]);
+  assert.ok(jobs[0].title.includes("2 parcels"), jobs[0].title);
+  assert.ok(jobs[1].title.includes("3 requests"), jobs[1].title);
+
+  // And they stay below real money.
+  const withMoney = needsDoing({
+    ...quiet,
+    unpaid: { value: 41200, count: 3, runLabel: "", closesAt: "" },
+    parcels: 1,
+  });
+  assert.deepEqual(withMoney.map((one) => one.kind), ["unpaid", "parcels"]);
+});

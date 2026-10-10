@@ -12,8 +12,8 @@
  * finished morning rather than a broken page.
  */
 export type Job = {
-  /** Which of the four it is, so the page can key and test them. */
-  kind: "left" | "unpaid" | "closing" | "reviews";
+  /** Which it is, so the page can key and test them. */
+  kind: "left" | "unpaid" | "closing" | "reviews" | "parcels" | "asked";
   /** How loud the dot is: red costs money today, amber soon, ink is timing,
    *  volt is worth doing but nobody is out of pocket. */
   tone: "red" | "amber" | "ink" | "volt";
@@ -33,6 +33,12 @@ export function needsDoing(now: {
   run: { label: string; closesInMinutes: number; kitchens: number; paid: number } | null;
   /** Reviews nobody has answered. */
   reviews: number;
+  /** Parcels promised for today. Not on the board, because the board was
+   *  drawn for a food run, but somebody has paid for these and is waiting. */
+  parcels?: number;
+  /** Somebody asking for something we do not stock, waiting on an answer.
+   *  It arrives by email too, and an inbox is where things go to be missed. */
+  asked?: number;
 }): Job[] {
   const jobs: Job[] = [];
 
@@ -80,6 +86,30 @@ export function needsDoing(now: {
           : `${said(now.run.paid, "order")} paid for so far.`),
       action: { label: "Open the run", href: "/admin/runs" },
       weight: now.run.paid === 0 ? 1 : 0,
+    });
+  }
+
+  if ((now.parcels ?? 0) > 0) {
+    jobs.push({
+      kind: "parcels",
+      tone: "red",
+      title: `${said(now.parcels as number, "parcel")} promised for today`,
+      detail: "Somebody has paid for these and is waiting on a day that is already here.",
+      action: { label: "Open parcels", href: "/admin/parcels" },
+      // Above the reviews and below real money, because a parcel late is a
+      // refund and an apology rather than a figure on this page.
+      weight: 1,
+    });
+  }
+
+  if ((now.asked ?? 0) > 0) {
+    jobs.push({
+      kind: "asked",
+      tone: "volt",
+      title: `${said(now.asked as number, "request")} waiting on an answer`,
+      detail: "Somebody asked for something we do not stock. Nobody has told them either way.",
+      action: { label: "Open requests", href: "/admin/requests" },
+      weight: 0,
     });
   }
 
