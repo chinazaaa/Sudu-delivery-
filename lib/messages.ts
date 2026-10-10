@@ -293,3 +293,62 @@ export function template(args: {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
+
+/**
+ * The same templates, to a person rather than about an order.
+ *
+ * Two of these messages are not about anything somebody bought. "Here is
+ * your PIN" and "would you leave us a review on Google" are addressed to a
+ * customer, and the customers list is exactly where you would send them
+ * from: it is the page with the person on it, and no order in sight.
+ *
+ * It used to borrow template() with an order invented on the spot, which
+ * worked right up until template() read a field the invention did not have
+ * and the whole page died with it. template() fills every token whether the
+ * message uses it or not, so an order has to be a real one.
+ *
+ * This fills only what a person has: their name, the links, their PIN. Any
+ * token that needs an order is removed rather than left standing, because
+ * the wording is editable and somebody will eventually put {ref} in a
+ * message that has no ref. An empty space in a sentence beats sending
+ * somebody a brace.
+ */
+export function templateFor(args: {
+  kind: TemplateKind;
+  /** Their name as the shop has it, and what the shop calls them where
+   *  that is different. */
+  name: string;
+  callsThem?: string;
+  settings: Settings;
+  pin?: string | null;
+  siteUrl: string;
+  what?: Ordered;
+}): string {
+  const { settings, siteUrl } = args;
+  const custom = String(settings[TEMPLATE_FIELD[args.kind]] ?? "").trim();
+  const body = custom || TEMPLATE_DEFAULT[args.kind];
+  const review = googleLinks(settings).review;
+
+  const values: Record<string, string> = {
+    "{name}": firstName(args.name, args.callsThem),
+    "{google}": review,
+    "{google_line}": review
+      ? `\n\nOr leave us a review on Google, which helps more than anything: ${review}`
+      : "",
+    "{site}": siteUrl,
+    "{link}": `${siteUrl}/orders`,
+    "{thing}": args.what ?? "food",
+    "{pin}": args.pin ?? "----",
+    "{pin_line}": args.pin
+      ? `Your PIN is ${args.pin}. Every order you place: ${siteUrl}/orders`
+      : "",
+  };
+
+  return Object.entries(values)
+    .reduce((text, [token, value]) => text.split(token).join(value), body)
+    // Whatever is left wanted an order. Out it comes.
+    .replace(/\{[a-z_]+\}/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}

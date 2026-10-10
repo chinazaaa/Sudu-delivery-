@@ -4,7 +4,7 @@ import { customerRows } from "@/lib/admin-data";
 import { errandsBy } from "@/lib/other-money";
 import { getSettings, googleLinks } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
-import { firstName, template, whatsappTo } from "@/lib/messages";
+import { firstName, templateFor, whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import SaveButton from "@/components/SaveButton";
@@ -213,17 +213,18 @@ export default async function CustomersPage({
               google.review !== "" && row.orders > 0
                 ? whatsappTo(
                     row.phone,
-                    template({
+                    // templateFor, not template: this message is to a
+                    // person, not about an order, and there is no order on
+                    // this page to give it. Inventing one took the whole
+                    // page down the moment the template reached for a field
+                    // the invention did not have.
+                    templateFor({
                       kind: "google",
-                      order: {
-                        customer_name: row.name,
-                        callsThem: row.callsThem,
-                      } as Parameters<typeof template>[0]["order"],
+                      name: row.name,
+                      callsThem: row.callsThem,
                       settings,
                       pin: row.pin || null,
                       siteUrl: url,
-                      batchLabel: "",
-                      deliveryWindow: "",
                     })
                   )
                 : "";

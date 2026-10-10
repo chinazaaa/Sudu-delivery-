@@ -6,6 +6,8 @@ import { weekAround } from "../lib/time";
 import { monthOf, nextMonth } from "../lib/standing";
 import { googleTagId, numberOr } from "../lib/settings";
 import { isExtra } from "../lib/shelf";
+import { templateFor } from "../lib/messages";
+import { EMPTY } from "../lib/settings";
 import { test } from "node:test";
 import { groupForCounter } from "../lib/admin";
 import { normalisePhone, formatPhone } from "../lib/phone";
@@ -1833,4 +1835,58 @@ test("extras are told apart from dishes by the category they are filed under", (
     assert.equal(isExtra(said), false, said);
   }
   assert.equal(isExtra(null), false);
+});
+
+/*
+ * A message to a person, with no order behind it.
+ *
+ * The customers list sends two of these: here is your PIN, and would you
+ * leave us a review. Neither is about anything somebody bought, and the
+ * page has no order on it to hand over. It used to invent one, which worked
+ * until the template reached for a field the invention did not have and
+ * took the whole page down with a server render error.
+ */
+test("a message to a person needs no order to be written", () => {
+  const settings = { ...EMPTY, google_review: "https://g.page/r/x/review" };
+
+  const asked = templateFor({
+    kind: "google",
+    name: "Ada Obi",
+    settings,
+    siteUrl: "https://sudu.store",
+  });
+  // Their first name, never their full one, and the link they are being
+  // asked to use.
+  assert.ok(asked.includes("Ada"), asked);
+  assert.ok(!asked.includes("Obi"), asked);
+  assert.ok(asked.includes("https://g.page/r/x/review"), asked);
+
+  // A PIN message is the other one sent from that page.
+  const pin = templateFor({
+    kind: "pin",
+    name: "Ada",
+    settings,
+    pin: "4821",
+    siteUrl: "https://sudu.store",
+  });
+  assert.ok(pin.includes("4821"), pin);
+});
+
+test("a token needing an order is removed rather than sent to somebody", () => {
+  // The wording is editable, so somebody will eventually put an order token
+  // in a message that has no order. A customer must never be sent a brace.
+  const said = templateFor({
+    kind: "google",
+    name: "Ada",
+    settings: {
+      ...EMPTY,
+      google_review: "https://g.page/r/x/review",
+      msg_google: "Hi {name}, about order {ref} for {total} to {hostel}: {google}",
+    },
+    siteUrl: "https://sudu.store",
+  });
+  assert.ok(!said.includes("{"), said);
+  assert.ok(!said.includes("}"), said);
+  assert.ok(said.includes("Ada"), said);
+  assert.ok(said.includes("https://g.page/r/x/review"), said);
 });
