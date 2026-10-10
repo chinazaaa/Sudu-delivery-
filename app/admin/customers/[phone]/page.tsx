@@ -586,10 +586,14 @@ export default async function CustomerPage({
                           <td className="py-[11px] pr-2.5 text-right font-mono text-[14.5px] font-semibold">
                             {naira(order.total)}
                           </td>
-                          <td className="py-[11px] text-right">
+                          {/* The cell is as narrow as the table can make it
+                              and the button wrapped inside it, so "Open"
+                              sat above its own arrow. The words stay on one
+                              line and the column stops being squeezed. */}
+                          <td className="w-px whitespace-nowrap py-[11px] text-right">
                             <Link
                               href={`/admin/orders/${order.id}`}
-                              className="btn-admin btn-admin-sm"
+                              className="btn-admin btn-admin-sm whitespace-nowrap"
                             >
                               Open →
                             </Link>

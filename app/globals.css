@@ -195,8 +195,26 @@ body {
    * them. Fifty-one pixels is the tab bar above which it stands.
    */
   .phone-bar {
-    @apply fixed inset-x-0 z-30 border-t-[1.5px] border-line bg-shell px-3.5 py-2.5 lg:hidden;
+    @apply fixed inset-x-0 z-30 border-t-[1.5px] border-line bg-shell px-3.5 py-2.5;
     bottom: calc(51px + env(safe-area-inset-bottom));
+  }
+  /*
+   * Gone on a desk, and said in a way a utility cannot undo.
+   *
+   * This used to be lg:hidden inside the @apply above, which put the
+   * display:none in the components layer. Four of these bars also carry
+   * `flex` on the element, and a utility is a later rule of the same
+   * weight, so `display:flex` won: the Send PIN bar sat across the bottom
+   * of the customer and order pages on a desk, over the rail and
+   * everything else.
+   *
+   * Naming the class twice is weight rather than order, so it holds
+   * whatever a caller puts beside it, and holds for the next one too.
+   */
+  @screen lg {
+    .phone-bar.phone-bar {
+      display: none;
+    }
   }
   /* The same bar, for a control that is also the header's action on a
      desk. A second copy in the markup would be a second form and a second
