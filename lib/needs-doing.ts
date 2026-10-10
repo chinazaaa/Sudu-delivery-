@@ -104,12 +104,13 @@ export function needsDoing(now: {
           .slice(0, 3)
           .map((one) => `${one.name} ${naira(one.owed)}${one.since ? ` since ${one.since}` : ""}`)
           .join(", ") + ". They brought these people in.",
-      // It opens the list of who is owed and what their account is. It does
-      // not pay anybody: the transfer is made by hand in a banking app, and
-      // a button that says "pay" and moves money on one tap is the last
-      // thing this page should have.
+      // Said as an instruction to whoever is reading it, which is what it
+      // is: go and pay these people. It opens the list and their account
+      // numbers. Nothing here moves money, because a promoter is paid by a
+      // transfer made by hand in a banking app.
       action: {
-        label: owedTo.length === 1 ? "Who and how much" : "Who and how much",
+        label:
+          owedTo.length === 1 ? "Pay them" : owedTo.length === 2 ? "Pay both" : "Pay them all",
         href: "/admin/promoters?owed=1",
       },
       // Not the shop's money, and somebody is waiting on it. It sits with

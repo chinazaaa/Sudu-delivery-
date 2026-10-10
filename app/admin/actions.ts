@@ -4189,3 +4189,78 @@ export async function sendEmail(
     sent: { to: to.length, cc: cc.length, files: attachments.length },
   };
 }
+
+export type BulkState = { error: string | null; done: string | null };
+
+/**
+ * The same thing to several orders at once.
+ *
+ * Marking eight orders paid one at a time is eight page loads, and on a
+ * Saturday morning with the bank app open beside this it is the slowest
+ * part of the job. The two that can honestly be done in bulk are done in
+ * bulk: money that has landed, and food that is moving to another car.
+ *
+ * Messaging is not one of them. A WhatsApp message is opened by hand, one
+ * person at a time, so a button here that claimed to have sent eight would
+ * be a button that sent none. The page offers the links instead.
+ */
+export async function doManyOrders(
+  _previous: BulkState,
+  form: FormData
+): Promise<BulkState> {
+  await assertAdmin();
+
+  const ids = form.getAll("id").map(String).filter(Boolean);
+  const what = String(form.get("what") ?? "");
+  if (ids.length === 0) return { error: "Nothing was ticked.", done: null };
+
+  const many = `${ids.length} order${ids.length === 1 ? "" : "s"}`;
+
+  if (what === "paid") {
+    const { error } = await db()
+      .from("orders")
+      .update({ status: "paid", paid_at: new Date().toISOString() })
+      .in("id", ids)
+      .eq("status", "pending");
+    if (error) return { error: error.message, done: null };
+
+    // What each one was actually charged, so an order edited afterwards can
+    // still say who owes whom. One at a time because each total is its own
+    // sum, and never allowed to fail the thing above it.
+    for (const id of ids) {
+      void db()
+        .from("orders")
+        .update({ charged: await orderTotal(id) })
+        .eq("id", id)
+        .then(() => undefined, () => undefined);
+    }
+
+    revalidatePath("/admin", "layout");
+    return { error: null, done: `${many} marked paid.` };
+  }
+
+  if (what === "move") {
+    const batchId = String(form.get("batch_id") ?? "");
+    if (batchId === "") return { error: "Pick a run to move them to.", done: null };
+
+    // One at a time, through the same door a single move goes through, so a
+    // run that cannot carry one of them says so rather than silently taking
+    // it. Whatever would not go is named.
+    const stuck: string[] = [];
+    for (const id of ids) {
+      const moved = await moveOrder(id, batchId).catch(() => false);
+      if (!moved) stuck.push(id);
+    }
+
+    revalidatePath("/admin", "layout");
+    if (stuck.length === ids.length) {
+      return { error: "None of them could move to that run.", done: null };
+    }
+    return {
+      error: stuck.length > 0 ? `${stuck.length} could not move and stayed put.` : null,
+      done: `${ids.length - stuck.length} moved.`,
+    };
+  }
+
+  return { error: "That is not something this can do.", done: null };
+}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import AdminLive from "@/components/admin/AdminLive";
 import Figure from "@/components/admin/Figure";
 import OrderCard from "@/components/admin/OrderCard";
+import { Bar, Picking, Tick } from "@/components/admin/BulkOrders";
 import { orderFeed, statusCounts } from "@/lib/admin-data";
 import { batchOverview } from "@/lib/admin";
 import { getSettings } from "@/lib/settings";
@@ -10,6 +11,7 @@ import { siteUrl, toCard } from "@/lib/admin-templates";
 import { SLOT_LABEL } from "@/lib/config";
 import { runDateLabel } from "@/lib/time";
 import { naira } from "@/lib/money";
+import { templateFor, whatsappTo } from "@/lib/messages";
 import {
   cancelOrder,
   markPaid,
@@ -232,21 +234,65 @@ export default async function OrdersPage({
           Nothing here yet. Orders appear the moment somebody checks out.
         </p>
       ) : (
-        <div className="space-y-3">
-          {orders.map((order) => (
-            <OrderCard
-              key={order.id}
-              order={toCard(order, settings, url, bank)}
-              markPaid={markPaid}
-              markDelivered={markDelivered}
-              refund={refundOrder}
-              cancel={cancelOrder}
-              remove={deleteOrder}
-              savePaymentLink={savePaymentLink}
-              saveNote={saveOrderNote}
-            />
-          ))}
-        </div>
+        <Picking>
+          {/* The runs an order could be moved onto, and the two messages
+              that have to be opened one person at a time. */}
+          <Bar
+            runs={batches
+              .filter((one) => one.status === "open")
+              .map((one) => ({
+                id: one.id,
+                label: `${runDateLabel(one.run_date)} · ${SLOT_LABEL[one.slot]}`,
+              }))}
+            links={Object.fromEntries(
+              orders.map((order) => [
+                order.id,
+                {
+                  name: order.customer_name.split(" ")[0],
+                  review: whatsappTo(
+                    order.customer_phone,
+                    templateFor({
+                      kind: "review",
+                      name: order.customer_name,
+                      settings,
+                      siteUrl: url,
+                    })
+                  ),
+                  pin: whatsappTo(
+                    order.customer_phone,
+                    templateFor({
+                      kind: "pin",
+                      name: order.customer_name,
+                      settings,
+                      pin: order.pin ?? null,
+                      siteUrl: url,
+                    })
+                  ),
+                },
+              ])
+            )}
+          />
+
+          <div className="space-y-3">
+            {orders.map((order) => (
+              <div key={order.id} className="flex gap-3">
+                <Tick id={order.id} total={order.total} name={order.customer_name} />
+                <div className="min-w-0 flex-1">
+                  <OrderCard
+                    order={toCard(order, settings, url, bank)}
+                    markPaid={markPaid}
+                    markDelivered={markDelivered}
+                    refund={refundOrder}
+                    cancel={cancelOrder}
+                    remove={deleteOrder}
+                    savePaymentLink={savePaymentLink}
+                    saveNote={saveOrderNote}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Picking>
       )}
     </div>
   );
