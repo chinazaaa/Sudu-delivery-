@@ -256,9 +256,9 @@ export default function Home() {
 
         {found !== null && (
           <View style={{ gap: 10 }}>
-            <Text style={{ fontWeight: "800", fontSize: 16, color: T.ink }}>
+            <Display size={22}>
               {found.length} result{found.length === 1 ? "" : "s"}
-            </Text>
+            </Display>
             {found.length === 0 && (
               <View style={{ gap: 10 }}>
                 <Text style={{ color: T.muted }}>
@@ -278,18 +278,20 @@ export default function Home() {
                   flexDirection: "row",
                   gap: 12,
                   backgroundColor: T.paper,
+                  borderWidth: 2,
+                  borderColor: T.ink,
                   borderRadius: T.radius,
                   padding: 12,
                   opacity: item.available ? 1 : 0.5,
                 }}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "800", color: T.ink }}>{item.name}</Text>
+                  <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>{item.name}</Text>
                   <Text style={{ color: T.muted, marginTop: 2 }}>{restaurant.name}</Text>
-                  <Text style={{ fontWeight: "800", marginTop: 6, color: T.ink }}>
+                  <Display size={22} style={{ marginTop: 6 }}>
                     {item.groups.length > 0 ? "from " : ""}
                     {naira(item.price)}
-                  </Text>
+                  </Display>
                   {!item.available && (
                     <Text style={{ color: T.muted, fontWeight: "700", marginTop: 2 }}>
                       Sold out today
@@ -337,7 +339,7 @@ export default function Home() {
               {shop!.shop.ribbon}
             </Text>
             {(shop?.shop.ribbonTo ?? "") !== "" && (
-              <Text style={{ color: T.brand, fontWeight: "800" }}>See</Text>
+              <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>See</Text>
             )}
           </Pressable>
         )}
@@ -529,14 +531,14 @@ export default function Home() {
                 style={door()}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "800", color: T.ink }}>Food</Text>
+                  <Display size={20}>Food</Display>
                   <Text style={{ color: T.muted, marginTop: 2 }}>
                     {shop
                       ? `${shop.menu.length} restaurant${shop.menu.length === 1 ? "" : "s"} in one list`
                       : "Every restaurant in one list"}
                   </Text>
                 </View>
-                <Text style={{ color: T.brand, fontWeight: "800" }}>Browse</Text>
+                <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>Browse</Text>
               </Pressable>
             );
           }
@@ -552,10 +554,10 @@ export default function Home() {
                 style={door()}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "800", color: T.ink }}>Send a parcel</Text>
+                  <Display size={20}>Send a parcel</Display>
                   <Text style={{ color: T.muted, marginTop: 2 }}>{parcels}</Text>
                 </View>
-                <Text style={{ color: T.brand, fontWeight: "800" }}>Send</Text>
+                <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>Send</Text>
               </Pressable>
             );
           }
@@ -567,10 +569,10 @@ export default function Home() {
             return (
               <Pressable key="skincare" onPress={() => router.push("/skincare")} style={door()}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "800", color: T.ink }}>Skincare</Text>
+                  <Display size={20}>Skincare</Display>
                   <Text style={{ color: T.muted, marginTop: 2 }}>{skincare}</Text>
                 </View>
-                <Text style={{ color: T.brand, fontWeight: "800" }}>Shop</Text>
+                <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>Shop</Text>
               </Pressable>
             );
           }
@@ -595,14 +597,14 @@ export default function Home() {
                   />
                 )}
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "800", color: T.ink }}>{one.name}</Text>
+                  <Display size={20}>{one.name}</Display>
                   <Text style={{ color: T.muted, marginTop: 2 }}>
                     {one.from === null
                       ? "One price, delivery in it"
                       : `From ${naira(one.from)}, delivery in it`}
                   </Text>
                 </View>
-                <Text style={{ color: T.brand, fontWeight: "800" }}>See</Text>
+                <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>See</Text>
               </Pressable>
             ));
           }
@@ -641,8 +643,19 @@ export function card() {
 }
 
 /** One door on the front page. They are all the same card. */
+/*
+ * A door into one part of the shop.
+ *
+ * Borderless white, which is what every card in the app looked like before
+ * the redesign. The hero and the kitchens above were moved over and these
+ * were not, so the home screen read as half one design and half the other
+ * from the shelves down. The 2px Ink rule is what the rest of the app
+ * draws a card with.
+ */
 const door = () => ({
   backgroundColor: T.paper,
+  borderWidth: 2,
+  borderColor: T.ink,
   borderRadius: T.radius,
   padding: 14,
   flexDirection: "row" as const,
