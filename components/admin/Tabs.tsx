@@ -25,17 +25,15 @@ export default function Tabs({
             key={section.id}
             type="button"
             onClick={() => setActive(section.id)}
-            className={`chip ${
-              current?.id === section.id
-                ? "border-ink bg-ink text-white"
-                : "border-black/10 bg-white"
+            className={`chip px-3.5 ${
+              current?.id === section.id ? "chip-on" : "bg-paper"
             }`}
           >
             {section.label}
             {section.badge && (
               <span
-                className={`rounded-full px-1.5 text-xs ${
-                  current?.id === section.id ? "bg-white/20" : "bg-black/5"
+                className={`font-mono text-xs ${
+                  current?.id === section.id ? "opacity-70" : "opacity-60"
                 }`}
               >
                 {section.badge}

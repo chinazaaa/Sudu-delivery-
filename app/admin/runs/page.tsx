@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Diagnostic from "@/components/Diagnostic";
-import PageHeader from "@/components/admin/PageHeader";
-import Stat from "@/components/admin/Stat";
+import Figure from "@/components/admin/Figure";
+import Panel from "@/components/admin/Panel";
 import { batchOverview } from "@/lib/admin";
 import { openUntil } from "@/lib/batches";
 import { sameDayTrips } from "@/lib/admin";
@@ -176,41 +176,42 @@ export default async function RunsPage({
 
   return (
     <div>
-      <PageHeader
-        title="Runs"
-        detail={
-          window === "all"
-            ? "Every run ever made, newest first."
-            : "Monday to Sunday, and anything before it that is not finished."
-        }
-        actions={
-          <>
-            <Link href="/admin/schedule" className="btn-quiet px-4 py-2.5 text-sm">
-              Schedule
-            </Link>
-            <Link
-              href={showForm ? "/admin/runs" : "/admin/runs?new=1"}
-              className="btn-primary px-4 py-2.5 text-sm"
-            >
-              {showForm ? "Close" : "One-off run"}
-            </Link>
-          </>
-        }
-      />
+      <header className="mb-[22px] flex flex-wrap items-start justify-between gap-3.5">
+        <div className="min-w-0">
+          <h1 className="font-display text-[46px] font-black uppercase leading-[0.95]">
+            Runs
+          </h1>
+          <p className="mt-1.5 text-[14.5px] text-muted">
+            {window === "all"
+              ? "Every run ever made, newest first."
+              : "Monday to Sunday, and anything before it that is not finished."}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/admin/schedule" className="btn-quiet px-4 py-2.5 text-sm">
+            Schedule
+          </Link>
+          <Link
+            href={showForm ? "/admin/runs" : "/admin/runs?new=1"}
+            className="btn-primary px-4 py-2.5 text-sm"
+          >
+            {showForm ? "Close" : "One-off run"}
+          </Link>
+        </div>
+      </header>
 
       {trips.length > 0 && (
-        <section className="card mb-4 space-y-2">
-          <div>
-            <h2 className="font-bold">Still to buy for</h2>
-            <p className="text-sm text-muted">
-              Same day cars nobody has been to the counter for yet. Ones within
-              an hour and a half of each other are one trip, so this is what to
-              buy in one go. They disappear from here once you set off.
-            </p>
-          </div>
-          <ul className="divide-y divide-black/5">
+        <Panel
+          title="Still to buy for"
+          detail="Same day cars nobody has been to the counter for yet. Ones within an hour and a half of each other are one trip, so this is what to buy in one go. They disappear from here once you set off."
+          className="mb-4"
+        >
+          <ul>
             {trips.map((trip) => (
-              <li key={trip.at} className="flex flex-wrap items-center justify-between gap-2 py-2">
+              <li
+                key={trip.at}
+                className="flex flex-wrap items-center justify-between gap-2 border-t-[1.5px] border-[#ece7df] py-2.5"
+              >
                 <span className="min-w-0">
                   {/* The earliest, because that is the one you cannot be
                       late for. It used to read "X to Y", which looks like one
@@ -226,7 +227,9 @@ export default async function RunsPage({
                   </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-3">
-                  <span className="font-extrabold">{naira(trip.gross)}</span>
+                  <span className="font-display text-[26px] font-black leading-none">
+                    {naira(trip.gross)}
+                  </span>
                   <Link
                     href={`/admin/trip/${encodeURIComponent(trip.at)}`}
                     className="text-sm font-bold text-brand"
@@ -237,7 +240,7 @@ export default async function RunsPage({
               </li>
             ))}
           </ul>
-        </section>
+        </Panel>
       )}
 
       {/* Wrapped, not scrolled sideways: the tap after a fling is
@@ -246,17 +249,13 @@ export default async function RunsPage({
       <div className="mb-3 flex flex-wrap gap-2">
         <Link
           href="/admin/runs"
-          className={`chip ${
-            window === "recent" ? "border-ink bg-ink text-white" : "border-black/10 bg-white"
-          }`}
+          className={`chip px-3.5 ${window === "recent" ? "chip-on" : "bg-paper"}`}
         >
           This week
         </Link>
         <Link
           href="/admin/runs?show=all"
-          className={`chip ${
-            window === "all" ? "border-ink bg-ink text-white" : "border-black/10 bg-white"
-          }`}
+          className={`chip px-3.5 ${window === "all" ? "chip-on" : "bg-paper"}`}
         >
           Every run so far
         </Link>
@@ -266,15 +265,15 @@ export default async function RunsPage({
           to order into. */}
       <div
         className={`card mb-4 ${
-          coverDays(until) < 14 ? "border-brand/30 bg-brand-tint" : ""
+          coverDays(until) < 14 ? "border-[#e8d9a8] bg-brand-tint" : ""
         }`}
       >
-        <h2 className="font-bold">
+        <h2 className="font-display text-[22px] font-black uppercase leading-none">
           {until
             ? `Ordering is open through ${runDateLabel(until)}`
             : "No runs are open"}
         </h2>
-        <p className="mt-0.5 text-sm text-ink/75">
+        <p className="mt-1.5 text-[13.5px] text-ink/75">
           {!until
             ? "Nobody can order anything until a month is opened."
             : coverDays(until) < 14
@@ -293,11 +292,11 @@ export default async function RunsPage({
           settings. Worth saying out loud: from the shop floor everything
           looks open, while the checkout quietly offers nobody a run. */}
       {hidden && (
-        <div className="card mb-4 border-amber-300 bg-amber-50">
-          <h2 className="font-bold text-amber-900">
+        <div className="card mb-4 border-[#e8d9a8] bg-brand-tint">
+          <h2 className="font-display text-[22px] font-black uppercase leading-none">
             Nobody can order onto a run right now
           </h2>
-          <p className="mt-0.5 text-sm text-amber-900/80">
+          <p className="mt-1.5 text-[13.5px] text-ink/75">
             The next run is {runDateLabel(soonestRun!)}, {daysAway} days away,
             and customers only see runs closing in the next {horizon}. Until
             that number is at least {daysAway}, the checkout offers a car of
@@ -312,26 +311,35 @@ export default async function RunsPage({
         </div>
       )}
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Runs listed" value={live.length} />
-        <Stat label="Orders" value={orders} />
-        <Stat label="Paid" value={paid} tone="good" hint={`${orders - paid} unpaid`} />
-        <Stat
+      <div className="mb-4 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+        <Figure
+          label="Runs listed"
+          value={String(live.length)}
+          detail={window === "all" ? "Every run so far" : "This week"}
+        />
+        <Figure label="Orders" value={String(orders)} detail="Across the runs below" />
+        <Figure
+          label="Paid"
+          value={String(paid)}
+          tone="mint"
+          detail={orders - paid === 0 ? "Nothing outstanding" : `${orders - paid} unpaid`}
+        />
+        {/* Only a profit in hand is coloured. A loss in mint reads as money
+            made, which is the one thing it is not. */}
+        <Figure
           label="Profit"
-          value={profit}
-          money
-          tone={profit >= 0 ? "good" : "warn"}
-          hint="Across the runs below"
+          value={naira(profit)}
+          tone={profit >= 0 ? "mint" : "ink"}
+          detail="Across the runs below"
         />
       </div>
 
       {showForm && (
-        <section className="card mb-4">
-          <h2 className="font-bold">A one-off run</h2>
-          <p className="mt-0.5 text-sm text-muted">
-            For a day that is not in your week: exam week, a match, a request.
-            Creating one that already exists updates it.
-          </p>
+        <Panel
+          title="A one-off run"
+          detail="For a day that is not in your week: exam week, a match, a request. Creating one that already exists updates it."
+          className="mb-4"
+        >
           <form action={createBatch} className="mt-3 space-y-3">
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
@@ -376,7 +384,7 @@ export default async function RunsPage({
               run. Leave the wording blank to use the default from Settings.
             </p>
           </form>
-        </section>
+        </Panel>
       )}
 
       <ul className="space-y-3">
@@ -401,19 +409,13 @@ export default async function RunsPage({
           return (
             <li key={batch.id}>
               {index === 0 && isToday && (
-                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brand">
-                  Today
-                </p>
+                <p className="ticket mb-2 text-brand">Today</p>
               )}
               {firstRest && (
-                <p className="mb-2 mt-4 text-xs font-bold uppercase tracking-wide text-muted">
-                  The rest of the week
-                </p>
+                <p className="ticket mb-2 mt-4 text-muted">The rest of the week</p>
               )}
               {firstUpcoming && (
-                <p className="mb-2 mt-4 text-xs font-bold uppercase tracking-wide text-muted">
-                  Still to come
-                </p>
+                <p className="ticket mb-2 mt-4 text-muted">Still to come</p>
               )}
               <Link
                 href={
@@ -428,7 +430,7 @@ export default async function RunsPage({
                       like one it was indistinguishable from a run: "Friday ·
                       Afternoon" for something somebody asked to arrive at two
                       o'clock. It says what it is. */}
-                  <p className="font-bold">
+                  <p className="text-[17px] font-bold">
                     {batch.kind === "same_day"
                       ? `${runDateLabel(batch.run_date)} · ${timeOnly(batch.delivery_window_text)}`
                       : batch.kind === "skincare"
@@ -440,7 +442,7 @@ export default async function RunsPage({
                           ? batch.delivery_window_text || "Parcel"
                           : `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`}
                   </p>
-                  <p className="text-sm text-muted">
+                  <p className="text-[12.5px] text-muted">
                     {batch.kind === "same_day"
                       ? `One car, asked for on ${runDateLabel(batch.run_date)}`
                       : batch.kind === "parcel"
@@ -451,22 +453,22 @@ export default async function RunsPage({
                   </p>
                   <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     {batch.status === "cancelled" && (
-                      <span className="rounded-full bg-black/5 px-2.5 py-1 text-xs font-bold text-muted">
+                      <span className="rounded-full bg-[#f1ede6] px-2.5 py-1 text-xs font-semibold">
                         Not running
                       </span>
                     )}
                     {batch.kind === "same_day" && (
-                      <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-bold text-brand-dark">
+                      <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-semibold text-brand-dark">
                         Same day
                       </span>
                     )}
                     {batch.kind === "skincare" && (
-                      <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-bold text-brand-dark">
+                      <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-semibold text-brand-dark">
                         Skincare, not food
                       </span>
                     )}
                     {batch.kind === "parcel" && (
-                      <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-bold text-brand-dark">
+                      <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-semibold text-brand-dark">
                         {batch.deliver_at ? "Parcel" : "Parcel · day not agreed"}
                       </span>
                     )}
@@ -474,7 +476,7 @@ export default async function RunsPage({
                         the list: it is the thing that explains why an order
                         could not go on it. */}
                     {batch.kind === "run" && placesOfRun(batch.only_places ?? "").length > 0 && (
-                      <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-bold text-brand-dark">
+                      <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-semibold text-brand-dark">
                         {placesOfRun(batch.only_places ?? "")
                           .map((id) => counterNames.get(id) ?? "one counter")
                           .join(", ")}{" "}
@@ -482,8 +484,8 @@ export default async function RunsPage({
                       </span>
                     )}
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                        open ? "bg-mint/10 text-mint" : "bg-black/5 text-muted"
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        open ? "bg-[#dff0e6] text-mint" : "bg-[#f1ede6] text-ink"
                       }`}
                     >
                       {batch.status}
@@ -491,24 +493,25 @@ export default async function RunsPage({
                   </span>
                 </div>
                 <div className="shrink-0 text-right">
+                  <p className="ticket text-muted">Paid</p>
                   <p
-                    className={`text-xl font-extrabold ${
+                    className={`font-display text-[30px] font-black leading-none ${
                       batch.paidCount === 0 ? "text-muted" : "text-mint"
                     }`}
                   >
-                    {batch.paidCount} paid
+                    {batch.paidCount}
                   </p>
-                  <p className="text-xs text-muted">
+                  <p className="mt-1 text-[12.5px] text-muted">
                     {batch.orderCount} ordered
                     {batch.orderCount > batch.paidCount &&
                       ` · ${batch.orderCount - batch.paidCount} unpaid`}
                   </p>
                   {batch.orderCount === 0 && (
-                    <p className="mt-1 text-xs text-muted">Nothing ordered yet</p>
+                    <p className="mt-1 text-[12.5px] text-muted">Nothing ordered yet</p>
                   )}
                   {batch.paidCount > 0 && (
                     <p
-                      className={`mt-1 text-sm font-bold ${
+                      className={`mt-1 text-[13px] font-bold ${
                         batch.profit >= 0 ? "text-mint" : "text-brand"
                       }`}
                     >

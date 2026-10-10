@@ -15,8 +15,8 @@ import SheetBody from "@/components/admin/SheetBody";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import HandoutList from "@/components/HandoutList";
-import PageHeader from "@/components/admin/PageHeader";
-import Stat from "@/components/admin/Stat";
+import Figure from "@/components/admin/Figure";
+import Panel from "@/components/admin/Panel";
 import Tabs from "@/components/admin/Tabs";
 import Checklist from "@/components/admin/Checklist";
 import ConfirmButton from "@/components/admin/ConfirmButton";
@@ -39,7 +39,13 @@ import { bandTable, parseBands } from "@/lib/fees";
 import { narration, template, whatsappTo } from "@/lib/messages";
 import { getSettings } from "@/lib/settings";
 import { sheetAsText } from "@/lib/sheet-text";
-import { STAGES, STAGE_ACTION, STAGE_LABEL, stageIndex } from "@/lib/stages";
+import {
+  PARCEL_ACTION,
+  STAGES,
+  STAGE_ACTION,
+  STAGE_LABEL,
+  stageIndex,
+} from "@/lib/stages";
 import {
   markDelivered,
   markPaid,
@@ -161,47 +167,97 @@ export default async function BatchPage({
 
   return (
     <div>
-      <PageHeader
-        title={batchLabel}
-        detail={`Closes ${clockLabel(batch.cut_off_at)} · ${batch.delivery_window_text} · ${STAGE_LABEL[batch.stage]}`}
-        backHref="/admin/runs"
-        backLabel="All runs"
-        actions={
-          // A closed run is a record. Moving its stage or sending its counter
-          // sheet to WhatsApp are things to do to a run that is still
-          // happening, and leaving them there is what made a finished run go
-          // on looking like work.
-          batch.settled_at ? null : (
-            <>
-              <StagePicker
-                batchId={batch.id}
-                stage={batch.stage}
-                action={setBatchStage}
-                // Two parcels sharing a day land here, and "At the counter,
-                // food being cooked" over two bags is a kitchen nobody is
-                // standing in.
-                parcel={batch.kind === "parcel"}
-              />
-              <SendSheet
-                batchId={batch.id}
-                open={batch.status === "open" && batch.stage === "ordering"}
-                closeRun={setBatchStage}
-                href={whatsappTo(
-                  settings.whatsapp_number || "0",
-                  sheetAsText(sheet, batchLabel)
-                )}
-              />
-            </>
-          )
-        }
-      />
+      <Link
+        href="/admin/runs"
+        className="text-[13.5px] font-semibold text-muted hover:text-brand"
+      >
+        ← All runs
+      </Link>
+      <header className="mb-[22px] mt-1 flex flex-wrap items-start justify-between gap-3.5">
+        <div className="min-w-0">
+          <h1 className="font-display text-[46px] font-black uppercase leading-[0.95]">
+            {batchLabel}
+          </h1>
+          <p className="mt-1.5 text-[14.5px] text-muted">
+            Closes {clockLabel(batch.cut_off_at)} · {batch.delivery_window_text} ·{" "}
+            {STAGE_LABEL[batch.stage]}
+          </p>
+        </div>
+        {/* A closed run is a record. Moving its stage or sending its counter
+            sheet to WhatsApp are things to do to a run that is still
+            happening, and leaving them there is what made a finished run go
+            on looking like work. */}
+        {!batch.settled_at && (
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <StagePicker
+              batchId={batch.id}
+              stage={batch.stage}
+              action={setBatchStage}
+              // Two parcels sharing a day land here, and "At the counter,
+              // food being cooked" over two bags is a kitchen nobody is
+              // standing in.
+              parcel={batch.kind === "parcel"}
+            />
+            <SendSheet
+              batchId={batch.id}
+              open={batch.status === "open" && batch.stage === "ordering"}
+              closeRun={setBatchStage}
+              href={whatsappTo(
+                settings.whatsapp_number || "0",
+                sheetAsText(sheet, batchLabel)
+              )}
+            />
+          </div>
+        )}
+      </header>
+
+      {/* Where the run has got to, read rather than set: the picker above is
+          what moves it. Six cells because there are six real stages, and
+          naming one you cannot be in is how a sheet starts lying about where
+          the food is. */}
+      <ol className="card mb-[18px] grid grid-cols-2 gap-0 overflow-hidden border-ink bg-ink p-0 sm:grid-cols-3 lg:grid-cols-6">
+        {STAGES.map((stage, index) => {
+          const here = stage === batch.stage;
+          const past = index < stageIndex(batch.stage);
+          return (
+            <li
+              key={stage}
+              className={`flex items-center gap-2.5 border-b border-r border-[#2c2721] px-3.5 py-3 ${
+                here ? "bg-brand text-white" : "text-[#8a8178]"
+              }`}
+            >
+              <span
+                className={`grid size-[22px] shrink-0 place-items-center rounded-full font-mono text-xs ${
+                  here ? "bg-white text-brand" : "bg-[#2c2721]"
+                }`}
+              >
+                {index + 1}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-[14.5px] font-bold">
+                  {(batch.kind === "parcel" ? PARCEL_ACTION : STAGE_ACTION)[stage]}
+                </span>
+                <span className="block text-xs opacity-85">
+                  {here
+                    ? "you are here"
+                    : stage === "ordering"
+                      ? `${past ? "closed" : "closes"} ${clockLabel(batch.cut_off_at)}`
+                      : past
+                        ? "done"
+                        : "—"}
+                </span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
 
       {batch.settled_at ? (
-        <section className="card mb-4 border-mint/30 bg-mint/[0.06]">
-          <h2 className="font-bold text-mint">
+        <section className="card mb-4 border-mint bg-mint/[0.06]">
+          <h2 className="font-display text-[24px] font-black uppercase leading-none text-mint">
             Closed on {runDateLabel(batch.settled_at.slice(0, 10))}
           </h2>
-          <p className="mt-0.5 text-sm text-ink/80">
+          <p className="mt-1.5 text-[13.5px] text-ink/80">
             {summary.paidCount} order{summary.paidCount === 1 ? "" : "s"},{" "}
             {naira(summary.gross)} in, {naira(summary.foodCost)} to the counters
             and {naira(summary.costs)} of costs. {naira(summary.profit)} left.
@@ -210,7 +266,7 @@ export default async function BatchPage({
             <input type="hidden" name="batch_id" value={batch.id} />
             <ConfirmButton
               tone="bare"
-              className="chip border-black/10 bg-white"
+              className="chip bg-paper"
               confirm="Yes, open it again"
             >
               Something was wrong, open it again
@@ -233,31 +289,34 @@ export default async function BatchPage({
         )
       )}
 
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat
+      <div className="mb-4 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+        <Figure
           label="Paid orders"
           value={`${summary.paidCount}`}
-          tone={summary.paidCount === 0 ? undefined : "good"}
-          hint={`${summary.paidCount + summary.unpaidCount} ordered${
+          detail={`${summary.paidCount + summary.unpaidCount} ordered${
             summary.unpaidCount > 0 ? `, ${summary.unpaidCount} unpaid` : ""
           }`}
         />
-        <Stat label="Money collected" value={summary.gross} money />
-        <Stat
-          label="Pay at counters"
-          value={summary.foodCost}
-          money
-          hint={`${counter.length} stop${counter.length === 1 ? "" : "s"}`}
+        <Figure
+          label="Money collected"
+          value={naira(summary.gross)}
+          detail="Across paid orders"
         />
-        <Stat
+        <Figure
+          label="Pay at counters"
+          value={naira(summary.foodCost)}
+          detail={`${counter.length} stop${counter.length === 1 ? "" : "s"}`}
+        />
+        {/* Only a profit in hand is coloured. A loss in mint reads as money
+            made, which is the one thing it is not. */}
+        <Figure
           label="Profit"
-          value={summary.profit}
-          money
-          tone={summary.profit >= 0 ? "good" : "warn"}
-          hint={
+          value={naira(summary.profit)}
+          tone={summary.profit >= 0 ? "mint" : "ink"}
+          detail={
             summary.costs > 0
-              ? `after ${naira(summary.costs)} ${spentOn(batch)}`
-              : "fuel, transport and driver not entered yet"
+              ? `After ${naira(summary.costs)} ${spentOn(batch)}`
+              : "Fuel, transport and driver not entered yet"
           }
         />
       </div>
@@ -267,8 +326,10 @@ export default async function BatchPage({
           the arithmetic. */}
       {batch.stage !== "handed_out" && likely !== null && (
         <p
-          className={`mb-4 rounded-2xl px-4 py-3 text-sm ${
-            likely >= 0 ? "bg-mint/10 text-mint" : "bg-amber-50 text-amber-800"
+          className={`mb-4 rounded-xl border-[1.5px] px-4 py-3 text-[14px] ${
+            likely >= 0
+              ? "border-mint/40 bg-mint/10 text-mint"
+              : "border-[#e8d9a8] bg-brand-tint text-ink"
           }`}
         >
           <span className="font-bold">
@@ -284,19 +345,13 @@ export default async function BatchPage({
       )}
 
       {short.length > 0 && (
-        <section className="card mb-4 space-y-3">
-          <div>
-            <h2 className="font-bold">Shared deliveries waiting on money</h2>
-            <p className="text-sm text-muted">
-              Everybody in one pays an even share of a single fee. When some of them
-              never pay, their food does not travel, but the fee for what is left
-              does not fall as fast as the heads do. Nobody can be asked for more
-              after the fact, so this is a judgement: chase them, carry it, or
-              refund the ones who paid.
-            </p>
-          </div>
+        <Panel
+          title="Shared deliveries waiting on money"
+          detail="Everybody in one pays an even share of a single fee. When some of them never pay, their food does not travel, but the fee for what is left does not fall as fast as the heads do. Nobody can be asked for more after the fact, so this is a judgement: chase them, carry it, or refund the ones who paid."
+          className="mb-4 space-y-3"
+        >
           {short.map((one) => (
-            <div key={one.groupId} className="rounded-xl border border-black/10 p-3">
+            <div key={one.groupId} className="rounded-xl border-[1.5px] border-line p-3">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <span className="font-bold">{one.leader}&apos;s delivery</span>
                 <span className="text-sm text-muted">
@@ -325,13 +380,13 @@ export default async function BatchPage({
                     <span className="flex shrink-0 gap-2">
                       <a
                         href={`tel:${who.phone}`}
-                        className="chip border-black/10 bg-white py-1 text-xs"
+                        className="chip bg-paper py-1 text-xs"
                       >
                         Call
                       </a>
                       <Link
                         href={`/admin/orders/${who.id}`}
-                        className="chip border-black/10 bg-white py-1 text-xs"
+                        className="chip bg-paper py-1 text-xs"
                       >
                         Open
                       </Link>
@@ -341,11 +396,11 @@ export default async function BatchPage({
               </ul>
             </div>
           ))}
-        </section>
+        </Panel>
       )}
 
       {losingMoney && (
-        <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <p className="mb-4 rounded-xl border-[1.5px] border-[#e8d9a8] bg-brand-tint px-4 py-3 text-[14px]">
           This run is {naira(Math.abs(summary.profit))} down after costs. Cancel
           and refund in full, or carry it and make it back on the next one.
         </p>
@@ -361,7 +416,7 @@ export default async function BatchPage({
             content: (
               <>
                 {shopped && (
-                  <p className="rounded-2xl bg-mint/10 px-4 py-3 text-sm font-semibold text-mint">
+                  <p className="rounded-xl border-[1.5px] border-mint/40 bg-mint/10 px-4 py-3 text-[14px] font-semibold text-mint">
                     {finished
                       ? "This run is finished. The list is here for the record, and what you actually paid still goes in below."
                       : "The food is bought and on the road. The list is here for the record, and what you actually paid still goes in below."}
@@ -369,7 +424,7 @@ export default async function BatchPage({
                 )}
 
                 {counter.length > 1 && !shopped && (
-                  <p className="rounded-2xl bg-black/[0.03] px-4 py-3 text-sm text-muted">
+                  <p className="rounded-xl border-[1.5px] border-line bg-paper px-4 py-3 text-[14px] text-muted">
                     Put the stops in the order you are driving them. Which one
                     is nearest depends on where you set off from and which
                     branch you are using, so it is yours to say rather than
@@ -378,14 +433,21 @@ export default async function BatchPage({
                 )}
 
                 {counter.map((group, index) => (
-                  <section key={group.restaurant} className="card">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <h3 className="text-lg font-extrabold">
-                        <span className="mr-2 text-muted">Stop {index + 1}</span>
-                        {group.restaurant}
+                  <section key={group.restaurant} className="card p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h3 className="min-w-0">
+                        <span className="ticket block text-muted">
+                          Stop {index + 1}
+                        </span>
+                        <span className="text-[19px] font-bold">{group.restaurant}</span>
                       </h3>
-                      <span className="shrink-0 font-bold">
-                        {naira(group.expectedFoodTotal)}
+                      <span className="shrink-0 text-right">
+                        <span className="ticket block text-muted">
+                          Pay at this counter
+                        </span>
+                        <span className="font-display text-[34px] font-black leading-none">
+                          {naira(group.expectedFoodTotal)}
+                        </span>
                       </span>
                       {/* Only worth arranging when there is more than one,
                           and not once the food is bought: the route is a
@@ -415,48 +477,60 @@ export default async function BatchPage({
                         done={shopped}
                         items={group.lines.map((line) => ({
                           key: `${line.name}|${line.choices.join("|")}`,
-                          text: `${line.qty}× ${line.name}`,
-                          detail:
-                            line.choices.length > 0
-                              ? line.choices.join(", ")
-                              : undefined,
+                          lead: `${line.qty}×`,
+                          text: line.name,
+                          // The each-price, said as the menu, because it is
+                          // the figure to argue with at the counter when the
+                          // till asks for something else.
+                          detail: [
+                            line.choices.join(", "),
+                            `menu ${naira(line.unitPrice)} ea`,
+                          ]
+                            .filter((part) => part !== "")
+                            .join(" · "),
                         }))}
                       />
                     </div>
                   </section>
                 ))}
-                <section className="card">
-                  <h2 className="font-bold">What you pay, stop by stop</h2>
-                  <p className="text-sm text-muted">
-                    Paid orders only. This is the money that leaves your hand at
-                    each restaurant. Tick things off as you buy them; the ticks
-                    are yours alone and change nothing.
-                  </p>
-                  <ul className="mt-3 space-y-1.5 text-sm">
+                <Panel
+                  title="What you pay, stop by stop"
+                  detail="Paid orders only. This is the money that leaves your hand at each restaurant. Tick things off as you buy them; the ticks are yours alone and change nothing."
+                >
+                  <ul className="mt-2 text-[14.5px]">
                     {counter.map((group) => (
-                      <li key={group.restaurant} className="flex justify-between gap-3">
+                      <li
+                        key={group.restaurant}
+                        className="flex justify-between gap-3 border-t-[1.5px] border-[#ece7df] py-2"
+                      >
                         <span>{group.restaurant}</span>
-                        <span className="font-semibold">
+                        <span className="font-mono font-semibold">
                           {naira(group.expectedFoodTotal)}
                         </span>
                       </li>
                     ))}
                     {counter.length === 0 && (
-                      <li className="text-muted">Nothing paid for yet.</li>
+                      <li className="border-t-[1.5px] border-[#ece7df] py-2 text-muted">
+                        Nothing paid for yet.
+                      </li>
                     )}
-                    <li className="flex justify-between gap-3 border-t border-black/10 pt-2 font-extrabold">
-                      <span>{counter.length} stops</span>
-                      <span>{naira(summary.foodCost)}</span>
+                    <li className="flex items-center justify-between gap-3 border-t-[1.5px] border-ink pt-2.5">
+                      <span className="ticket text-muted">
+                        {counter.length} stop{counter.length === 1 ? "" : "s"}
+                      </span>
+                      <span className="font-display text-[34px] font-black leading-none">
+                        {naira(summary.foodCost)}
+                      </span>
                     </li>
                   </ul>
-                </section>
+                </Panel>
 
                 {counter.length > 0 && (
-                  <details className="card">
-                    <summary className="cursor-pointer font-bold text-brand">
+                  <details className="card p-5">
+                    <summary className="cursor-pointer font-display text-[22px] font-black uppercase leading-none text-brand">
                       What it actually cost
                     </summary>
-                    <p className="mt-1 text-sm text-muted">
+                    <p className="mt-1.5 text-[12.5px] text-muted">
                       Only the ones that were different. Most of a run is
                       exactly the menu price, so nothing is listed until you
                       say otherwise.
@@ -467,7 +541,7 @@ export default async function BatchPage({
                         the end of the day is one line rather than a scroll
                         back through every item. */}
                     {summary.reconciled.lines > 0 && (
-                      <div className="rounded-xl bg-black/[0.03] p-3">
+                      <div className="rounded-xl border-[1.5px] border-line bg-shell p-3">
                         <p className="text-sm">
                           <span className="font-bold">
                             {summary.reconciled.lines} of {summary.reconciled.of}
@@ -521,7 +595,7 @@ export default async function BatchPage({
                           <form
                             key={`fixed-${line.key}`}
                             action={setCounterSpend}
-                            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-black/10 px-3 py-2"
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border-[1.5px] border-line px-3 py-2"
                           >
                             <input type="hidden" name="batch_id" value={batch.id} />
                             <input type="hidden" name="line_key" value={line.key} />
@@ -629,7 +703,7 @@ export default async function BatchPage({
                     {counter.some((group) => group.lines.some((line) => line.paid === null)) && (
                     <form
                       action={setCounterSpend}
-                      className="flex flex-wrap items-end gap-2 border-t border-black/10 pt-3"
+                      className="flex flex-wrap items-end gap-2 border-t-[1.5px] border-[#ece7df] pt-3"
                     >
                       <input type="hidden" name="batch_id" value={batch.id} />
                       <div className="min-w-0 flex-1">
@@ -684,17 +758,11 @@ export default async function BatchPage({
                 )}
 
                 {batch.kind === "same_day" && batch.stage === "ordering" && (
-                  <section className="card space-y-3">
-                    <div>
-                      <h2 className="font-bold">Move this car</h2>
-                      <p className="text-sm text-muted">
-                        Ring them, ask whether another window suits, and put it
-                        here. A car moved into a window somebody else already
-                        asked for becomes one trip with theirs, which is one
-                        walk to the counter instead of two. Nobody is told by
-                        this: the agreement happened on the phone.
-                      </p>
-                    </div>
+                  <Panel
+                    title="Move this car"
+                    detail="Ring them, ask whether another window suits, and put it here. A car moved into a window somebody else already asked for becomes one trip with theirs, which is one walk to the counter instead of two. Nobody is told by this: the agreement happened on the phone."
+                    className="space-y-3"
+                  >
                     <form action={moveSameDayCar} className="flex flex-wrap items-end gap-2">
                       <input type="hidden" name="batch_id" value={batch.id} />
                       <div className="min-w-0 flex-1">
@@ -717,7 +785,7 @@ export default async function BatchPage({
                         Nothing else can be reached today.
                       </p>
                     )}
-                  </section>
+                  </Panel>
                 )}
 
               </>
@@ -729,17 +797,13 @@ export default async function BatchPage({
             badge: String(handout.length),
             content: (
               <>
-                <section className="card space-y-2">
-                  <h2 className="font-bold">One bag per name</h2>
-                  <p className="text-sm text-muted">
-                    Anything added later in the week is already merged in. Mark
-                    each one delivered as you hand it over: that is the tick,
-                    and the customer sees it on their own page. Setting the run
-                    itself to &quot;Delivered, every bag&quot; at the top does
-                    all of them at once.
-                  </p>
+                <Panel
+                  title="One bag per name"
+                  detail={`Anything added later in the week is already merged in. Mark each one delivered as you hand it over: that is the tick, and the customer sees it on their own page. Setting the run itself to "Delivered, every bag" at the top does all of them at once.`}
+                  className="space-y-2"
+                >
                   {handout.length > 0 && finished && (
-                    <p className="rounded-2xl bg-mint/10 px-4 py-3 text-sm font-semibold text-mint">
+                    <p className="rounded-xl border-[1.5px] border-mint/40 bg-mint/10 px-4 py-3 text-[14px] font-semibold text-mint">
                       Every bag on this run is marked delivered.
                     </p>
                   )}
@@ -790,7 +854,7 @@ export default async function BatchPage({
                       ),
                     }))}
                   />
-                </section>
+                </Panel>
 
               </>
             ),
@@ -800,19 +864,17 @@ export default async function BatchPage({
             label: "Unpaid",
             badge: String(unpaid.length),
             content: (
-              <section className="card space-y-3">
-                <div>
-                  <h2 className="font-bold">These do not travel</h2>
-                  <p className="text-sm text-muted">
-                    Chase them before the cut-off, or they simply drop out.
-                  </p>
-                </div>
+              <Panel
+                title="These do not travel"
+                detail="Chase them before the cut-off, or they simply drop out."
+                className="space-y-3"
+              >
                 {unpaid.length === 0 ? (
                   <p className="text-sm text-muted">None. Everything is paid for.</p>
                 ) : (
                   <ul className="space-y-3">
                     {unpaid.map((order) => (
-                      <li key={order.id} className="rounded-2xl border border-black/10 p-3">
+                      <li key={order.id} className="rounded-xl border-[1.5px] border-line p-3">
                         <p className="font-semibold">
                           <Link
                             href={`/admin/orders/${order.id}`}
@@ -825,7 +887,7 @@ export default async function BatchPage({
                             className={`ml-2 rounded-full px-2 py-0.5 text-xs font-bold ${
                               order.payment_method === "card"
                                 ? "bg-brand text-white"
-                                : "bg-black/5 text-muted"
+                                : "bg-[#f1ede6] text-ink"
                             }`}
                           >
                             {order.payment_method === "card"
@@ -848,7 +910,7 @@ export default async function BatchPage({
                         <div className="mt-2 flex flex-wrap gap-2">
                           <Link
                             href={`/admin/orders/${order.id}`}
-                            className="chip border-black/10 bg-white"
+                            className="chip bg-paper"
                           >
                             View order
                           </Link>
@@ -856,7 +918,7 @@ export default async function BatchPage({
                             href={messageFor(order)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="chip border-black/10 bg-white"
+                            className="chip bg-paper"
                           >
                             Send payment details on WhatsApp
                           </a>
@@ -879,7 +941,7 @@ export default async function BatchPage({
                     ))}
                   </ul>
                 )}
-              </section>
+              </Panel>
             ),
           },
           {
@@ -887,9 +949,8 @@ export default async function BatchPage({
             label: "Profit",
             content: (
               <>
-                <section className="card space-y-2">
-                  <h2 className="font-bold">Profit on this run</h2>
-                  <dl className="space-y-1 text-sm">
+                <Panel title="Profit on this run" className="space-y-2">
+                  <dl className="mt-2 space-y-1 text-[14.5px]">
                     <Row label="Collected from customers" value={naira(summary.gross)} />
                     {counter.map((group) => (
                       <Row
@@ -952,29 +1013,24 @@ export default async function BatchPage({
                     )}
                   </dl>
                   <p
-                    className={`border-t border-black/10 pt-3 text-3xl font-extrabold ${
+                    className={`border-t-[1.5px] border-ink pt-3 font-display text-[40px] font-black leading-[1.05] ${
                       summary.profit >= 0 ? "text-mint" : "text-brand"
                     }`}
                   >
                     {naira(summary.profit)}
                   </p>
-                  <p className="text-sm text-muted">
+                  <p className="text-[12.5px] text-muted">
                     {summary.costs === 0
                       ? "Fuel and driver are not in this yet. Put them in below and this becomes the real number."
                       : `After ${naira(summary.costs)} of fuel, driver and anything else.`}
                   </p>
-                </section>
+                </Panel>
 
-                <section className="card space-y-3">
-                  <div>
-                    <h2 className="font-bold">What this run cost you</h2>
-                    <p className="text-sm text-muted">
-                      Fill these in on the night. They come straight off the profit
-                      above, and off this run in the dashboard. What the food
-                      cost is not here: it is priced at the counter, item by
-                      item, under At the counter.
-                    </p>
-                  </div>
+                <Panel
+                  title="What this run cost you"
+                  detail="Fill these in on the night. They come straight off the profit above, and off this run in the dashboard. What the food cost is not here: it is priced at the counter, item by item, under At the counter."
+                  className="space-y-3"
+                >
 
                   {/* A run reconciled the old way, with one figure for the
                       whole shop. It still counts, and this is the way out of
@@ -982,7 +1038,7 @@ export default async function BatchPage({
                   {batch.food_spend > 0 && summary.reconciled.lines === 0 && (
                     <form
                       action={setRunCosts}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-black/[0.03] px-3 py-2"
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border-[1.5px] border-line bg-shell px-3 py-2"
                     >
                       <input type="hidden" name="batch_id" value={batch.id} />
                       <input type="hidden" name="fuel_cost" value={batch.fuel_cost || ""} />
@@ -1002,7 +1058,7 @@ export default async function BatchPage({
                       </span>
                       <ConfirmButton
                         tone="bare"
-                        className="chip border-black/10 bg-white text-brand"
+                        className="chip bg-paper text-brand"
                         confirm="Yes, back to menu prices"
                       >
                         Clear it
@@ -1076,20 +1132,22 @@ export default async function BatchPage({
                     </div>
                     <SaveButton>Save costs</SaveButton>
                   </form>
-                </section>
+                </Panel>
 
                 <ShortGroups groups={groupsShort} />
 
                 {refunds.length > 0 && (
-                  <section className="card space-y-2">
-                    <h2 className="font-bold">Refunds owed</h2>
-                    <p className="text-sm text-muted">
-                      A group shrank when unpaid shares dropped out, so its delivery
-                      fee fell a band. Send these back tonight.
-                    </p>
-                    <ul className="space-y-1 text-sm">
+                  <Panel
+                    title="Refunds owed"
+                    detail="A group shrank when unpaid shares dropped out, so its delivery fee fell a band. Send these back tonight."
+                    className="space-y-2"
+                  >
+                    <ul className="mt-2 text-[14.5px]">
                       {refunds.map((order) => (
-                        <li key={order.id} className="flex justify-between gap-3">
+                        <li
+                          key={order.id}
+                          className="flex justify-between gap-3 border-t-[1.5px] border-[#ece7df] py-2"
+                        >
                           <span>
                             {order.for_name ?? order.customer_name} ·{" "}
                             {formatPhone(order.customer_phone)}
@@ -1100,7 +1158,7 @@ export default async function BatchPage({
                         </li>
                       ))}
                     </ul>
-                  </section>
+                  </Panel>
                 )}
               </>
             ),
@@ -1110,16 +1168,11 @@ export default async function BatchPage({
             label: "Controls",
             content: (
               <>
-                <section className="card space-y-3">
-                  <div>
-                    <h2 className="font-bold">Where the food is</h2>
-                    <p className="text-sm text-muted">
-                      The same stages as the dropdown at the top of this page.
-                      Everyone in this run sees the stage on their order page,
-                      and the run closes to new orders by itself the moment you
-                      leave &quot;Ordering&quot;.
-                    </p>
-                  </div>
+                <Panel
+                  title="Where the food is"
+                  detail={`The same stages as the dropdown at the top of this page. Everyone in this run sees the stage on their order page, and the run closes to new orders by itself the moment you leave "Ordering".`}
+                  className="space-y-3"
+                >
                   <div className="flex flex-wrap gap-2">
                     {STAGES.filter((stage) => stage !== "ordering").map((stage) => (
                       <form action={setBatchStage} key={stage}>
@@ -1138,14 +1191,16 @@ export default async function BatchPage({
                       </form>
                     ))}
                   </div>
-                </section>
+                </Panel>
 
-                <section className="card space-y-3">
+                <section className="card space-y-3 p-5">
                   <form action={updateRun} className="space-y-3">
                     <input type="hidden" name="batch_id" value={batch.id} />
                     <div>
-                      <h2 className="font-bold">This run</h2>
-                      <p className="text-sm text-muted">
+                      <h2 className="font-display text-[26px] font-black uppercase leading-none">
+                        This run
+                      </h2>
+                      <p className="mt-1 text-[12.5px] text-muted">
                         {empty
                           ? "Nobody has ordered into it yet, so everything about it can still change."
                           : "It has orders on it, so the day and the slot are fixed. The window and the cut-off can still move."}
@@ -1153,7 +1208,7 @@ export default async function BatchPage({
                     </div>
 
                     {areas.length > 0 && (
-                      <div className="space-y-2 rounded-2xl bg-shell p-3">
+                      <div className="space-y-2 rounded-xl border-[1.5px] border-line bg-shell p-3">
                         <input type="hidden" name="areas_set" value="1" />
                         <p className="label mb-0">
                           Where this {batch.kind === "skincare" ? "drop" : "car"} goes
@@ -1183,7 +1238,7 @@ export default async function BatchPage({
                         person, wherever they asked, and the skincare drop is
                         its own shop. */}
                     {batch.kind === "run" && counters.length > 0 && (
-                      <div className="space-y-2 rounded-2xl bg-shell p-3">
+                      <div className="space-y-2 rounded-xl border-[1.5px] border-line bg-shell p-3">
                         <input type="hidden" name="places_set" value="1" />
                         <p className="label mb-0">Which counters it stops at</p>
                         <p className="text-xs text-muted">
@@ -1282,10 +1337,12 @@ export default async function BatchPage({
                   </form>
                 </section>
 
-                <section className="card space-y-3">
+                <section className="card space-y-3 p-5">
                   <form action={setFlashFee} className="space-y-2">
                     <input type="hidden" name="batch_id" value={batch.id} />
-                    <h2 className="font-bold">Flash fee drop</h2>
+                    <h2 className="font-display text-[26px] font-black uppercase leading-none">
+                      Flash fee drop
+                    </h2>
                     <p className="text-xs text-muted">
                       For rescuing a thin batch, not rewarding customers. Never
                       announce it in advance, never make it a fixed day, and always
@@ -1325,7 +1382,7 @@ export default async function BatchPage({
                     </p>
                   </form>
 
-                  <form action={setBatchCapacity} className="flex items-end gap-2 border-t border-black/5 pt-3">
+                  <form action={setBatchCapacity} className="flex items-end gap-2 border-t-[1.5px] border-[#ece7df] pt-3">
                     <input type="hidden" name="batch_id" value={batch.id} />
                     <div className="grow">
                       <label className="label" htmlFor="capacity">
@@ -1342,9 +1399,11 @@ export default async function BatchPage({
                     <SaveButton className="shrink-0">Save</SaveButton>
                   </form>
 
-                  <div className="border-t border-black/5 pt-3">
-                    <h2 className="font-bold">Is this run taking orders?</h2>
-                    <p className="mt-0.5 text-sm text-muted">
+                  <div className="border-t-[1.5px] border-[#ece7df] pt-3">
+                    <h2 className="font-display text-[26px] font-black uppercase leading-none">
+                      Is this run taking orders?
+                    </h2>
+                    <p className="mt-1 text-[12.5px] text-muted">
                       Currently {batch.status}. The stages above set this for you;
                       these two are for overriding it by hand.
                     </p>
@@ -1389,9 +1448,11 @@ export default async function BatchPage({
                     </p>
 
                     {empty && (
-                      <form action={deleteRun} className="mt-4 border-t border-black/5 pt-3">
+                      <form action={deleteRun} className="mt-4 border-t-[1.5px] border-[#ece7df] pt-3">
                         <input type="hidden" name="batch_id" value={batch.id} />
-                        <h3 className="font-bold">Delete this run</h3>
+                        <h3 className="font-display text-[22px] font-black uppercase leading-none">
+                          Delete this run
+                        </h3>
                         <p className="mt-0.5 text-xs text-muted">
                           Nothing has been ordered into it, so it can go
                           entirely. A run with orders on it is cancelled

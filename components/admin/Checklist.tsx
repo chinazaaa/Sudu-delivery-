@@ -16,7 +16,17 @@ export default function Checklist({
 }: {
   /** Anything unique to this list, so two lists never share their ticks. */
   id: string;
-  items: { key: string; text: string; detail?: string }[];
+  items: {
+    key: string;
+    text: string;
+    detail?: string;
+    /**
+     * The count, set apart from the name. At a counter the number is what
+     * gets said out loud and the name only confirms it, so it is read first
+     * and in the display face rather than buried in front of the words.
+     */
+    lead?: string;
+  }[];
   label: string;
   /** The work this list was for is over: show it settled, not half-ticked. */
   done?: boolean;
@@ -73,32 +83,35 @@ export default function Checklist({
         )}
       </div>
 
-      <ul className="space-y-1.5">
+      <ul className="divide-y-[1.5px] divide-[#ece7df] border-t-[1.5px] border-[#ece7df]">
         {items.map((item) => (
           <li key={item.key}>
             <button
               type="button"
               onClick={() => toggle(item.key)}
               disabled={done}
-              className={`flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left disabled:opacity-80 ${
-                done || ticked[item.key]
-                  ? "border-mint/30 bg-mint/5 text-muted"
-                  : "border-black/10 bg-white"
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left disabled:opacity-80 ${
+                done || ticked[item.key] ? "bg-mint/5 opacity-60" : ""
               }`}
             >
               <span
-                className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-md border text-xs font-black ${
+                className={`grid size-7 shrink-0 place-items-center rounded-lg border-2 text-[15px] font-black ${
                   done || ticked[item.key]
                     ? "border-mint bg-mint text-white"
-                    : "border-black/20"
+                    : "border-ink bg-paper"
                 }`}
               >
                 {done || ticked[item.key] ? "✓" : ""}
               </span>
-              <span className={done || ticked[item.key] ? "line-through" : ""}>
-                <span className="block font-semibold">{item.text}</span>
+              {item.lead && (
+                <span className="min-w-[48px] shrink-0 font-display text-[30px] font-black leading-none">
+                  {item.lead}
+                </span>
+              )}
+              <span className={`min-w-0 ${done || ticked[item.key] ? "line-through" : ""}`}>
+                <span className="block text-[15.5px] font-semibold">{item.text}</span>
                 {item.detail && (
-                  <span className="block text-sm text-muted">{item.detail}</span>
+                  <span className="block text-[12.5px] text-muted">{item.detail}</span>
                 )}
               </span>
             </button>
