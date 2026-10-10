@@ -324,8 +324,20 @@ export default async function AdminHome() {
       <div className="mb-3 sm:hidden">
         {(left.length > 0 || owing.length > 0) && (
           <div className="mb-[11px] grid grid-cols-2 gap-[9px]">
+            {/* Both of these go somewhere, because both of them are a job.
+
+                They read as the same fact as the line in Needs doing
+                underneath, in bigger type and with the money in it, and
+                that line opens the page that deals with it. A tile that
+                says you owe somebody five hundred naira and then does
+                nothing when it is pressed is a tile that has to be pressed
+                twice to be believed. Same addresses as the lines below, so
+                the two cannot drift apart. */}
             {left.length > 0 && (
-              <div className="card border-volt-line bg-brand-tint px-[13px] py-[11px]">
+              <Link
+                href="/admin/carts"
+                className="card border-volt-line bg-brand-tint px-[13px] py-[11px] transition hover:border-ink"
+              >
                 <p className="ticket text-muted">Left behind</p>
                 <p className="font-display text-[27px] font-black leading-none">
                   {naira(left.reduce((total, cart) => total + cart.value, 0))}
@@ -334,10 +346,13 @@ export default async function AdminHome() {
                   {left.length} cart{left.length === 1 ? "" : "s"}
                   {inTime > 0 ? ` · ${inTime} still live` : ""}
                 </p>
-              </div>
+              </Link>
             )}
             {owing.length > 0 && (
-              <div className="card border-brand-dark px-[13px] py-[11px]">
+              <Link
+                href="/admin/promoters?owed=1#owed"
+                className="card border-brand-dark px-[13px] py-[11px] transition hover:border-ink"
+              >
                 <p className="ticket text-brand-dark">You owe promoters</p>
                 <p className="font-display text-[27px] font-black leading-none text-brand-dark">
                   {naira(owing.reduce((total, one) => total + one.owed, 0))}
@@ -345,7 +360,7 @@ export default async function AdminHome() {
                 <p className="hint">
                   {owing.slice(0, 3).map((one) => one.name).join(", ")}
                 </p>
-              </div>
+              </Link>
             )}
           </div>
         )}
