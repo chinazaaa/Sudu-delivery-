@@ -151,17 +151,48 @@ export default async function OrdersPage({
   const today = lagosToday();
   const rank = (status: string) =>
     status === "pending" ? 0 : status === "delivered" ? 2 : 1;
+
+  /*
+   * What counts as today.
+   *
+   * Everything that came in today, which is what "New in" says on the tin:
+   * an order placed this morning for Friday's run is new in this morning,
+   * and a screen that waited until Friday to mention it would be a screen
+   * nobody could trust.
+   *
+   * And everything on a run that is today, whenever it was placed. Those
+   * are the bags going out in a few hours, and an order taken yesterday for
+   * tonight is exactly the one that used to be invisible here. Dropping it
+   * would put it back behind the run screen, which is the thing this cut was
+   * opened up to fix.
+   *
+   * Nearly always the same orders, because the cut-off is the same morning.
+   * Where they differ, both halves are somebody's job today.
+   */
+  const placedToday = (iso: string) => {
+    const at = new Date(iso);
+    return !Number.isNaN(at.getTime()) && lagosToday(at) === today;
+  };
   const todays = everything
-    .filter((order) => order.runDate === today && !isGone(order.status))
+    .filter(
+      (order) =>
+        !isGone(order.status) &&
+        (placedToday(order.created_at) || order.runDate === today)
+    )
     .sort(
       (a, b) =>
         rank(a.status) - rank(b.status) || a.created_at.localeCompare(b.created_at)
     );
 
-  // Money still out on a run that is not today. The chasing list the cut
-  // started as, kept because an order from last Friday is the one most worth
-  // a message and today's screen would otherwise drop it.
-  const olderUnpaid = waiting.filter((order) => order.runDate !== today);
+  // Money still out from before today. The chasing list the cut started as,
+  // kept because an order from last Friday is the one most worth a message
+  // and today's screen would otherwise drop it.
+  //
+  // Measured against what is already above rather than against the date, now
+  // that today is the wider of two answers: an unpaid order placed this
+  // morning for Friday's run is new in today and is not also an old debt.
+  const above = new Set(todays.map((order) => order.id));
+  const olderUnpaid = waiting.filter((order) => !above.has(order.id));
 
   // Paid for and still to be handed over, today. The other half of the work.
   const toHandOver = todays.filter((order) => order.status === "paid");
@@ -302,7 +333,8 @@ export default async function OrdersPage({
         {todays.length > 0 && (
           <>
             <p className="ticket mb-2 text-muted">
-              Today · {todays.length} {todays.length === 1 ? "order" : "orders"}
+              New in today · {todays.length}{" "}
+              {todays.length === 1 ? "order" : "orders"}
             </p>
             <div className="space-y-3">
               {todays.map((order) =>

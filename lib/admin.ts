@@ -2,6 +2,7 @@ import { db } from "./supabase";
 import { feeFor } from "./fees";
 import { activeBands } from "./settings";
 import { getBatch } from "./batches";
+import { lagosToday } from "./time";
 import { isGone, isPaid, NOT_ORDERS_SQL } from "./orders";
 import { groupShortfalls, refundsOwed, settleGroupFees, type GroupShortfall } from "./groups";
 import { linesFor, type OrderLine } from "./orders";
@@ -1199,6 +1200,56 @@ export function notPriced(sheet: BatchSheet): number {
 }
 
 /**
+ * Bags paid for and not yet handed over, on a run that is today.
+ *
+ * Two small queries rather than a join, because this runs on every admin
+ * page: the runs for today, then the paid orders on them. Nought on any
+ * trouble at all, since a badge is never worth failing the page it sits on.
+ */
+async function toHandOverToday(): Promise<number> {
+  try {
+    const today = lagosToday();
+
+    const { data: runs } = await db()
+      .from("batches")
+      .select("id")
+      .eq("run_date", today);
+    const ids = ((runs ?? []) as { id: string }[]).map((one) => one.id);
+
+    // Paid and not yet handed over, counted the two ways the screen counts
+    // it: on a run that is today, or placed today for a run still to come.
+    // By id rather than by adding two numbers, because an order placed this
+    // morning for tonight is both and is one bag.
+    const seen = new Set<string>();
+
+    if (ids.length > 0) {
+      const { data } = await db()
+        .from("orders")
+        .select("id")
+        .in("batch_id", ids)
+        .eq("status", "paid");
+      for (const one of (data ?? []) as { id: string }[]) seen.add(one.id);
+    }
+
+    const { data: fresh } = await db()
+      .from("orders")
+      .select("id, created_at")
+      .eq("status", "paid")
+      // A day either side of Lagos midnight, narrowed properly below: the
+      // column is an instant and the day is a Lagos day.
+      .gte("created_at", new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString());
+    for (const one of (fresh ?? []) as { id: string; created_at: string }[]) {
+      const at = new Date(one.created_at);
+      if (!Number.isNaN(at.getTime()) && lagosToday(at) === today) seen.add(one.id);
+    }
+
+    return seen.size;
+  } catch {
+    return 0;
+  }
+}
+
+/**
  * What is waiting, by the section that deals with it.
  *
  * The rail carries a number beside Orders and a dot beside the heading
@@ -1218,7 +1269,13 @@ export async function waitingCounts(): Promise<Record<string, number>> {
       .eq("status", "pending");
 
     const out: Record<string, number> = {};
-    if (count && count > 0) out["/admin/orders"] = count;
+    // Money owed, plus today's bags still to go out: the same two things the
+    // New in cut counts on its own control. Counting only the unpaid ones
+    // here was right while that screen only held unpaid ones, and the day it
+    // started holding today's work as well the rail began promising a
+    // smaller number than the screen it points at.
+    const orders = (count ?? 0) + (await toHandOverToday());
+    if (orders > 0) out["/admin/orders"] = orders;
 
     // Carts filled in and walked away from. The rail carries this one in the
     // quieter grey: it is work waiting rather than money already owed.
