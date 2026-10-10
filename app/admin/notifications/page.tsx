@@ -1,6 +1,5 @@
 import PageHeader from "@/components/admin/PageHeader";
 import Figure from "@/components/admin/Figure";
-import Panel from "@/components/admin/Panel";
 import DealPush from "@/components/admin/DealPush";
 import { menuView } from "@/lib/menu";
 import { dealAudience } from "@/lib/push";
@@ -45,8 +44,11 @@ export default async function NotificationsPage() {
       />
 
       {/* One column on a phone, where the board puts the two figures over
-          the form and the warning under it, and two from the desk width,
-          where the writing is the work and everything else is the aside. */}
+          the form and everything else under it, and two from the desk width,
+          where the writing is the work and the figures are the aside.
+          The warning about sending too often moved into the form, under the
+          boxes it is a warning about: standing in this aside, a phone read
+          it before there was anything to send. */}
       <div className="grid items-start gap-[18px] lg:grid-cols-[1.6fr_1fr]">
         <div className="order-2 lg:order-1">
           <DealPush
@@ -86,24 +88,6 @@ export default async function NotificationsPage() {
             </div>
           </div>
 
-          {/* A soft note rather than the Ink outline: it is worth reading
-              before sending and it is not an error. */}
-          <div className="soft border-volt-line bg-brand-tint p-3.5">
-            <p className="text-sm font-bold">Send these sparingly</p>
-            <p className="hint mt-1">
-              More than about two a week and people turn them off in the app.
-              There is no undo once one has gone.
-            </p>
-          </div>
-
-          <Panel title="Where it lands" size="sm">
-            <p className="hint">
-              Today&apos;s run, the shop, one restaurant, a collection or a
-              basket you have already filled. Picked from the lists in the
-              form rather than typed, because a notification that opens the
-              wrong screen is worse than one nobody sent.
-            </p>
-          </Panel>
         </div>
       </div>
     </div>

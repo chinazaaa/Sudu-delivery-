@@ -170,40 +170,47 @@ export default async function SchedulePage() {
       <PageHeader
         title="Schedule"
         detail={`The pattern every week follows. Runs are opened from it automatically, ${RUN_HORIZON_DAYS} days ahead.`}
-        backHref="/admin/runs"
-        backLabel="All runs"
         actions={
           <>
-            {/* Two different kinds of new, and the diary is where somebody
-                stands when they want either: a day added to the pattern that
-                repeats every week, or one car on a date that is not part of
-                it. Both beside the way out to the runs themselves, because
-                reaching a one off through the runs list was three taps from
-                here. */}
-            <a href="#add" className="btn-admin">
-              Add a day
+            {/* The board puts one button on this line, and three of them on a
+                phone is three forty-four pixel buttons standing over the
+                first card. Two different kinds of new is the most this row
+                can carry: a slot added to the pattern that repeats every
+                week, or one car on a date that is not part of it. The way
+                out to the runs themselves moved into the card below, where
+                the sentence about what is open already is. */}
+            <a href="#add" className="btn-admin btn-admin-sm">
+              Add a slot
             </a>
-            <Link href="/admin/runs?new=1" className="btn-admin">
+            <Link href="/admin/runs?new=1" className="btn-admin btn-admin-sm">
               New run
-            </Link>
-            <Link href="/admin/runs" className="btn-admin">
-              See the runs
             </Link>
           </>
         }
       />
 
       <div className="card mb-3.5 p-3.5 sm:p-4">
-        <h2 className="text-[14.5px] font-bold">
-          {until
-            ? `Ordering is open through ${runDateLabel(until)}`
-            : "No runs are open"}
-        </h2>
-        <p className="hint mt-1">
-          {until
-            ? `Customers see the runs closing in the next ${horizon} days. The rest are yours to plan.`
-            : "Nobody can order anything. Set your week below and open a month."}
-        </p>
+        {/* The board draws this card's first line as a row with room on the
+            end of it, which is where the way out to the runs now lives: the
+            sentence is about what is open, and the runs are what it is
+            talking about. */}
+        <div className="flex items-start gap-2.5">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[14.5px] font-bold">
+              {until
+                ? `Ordering is open to ${runDateLabel(until)}`
+                : "No runs are open"}
+            </h2>
+            <p className="hint mt-1">
+              {until
+                ? `Customers see the runs closing in the next ${horizon} days. The rest are yours to plan.`
+                : "Nobody can order anything. Set your week below and open a month."}
+            </p>
+          </div>
+          <Link href="/admin/runs" className="btn-admin btn-admin-sm shrink-0">
+            See the runs
+          </Link>
+        </div>
 
         {/* The three numbers sit in this card rather than in tiles of their
             own, because they are all answers to the sentence above them.
@@ -309,163 +316,200 @@ export default async function SchedulePage() {
             </div>
 
             {day.runs.map((run) => (
-              <details
+              <div
                 key={run.id}
-                className="border-t-[1.5px] border-rule [&_summary::-webkit-details-marker]:hidden"
+                className="flex items-start gap-2.5 border-t-[1.5px] border-rule"
               >
-                {/* The row the board draws: which run it is, when it closes,
-                    when it lands. Everything you could change about it is
-                    behind it rather than on it. */}
-                <summary className="flex min-h-[48px] cursor-pointer list-none items-center gap-2.5 py-2.5">
-                  {run.active ? (
-                    <span className="tag bg-mint-tint text-mint">on</span>
-                  ) : (
-                    <span className="tag bg-wash text-ink">paused</span>
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold capitalize">
-                      {SLOT_LABEL[run.slot]}
-                    </span>
-                    <span className="hint block">
-                      Closes {run.cut_off} ·{" "}
-                      {run.window_text.trim() || DELIVERY_WINDOWS[run.slot]}
-                    </span>
-                  </span>
-                  <span className="text-[17px] text-muted">›</span>
-                </summary>
-
-                {/* Editable in place: a cut-off that moves half an hour is the
-                    most likely change anyone makes here. */}
-                <form action={saveScheduleRun} className="space-y-3 pb-3.5">
-                  <input type="hidden" name="weekday" value={run.weekday} />
-                  <input type="hidden" name="slot" value={run.slot} />
-                  {/* A button carries one name and one value, so what Pause and
-                      Save each need to know about the paused state lives here.
-                      Without this, Pause worked and Resume did nothing. */}
-                  <input type="hidden" name="active" value={String(run.active)} />
-                  <input type="hidden" name="next_active" value={String(!run.active)} />
-
-                  <div className="grid gap-3 sm:grid-cols-[8rem_1fr]">
-                    <div>
-                      <label className="label" htmlFor={`cut-${run.id}`}>
-                        Closes
-                      </label>
-                      <input
-                        id={`cut-${run.id}`}
-                        name="cut_off"
-                        type="time"
-                        defaultValue={run.cut_off}
-                        className="field field-admin"
+                {/*
+                 * On or off, as the switch the board draws rather than a tag
+                 * with a form folded away behind it: whether a run happens is
+                 * the one thing anybody changes from this page, and it was
+                 * two taps and a scroll down an edit form away.
+                 *
+                 * The same shape as the stock page's switch, and the same
+                 * reasoning: a switch whose only state is a colour fails the
+                 * fourth rule of the design system and fails in sunlight, so
+                 * the state is said in words beside it. The board draws it
+                 * bare; the rules win.
+                 *
+                 * Beside the fold rather than inside it, because a button in
+                 * a summary toggles the summary as well as submitting, and
+                 * pausing a run would have opened its edit form every time.
+                 */}
+                <form action={toggleScheduleRun} className="shrink-0 pt-2">
+                  <input type="hidden" name="schedule_id" value={run.id} />
+                  <input
+                    type="hidden"
+                    name="next_active"
+                    value={String(!run.active)}
+                  />
+                  <ActionButton
+                    busy="…"
+                    done="Done ✓"
+                    role="switch"
+                    aria-checked={run.active}
+                    aria-label={`${day.name} ${SLOT_LABEL[run.slot]} run`}
+                    className="btn-admin btn-admin-sm gap-2 border-transparent bg-transparent px-0 hover:bg-transparent"
+                  >
+                    <span
+                      aria-hidden
+                      className={`relative block h-[27px] w-[46px] shrink-0 rounded-full transition-colors ${
+                        run.active ? "bg-mint" : "bg-line"
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-[3px] block size-[21px] rounded-full bg-paper transition-all ${
+                          run.active ? "left-[22px]" : "left-[3px]"
+                        }`}
                       />
-                    </div>
-                    {/* Two times on a clock, worded the same way a run's own
-                        window is worded, rather than a sentence typed twice and
-                        spelt two different ways. */}
-                    <div>
-                      <label className="label" htmlFor={`from-${run.id}`}>
-                        These runs arrive between
-                      </label>
-                      <span className="flex items-center gap-2">
-                        <input
-                          id={`from-${run.id}`}
-                          name="window_from"
-                          type="time"
-                          defaultValue={run.window_from}
-                          className="field field-admin w-32"
-                        />
-                        <span className="text-sm text-muted">and</span>
-                        <input
-                          name="window_to"
-                          type="time"
-                          defaultValue={run.window_to}
-                          aria-label="Latest arrival"
-                          className="field field-admin w-32"
-                        />
+                    </span>
+                    <span className="text-[12px] font-bold">
+                      {run.active ? "On" : "Paused"}
+                    </span>
+                  </ActionButton>
+                </form>
+
+                <details className="min-w-0 flex-1 [&_summary::-webkit-details-marker]:hidden">
+                  {/* The row the board draws: which run it is, when it closes,
+                      when it lands. Everything you could change about it is
+                      behind it rather than on it. */}
+                  <summary className="flex min-h-[48px] cursor-pointer list-none items-center gap-2.5 py-2.5">
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold capitalize">
+                        {SLOT_LABEL[run.slot]}
                       </span>
-                      <p className="hint mt-1">
-                        Customers are told:{" "}
-                        <span className="font-semibold">
-                          {run.window_text.trim() || DELIVERY_WINDOWS[run.slot]}
+                      <span className="hint block">
+                        Closes {run.cut_off} · delivers{" "}
+                        {run.window_text.trim() || DELIVERY_WINDOWS[run.slot]}
+                      </span>
+                    </span>
+                    <span className="text-[17px] text-muted">›</span>
+                  </summary>
+
+                  {/* Editable in place: a cut-off that moves half an hour is the
+                      most likely change anyone makes here. */}
+                  <form action={saveScheduleRun} className="space-y-3 pb-3.5">
+                    <input type="hidden" name="weekday" value={run.weekday} />
+                    <input type="hidden" name="slot" value={run.slot} />
+                    {/* Saving a time must not resume a paused run, so the
+                        state it is already in travels with the form. Pausing
+                        is the switch on the row, which carries its own. */}
+                    <input type="hidden" name="active" value={String(run.active)} />
+
+                    <div className="grid gap-3 sm:grid-cols-[8rem_1fr]">
+                      <div>
+                        <label className="label" htmlFor={`cut-${run.id}`}>
+                          Closes
+                        </label>
+                        <input
+                          id={`cut-${run.id}`}
+                          name="cut_off"
+                          type="time"
+                          defaultValue={run.cut_off}
+                          className="field field-admin"
+                        />
+                      </div>
+                      {/* Two times on a clock, worded the same way a run's own
+                          window is worded, rather than a sentence typed twice and
+                          spelt two different ways. */}
+                      <div>
+                        <label className="label" htmlFor={`from-${run.id}`}>
+                          These runs arrive between
+                        </label>
+                        <span className="flex items-center gap-2">
+                          <input
+                            id={`from-${run.id}`}
+                            name="window_from"
+                            type="time"
+                            defaultValue={run.window_from}
+                            className="field field-admin w-32"
+                          />
+                          <span className="text-sm text-muted">and</span>
+                          <input
+                            name="window_to"
+                            type="time"
+                            defaultValue={run.window_to}
+                            aria-label="Latest arrival"
+                            className="field field-admin w-32"
+                          />
                         </span>
-                        {run.window_text.trim() === "" && " (nothing set yet)"}
-                      </p>
+                        <p className="hint mt-1">
+                          Customers are told:{" "}
+                          <span className="font-semibold">
+                            {run.window_text.trim() || DELIVERY_WINDOWS[run.slot]}
+                          </span>
+                          {run.window_text.trim() === "" && " (nothing set yet)"}
+                        </p>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Where these runs go. Said once here rather than ticked
-                      on every run after it opens: runs open weeks ahead by
-                      themselves, and a week that was missed is a restaurant
-                      nobody can order from with no sign of why. */}
-                  {areas.length > 0 && (
-                    <div className="soft bg-shell p-3">
-                      <input type="hidden" name="areas_set" value="1" />
-                      <p className="label mb-0">Where these runs go</p>
-                      <p className="hint mb-1.5">
-                        They always pass Sangotedo. Tick anywhere else they go,
-                        and those restaurants can be ordered onto them.
-                      </p>
-                      <span className="flex flex-wrap gap-x-4 gap-y-2">
-                        {areas.map((one) => (
-                          <label
-                            key={one.id}
-                            className="flex min-h-[44px] items-center gap-2 text-sm"
-                          >
-                            <input
-                              type="checkbox"
-                              name="area"
-                              value={one.id}
-                              defaultChecked={areasOfRun(run.areas).includes(one.id)}
-                              className="size-5"
-                            />
-                            {one.name}
-                          </label>
-                        ))}
-                      </span>
-                    </div>
-                  )}
+                    {/* Where these runs go. Said once here rather than ticked
+                        on every run after it opens: runs open weeks ahead by
+                        themselves, and a week that was missed is a restaurant
+                        nobody can order from with no sign of why. */}
+                    {areas.length > 0 && (
+                      <div className="soft bg-shell p-3">
+                        <input type="hidden" name="areas_set" value="1" />
+                        <p className="label mb-0">Where these runs go</p>
+                        <p className="hint mb-1.5">
+                          They always pass Sangotedo. Tick anywhere else they go,
+                          and those restaurants can be ordered onto them.
+                        </p>
+                        <span className="flex flex-wrap gap-x-4 gap-y-2">
+                          {areas.map((one) => (
+                            <label
+                              key={one.id}
+                              className="flex min-h-[44px] items-center gap-2 text-sm"
+                            >
+                              <input
+                                type="checkbox"
+                                name="area"
+                                value={one.id}
+                                defaultChecked={areasOfRun(run.areas).includes(one.id)}
+                                className="size-5"
+                              />
+                              {one.name}
+                            </label>
+                          ))}
+                        </span>
+                      </div>
+                    )}
 
-                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Only Save here now. Pausing is the switch on the row
+                        above, where it can be read and changed without
+                        opening anything. */}
                     <SaveButton look="btn-admin" className="shrink-0">
                       Save this run
                     </SaveButton>
-                    <ActionButton
-                      formAction={toggleScheduleRun}
-                      name="schedule_id"
-                      value={run.id}
-                      className="btn-admin"
-                      done={run.active ? "Paused ✓" : "Back on ✓"}
+
+                    <p className="hint">
+                      Changing a time moves every run still to come that nobody
+                      has ordered on. A run with orders on it keeps the time its
+                      customers were told, and is editable on the run itself.
+                    </p>
+                  </form>
+
+                  {/* Its own form, because removing goes by the day and the slot
+                      rather than by the row id, and because a destructive button
+                      sharing a form with Save is one mis-tap from a week with a
+                      hole in it. */}
+                  <form action={deleteScheduleRun} className="flex items-center gap-2.5 border-t-[1.5px] border-rule py-3">
+                    <input type="hidden" name="weekday" value={run.weekday} />
+                    <input type="hidden" name="slot" value={run.slot} />
+                    <p className="hint flex-1">
+                      Removing is forever and takes this run&apos;s empty future
+                      runs with it. Pausing keeps the times.
+                    </p>
+                    <ConfirmButton
+                      tone="bad"
+                      className="min-h-[44px] shrink-0"
+                      confirm="Yes, remove it"
                     >
-                      {run.active ? "Pause" : "Resume"}
-                    </ActionButton>
-                  </div>
-
-                  <p className="hint">
-                    Changing a time moves every run still to come that nobody
-                    has ordered on. A run with orders on it keeps the time its
-                    customers were told, and is editable on the run itself.
-                  </p>
-                </form>
-
-                {/* Its own form, because removing goes by the day and the slot
-                    rather than by the row id, and because a destructive button
-                    sharing a form with Save is one mis-tap from a week with a
-                    hole in it. */}
-                <form action={deleteScheduleRun} className="flex items-center gap-2.5 border-t-[1.5px] border-rule py-3">
-                  <input type="hidden" name="weekday" value={run.weekday} />
-                  <input type="hidden" name="slot" value={run.slot} />
-                  <p className="hint flex-1">
-                    Removing is forever and takes this run&apos;s empty future
-                    runs with it. Pausing keeps the times.
-                  </p>
-                  <ConfirmButton
-                    tone="bad"
-                    className="min-h-[44px] shrink-0"
-                    confirm="Yes, remove it"
-                  >
-                    Remove
-                  </ConfirmButton>
-                </form>
-              </details>
+                      Remove
+                    </ConfirmButton>
+                  </form>
+                </details>
+              </div>
             ))}
           </div>
         ))}
@@ -473,7 +517,7 @@ export default async function SchedulePage() {
 
       <div className="mt-3.5 grid items-start gap-[18px] xl:grid-cols-2">
         <Panel
-          title="Add another day"
+          title="Add a slot"
           detail="A day, the run on it, and when it closes. Everything else can be set after it is on the week."
           className="scroll-mt-4"
         >

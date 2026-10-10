@@ -5,8 +5,15 @@ import { sendDealPush, type DealPushState } from "@/app/admin/actions";
 
 type Restaurant = { id: string; name: string; categories: { id: string; name: string }[] };
 
-/** The longest the notification itself will carry, which the counter reads. */
-const TITLE_MOST = 80;
+/*
+ * The longest the notification itself will carry, which the counter reads.
+ *
+ * Forty, not eighty: forty is about what a lock screen shows before it cuts
+ * the line off, and a title nobody can read to the end is the whole reason
+ * the preview above the boxes exists. The send itself allows more, so this
+ * is the stricter of the two and the one that matters.
+ */
+const TITLE_MOST = 40;
 const BODY_MOST = 180;
 
 /** One of the board's starting points: a kind, and what it fills in. */
@@ -14,6 +21,10 @@ type Template = {
   kind: string;
   title: string;
   body: string;
+  /** What this starting point is for, which is what the card says under its
+   *  title. The body itself is already shown in the preview, and printed
+   *  here as well it was two copies of the same sentence in one screen. */
+  note: string;
   /** The same value the Opens list uses, so picking a template sets where it
    *  lands as well as what it says. */
   where: string;
@@ -118,6 +129,7 @@ export default function DealPush({
       kind: "Closing soon",
       title: "Ordering closes soon",
       body: "Get your order in for today's run.",
+      note: "For the hour before a cut off.",
       where: "",
     },
     ...(restaurants.length > 0
@@ -126,6 +138,7 @@ export default function DealPush({
             kind: "New deals",
             title: `New deals at ${restaurants[0].name}`,
             body: "Something new on the menu today. Tap to see it.",
+            note: `Opens ${restaurants[0].name}.`,
             where: restaurants[0].id,
           },
         ]
@@ -136,6 +149,7 @@ export default function DealPush({
             kind: "Boxes",
             title: `${occasions[0].name} boxes are open`,
             body: "One box, one delivery fee, split it with your block.",
+            note: `Opens the ${occasions[0].name} collection.`,
             where: `occasion:${occasions[0].slug}`,
           },
         ]
@@ -144,12 +158,15 @@ export default function DealPush({
       kind: "Payday",
       title: "It's payday weekend",
       body: "Every kitchen, one delivery fee, split with your block.",
+      note: "For the end of the month.",
       where: "",
     },
   ];
 
   const pick = (one: Template) => {
-    setTitle(one.title);
+    // Cut to what the box itself allows, so a long restaurant name cannot
+    // put the counter over its own limit the moment a card is tapped.
+    setTitle(one.title.slice(0, TITLE_MOST));
     setBody(one.body);
     setRestaurant(one.where);
     setCategory("");
@@ -180,7 +197,7 @@ export default function DealPush({
               <span className="mt-0.5 block text-sm font-bold leading-[1.3]">
                 {one.title}
               </span>
-              <span className="hint mt-0.5 block">{one.body}</span>
+              <span className="hint mt-0.5 block">{one.note}</span>
             </button>
           ))}
         </div>
@@ -191,7 +208,9 @@ export default function DealPush({
           that. */}
       <div>
         <p className="ticket mb-2 text-muted">What it will look like</p>
-        <div className="rounded-[16px] bg-ink p-3.5">
+        {/* The board's phone is a lighter ink than the rail, so the white
+            card inside it reads as a notification rather than a hole. */}
+        <div className="rounded-[16px] bg-rail-line p-3.5">
           <div className="flex items-start gap-2.5 rounded-xl bg-white/[0.13] p-3">
             <span className="grid size-[30px] shrink-0 place-items-center rounded-[7px] bg-brand font-display text-[15px] font-black text-white">
               S
@@ -263,7 +282,17 @@ export default function DealPush({
                 setCategory("");
               }}
             >
-              <option value="">The shop, for anything about delivery or a code</option>
+              {/*
+                Today's run and the shop front are the same screen: the front
+                page is where the open runs and their cut-offs are drawn, and
+                there is no page of its own for one run that a customer could
+                be sent to. So this option is worded for the thing the first
+                starting point is about, rather than offered twice under two
+                names that would land on the same URL.
+              */}
+              <option value="">
+                Today&apos;s run, on the shop front where the cut-off is
+              </option>
 
               {occasions.length > 0 && (
                 <optgroup label="Boxes">
@@ -297,6 +326,12 @@ export default function DealPush({
                 </optgroup>
               )}
             </select>
+            <p className="hint mt-1">
+              Today&apos;s run, one restaurant, a collection or a basket you
+              have already filled. Picked from this list rather than typed,
+              because a notification that opens the wrong screen is worse than
+              one nobody sent.
+            </p>
           </div>
 
           {chosen && chosen.categories.length > 0 && (
@@ -339,6 +374,21 @@ export default function DealPush({
             Sent to {state.sent} phone{state.sent === 1 ? "" : "s"}.
           </p>
         )}
+      </div>
+
+      {/*
+        The one control in admin with no undo, said under the boxes it is
+        about rather than over them: on a phone this card stood above the
+        form and was read before there was anything to send. A soft note
+        rather than the Ink outline, because it is worth reading and it is
+        not an error.
+      */}
+      <div className="soft border-volt-line bg-brand-tint p-3.5">
+        <p className="text-sm font-bold">Send these sparingly</p>
+        <p className="hint mt-1">
+          More than about two a week and people turn them off in the app.
+          There is no undo once one has gone.
+        </p>
       </div>
 
       {gone.length > 0 && (
