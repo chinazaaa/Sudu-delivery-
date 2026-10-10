@@ -56,6 +56,17 @@ import { parseCatalogue, parseProducts } from "../lib/skincare-import";
 import { feeForValue, parseValueBands } from "../lib/value-bands";
 import { isExampleNumber, sprung, tooFast } from "../lib/guard";
 import { nextDrop } from "../lib/skincare";
+import {
+  BODY_MOST,
+  TITLE_MOST,
+  cartsLeftAlert,
+  forLockScreen,
+  isGone,
+  toldKey,
+  trimToFit,
+  unpaidRunAlert,
+} from "../lib/admin-alerts";
+import { isApple, urlBase64ToBytes } from "../lib/push-keys";
 
 /** A settings row with nothing filled in, for the template tests. */
 const EMPTY_SETTINGS: Settings = { ...SETTINGS_DEFAULTS };
@@ -2274,4 +2285,125 @@ test("a kitchen nothing went through has no percentage rather than all of nothin
   ]);
   assert.equal(one.share, 0);
   assert.equal(one.kept, 0);
+});
+
+/* Admin notifications: everything that can be decided without a push service. */
+
+test("a title that fits a lock screen is left exactly as it was written", () => {
+  assert.equal(trimToFit("New order #1042 · ₦8,400", 48), "New order #1042 · ₦8,400");
+});
+
+test("a long title is cut at a whole word, not mid-word", () => {
+  const cut = trimToFit(
+    "Somebody is looking for a particular pink power bank from Ikeja",
+    30
+  );
+  assert.ok(cut.length <= 30);
+  // Cut at a space, so the last thing on the lock screen is a word.
+  assert.ok(!cut.includes("particu…"));
+  assert.ok(cut.endsWith("…"));
+});
+
+test("one word longer than the whole budget is cut rather than lost", () => {
+  const cut = trimToFit("Supercalifragilisticexpialidocious", 12);
+  assert.equal(cut, "Supercalifr…");
+  assert.ok(cut.length <= 12);
+});
+
+test("runs of whitespace collapse, because a lock screen draws them all", () => {
+  assert.equal(trimToFit("  New   order\n#9  ", 40), "New order #9");
+});
+
+test("a notification is trimmed in both halves and keeps its url untouched", () => {
+  const ready = forLockScreen({
+    title: "x".repeat(200),
+    body: "y".repeat(400),
+    url: "/admin/orders?view=new",
+  });
+  assert.ok(ready.title.length <= TITLE_MOST);
+  assert.ok(ready.body.length <= BODY_MOST);
+  assert.equal(ready.url, "/admin/orders?view=new");
+});
+
+test("only 404 and 410 mean a subscription is gone for good", () => {
+  assert.equal(isGone(404), true);
+  assert.equal(isGone(410), true);
+  // A push service having a bad minute is not a reason to forget a phone.
+  assert.equal(isGone(500), false);
+  assert.equal(isGone(429), false);
+  assert.equal(isGone(201), false);
+  assert.equal(isGone(0), false);
+});
+
+test("what has been told is keyed by kind and id, so two kinds never collide", () => {
+  assert.equal(toldKey("cart", "abc"), "cart:abc");
+  assert.notEqual(toldKey("cart", "abc"), toldKey("run-unpaid", "abc"));
+});
+
+test("one cart left behind names the person and what they filled", () => {
+  const alert = cartsLeftAlert([{ name: "Tolu", value: 8400, items: 3 }]);
+  assert.equal(alert.title, "₦8,400 left in a cart");
+  assert.equal(alert.body, "Tolu filled 3 items and never paid.");
+  assert.equal(alert.url, "/admin/carts");
+});
+
+test("one cart with one item in it does not say 1 items", () => {
+  const alert = cartsLeftAlert([{ name: "", value: 2000, items: 1 }]);
+  assert.equal(alert.body, "Someone filled 1 item and never paid.");
+});
+
+test("several carts are one notification carrying the whole amount", () => {
+  const alert = cartsLeftAlert([
+    { name: "Tolu", value: 8400, items: 3 },
+    { name: "Ada", value: 1600, items: 1 },
+  ]);
+  assert.equal(alert.title, "₦10,000 left in 2 carts");
+  assert.ok(alert.body.startsWith("2 people"));
+});
+
+test("a run closing with money out says the money, the time and the count", () => {
+  const alert = unpaidRunAlert({
+    label: "night",
+    closes: "7:30 pm",
+    orders: 4,
+    total: 23500,
+  });
+  assert.equal(alert.title, "₦23,500 unpaid · closes 7:30 pm");
+  assert.ok(alert.body.includes("4 orders"));
+  assert.ok(alert.body.includes("night"));
+  // It opens the list to chase from. Nothing a notification carries marks
+  // anything paid.
+  assert.equal(alert.url, "/admin/orders?view=new");
+});
+
+test("a single unpaid order on a closing run does not say 1 orders", () => {
+  const alert = unpaidRunAlert({ label: "afternoon", closes: "2 pm", orders: 1, total: 5000 });
+  assert.ok(alert.body.startsWith("1 order on the"));
+  assert.ok(!alert.body.includes("1 orders"));
+});
+
+test("the VAPID key reads back as bytes, padding and swapped characters and all", () => {
+  // "Hello-world_" in URL-safe base64, which is the alphabet the key uses:
+  // minus and underscore where base64 has plus and slash, and no padding.
+  const bytes = urlBase64ToBytes("SGVsbG8");
+  assert.deepEqual([...bytes], [72, 101, 108, 108, 111]);
+
+  // The two swapped characters have to come back as the bytes plus and
+  // slash would have given, or the key is subtly wrong and every subscribe
+  // fails with nothing to read.
+  assert.deepEqual([...urlBase64ToBytes("-_8")], [...urlBase64ToBytes("+/8")]);
+});
+
+test("an applicationServerKey is the 65 bytes a push service expects", () => {
+  // A real VAPID public key is 65 bytes, which is 87 URL-safe characters.
+  const key = "B" + "A".repeat(86);
+  assert.equal(urlBase64ToBytes(key).length, 65);
+});
+
+test("an iPhone is told about the Home Screen and a desktop is not", () => {
+  assert.equal(isApple("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)"), true);
+  assert.equal(isApple("Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)"), true);
+  assert.equal(isApple("Mozilla/5.0 (Linux; Android 14; Pixel 8)"), false);
+  // A Mac has no Home Screen, so the sentence would only confuse.
+  assert.equal(isApple("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"), false);
 });

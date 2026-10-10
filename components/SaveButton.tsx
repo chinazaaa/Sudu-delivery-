@@ -20,9 +20,22 @@ export default function SaveButton({
   children = "Save",
   className = "",
   look = "btn-primary",
+  name,
+  value,
 }: {
   children?: React.ReactNode;
   className?: string;
+  /**
+   * What this particular button says when it is the one that was pressed.
+   *
+   * A form with two ways to commit is one form, not two: the offer board
+   * ends on "Save as off" beside "Save and go live", and the difference
+   * between them is a single field. Without this a page has to choose
+   * between two forms holding two copies of the same five questions, or a
+   * hidden input nobody can see the state of.
+   */
+  name?: string;
+  value?: string;
   /**
    * The button underneath, for pages whose buttons are not the shop's.
    *
@@ -49,6 +62,8 @@ export default function SaveButton({
   return (
     <button
       type="submit"
+      name={name}
+      value={value}
       disabled={pending}
       className={`${look} ${className} ${
         saved ? "!bg-mint !text-white !border-transparent" : ""

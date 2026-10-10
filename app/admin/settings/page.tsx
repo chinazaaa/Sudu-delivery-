@@ -30,6 +30,8 @@ import {
   toggleHostel,
 } from "../actions";
 import { listHostels } from "@/lib/hostels";
+import NotifyPhone from "@/components/admin/NotifyPhone";
+import { adminPhones } from "@/lib/admin-alerts";
 
 /** Whole hours, named the way somebody says them. */
 const HOURS = Array.from({ length: 16 }, (_, index) => {
@@ -52,6 +54,10 @@ export default async function SettingsAdmin() {
   // Null means the table is not there yet, which reads differently from an
   // empty list and is worth saying out loud.
   const accounts = await allAccounts();
+  // The phones that buzz. Read here rather than in the control, because the
+  // control is a client component and the list is the shop's, not the
+  // browser's: a phone subscribed at the counter shows on the laptop too.
+  const phones = await adminPhones();
 
   return (
     <div>
@@ -79,6 +85,7 @@ export default async function SettingsAdmin() {
           ["#strip", "The site"],
           ["#fees", "Delivery fees"],
           ["#messages", "Messages"],
+          ["#buzz", "Notifications"],
           ["#told", "Team"],
         ].map(([href, said]) => (
           <a key={href} href={href} className="pill-admin">
@@ -712,6 +719,36 @@ export default async function SettingsAdmin() {
           decides how far ahead a customer is offered one.
         </p>
       </form>
+
+      {/* Its own card rather than a line in "Who gets told", because an email
+          address is typed once and forgotten and a phone has to be subscribed
+          on the phone itself. Somebody reading this card on a laptop has to
+          understand that the button only ever does something to whatever is
+          in their hand, which the copy says out loud. */}
+      <section id="buzz" className="card space-y-3 p-5 xl:col-span-2">
+        <div>
+          <h2 className="font-display text-[26px] font-black uppercase leading-none">
+            Buzz my phone
+          </h2>
+          <p className="hint">
+            A new order, a custom order, a parcel, somebody applying to
+            promote, a cart left behind and a run closing with money still
+            unpaid. Each one opens the page that deals with it. Nothing a
+            notification says changes anything: an order is only ever marked
+            paid by you.
+          </p>
+        </div>
+        <NotifyPhone
+          phones={phones}
+          publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""}
+        />
+        {!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && (
+          <p className="ticket text-brand-dark">
+            NEXT_PUBLIC_VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY are not set, so
+            nothing can be subscribed yet.
+          </p>
+        )}
+      </section>
 
       <form id="told" action={saveSettings} className="card space-y-3 p-5 xl:col-span-2">
         <div>

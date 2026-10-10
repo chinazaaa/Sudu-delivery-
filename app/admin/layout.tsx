@@ -1,5 +1,6 @@
 import AdminShell from "@/components/admin/Shell";
 import AdminLogin from "@/components/AdminLogin";
+import RegisterWorker from "@/components/admin/RegisterWorker";
 import { isSignedIn } from "@/lib/admin-auth";
 import { waitingCounts } from "@/lib/admin";
 import { logout } from "./actions";
@@ -17,6 +18,8 @@ export default async function AdminLayout({
 
   return (
     <AdminShell signOut={logout} waiting={await waitingCounts()}>
+      {/* Only here, because only admin is notified of anything. */}
+      <RegisterWorker />
       {children}
     </AdminShell>
   );

@@ -21,6 +21,7 @@ import { offerShare, type LiveOffer } from "./offers";
 import { lookupColumn } from "./links";
 import { cartConverted } from "./carts";
 import { emailAdmins } from "./email";
+import { tellAdmin } from "./admin-alerts";
 import { renderEmail, renderText, type Block } from "./email-html";
 import { siteUrl } from "./admin-templates";
 import { naira, orderRef } from "./money";
@@ -1332,6 +1333,24 @@ async function announceOrder(args: {
   items: number;
   note: string;
 }): Promise<void> {
+  // The phone first, and on its own, because it is the thing somebody acts
+  // on. An email provider that is down must not also cost the buzz, and a
+  // push service that is down must not cost the email, so neither waits on
+  // the other's try block.
+  try {
+    const placed = await getOrder(args.orderId);
+    await tellAdmin({
+      title: `New order ${placed ? orderRef(placed) : ""} · ${naira(placed?.total ?? 0)}`,
+      body: `${args.name}, ${args.hostel}. ${
+        placed?.payment_method === "card" ? "Card link to send." : "Unpaid."
+      }`,
+      // The new-orders view, which is the list this one is now at the top of.
+      url: "/admin/orders?view=new",
+    });
+  } catch {
+    /* Never at the cost of an order that is already saved. */
+  }
+
   try {
     const order = await getOrder(args.orderId);
     const label = carLabel(args.batch);

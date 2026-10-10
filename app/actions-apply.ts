@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { apply } from "@/lib/promoter-applications";
+import { tellAdmin } from "@/lib/admin-alerts";
 
 export type ApplyState = { error: string | null; sent: boolean };
 
@@ -48,6 +49,25 @@ export async function askToPromote(
   });
 
   if (!answer.ok) return { error: answer.why, sent: false };
+
+  // After it is saved, and wrapped, because an application that sent fine
+  // must not come back as an error because a push service was slow.
+  //
+  // There is no money on an application, so what it carries instead is where
+  // they would be posting, which is the whole of what the decision is made
+  // on and the reason to open the page rather than read the notification and
+  // move on.
+  try {
+    await tellAdmin({
+      title: "Someone wants to promote",
+      body: `${String(form.get("name") ?? "").trim() || "Someone"} · ${
+        String(form.get("reach") ?? "").trim() || "no reach said"
+      }`,
+      url: "/admin/applications",
+    });
+  } catch {
+    /* The application is on the list either way. */
+  }
 
   revalidatePath("/admin", "layout");
   return { error: null, sent: true };

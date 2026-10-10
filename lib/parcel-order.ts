@@ -10,6 +10,7 @@ import { lagosInstant, lagosToday } from "./time";
 import { normalisePhone } from "./phone";
 import { parcels, liveRoutes, routeById, feeFor, heaviest } from "./parcels";
 import { newPin } from "./customer-auth";
+import { tellAdmin } from "./admin-alerts";
 
 export type ParcelInput = {
   name: string;
@@ -255,6 +256,20 @@ export async function placeParcel(input: ParcelInput): Promise<ParcelResult> {
     }
   } catch {
     /* The parcel exists either way. */
+  }
+
+  // The phone, before the email, and in its own try: a parcel that is
+  // already saved must not be undone by either of them.
+  try {
+    await tellAdmin({
+      title: `Parcel booked · ${naira(fee)}`,
+      body: `${item} on ${route.label}. ${name}, unpaid.`,
+      // Parcels have their own board, where a day is agreed and the trip is
+      // the thing that gets arranged.
+      url: "/admin/parcels",
+    });
+  } catch {
+    /* Never at the cost of a parcel that is already saved. */
   }
 
   await announceParcel({

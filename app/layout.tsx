@@ -42,6 +42,11 @@ export const metadata: Metadata = {
   },
   description: BLURB,
   applicationName: "Sudu",
+  // Next emits the manifest link itself from app/manifest.ts, but not this.
+  // iOS only treats a site as installed, and only delivers a web push to it,
+  // when it is opened from the Home Screen, and it only opens that way when
+  // this is here.
+  appleWebApp: { capable: true, title: "Sudu", statusBarStyle: "default" },
   // Nearly everyone arrives from a link pasted into a group chat, so the card
   // that link draws is the front door.
   openGraph: {
