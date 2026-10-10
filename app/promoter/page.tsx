@@ -43,7 +43,7 @@ export default async function PromoterPage({
   if (!earnings) {
     return (
       <div className="mx-auto max-w-md space-y-4">
-        <h1 className="text-2xl font-extrabold tracking-tight">What you have earned</h1>
+        <h1 className="section-title">What you have earned</h1>
         <p className="text-ink/75">
           Your code and PIN show every run your orders landed in, and what each
           one is worth.
@@ -56,9 +56,7 @@ export default async function PromoterPage({
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-extrabold tracking-tight">
-          {earnings.name}&apos;s runs
-        </h1>
+        <h1 className="section-title">{earnings.name}&apos;s runs</h1>
         <form action={signOut}>
           <button className="text-sm text-muted hover:underline">Sign out</button>
         </form>
@@ -68,8 +66,8 @@ export default async function PromoterPage({
           the whole reason it exists is that people forget to pick a name out
           of a dropdown at the end of a form. Share the link instead and
           nobody has to remember anything. */}
-      <section className="rounded-2xl border border-brand/20 bg-brand-tint/40 p-4">
-        <h2 className="text-sm font-bold text-brand-dark">Your link</h2>
+      <section className="rounded-2xl border-2 border-ink bg-brand-tint p-4">
+        <h2 className="ticket text-brand-dark">Your link</h2>
         <p className="mt-1 break-all font-mono text-sm font-bold text-ink">
           {`${site.replace(/^https?:\/\//, "")}/s/${earnings.handle}`}
         </p>
@@ -121,35 +119,35 @@ export default async function PromoterPage({
           in the biggest type on the page and reads it as "you have nothing",
           when what it means is "we owe you nothing, and here is the ₦1,500
           you have already had". */}
-      <section className="rounded-3xl bg-gradient-to-br from-brand to-brand-dark p-5 text-white">
+      <section className="rounded-2xl border-2 border-ink bg-ink p-5 text-shell shadow-card">
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.1em] text-white/70">
+            <p className="ticket text-[#b9b0a5]">
               Earned
             </p>
-            <p className="mt-0.5 text-2xl font-extrabold leading-tight">
+            <p className="mt-0.5 font-display text-[34px] font-black leading-none">
               {naira(earnings.earned)}
             </p>
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.1em] text-white/70">
+            <p className="ticket text-[#b9b0a5]">
               Paid to you
             </p>
-            <p className="mt-0.5 text-2xl font-extrabold leading-tight">
+            <p className="mt-0.5 font-display text-[34px] font-black leading-none">
               {naira(earnings.paid)}
             </p>
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.1em] text-white/70">
+            <p className="ticket text-[#b9b0a5]">
               Still to come
             </p>
-            <p className="mt-0.5 text-2xl font-extrabold leading-tight">
+            <p className="mt-0.5 font-display text-[34px] font-black leading-none text-volt">
               {naira(earnings.owed)}
             </p>
           </div>
         </div>
 
-        <p className="mt-3 rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold">
+        <p className="mt-3 rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold">
           {earnings.waiting > 0
             ? `${naira(earnings.waiting)} more if the ${earnings.chase.length} unpaid order${
                 earnings.chase.length === 1 ? "" : "s"
@@ -165,7 +163,7 @@ export default async function PromoterPage({
           been told it. */}
       {tab === "money" && (
         <section className="card space-y-2">
-          <h2 className="font-bold">What you earn</h2>
+          <h2 className="section-title text-2xl">What you earn</h2>
           <div className="flex items-baseline justify-between gap-3 border-b border-black/5 pb-2">
             <span className="text-sm">
               <span className="block font-semibold">Food, skincare, parcels</span>
@@ -204,7 +202,7 @@ export default async function PromoterPage({
       {tab === "chase" && earnings.chase.length > 0 && (
         <section className="card space-y-2 border-amber-300 bg-amber-50">
           <div>
-            <h2 className="font-bold">Ordered but not paid for</h2>
+            <h2 className="section-title text-2xl">Ordered but not paid for</h2>
             <p className="text-sm text-muted">
               These are in runs still taking money. Each one is{" "}
               {naira(earnings.rate)} to you the moment it is paid. A nudge is
@@ -248,7 +246,7 @@ export default async function PromoterPage({
       {tab === "chase" && earnings.carts.length > 0 && (
         <section className="card space-y-2">
           <div>
-            <h2 className="font-bold">Filled a cart and stopped</h2>
+            <h2 className="section-title text-2xl">Filled a cart and stopped</h2>
             <p className="text-sm text-muted">
               These never became orders, so they are worth nothing to anybody
               yet. A word from you is usually what turns one into a{" "}
@@ -298,7 +296,7 @@ export default async function PromoterPage({
         </p>
       ) : (
         <section className="card space-y-2">
-          <h2 className="font-bold">Run by run</h2>
+          <h2 className="section-title text-2xl">Run by run</h2>
           <ul className="divide-y divide-black/5">
             {earnings.runs.map((run) => (
               <li key={run.batchId} className="flex items-baseline justify-between gap-3 py-2.5">
@@ -348,7 +346,7 @@ export default async function PromoterPage({
 
       {tab === "money" && earnings.payouts.length > 0 && (
         <section className="card space-y-2">
-          <h2 className="font-bold">Paid out to you</h2>
+          <h2 className="section-title text-2xl">Paid out to you</h2>
           <ul className="divide-y divide-black/5 text-sm">
             {earnings.payouts.map((payout) => (
               <li
@@ -392,7 +390,7 @@ export default async function PromoterPage({
       {tab === "you" && canEditNudge && (
       <form action={saveNudge} className="card space-y-3">
         <div>
-          <h2 className="font-bold">What your nudge says</h2>
+          <h2 className="section-title text-2xl">What your nudge says</h2>
           <p className="text-sm text-muted">
             This is the message that opens in WhatsApp when you tap Nudge. Say
             it the way you would say it. Empty the box to put the standard one
@@ -416,7 +414,7 @@ export default async function PromoterPage({
       <>
       <form action={saveBank} className="card space-y-3">
         <div>
-          <h2 className="font-bold">Where your money goes</h2>
+          <h2 className="section-title text-2xl">Where your money goes</h2>
           <p className="text-sm text-muted">
             Keep this right and nobody has to ask you for it on payday.
           </p>
