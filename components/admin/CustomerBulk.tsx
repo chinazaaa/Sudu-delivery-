@@ -30,6 +30,10 @@ type Holding = {
   people: Picked[];
   toggle: (phone: string) => void;
   setAll: (phones: string[]) => void;
+  /** Let everybody go. What a bulk action does when it has finished: the
+   *  job is done, so the bar that offered it should not still be standing
+   *  over the list offering to do it again. */
+  clear: () => void;
   draft: string;
   setDraft: (text: string) => void;
   patterns: Pattern[];
@@ -84,6 +88,7 @@ export function Picking({
       // is for.
       setAll: (phones) =>
         setOn((was) => (was.size >= phones.length ? new Set() : new Set(phones))),
+      clear: () => setOn(new Set()),
     }),
     [on, people, patterns, draft]
   );
@@ -252,8 +257,16 @@ export function Bar({
             this is a thing you note rather than a thing you do. The same
             shape as the tick on a delivered order, so the two read as the
             same gesture. */}
+        {/* Let them go once it is written down. Marking somebody reviewed is
+            the end of that job, and a bar still standing over the list with
+            them ticked is an invitation to do it twice. */}
         {markReviewed && (
-          <form action={markReviewed}>
+          <form
+            action={async (data: FormData) => {
+              await markReviewed(data);
+              held.clear();
+            }}
+          >
             {phones.map((phone) => (
               <input key={phone} type="hidden" name="phone" value={phone} />
             ))}
@@ -306,7 +319,12 @@ export function Bar({
             </a>
           )}
           {markReviewed && (
-            <form action={markReviewed}>
+            <form
+              action={async (data: FormData) => {
+                await markReviewed(data);
+                held.clear();
+              }}
+            >
               {phones.map((phone) => (
                 <input key={phone} type="hidden" name="phone" value={phone} />
               ))}
