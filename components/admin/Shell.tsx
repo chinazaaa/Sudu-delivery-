@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { DAILY, EVERY, GROUPS, TABS, type Item } from "@/lib/admin-nav";
+import { DAILY, EVERY, GROUPS, TABS, YOU, type Item } from "@/lib/admin-nav";
 
 /**
  * The frame every admin page sits in: an Ink rail on a desktop, a drawer on
@@ -155,6 +155,14 @@ export default function AdminShell({
 
   const foot = (
     <div className="mt-3.5 flex flex-col gap-0.5 border-t border-rail-line pt-3.5">
+      {/* Settings and Deleted are pinned to the foot on every board rather
+          than filed under a heading, because they are where you go when
+          something is wrong rather than part of a day's work. They used to
+          sit inside the Site group, which also listed them a second time on
+          the More screen. */}
+      {YOU.map((item) => (
+        <Row key={item.href} item={item} />
+      ))}
       <Link
         href="/"
         className="flex items-center gap-2.5 rounded-[9px] px-3 py-2 text-[14.5px] font-semibold text-volt hover:bg-white/[0.06]"

@@ -5,7 +5,7 @@ import Figure from "@/components/admin/Figure";
 import Panel from "@/components/admin/Panel";
 import SaveButton from "@/components/SaveButton";
 import ActionButton from "@/components/admin/ActionButton";
-import { oneCustomer } from "@/lib/customer";
+import { oneCustomer, type OneCustomer } from "@/lib/customer";
 import { getSettings, googleLinks } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
 import { firstName, templateFor, whatsappTo } from "@/lib/messages";
@@ -57,6 +57,116 @@ function monthOf(when: string | null): string {
   const day = new Date(when);
   if (Number.isNaN(day.getTime())) return "";
   return day.toLocaleDateString("en-GB", { month: "long" });
+}
+
+/**
+ * A panel heading in the phone board's voice.
+ *
+ * On a desk these three are display headings beside the orders, which is
+ * what every other panel is. On a phone the board drops them to the ticket
+ * label it uses over a figure: a card holding one sentence or one box does
+ * not need a heading the size of the page title above it, and three of them
+ * down a phone screen read as three pages.
+ *
+ * One node rather than two panels behind display:none, because Panel takes
+ * a node for its title.
+ */
+function Ticketed({ children, wide }: { children: string; wide?: string }) {
+  return (
+    <>
+      <span className="ticket text-muted sm:hidden">{children}</span>
+      <span className="hidden sm:inline">{wide ?? children}</span>
+    </>
+  );
+}
+
+/** "once", "twice", then plain counting. */
+function timesWord(count: number): string {
+  return count === 1 ? "once" : count === 2 ? "twice" : `${count} times`;
+}
+
+/** A list in the voice somebody would read it out in. */
+function readOut(names: string[]): string {
+  if (names.length < 2) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+/**
+ * Where they order from, as one sentence.
+ *
+ * The bar chart is the desk's answer, where there is room beside the orders
+ * for six bars and a scale. On a phone the board writes it out instead: six
+ * bars on a card that narrow is six lines of chart saying what one line of
+ * prose says, and prose is what somebody repeats to themselves before they
+ * write the message.
+ */
+function whatTheyOrder(favourites: { name: string; count: number }[]): string {
+  const again = favourites.filter((place) => place.count > 1);
+  const once = favourites.filter((place) => place.count === 1).map((place) => place.name);
+  const parts = again.map((place) => `${place.name} ${timesWord(place.count)}`);
+  if (once.length > 0) {
+    parts.push(
+      `${parts.length > 0 ? "then " : ""}${readOut(once)} once${once.length > 1 ? " each" : ""}`
+    );
+  }
+  return parts.join(", ");
+}
+
+/**
+ * What an order was, in the board's words: the kitchen, then the food.
+ *
+ * It printed a count of items, which is the one thing about an order nobody
+ * remembers it by. Named up to two lines, because that is what fits on a row
+ * and because a shop of nine things is a shop, not a dish.
+ */
+function whatWasIn(lines: { name: string; qty: number }[]): string {
+  if (lines.length === 0) return "";
+  const items = lines.reduce((count, line) => count + line.qty, 0);
+  if (lines.length > 2) return `${items} item${items === 1 ? "" : "s"}`;
+  return lines
+    .map((line) => `${line.name}${line.qty > 1 ? ` ×${line.qty}` : ""}`)
+    .join(", ");
+}
+
+/**
+ * One order, as a row on a phone.
+ *
+ * Its own piece because the board folds this list after five: the five on
+ * show and the rest behind the fold have to be the same row, and two copies
+ * of a row is one copy that quietly stops matching.
+ */
+function PhoneRow({ order }: { order: OneCustomer["orders"][number] }) {
+  const places = [...new Set(order.lines.map((line) => line.restaurant).filter(Boolean))];
+  const food = whatWasIn(order.lines);
+  return (
+    <li className="border-t-[1.5px] border-rule">
+      <Link
+        href={`/admin/orders/${order.id}`}
+        className="flex min-h-[56px] items-center gap-2.5 py-3"
+      >
+        <span className="min-w-0 grow">
+          <span className="block text-sm font-semibold leading-[1.3]">
+            {places.join(", ") || "Nothing itemised"}
+            {food !== "" && ` · ${food}`}
+          </span>
+          <span className="hint block">
+            {shareRef(order, order.groupOrders)} · {runDateLabel(order.runDate)} ·{" "}
+            {SLOT_LABEL[order.slot] ?? ""}
+          </span>
+        </span>
+        <span className="shrink-0 text-right">
+          <span className="block font-mono text-sm font-semibold">{naira(order.total)}</span>
+          <Tag
+            tone={
+              order.status === "refunded" ? "bad" : order.status === "pending" ? "shell" : "mint"
+            }
+          >
+            {order.status}
+          </Tag>
+        </span>
+      </Link>
+    </li>
+  );
 }
 
 function daysSince(when: string | null): number | null {
@@ -121,17 +231,55 @@ export default async function CustomerPage({
   const promoter = promoters.find((one) => one.code === person.promoterCode) ?? null;
   const mostOrdered = person.favourites[0]?.count ?? 1;
 
+  /*
+   * Where they usually are, and when, as a sentence.
+   *
+   * Only said where it is actually true of them: a line claiming "always
+   * Queen Mary" about somebody who moves every week is worse than no line.
+   * Built here because both widths read it, the phone inside the sentence
+   * about what they order and the desk under the chart.
+   */
+  const usually =
+    person.usualHostel === "" && person.usualSlot === ""
+      ? ""
+      : [
+          person.usualHostel === "" ? "" : `Nearly always ${person.usualHostel}`,
+          person.usualSlot === ""
+            ? ""
+            : `${person.usualHostel === "" ? "Nearly always" : "always"} a ${SLOT_LABEL[
+                person.usualSlot
+              ].toLowerCase()} run`,
+        ]
+          .filter((part) => part !== "")
+          .join(", ");
+
   return (
     <div>
       <PageHeader
         backHref="/admin/customers"
         backLabel="All customers"
         title={person.name || formatPhone(person.phone)}
+        /* Two lines for one sentence, because the phone has room for three
+           facts and the desk has room for four. The board's phone line is the
+           block, the month and the PIN: the number is on the two buttons just
+           below it and the PIN is what they ring about, so the PIN takes the
+           number's place and comes out of the tags. */
         detail={
           <>
-            {formatPhone(person.phone)} · {person.hostel || "no block saved"} ·{" "}
-            {person.pays === "card" ? "pays by card" : "pays by transfer"}
-            {since !== "" && ` · customer since ${since}`}
+            <span className="lg:hidden">
+              {[
+                person.hostel || "no block saved",
+                since === "" ? "" : `since ${since}`,
+                person.pin === "" ? "" : `PIN ${person.pin}`,
+              ]
+                .filter((part) => part !== "")
+                .join(" · ")}
+            </span>
+            <span className="hidden lg:inline">
+              {formatPhone(person.phone)} · {person.hostel || "no block saved"} ·{" "}
+              {person.pays === "card" ? "pays by card" : "pays by transfer"}
+              {since !== "" && ` · customer since ${since}`}
+            </span>
           </>
         }
         /* On a desk every answer sits in the header, where the mouse
@@ -200,12 +348,22 @@ export default async function CustomerPage({
             is somebody writing on a profile. Both are worth seeing. */}
         {person.rating !== null && (
           <Tag tone="volt">
-            Rated us {"★".repeat(Math.round(person.rating))}
+            {/* The stars alone on a phone, where the board shortens it: four
+                words in front of five stars is most of the row for a thing
+                the stars already say. */}
+            <span className="hidden lg:inline">Rated us </span>
+            {"★".repeat(Math.round(person.rating))}
             {person.rating % 1 !== 0 && ` (${person.rating.toFixed(1)})`}
           </Tag>
         )}
         {person.reviewed && <Tag tone="volt">Reviewed on Google</Tag>}
-        {person.pin !== "" && <Tag>PIN {person.pin}</Tag>}
+        {/* The PIN is in the sentence under the title on a phone, so the tag
+            is the desk's alone rather than the same fact twice. */}
+        {person.pin !== "" && (
+          <span className="hidden lg:inline-flex">
+            <Tag>PIN {person.pin}</Tag>
+          </span>
+        )}
         {person.errands && person.errands.count > 0 && (
           <Tag tone="mint">
             {naira(person.errands.took)} on {person.errands.count} errand
@@ -231,7 +389,12 @@ export default async function CustomerPage({
         </a>
       </div>
 
-      <div className="mb-[18px] grid grid-cols-2 gap-2.5 sm:gap-3.5 xl:grid-cols-4">
+      {/* Four on a desk, two on a phone, which is what the board draws: what
+          they have paid and what is left of it. The average against the house
+          and the days since are desk figures, worth having beside the other
+          two and not worth a second row on a screen where the next thing is
+          every order they have placed. */}
+      <div className="mb-[18px] grid grid-cols-2 gap-2.5 sm:gap-3.5 lg:grid-cols-4">
         <Figure
           label="Lifetime spend"
           value={naira(person.spend)}
@@ -243,6 +406,7 @@ export default async function CustomerPage({
                 }`
           }
         />
+        <div className="hidden lg:block">
         <Figure
           label="Average order"
           value={naira(person.averageOrder)}
@@ -254,6 +418,7 @@ export default async function CustomerPage({
                 : `Below the ${naira(person.houseAverage)} house average`
           }
         />
+        </div>
         {/* The one figure on this page that is worked out rather than
             recorded, so it says so. Run costs belong to a run, and the only
             honest way to put fuel against a person is to split it by what
@@ -268,6 +433,7 @@ export default async function CustomerPage({
               : "After food, promoter and the runs they were on"
           }
         />
+        <div className="hidden lg:block">
         <Figure
           label="Last ordered"
           value={quiet === null ? "Never" : quiet === 0 ? "Today" : `${quiet} day${quiet === 1 ? "" : "s"}`}
@@ -279,11 +445,12 @@ export default async function CustomerPage({
               : undefined
           }
         />
+        </div>
       </div>
 
-      <div className="grid items-start gap-[18px] xl:grid-cols-[1.55fr_1fr]">
+      <div className="grid items-start gap-[18px] lg:grid-cols-[1.55fr_1fr]">
         <Panel
-          title="Every order"
+          title={<Ticketed>Every order</Ticketed>}
           aside={
             <span className="flex items-center gap-2.5">
               {/* The count alone where there is no room for the word, which
@@ -315,49 +482,34 @@ export default async function CustomerPage({
             <div>
               {/* A row per order on a phone, each one a link into it. The
                   table is five columns of money and status, which on a three
-                  hundred and ninety pixel screen is a table read sideways. */}
+                  hundred and ninety pixel screen is a table read sideways.
+
+                  Five, then the rest behind "Show the other one", which is
+                  what the board draws: somebody who has ordered twenty times
+                  is the person this page is most worth opening for, and
+                  twenty rows is the note and the name both off the screen. */}
               <ul className="mt-1 lg:hidden">
-                {person.orders.map((order) => {
-                  const places = [
-                    ...new Set(order.lines.map((line) => line.restaurant).filter(Boolean)),
-                  ];
-                  const items = order.lines.reduce((count, line) => count + line.qty, 0);
-                  return (
-                    <li key={order.id} className="border-t-[1.5px] border-rule">
-                      <Link
-                        href={`/admin/orders/${order.id}`}
-                        className="flex min-h-[56px] items-center gap-2.5 py-3"
-                      >
-                        <span className="min-w-0 grow">
-                          <span className="block text-sm font-semibold leading-[1.3]">
-                            {places.join(", ") || "Nothing itemised"}
-                            {items > 0 && ` · ${items} item${items === 1 ? "" : "s"}`}
-                          </span>
-                          <span className="hint block">
-                            {shareRef(order, order.groupOrders)} ·{" "}
-                            {runDateLabel(order.runDate)} · {SLOT_LABEL[order.slot] ?? ""}
-                          </span>
+                {person.orders.slice(0, 5).map((order) => (
+                  <PhoneRow key={order.id} order={order} />
+                ))}
+                {person.orders.length > 5 && (
+                  <li>
+                    <details className="group">
+                      <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-center border-t-[1.5px] border-rule text-sm font-semibold text-brand-dark [&::-webkit-details-marker]:hidden">
+                        <span className="group-open:hidden">
+                          Show the other {person.orders.length - 5 === 1 ? "one" : person.orders.length - 5}{" "}
+                          ›
                         </span>
-                        <span className="shrink-0 text-right">
-                          <span className="block font-mono text-sm font-semibold">
-                            {naira(order.total)}
-                          </span>
-                          <Tag
-                            tone={
-                              order.status === "refunded"
-                                ? "bad"
-                                : order.status === "pending"
-                                  ? "shell"
-                                  : "mint"
-                            }
-                          >
-                            {order.status}
-                          </Tag>
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
+                        <span className="hidden group-open:inline">Hide those ‹</span>
+                      </summary>
+                      <ul>
+                        {person.orders.slice(5).map((order) => (
+                          <PhoneRow key={order.id} order={order} />
+                        ))}
+                      </ul>
+                    </details>
+                  </li>
+                )}
               </ul>
 
               <div className="mt-2 hidden overflow-x-auto lg:block">
@@ -367,7 +519,7 @@ export default async function CustomerPage({
                       const places = [
                         ...new Set(order.lines.map((line) => line.restaurant).filter(Boolean)),
                       ];
-                      const items = order.lines.reduce((count, line) => count + line.qty, 0);
+                      const food = whatWasIn(order.lines);
                       return (
                         <tr key={order.id} className="border-t-[1.5px] border-rule">
                           <td className="py-[11px] pr-2.5 font-mono text-[14.5px] text-muted">
@@ -376,7 +528,7 @@ export default async function CustomerPage({
                           <td className="py-[11px] pr-2.5">
                             <strong className="text-[14.5px]">
                               {places.join(", ") || "Nothing itemised"}
-                              {items > 0 && ` · ${items} item${items === 1 ? "" : "s"}`}
+                              {food !== "" && ` · ${food}`}
                             </strong>
                             <p className="text-[12.5px] text-muted">
                               {runDateLabel(order.runDate)} · {SLOT_LABEL[order.slot] ?? ""} ·{" "}
@@ -419,7 +571,7 @@ export default async function CustomerPage({
 
         <div className="flex flex-col gap-4">
           {promoter && (
-            <Panel title={`Brought by ${promoter.name}`}>
+            <Panel title={`Brought by ${promoter.name}`} size="sm">
               <div className="mb-3 mt-2 flex items-center gap-3">
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-volt text-[17px] font-extrabold">
                   {promoter.name.slice(0, 1).toUpperCase()}
@@ -447,8 +599,22 @@ export default async function CustomerPage({
           )}
 
           {person.favourites.length > 0 && (
-            <Panel title={`What ${greeting || "they"} order${greeting ? "s" : ""}`}>
-              <div className="mt-1">
+            <Panel
+              title={
+                <Ticketed>{`What ${greeting || "they"} order${greeting ? "s" : ""}`}</Ticketed>
+              }
+              size="sm"
+            >
+              {/* The phone board writes this out as one sentence rather than
+                  drawing the chart: six bars on a card that narrow is six
+                  lines saying what one line says, and the sentence is what
+                  somebody repeats to themselves while writing the message.
+                  The chart is the desk's, from the first breakpoint up. */}
+              <p className="mt-1 text-sm leading-[1.5] sm:hidden">
+                {usually === "" ? "" : `${usually}. `}
+                {whatTheyOrder(person.favourites)}.
+              </p>
+              <div className="mt-1 hidden sm:block">
                 {person.favourites.slice(0, 6).map((place) => (
                   <div key={place.name} className="py-2">
                     <div className="flex justify-between text-[13.5px]">
@@ -464,18 +630,12 @@ export default async function CustomerPage({
                   </div>
                 ))}
               </div>
-              {/* Only said where it is actually true of them. A line saying
-                  "always Queen Mary" about somebody who moves around every
-                  week is worse than no line. */}
-              {(person.usualHostel !== "" || person.usualSlot !== "") && (
+              {/* Under the chart on a desk, where the sentence above is the
+                  phone's whole answer. The thing to do about it is said here
+                  and at both widths. */}
+              {usually !== "" && (
                 <p className="mt-2.5 text-[12.5px] leading-[1.5] text-muted">
-                  {person.usualHostel !== "" && `Nearly always ${person.usualHostel}`}
-                  {person.usualHostel !== "" && person.usualSlot !== "" && ", "}
-                  {person.usualSlot !== "" &&
-                    `${person.usualHostel === "" ? "Nearly always" : "always"} ${
-                      SLOT_LABEL[person.usualSlot]
-                    }`}
-                  .{" "}
+                  <span className="hidden sm:inline">{usually}. </span>
                   {person.usualSlot !== "" &&
                     `Tell ${greeting || "them"} first when a ${SLOT_LABEL[
                       person.usualSlot
@@ -487,7 +647,7 @@ export default async function CustomerPage({
 
           {/* The working behind the profit figure above it. A number nobody
               can take apart is a number nobody believes. */}
-          <Panel title="Where the money went">
+          <Panel title="Where the money went" size="sm">
             <dl className="mt-1 text-[13.5px]">
               {[
                 { label: "They paid", value: person.spend },
@@ -523,14 +683,17 @@ export default async function CustomerPage({
             )}
           </Panel>
 
-          <Panel title="Note" detail="Only you see this.">
+          <Panel
+            title={<Ticketed wide="Note">Note · only you see it</Ticketed>}
+            size="sm"
+          >
             <form action={saveCustomerNote} className="mt-1 space-y-2.5">
               <input type="hidden" name="phone" value={person.phone} />
               <textarea
                 name="admin_note"
                 rows={3}
                 defaultValue={person.note}
-                placeholder="Allergic to nothing, calls rather than messages"
+                placeholder="Only you see this"
                 className="field min-h-[76px] py-2.5"
               />
               <SaveButton look="btn-admin btn-admin-sm">Save note</SaveButton>
@@ -540,6 +703,7 @@ export default async function CustomerPage({
           <Panel
             title="Their name"
             detail={`Messages open with a first name. Now: ${firstName(person.name)}.`}
+            size="sm"
           >
             <form action={saveCustomerName} className="mt-1 flex gap-2">
               <input type="hidden" name="phone" value={person.phone} />
@@ -557,6 +721,7 @@ export default async function CustomerPage({
             <Panel
               title="Who brought them"
               detail="Changing this moves every order they have ever placed."
+              size="sm"
             >
               <form action={setCustomerPromoter} className="mt-1 flex gap-2">
                 <input type="hidden" name="phone" value={person.phone} />
@@ -600,14 +765,28 @@ export default async function CustomerPage({
               because a row of eight people is the wrong place to put the one
               button that cannot be undone. */}
           {person.orders.length === 0 && (
-            <Panel title="Delete them" detail="Only while there is no order behind them.">
-              <form action={deleteCustomer} className="mt-1">
+            <Panel
+              title="Delete them"
+              detail="Only while there is no order behind them."
+              size="sm"
+            >
+              {/* The sixth rule: what is forever, written beside the button
+                  rather than in a dialog after it. "Only while there is no
+                  order behind them" says when you are allowed to, which is a
+                  different sentence and was the only one here. */}
+              <form action={deleteCustomer} className="mt-1 flex items-center gap-2.5">
                 <input type="hidden" name="phone" value={person.phone} />
+                <p className="hint flex-1">
+                  Deleting is forever: their name, their block, their PIN and
+                  their note go, and nothing else in the shop keeps them.
+                  Leaving them costs nothing.
+                </p>
                 <ConfirmButton
                   tone="bad"
+                  className="min-h-[44px] shrink-0"
                   confirm={`Yes, delete ${person.name || person.phone}`}
                 >
-                  Delete {person.name || formatPhone(person.phone)}
+                  Delete
                 </ConfirmButton>
               </form>
             </Panel>

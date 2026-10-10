@@ -87,13 +87,12 @@ export default async function RestaurantsAdmin() {
       count: noWords.length,
       said: "with no description",
       items: noWords,
-      // Volt rather than Tomato Deep, because the point is that the two
+      // Amber rather than Tomato Deep, because the point is that the two
       // gaps are not worth the same: a missing description costs less than
-      // a missing photograph. The board draws an amber here and there is no
-      // amber token, so the number stays in Ink and the bar carries the
-      // colour: Volt is a fill in this palette and never text on light.
-      number: "text-ink",
-      bar: "bg-volt",
+      // a missing photograph, and the board draws this one in the amber the
+      // palette carries for exactly that, the middle severity.
+      number: "text-amber",
+      bar: "bg-amber",
       fix: "Write the descriptions",
     },
   ].filter((gap) => gap.count > 0);
@@ -110,12 +109,13 @@ export default async function RestaurantsAdmin() {
             <Link href="/admin/stock" className="btn-admin">
               Something sold out?
             </Link>
-            {/* The board's one red button, and the only thing on this page
-                that is not just looking at what is already here. The form
-                itself is at the bottom, under however many restaurants there
-                are, which is the right place for it and the wrong place to
-                have to scroll to. */}
-            <a href="#add" className="btn-admin-go">
+            {/* A jump down to the form, which is at the bottom under however
+                many restaurants there are: the right place for it and the
+                wrong place to have to scroll to. An outline, because it adds
+                nothing by itself. The red one on this screen is that form's
+                own save, which is the thing that actually writes a
+                restaurant. */}
+            <a href="#add" className="btn-admin">
               Add a restaurant
             </a>
           </>
@@ -133,7 +133,11 @@ export default async function RestaurantsAdmin() {
               Adds KFC Novare and Domino&apos;s with their usual items at placeholder
               prices.
             </p>
-            <SaveButton look="btn-admin-go" className="w-full">
+            {/* An outline too. This card only appears while the shop has no
+                menu at all, and the form at the bottom of the page is on
+                screen with it: two red buttons and neither reads as the
+                answer. */}
+            <SaveButton look="btn-admin" className="w-full">
               Add KFC and Domino&apos;s
             </SaveButton>
           </form>
@@ -146,7 +150,7 @@ export default async function RestaurantsAdmin() {
           detail={`Of ${onSale.length} items on sale. A photo sells food better than anything else on the page.`}
           className="mb-[18px]"
         >
-          <div className="grid items-center gap-[18px] xl:grid-cols-[1fr_auto]">
+          <div className="grid items-center gap-[18px] lg:grid-cols-[1fr_auto]">
             <div className="grid gap-3.5 sm:grid-cols-2">
               {gaps.map((gap) => {
                 // Worst first, because the list is a work order rather than a
@@ -220,7 +224,7 @@ export default async function RestaurantsAdmin() {
                 worth more than the mark. */}
             <div
               aria-hidden
-              className="hidden h-[150px] w-[112px] rounded-xl border-2 border-ink bg-[repeating-linear-gradient(-60deg,theme(colors.brand.DEFAULT)_0_7px,transparent_7px_16px)] xl:block"
+              className="hidden h-[150px] w-[112px] rounded-xl border-2 border-ink bg-[repeating-linear-gradient(-60deg,theme(colors.brand.DEFAULT)_0_7px,transparent_7px_16px)] lg:block"
             />
           </div>
         </Panel>
@@ -230,7 +234,7 @@ export default async function RestaurantsAdmin() {
         Up and down to reorder. This is the order a customer sees on the home page.
       </p>
 
-      <ul className="mb-[18px] grid gap-3 xl:grid-cols-2">
+      <ul className="mb-[18px] grid gap-3 lg:grid-cols-2">
         {list.map((restaurant, index) => (
           <li
             key={restaurant.id}
@@ -262,7 +266,7 @@ export default async function RestaurantsAdmin() {
                 in sunlight, which is where this page gets opened. */}
             <span
               className={`tag shrink-0 ${
-                restaurant.active ? "bg-mint/10 text-mint" : "bg-wash text-ink"
+                restaurant.active ? "bg-mint-tint text-mint" : "bg-wash text-ink"
               }`}
             >
               {restaurant.active ? "on the site" : "off"}

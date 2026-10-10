@@ -17,18 +17,18 @@ import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import SaveButton from "@/components/SaveButton";
 import { addCustomer } from "../actions";
+import { Bar, Composer, Picking, Room, Tick, TickAll } from "@/components/admin/CustomerBulk";
+/* The cuts and the address of the message screen come from the plain module,
+   not from the composer. The composer is a client component, and a server
+   page that imports a value out of one is handed a reference to something
+   that only exists in the browser: reading VIEWS or calling broadcastHref
+   through it threw on every render of this page. */
 import {
-  Bar,
-  Composer,
-  Picking,
-  Room,
-  Tick,
-  TickAll,
   VIEWS,
   broadcastHref,
   type Pattern,
   type Picked,
-} from "@/components/admin/CustomerBulk";
+} from "@/lib/customer-views";
 import { hostelNames } from "@/lib/hostels";
 import { namedPromoters } from "@/lib/promoters";
 import { santaRooms } from "@/lib/santa-admin";
@@ -224,12 +224,29 @@ export default async function CustomersPage({
     <div>
       <PageHeader
         title="Customers"
+        /* On a phone this page is reached from More, and the board draws the
+           way back to it above the title, as every other page behind More
+           does. */
+        backHref="/admin/more"
+        backLabel="More"
         detail={
           brought
             ? `Everybody ${brought.name} brought in, and what they have spent.`
             : by === "none"
               ? "Everybody who arrived on their own, with nobody to thank for it."
-              : "Everyone who has ever ordered, with the PIN that opens their history."
+              : /* Two sentences, because the phone board draws no figure tiles
+                   at all and puts the two numbers worth having into the line
+                   under the title instead. On a desk the tiles are there and
+                   the sentence says what the page is for. */
+                <>
+                  <span className="lg:hidden">
+                    {shown.length} {shown.length === 1 ? "person" : "people"} ·{" "}
+                    {naira(spend)} all time
+                  </span>
+                  <span className="hidden lg:inline">
+                    Everyone who has ever ordered, with the PIN that opens their history.
+                  </span>
+                </>
         }
         actions={
           <>
@@ -239,8 +256,13 @@ export default async function CustomersPage({
             {/* The composer is a card beside the table on a desk and a screen
                 of its own on a phone, so the button that opens it is a jump
                 down the page at one width and a link at the other. Both go
-                to the same composer; neither sends anything. */}
-            <a href="#send-a-message" className="btn-admin hidden lg:inline-flex">
+                to the same composer; neither sends anything.
+
+                It is also the board's one red button on this screen: Add
+                somebody and Export only jump down the page or hand back a
+                file. Only one of these two copies is ever on screen, so the
+                rule still holds at both widths. */}
+            <a href="#send-a-message" className="btn-admin-go hidden lg:inline-flex">
               Send a message
             </a>
             <a
@@ -250,7 +272,7 @@ export default async function CustomersPage({
                 by,
                 q: query.q ?? "",
               })}
-              className="btn-admin lg:hidden"
+              className="btn-admin-go lg:hidden"
             >
               Send a message
             </a>
@@ -269,7 +291,11 @@ export default async function CustomersPage({
         }
       />
 
-      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3.5 xl:grid-cols-4">
+      {/* The desk's four, and none on a phone: the board there goes title,
+          sentence, search, cuts, then the first person, because four tiles
+          two up is most of a phone screen spent before the book starts. The
+          two figures worth having are in the sentence above instead. */}
+      <div className="mb-4 hidden gap-2.5 sm:gap-3.5 lg:grid lg:grid-cols-4">
         <Figure
           label="Customers"
           value={String(shown.length)}
@@ -293,6 +319,12 @@ export default async function CustomersPage({
         />
       </div>
 
+      {/* The phone board puts the box under the title and the cuts below it;
+          the desk board has the cuts first, with the box in the row of
+          controls under them. The same two things in a column, ordered by
+          width, because a second copy of the box would be a second form and
+          a second set of hidden fields to keep in step. */}
+      <div className="flex flex-col">
       {/* The named cuts of the book, as links rather than a dropdown: the
           counts are the point, and a count inside a closed select is a count
           nobody reads. */}
@@ -309,7 +341,10 @@ export default async function CustomersPage({
         ))}
       </div>
 
-      <form className="mb-4 flex flex-wrap gap-2.5" action="/admin/customers">
+      <form
+        className="order-first mb-4 flex flex-wrap gap-2.5 lg:order-none"
+        action="/admin/customers"
+      >
         {/* The cut survives a search. Searching inside "quiet 30 days" and
             landing back on everyone is the filter undoing itself. */}
         {view !== "" && <input type="hidden" name="view" value={view} />}
@@ -343,6 +378,7 @@ export default async function CustomersPage({
           </a>
         )}
       </form>
+      </div>
 
       <Picking people={people} patterns={patterns}>
         <Bar
@@ -377,7 +413,7 @@ export default async function CustomersPage({
           </div>
         )}
 
-        <div className="grid items-start gap-[18px] xl:grid-cols-[1.55fr_1fr]">
+        <div className="grid items-start gap-[18px] lg:grid-cols-[1.55fr_1fr]">
           {shown.length === 0 ? (
             <p className="card hint">
               {rows.length === 0
@@ -628,6 +664,7 @@ export default async function CustomersPage({
             <Panel
               title="Who comes back"
               detail="Counted across the whole book, not the filter above it."
+              size="sm"
             >
               {[
                 { label: "Ordered once, never again", count: once, bar: "bg-brand-dark" },

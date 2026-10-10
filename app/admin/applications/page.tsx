@@ -115,10 +115,26 @@ export default async function ApplicationsAdmin({
         }
       />
 
-      {/* Two up on a phone, which is what the mobile board draws: four
-          figures down the screen is four screens of scrolling before the
-          first application. */}
-      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:mb-4 sm:gap-3.5 xl:grid-cols-4">
+      {/* One tile on a phone, which is what the mobile board draws, and it
+          is the only one worth a whole card: the three counts beside it are
+          history, and this page is opened because somebody is waiting. On
+          brand tint with the volt hairline, which is the ground the boards
+          put a soft warning on, so the number reads as something owed rather
+          than something tallied. */}
+      <div className="card mb-3 border-volt-line bg-brand-tint px-3.5 py-3 lg:hidden">
+        <p className="ticket text-muted">Waiting on you</p>
+        {/* Ink, not the Deep the desk tile uses: there the number is one of
+            four on a white ground and has to say on its own which one to
+            read, and here the tint it is sitting on has already said it. */}
+        <p className="font-display text-[33px] font-black leading-none text-ink">
+          {waiting.length}
+        </p>
+        <p className="hint mt-0.5">
+          {oldest ? `Oldest asked ${agoLabel(oldest.created_at)}` : "Nobody is waiting on you"}
+        </p>
+      </div>
+
+      <div className="mb-3 hidden gap-2.5 sm:mb-4 sm:gap-3.5 lg:grid lg:grid-cols-4">
         <Figure
           label="Waiting on you"
           value={String(waiting.length)}
@@ -173,7 +189,7 @@ export default async function ApplicationsAdmin({
         ))}
       </div>
 
-      <div className="grid items-start gap-3 sm:gap-[18px] xl:grid-cols-[1.6fr_1fr]">
+      <div className="grid items-start gap-3 sm:gap-[18px] lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-2.5 sm:space-y-3">
           {order.length === 0 ? (
             <p className="card text-sm text-muted">
@@ -230,51 +246,61 @@ export default async function ApplicationsAdmin({
                     </p>
                   )}
 
-                  {/* On a phone each of these buttons grows to share the
-                      line, so the two that matter sit side by side at full
-                      height rather than four small ones in a row a thumb
-                      cannot pick between. On a desk they are their own
-                      width, as they were. */}
+                  {/* The board puts two buttons on this card on a phone and
+                      four on a desk. Four across three hundred and ninety
+                      pixels is four targets a thumb cannot pick between, so
+                      the two that matter take the line and the other two drop
+                      to a line of their own underneath, still on the card and
+                      still forty-four pixels.
+
+                      Two groups rather than two copies, and `sm:contents`
+                      lifts their children back into the one row on a desk, so
+                      the desk keeps the row it had and no button is written
+                      out twice. */}
                   {open && (
                     <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t-[1.5px] border-rule pt-2.5 sm:mt-3 sm:pt-3">
-                      {/* The one red thing on the page: it is what the page
-                          exists to do. */}
-                      <form action={decideApplication} className="flex-[1.4] sm:flex-none">
-                        <input type="hidden" name="id" value={one.id} />
-                        <input type="hidden" name="decision" value="approve" />
-                        <SaveButton look="btn-admin-go" className="w-full sm:w-auto">
-                          Set them up
-                        </SaveButton>
-                      </form>
-                      <a href={`tel:${one.phone}`} className="btn-admin flex-1 sm:flex-none">
-                        Call
-                      </a>
-                      <a
-                        href={whatsappTo(one.phone, `Hi ${first},`)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn-admin flex-1 sm:flex-none"
-                      >
-                        WhatsApp
-                      </a>
-                      {/* Turning somebody down is not destructive and not
-                          forever: it keeps the application, and the Turned
-                          down cut is where it is reconsidered. So it is a
-                          quiet button on the far side rather than a red
-                          one. */}
-                      <form
-                        action={decideApplication}
-                        className="flex-1 sm:ml-auto sm:flex-none"
-                      >
-                        <input type="hidden" name="id" value={one.id} />
-                        <input type="hidden" name="decision" value="decline" />
-                        <SaveButton
-                          look="btn-admin"
-                          className="w-full border-line text-muted sm:w-auto"
+                      <div className="flex w-full gap-2 sm:contents">
+                        {/* The one red thing on the page: it is what the page
+                            exists to do. */}
+                        <form action={decideApplication} className="flex-[1.4] sm:flex-none">
+                          <input type="hidden" name="id" value={one.id} />
+                          <input type="hidden" name="decision" value="approve" />
+                          <SaveButton look="btn-admin-go" className="w-full sm:w-auto">
+                            Set them up
+                          </SaveButton>
+                        </form>
+                        <a href={`tel:${one.phone}`} className="btn-admin flex-1 sm:flex-none">
+                          Call
+                        </a>
+                      </div>
+                      <div className="flex w-full gap-2 sm:contents">
+                        <a
+                          href={whatsappTo(one.phone, `Hi ${first},`)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-admin flex-1 sm:flex-none"
                         >
-                          Not now
-                        </SaveButton>
-                      </form>
+                          WhatsApp
+                        </a>
+                        {/* Turning somebody down is not destructive and not
+                            forever: it keeps the application, and the Turned
+                            down cut is where it is reconsidered. So it is a
+                            quiet button on the far side rather than a red
+                            one. */}
+                        <form
+                          action={decideApplication}
+                          className="flex-1 sm:ml-auto sm:flex-none"
+                        >
+                          <input type="hidden" name="id" value={one.id} />
+                          <input type="hidden" name="decision" value="decline" />
+                          <SaveButton
+                            look="btn-admin"
+                            className="w-full border-line text-muted sm:w-auto"
+                          >
+                            Not now
+                          </SaveButton>
+                        </form>
+                      </div>
                     </div>
                   )}
                 </article>
@@ -284,7 +310,11 @@ export default async function ApplicationsAdmin({
         </div>
 
         <div className="flex flex-col gap-3 sm:gap-4">
-          <Panel title="Setting somebody up" detail="What happens when you tap it.">
+          <Panel
+            title="Setting somebody up"
+            detail="What happens when you tap it."
+            size="sm"
+          >
             <ol className="mt-1">
               {[
                 {
@@ -320,7 +350,7 @@ export default async function ApplicationsAdmin({
             </p>
           </Panel>
 
-          <Panel title="Worth knowing">
+          <Panel title="Worth knowing" size="sm">
             <p className="hint mt-1">
               {promoters.length === 0
                 ? "Nobody is promoting yet, so there is nothing to compare an application against."

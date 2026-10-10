@@ -4,43 +4,26 @@ import { createContext, useContext, useMemo, useState } from "react";
 import PageHeader from "@/components/admin/PageHeader";
 import { whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
-
-/**
- * The named cuts of the book.
+/*
+ * The cuts, the address of the message screen and the two shapes they are
+ * written in all live in lib/customer-views, outside this file. The address
+ * is built in here as well as on the pages, so it is imported; neither it
+ * nor the cuts are re-exported.
  *
- * It lived on the customers page until the phone's own message screen had to
- * name the cut it was started from, and a list of views written out twice is
- * a list that disagrees with itself by the second change.
+ * This module is a client component. A server page that imports a value out
+ * of one is not handed the value: the bundler gives it a reference to
+ * something that only exists in the browser, and the first time the server
+ * dots into it the render throws. Both server pages that draw this composer
+ * read the cuts and build that address, so both have to reach the real
+ * module themselves.
  */
-export const VIEWS = [
-  { value: "", label: "Everyone", nudge: "" },
-  { value: "repeat", label: "Ordered twice or more", nudge: "have ordered twice or more" },
-  { value: "quiet", label: "Quiet 30 days", nudge: "have not ordered in 30 days" },
-  { value: "unreviewed", label: "Never reviewed", nudge: "have never left a review" },
-  { value: "big", label: "Big spenders", nudge: "spend above the house average" },
-] as const;
+import { broadcastHref, type Pattern, type Picked } from "@/lib/customer-views";
 
-/** One person in the book, as much of them as a message needs. */
-export type Picked = {
-  phone: string;
-  /** Their name as the book has it, or their number where there is none. */
-  name: string;
-  /** What a message opens with, worked out on the server where the book's
-   *  own answer for this person lives. */
-  greet: string;
-  block: string;
-  pin: string;
-  spend: number;
-  orders: number;
-};
-
-/** A template the owner can drop into the box, as the settings have it. */
-export type Pattern = {
-  kind: string;
-  label: string;
-  /** The admin's own wording with {name}, {block} and {pin} still in it. */
-  body: string;
-};
+/* The two shapes travel on, because every caller that takes a list of
+   people also renders something from this file. A type is erased at build
+   time, so passing one through a client module costs nothing and cannot
+   become a browser-only reference. */
+export type { Pattern, Picked };
 
 type Holding = {
   on: Set<string>;
@@ -170,36 +153,6 @@ function chosen(held: Holding): Picked[] {
 }
 
 /**
- * The address of the phone's message screen, with the people in it.
- *
- * Who the message is for travels in the address rather than in a store, so
- * the screen can be linked to, reloaded, and sent to somebody else without
- * the list of nine people quietly turning into nobody. The cut it was
- * started from travels too, so the way back is the list as it was left.
- */
-export function broadcastHref({
-  phones,
-  view = "",
-  by = "",
-  q = "",
-  start = "",
-}: {
-  phones: string[];
-  view?: string;
-  by?: string;
-  q?: string;
-  /** The template to land on, where the button that opened this named one. */
-  start?: string;
-}): string {
-  const params = new URLSearchParams();
-  params.set("who", phones.join(","));
-  for (const [key, value] of Object.entries({ view, by, q, start })) {
-    if (value !== "") params.set(key, value);
-  }
-  return `/admin/broadcast?${params.toString()}`;
-}
-
-/**
  * The bar that appears once anything is ticked.
  *
  * On a desk it is the dark strip over the table, where the mouse already is
@@ -303,7 +256,7 @@ export function Bar({
               onClick={() =>
                 load(held.patterns.some((one) => one.kind === "google") ? "google" : "review")
               }
-              className="btn-admin btn-admin-sm border-shell/25 bg-transparent text-shell hover:bg-shell/10"
+              className="btn-admin btn-admin-sm btn-admin-dark"
             >
               Ask for a review
             </a>
@@ -311,20 +264,20 @@ export function Bar({
           <a
             href="#send-a-message"
             onClick={() => load("pin")}
-            className="btn-admin btn-admin-sm border-shell/25 bg-transparent text-shell hover:bg-shell/10"
+            className="btn-admin btn-admin-sm btn-admin-dark"
           >
             Send PINs
           </a>
           <a
             href={codeHref}
-            className="btn-admin btn-admin-sm border-shell/25 bg-transparent text-shell hover:bg-shell/10"
+            className="btn-admin btn-admin-sm btn-admin-dark"
           >
             Give them a code
           </a>
           <button
             type="button"
             onClick={exportThem}
-            className="btn-admin btn-admin-sm border-shell/25 bg-transparent text-shell hover:bg-shell/10"
+            className="btn-admin btn-admin-sm btn-admin-dark"
           >
             Export
           </button>
@@ -630,7 +583,12 @@ export function Broadcast({
           {first && ready && (
             <>
               <p className="ticket mb-1.5 text-muted">{first.greet} would read</p>
-              <div className="mb-3 rounded-[14px] rounded-tr-[4px] border-[1.5px] border-mint/30 bg-mint-tint p-3">
+              {/* The bubble as WhatsApp draws one: the tint it is filled
+                  with and a solid hairline, not that tint at a third over
+                  whatever the card happens to be sitting on. An opacity over
+                  the page ground is not a colour, it is two colours
+                  depending on where the card lands. */}
+              <div className="mb-3 rounded-[14px] rounded-tr-[4px] border-[1.5px] border-mint bg-mint-tint p-3">
                 <p className="whitespace-pre-wrap text-sm leading-[1.45]">
                   {fill(held.draft, first)}
                 </p>

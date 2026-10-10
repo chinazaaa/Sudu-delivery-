@@ -2,6 +2,7 @@ import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import MoreList from "@/components/admin/MoreList";
 import { waitingCounts } from "@/lib/admin";
+import { YOU } from "@/lib/admin-nav";
 import { logout } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -48,24 +49,21 @@ export default async function MorePage() {
 
         <section className="card px-3.5 pb-1.5 pt-2.5">
           <p className="ticket text-muted">You</p>
-          <Link
-            href="/admin/settings"
-            className="flex min-h-[46px] items-center gap-2.5 border-t-[1.5px] border-rule px-0.5 py-3"
-          >
-            <span className="flex-1 text-[14.5px] font-semibold">Settings</span>
-            <span aria-hidden className="text-[17px] text-muted">
-              ›
-            </span>
-          </Link>
-          <Link
-            href="/admin/deletions"
-            className="flex min-h-[46px] items-center gap-2.5 border-t-[1.5px] border-rule px-0.5 py-3"
-          >
-            <span className="flex-1 text-[14.5px] font-semibold">Deleted</span>
-            <span aria-hidden className="text-[17px] text-muted">
-              ›
-            </span>
-          </Link>
+          {/* Read off the same list the rail's footer pins, rather than
+              written out here: these two were also filed under the Site
+              heading above, so the More screen listed each of them twice. */}
+          {YOU.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex min-h-[46px] items-center gap-2.5 border-t-[1.5px] border-rule px-0.5 py-3"
+            >
+              <span className="flex-1 text-[14.5px] font-semibold">{item.label}</span>
+              <span aria-hidden className="text-[17px] text-muted">
+                ›
+              </span>
+            </Link>
+          ))}
           <Link
             href="/"
             className="flex min-h-[46px] items-center gap-2.5 border-t-[1.5px] border-rule px-0.5 py-3 text-brand-dark"

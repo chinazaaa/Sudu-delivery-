@@ -76,13 +76,29 @@ export const GROUPS: Group[] = [
       { href: "/admin/santa", label: "Secret Santa" },
       { href: "/admin/email", label: "Email" },
       { href: "/admin/notifications", label: "Notifications" },
-      { href: "/admin/settings", label: "Settings" },
-      { href: "/admin/deletions", label: "Deleted" },
+      /* Settings and Deleted are not filed here. The board's Site group is
+         the four pages above, and both of those belong to the "You" card at
+         the bottom of the More screen and to the rail's own footer, so
+         listing them in a group printed them twice on a phone. */
     ],
   },
 ];
 
-export const EVERY = [...DAILY, ...GROUPS.flatMap((one) => one.items)];
+/**
+ * The two that belong to whoever is signed in, rather than to a group.
+ *
+ * The board draws these in the "You" card at the bottom of the More screen
+ * and pinned into the rail's footer, which is why they are not in GROUPS:
+ * a group would print them a second time on the More screen. They are still
+ * pages, so they stay in EVERY, which is what names the page in the phone
+ * header.
+ */
+export const YOU: Item[] = [
+  { href: "/admin/settings", label: "Settings" },
+  { href: "/admin/deletions", label: "Deleted" },
+];
+
+export const EVERY = [...DAILY, ...GROUPS.flatMap((one) => one.items), ...YOU];
 
 /**
  * The five the thumb reaches, on a phone.
