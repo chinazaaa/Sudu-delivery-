@@ -1,4 +1,4 @@
-import { Pressable, Text, View, type ViewStyle } from "react-native";
+import { Pressable, Text, View, type TextStyle, type ViewStyle } from "react-native";
 import { F, T } from "@/lib/theme";
 
 /**
@@ -19,7 +19,7 @@ export function Ticket({
 }: {
   children: React.ReactNode;
   colour?: string;
-  style?: ViewStyle;
+  style?: TextStyle;
 }) {
   return (
     <Text
@@ -31,7 +31,7 @@ export function Ticket({
           textTransform: "uppercase",
           color: colour,
         },
-        style as never,
+        style,
       ]}
     >
       {children}
@@ -49,7 +49,7 @@ export function Display({
   children: React.ReactNode;
   size?: number;
   colour?: string;
-  style?: ViewStyle;
+  style?: TextStyle;
 }) {
   return (
     <Text
@@ -61,7 +61,7 @@ export function Display({
           color: colour,
           textTransform: "uppercase",
         },
-        style as never,
+        style,
       ]}
     >
       {children}

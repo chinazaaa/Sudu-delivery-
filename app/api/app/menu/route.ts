@@ -3,7 +3,13 @@ import { openBatches } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
 import { hostelNames } from "@/lib/hostels";
 import { namedPromoters } from "@/lib/promoters";
-import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
+import {
+  activeBands,
+  googleLinks,
+  hoursByDay,
+  safeSettings,
+  sameDayPricing,
+} from "@/lib/settings";
 import { dealsAt, offerNudge, offersByRestaurant, type Nudge } from "@/lib/coupons";
 import { offerBadge, offerLine } from "@/lib/offers";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
@@ -200,6 +206,10 @@ export async function GET(): Promise<NextResponse> {
         // nowhere.
         ribbonTo: appRoute(ribbon?.href ?? ""),
         whatsapp: settings.whatsapp_number,
+        // Where to leave us a review, so the app can ask for one on a
+        // delivered order exactly as the website does. Empty where admin has
+        // not put a link in, and then nothing is asked.
+        google: googleLinks(settings),
       },
     });
   } catch (error) {

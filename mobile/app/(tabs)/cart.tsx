@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
   api,
+  bandIndex,
   feeAcross,
   feeFor,
   lagosToday,
@@ -15,7 +16,9 @@ import {
 } from "@/lib/api";
 import { cart, cartTotal, countItems, party, people, useStored, type Line } from "@/lib/store";
 import { useShop } from "@/lib/use-shop";
-import { T } from "@/lib/theme";
+import Thumb from "@/components/Thumb";
+import { Button, Card, Display, FloatingBar, Stepper, Ticket } from "@/components/ui";
+import { F, T } from "@/lib/theme";
 
 /** What is in the bag, and what it will cost to bring it. */
 export default function Cart() {
@@ -96,17 +99,34 @@ export default function Cart() {
 
   if (lines.length === 0) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <Text style={{ fontSize: 18, fontWeight: "800", color: T.ink }}>Your cart is empty</Text>
-        <Text style={{ color: T.muted, textAlign: "center", marginTop: 6 }}>
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+          backgroundColor: T.shell,
+        }}
+      >
+        <Ticket>Nothing in the car yet</Ticket>
+        <Display size={44} style={{ textAlign: "center", marginTop: 6 }}>
+          Your cart is empty
+        </Display>
+        <Text
+          style={{
+            color: T.muted,
+            textAlign: "center",
+            marginTop: 8,
+            fontFamily: F.body,
+            fontSize: 15,
+            lineHeight: 22,
+          }}
+        >
           Pick a few things and they gather here, ready for the next run.
         </Text>
-        <Pressable
-          onPress={() => router.replace("/")}
-          style={{ marginTop: 16, backgroundColor: T.brand, borderRadius: 999, paddingHorizontal: 24, paddingVertical: 12 }}
-        >
-          <Text style={{ color: T.paper, fontWeight: "800" }}>Browse the menu</Text>
-        </Pressable>
+        <Button onPress={() => router.replace("/")} style={{ marginTop: 18 }}>
+          Browse the menu
+        </Button>
       </View>
     );
   }
@@ -117,23 +137,13 @@ export default function Cart() {
   // Only where the ladder is what they would pay. Under an offer this number
   // is not what ordering alone costs, and the whole point of the line is that
   // the two figures are real.
-  // Priced the way the food is actually going, not the way it usually goes.
-  // With no run inside the days people can order ahead, the soonest thing is
-  // a car of its own, and quoting the run ladder here had the cart promising
-  // four thousand over a checkout about to charge six and a half.
   // Which kitchens this cart touches, found the same way the checkout finds
   // them: a line carries the counter's name, not its id.
   const kitchenOf = (line: { itemId: string }) =>
     shop?.menu.find((one) => one.items.some((item) => item.id === line.itemId))
       ?.restaurant.id ?? "";
   const kitchensIn = [
-    ...new Set(
-      lines.map(
-        (line) =>
-          shop?.menu.find((one) => one.items.some((item) => item.id === line.itemId))
-            ?.restaurant.id ?? ""
-      )
-    ),
+    ...new Set(lines.map((line) => kitchenOf(line))),
   ].filter(Boolean);
   const decided = shop
     ? nextArrival(
@@ -197,31 +207,97 @@ export default function Cart() {
   // says which is which and leaves the choice to them.
   const nearly = priced?.nearly ?? null;
 
+  // The meter at the top: how full the car is, and how much more fits before
+  // the fee goes up a rung. It only tells the truth where the fee is the
+  // container ladder, so shopping priced by what it comes to, a picked time
+  // and an offer each leave it out rather than draw a number that is wrong.
+  const onTheLadder = !offered && byValue.length === 0 && soon === null && shop !== null;
+  const ladder = shop && shop.bands.length > 0 ? shop.bands : [];
+  const rung = onTheLadder && shop ? bandIndex(shop.bands, items) : -1;
+  const cap = rung >= 0 ? ladder[rung]?.maxItems ?? null : null;
+  const tier =
+    cap === null ? "" : `up to ${cap} item${cap === 1 ? "" : "s"}`;
+  const room = cap === null ? null : cap - items;
+  const hint =
+    fee === null
+      ? "The fee lands with the next run."
+      : room === null
+        ? offered
+          ? offered.note || "Delivery is on offer for this cart."
+          : `Delivery on this cart is ${naira(fee)}.`
+        : room > 0
+          ? `${room} more item${room === 1 ? "" : "s"} ${
+              room === 1 ? "fits" : "fit"
+            } in ${naira(fee)}, from any kitchen.`
+          : `This car is full at ${naira(fee)}.`;
+
+  const countLabel = `${items} item${items === 1 ? "" : "s"}${
+    tier === "" ? "" : ` · ${tier}`
+  }`;
 
   return (
-    <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 140, gap: 10 }}>
-        {/* Groups live on the website: the link somebody is sent is a web
-            address, and everybody in a car has to see the same page. Rather
-            than pretend the app can do it, this hands over to the thing that
-            can, with the food already in their cart waiting for them. */}
+    <View style={{ flex: 1, backgroundColor: T.shell }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 150, gap: 14 }}>
+        {/* How full the car is. The first thing on the screen, because the
+            fee is the one number people are deciding about. */}
+        <View
+          style={{
+            backgroundColor: T.ink,
+            borderRadius: T.radius,
+            paddingVertical: 14,
+            paddingHorizontal: 16,
+            gap: 10,
+          }}
+        >
+          <View
+            style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" }}
+          >
+            <Ticket colour={T.volt}>Fee for this car</Ticket>
+            {tier !== "" && (
+              <Text style={{ fontFamily: F.mono, fontSize: 11, color: T.onInkMuted }}>
+                {tier.toUpperCase()}
+              </Text>
+            )}
+          </View>
+
+          {cap !== null && cap <= 14 && (
+            <View style={{ flexDirection: "row", gap: 4 }}>
+              {Array.from({ length: cap }, (_, at) => (
+                <View
+                  key={at}
+                  style={{
+                    flex: 1,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: at < items ? T.brand : T.inkLine,
+                  }}
+                />
+              ))}
+            </View>
+          )}
+
+          <Text style={{ fontFamily: F.body, fontSize: 13, color: T.onInk, lineHeight: 19 }}>
+            {hint}
+          </Text>
+        </View>
+
         {nearly && (
           <View
             style={{
               backgroundColor: T.tint,
               borderRadius: T.radius,
-              borderWidth: 1,
-              borderColor: T.brand + "40",
+              borderWidth: 2,
+              borderColor: T.ink,
               padding: 14,
               gap: 4,
             }}
           >
-            <Text style={{ fontWeight: "800", color: T.brandDark }}>
+            <Text style={{ fontFamily: F.bodyBold, color: T.brandDark, fontSize: 15 }}>
               {nearly.fee === 0
                 ? "Delivery would be free"
                 : `Delivery would be ${naira(nearly.fee)}`}
             </Text>
-            <Text style={{ color: T.ink }}>
+            <Text style={{ fontFamily: F.body, color: T.ink, fontSize: 14, lineHeight: 20 }}>
               {nearly.note || "An offer"} is on for part of this cart.{" "}
               {nearly.blocking.length <= 2
                 ? `${nearly.blocking.join(" and ")} ${
@@ -236,43 +312,251 @@ export default function Cart() {
           </View>
         )}
 
+        {/* Everything in the cart, in one drawn card, with a hairline
+            between the rows and the way to add more at the bottom of it. */}
+        <View
+          style={{
+            backgroundColor: T.paper,
+            borderWidth: 2,
+            borderColor: T.ink,
+            borderRadius: T.radius,
+            overflow: "hidden",
+          }}
+        >
+          {blocks.map((block) => (
+            <View key={block.person === "" ? "me" : block.person}>
+              {friends.length > 0 && (
+                <View
+                  style={{
+                    backgroundColor: T.shell,
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderBottomWidth: 1,
+                    borderBottomColor: T.line,
+                  }}
+                >
+                  <Ticket>{block.person === "" ? "You" : block.person}</Ticket>
+                </View>
+              )}
+
+              {block.lines.map((line) => (
+                <View
+                  key={line.key}
+                  style={{ borderBottomWidth: 1, borderBottomColor: T.line, padding: 12 }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                    <View
+                      style={{
+                        width: 52,
+                        height: 52,
+                        borderRadius: 10,
+                        overflow: "hidden",
+                        backgroundColor: T.tint,
+                      }}
+                    >
+                      <Thumb src={line.imageUrl} name={line.name} ratio={1} />
+                    </View>
+
+                    {/* The same as the website: the dish in the cart is a way
+                        back to the dish itself, for a second look or a
+                        second one. */}
+                    <Pressable
+                      onPress={() => {
+                        const place = placeOf(line);
+                        // The line, not just the dish: tapping something in
+                        // the cart is going back to what you chose, so the
+                        // sheet opens holding your choices and saving
+                        // replaces it.
+                        if (place)
+                          router.push(
+                            `/r/${place.restaurant.id}?item=${line.itemId}` +
+                              `&line=${encodeURIComponent(line.key)}`
+                          );
+                      }}
+                      disabled={placeOf(line) === null}
+                      accessibilityRole="link"
+                      accessibilityLabel={`${line.name}, open on the ${line.restaurant} menu`}
+                      style={{ flex: 1, minWidth: 0, gap: 2 }}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: F.bodyBold,
+                          fontSize: 15,
+                          lineHeight: 19,
+                          color: T.ink,
+                        }}
+                      >
+                        {line.name}
+                      </Text>
+                      <Text style={{ fontFamily: F.mono, fontSize: 11, color: T.muted }}>
+                        {line.restaurant} · {naira(line.unitPrice * line.qty)}
+                      </Text>
+                      {line.choices.length > 0 && (
+                        <Text style={{ fontFamily: F.body, fontSize: 12, color: T.muted }}>
+                          {line.choices.join(", ")}
+                        </Text>
+                      )}
+                    </Pressable>
+
+                    <Stepper
+                      qty={line.qty}
+                      name={line.name}
+                      tone="chalk"
+                      onLess={() => cart.setQty(line.key, line.qty - 1)}
+                      onMore={() => cart.setQty(line.key, line.qty + 1)}
+                    />
+                  </View>
+
+                  {/* Taking something out had no button of its own: the only
+                      way was to press minus until the row went, which
+                      somebody who does not already know reads as a cart that
+                      will not let them delete anything. */}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      alignItems: "center",
+                      gap: 6,
+                      marginTop: friends.length > 0 ? 10 : 8,
+                      paddingLeft: 64,
+                    }}
+                  >
+                    <Pressable
+                      onPress={() => cart.setQty(line.key, 0)}
+                      hitSlop={8}
+                      accessibilityLabel={`Remove ${line.name} from the cart`}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: F.bodySemi,
+                          fontSize: 12,
+                          color: T.muted,
+                          textDecorationLine: "underline",
+                        }}
+                      >
+                        Remove
+                      </Text>
+                    </Pressable>
+
+                    {friends.length > 0 &&
+                      ["", ...friends.map((friend) => friend.name)].map((name) => {
+                        const on = line.forName === name;
+                        return (
+                          <Pressable
+                            key={name === "" ? "me" : name}
+                            onPress={() => cart.setForName(line.key, name)}
+                            style={{
+                              borderRadius: 999,
+                              borderWidth: 2,
+                              borderColor: on ? T.ink : T.line,
+                              paddingHorizontal: 11,
+                              paddingVertical: 4,
+                              backgroundColor: on ? T.ink : T.paper,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontFamily: F.bodySemi,
+                                fontSize: 12,
+                                color: on ? T.paper : T.ink,
+                              }}
+                            >
+                              {name === "" ? "Me" : name}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                  </View>
+                </View>
+              ))}
+            </View>
+          ))}
+
+          <Pressable
+            onPress={() => router.push("/")}
+            accessibilityRole="link"
+            style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: 14 }}
+          >
+            <Ionicons name="add" size={18} color={T.brandDark} />
+            <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.brandDark }}>
+              Add from another kitchen, same car
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* The bill. The total in the display face, because it is the line
+            everybody scrolls down here to read. */}
+        <Card style={{ gap: 8 }}>
+          <Row label="Subtotal" value={naira(food)} />
+          <Row
+            label={
+              offered
+                ? offered.note || "Delivery, on offer"
+                : tier === ""
+                  ? "Delivery"
+                  : `Delivery (${tier})`
+            }
+            value={fee === null ? "at checkout" : naira(fee)}
+          />
+          <View
+            style={{
+              borderTopWidth: 2,
+              borderStyle: "dashed",
+              borderColor: T.line,
+              marginVertical: 2,
+            }}
+          />
+          <View
+            style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}
+          >
+            <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.ink }}>Total</Text>
+            <Display size={34}>{naira(food + (fee ?? 0))}</Display>
+          </View>
+        </Card>
+
+        {/* Groups live on the website: the link somebody is sent is a web
+            address, and everybody in a car has to see the same page. Rather
+            than pretend the app can do it, this hands over to the thing that
+            can, with the food already in their cart waiting for them. */}
         {alone > 0 && (
           <Pressable
             onPress={() => router.push("/group")}
+            accessibilityRole="link"
             style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
               backgroundColor: T.tint,
-              borderRadius: T.radius,
-              borderWidth: 1,
-              borderColor: T.brand + "40",
-              padding: 14,
-              gap: 4,
+              borderRadius: 14,
+              paddingVertical: 12,
+              paddingHorizontal: 14,
             }}
           >
-            <Text style={{ fontWeight: "800", color: T.brand }}>
-              Ordering with friends?
+            <Ionicons name="people-outline" size={22} color={T.brand} />
+            <Text
+              style={{ flex: 1, fontFamily: F.body, fontSize: 14, color: T.ink, lineHeight: 20 }}
+            >
+              <Text style={{ fontFamily: F.bodyBold }}>Ordering with friends? </Text>
+              Share this run and split the {naira(alone)}.
             </Text>
-            <Text style={{ color: T.ink }}>
-              Delivery on this is {naira(alone)} on your own. Start a group and
-              that splits evenly between everybody in the car.
-            </Text>
-            <Text style={{ fontWeight: "800", color: T.brand, marginTop: 2 }}>
-              Start a group
-            </Text>
+            <Ionicons name="chevron-forward" size={18} color={T.ink} />
           </Pressable>
         )}
 
-        <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
+        {/* Names on the bags. Not on the board, because the board draws one
+            person's cart, but the fee does not move and the labels do. */}
+        <Card style={{ gap: 8 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={{ fontWeight: "800", color: T.ink }}>
-              {friends.length > 0 ? "People in this order" : "Ordering for friends?"}
-            </Text>
+            <Ticket>{friends.length > 0 ? "People in this order" : "Ordering for friends?"}</Ticket>
             {friends.length > 0 && (
               <Pressable onPress={() => people.clear()}>
-                <Text style={{ color: T.muted, fontWeight: "700" }}>Turn off</Text>
+                <Text style={{ fontFamily: F.bodySemi, fontSize: 12, color: T.muted }}>
+                  Turn off
+                </Text>
               </Pressable>
             )}
           </View>
-          <Text style={{ color: T.muted }}>
+          <Text style={{ fontFamily: F.body, fontSize: 14, color: T.muted, lineHeight: 20 }}>
             {friends.length > 0
               ? "Tap a name under each item to say whose it is. Bags are labelled with these names."
               : "Add their names, then tap a name under each item. The delivery fee does not change."}
@@ -283,17 +567,20 @@ export default function Cart() {
               <Pressable
                 key={friend.name}
                 onPress={() => people.remove(friend.name)}
+                accessibilityLabel={`Take ${friend.name} out of this order`}
                 style={{
                   flexDirection: "row",
                   gap: 6,
-                  borderWidth: 1,
-                  borderColor: T.line,
+                  borderWidth: 2,
+                  borderColor: T.ink,
                   borderRadius: 999,
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                 }}
               >
-                <Text style={{ fontWeight: "700", color: T.ink }}>{friend.name}</Text>
+                <Text style={{ fontFamily: F.bodySemi, fontSize: 13, color: T.ink }}>
+                  {friend.name}
+                </Text>
                 <Text style={{ color: T.muted }}>✕</Text>
               </Pressable>
             ))}
@@ -302,18 +589,22 @@ export default function Cart() {
               value={adding}
               onChangeText={setAdding}
               placeholder="Add a name"
+              placeholderTextColor={T.muted}
               onSubmitEditing={() => {
                 void people.add(adding);
                 setAdding("");
               }}
               style={{
-                borderWidth: 1,
-                borderColor: T.line,
+                borderWidth: 2,
+                borderColor: T.ink,
                 borderRadius: 999,
+                backgroundColor: T.field,
                 paddingHorizontal: 14,
-                paddingVertical: 6,
-                minWidth: 120,
+                paddingVertical: 7,
+                minWidth: 130,
                 color: T.ink,
+                fontFamily: F.body,
+                fontSize: 15,
               }}
             />
             <Pressable
@@ -323,189 +614,43 @@ export default function Cart() {
               }}
               style={{
                 borderRadius: 999,
-                paddingHorizontal: 14,
+                borderWidth: 2,
+                borderColor: T.ink,
+                paddingHorizontal: 16,
                 paddingVertical: 7,
-                backgroundColor: adding.trim() === "" ? "rgba(20,17,15,0.08)" : T.ink,
+                backgroundColor: adding.trim() === "" ? T.shell : T.ink,
               }}
             >
-              <Text style={{ color: adding.trim() === "" ? T.muted : T.paper, fontWeight: "800" }}>
+              <Text
+                style={{
+                  fontFamily: F.bodyBold,
+                  fontSize: 14,
+                  color: adding.trim() === "" ? T.muted : T.paper,
+                }}
+              >
                 Add
               </Text>
             </Pressable>
           </View>
-        </View>
-
-        {blocks.map((block) => (
-          <View key={block.person === "" ? "me" : block.person} style={{ gap: 10 }}>
-            {friends.length > 0 && (
-              <Text
-                style={{
-                  fontWeight: "800",
-                  fontSize: 13,
-                  letterSpacing: 0.6,
-                  color: T.muted,
-                  textTransform: "uppercase",
-                  marginTop: 6,
-                }}
-              >
-                {block.person === "" ? "You" : block.person}
-              </Text>
-            )}
-            {block.lines.map((line) => (
-              <View key={line.key} style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14 }}>
-                {/* The same as the website: the dish in the cart is a way back to
-                    the dish itself, for a second look or a second one. */}
-                <Pressable
-                  onPress={() => {
-                    const place = placeOf(line);
-                    // The line, not just the dish: tapping something in the
-                    // cart is going back to what you chose, so the sheet
-                    // opens holding your choices and saving replaces it.
-                    if (place)
-                      router.push(
-                        `/r/${place.restaurant.id}?item=${line.itemId}` +
-                          `&line=${encodeURIComponent(line.key)}`
-                      );
-                  }}
-                  disabled={placeOf(line) === null}
-                  accessibilityRole="link"
-                  accessibilityLabel={`${line.name}, open on the ${line.restaurant} menu`}
-                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontWeight: "800", color: T.ink }}>{line.name}</Text>
-                    <Text style={{ color: T.muted, marginTop: 2 }}>
-                      {line.restaurant}
-                      {line.choices.length > 0 ? ` · ${line.choices.join(", ")}` : ""}
-                    </Text>
-                  </View>
-                  {placeOf(line) !== null && (
-                    <Ionicons name="chevron-forward" size={18} color={T.muted} />
-                  )}
-                </Pressable>
-                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, gap: 12 }}>
-                  <Text style={{ fontWeight: "800", flex: 1, color: T.ink }}>
-                    {naira(line.unitPrice * line.qty)}
-                  </Text>
-                  <Pressable onPress={() => cart.setQty(line.key, line.qty - 1)} style={round()}>
-                    <Text style={{ fontSize: 18 }}>−</Text>
-                  </Pressable>
-                  <Text style={{ fontWeight: "800", minWidth: 20, textAlign: "center" }}>{line.qty}</Text>
-                  <Pressable onPress={() => cart.setQty(line.key, line.qty + 1)} style={round()}>
-                    <Text style={{ fontSize: 18 }}>+</Text>
-                  </Pressable>
-                </View>
-
-                {/* Taking something out had no button of its own: the only
-                    way was to press minus until the row went, which somebody
-                    who does not already know reads as a cart that will not
-                    let them delete anything. */}
-                <Pressable
-                  onPress={() => cart.setQty(line.key, 0)}
-                  hitSlop={8}
-                  accessibilityLabel={`Remove ${line.name} from the cart`}
-                  style={{ marginTop: 8, alignSelf: "flex-start" }}
-                >
-                  <Text
-                    style={{
-                      color: T.muted,
-                      fontWeight: "700",
-                      fontSize: 12,
-                      textDecorationLine: "underline",
-                    }}
-                  >
-                    Remove
-                  </Text>
-                </Pressable>
-
-                {friends.length > 0 && (
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
-                    <Text style={{ color: T.muted, fontWeight: "700", alignSelf: "center" }}>
-                      Whose?
-                    </Text>
-                    {["", ...friends.map((friend) => friend.name)].map((name) => {
-                      const on = line.forName === name;
-                      return (
-                        <Pressable
-                          key={name === "" ? "me" : name}
-                          onPress={() => cart.setForName(line.key, name)}
-                          style={{
-                            borderRadius: 999,
-                            paddingHorizontal: 12,
-                            paddingVertical: 5,
-                            backgroundColor: on ? T.brand : "rgba(20,17,15,0.06)",
-                          }}
-                        >
-                          <Text style={{ color: on ? T.paper : T.ink, fontWeight: "700", fontSize: 13 }}>
-                            {name === "" ? "Me" : name}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                )}
-              </View>
-            ))}
-          </View>
-        ))}
-
-        <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 6 }}>
-          <Row label="Food" value={naira(food)} />
-          <Row
-            label={
-              offered
-                ? offered.note || "Delivery, on offer"
-                : byValue.length > 0
-                  ? "Delivery"
-                  : `Delivery (${items} item${items === 1 ? "" : "s"})`
-            }
-            value={fee === null ? "at checkout" : naira(fee)}
-          />
-          <View style={{ height: 1, backgroundColor: T.line, marginVertical: 4 }} />
-          <Row label="Total" value={naira(food + (fee ?? 0))} strong />
-        </View>
+        </Card>
       </ScrollView>
 
-      <Pressable
+      <FloatingBar
+        label={countLabel}
+        total={naira(food + (fee ?? 0))}
+        action={seated ? "Finalise" : "Checkout"}
         onPress={() => router.push(seated ? "/finalise" : "/checkout")}
-        style={{
-          position: "absolute",
-          left: 16,
-          right: 16,
-          bottom: 24,
-          backgroundColor: T.brand,
-          borderRadius: 999,
-          paddingVertical: 16,
-          alignItems: "center",
-        }}
-      >
-        <Text style={{ color: T.paper, fontWeight: "800", fontSize: 16 }}>
-          {seated ? "Finalise my food" : "Checkout"}
-        </Text>
-      </Pressable>
+        bottom={24}
+      />
     </View>
   );
 }
 
-function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-      <Text style={{ color: strong ? T.ink : T.muted, fontWeight: strong ? "800" : "400" }}>
-        {label}
-      </Text>
-      <Text style={{ color: T.ink, fontWeight: strong ? "800" : "600" }}>{value}</Text>
+    <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+      <Text style={{ fontFamily: F.body, fontSize: 15, color: T.ink, flexShrink: 1 }}>{label}</Text>
+      <Text style={{ fontFamily: F.bodySemi, fontSize: 15, color: T.ink }}>{value}</Text>
     </View>
   );
-}
-
-function round() {
-  return {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: T.line,
-    alignItems: "center",
-    justifyContent: "center",
-  } as const;
 }

@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import Constants from "expo-constants";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api";
 import { enablePush, pushPermission, pushTokenIfAllowed } from "@/lib/push";
 import { cart, me, mine, people, useStored } from "@/lib/store";
-import { T } from "@/lib/theme";
+import { useShop } from "@/lib/use-shop";
+import { Display } from "@/components/ui";
+import { F, T } from "@/lib/theme";
 
 const SITE = "https://sudu.store";
 
@@ -19,6 +23,8 @@ const SITE = "https://sudu.store";
 export default function Account() {
   const router = useRouter();
   const [saved] = useStored(me.read, { name: "", phone: "", hostel: "", token: null });
+  const [here] = useStored(mine.read, []);
+  const shop = useShop();
   const [busy, setBusy] = useState(false);
 
   /** This phone's push token, once it has allowed notifications at all. Null
@@ -128,29 +134,83 @@ export default function Account() {
     router.replace("/");
   };
 
+  const help = shop?.shop.whatsapp ?? "";
+  const version = String(Constants.expoConfig?.version ?? "");
+
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}>
-      <View style={card}>
-        <Text style={heading}>
-          {saved.phone ? `You order as ${saved.phone}` : "No number on this phone yet"}
-        </Text>
-        <Text style={body}>
-          There are no accounts and no passwords here. Your number is who you are, and
-          the four digit PIN we sent on WhatsApp is how you see your own orders again.
-        </Text>
+    <ScrollView
+      style={{ backgroundColor: T.shell }}
+      contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 40 }}
+    >
+      {/* Who the shop has you down as. No account, no password: the number
+          is the name, which is why it is set in the ticket face beside it. */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 14,
+          backgroundColor: T.ink,
+          borderRadius: 18,
+          padding: 16,
+        }}
+      >
+        <View
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 999,
+            backgroundColor: T.brand,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Display size={30} colour={T.paper}>
+            {(saved.name || saved.phone || "?").slice(0, 1)}
+          </Display>
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={{ fontFamily: F.bodyBold, fontSize: 18, color: T.shell }}>
+            {saved.name || "Not ordered yet"}
+          </Text>
+          <Text style={{ fontFamily: F.mono, fontSize: 12, color: T.onInkMuted }}>
+            {saved.phone === "" ? "NO NUMBER ON THIS PHONE" : saved.phone}
+            {saved.hostel === "" ? "" : ` · ${saved.hostel.toUpperCase()}`}
+          </Text>
+        </View>
+      </View>
+
+      {/* Two facts rather than three: a figure for what splitting has saved
+          would have to be invented, and a made-up number on somebody's own
+          page is worse than a gap. */}
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <Stat value={String(here.length)} label="orders on this phone" />
+        <Stat value={saved.hostel || "Not set"} label="your block" />
       </View>
 
       {/* Always here, even before this phone can be notified at all. A
           setting that only appears once it is already relevant is a setting
           nobody finds, and somebody looking for it and seeing nothing decides
           the app has none. */}
-      <View style={card}>
-        <Text style={heading}>Notifications</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 8 }}>
+      <Section>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            minHeight: 56,
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            borderBottomWidth: 1,
+            borderBottomColor: T.line,
+          }}
+        >
+          <Ionicons name="notifications-outline" size={22} color={T.brand} />
           <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: "700", color: T.ink }}>Deals and offers</Text>
-            <Text style={body}>
-              New deals at a restaurant, cheaper delivery, and discount codes.
+            <Text style={{ fontFamily: F.bodySemi, fontSize: 15, color: T.ink }}>
+              Deals and offers
+            </Text>
+            <Text style={{ fontFamily: F.body, fontSize: 12, color: T.muted, marginTop: 1 }}>
+              New deals, cheaper delivery, discount codes
             </Text>
           </View>
           {/* Live whatever the phone has agreed to so far: turning it on is
@@ -159,104 +219,186 @@ export default function Account() {
             value={deals && pushToken !== null}
             onValueChange={chooseDeals}
             disabled={permission === "denied" && pushToken === null}
-            trackColor={{ true: T.brand }}
+            trackColor={{ true: T.mint }}
             accessibilityLabel="Deals and offers"
           />
         </View>
 
-        {pushToken === null && permission === "denied" ? (
-          <>
-            <Text style={[body, { marginTop: 10 }]}>
-              This phone has notifications switched off for Sudu, and iOS only asks once.
-            </Text>
+        <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
+          <Text style={{ fontFamily: F.body, fontSize: 13, color: T.muted, lineHeight: 19 }}>
+            {pushToken === null && permission === "denied"
+              ? "This phone has notifications switched off for Sudu, and iOS only asks once. Tap below to turn them on in Settings."
+              : pushToken === null
+                ? "Turn this on and we will ask this phone for permission. You do not have to have ordered anything: a deal is worth hearing about before a first order, not after it."
+                : "News about an order stays on either way: where your food is, and when it has arrived, is not something to have to remember to switch back on."}
+          </Text>
+          {pushToken === null && permission === "denied" && (
             <Pressable onPress={() => void Linking.openSettings()} style={{ marginTop: 10 }}>
-              <Text style={{ color: T.brand, fontWeight: "800" }}>
+              <Text style={{ fontFamily: F.bodyBold, fontSize: 14, color: T.brand }}>
                 Turn them on in Settings
               </Text>
             </Pressable>
-          </>
-        ) : pushToken === null ? (
-          <Text style={[body, { marginTop: 10 }]}>
-            Turn this on and we will ask this phone for permission. You do not have to
-            have ordered anything: a deal is worth hearing about before a first order,
-            not after it.
-          </Text>
-        ) : (
-          <Text style={[body, { marginTop: 10 }]}>
-            News about an order stays on either way: where your food is, and when it has
-            arrived, is not something to have to remember to switch back on.
-          </Text>
+          )}
+        </View>
+      </Section>
+
+      <Section>
+        {help !== "" && (
+          <Line
+            icon="logo-whatsapp"
+            label="Help on WhatsApp"
+            note={help}
+            onPress={() => Linking.openURL(`https://wa.me/${help.replace(/[^0-9]/g, "")}`)}
+          />
         )}
-      </View>
+        <Line
+          icon="people-outline"
+          label="Group orders"
+          note="Start or join a run"
+          onPress={() => router.push("/group")}
+        />
+        <Line
+          icon="document-text-outline"
+          label="What we keep about you"
+          note="Name, number, block, PIN, and what you ordered"
+          onPress={() => Linking.openURL(`${SITE}/privacy`)}
+        />
+        <Line
+          icon="document-text-outline"
+          label="Terms"
+          onPress={() => Linking.openURL(`${SITE}/terms`)}
+        />
+        <Line
+          icon="document-text-outline"
+          label="Returns and refunds"
+          onPress={() => Linking.openURL(`${SITE}/return-policy`)}
+        />
+        <Line
+          icon="help-buoy-outline"
+          label="Get help with an order"
+          onPress={() => Linking.openURL(`${SITE}/support`)}
+          last
+        />
+      </Section>
 
-      <View style={card}>
-        <Text style={heading}>What we keep</Text>
-        <Text style={body}>
-          Your name, number and block, what you ordered and what it cost, your PIN, and
-          the notification token for this phone if you allowed notifications.
-        </Text>
-        <Text style={[body, { marginTop: 6 }]}>
-          We never see your card details or your bank login. We do not track your
-          location, read your contacts, or use your camera.
-        </Text>
-        <Link label="Read the full privacy policy" onPress={() => Linking.openURL(`${SITE}/privacy`)} />
-        <Link label="Get help with an order" onPress={() => Linking.openURL(`${SITE}/support`)} />
-      </View>
-
-      <View style={card}>
-        <Text style={heading}>Delete everything about you</Text>
-        <Text style={body}>
-          Your name, number, block and PIN go for good. We keep the bare record of past
-          sales with no name on it, because we have to account for money that changed
-          hands.
-        </Text>
-        <Pressable
-          onPress={saved.token ? confirm : undefined}
-          disabled={!saved.token || busy}
-          style={{
-            marginTop: 10,
-            borderRadius: 999,
-            paddingVertical: 14,
-            alignItems: "center",
-            backgroundColor: saved.token && !busy ? T.brandDark : "rgba(20,17,15,0.12)",
-          }}
-        >
-          <Text style={{ color: saved.token && !busy ? T.paper : T.muted, fontWeight: "800" }}>
-            {busy ? "Deleting…" : "Delete my data"}
-          </Text>
-        </Pressable>
-        {!saved.token && (
-          <Text style={[body, { marginTop: 8 }]}>
-            Sign in on My orders first, so we know whose record to delete. A record is
-            only ever deleted by the phone it belongs to.
-          </Text>
+      <Section>
+        {saved.token && (
+          <Line icon="log-out-outline" label="Sign out of this phone" onPress={() => void signOut()} />
         )}
-      </View>
+        <Line
+          icon="trash-outline"
+          label={busy ? "Deleting…" : "Delete my data"}
+          note={
+            saved.token
+              ? "Removes your name, number, block and PIN"
+              : "Sign in on My orders first, so we know whose record to delete"
+          }
+          onPress={saved.token && !busy ? confirm : undefined}
+          tone="danger"
+          last
+        />
+      </Section>
 
-      {saved.token && (
-        <Pressable onPress={signOut} style={{ paddingVertical: 12, alignItems: "center" }}>
-          <Text style={{ color: T.muted, fontWeight: "700" }}>
-            Sign out of this phone instead
-          </Text>
-        </Pressable>
-      )}
+      <Text
+        style={{
+          fontFamily: F.mono,
+          fontSize: 11,
+          color: T.muted,
+          textAlign: "center",
+          letterSpacing: 1,
+        }}
+      >
+        SUDU · 速度{version === "" ? "" : ` · VERSION ${version}`}
+      </Text>
     </ScrollView>
   );
 }
 
-function Link({ label, onPress }: { label: string; onPress: () => void }) {
+/** One number worth knowing, in a drawn tile. */
+function Stat({ value, label }: { value: string; label: string }) {
   return (
-    <Pressable onPress={onPress} style={{ paddingTop: 10 }}>
-      <Text style={{ color: T.brand, fontWeight: "700" }}>{label}</Text>
-    </Pressable>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: T.paper,
+        borderWidth: 2,
+        borderColor: T.ink,
+        borderRadius: 14,
+        padding: 10,
+        gap: 2,
+      }}
+    >
+      <Display size={28} style={{ lineHeight: 28 }}>
+        {value}
+      </Display>
+      <Text style={{ fontFamily: F.body, fontSize: 12, color: T.muted }}>{label}</Text>
+    </View>
   );
 }
 
-const card = {
-  backgroundColor: T.paper,
-  borderRadius: T.radius,
-  padding: 16,
-} as const;
+/** A drawn card that holds a list of rows, clipped so they meet its edge. */
+function Section({ children }: { children: React.ReactNode }) {
+  return (
+    <View
+      style={{
+        backgroundColor: T.paper,
+        borderWidth: 2,
+        borderColor: T.ink,
+        borderRadius: T.radius,
+        overflow: "hidden",
+      }}
+    >
+      {children}
+    </View>
+  );
+}
 
-const heading = { fontSize: 16, fontWeight: "800", color: T.ink } as const;
-const body = { color: T.muted, marginTop: 4, lineHeight: 20 } as const;
+/** A row in one of those cards: an icon, a label, and a way onward. */
+function Line({
+  icon,
+  label,
+  note,
+  onPress,
+  tone = "plain",
+  last = false,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  note?: string;
+  onPress?: () => void;
+  /** "danger" for the one row that destroys something. */
+  tone?: "plain" | "danger";
+  last?: boolean;
+}) {
+  const colour = tone === "danger" ? T.brandDark : T.ink;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={onPress === undefined}
+      accessibilityRole="button"
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        minHeight: 56,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        opacity: onPress === undefined ? 0.5 : 1,
+        borderBottomWidth: last ? 0 : 1,
+        borderBottomColor: T.line,
+      }}
+    >
+      <Ionicons name={icon} size={22} color={tone === "danger" ? T.brandDark : T.brand} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontFamily: F.bodySemi, fontSize: 15, color: colour }}>{label}</Text>
+        {note !== undefined && note !== "" && (
+          <Text style={{ fontFamily: F.body, fontSize: 12, color: T.muted, marginTop: 1 }}>
+            {note}
+          </Text>
+        )}
+      </View>
+      {onPress !== undefined && <Ionicons name="chevron-forward" size={18} color={T.muted} />}
+    </Pressable>
+  );
+}

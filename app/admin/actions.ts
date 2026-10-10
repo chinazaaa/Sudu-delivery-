@@ -38,6 +38,13 @@ import {
 } from "@/lib/skincare-import";
 import { skincareShelves } from "@/lib/skincare";
 import { areaText } from "@/lib/areas";
+import {
+  ATTACHMENT_LIMIT,
+  emailList,
+  sendOneEmail,
+  wordsFrom,
+  type Attachment,
+} from "@/lib/email";
 import { placesText } from "@/lib/run-places";
 import { newPin } from "@/lib/customer-auth";
 import { recordDeletion } from "@/lib/deletions";
@@ -2223,13 +2230,43 @@ const SETTING_BOXES = [
  *  this is a name, not an action. The forms write the same suffix. */
 const askedName = (field: string) => `${field}__asked`;
 
+/**
+ * The two settings the database keeps as a number rather than as words.
+ *
+ * Everything else on this table is text, so every setting was saved as text,
+ * and an empty box went down as the empty string. Postgres will not read ""
+ * as a number: it rejected the whole update, the retry loop could not find a
+ * column name in "invalid input syntax for type numeric", and saving the
+ * legal page dates failed because two unrelated boxes further up the form
+ * were blank. Blank means nobody has said, which is null.
+ */
+const SETTING_NUMBERS: Record<string, "whole" | "decimal"> = {
+  google_rating: "decimal",
+  google_reviews: "whole",
+};
+
 export async function saveSettings(form: FormData): Promise<void> {
   await assertAdmin();
 
-  const patch: Record<string, string> = {};
+  const patch: Record<string, string | number | null> = {};
   for (const field of SETTING_FIELDS) {
     const value = form.get(field);
-    if (value !== null) patch[field] = String(value).trim();
+    if (value === null) continue;
+    const said = String(value).trim();
+
+    const kind = SETTING_NUMBERS[field];
+    if (kind) {
+      const number = Number(said);
+      patch[field] =
+        said === "" || !Number.isFinite(number)
+          ? null
+          : kind === "whole"
+            ? Math.round(number)
+            : number;
+      continue;
+    }
+
+    patch[field] = said;
   }
 
   // Asked and not ticked is "no". Not asked at all is a different form,
@@ -2265,7 +2302,7 @@ export async function saveSettings(form: FormData): Promise<void> {
 
   if (Object.keys(patch).length === 0) return;
 
-  const write = (fields: Record<string, string>) =>
+  const write = (fields: Record<string, string | number | null>) =>
     db()
       .from("settings")
       .update({ ...fields, updated_at: new Date().toISOString() })
@@ -4062,4 +4099,87 @@ async function tripAlreadyGoing(
     (one) => one.parcel_route === route
   );
   return match?.batch_id ?? null;
+}
+
+export type EmailState = {
+  error: string | null;
+  /** What was sent, and to how many people, for the line after a send. */
+  sent: { to: number; cc: number; files: number } | null;
+};
+
+/**
+ * One email, written in admin and sent to whoever it names.
+ *
+ * Every other email in this shop goes to us. This one goes out: a letter to a
+ * parent, a quote to a hall, an invoice with the PDF attached. The HTML is
+ * written in the box and sent as it stands, because anything cleverer would
+ * mean a template language to learn and a preview that lies.
+ *
+ * The from address is the one Resend is set up with, on the deployment, and
+ * is deliberately not editable here: an address nobody has verified bounces,
+ * or lands in spam, and the sender is the one part of an email that cannot be
+ * guessed at.
+ */
+export async function sendEmail(
+  _previous: EmailState,
+  form: FormData
+): Promise<EmailState> {
+  await assertAdmin();
+
+  const to = emailList(String(form.get("to") ?? ""));
+  const cc = emailList(String(form.get("cc") ?? ""));
+  const subject = String(form.get("subject") ?? "").trim();
+  const html = String(form.get("html") ?? "").trim();
+  const replyTo = emailList(String(form.get("reply_to") ?? ""))[0] ?? "";
+
+  if (to.length === 0) {
+    return { error: "Put at least one address in To. One per line, or separated by commas.", sent: null };
+  }
+  if (subject === "") return { error: "An email with no subject is one nobody opens.", sent: null };
+  if (html === "") return { error: "There is nothing in the message.", sent: null };
+
+  // Resend takes fifty addresses in one go, and a list longer than that is a
+  // mailing list rather than an email.
+  if (to.length + cc.length > 50) {
+    return {
+      error: `That is ${to.length + cc.length} addresses. Fifty is the most one email can carry.`,
+      sent: null,
+    };
+  }
+
+  const attachments: Attachment[] = [];
+  let weight = 0;
+  for (const one of form.getAll("files")) {
+    if (!(one instanceof File) || one.size === 0) continue;
+    weight += one.size;
+    if (weight > ATTACHMENT_LIMIT) {
+      return {
+        error: `Those attachments come to more than ${Math.round(
+          ATTACHMENT_LIMIT / (1024 * 1024)
+        )}MB together, which is more than an email will carry. Send the big one as a link.`,
+        sent: null,
+      };
+    }
+    attachments.push({
+      filename: one.name || "attachment.pdf",
+      content: Buffer.from(await one.arrayBuffer()).toString("base64"),
+    });
+  }
+
+  const result = await sendOneEmail({
+    to,
+    cc,
+    subject,
+    html,
+    text: wordsFrom(html),
+    attachments,
+    replyTo,
+  });
+
+  if (!result.ok) return { error: result.why, sent: null };
+
+  return {
+    error: null,
+    sent: { to: to.length, cc: cc.length, files: attachments.length },
+  };
 }

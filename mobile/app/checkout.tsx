@@ -37,7 +37,8 @@ import { cart, cartTotal, countItems, me, mine, people, useStored } from "@/lib/
 import FeeWhy from "@/components/FeeWhy";
 import KeepCart from "@/components/KeepCart";
 import { registerForPush } from "@/lib/push";
-import { T } from "@/lib/theme";
+import { Card, Display, Ticket } from "@/components/ui";
+import { F, T } from "@/lib/theme";
 
 /** Who it is for, which run, and how they are paying. Nothing else. */
 export default function Checkout() {
@@ -451,12 +452,14 @@ export default function Checkout() {
         }}
         style={{
           backgroundColor: T.tint,
+          borderWidth: 2,
+          borderColor: T.ink,
           borderRadius: 12,
           paddingHorizontal: 12,
           paddingVertical: 10,
         }}
       >
-        <Text style={{ color: T.brandDark, fontWeight: "700" }}>
+        <Text style={{ color: T.brandDark, fontFamily: F.bodySemi, fontSize: 14, lineHeight: 20 }}>
           {picked
             ? `Rather pay less? ${otherWay.said} for ${naira(otherWay.fee)}` +
               (otherWay.saving > 0 ? `, ${naira(otherWay.saving)} less.` : ".")
@@ -468,8 +471,16 @@ export default function Checkout() {
 
   if (!shop) return <ActivityIndicator color={T.brand} style={{ marginTop: 40 }} />;
 
+  const ready =
+    !busy &&
+    !(picked === null && runId === "") &&
+    lines.length > 0 &&
+    unresolved.length === 0 &&
+    !splitNotReady;
+
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60, gap: 14 }}>
+    <View style={{ flex: 1, backgroundColor: T.shell }}>
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 24, gap: 14 }}>
       <KeepCart
         phone={phone}
         name={name}
@@ -484,12 +495,23 @@ export default function Checkout() {
           drive it over before they could buy lunch, and the commonest answer
           to it was the dear one twenty minutes before a run went to the same
           block. */}
-      <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
-        <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink }}>
-          Order now, get it {arriving}
-        </Text>
+      <Step number="01" title="When" />
+      <View
+        style={{
+          backgroundColor: T.ink,
+          borderWidth: 2,
+          borderColor: T.ink,
+          borderRadius: T.radius,
+          padding: 14,
+          gap: 8,
+        }}
+      >
+        <Ticket colour={T.volt}>{picked ? "A car of its own" : "Next run to PAU"}</Ticket>
+        <Display size={30} colour={T.shell}>
+          {arriving}
+        </Display>
 
-        <Text style={{ color: T.muted }}>
+        <Text style={{ color: T.onInkMuted, fontFamily: F.body, fontSize: 14, lineHeight: 20 }}>
           {picked
             ? "A car of its own, because no run is going in time for this."
             : "Everybody's food in one car, which is why it costs less."}
@@ -499,8 +521,10 @@ export default function Checkout() {
             paragraphs nobody reads. Why it waits for a run, and the way out
             where waiting is the wrong trade. */}
         {far.length > 0 && !noRunThere && (
-          <Text style={{ color: T.brandDark }}>
-            <Text style={{ fontWeight: "700" }}>{farNames} goes out on a run only.</Text>
+          <Text style={{ color: T.onInk, fontFamily: F.body, fontSize: 14, lineHeight: 20 }}>
+            <Text style={{ fontFamily: F.bodyBold, color: T.volt }}>
+              {farNames} goes out on a run only.
+            </Text>
             {farSooner !== ""
               ? ` Take ${far.length === 1 ? "it" : "those"} out and the rest can come ${farSooner}.`
               : " Everything here travels together, so there is one delivery fee."}
@@ -511,8 +535,8 @@ export default function Checkout() {
             usual runs went. The line above already names when this cart can
             come; this says why it is not sooner. */}
         {wrongCounter.length > 0 && (
-          <Text style={{ color: T.brandDark }}>
-            <Text style={{ fontWeight: "700" }}>
+          <Text style={{ color: T.onInk, fontFamily: F.body, fontSize: 14, lineHeight: 20 }}>
+            <Text style={{ fontFamily: F.bodyBold, color: T.volt }}>
               Not every run stops at {counterSaid}.
             </Text>
             {runsHere.length > 0
@@ -525,7 +549,9 @@ export default function Checkout() {
 
         {/* An estimate, and said to be one: four o'clock to the minute is a
             promise nobody can keep in Lagos traffic. */}
-        <Text style={{ color: T.muted }}>{ESTIMATE_NOTE}</Text>
+        <Text style={{ color: T.onInkMuted, fontFamily: F.body, fontSize: 13, lineHeight: 19 }}>
+          {ESTIMATE_NOTE}
+        </Text>
 
         {/* Somebody on a run being told a car could be quicker. The argument
             here is time, so it belongs beside the time. The other direction
@@ -533,7 +559,7 @@ export default function Checkout() {
         {otherWay && !picked && theOtherWay()}
 
         {noRunThere && (
-          <Text style={{ color: T.brandDark, fontWeight: "700" }}>
+          <Text style={{ color: T.volt, fontFamily: F.bodySemi, fontSize: 14, lineHeight: 20 }}>
             No run is going to {farNames} just now, and a car of its own
             cannot get there and back in time. Take {far.length === 1 ? "it" : "those"}{" "}
             out and the rest can come {farSooner || "on the next one"}.
@@ -541,19 +567,19 @@ export default function Checkout() {
         )}
 
         {runsHere.length === 0 && far.length === 0 && slots.length === 0 && (
-          <Text style={{ color: T.muted }}>
+          <Text style={{ color: T.onInkMuted, fontFamily: F.body, fontSize: 14 }}>
             Nothing is going just now. Try again shortly.
           </Text>
         )}
       </View>
 
       {(shop.promoters ?? []).length > 0 && (
-        <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
+        <Card style={{ gap: 8 }}>
           {/* Asked once, on the one form a first order passes through.
               Whoever they name is theirs for life, so there is no second
               chance at it, and "somewhere else" is a real answer: most
               people are nobody's referral. */}
-          <Text style={{ fontWeight: "800", color: T.ink }}>
+          <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.ink }}>
             Where did you hear about us?
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -564,28 +590,33 @@ export default function Checkout() {
                   onPress={() => setHeardFrom(one.code)}
                   style={{
                     borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: heardFrom === one.code ? T.brand : T.line,
-                    backgroundColor: heardFrom === one.code ? T.tint : T.paper,
+                    borderWidth: 2,
+                    borderColor: heardFrom === one.code ? T.ink : T.line,
+                    backgroundColor: heardFrom === one.code ? T.ink : T.paper,
+                    minHeight: 42,
+                    justifyContent: "center",
                     paddingHorizontal: 14,
-                    paddingVertical: 8,
                   }}
                 >
-                  <Text style={{ color: T.ink, fontWeight: heardFrom === one.code ? "800" : "400" }}>
+                  <Text
+                    style={{
+                      color: heardFrom === one.code ? T.paper : T.ink,
+                      fontFamily: heardFrom === one.code ? F.bodyBold : F.bodySemi,
+                      fontSize: 14,
+                    }}
+                  >
                     {one.name}
                   </Text>
                 </Pressable>
               ))}
             </View>
           </ScrollView>
-        </View>
+        </Card>
       )}
 
       {sharing.length > 0 && (
-        <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 10 }}>
-          <Text style={{ fontWeight: "800", color: T.ink }}>
-            Group order · {sharing.length + 1} people
-          </Text>
+        <Card style={{ gap: 10 }}>
+          <Ticket>Group order · {sharing.length + 1} people</Ticket>
 
           {(
             [
@@ -597,21 +628,41 @@ export default function Checkout() {
               key={value}
               onPress={() => setMode(value)}
               style={{
-                borderWidth: 1,
-                borderColor: mode === value ? T.brand : T.line,
-                backgroundColor: mode === value ? T.tint : T.paper,
-                borderRadius: 12,
+                borderWidth: 2,
+                borderColor: T.ink,
+                backgroundColor: mode === value ? T.ink : T.paper,
+                borderRadius: 14,
                 padding: 12,
+                gap: 2,
               }}
             >
-              <Text style={{ fontWeight: "700", color: T.ink }}>{title}</Text>
-              <Text style={{ color: T.muted }}>{detail}</Text>
+              <Text
+                style={{
+                  fontFamily: F.bodyBold,
+                  fontSize: 15,
+                  color: mode === value ? T.shell : T.ink,
+                }}
+              >
+                {title}
+              </Text>
+              <Text
+                style={{
+                  fontFamily: F.body,
+                  fontSize: 13,
+                  lineHeight: 19,
+                  color: mode === value ? T.onInkMuted : T.muted,
+                }}
+              >
+                {detail}
+              </Text>
             </Pressable>
           ))}
 
           {sharing.map((friend) => (
-            <View key={friend.name} style={{ gap: 8, borderTopWidth: 1, borderTopColor: T.line, paddingTop: 10 }}>
-              <Text style={{ fontWeight: "800", color: T.ink }}>{friend.name}&apos;s food goes</Text>
+            <View key={friend.name} style={{ gap: 8, borderTopWidth: 2, borderTopColor: T.line, paddingTop: 10 }}>
+              <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.ink }}>
+                {friend.name}&apos;s food goes
+              </Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 {(
                   [
@@ -629,12 +680,21 @@ export default function Checkout() {
                     }
                     style={{
                       borderRadius: 999,
+                      borderWidth: 2,
+                      borderColor: friend.goesTo === value ? T.ink : T.line,
+                      minHeight: 42,
+                      justifyContent: "center",
                       paddingHorizontal: 14,
-                      paddingVertical: 7,
-                      backgroundColor: friend.goesTo === value ? T.ink : "rgba(20,17,15,0.06)",
+                      backgroundColor: friend.goesTo === value ? T.brand : T.paper,
                     }}
                   >
-                    <Text style={{ color: friend.goesTo === value ? T.paper : T.ink, fontWeight: "700" }}>
+                    <Text
+                      style={{
+                        color: friend.goesTo === value ? T.paper : T.ink,
+                        fontFamily: F.bodyBold,
+                        fontSize: 14,
+                      }}
+                    >
                       {label}
                     </Text>
                   </Pressable>
@@ -660,7 +720,9 @@ export default function Checkout() {
 
               {mode === "split" && (
                 <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-                  <Text style={{ color: T.muted, fontWeight: "700" }}>{friend.name} pays by</Text>
+                  <Text style={{ color: T.muted, fontFamily: F.bodySemi, fontSize: 13 }}>
+                    {friend.name} pays by
+                  </Text>
                   {(
                     [
                       ["transfer", "Transfer"],
@@ -672,12 +734,20 @@ export default function Checkout() {
                       onPress={() => people.update(friend.name, { pays: value })}
                       style={{
                         borderRadius: 999,
+                        borderWidth: 2,
+                        borderColor: friend.pays === value ? T.ink : T.line,
                         paddingHorizontal: 12,
                         paddingVertical: 6,
-                        backgroundColor: friend.pays === value ? T.ink : "rgba(20,17,15,0.06)",
+                        backgroundColor: friend.pays === value ? T.ink : T.paper,
                       }}
                     >
-                      <Text style={{ color: friend.pays === value ? T.paper : T.ink, fontWeight: "700", fontSize: 13 }}>
+                      <Text
+                        style={{
+                          color: friend.pays === value ? T.paper : T.ink,
+                          fontFamily: F.bodyBold,
+                          fontSize: 13,
+                        }}
+                      >
                         {label}
                       </Text>
                     </Pressable>
@@ -687,29 +757,29 @@ export default function Checkout() {
             </View>
           ))}
 
-          <Text style={{ color: T.muted, fontSize: 13 }}>
+          <Text style={{ color: T.muted, fontFamily: F.body, fontSize: 13, lineHeight: 19 }}>
             {collect === "leader"
               ? "Every bag comes to your block, and you hand the rest out."
               : "Each bag goes to the block under its own name. Yours comes to you."}
           </Text>
-        </View>
+        </Card>
       )}
 
-      <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 10 }}>
-        <Text style={{ fontWeight: "800", color: T.ink }}>{whereHeading}</Text>
+      <Step number="02" title={whereHeading} />
+      <Card style={{ gap: 10 }}>
         {sharing.length > 0 && !ownFood && !bagsToMe && (
-          <Text style={{ color: T.muted }}>
+          <Text style={{ color: T.muted, fontFamily: F.body, fontSize: 14, lineHeight: 20 }}>
             Nothing in this cart is coming to you, but we still need somebody to call if a
             bag cannot be handed over.
           </Text>
         )}
         <Field label="Your name" value={name} onChange={setName} />
-        <Field label="Phone number" value={phone} onChange={setPhone} keyboard="phone-pad" />
+        <Field label="WhatsApp number" value={phone} onChange={setPhone} keyboard="phone-pad" />
         <Blocks label="Hostel or block" value={hostel} onChange={setHostel} all={hostels} />
-      </View>
+      </Card>
 
-      <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
-        <Text style={{ fontWeight: "800", color: T.ink }}>How are you paying?</Text>
+      <Step number="03" title="Pay" />
+      <Card style={{ gap: 8 }}>
         {(
           [
             ["transfer", "Bank transfer", "Account details on the next screen, with a number to put in the narration."],
@@ -720,18 +790,36 @@ export default function Checkout() {
             key={value}
             onPress={() => setMethod(value)}
             style={{
-              borderWidth: 1,
-              borderColor: method === value ? T.brand : T.line,
-              backgroundColor: method === value ? T.tint : T.paper,
-              borderRadius: 12,
+              borderWidth: 2,
+              borderColor: T.ink,
+              backgroundColor: method === value ? T.ink : T.paper,
+              borderRadius: 14,
               padding: 12,
+              gap: 2,
             }}
           >
-            <Text style={{ fontWeight: "700", color: T.ink }}>{title}</Text>
-            <Text style={{ color: T.muted }}>{detail}</Text>
+            <Text
+              style={{
+                fontFamily: F.bodyBold,
+                fontSize: 15,
+                color: method === value ? T.shell : T.ink,
+              }}
+            >
+              {title}
+            </Text>
+            <Text
+              style={{
+                fontFamily: F.body,
+                fontSize: 13,
+                lineHeight: 19,
+                color: method === value ? T.onInkMuted : T.muted,
+              }}
+            >
+              {detail}
+            </Text>
           </Pressable>
         ))}
-      </View>
+      </Card>
 
       {/* What the order comes to, for the card link's rough conversion: the
           same number the Total row shows. */}
@@ -746,11 +834,11 @@ export default function Checkout() {
           by card, and appearing anywhere else reads as a question about the
           food. */}
       {method === "card" && (shop.monies ?? []).length > 0 && (
-        <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
-          <Text style={{ fontWeight: "800", color: T.ink }}>
+        <Card style={{ gap: 8 }}>
+          <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.ink }}>
             Is somebody abroad paying?
           </Text>
-          <Text style={{ color: T.muted, fontSize: 12 }}>
+          <Text style={{ color: T.muted, fontFamily: F.body, fontSize: 13, lineHeight: 19 }}>
             We send a card link in their money. The order is still {naira(owed)};
             the amount on the link is worked out at our rate, so it is close
             rather than exact.
@@ -762,16 +850,18 @@ export default function Checkout() {
                 onPress={() => setMoney(one.code)}
                 style={{
                   borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: money === one.code ? T.brand : T.line,
-                  backgroundColor: money === one.code ? T.tint : T.paper,
+                  borderWidth: 2,
+                  borderColor: T.ink,
+                  backgroundColor: money === one.code ? T.volt : T.paper,
                   paddingHorizontal: 14,
                   paddingVertical: 8,
                 }}
               >
-                <Text style={{ color: T.ink, fontWeight: "600" }}>{one.label}</Text>
+                <Text style={{ color: T.ink, fontFamily: F.bodySemi, fontSize: 14 }}>
+                  {one.label}
+                </Text>
                 {"rate" in one && one.rate > 0 && (
-                  <Text style={{ color: T.muted, fontSize: 12 }}>
+                  <Text style={{ color: money === one.code ? T.ink : T.muted, fontFamily: F.mono, fontSize: 11 }}>
                     about {one.symbol}
                     {(Math.ceil((owed / one.rate) * 10) / 10).toFixed(2)}
                   </Text>
@@ -779,10 +869,10 @@ export default function Checkout() {
               </Pressable>
             ))}
           </View>
-        </View>
+        </Card>
       )}
 
-      <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 6 }}>
+      <Card style={{ gap: 6 }}>
         <Row label="Food" value={naira(food)} />
 
         <Row
@@ -870,11 +960,25 @@ export default function Checkout() {
         {otherWay && picked && theOtherWay()}
 
         {applied && <Row label={`Code ${applied.code}`} value={`−${naira(applied.discount)}`} />}
-        <View style={{ height: 1, backgroundColor: T.line, marginVertical: 4 }} />
-        <Row label="Total" value={naira(owed)} strong />
+        <View
+          style={{
+            borderTopWidth: 2,
+            borderStyle: "dashed",
+            borderColor: T.line,
+            marginVertical: 2,
+          }}
+        />
+        <View
+          style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}
+        >
+          <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.ink }}>Total</Text>
+          <Display size={34}>{naira(owed)}</Display>
+        </View>
 
         {nearly && (
-          <Text style={{ color: T.brandDark, fontSize: 13, fontWeight: "700" }}>
+          <Text
+            style={{ color: T.brandDark, fontSize: 13, fontFamily: F.bodySemi, lineHeight: 19 }}
+          >
             {nearly.fee === 0
               ? "Delivery would be free"
               : `Delivery would be ${naira(nearly.fee)}`}{" "}
@@ -899,15 +1003,19 @@ export default function Checkout() {
               setCodeError("");
             }}
             placeholder="Discount code"
+            placeholderTextColor={T.muted}
             autoCapitalize="characters"
             style={{
               flex: 1,
-              borderWidth: 1,
-              borderColor: T.line,
+              borderWidth: 2,
+              borderColor: T.ink,
               borderRadius: 12,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
+              backgroundColor: T.field,
+              minHeight: 50,
+              paddingHorizontal: 14,
               color: T.ink,
+              fontFamily: F.mono,
+              fontSize: 15,
             }}
           />
           <Pressable
@@ -933,26 +1041,39 @@ export default function Checkout() {
             disabled={code.trim() === "" || runId === ""}
             style={{
               borderRadius: 12,
+              borderWidth: 2,
+              borderColor: T.ink,
+              minHeight: 50,
               paddingHorizontal: 18,
               justifyContent: "center",
-              backgroundColor: code.trim() === "" ? "rgba(20,17,15,0.08)" : T.ink,
+              backgroundColor: code.trim() === "" ? T.shell : T.ink,
             }}
           >
-            <Text style={{ color: code.trim() === "" ? T.muted : T.paper, fontWeight: "800" }}>
+            <Text
+              style={{
+                color: code.trim() === "" ? T.muted : T.paper,
+                fontFamily: F.bodyBold,
+                fontSize: 15,
+              }}
+            >
               Apply
             </Text>
           </Pressable>
         </View>
         {applied && (
-          <Text style={{ color: "#0f9d58", fontWeight: "700" }}>{applied.label} applied.</Text>
+          <Text style={{ color: T.mint, fontFamily: F.bodySemi, fontSize: 14 }}>
+            {applied.label} applied.
+          </Text>
         )}
         {codeError !== "" && (
-          <Text style={{ color: T.brandDark, fontWeight: "700" }}>{codeError}</Text>
+          <Text style={{ color: T.brandDark, fontFamily: F.bodySemi, fontSize: 14 }}>
+            {codeError}
+          </Text>
         )}
-      </View>
+      </Card>
 
       {unresolved.length > 0 && (
-        <Text style={{ color: T.brandDark, fontWeight: "700" }}>
+        <Text style={{ color: T.brandDark, fontFamily: F.bodySemi, fontSize: 14, lineHeight: 20 }}>
           {unresolved[0].goesTo === null
             ? `Say where ${unresolved[0].name}'s food goes.`
             : `${unresolved[0].name} needs a phone number and a block, since the food goes to them.`}
@@ -960,38 +1081,82 @@ export default function Checkout() {
       )}
 
       {splitNotReady && (
-        <Text style={{ color: T.brandDark, fontWeight: "700" }}>
+        <Text style={{ color: T.brandDark, fontFamily: F.bodySemi, fontSize: 14, lineHeight: 20 }}>
           Splitting needs somebody other than you to have food in the cart. Tap a name under each item.
         </Text>
       )}
 
       {error !== "" && (
-        <Text style={{ color: T.brandDark, fontWeight: "700" }}>{error}</Text>
+        <Text style={{ color: T.brandDark, fontFamily: F.bodySemi, fontSize: 14, lineHeight: 20 }}>
+          {error}
+        </Text>
       )}
 
-      <Pressable
-        onPress={place}
-        disabled={
-          busy ||
-          (picked === null && runId === "") ||
-          lines.length === 0 ||
-          unresolved.length > 0 ||
-          splitNotReady
-        }
-        style={{
-          backgroundColor: busy ? "rgba(20,17,15,0.2)" : T.brand,
-          borderRadius: 999,
-          paddingVertical: 16,
-          alignItems: "center",
-        }}
-      >
-        <Text style={{ color: T.paper, fontWeight: "800", fontSize: 16 }}>
-          {busy
-            ? "Placing…"
-            : `Place order · ${naira(Math.max(0, food + fee - (applied?.discount ?? 0)))}`}
-        </Text>
-      </Pressable>
     </ScrollView>
+
+    {/* The total and the button, held where the thumb is rather than at the
+        bottom of a form nobody has finished scrolling. */}
+    <View
+      style={{
+        backgroundColor: T.shell,
+        borderTopWidth: 2,
+        borderTopColor: T.ink,
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 28,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+      }}
+    >
+      <View>
+        <Ticket>Total</Ticket>
+        <Display size={30}>{naira(owed)}</Display>
+      </View>
+
+      <View style={{ flex: 1 }}>
+        <Pressable
+          onPress={place}
+          disabled={!ready}
+          accessibilityRole="button"
+          style={({ pressed }) => ({
+            minHeight: 54,
+            borderRadius: 999,
+            borderWidth: 2,
+            borderColor: T.ink,
+            backgroundColor: ready ? T.brand : T.line,
+            alignItems: "center",
+            justifyContent: "center",
+            paddingHorizontal: 16,
+            transform: pressed ? [{ translateX: 2 }, { translateY: 2 }] : [],
+          })}
+        >
+          <Text
+            style={{
+              color: ready ? T.paper : T.muted,
+              fontFamily: F.bodyBold,
+              fontSize: 16,
+            }}
+          >
+            {busy ? "Placing…" : `Place order · ${method === "card" ? "Card" : "Transfer"}`}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+    </View>
+  );
+}
+
+/** A numbered step, exactly as the board sets one: the number in the
+ *  display face, in Tomato, and the word beside it. */
+function Step({ number, title }: { number: string; title: string }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8, marginTop: 4 }}>
+      <Display size={24} colour={T.brand}>
+        {number}
+      </Display>
+      <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.ink }}>{title}</Text>
+    </View>
   );
 }
 
@@ -1016,29 +1181,68 @@ function Blocks({
   const [open, setOpen] = useState(false);
   if (all.length === 0) return <Field label={label} value={value} onChange={onChange} />;
 
+  // The commonest few in front, as the board draws them, with everything
+  // else one tap behind a pill. A picked block that is not in the front few
+  // joins them, so what they chose is always on the screen.
+  const front = all.slice(0, 8);
+  const shown = value !== "" && !front.includes(value) ? [value, ...front.slice(0, 7)] : front;
+
   return (
-    <View>
-      <Text style={{ color: T.muted, fontWeight: "700", marginBottom: 4 }}>{label}</Text>
-      <Pressable
-        onPress={() => setOpen(true)}
-        accessibilityRole="button"
-        accessibilityLabel={value === "" ? `Choose ${label.toLowerCase()}` : value}
-        style={{
-          borderWidth: 1,
-          borderColor: T.line,
-          borderRadius: 12,
-          paddingHorizontal: 12,
-          paddingVertical: 14,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 8,
-        }}
-      >
-        <Text style={{ flex: 1, fontSize: 16, color: value === "" ? T.muted : T.ink }}>
-          {value === "" ? "Choose yours" : value}
-        </Text>
-        <Ionicons name="chevron-down" size={18} color={T.muted} />
-      </Pressable>
+    <View style={{ gap: 6 }}>
+      <Text style={{ color: T.ink, fontFamily: F.bodySemi, fontSize: 13 }}>{label}</Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+        {shown.map((one) => {
+          const on = one === value;
+          return (
+            <Pressable
+              key={one}
+              onPress={() => onChange(one)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
+              style={{
+                minHeight: 42,
+                justifyContent: "center",
+                paddingHorizontal: 14,
+                borderRadius: 999,
+                borderWidth: 2,
+                borderColor: on ? T.ink : T.line,
+                backgroundColor: on ? T.brand : T.paper,
+              }}
+            >
+              <Text
+                style={{
+                  color: on ? T.paper : T.ink,
+                  fontFamily: on ? F.bodyBold : F.bodySemi,
+                  fontSize: 14,
+                }}
+              >
+                {one}
+              </Text>
+            </Pressable>
+          );
+        })}
+
+        {all.length > shown.length && (
+          <Pressable
+            onPress={() => setOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`Choose from all ${all.length} blocks`}
+            style={{
+              minHeight: 42,
+              justifyContent: "center",
+              paddingHorizontal: 14,
+              borderRadius: 999,
+              borderWidth: 2,
+              borderStyle: "dashed",
+              borderColor: T.ink,
+            }}
+          >
+            <Text style={{ color: T.ink, fontFamily: F.bodySemi, fontSize: 14 }}>
+              All {all.length} blocks
+            </Text>
+          </Pressable>
+        )}
+      </View>
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
         <View style={{ flex: 1, backgroundColor: "rgba(20,17,15,0.45)", justifyContent: "flex-end" }}>
@@ -1052,8 +1256,19 @@ function Blocks({
               overflow: "hidden",
             }}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", padding: 14, gap: 8 }}>
-              <Text style={{ flex: 1, fontWeight: "800", fontSize: 17, color: T.ink }}>{label}</Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                padding: 14,
+                gap: 8,
+                borderBottomWidth: 2,
+                borderBottomColor: T.ink,
+              }}
+            >
+              <Display size={26} style={{ flex: 1 }}>
+                {label}
+              </Display>
               <Pressable onPress={() => setOpen(false)} hitSlop={8} accessibilityLabel="Close">
                 <Ionicons name="close" size={22} color={T.ink} />
               </Pressable>
@@ -1081,7 +1296,7 @@ function Blocks({
                       flex: 1,
                       fontSize: 16,
                       color: one === value ? T.brand : T.ink,
-                      fontWeight: one === value ? "800" : "400",
+                      fontFamily: one === value ? F.bodyBold : F.body,
                     }}
                   >
                     {one}
@@ -1109,19 +1324,21 @@ function Field({
   keyboard?: "phone-pad";
 }) {
   return (
-    <View>
-      <Text style={{ color: T.muted, fontWeight: "700", marginBottom: 4 }}>{label}</Text>
+    <View style={{ gap: 4 }}>
+      <Text style={{ color: T.ink, fontFamily: F.bodySemi, fontSize: 13 }}>{label}</Text>
       <TextInput
         value={value}
         onChangeText={onChange}
         keyboardType={keyboard}
         style={{
-          borderWidth: 1,
-          borderColor: T.line,
+          borderWidth: 2,
+          borderColor: T.ink,
           borderRadius: 12,
-          paddingHorizontal: 12,
-          paddingVertical: 12,
+          backgroundColor: T.field,
+          minHeight: 50,
+          paddingHorizontal: 14,
           fontSize: 16,
+          fontFamily: F.body,
           color: T.ink,
         }}
       />
@@ -1129,13 +1346,11 @@ function Field({
   );
 }
 
-function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-      <Text style={{ color: strong ? T.ink : T.muted, fontWeight: strong ? "800" : "400" }}>
-        {label}
-      </Text>
-      <Text style={{ color: T.ink, fontWeight: strong ? "800" : "600" }}>{value}</Text>
+    <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+      <Text style={{ color: T.ink, fontFamily: F.body, fontSize: 15, flexShrink: 1 }}>{label}</Text>
+      <Text style={{ color: T.ink, fontFamily: F.bodySemi, fontSize: 15 }}>{value}</Text>
     </View>
   );
 }

@@ -305,6 +305,9 @@ export type Shop = {
      *  Empty leaves the strip as words rather than a door. */
     ribbonTo?: string;
     whatsapp: string;
+    /** Where to leave us a review on Google. Both empty where admin has put
+     *  no link in, and then the app never asks for one. */
+    google?: { profile: string; review: string };
   };
   /** Who somebody could say they heard about the shop from. Empty means
    *  nobody is promoting, and the question is not worth asking. */

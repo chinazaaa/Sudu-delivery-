@@ -1,10 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  Linking,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { api, naira, type OrderView } from "@/lib/api";
 import { me, useStored } from "@/lib/store";
-import { T } from "@/lib/theme";
+import { Button, Card, Display, Stripes, Ticket } from "@/components/ui";
+import { F, T } from "@/lib/theme";
+
+/** The five steps an order goes through, the way somebody waiting reads it. */
+const STAGES = ["ordering", "closed", "at_counter", "on_the_road", "at_drop", "handed_out"];
 
 /** One order: where to pay, what was ordered, and where it has got to. */
 export default function Order() {
@@ -64,45 +77,114 @@ export default function Order() {
     setTimeout(() => setCopied(""), 2000);
   };
 
+  // Where it has got to, in one word on a coloured tab, and a headline
+  // somebody can read from across a room.
+  const done = order.status === "delivered" || order.stage === "handed_out";
+  const paid = order.status !== "pending";
+  const [chip, chipOn] = done
+    ? ["Delivered", T.mint]
+    : order.status === "refunded"
+      ? ["Refunded", T.muted]
+      : order.status === "cancelled"
+        ? ["Cancelled", T.muted]
+        : paid
+          ? order.stage === "on_the_road"
+            ? ["On the way", T.brand]
+            : order.stage === "at_drop"
+              ? ["At your block", T.brand]
+              : ["Paid", T.brand]
+          : order.payable
+            ? ["Awaiting payment", T.volt]
+            : ["Run gone", T.muted];
+  const headline = done
+    ? "Delivered. Enjoy."
+    : order.status === "refunded"
+      ? "Refunded"
+      : order.status === "cancelled"
+        ? "Cancelled"
+        : !paid
+          ? order.payable
+            ? `Pay ${naira(order.total)}`
+            : "This run has gone"
+          : order.stage === "on_the_road"
+            ? "On the way to PAU"
+            : order.stage === "at_drop"
+              ? "At your block now"
+              : "You are on the run";
+  // A parcel has no slot anybody chose and, until the day is agreed, no day
+  // either: the run label over it was a promise nobody had made.
+  const sub = isParcel
+    ? order.run.agreed
+      ? `${order.run.label} · ${order.run.window}`
+      : `${order.run.window} · day not agreed yet`
+    : order.run.sameDay
+      ? `Going out ${order.run.window}`
+      : `${order.run.label} · ${order.run.window}`;
+
+  const help = shop?.shop.whatsapp ?? "";
+  const google = shop?.shop.google?.review ?? "";
+
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 60 }}>
-      <View style={{ backgroundColor: T.ink, borderRadius: T.radius, padding: 16 }}>
-        <Text style={{ color: "rgba(255,255,255,0.7)", fontWeight: "700", fontSize: 12 }}>
-          ORDER {order.ref}
-        </Text>
-        <Text style={{ color: T.paper, fontSize: 20, fontWeight: "800", marginTop: 2 }}>
-          {order.status !== "pending"
-            ? "Paid. You are on the run."
-            : order.payable
-              ? `Pay ${naira(order.total)}`
-              : "This run has gone"}
-        </Text>
-        <Text style={{ color: "rgba(255,255,255,0.75)", marginTop: 4 }}>
-          {/* A parcel has no slot anybody chose and, until the day is
-              agreed, no day either: the run label over it was a promise
-              nobody had made. */}
-          {isParcel
-            ? order.run.agreed
-              ? `${order.run.label} · ${order.run.window}`
-              : `${order.run.window} · day not agreed yet`
-            : order.run.sameDay
-              ? `Going out ${order.run.window}`
-              : `${order.run.label} · ${order.run.window}`}
-        </Text>
+    <ScrollView
+      style={{ backgroundColor: T.shell }}
+      contentContainerStyle={{ paddingBottom: 60 }}
+    >
+      <View
+        style={{
+          overflow: "hidden",
+          backgroundColor: T.ink,
+          paddingHorizontal: 16,
+          paddingTop: 18,
+          paddingBottom: 20,
+          gap: 8,
+        }}
+      >
+        <Stripes style={{ right: -10, width: "30%" }} />
+
+        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+          <View
+            style={{ backgroundColor: chipOn, paddingHorizontal: 8, paddingVertical: 3 }}
+          >
+            <Ticket colour={chipOn === T.volt ? T.ink : T.paper}>{chip}</Ticket>
+          </View>
+          <Text style={{ fontFamily: F.mono, fontSize: 11, color: T.onInkMuted }}>
+            {order.ref}
+          </Text>
+        </View>
+
+        <Display size={46} colour={T.shell}>
+          {headline}
+        </Display>
+        <Text style={{ fontFamily: F.body, fontSize: 14, color: T.onInk }}>{sub}</Text>
       </View>
+
+      <View style={{ padding: 16, gap: 14 }}>
 
       {/* A run that has been shopped for cannot take money: paying into it
           now is a refund waiting to happen, so the details come off and the
           screen says so. */}
       {!isParcel && order.status === "pending" && !order.payable && (
-        <View style={{ backgroundColor: T.tint, borderRadius: T.radius, padding: 14, gap: 8 }}>
-          <Text style={{ fontWeight: "800", color: T.ink }}>Do not pay this one</Text>
-          <Text style={{ color: T.muted }}>
+        <View
+          style={{
+            backgroundColor: T.tint,
+            borderWidth: 2,
+            borderColor: T.ink,
+            borderRadius: T.radius,
+            padding: 14,
+            gap: 8,
+          }}
+        >
+          <Display size={26}>Do not pay this one</Display>
+          <Text style={{ fontFamily: F.body, fontSize: 14, color: T.ink, lineHeight: 20 }}>
             Nothing was charged. This run has been bought for already, so put your
             food on another one and it is yours again, priced on today's menu.
           </Text>
 
-          {moving !== "" && <Text style={{ color: T.brandDark, fontWeight: "700" }}>{moving}</Text>}
+          {moving !== "" && (
+            <Text style={{ color: T.brandDark, fontFamily: F.bodySemi, fontSize: 14 }}>
+              {moving}
+            </Text>
+          )}
 
           {(shop?.runs ?? [])
             .filter((one) => !one.closed && !one.full && one.id !== order.runId)
@@ -117,15 +199,21 @@ export default function Order() {
                   justifyContent: "space-between",
                   gap: 12,
                   backgroundColor: T.paper,
+                  borderWidth: 2,
+                  borderColor: T.ink,
                   borderRadius: 14,
                   padding: 12,
                 }}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "800", color: T.ink }}>{one.label}</Text>
-                  <Text style={{ color: T.muted, fontSize: 13 }}>{one.deliveryWindow}</Text>
+                  <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.ink }}>
+                    {one.label}
+                  </Text>
+                  <Text style={{ fontFamily: F.body, fontSize: 13, color: T.muted }}>
+                    {one.deliveryWindow}
+                  </Text>
                 </View>
-                <Text style={{ color: T.brand, fontWeight: "800" }}>
+                <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.brand }}>
                   {busy ? "…" : "Move"}
                 </Text>
               </Pressable>
@@ -134,10 +222,32 @@ export default function Order() {
       )}
 
       {order.status === "pending" && order.payable && order.paymentMethod === "transfer" && account && (
-        <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
-          <Row label="Bank" value={account.bank} />
-          <Row label="Account name" value={account.name} />
-          <Row label="Account number" value={account.number} strong />
+        <View
+          style={{
+            backgroundColor: T.paper,
+            borderWidth: 2,
+            borderColor: T.ink,
+            borderRadius: T.radius,
+            overflow: "hidden",
+          }}
+        >
+          <View style={{ backgroundColor: T.volt, paddingHorizontal: 14, paddingVertical: 10 }}>
+            <Text style={{ fontFamily: F.bodyBold, fontSize: 14, color: T.ink }}>
+              Pay by transfer · {naira(order.total)}
+            </Text>
+          </View>
+
+          <Line label="Amount" value={naira(order.total)} onCopy={() => copy(String(order.total), "amount")} copied={copied === "amount"} />
+          <Line label="Bank" value={account.bank} />
+          <Line label="Account name" value={account.name} />
+          <Line
+            label="Account no."
+            value={account.number}
+            onCopy={() => copy(account.number, "account")}
+            copied={copied === "account"}
+          />
+
+          <View style={{ padding: 14, gap: 8 }}>
 
           {/* Out of the list and onto its own panel, exactly as on the website.
               As one row among four it read the same as the bank name, and
@@ -145,50 +255,35 @@ export default function Order() {
           <View
             style={{
               borderWidth: 2,
-              borderColor: "rgba(255,90,31,0.4)",
+              borderColor: T.brand,
               backgroundColor: T.tint,
               borderRadius: 14,
               paddingVertical: 12,
               paddingHorizontal: 12,
               alignItems: "center",
-              marginTop: 4,
             }}
           >
-            <Text
-              style={{
-                fontSize: 11,
-                fontWeight: "800",
-                letterSpacing: 0.6,
-                color: T.brandDark,
-                textTransform: "uppercase",
-              }}
-            >
-              Type this in the narration
-            </Text>
-            <Text
-              style={{
-                fontSize: 34,
-                fontWeight: "800",
-                letterSpacing: 2,
-                color: T.brandDark,
-                marginTop: 2,
-              }}
-            >
+            <Ticket colour={T.brandDark}>Type this in the narration</Ticket>
+            <Display size={38} colour={T.brandDark} style={{ marginTop: 2 }}>
               {order.narration}
-            </Text>
-            <Text style={{ fontSize: 11, fontWeight: "600", color: T.muted, marginTop: 3 }}>
+            </Display>
+            <Text
+              style={{ fontFamily: F.body, fontSize: 12, color: T.muted, marginTop: 3 }}
+            >
               Without it we cannot match your transfer to your order.
             </Text>
           </View>
 
-          <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
+          <View style={{ flexDirection: "row", gap: 10 }}>
             <Tap onPress={() => copy(account.number, "account")} label={copied === "account" ? "Copied" : "Copy account"} />
             <Tap onPress={() => copy(order.narration, "narration")} label={copied === "narration" ? "Copied" : "Copy narration"} />
           </View>
 
           {order.accounts.length > 1 && (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
-              <Text style={{ color: T.muted, fontWeight: "700" }}>Or pay into:</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+              <Text style={{ fontFamily: F.bodySemi, fontSize: 13, color: T.muted }}>
+                Or pay into:
+              </Text>
               {order.accounts.map((one, index) => (
                 <Pressable
                   key={one.number}
@@ -197,10 +292,18 @@ export default function Order() {
                     paddingHorizontal: 12,
                     paddingVertical: 6,
                     borderRadius: 999,
-                    backgroundColor: index === chosen ? T.ink : "rgba(20,17,15,0.06)",
+                    borderWidth: 2,
+                    borderColor: index === chosen ? T.ink : T.line,
+                    backgroundColor: index === chosen ? T.ink : T.paper,
                   }}
                 >
-                  <Text style={{ color: index === chosen ? T.paper : T.ink, fontWeight: "700", fontSize: 12 }}>
+                  <Text
+                    style={{
+                      color: index === chosen ? T.paper : T.ink,
+                      fontFamily: F.bodySemi,
+                      fontSize: 13,
+                    }}
+                  >
                     {one.bank}
                   </Text>
                 </Pressable>
@@ -208,32 +311,99 @@ export default function Order() {
             </View>
           )}
 
-          <Text style={{ color: T.muted, marginTop: 4 }}>
+          <Text style={{ fontFamily: F.body, fontSize: 13, color: T.muted, lineHeight: 19 }}>
             Put{" "}
-            <Text style={{ fontWeight: "800", color: T.brandDark }}>{order.narration}</Text> in the
-            narration. That is how this transfer is matched to your order. Transfer only, no cash
-            on delivery.
+            <Text style={{ fontFamily: F.bodyBold, color: T.brandDark }}>{order.narration}</Text>{" "}
+            in the narration. That is how this transfer is matched to your order. Transfer
+            only, no cash on delivery.
           </Text>
+          </View>
         </View>
       )}
 
       {order.status === "pending" && order.payable && order.paymentMethod === "card" && (
-        <View style={{ backgroundColor: T.tint, borderRadius: T.radius, padding: 14 }}>
-          <Text style={{ fontWeight: "800", color: T.ink }}>Your card link is coming</Text>
-          <Text style={{ color: T.muted, marginTop: 4 }}>
+        <View
+          style={{
+            backgroundColor: T.tint,
+            borderWidth: 2,
+            borderColor: T.ink,
+            borderRadius: T.radius,
+            padding: 14,
+            gap: 4,
+          }}
+        >
+          <Display size={26}>Your card link is coming</Display>
+          <Text style={{ fontFamily: F.body, fontSize: 14, color: T.ink, lineHeight: 20 }}>
             It comes to the number on this order, on WhatsApp.
           </Text>
         </View>
       )}
 
-      <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 8 }}>
-        <Text style={{ fontWeight: "800", color: T.ink }}>What you ordered</Text>
+      {/* Where it has got to. The same six stages the run sheet moves
+          through, so this says what admin has actually done rather than
+          guessing from the clock. */}
+      {order.status !== "refunded" && order.status !== "cancelled" && (
+        <Card>
+          {TIMELINE.map((step, at) => {
+            const reached = step.at(order);
+            const next = TIMELINE[at + 1];
+            const current = reached && !(next && next.at(order));
+            return (
+              <View key={step.label} style={{ flexDirection: "row", gap: 12 }}>
+                <View style={{ width: 24, alignItems: "center" }}>
+                  <View
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 999,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: current ? T.ink : reached ? T.brand : T.paper,
+                      borderWidth: current ? 3 : reached ? 0 : 2,
+                      borderColor: current ? T.brand : T.line,
+                    }}
+                  >
+                    {reached && !current && (
+                      <Ionicons name="checkmark" size={13} color={T.paper} />
+                    )}
+                  </View>
+                  {at < TIMELINE.length - 1 && (
+                    <View style={{ flex: 1, width: 3, backgroundColor: T.line }} />
+                  )}
+                </View>
+                <View style={{ paddingTop: 1, paddingBottom: 14, flex: 1 }}>
+                  <Text
+                    style={{
+                      fontFamily: F.bodyBold,
+                      fontSize: 15,
+                      color: reached ? T.ink : T.muted,
+                    }}
+                  >
+                    {step.label}
+                  </Text>
+                  <Text style={{ fontFamily: F.mono, fontSize: 11, color: T.muted }}>
+                    {step.note(order, isParcel)}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+        </Card>
+      )}
+
+      <Card style={{ gap: 8 }}>
+        <Ticket>What you ordered</Ticket>
         {order.lines.map((line, index) => (
           <View key={`${line.name}-${index}`}>
-            <Text style={{ color: T.ink }}>
-              {line.qty}× {line.name}
-            </Text>
-            <Text style={{ color: T.muted, fontSize: 13 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+              <Text style={{ fontFamily: F.bodySemi, fontSize: 15, color: T.ink, flexShrink: 1 }}>
+                {line.qty}× {line.name}
+              </Text>
+              <Text style={{ fontFamily: F.bodySemi, fontSize: 15, color: T.ink }}>
+                {naira(line.unitPrice * line.qty)}
+              </Text>
+            </View>
+            <Text style={{ fontFamily: F.body, fontSize: 13, color: T.muted }}>
               {line.restaurant}
               {line.choices.length > 0 ? ` · ${line.choices.join(", ")}` : ""}
             </Text>
@@ -251,7 +421,14 @@ export default function Order() {
           </View>
         )}
 
-        <View style={{ height: 1, backgroundColor: T.line, marginVertical: 4 }} />
+        <View
+          style={{
+            borderTopWidth: 2,
+            borderStyle: "dashed",
+            borderColor: T.line,
+            marginVertical: 2,
+          }}
+        />
         {/* Nothing is bought on a parcel, so "Food ₦0" is a line about
             something that never happened. */}
         {!isParcel && (
@@ -267,8 +444,13 @@ export default function Order() {
             value={`−${naira(order.discount)}`}
           />
         )}
-        <Row label="Total" value={naira(order.total)} strong />
-      </View>
+        <View
+          style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}
+        >
+          <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.ink }}>Total</Text>
+          <Display size={30}>{naira(order.total)}</Display>
+        </View>
+      </Card>
 
       {/* Until the run closes there is still time to order. It travels in
           the same car, and it pays its own delivery like any other order, so
@@ -276,31 +458,77 @@ export default function Order() {
       {/* Nothing to add to a parcel: it is one bag on one trip, and the
           menu has nothing to do with it. */}
       {!isParcel && new Date(order.run.cutOffISO).getTime() > Date.now() && (
+        <Button onPress={() => router.push("/")}>Order something else</Button>
+      )}
+
+      {/* Asked only once the food has actually arrived, and never of a
+          refunded order, exactly as the website asks it. */}
+      {done && order.status !== "refunded" && (
+        <Rate
+          orderId={order.id}
+          rating={order.rating ?? null}
+          feedback={order.feedback ?? ""}
+          onSaved={load}
+        />
+      )}
+
+      {/* And the one place worth asking for a review in public: a delivered
+          order, from somebody who has just had their food. Only where admin
+          has put a link in, and never instead of the stars above, which are
+          ours to read. */}
+      {done && order.status !== "refunded" && google !== "" && (
         <Pressable
-          onPress={() => router.push("/")}
+          onPress={() => void Linking.openURL(google)}
+          accessibilityRole="link"
           style={{
-            backgroundColor: T.brand,
-            borderRadius: 999,
-            paddingVertical: 16,
+            flexDirection: "row",
             alignItems: "center",
+            gap: 12,
+            backgroundColor: T.volt,
+            borderWidth: 2,
+            borderColor: T.ink,
+            borderRadius: T.radius,
+            padding: 14,
           }}
         >
-          <Text style={{ color: T.paper, fontWeight: "800", fontSize: 16 }}>
-            Order something else
+          <Text style={{ fontSize: 22 }}>★</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.ink }}>
+              Rate us on Google
+            </Text>
+            <Text style={{ fontFamily: F.body, fontSize: 13, color: T.ink, lineHeight: 19 }}>
+              One minute, and it helps us more than anything else does.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={T.ink} />
+        </Pressable>
+      )}
+
+      {/* Something has gone wrong and nobody wants to hunt for a number. */}
+      {help !== "" && (
+        <Pressable
+          onPress={() =>
+            void Linking.openURL(`https://wa.me/${help.replace(/[^0-9]/g, "")}`)
+          }
+          accessibilityRole="link"
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            minHeight: 48,
+            borderRadius: 999,
+            borderWidth: 2,
+            borderColor: T.ink,
+          }}
+        >
+          <Ionicons name="logo-whatsapp" size={18} color={T.ink} />
+          <Text style={{ fontFamily: F.bodyBold, fontSize: 14, color: T.ink }}>
+            Help on WhatsApp
           </Text>
         </Pressable>
       )}
-      {/* Asked only once the food has actually arrived, and never of a
-          refunded order, exactly as the website asks it. */}
-      {(order.status === "delivered" || order.stage === "handed_out") &&
-        order.status !== "refunded" && (
-          <Rate
-            orderId={order.id}
-            rating={order.rating ?? null}
-            feedback={order.feedback ?? ""}
-            onSaved={load}
-          />
-        )}
+      </View>
     </ScrollView>
   );
 }
@@ -348,12 +576,18 @@ function Rate({
   };
 
   return (
-    <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 10 }}>
+    <Card style={{ gap: 10 }}>
       <View>
-        <Text style={{ fontWeight: "800", color: T.ink }}>
-          {answered ? "Thank you" : "How was it?"}
-        </Text>
-        <Text style={{ color: T.muted, marginTop: 2 }}>
+        <Display size={28}>{answered ? "Thank you" : "How was it?"}</Display>
+        <Text
+          style={{
+            fontFamily: F.body,
+            fontSize: 14,
+            color: T.muted,
+            marginTop: 2,
+            lineHeight: 20,
+          }}
+        >
           {answered
             ? "Change it any time. We read every one of these."
             : "One tap. It tells us whether to keep using a restaurant."}
@@ -385,13 +619,17 @@ function Rate({
           </Pressable>
         ))}
         {chosen > 0 && (
-          <Text style={{ marginLeft: 6, color: T.muted, fontWeight: "700" }}>{WORDS[chosen]}</Text>
+          <Text
+            style={{ marginLeft: 6, fontFamily: F.bodySemi, fontSize: 14, color: T.muted }}
+          >
+            {WORDS[chosen]}
+          </Text>
         )}
       </View>
 
       {chosen > 0 && (
         <>
-          <Text style={{ color: T.muted, fontWeight: "700" }}>
+          <Text style={{ fontFamily: F.bodySemi, fontSize: 13, color: T.ink }}>
             Anything you want to tell us? Optional
           </Text>
           <TextInput
@@ -402,51 +640,114 @@ function Rate({
             placeholder="Cold by the time it arrived, or the wrap was perfect."
             placeholderTextColor={T.muted}
             style={{
-              borderWidth: 1,
-              borderColor: T.line,
+              borderWidth: 2,
+              borderColor: T.ink,
               borderRadius: 12,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              minHeight: 64,
+              backgroundColor: T.field,
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+              minHeight: 72,
               fontSize: 16,
+              fontFamily: F.body,
               color: T.ink,
               textAlignVertical: "top",
             }}
           />
-          <Pressable
-            onPress={send}
-            disabled={busy}
-            style={{
-              backgroundColor: busy ? "rgba(20,17,15,0.15)" : T.brand,
-              borderRadius: 999,
-              paddingVertical: 14,
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ color: T.paper, fontWeight: "800" }}>
-              {busy ? "Sending…" : answered ? "Change my answer" : "Send"}
-            </Text>
-          </Pressable>
+          <Button onPress={send} disabled={busy}>
+            {busy ? "Sending…" : answered ? "Change my answer" : "Send"}
+          </Button>
         </>
       )}
 
       {problem !== "" && (
-        <Text style={{ color: T.brandDark, fontWeight: "700" }}>{problem}</Text>
+        <Text style={{ color: T.brandDark, fontFamily: F.bodySemi, fontSize: 14 }}>
+          {problem}
+        </Text>
       )}
       {sent && problem === "" && (
-        <Text style={{ color: T.ink, fontWeight: "700" }}>Got it. Thank you.</Text>
+        <Text style={{ color: T.mint, fontFamily: F.bodySemi, fontSize: 14 }}>
+          Got it. Thank you.
+        </Text>
       )}
+    </Card>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+      <Text style={{ fontFamily: F.body, fontSize: 15, color: T.ink }}>{label}</Text>
+      <Text
+        style={{
+          fontFamily: F.bodySemi,
+          fontSize: 15,
+          color: T.ink,
+          flexShrink: 1,
+          textAlign: "right",
+        }}
+      >
+        {value}
+      </Text>
     </View>
   );
 }
 
-function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+/** A row inside the transfer card: what it is, what it says, and a way to
+ *  have it on the clipboard where that is the point of it. */
+function Line({
+  label,
+  value,
+  onCopy,
+  copied = false,
+}: {
+  label: string;
+  value: string;
+  onCopy?: () => void;
+  copied?: boolean;
+}) {
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-      <Text style={{ color: T.muted }}>{label}</Text>
-      <Text style={{ color: T.ink, fontWeight: strong ? "800" : "600", flexShrink: 1, textAlign: "right" }}>
-        {value}
-      </Text>
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: T.line,
+      }}
+    >
+      <Text style={{ fontFamily: F.body, fontSize: 14, color: T.muted }}>{label}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1 }}>
+        <Text
+          style={{ fontFamily: F.bodyBold, fontSize: 14, color: T.ink, textAlign: "right" }}
+        >
+          {value}
+        </Text>
+        {onCopy && (
+          <Pressable
+            onPress={onCopy}
+            accessibilityLabel={`Copy ${label.toLowerCase()}`}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 999,
+              borderWidth: 2,
+              borderColor: copied ? T.ink : T.line,
+              backgroundColor: copied ? T.ink : T.paper,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons
+              name={copied ? "checkmark" : "copy-outline"}
+              size={15}
+              color={copied ? T.paper : T.ink}
+            />
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }
@@ -457,14 +758,60 @@ function Tap({ onPress, label }: { onPress: () => void; label: string }) {
       onPress={onPress}
       style={{
         flex: 1,
-        borderWidth: 1,
-        borderColor: T.line,
+        borderWidth: 2,
+        borderColor: T.ink,
         borderRadius: 999,
-        paddingVertical: 10,
+        minHeight: 44,
         alignItems: "center",
+        justifyContent: "center",
       }}
     >
-      <Text style={{ fontWeight: "800", color: T.ink }}>{label}</Text>
+      <Text style={{ fontFamily: F.bodyBold, fontSize: 14, color: T.ink }}>{label}</Text>
     </Pressable>
   );
 }
+
+/**
+ * The steps an order goes through, and what each one says underneath.
+ *
+ * Read off the run's own stage rather than from the clock, so it only ever
+ * says what admin has actually done. Placed is always behind you: the order
+ * exists, which is why you are looking at this page.
+ */
+const TIMELINE: {
+  label: string;
+  at: (order: OrderView) => boolean;
+  note: (order: OrderView, parcel: boolean) => string;
+}[] = [
+  {
+    label: "Placed",
+    at: () => true,
+    note: (order) => order.ref,
+  },
+  {
+    label: "Paid",
+    at: (order) => order.status !== "pending",
+    note: (order) =>
+      order.status !== "pending"
+        ? order.paymentMethod === "card"
+          ? "Card"
+          : "Bank transfer"
+        : "Waiting on you",
+  },
+  {
+    label: "Collecting",
+    at: (order) => STAGES.indexOf(order.stage) >= STAGES.indexOf("at_counter"),
+    note: (order, parcel) =>
+      parcel ? "Picking it up" : order.lines[0]?.restaurant || "At the counter",
+  },
+  {
+    label: "On the way",
+    at: (order) => STAGES.indexOf(order.stage) >= STAGES.indexOf("on_the_road"),
+    note: () => "To PAU",
+  },
+  {
+    label: "At your block",
+    at: (order) => STAGES.indexOf(order.stage) >= STAGES.indexOf("at_drop"),
+    note: (order) => order.hostel || "Your block",
+  },
+];
