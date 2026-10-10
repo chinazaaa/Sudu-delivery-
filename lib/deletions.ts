@@ -154,12 +154,28 @@ export async function recentDeletions(limit = 100): Promise<
     created_at: string;
   }[]
 > {
+  /*
+   * Ordered by `at`, which is what the column is called.
+   *
+   * This asked for `created_at`, a column this table has never had.
+   * PostgREST does not ignore an order it cannot make, it fails the whole
+   * query, and the catch below turned that into an empty list. So the page
+   * read "Nothing has been deleted" over a log that had been filling up
+   * since September, which is the worst way for a record to be wrong:
+   * confidently, and about itself.
+   */
   const { data, error } = await db()
     .from("deletions")
     .select("*")
-    .order("created_at", { ascending: false })
+    .order("at", { ascending: false })
     .limit(limit);
-  if (error) return [];
+  // Written down rather than swallowed. An empty log and a log that could
+  // not be read look identical on the page, and this one spent weeks
+  // looking like the first while being the second.
+  if (error) {
+    console.error("Could not read the deletions log:", error.message);
+    return [];
+  }
   return (data ?? []).map((row: Record<string, unknown>) => ({
     id: String(row.id ?? ""),
     kind: String(row.kind ?? ""),
@@ -167,6 +183,9 @@ export async function recentDeletions(limit = 100): Promise<
     who: String(row.who ?? ""),
     detail: String(row.detail ?? ""),
     body: row.body ?? null,
-    created_at: String(row.created_at ?? ""),
+    // The page calls it created_at; the table calls it at. Mapped here
+    // rather than renamed, so the column keeps the name every row in it
+    // was written under.
+    created_at: String(row.at ?? ""),
   }));
 }
