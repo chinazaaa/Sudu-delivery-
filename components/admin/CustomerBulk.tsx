@@ -526,7 +526,13 @@ export function Broadcast({
       />
 
       <div className="grid items-start gap-4 lg:grid-cols-[1.1fr_1fr]">
-        <div>
+        {/* min-w-0, because the row of templates below scrolls sideways, and
+            a sideways scroller only scrolls if it is allowed to be narrower
+            than the row inside it. A grid child is min-width:auto by
+            default, which means "as wide as my contents", so the templates
+            would set the width of the column and the column the width of
+            the page. */}
+        <div className="min-w-0">
           {held.patterns.length > 0 && (
             <>
               <p className="ticket mb-1.5 text-muted">Start from one</p>

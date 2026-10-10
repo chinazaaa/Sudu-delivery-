@@ -180,7 +180,15 @@ export default function DealPush({
       {/* Scrolled sideways rather than wrapped: four cards wrapped on a
           phone is most of a screen, and these are a shortcut past the
           typing, not the page. */}
-      <div>
+      {/* min-w-0, because a sideways scroller only scrolls if it is allowed
+          to be narrower than the row inside it. A grid or flex child is
+          min-width:auto by default, which means "as wide as my contents",
+          so four 208px cards set the width of the column, the column set
+          the width of the page, and the whole of admin scrolled sideways on
+          a phone with the header cut off halfway across. Said here rather
+          than only on the page, so this cannot do it again wherever it is
+          put next. */}
+      <div className="min-w-0">
         <p className="ticket mb-2 text-muted">Start from one of these</p>
         <div className="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1">
           {templates.map((one) => (

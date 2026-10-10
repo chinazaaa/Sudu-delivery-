@@ -63,7 +63,7 @@ export default async function NotificationsPage() {
           boxes it is a warning about: standing in this aside, a phone read
           it before there was anything to send. */}
       <div className="grid items-start gap-[18px] lg:grid-cols-[1.6fr_1fr]">
-        <div className="order-2 lg:order-1">
+        <div className="order-2 min-w-0 lg:order-1">
           <DealPush
             restaurants={menu.map((place) => ({
               id: place.restaurant.id,
@@ -81,7 +81,7 @@ export default async function NotificationsPage() {
           />
         </div>
 
-        <div className="order-1 space-y-3.5 lg:order-2">
+        <div className="order-1 min-w-0 space-y-3.5 lg:order-2">
           <div className="grid grid-cols-2 gap-3.5">
             <Figure
               label="Would reach"
@@ -120,7 +120,7 @@ export default async function NotificationsPage() {
           width.
         */}
         {sends.length > 0 && (
-          <div className="card order-3 lg:col-start-2">
+          <div className="card order-3 min-w-0 lg:col-start-2">
             <p className="ticket text-muted">Sent before</p>
             {sends.map((one) => {
               const chip = outcomeChip(one);
