@@ -111,7 +111,11 @@ export function needsDoing(now: {
       action: {
         label:
           owedTo.length === 1 ? "Pay them" : owedTo.length === 2 ? "Pay both" : "Pay them all",
-        href: "/admin/promoters?owed=1",
+        // Straight to the owed list and down to it, rather than to the top
+        // of a page of nine promoters with the two who are owed somewhere
+        // below the fold. Somebody tapping this has already decided; the
+        // page should open where the account numbers are.
+        href: "/admin/promoters?owed=1#owed",
       },
       // Not the shop's money, and somebody is waiting on it. It sits with
       // the rest of the money rather than below the nice-to-haves.

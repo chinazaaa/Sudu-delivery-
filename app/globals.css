@@ -50,6 +50,23 @@ body {
   h3 {
     @apply tracking-[-0.01em];
   }
+
+  /*
+   * A clock that stays inside its card.
+   *
+   * Safari on an iPhone gives a date or time input an intrinsic width of
+   * its own and will not shrink it below that, whatever the box it is in
+   * says, so the cut-off on the diary hung out past the right edge of the
+   * card it belongs to. Full width is not enough on its own: the minimum
+   * has to be told it may be nothing. This is every one of them at once,
+   * because the same box is on the run sheet and in settings.
+   */
+  input[type="time"],
+  input[type="date"],
+  input[type="datetime-local"] {
+    min-width: 0;
+    max-width: 100%;
+  }
 }
 
 @layer components {

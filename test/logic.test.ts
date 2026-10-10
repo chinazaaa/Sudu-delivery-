@@ -2007,13 +2007,13 @@ test("money owed to somebody else is money on the list", () => {
   // guarding is where it goes: the list and the account numbers, never an
   // action that moves money.
   assert.equal(jobs[0].action.label, "Pay both");
-  assert.equal(jobs[0].action.href, "/admin/promoters?owed=1");
+  assert.equal(jobs[0].action.href, "/admin/promoters?owed=1#owed");
 
   // One of them is paid, not paid all.
   const one = needsDoing({ ...quiet, promoters: [{ name: "Onize", owed: 500, since: "" }] });
   assert.equal(one[0].action.label, "Pay them");
   assert.equal(one[0].title, "You owe 1 promoter ₦500");
-  assert.equal(one[0].action.href, "/admin/promoters?owed=1");
+  assert.equal(one[0].action.href, "/admin/promoters?owed=1#owed");
 
   // Nobody owed anything leaves the list empty rather than saying so.
   assert.deepEqual(needsDoing({ ...quiet, promoters: [{ name: "Ada", owed: 0, since: "" }] }), []);
