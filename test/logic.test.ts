@@ -4,7 +4,7 @@ import { containersIn } from "../lib/containers";
 import { channelOfSite, tidyChannel, tidyHandle } from "../lib/came-from";
 import { weekAround } from "../lib/time";
 import { monthOf, nextMonth } from "../lib/standing";
-import { numberOr } from "../lib/settings";
+import { googleTagId, numberOr } from "../lib/settings";
 import { test } from "node:test";
 import { groupForCounter } from "../lib/admin";
 import { normalisePhone, formatPhone } from "../lib/phone";
@@ -1741,4 +1741,40 @@ test("a month knows which month comes after it", () => {
   // And into a February, which is where day-of-month maths usually breaks.
   assert.equal(nextMonth("2027-01-01"), "2027-02-01");
   assert.equal(nextMonth("2027-02-01"), "2027-03-01");
+});
+
+/*
+ * The one place a setting becomes a third-party script.
+ *
+ * Whatever is typed into that box ends up in a src attribute on every page
+ * of the shop, so it is checked for shape rather than trusted. Google hands
+ * out several prefixes for the same tag and whichever it printed is the
+ * right one, so the test is the shape, not a list of prefixes we happen to
+ * have seen.
+ */
+test("a tag id is taken on its shape, whichever prefix Google used", () => {
+  // The real one, off the Merchant Center setup screen.
+  assert.equal(googleTagId({ google_tag: "GT-NBJ6JTMC" }), "GT-NBJ6JTMC");
+  // The other prefixes the same box might be given.
+  assert.equal(googleTagId({ google_tag: "G-ABC123DEF4" }), "G-ABC123DEF4");
+  assert.equal(googleTagId({ google_tag: "AW-12345678" }), "AW-12345678");
+  assert.equal(googleTagId({ google_tag: "987654321" }), "987654321");
+  // Pasted with the whitespace that comes off a copy button.
+  assert.equal(googleTagId({ google_tag: "  GT-NBJ6JTMC\n" }), "GT-NBJ6JTMC");
+});
+
+test("anything that is not a tag id puts no script on the page", () => {
+  for (const said of [
+    "",
+    "   ",
+    "paste your tag here",
+    // The whole snippet pasted in rather than the id out of it.
+    '<script async src="https://www.googletagmanager.com/gtag/js?id=GT-NBJ6JTMC">',
+    "GT-",
+    "TOOLONGAPREFIX-ABC123",
+  ]) {
+    assert.equal(googleTagId({ google_tag: said }), "", said);
+  }
+  // Absent entirely, which is every shop that has not set one up.
+  assert.equal(googleTagId({}), "");
 });
