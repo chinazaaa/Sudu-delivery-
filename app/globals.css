@@ -61,8 +61,12 @@ body {
    * was. This one is a 2px Ink outline and a solid block of Ink behind it,
    * which prints, photographs and survives a phone in sunlight.
    */
+  /* Fourteen pixels and a four pixel shadow, which is what every board
+     draws: ours was sixteen and three, and a card is on every screen there
+     is, so being two pixels out everywhere is most of what reads as "not
+     the design". */
   .card {
-    @apply rounded-2xl border-2 border-ink bg-paper p-4 shadow-card;
+    @apply rounded-[14px] border-2 border-ink bg-paper p-4 shadow-hard;
   }
   .btn {
     @apply inline-flex min-h-[52px] touch-manipulation items-center justify-center gap-2 rounded-full px-6 font-bold transition;
@@ -89,6 +93,51 @@ body {
   /* Selected fills with Ink, which is the one state a chip has. */
   .chip-on {
     @apply border-ink bg-ink text-shell;
+  }
+
+  /*
+   * Admin's own sizes.
+   *
+   * The shop is read with a thumb, so its button is fifty-two pixels tall
+   * and its chip forty-four: a phone held in one hand on a walk to the
+   * hostel. Admin is read at a desk with a mouse on it, and the design
+   * system sets it smaller on purpose, forty-four for a button, thirty-four
+   * for an action inside a row, thirty-eight for a filter. Shop sizes in
+   * admin make every page read as a blown-up version of itself, which is
+   * exactly what it looked like.
+   *
+   * The one exception is the phone, where the six rules say nothing goes
+   * under forty-four, so the row action keeps a full-size tap area on a
+   * touch screen and only looks small.
+   */
+  .btn-admin {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full border-2 border-ink bg-paper px-[18px] text-[15px] font-bold transition hover:bg-shell;
+  }
+  /* One per screen: the single thing to do next. */
+  .btn-admin-go {
+    @apply btn-admin border-ink bg-brand text-white shadow-card hover:bg-brand-dark active:translate-x-0.5 active:translate-y-0.5 active:shadow-press;
+  }
+  .btn-admin-sm {
+    @apply min-h-[34px] border-[1.5px] px-3 text-[13px] font-bold;
+  }
+  /* Destructive is an outline, never filled. */
+  .btn-admin-bad {
+    @apply border-brand-dark text-brand-dark hover:bg-brand-tint hover:text-brand-dark;
+  }
+  .pill-admin {
+    @apply inline-flex min-h-[38px] items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-ink bg-paper px-3.5 text-sm font-semibold transition;
+  }
+  .pill-admin-on {
+    @apply bg-ink text-shell;
+  }
+  /* A card inside a card: a hairline rather than the Ink outline, because
+     two hard outlines nested read as two cards. */
+  .soft {
+    @apply rounded-xl border-[1.5px] border-line bg-paper;
+  }
+  /* The sentence under a heading, and the line under a figure. */
+  .hint {
+    @apply text-[12.5px] leading-[1.35] text-muted;
   }
   .section-title {
     @apply font-display text-3xl font-black uppercase leading-none sm:text-4xl;

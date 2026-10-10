@@ -100,25 +100,56 @@ export default function AdminShell({
     );
   };
 
+  /*
+   * One group open at a time, which is what the board draws.
+   *
+   * Every group expanded put twenty-eight links in the rail and pushed
+   * Settings off the bottom of a laptop screen, so the four that matter sat
+   * in the same wall of text as Secret Santa. Collapsed, the rail is the
+   * four daily pages and six headings, and the one you are inside is open.
+   */
+  const inside = GROUPS.find((group) => group.items.some((item) => active(item.href)));
+  const [opened, setOpened] = useState<string | null>(null);
+  // The address decides, until somebody opens another heading themselves.
+  const showing = opened ?? inside?.name ?? null;
+
   const nav = (
     <nav className="flex flex-col gap-0.5">
       {DAILY.map((item) => (
         <Row key={item.href} item={item} />
       ))}
 
-      {GROUPS.map((group) => (
-        <div key={group.name}>
-          <p className="flex items-center gap-1.5 px-3 pb-1 pt-3.5 font-mono text-[10.5px] font-bold uppercase tracking-[0.12em] text-[#7e756a]">
-            <span aria-hidden>▾</span>
-            {group.name}
-          </p>
-          <div className="flex flex-col gap-0.5">
-            {group.items.map((item) => (
-              <Row key={item.href} item={item} />
-            ))}
+      {GROUPS.map((group) => {
+        const open = showing === group.name;
+        // A heading with something waiting under it says so while it is
+        // shut, otherwise closing a group hides the one number on it.
+        const under = group.items.reduce((count, item) => count + (waiting[item.href] ?? 0), 0);
+        return (
+          <div key={group.name}>
+            <button
+              type="button"
+              onClick={() => setOpened(open ? "" : group.name)}
+              aria-expanded={open}
+              className="flex w-full items-center gap-1.5 px-3 pb-1 pt-3.5 text-left font-mono text-[10.5px] font-bold uppercase tracking-[0.12em] text-[#7e756a] hover:text-[#cfc7bc]"
+            >
+              <span aria-hidden>{open ? "▾" : "▸"}</span>
+              {group.name}
+              {!open && under > 0 && (
+                <span className="ml-auto rounded-full bg-[#3a332d] px-[7px] font-mono text-[10.5px] leading-[1.5] text-[#cfc7bc]">
+                  {under}
+                </span>
+              )}
+            </button>
+            {open && (
+              <div className="flex flex-col gap-0.5">
+                {group.items.map((item) => (
+                  <Row key={item.href} item={item} />
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </nav>
   );
 
