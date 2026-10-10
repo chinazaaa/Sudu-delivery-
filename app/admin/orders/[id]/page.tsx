@@ -1,3 +1,4 @@
+import PageHeader from "@/components/admin/PageHeader";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Figure from "@/components/admin/Figure";
@@ -154,24 +155,20 @@ async function orderPage(id: string, said: string) {
 
   return (
     <div>
-      <Link
-        href="/admin/orders"
-        className="text-[13.5px] font-semibold text-muted hover:text-brand"
-      >
-        ← All orders
-      </Link>
-
-      <header className="mb-[22px] mt-1.5 flex flex-wrap items-start justify-between gap-3.5">
-        <div className="min-w-0">
-          {/* The same wording as the card below it and the transfer
-              narration: #1001a, not #1001 on one screen and #1001a on the
-              next. */}
-          <h1 className="font-display text-[46px] font-black uppercase leading-[0.95]">
-            Order {shareRef(order, order.shares.length > 0 ? order.shares : [order])}
-          </h1>
-          {/* Two people on a gift, and the driver needs the second one.
-              Whoever paid stays first, because they are who is chased. */}
-          <p className="mt-1.5 text-[14.5px] text-muted">
+      <PageHeader
+        backHref="/admin/orders"
+        backLabel="All orders"
+        /* The same wording as the card below it and the transfer
+           narration: #1001a, not #1001 on one screen and #1001a on the
+           next. */
+        title={`Order ${shareRef(
+          order,
+          order.shares.length > 0 ? order.shares : [order]
+        )}`}
+        /* Two people on a gift, and the driver needs the second one.
+           Whoever paid stays first, because they are who is chased. */
+        detail={
+          <>
             {order.deliver_to_name
               ? `Paid by ${order.customer_name} · ${formatPhone(order.customer_phone)}, ` +
                 `goes to ${order.deliver_to_name} · ${formatPhone(
@@ -179,15 +176,17 @@ async function orderPage(id: string, said: string) {
                 )} · ${order.hostel}`
               : `${order.customer_name} · ${formatPhone(order.customer_phone)} · ${order.hostel}`}
             {runLabel === "" ? "" : ` · on ${runLabel}`}
-          </p>
-        </div>
-        <Link
-          href={`/admin/batch/${order.batch_id}`}
-          className="btn-quiet px-4 py-2.5 text-sm"
-        >
-          {runLabel === "" ? "Open its run" : `On ${runLabel}`}
-        </Link>
-      </header>
+          </>
+        }
+        actions={
+          <Link
+            href={`/admin/batch/${order.batch_id}`}
+            className="btn-quiet px-4 py-2.5 text-sm"
+          >
+            {runLabel === "" ? "Open its run" : `On ${runLabel}`}
+          </Link>
+        }
+      />
 
       <div
         className={`mb-[18px] grid gap-3.5 sm:grid-cols-2 ${

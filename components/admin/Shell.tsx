@@ -83,6 +83,27 @@ const GROUPS: Group[] = [
 const EVERY = [...DAILY, ...GROUPS.flatMap((one) => one.items)];
 
 /**
+ * The five the thumb reaches, on a phone.
+ *
+ * The rail is a desk: twenty-eight links read top to bottom with the mouse
+ * already on them. A phone in one hand in a moving car is not that, and a
+ * drawer behind a hamburger is two taps and a scroll before the first
+ * decision. So the four things open every day sit in a bar at the bottom
+ * where the thumb already is, and everything else is behind More.
+ *
+ * Orders rather than Inbox, because that is what they are: the board calls
+ * the screen an inbox and the tab Orders, and the tab is the one somebody
+ * reads.
+ */
+const TABS: Item[] = [
+  { href: "/admin", label: "Dash" },
+  { href: "/admin/orders", label: "Orders" },
+  { href: "/admin/runs", label: "Runs" },
+  { href: "/admin/schedule", label: "Diary" },
+  { href: "/admin/more", label: "More" },
+];
+
+/**
  * The frame every admin page sits in: an Ink rail on a desktop, a drawer on
  * a phone.
  *
@@ -234,25 +255,36 @@ export default function AdminShell({
 
   return (
     <div className="min-h-screen bg-shell lg:flex">
-      <header className="sticky top-0 z-40 flex items-center gap-3 border-b-2 border-ink bg-ink px-4 py-3 lg:hidden">
+      {/* The board's phone bar: the wordmark, and the way into everything
+          else. The page says what it is in its own heading at the top of the
+          content, so the bar does not repeat it; the current section is
+          still named for a screen reader, which is the one place it was
+          doing any work. */}
+      <header className="sticky top-0 z-40 flex items-center gap-2.5 border-b-2 border-ink bg-ink px-4 py-2.5 lg:hidden">
+        <span aria-hidden className="flex flex-col items-end gap-[2px]">
+          <span className="block h-[3px] w-3 bg-brand" />
+          <span className="block h-[3px] w-2 bg-brand" />
+          <span className="block h-[3px] w-1 bg-brand" />
+        </span>
+        <span className="font-display text-[22px] font-black leading-none text-white [transform:skewX(-10deg)]">
+          SUDU
+        </span>
+        <span className="mt-1.5 font-mono text-[9.5px] tracking-[0.1em] text-[#8a8178]">
+          ADMIN
+        </span>
+        <span className="sr-only">{current}</span>
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label="Open the menu"
-          className="grid size-10 shrink-0 place-items-center rounded-xl border-2 border-[#3a322b]"
+          aria-label="Open the full menu"
+          className="ml-auto grid size-[30px] shrink-0 place-items-center rounded-full bg-[#2c2721]"
         >
-          <span className="space-y-1">
-            <span className="block h-0.5 w-5 rounded bg-shell" />
-            <span className="block h-0.5 w-5 rounded bg-shell" />
-            <span className="block h-0.5 w-5 rounded bg-shell" />
+          <span aria-hidden className="space-y-[3px]">
+            <span className="block h-0.5 w-3.5 rounded bg-shell" />
+            <span className="block h-0.5 w-3.5 rounded bg-shell" />
+            <span className="block h-0.5 w-3.5 rounded bg-shell" />
           </span>
         </button>
-        <span className="min-w-0">
-          <span className="block font-mono text-[10px] uppercase tracking-[0.1em] text-[#7e756a]">
-            Sudu admin
-          </span>
-          <span className="block truncate font-bold leading-tight text-white">{current}</span>
-        </span>
       </header>
 
       {open && (
@@ -289,9 +321,48 @@ export default function AdminShell({
         {foot}
       </aside>
 
-      <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 lg:px-[30px] lg:pb-12 lg:pt-[26px]">
+      <main className="min-w-0 flex-1 px-4 pb-[86px] pt-5 sm:px-6 lg:px-[30px] lg:pb-12 lg:pt-[26px]">
         {children}
       </main>
+
+      {/* The bar, on phones only: the rail is the same thing on a desk.
+          Fixed rather than sticky, because half these pages are a long list
+          and a bar that scrolls away is a bar that is not there when the
+          counter hands you the bags. */}
+      <nav
+        aria-label="Admin sections"
+        className="fixed inset-x-0 bottom-0 z-40 flex border-t-2 border-ink bg-paper pb-[env(safe-area-inset-bottom)] lg:hidden"
+      >
+        {TABS.map((tab) => {
+          const on = tab.href === "/admin/more" ? path.startsWith("/admin/more") : active(tab.href);
+          const count = waiting[tab.href] ?? 0;
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              aria-current={on ? "page" : undefined}
+              className={`flex flex-1 flex-col items-center gap-[3px] py-[7px] ${
+                on ? "text-brand" : "text-muted"
+              }`}
+            >
+              <span className="relative">
+                <span
+                  aria-hidden
+                  className={`block size-[19px] rounded-md border-2 ${
+                    on ? "border-brand bg-brand" : "border-muted"
+                  }`}
+                />
+                {count > 0 && (
+                  <span className="absolute -right-2 -top-1.5 min-w-[15px] rounded-full bg-brand px-1 text-center font-mono text-[9.5px] font-semibold leading-[15px] text-white">
+                    {count}
+                  </span>
+                )}
+              </span>
+              <span className="text-[10.5px] font-semibold">{tab.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

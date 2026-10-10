@@ -1,3 +1,4 @@
+import PageHeader from "@/components/admin/PageHeader";
 import Link from "next/link";
 import Diagnostic from "@/components/Diagnostic";
 import AdminLive from "@/components/admin/AdminLive";
@@ -196,26 +197,26 @@ export default async function AdminHome() {
     <div>
       <AdminLive />
 
-      <header className="mb-[22px] flex flex-wrap items-start justify-between gap-3.5">
-        <div className="min-w-0">
-          <h1 className="font-display text-[46px] font-black uppercase leading-[0.95]">
-            Dashboard
-          </h1>
-          <p className="mt-1.5 text-[14.5px] text-muted">
+      <PageHeader
+        title="Dashboard"
+        detail={
+          <>
             {runDateLabel(lagosToday())} · the last 28 days, and what needs doing today.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href="/admin/runs?new=1" className="btn-quiet px-4 py-2.5 text-sm">
-            New run
-          </Link>
-          {working && (
-            <Link href={`/admin/batch/${working.id}`} className="btn-primary px-4 py-2.5 text-sm">
-              Open {workingLabel.toLowerCase()} →
+          </>
+        }
+        actions={
+          <>
+            <Link href="/admin/runs?new=1" className="btn-quiet px-4 py-2.5 text-sm">
+              New run
             </Link>
-          )}
-        </div>
-      </header>
+            {working && (
+              <Link href={`/admin/batch/${working.id}`} className="btn-primary px-4 py-2.5 text-sm">
+                Open {workingLabel.toLowerCase()} →
+              </Link>
+            )}
+          </>
+        }
+      />
 
       {problem && !problem.ok && (
         <Diagnostic title={problem.title} detail={problem.detail} />
@@ -264,7 +265,7 @@ export default async function AdminHome() {
           }
         >
           {jobs.length === 0 ? (
-            <p className="border-t-[1.5px] border-[#ece7df] pt-3.5 text-[14.5px] text-muted">
+            <p className="border-t-[1.5px] border-rule pt-3.5 text-[14.5px] text-muted">
               Nothing is waiting. Every cart has been paid for, every order is on a run, and
               nobody is owed an answer.
             </p>
@@ -272,7 +273,7 @@ export default async function AdminHome() {
             jobs.map((job) => (
               <div
                 key={job.kind}
-                className="flex items-center gap-3 border-t-[1.5px] border-[#ece7df] px-1 py-3"
+                className="flex items-center gap-3 border-t-[1.5px] border-rule px-1 py-3"
               >
                 <span aria-hidden className={`size-2.5 shrink-0 rounded-full ${dot[job.tone]}`} />
                 <div className="min-w-0 flex-1">
@@ -300,7 +301,7 @@ export default async function AdminHome() {
           }
         >
           {soon.length === 0 && !after && (
-            <p className="border-t-[1.5px] border-[#ece7df] pt-3 text-[14.5px] text-muted">
+            <p className="border-t-[1.5px] border-rule pt-3 text-[14.5px] text-muted">
               Nothing is going today or tomorrow.
             </p>
           )}
@@ -308,7 +309,7 @@ export default async function AdminHome() {
             <Link
               key={batch.id}
               href={`/admin/batch/${batch.id}`}
-              className="flex items-center gap-3 border-t-[1.5px] border-[#ece7df] py-3"
+              className="flex items-center gap-3 border-t-[1.5px] border-rule py-3"
             >
               <span className="min-w-0 flex-1">
                 <span className="block font-bold">
@@ -346,7 +347,7 @@ export default async function AdminHome() {
                 </span>
                 <span className="font-mono shrink-0">{one.qty}</span>
               </div>
-              <div className="mt-1.5 h-[7px] rounded-full bg-[#ece7df]">
+              <div className="mt-1.5 h-[7px] rounded-full bg-rule">
                 <div
                   className="h-full rounded-full bg-brand"
                   style={{ width: `${Math.round((one.qty / topped) * 100)}%` }}
@@ -380,7 +381,7 @@ export default async function AdminHome() {
                     </div>
                   ))}
                 </div>
-                <p className="border-t-[1.5px] border-[#ece7df] pt-2 text-[12.5px] text-muted">
+                <p className="border-t-[1.5px] border-rule pt-2 text-[12.5px] text-muted">
                   Best of these: <strong>{naira(best)}</strong>. Fuller cars, same cost.
                 </p>
               </>
@@ -389,7 +390,7 @@ export default async function AdminHome() {
 
           <Link
             href="/admin/money"
-            className="flex items-center gap-3 rounded-xl border-[1.5px] border-[#e8d9a8] bg-brand-tint px-4 py-3.5"
+            className="flex items-center gap-3 rounded-xl border-[1.5px] border-volt-line bg-brand-tint px-4 py-3.5"
           >
             <span className="flex-1">
               <strong className="text-[14.5px]">Other money</strong>

@@ -1,3 +1,4 @@
+import PageHeader from "@/components/admin/PageHeader";
 import { naira } from "@/lib/money";
 import SaveButton from "@/components/SaveButton";
 import BandEditor from "@/components/admin/BandEditor";
@@ -54,17 +55,10 @@ export default async function SettingsAdmin() {
 
   return (
     <div>
-      <header className="mb-[22px] flex flex-wrap items-start justify-between gap-3.5">
-        <div className="min-w-0">
-          <h1 className="font-display text-[46px] font-black uppercase leading-[0.95]">
-            Settings
-          </h1>
-          <p className="mt-1.5 text-[14.5px] text-muted">
-            Everything that is true across the whole shop. Every word on the site, and
-            every message you send. No redeploy, no code.
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        title="Settings"
+        detail="Everything that is true across the whole shop. Every word on the site, and every message you send. No redeploy, no code."
+      />
 
       {/* The board draws these as filter pills. They are jump links instead,
           because each card below keeps its own values and its own save
@@ -101,7 +95,7 @@ export default async function SettingsAdmin() {
         </div>
 
         {accounts === null && (
-          <p className="rounded-xl border-[1.5px] border-[#e8d9a8] bg-brand-tint px-3.5 py-2.5 text-[13px] text-brand-dark">
+          <p className="rounded-xl border-[1.5px] border-volt-line bg-brand-tint px-3.5 py-2.5 text-[13px] text-brand-dark">
             The database has no bank_accounts table yet, so this is still the
             single account below. Run supabase/update.sql and the list starts
             working, with that account already on it.
@@ -109,7 +103,7 @@ export default async function SettingsAdmin() {
         )}
 
         {accounts !== null && accounts.length === 0 && (
-          <p className="rounded-xl border-[1.5px] border-[#e8d9a8] bg-brand-tint px-3.5 py-2.5 text-[13px] text-brand-dark">
+          <p className="rounded-xl border-[1.5px] border-volt-line bg-brand-tint px-3.5 py-2.5 text-[13px] text-brand-dark">
             No account on the list, so customers have nowhere to pay. Add one
             before ordering opens.
           </p>
@@ -406,7 +400,7 @@ export default async function SettingsAdmin() {
         </div>
 
         {missing.length > 0 && (
-          <p className="rounded-xl border-[1.5px] border-[#e8d9a8] bg-brand-tint px-3.5 py-2.5 text-[13px] text-brand-dark">
+          <p className="rounded-xl border-[1.5px] border-volt-line bg-brand-tint px-3.5 py-2.5 text-[13px] text-brand-dark">
             The database is missing {missing.join(" and ")}, so there is nowhere
             to keep this yet. Run supabase/update.sql and this box starts
             working.
@@ -787,7 +781,7 @@ export default async function SettingsAdmin() {
         {/* The Google Business Profile. Two links rather than one, because
             the one worth putting in front of somebody who has just been
             handed their food is the one that opens the review box. */}
-        <div className="space-y-3 border-t-[1.5px] border-[#ece7df] pt-4">
+        <div className="space-y-3 border-t-[1.5px] border-rule pt-4">
           <div>
             <h2 className="font-display text-[26px] font-black uppercase leading-none">
               Google
@@ -934,7 +928,7 @@ export default async function SettingsAdmin() {
         {/* The dates on the small print. Typed rather than read off the
             file, because restyling a page is not a change to the policy and
             a date that moves every deploy tells a reader nothing. */}
-        <div className="space-y-3 border-t-[1.5px] border-[#ece7df] pt-4">
+        <div className="space-y-3 border-t-[1.5px] border-rule pt-4">
           <div>
             <h2 className="font-display text-[26px] font-black uppercase leading-none">
               The small print
@@ -1123,7 +1117,7 @@ export default async function SettingsAdmin() {
           </span>
         </label>
 
-        <div className="border-t-[1.5px] border-[#ece7df] pt-3.5">
+        <div className="border-t-[1.5px] border-rule pt-3.5">
           <p className="label">What it costs</p>
           <BandEditor
             initial={

@@ -6,6 +6,8 @@ import Ribbon from "@/components/Ribbon";
 import OfferNudge from "@/components/OfferNudge";
 import GroupBar from "@/components/GroupBar";
 import GroupSync from "@/components/GroupSync";
+import Frame from "@/components/Frame";
+import ShopOnly from "@/components/ShopOnly";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import { offerNudge, publicOffer } from "@/lib/coupons";
@@ -186,7 +188,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
         {/* Each line of the footer is there because something is set. Empty
             it in admin and it goes. */}
-        <Ribbon text={ribbon?.text ?? ""} href={ribbon?.href ?? ""} offer={offer} />
+        <ShopOnly>
+          <Ribbon text={ribbon?.text ?? ""} href={ribbon?.href ?? ""} offer={offer} />
+        </ShopOnly>
         {/* Above the header, because it is about why they are here at all
             rather than about anything on the page under it. */}
         {perk && perkFrom && <LinkPerk who={perkFrom} line={perk.line} />}
@@ -200,19 +204,24 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             thing on the page, which is the footer: put on the main it opens
             a hole between the end of the content and the footer instead, and
             on a wide screen that hole was most of a screen of nothing. */}
-        <main className="mx-auto w-full max-w-[1240px] px-4 pt-4 sm:px-8">{children}</main>
-        {showFooter && (
-          <SiteFooter
-            line={settings.footer_line}
-            instagram={instagram}
-            groupLink={settings.whatsapp_group_link}
-            google={google.profile}
-            showPromoterLink={showPromoterLink}
-          />
-        )}
-        {/* The footer carried the clearance for the tab bar and the sticky
-            cart. With it hidden, that space still has to be there. */}
-        {!showFooter && <div aria-hidden className="pb-28 sm:pb-32 lg:pb-16" />}
+        {/* The shop's column, except on the pages that draw their own edge
+            to edge: admin's rail and the promoter's bar. */}
+        <Frame>{children}</Frame>
+        <ShopOnly>
+          {showFooter && (
+            <SiteFooter
+              line={settings.footer_line}
+              instagram={instagram}
+              groupLink={settings.whatsapp_group_link}
+              google={google.profile}
+              showPromoterLink={showPromoterLink}
+            />
+          )}
+          {/* The footer carried the clearance for the tab bar and the sticky
+              cart. With it hidden, that space still has to be there. */}
+          {!showFooter && <div aria-hidden className="pb-28 sm:pb-32 lg:pb-16" />}
+        </ShopOnly>
+
         <BottomNav />
         {/* A small card in the corner, once per offer, never over the cart
             or the checkout. */}

@@ -20,6 +20,13 @@ const config: Config = {
         /** Hairlines, which were black at 6% and are now a colour of their
          *  own: a border this heavy has to be drawn rather than implied. */
         line: "#dcd6cc",
+        /** The rule between rows in a list, which is lighter than a border
+         *  round a card: a table of twenty rows drawn in `line` reads as
+         *  twenty cards. */
+        rule: "#ece7df",
+        /** A neutral chip or a bar's unfilled half: shell with a touch more
+         *  in it, so a chip on a shell page is still a shape. */
+        wash: "#f1ede6",
         paper: "#ffffff",
         shell: "#f2efe9",
         brand: {
@@ -27,7 +34,12 @@ const config: Config = {
           dark: "#b8230f",
           tint: "#fff6d6",
         },
-        volt: "#ffd23f",
+        volt: {
+          DEFAULT: "#ffd23f",
+          /** The border on a soft warning, where a 2px Ink outline would
+           *  make a note read as an error. */
+          line: "#e8d9a8",
+        },
         mint: "#1e7a4c",
       },
       fontFamily: {

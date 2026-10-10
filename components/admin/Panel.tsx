@@ -14,7 +14,10 @@ export default function Panel({
 }: {
   title: string;
   aside?: React.ReactNode;
-  detail?: string;
+  /** The lead sentence. A node rather than a string: several of these
+   *  want a figure or a link inside the sentence, and flattening those to
+   *  prose loses the one thing worth reading. */
+  detail?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }) {

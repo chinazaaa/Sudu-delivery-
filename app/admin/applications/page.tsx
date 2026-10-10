@@ -137,7 +137,7 @@ export default async function ApplicationsAdmin() {
                   className={`chip ml-auto border-0 px-2.5 py-0.5 text-xs ${
                     one.status === "approved"
                       ? "bg-[#dff0e6] text-mint"
-                      : "bg-[#f1ede6] text-ink"
+                      : "bg-wash text-ink"
                   }`}
                 >
                   {one.status === "approved" ? `approved · ${one.code}` : "not this time"}

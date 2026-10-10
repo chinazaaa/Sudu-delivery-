@@ -1,3 +1,4 @@
+import PageHeader from "@/components/admin/PageHeader";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Figure from "@/components/admin/Figure";
@@ -110,40 +111,38 @@ export default async function CustomerPage({
 
   return (
     <div>
-      <Link href="/admin/customers" className="text-[13.5px] font-semibold text-muted">
-        ← All customers
-      </Link>
-
-      <header className="mb-[22px] mt-1 flex flex-wrap items-start justify-between gap-3.5">
-        <div className="min-w-0">
-          <h1 className="font-display text-[46px] font-black uppercase leading-[0.95]">
-            {person.name || formatPhone(person.phone)}
-          </h1>
-          <p className="mt-1.5 text-[14.5px] text-muted">
+      <PageHeader
+        backHref="/admin/customers"
+        backLabel="All customers"
+        title={person.name || formatPhone(person.phone)}
+        detail={
+          <>
             {formatPhone(person.phone)} · {person.hostel || "no block saved"} ·{" "}
             {person.pays === "card" ? "pays by card" : "pays by transfer"}
             {since !== "" && ` · customer since ${since}`}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {person.pin !== "" && (
-            <a href={sendPin} target="_blank" rel="noopener noreferrer" className="btn-quiet">
-              Send their PIN
+          </>
+        }
+        actions={
+          <>
+            {person.pin !== "" && (
+              <a href={sendPin} target="_blank" rel="noopener noreferrer" className="btn-quiet">
+                Send their PIN
+              </a>
+            )}
+            {askReview !== "" && !person.reviewed && (
+              <a href={askReview} target="_blank" rel="noopener noreferrer" className="btn-quiet">
+                Ask for a review
+              </a>
+            )}
+            <a href={`tel:${person.phone}`} className="btn-quiet">
+              Call
             </a>
-          )}
-          {askReview !== "" && !person.reviewed && (
-            <a href={askReview} target="_blank" rel="noopener noreferrer" className="btn-quiet">
-              Ask for a review
+            <a href={message} target="_blank" rel="noopener noreferrer" className="btn">
+              Message {greeting || "them"}
             </a>
-          )}
-          <a href={`tel:${person.phone}`} className="btn-quiet">
-            Call
-          </a>
-          <a href={message} target="_blank" rel="noopener noreferrer" className="btn">
-            Message {greeting || "them"}
-          </a>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       <div className="mb-[18px] flex flex-wrap gap-2">
         {promoter && (
@@ -256,7 +255,7 @@ export default async function CustomerPage({
                     ];
                     const items = order.lines.reduce((count, line) => count + line.qty, 0);
                     return (
-                      <tr key={order.id} className="border-t-[1.5px] border-[#ece7df]">
+                      <tr key={order.id} className="border-t-[1.5px] border-rule">
                         <td className="py-[11px] pr-2.5 font-mono text-[14.5px] text-muted">
                           {shareRef(order, order.groupOrders)}
                         </td>
@@ -341,7 +340,7 @@ export default async function CustomerPage({
                       <span>{place.name}</span>
                       <span className="font-mono">{place.count}×</span>
                     </div>
-                    <div className="mt-1.5 h-[7px] rounded-full bg-[#ece7df]">
+                    <div className="mt-1.5 h-[7px] rounded-full bg-rule">
                       <div
                         className="h-full rounded-full bg-brand"
                         style={{ width: `${Math.round((place.count / mostOrdered) * 100)}%` }}
@@ -384,7 +383,7 @@ export default async function CustomerPage({
               ].map((line) => (
                 <div
                   key={line.label}
-                  className="flex justify-between border-t-[1.5px] border-[#ece7df] py-2"
+                  className="flex justify-between border-t-[1.5px] border-rule py-2"
                 >
                   <dt>{line.label}</dt>
                   <dd className="font-mono">{naira(line.value)}</dd>

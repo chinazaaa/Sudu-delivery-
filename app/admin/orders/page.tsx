@@ -1,3 +1,4 @@
+import PageHeader from "@/components/admin/PageHeader";
 import Link from "next/link";
 import AdminLive from "@/components/admin/AdminLive";
 import Figure from "@/components/admin/Figure";
@@ -100,16 +101,10 @@ export default async function OrdersPage({
     <div>
       <AdminLive />
 
-      <header className="mb-[22px] flex flex-wrap items-start justify-between gap-3.5">
-        <div className="min-w-0">
-          <h1 className="font-display text-[46px] font-black uppercase leading-[0.95]">
-            Orders
-          </h1>
-          <p className="mt-1.5 text-[14.5px] text-muted">
-            Every order ever placed, whatever run it belongs to.
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        title="Orders"
+        detail="Every order ever placed, whatever run it belongs to."
+      />
 
       {/* Said here rather than on the order's own page, because that page is
           the one thing that no longer exists. */}

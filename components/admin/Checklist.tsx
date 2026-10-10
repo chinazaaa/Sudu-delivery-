@@ -83,7 +83,7 @@ export default function Checklist({
         )}
       </div>
 
-      <ul className="divide-y-[1.5px] divide-[#ece7df] border-t-[1.5px] border-[#ece7df]">
+      <ul className="divide-y-[1.5px] divide-rule border-t-[1.5px] border-rule">
         {items.map((item) => (
           <li key={item.key}>
             <button

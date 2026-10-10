@@ -1,3 +1,4 @@
+import PageHeader from "@/components/admin/PageHeader";
 import SaveButton from "@/components/SaveButton";
 import type { Batch } from "@/lib/types";
 import { deliverySlots } from "@/lib/same-day";
@@ -167,49 +168,45 @@ export default async function BatchPage({
 
   return (
     <div>
-      <Link
-        href="/admin/runs"
-        className="text-[13.5px] font-semibold text-muted hover:text-brand"
-      >
-        ← All runs
-      </Link>
-      <header className="mb-[22px] mt-1 flex flex-wrap items-start justify-between gap-3.5">
-        <div className="min-w-0">
-          <h1 className="font-display text-[46px] font-black uppercase leading-[0.95]">
-            {batchLabel}
-          </h1>
-          <p className="mt-1.5 text-[14.5px] text-muted">
+      <PageHeader
+        backHref="/admin/runs"
+        backLabel="All runs"
+        title={batchLabel}
+        detail={
+          <>
             Closes {clockLabel(batch.cut_off_at)} · {batch.delivery_window_text} ·{" "}
             {STAGE_LABEL[batch.stage]}
-          </p>
-        </div>
-        {/* A closed run is a record. Moving its stage or sending its counter
-            sheet to WhatsApp are things to do to a run that is still
-            happening, and leaving them there is what made a finished run go
-            on looking like work. */}
-        {!batch.settled_at && (
-          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-            <StagePicker
-              batchId={batch.id}
-              stage={batch.stage}
-              action={setBatchStage}
-              // Two parcels sharing a day land here, and "At the counter,
-              // food being cooked" over two bags is a kitchen nobody is
-              // standing in.
-              parcel={batch.kind === "parcel"}
-            />
-            <SendSheet
-              batchId={batch.id}
-              open={batch.status === "open" && batch.stage === "ordering"}
-              closeRun={setBatchStage}
-              href={whatsappTo(
-                settings.whatsapp_number || "0",
-                sheetAsText(sheet, batchLabel)
-              )}
-            />
-          </div>
-        )}
-      </header>
+          </>
+        }
+        actions={
+          /* A closed run is a record. Moving its stage or sending its counter
+             sheet to WhatsApp are things to do to a run that is still
+             happening, and leaving them there is what made a finished run go
+             on looking like work. */
+          !batch.settled_at ? (
+            <>
+              <StagePicker
+                batchId={batch.id}
+                stage={batch.stage}
+                action={setBatchStage}
+                // Two parcels sharing a day land here, and "At the counter,
+                // food being cooked" over two bags is a kitchen nobody is
+                // standing in.
+                parcel={batch.kind === "parcel"}
+              />
+              <SendSheet
+                batchId={batch.id}
+                open={batch.status === "open" && batch.stage === "ordering"}
+                closeRun={setBatchStage}
+                href={whatsappTo(
+                  settings.whatsapp_number || "0",
+                  sheetAsText(sheet, batchLabel)
+                )}
+              />
+            </>
+          ) : null
+        }
+      />
 
       {/* Where the run has got to, read rather than set: the picker above is
           what moves it. Six cells because there are six real stages, and
@@ -329,7 +326,7 @@ export default async function BatchPage({
           className={`mb-4 rounded-xl border-[1.5px] px-4 py-3 text-[14px] ${
             likely >= 0
               ? "border-mint/40 bg-mint/10 text-mint"
-              : "border-[#e8d9a8] bg-brand-tint text-ink"
+              : "border-volt-line bg-brand-tint text-ink"
           }`}
         >
           <span className="font-bold">
@@ -400,7 +397,7 @@ export default async function BatchPage({
       )}
 
       {losingMoney && (
-        <p className="mb-4 rounded-xl border-[1.5px] border-[#e8d9a8] bg-brand-tint px-4 py-3 text-[14px]">
+        <p className="mb-4 rounded-xl border-[1.5px] border-volt-line bg-brand-tint px-4 py-3 text-[14px]">
           This run is {naira(Math.abs(summary.profit))} down after costs. Cancel
           and refund in full, or carry it and make it back on the next one.
         </p>
@@ -501,7 +498,7 @@ export default async function BatchPage({
                     {counter.map((group) => (
                       <li
                         key={group.restaurant}
-                        className="flex justify-between gap-3 border-t-[1.5px] border-[#ece7df] py-2"
+                        className="flex justify-between gap-3 border-t-[1.5px] border-rule py-2"
                       >
                         <span>{group.restaurant}</span>
                         <span className="font-mono font-semibold">
@@ -510,7 +507,7 @@ export default async function BatchPage({
                       </li>
                     ))}
                     {counter.length === 0 && (
-                      <li className="border-t-[1.5px] border-[#ece7df] py-2 text-muted">
+                      <li className="border-t-[1.5px] border-rule py-2 text-muted">
                         Nothing paid for yet.
                       </li>
                     )}
@@ -703,7 +700,7 @@ export default async function BatchPage({
                     {counter.some((group) => group.lines.some((line) => line.paid === null)) && (
                     <form
                       action={setCounterSpend}
-                      className="flex flex-wrap items-end gap-2 border-t-[1.5px] border-[#ece7df] pt-3"
+                      className="flex flex-wrap items-end gap-2 border-t-[1.5px] border-rule pt-3"
                     >
                       <input type="hidden" name="batch_id" value={batch.id} />
                       <div className="min-w-0 flex-1">
@@ -887,7 +884,7 @@ export default async function BatchPage({
                             className={`ml-2 rounded-full px-2 py-0.5 text-xs font-bold ${
                               order.payment_method === "card"
                                 ? "bg-brand text-white"
-                                : "bg-[#f1ede6] text-ink"
+                                : "bg-wash text-ink"
                             }`}
                           >
                             {order.payment_method === "card"
@@ -1146,7 +1143,7 @@ export default async function BatchPage({
                       {refunds.map((order) => (
                         <li
                           key={order.id}
-                          className="flex justify-between gap-3 border-t-[1.5px] border-[#ece7df] py-2"
+                          className="flex justify-between gap-3 border-t-[1.5px] border-rule py-2"
                         >
                           <span>
                             {order.for_name ?? order.customer_name} ·{" "}
@@ -1382,7 +1379,7 @@ export default async function BatchPage({
                     </p>
                   </form>
 
-                  <form action={setBatchCapacity} className="flex items-end gap-2 border-t-[1.5px] border-[#ece7df] pt-3">
+                  <form action={setBatchCapacity} className="flex items-end gap-2 border-t-[1.5px] border-rule pt-3">
                     <input type="hidden" name="batch_id" value={batch.id} />
                     <div className="grow">
                       <label className="label" htmlFor="capacity">
@@ -1399,7 +1396,7 @@ export default async function BatchPage({
                     <SaveButton className="shrink-0">Save</SaveButton>
                   </form>
 
-                  <div className="border-t-[1.5px] border-[#ece7df] pt-3">
+                  <div className="border-t-[1.5px] border-rule pt-3">
                     <h2 className="font-display text-[26px] font-black uppercase leading-none">
                       Is this run taking orders?
                     </h2>
@@ -1448,7 +1445,7 @@ export default async function BatchPage({
                     </p>
 
                     {empty && (
-                      <form action={deleteRun} className="mt-4 border-t-[1.5px] border-[#ece7df] pt-3">
+                      <form action={deleteRun} className="mt-4 border-t-[1.5px] border-rule pt-3">
                         <input type="hidden" name="batch_id" value={batch.id} />
                         <h3 className="font-display text-[22px] font-black uppercase leading-none">
                           Delete this run

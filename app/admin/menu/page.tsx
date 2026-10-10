@@ -1,3 +1,4 @@
+import PageHeader from "@/components/admin/PageHeader";
 import Link from "next/link";
 import Diagnostic from "@/components/Diagnostic";
 import Panel from "@/components/admin/Panel";
@@ -94,30 +95,25 @@ export default async function RestaurantsAdmin() {
 
   return (
     <div>
-      <header className="mb-[22px] flex flex-wrap items-start justify-between gap-3.5">
-        <div className="min-w-0">
-          <h1 className="font-display text-[46px] font-black uppercase leading-[0.95]">
-            Restaurants
-          </h1>
-          <p className="mt-1.5 text-[14.5px] text-muted">
-            Each one holds its own categories, items and choices. Switch one off to
-            take it off the site without losing its menu.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Taking one thing off sale does not need any of this page. It
-              needs a search box, and that is somewhere else. */}
-          <Link href="/admin/stock" className="btn-quiet px-4 py-2.5 text-sm">
-            Something sold out?
-          </Link>
-          {/* The form is at the bottom, under however many restaurants there
-              are, which is the right place for it and the wrong place to have
-              to scroll to. */}
-          <a href="#add" className="btn-primary px-4 py-2.5 text-sm">
-            Add a restaurant
-          </a>
-        </div>
-      </header>
+      <PageHeader
+        title="Restaurants"
+        detail="Each one holds its own categories, items and choices. Switch one off to take it off the site without losing its menu."
+        actions={
+          <>
+            {/* Taking one thing off sale does not need any of this page. It
+                needs a search box, and that is somewhere else. */}
+            <Link href="/admin/stock" className="btn-quiet px-4 py-2.5 text-sm">
+              Something sold out?
+            </Link>
+            {/* The form is at the bottom, under however many restaurants there
+                are, which is the right place for it and the wrong place to have
+                to scroll to. */}
+            <a href="#add" className="btn-primary px-4 py-2.5 text-sm">
+              Add a restaurant
+            </a>
+          </>
+        }
+      />
 
       {problem && !problem.ok && (
         <div className="mb-[18px] space-y-3.5">
@@ -157,7 +153,7 @@ export default async function RestaurantsAdmin() {
                     </span>
                     <strong className="text-sm">{gap.said}</strong>
                   </div>
-                  <div className="my-2.5 h-[9px] rounded-full bg-[#ece7df]">
+                  <div className="my-2.5 h-[9px] rounded-full bg-rule">
                     <div
                       className="h-full rounded-full"
                       style={{
@@ -245,7 +241,7 @@ export default async function RestaurantsAdmin() {
                 in sunlight, which is where this page gets opened. */}
             <span
               className={`chip shrink-0 border-0 px-2.5 py-0.5 text-xs ${
-                restaurant.active ? "bg-[#dff0e6] text-mint" : "bg-[#f1ede6] text-ink"
+                restaurant.active ? "bg-[#dff0e6] text-mint" : "bg-wash text-ink"
               }`}
               style={{ minHeight: 0 }}
             >

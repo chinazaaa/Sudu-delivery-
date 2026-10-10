@@ -1,3 +1,4 @@
+import PageHeader from "@/components/admin/PageHeader";
 import Link from "next/link";
 import Figure from "@/components/admin/Figure";
 import Panel from "@/components/admin/Panel";
@@ -173,20 +174,16 @@ export default async function CustomersPage({
 
   return (
     <div>
-      <header className="mb-[22px] flex flex-wrap items-start justify-between gap-3.5">
-        <div className="min-w-0">
-          <h1 className="font-display text-[46px] font-black uppercase leading-[0.95]">
-            Customers
-          </h1>
-          <p className="mt-1.5 text-[14.5px] text-muted">
-            {brought
-              ? `Everybody ${brought.name} brought in, and what they have spent.`
-              : by === "none"
-                ? "Everybody who arrived on their own, with nobody to thank for it."
-                : "Everyone who has ever ordered, with the PIN that opens their history."}
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        title="Customers"
+        detail={
+          brought
+            ? `Everybody ${brought.name} brought in, and what they have spent.`
+            : by === "none"
+              ? "Everybody who arrived on their own, with nobody to thank for it."
+              : "Everyone who has ever ordered, with the PIN that opens their history."
+        }
+      />
 
       <div className="mb-4 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         <Figure

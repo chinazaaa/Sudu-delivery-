@@ -79,7 +79,7 @@ export default async function PromotersAdmin({
       />
 
       {payingOut && (
-        <p className="card mb-4 flex flex-wrap items-center gap-3 border-[#e8d9a8] bg-brand-tint text-sm">
+        <p className="card mb-4 flex flex-wrap items-center gap-3 border-volt-line bg-brand-tint text-sm">
           <span className="font-semibold">
             {promoters.length === 0
               ? "Nobody is owed anything."
