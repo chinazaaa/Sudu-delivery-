@@ -45,7 +45,7 @@ export default function PageHeader({
         }`}
       >
         <div className="min-w-0">
-          <h1 className="font-display text-[46px] font-black uppercase leading-[0.95]">
+          <h1 className="font-display text-[34px] font-black uppercase leading-[0.95] sm:text-[46px]">
             {title}
           </h1>
           {detail && <p className="mt-1.5 text-[14.5px] text-muted">{detail}</p>}

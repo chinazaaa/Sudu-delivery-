@@ -144,6 +144,21 @@ body {
   .field-admin {
     @apply min-h-[42px] py-0 text-[14.5px];
   }
+  /*
+   * The bar that sits on the bottom of a phone, over the page and under
+   * the tab bar.
+   *
+   * Every mobile board puts the one thing this screen is for down here:
+   * ask for a review, message the nine you picked, open WhatsApp for the
+   * first of them. On a desk those live in the header, where the mouse
+   * already is; on a phone the header is the far end of a reach and the
+   * thumb is at the bottom, so the board moves them rather than shrinking
+   * them. Fifty-one pixels is the tab bar above which it stands.
+   */
+  .phone-bar {
+    @apply fixed inset-x-0 z-30 border-t-[1.5px] border-line bg-shell px-3.5 py-2.5 lg:hidden;
+    bottom: calc(51px + env(safe-area-inset-bottom));
+  }
   .pill-admin {
     @apply inline-flex min-h-[38px] items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-ink bg-paper px-3.5 text-sm font-semibold transition;
   }
