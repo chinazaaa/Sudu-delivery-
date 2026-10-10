@@ -1778,3 +1778,27 @@ test("anything that is not a tag id puts no script on the page", () => {
   // Absent entirely, which is every shop that has not set one up.
   assert.equal(googleTagId({}), "");
 });
+
+/*
+ * A query with a brace in it is a template nobody filled in.
+ *
+ * Google crawled the SearchAction target literally, braces and all, then
+ * followed every filter link on the page it landed on. The product list now
+ * drops such a query rather than searching for it, and this is the rule
+ * that decides, kept honest so a real search is never thrown away with it.
+ */
+test("a search with a brace in it is nobody's search", () => {
+  const unfilled = (said: string | undefined): boolean =>
+    said !== undefined && /[{}]/.test(said);
+
+  // What Google actually crawled, two hundred and thirty-one times over.
+  assert.equal(unfilled("{search_term_string}"), true);
+  assert.equal(unfilled("{q}"), true);
+
+  // Things people really type, which must survive.
+  for (const real of ["chicken", "jollof rice", "", "pepperoni & chips", "50cl", "CeraVe"]) {
+    assert.equal(unfilled(real), false, real);
+  }
+  // Nothing asked for at all is not a search either way.
+  assert.equal(unfilled(undefined), false);
+});

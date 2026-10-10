@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
 import ProductGrid from "@/components/ProductGrid";
 import { optionGroupsFor } from "@/lib/menu";
@@ -38,6 +39,38 @@ export async function generateMetadata({
   };
 }
 
+/**
+ * A search nobody typed.
+ *
+ * The site tells search engines how to search it, in the way the standard
+ * asks: a SearchAction whose target is /products?q={search_term_string},
+ * where the braces are a placeholder a search engine is meant to fill in.
+ * Google crawled the address exactly as written instead, braces and all,
+ * landed on this page, and then followed every restaurant, category and
+ * sort link on it, each of which carries the query along. One placeholder
+ * became two hundred and thirty-one crawled addresses, all of them noindex,
+ * on a site where nine hundred real dish pages are still waiting to be
+ * crawled for the first time.
+ *
+ * So a query with a brace in it is not a search: nobody types one, and the
+ * only thing that produces one is a template nobody filled in. It is
+ * dropped, permanently, which collapses the whole tree back to the one real
+ * page at the root of it.
+ */
+const unfilled = (said: string | undefined): boolean =>
+  said !== undefined && /[{}]/.test(said);
+
+/** The same address without the query, keeping whatever else was asked for,
+ *  so a redirect lands somewhere real rather than at the top of the shop. */
+function withoutQuery(asked: Asked): string {
+  const rest = new URLSearchParams();
+  if (asked.place) rest.set("place", asked.place);
+  if (asked.category) rest.set("category", asked.category);
+  if (asked.sort) rest.set("sort", asked.sort);
+  const query = rest.toString();
+  return query === "" ? "/products" : `/products?${query}`;
+}
+
 type Asked = {
   q?: string;
   place?: string;
@@ -61,6 +94,7 @@ export default async function ProductsPage({
   searchParams: Promise<Asked>;
 }) {
   const asked = await searchParams;
+  if (unfilled(asked.q)) permanentRedirect(withoutQuery(asked));
   const page = Math.max(1, Number(asked.page ?? 1) || 1);
 
   const [{ products, total }, facets] = await Promise.all([
