@@ -6,6 +6,7 @@ import { weekAround } from "../lib/time";
 import { monthOf, nextMonth } from "../lib/standing";
 import { googleTagId, numberOr } from "../lib/settings";
 import { isExtra } from "../lib/shelf";
+import { howLong, needsDoing } from "../lib/needs-doing";
 import { templateFor } from "../lib/messages";
 import { EMPTY } from "../lib/settings";
 import { test } from "node:test";
@@ -1889,4 +1890,80 @@ test("a token needing an order is removed rather than sent to somebody", () => {
   assert.ok(!said.includes("}"), said);
   assert.ok(said.includes("Ada"), said);
   assert.ok(said.includes("https://g.page/r/x/review"), said);
+});
+
+/*
+ * The dashboard list that is the whole job.
+ *
+ * Six cards of figures answer "how are we doing" and never answer "what
+ * should I do now". Every line in this list costs money if it is left, so
+ * the order is what it costs to ignore, and an empty list is a finished
+ * morning rather than a broken page.
+ */
+const quiet = {
+  left: { value: 0, count: 0, stillInTime: 0 },
+  unpaid: { value: 0, count: 0, runLabel: "", closesAt: "" },
+  run: null,
+  reviews: 0,
+};
+
+test("a morning with nothing waiting has an empty list, not a fabricated one", () => {
+  assert.deepEqual(needsDoing(quiet), []);
+});
+
+test("the list is ordered by what it costs to leave", () => {
+  const jobs = needsDoing({
+    ...quiet,
+    left: { value: 62100, count: 4, stillInTime: 3 },
+    unpaid: { value: 41200, count: 3, runLabel: "Saturday afternoon", closesAt: "12:30" },
+    reviews: 2,
+  });
+  // Money first, biggest first. Replying to a review costs nothing to defer,
+  // so it goes last however nice it is to do.
+  assert.deepEqual(jobs.map((one) => one.kind), ["left", "unpaid", "reviews"]);
+  assert.ok(jobs[0].title.includes("62,100"), jobs[0].title);
+  assert.ok(jobs[0].detail.includes("3 can still make"), jobs[0].detail);
+});
+
+test("a run is only worth saying when it is close enough to act on", () => {
+  const far = needsDoing({
+    ...quiet,
+    run: { label: "Tomorrow's run", closesInMinutes: 9 * 60, kitchens: 11, paid: 0 },
+  });
+  // Nine hours away is a timetable, and a dashboard that says so every
+  // morning is one nobody reads by Thursday.
+  assert.deepEqual(far, []);
+
+  const near = needsDoing({
+    ...quiet,
+    run: { label: "Saturday's run", closesInMinutes: 134, kitchens: 11, paid: 0 },
+  });
+  assert.equal(near.length, 1);
+  assert.ok(near[0].title.includes("2h 14m"), near[0].title);
+  assert.ok(near[0].detail.includes("nothing ordered yet"), near[0].detail);
+
+  // And a run already closed is not a thing to do either.
+  assert.deepEqual(
+    needsDoing({ ...quiet, run: { label: "x", closesInMinutes: 0, kitchens: 1, paid: 0 } }),
+    []
+  );
+});
+
+test("one of a thing is said as one, never as one(s)", () => {
+  const jobs = needsDoing({
+    ...quiet,
+    left: { value: 4000, count: 1, stillInTime: 0 },
+    reviews: 1,
+  });
+  assert.ok(jobs[0].detail.startsWith("1 cart filled"), jobs[0].detail);
+  assert.ok(jobs[0].detail.includes("None of them"), jobs[0].detail);
+  assert.ok(jobs[1].title === "1 review to reply to", jobs[1].title);
+});
+
+test("how long is said the way somebody would say it", () => {
+  assert.equal(howLong(134), "2h 14m");
+  assert.equal(howLong(40), "40m");
+  assert.equal(howLong(120), "2h");
+  assert.equal(howLong(0), "0m");
+  assert.equal(howLong(-5), "0m");
 });
