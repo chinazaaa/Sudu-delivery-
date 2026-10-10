@@ -18,8 +18,8 @@ export default function ChangePin({ code }: { code: string }) {
   return (
     <form action={action} className="card space-y-3">
       <div>
-        <h2 className="font-bold">Your PIN</h2>
-        <p className="text-sm text-muted">
+        <h2 className="font-display text-[21px] font-black uppercase leading-none sm:text-[26px]">Your PIN</h2>
+        <p className="hint mt-1">
           Four digits, with your code ({code}), is how you sign in here.
           Change it whenever you like: your code stays the same, so everyone
           you have brought stays yours. The one you have now is asked for
@@ -54,18 +54,18 @@ export default function ChangePin({ code }: { code: string }) {
             className="field tracking-widest"
           />
         </div>
-        <button type="submit" disabled={busy} className="btn-primary shrink-0 px-5">
+        <button type="submit" disabled={busy} className="btn-admin-go shrink-0 px-5">
           {busy ? "Changing…" : "Change it"}
         </button>
       </div>
 
       {state.error !== "" && (
-        <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+        <p className="rounded-xl border-2 border-brand bg-brand-wash px-3 py-2 text-sm font-semibold text-brand-dark">
           {state.error}
         </p>
       )}
       {state.done !== "" && (
-        <p className="rounded-xl bg-mint/10 px-3 py-2 text-sm font-semibold text-mint">
+        <p className="rounded-xl bg-mint-tint px-3 py-2 text-sm font-semibold text-mint">
           {state.done}
         </p>
       )}

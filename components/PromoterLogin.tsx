@@ -37,7 +37,7 @@ export default function PromoterLogin() {
         </p>
       </div>
       {state.error && (
-        <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+        <p className="rounded-xl border-2 border-brand bg-brand-wash px-3 py-2 text-sm font-semibold text-brand-dark">
           {state.error}
         </p>
       )}

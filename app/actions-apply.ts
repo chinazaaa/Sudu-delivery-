@@ -29,13 +29,16 @@ export async function askToPromote(
     .replace(/^.*\//, "");
   const theirs = String(form.get("said") ?? "").trim();
 
+  // Joined on one line rather than with newlines, because the admin list
+  // prints this in an ordinary paragraph and a newline there collapses to a
+  // space anyway.
   const said = [
     hostel && `Hostel or block: ${hostel}`,
     wanted && `Code they want: ${wanted}`,
     theirs,
   ]
     .filter(Boolean)
-    .join("\n");
+    .join(" · ");
 
   const answer = await apply({
     name: String(form.get("name") ?? ""),

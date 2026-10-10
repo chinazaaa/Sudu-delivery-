@@ -89,7 +89,10 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
     else router.push("/");
   };
 
-  if (path.startsWith("/admin")) return null;
+  // The promoter's page draws its own Ink bar, the same way admin does, and
+  // the board has nothing above it. Two bars stacked was a shop header over
+  // a page that is not the shop.
+  if (path.startsWith("/admin") || path.startsWith("/promoter")) return null;
 
   const deep = path !== "/";
 

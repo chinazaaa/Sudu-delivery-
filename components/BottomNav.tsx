@@ -29,7 +29,10 @@ export default function BottomNav() {
     return () => window.removeEventListener(PARTY_CHANGED, read);
   }, []);
 
-  if (path.startsWith("/admin")) return null;
+  // The promoter's page is not the shop either: the tab bar floated over
+  // the end of it, and the way back to the shop is a line at the bottom of
+  // the page where the board puts it.
+  if (path.startsWith("/admin") || path.startsWith("/promoter")) return null;
 
   const tabs = [
     // Everything there is, one list with filters, rather than the front
