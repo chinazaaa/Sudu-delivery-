@@ -143,7 +143,12 @@ export default async function ProductsPage({
     const now = new URLSearchParams();
     const next = { ...asked, ...change, page: change.page ?? undefined };
     for (const [key, value] of Object.entries(next)) {
-      if (value && value !== "") now.set(key, String(value));
+      if (!value || value === "") continue;
+      // The first page is this page. Paging back to it used to write
+      // ?page=1, which is a second address for a list already at its own
+      // address, and Google crawled both.
+      if (key === "page" && String(value) === "1") continue;
+      now.set(key, String(value));
     }
     const query = now.toString();
     return query === "" ? "/products" : `/products?${query}`;
@@ -250,6 +255,11 @@ export default async function ProductsPage({
                 <Link
                   key={label}
                   replace
+                  // The same dishes in a different order. Every place and
+                  // category was being crawled three times over for it, on
+                  // a site with nine hundred dish pages still waiting for a
+                  // first crawl.
+                  rel="nofollow"
                   href={link({ sort: value })}
                   className={`flex min-h-9 items-center rounded-full px-3 text-sm font-semibold transition ${
                     (asked.sort ?? "") === value ? "bg-ink text-white" : "text-ink"
@@ -302,6 +312,9 @@ export default async function ProductsPage({
           {page > 1 ? (
             <Link
               replace
+              // Nothing is discovered only by paging: every dish has a page
+              // of its own, and all of them are in the sitemap.
+              rel="nofollow"
               href={link({ page: String(page - 1) })}
               className="btn-quiet px-4 py-2 text-sm"
             >
@@ -316,6 +329,7 @@ export default async function ProductsPage({
           {page < pages ? (
             <Link
               replace
+              rel="nofollow"
               href={link({ page: String(page + 1) })}
               className="btn-quiet px-4 py-2 text-sm"
             >
