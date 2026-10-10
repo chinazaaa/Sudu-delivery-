@@ -3,6 +3,10 @@ import PageHeader from "@/components/admin/PageHeader";
 import Figure from "@/components/admin/Figure";
 import { alerts, inbox, senderName, snippet, type Letter, ALERTS_AT, READS_AT } from "@/lib/mail";
 import { agoLabel } from "@/lib/time";
+import AlertCard from "@/components/admin/AlertCard";
+import { likelyOrders, readAlert } from "@/lib/alerts";
+import { unpaidOrdersForMatching } from "@/lib/admin-data";
+import { markPaid, setMailDone } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +30,23 @@ export default async function InboxPage({
   const onAlerts = query.view === "alerts";
 
   const [post, banked] = await Promise.all([inbox(), alerts()]);
+
+  /*
+   * What each alert says, and the orders it could be about.
+   *
+   * Only read on the alerts tab, because it costs a query and the letters
+   * tab has no use for it.
+   */
+  const unpaid = onAlerts ? await unpaidOrdersForMatching() : [];
+  const read = banked.map((letter) => {
+    const said = readAlert(letter.subject, letter.text);
+    return {
+      letter,
+      amount: said?.amount ?? null,
+      payer: said?.payer ?? "",
+      candidates: said ? likelyOrders(said, unpaid, Date.parse(letter.receivedAt)) : [],
+    };
+  });
   const waiting = post.filter((one) => !one.repliedAt && !one.doneAt);
   const dealt = post.filter((one) => one.repliedAt || one.doneAt);
 
@@ -95,8 +116,17 @@ export default async function InboxPage({
             </p>
           </div>
           <ul className="space-y-2.5">
-            {banked.map((letter) => (
-              <Row key={letter.id} letter={letter} />
+            {read.map((one) => (
+              <li key={one.letter.id}>
+                <AlertCard
+                  letter={one.letter}
+                  amount={one.amount}
+                  payer={one.payer}
+                  candidates={one.candidates}
+                  markPaid={markPaid}
+                  setMailDone={setMailDone}
+                />
+              </li>
             ))}
           </ul>
         </>

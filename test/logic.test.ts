@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
 import { containersIn } from "../lib/containers";
 import { runShouldBe } from "../lib/run-follow";
+import { likelyOrders, nameOverlap, readAlert } from "../lib/alerts";
 import { svixSigned } from "../lib/svix";
 import { addressOf, isAlert, replySubject, senderName, snippet, vouchedFor } from "../lib/mail";
 import { tidyCode, whyNotACode } from "../lib/promoter-applications";
@@ -3000,4 +3001,72 @@ test("an alert is told from a letter by who it was sent to", () => {
   assert.equal(isAlert("someone@else.com, payments@sudu.store"), true);
   assert.equal(isAlert("hello@sudu.store"), false);
   assert.equal(isAlert(""), false);
+});
+
+test("a Catlog alert is read for its amount and who paid", () => {
+  // The real thing, forwarded by hand, as it arrived.
+  const subject = "Fwd: BEST ETI-INYENE IDONGESIT just paid you NGN 11,700.00 🤑";
+  const body = [
+    "---------- Forwarded message ---------",
+    "From: Catlog <holla@catlog.shop>",
+    "Date: Sat, 10 Oct 2026 at 09:38",
+    "Subject: BEST ETI-INYENE IDONGESIT just paid you NGN 11,700.00 🤑",
+    "To: <nazaalistic@gmail.com>",
+    "",
+    "You just received NGN 11,700.00 from BEST ETI-INYENE IDONGESIT. Your wallet",
+    "balance is now NGN 11,760.25",
+  ].join("\n");
+
+  const want = { amount: 11700, payer: "BEST ETI-INYENE IDONGESIT" };
+  // The subject carries both facts, and the Fwd: in front of it is not part
+  // of anybody's name.
+  assert.deepEqual(readAlert(subject, ""), want);
+  // So does the body, and a forwarded email carries its own header inside
+  // it, so the name must not walk backwards into "shop> Subject:".
+  assert.deepEqual(readAlert("", body), want);
+  assert.deepEqual(readAlert(subject, body), want);
+
+  // Kobo is dropped rather than rounded: an order's total is whole naira.
+  assert.equal(readAlert("Ada Obi just paid you NGN 9,999.99", "")?.amount, 9999);
+  // Anything that is not an alert is nothing, never a zero: an alert read
+  // as zero naira would match every free order in the book.
+  assert.equal(readAlert("Your weekly summary", "Nothing to see"), null);
+  assert.equal(readAlert("", ""), null);
+});
+
+test("an alert suggests the orders it could be, best first", () => {
+  const alert = { amount: 11700, payer: "BEST ETI-INYENE IDONGESIT" };
+  const orders = [
+    // Same amount, no word in common, and from weeks ago.
+    { id: "b", order_no: 1010, customer_name: "Ada Obi", total: 11700, created_at: "2026-09-01T08:00:00Z" },
+    // The one. The book has a short name and the bank has the full one,
+    // which is the whole reason this matches on words rather than strings.
+    { id: "a", order_no: 1036, customer_name: "BEST", total: 11700, created_at: "2026-10-10T08:36:58Z" },
+    // Right person, wrong money. A transfer is for what it is for.
+    { id: "c", order_no: 1011, customer_name: "BEST", total: 9000, created_at: "2026-10-10T08:40:00Z" },
+  ];
+
+  const found = likelyOrders(alert, orders, Date.parse("2026-10-10T09:38:00Z"));
+  // Both of the right amount come back, because two people paying the same
+  // amount on one run is a real Saturday and the honest answer is a choice.
+  assert.deepEqual(found.map((one) => one.orderNo), [1036, 1010]);
+  assert.equal(found[0].shared, 1);
+  assert.equal(found[1].shared, 0);
+
+  // Nothing of that amount is nothing, rather than the nearest thing.
+  assert.deepEqual(likelyOrders({ amount: 500, payer: "BEST" }, orders), []);
+});
+
+test("two spellings of one name are compared on their words", () => {
+  // The book's name inside the bank's fuller one, either way round.
+  assert.equal(nameOverlap("BEST ETI-INYENE IDONGESIT", "BEST"), 1);
+  assert.equal(nameOverlap("OGBE IYERESIRI PRECIOUS", "Iyeresiri Ogbe"), 2);
+  // Case and punctuation are the bank's business, not a difference.
+  assert.equal(nameOverlap("ada obi", "ADA OBI"), 2);
+  // Nothing in common is nothing.
+  assert.equal(nameOverlap("Ada Obi", "BEST"), 0);
+  // Two letters and under are dropped: an initial matches everybody, and a
+  // suggestion that matches everybody is noise.
+  assert.equal(nameOverlap("A B Okeke", "A B Danjuma"), 0);
+  assert.equal(nameOverlap("", "BEST"), 0);
 });

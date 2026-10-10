@@ -635,3 +635,40 @@ export async function statusCounts(): Promise<Record<string, number>> {
   }
   return out;
 }
+
+/**
+ * Orders still waiting on money, for matching a payment alert against.
+ *
+ * Only the unpaid ones, because an alert is about money arriving and an
+ * order already marked paid is not waiting for any. Only what the match
+ * needs, because this runs beside a page of letters and has no business
+ * reading the whole order feed to compare two numbers.
+ */
+export async function unpaidOrdersForMatching(): Promise<
+  {
+    id: string;
+    order_no: number | null;
+    customer_name: string;
+    total: number;
+    created_at: string;
+  }[]
+> {
+  try {
+    const { data, error } = await db()
+      .from("orders")
+      .select("id, order_no, customer_name, total, created_at")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(300);
+    if (error) return [];
+    return (data ?? []) as unknown as {
+      id: string;
+      order_no: number | null;
+      customer_name: string;
+      total: number;
+      created_at: string;
+    }[];
+  } catch {
+    return [];
+  }
+}
