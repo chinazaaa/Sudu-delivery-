@@ -1754,13 +1754,13 @@ test("a month knows which month comes after it", () => {
  */
 test("a tag id is taken on its shape, whichever prefix Google used", () => {
   // The real one, off the Merchant Center setup screen.
-  assert.equal(googleTagId({ google_tag: "GT-NBJ6JTMC" }), "GT-NBJ6JTMC");
+  assert.equal(googleTagId({ google_tag: "GT-K4LKKR94" }), "GT-K4LKKR94");
   // The other prefixes the same box might be given.
   assert.equal(googleTagId({ google_tag: "G-ABC123DEF4" }), "G-ABC123DEF4");
   assert.equal(googleTagId({ google_tag: "AW-12345678" }), "AW-12345678");
   assert.equal(googleTagId({ google_tag: "987654321" }), "987654321");
   // Pasted with the whitespace that comes off a copy button.
-  assert.equal(googleTagId({ google_tag: "  GT-NBJ6JTMC\n" }), "GT-NBJ6JTMC");
+  assert.equal(googleTagId({ google_tag: "  GT-K4LKKR94\n" }), "GT-K4LKKR94");
 });
 
 test("anything that is not a tag id puts no script on the page", () => {
@@ -1769,7 +1769,7 @@ test("anything that is not a tag id puts no script on the page", () => {
     "   ",
     "paste your tag here",
     // The whole snippet pasted in rather than the id out of it.
-    '<script async src="https://www.googletagmanager.com/gtag/js?id=GT-NBJ6JTMC">',
+    '<script async src="https://www.googletagmanager.com/gtag/js?id=GT-K4LKKR94">',
     "GT-",
     "TOOLONGAPREFIX-ABC123",
   ]) {
