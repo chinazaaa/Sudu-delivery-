@@ -264,9 +264,84 @@ export default async function ProfitPage({
         </form>
       </div>
 
+      {/*
+        The same four figures as one Ink card on a phone.
+        Four tiles stacked two by two push the working a screen and a half
+        down, and the working is the reason somebody opened this page. The
+        board answers it with one card instead: the window, the profit, the
+        share and the order count on one line, then the three figures it was
+        built from small along the bottom. Everything is still here, and the
+        working is now the next thing under the thumb.
+      */}
+      <div className="card mb-3 border-ink bg-ink p-3.5 text-shell sm:hidden">
+        <p className="ticket text-shell/60">{windowLabel(from, to)}</p>
+        <p
+          /* White, because on Ink the profit is the one thing being read.
+             A loss goes to Volt, which is the board's highlight on Ink:
+             mint and brand-dark are both colours for a light ground and
+             neither carries on this one. */
+          className={`font-display text-[46px] font-black leading-none ${
+            sums.profit < 0 ? "text-volt" : "text-paper"
+          }`}
+        >
+          {sums.profit < 0 ? `−${naira(Math.abs(sums.profit))}` : naira(sums.profit)}
+        </p>
+        <p className="text-[13px] text-shell/80">
+          {sums.gross === 0 ? "nothing came in" : `${share}% of money in`} ·{" "}
+          {sums.orders} paid order{sums.orders === 1 ? "" : "s"}
+        </p>
+        <div className="mt-3 flex gap-3.5 border-t border-shell/25 pt-3">
+          <div>
+            <p className="ticket text-shell/60">In</p>
+            <p className="font-mono text-sm font-semibold">{naira(sums.gross)}</p>
+          </div>
+          <div>
+            <p className="ticket text-shell/60">Margin</p>
+            <p className="font-mono text-sm font-semibold">{naira(sums.margin)}</p>
+          </div>
+          <div>
+            <p className="ticket text-shell/60">Costs</p>
+            <p className="font-mono text-sm font-semibold">{naira(allCosts)}</p>
+          </div>
+        </div>
+      </div>
+
+      {/*
+        The runs nobody has typed a cost into, named, with the figure that is
+        standing in for them.
+
+        It is in the right column on a desk, where the eye takes in both
+        columns at once. On a phone that column is below everything, which
+        is a caveat arriving after the figure it is a caveat about, so the
+        board puts it directly under the profit it makes a guess.
+      */}
+      {estimated.length > 0 && (
+        <div className="card mb-3 border-volt-line bg-brand-tint p-3.5 sm:hidden">
+          <strong className="text-[14px]">
+            {estimated.length} run{estimated.length === 1 ? "" : "s"} still use
+            {estimated.length === 1 ? "s" : ""} estimates
+          </strong>
+          <p className="hint mt-1">
+            {estimated
+              .map((run) => `${runDateLabel(run.runDate)} · ${SLOT_LABEL[run.slot] ?? run.kind}`)
+              .join(", ")}
+            {typical === null
+              ? ", with nothing typed in and no run yet to average."
+              : `, each assuming ${naira(typical)}.`}{" "}
+            Put the real fuel and driver in and this figure becomes exact.
+          </p>
+          <Link
+            href={`/admin/batch/${estimated[0].id}`}
+            className="btn-admin btn-admin-sm mt-2.5 w-full"
+          >
+            Add them now
+          </Link>
+        </div>
+      )}
+
       {/* Money in, the margin the delivery itself earns, everything taken off
           and what is left: the four figures in the order they happen. */}
-      <div className="mb-3 grid grid-cols-2 gap-2.5 sm:mb-[18px] sm:gap-3.5 xl:grid-cols-4">
+      <div className="hidden sm:mb-[18px] sm:grid sm:grid-cols-2 sm:gap-3.5 xl:grid-cols-4">
         <Figure
           label="Money in"
           value={naira(sums.gross)}
@@ -298,14 +373,25 @@ export default async function ProfitPage({
 
       <div className="grid items-start gap-3 sm:gap-[18px] xl:grid-cols-[1.5fr_1fr]">
         <div className="flex flex-col gap-3 sm:gap-4">
-          <Panel
-            title="How it is worked out"
-            detail="Every line is money that moved. Tap one to see the orders or runs behind it."
-          >
+          {/*
+            Written out rather than a Panel, because on a phone the board
+            sets this heading as a ticket label and not as a display
+            headline: a 21px condensed heading over seven rows of 13.5px
+            competes with the figure in the card above it. From sm up this
+            is the same markup a Panel renders, so the desk is unchanged.
+          */}
+          <section className="card p-3.5 sm:p-5">
+            <p className="ticket text-muted sm:hidden">How it is worked out</p>
+            <h2 className="hidden font-display font-black uppercase leading-none sm:block sm:text-[26px]">
+              How it is worked out
+            </h2>
+            <p className="hint mb-1.5 mt-1">
+              Every line is money that moved. Tap one to see the orders or runs behind it.
+            </p>
             {/* Every line that moved it, in the order it is taken off. A
                 figure somebody disputes is disputed at this level, not at
                 the summary's. */}
-            <dl className="text-[14.5px]">
+            <dl className="text-[13.5px] sm:text-[14.5px]">
               <Line
                 label={`Money in, from ${sums.orders} paid order${
                   sums.orders === 1 ? "" : "s"
@@ -360,7 +446,7 @@ export default async function ProfitPage({
               <div className="mt-0.5 flex items-baseline justify-between gap-3.5 border-t-2 border-ink pt-3">
                 <dt className="text-[17px] font-bold">Profit</dt>
                 <dd
-                  className={`font-display text-[30px] font-black leading-none ${
+                  className={`font-display text-[26px] font-black leading-none sm:text-[30px] ${
                     sums.profit >= 0 ? "text-mint" : "text-brand-dark"
                   }`}
                 >
@@ -370,7 +456,7 @@ export default async function ProfitPage({
                 </dd>
               </div>
             </dl>
-          </Panel>
+          </section>
 
           <Panel
             title="Run by run"
@@ -432,6 +518,17 @@ export default async function ProfitPage({
                       )}
                     </div>
                   ))}
+                  {/* The board's way out of this card. On a desk the header
+                      carries it, but on a phone that button is the bar at
+                      the bottom and the bar is putting a run's costs in
+                      while any are still a guess, which leaves the run list
+                      with no way to it from here. */}
+                  <Link
+                    href="/admin/runs"
+                    className="flex min-h-[44px] items-center justify-center border-t-[1.5px] border-rule text-[14px] font-semibold text-brand-dark"
+                  >
+                    Every run ›
+                  </Link>
                 </div>
 
                 <table className="hidden w-full border-collapse lg:table">
@@ -675,6 +772,10 @@ export default async function ProfitPage({
             <Panel
               title="Still estimated"
               size="sm"
+              /* The amber card under the profit is this panel's phone form,
+                 and two copies of the same warning on one screen is the
+                 second one being ignored. */
+              className="hidden sm:block"
               detail={`${estimated.length} run${
                 estimated.length === 1 ? "" : "s"
               } use the average of your last few. Put the real figures in and the profit above becomes exact.`}
