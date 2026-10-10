@@ -189,6 +189,19 @@ async function shrink(one: {
         fit: "inside",
         withoutEnlargement: true,
       })
+      // Over white first, always.
+      //
+      // A PNG of a doughnut cut out on a transparent background stays cut
+      // out after sharp has re-encoded it, and a WebP carrying an alpha
+      // channel is the extended container, VP8X, which Google Merchant
+      // Center refuses outright as an unsupported image type. Ninety-seven
+      // of these had to be flattened afterwards by
+      // scripts/opaque-images.ts; doing it here is how there is no
+      // ninety-eighth.
+      //
+      // Nothing is lost by it. Every card these sit on is already white, so
+      // the transparency was never doing anything a reader could see.
+      .flatten({ background: { r: 255, g: 255, b: 255 } })
       .webp({ quality: QUALITY })
       .toBuffer();
   } catch (problem) {
