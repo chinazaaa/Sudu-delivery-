@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import ConfirmButton from "./admin/ConfirmButton";
 
 /**
@@ -48,9 +49,50 @@ export default function HandoutList({
   setDelivered: (form: FormData) => Promise<void>;
   refund: (form: FormData) => Promise<void>;
 }) {
-  const done = entries.filter((entry) =>
-    entry.orders.every((order) => order.status === "delivered")
-  ).length;
+  const isOut = (entry: HandoutEntry) =>
+    entry.orders.every((order) => order.status === "delivered");
+  const done = entries.filter(isOut).length;
+
+  /** Which block is open on a phone. From the rail up they all are. */
+  const [opened, setOpened] = useState<string | null>(null);
+  const [find, setFind] = useState("");
+
+  const looking = find.trim().toLowerCase();
+  const matches = (entry: HandoutEntry) =>
+    looking === "" ||
+    [entry.name, entry.hostel, entry.phone, ...entry.orders.map((o) => o.ref)]
+      .join(" ")
+      .toLowerCase()
+      .includes(looking);
+
+  /*
+   * By block, not one list of thirty-one names.
+   *
+   * A handout happens standing in one place: everybody in Queen Mary, then
+   * everybody at the school gate. A flat alphabetical list means walking
+   * the car's length for every name on it, and on a phone it is a thumb
+   * scrolling past twenty-eight people to reach the two in front of you.
+   *
+   * Most still to hand over first, which is as close to "nearest" as the
+   * data can honestly get: nothing here knows how far a block is from
+   * anything.
+   */
+  const blocks = [...new Set(entries.map((entry) => entry.hostel))]
+    .map((hostel) => {
+      const bags = entries.filter((entry) => entry.hostel === hostel);
+      return {
+        hostel,
+        bags,
+        shown: bags.filter(matches),
+        out: bags.filter(isOut).length,
+      };
+    })
+    .filter((block) => block.shown.length > 0)
+    .sort(
+      (a, b) =>
+        b.bags.length - b.out - (a.bags.length - a.out) ||
+        a.hostel.localeCompare(b.hostel)
+    );
 
   return (
     <div className="space-y-2">
@@ -83,145 +125,225 @@ export default function HandoutList({
           />
         </span>
       </div>
-      <ul className="space-y-2">
-        {entries.map((entry) => {
-          const handedOut = entry.orders.every(
-            (order) => order.status === "delivered"
-          );
-          const ids = entry.orders.map((order) => order.id).join(",");
-          const refs = entry.orders.map((order) => order.ref).join(" and ");
+      {/* One box, because at a gate the thing you have is a name somebody
+          shouted or the last four digits of a number. It filters what is
+          already here rather than asking the server again: the whole run is
+          on this page, and a search that needs signal is a search that does
+          not work in a car park. */}
+      <label className="block">
+        <span className="sr-only">Find a bag by name, number or block</span>
+        <input
+          value={find}
+          onChange={(event) => setFind(event.target.value)}
+          placeholder="Name, number or block"
+          className="field field-admin min-h-[44px] border-[1.5px] border-line bg-paper"
+        />
+      </label>
 
-          return (
-            <li
-              key={entry.id}
-              className={`soft ${handedOut ? "border-mint bg-mint-tint" : ""}`}
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="font-display text-[19px] font-black uppercase leading-none sm:text-[24px]">
+          By block
+        </h3>
+        {/* Not "nearest first": nothing in the data knows how far a block is
+            from anything. Most left to hand over is the honest version of
+            the same idea. */}
+        <span className="hint">Most left first</span>
+      </div>
+
+      {blocks.length === 0 && (
+        <p className="hint">Nothing here matches {`"${find.trim()}"`}.</p>
+      )}
+
+      {blocks.map((block) => {
+        const all = block.out === block.bags.length;
+        // A search opens whatever it found: hunting for a name and then
+        // tapping its block to see it is two gestures for one question.
+        const open = looking !== "" || opened === block.hostel;
+        return (
+          <div key={block.hostel} className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setOpened(opened === block.hostel ? null : block.hostel)}
+              aria-expanded={open}
+              /* A drill-in on a phone and a heading on a desk, where every
+                 bag under it is already on screen and there is nothing for
+                 a press to reveal. */
+              className={`card flex w-full items-center gap-2.5 p-3.5 text-left lg:pointer-events-none ${
+                all ? "opacity-60" : ""
+              }`}
             >
-              <div>
-                <div
-                  className={`flex gap-3 px-3 py-2.5 ${
-                    handedOut ? "text-muted line-through" : ""
-                  }`}
+              <span
+                aria-hidden
+                className={`tick size-8 rounded-full text-base font-black ${
+                  all ? "tick-done" : ""
+                }`}
+              >
+                {all ? "✓" : ""}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15.5px] font-bold">{block.hostel}</span>
+                <span className="hint block">
+                  {block.out} of {block.bags.length} handed over
+                </span>
+                <span
+                  aria-hidden
+                  className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-wash"
                 >
-                  {/* The board puts a tick box at the head of every handout
-                      row. It is a picture of where this bag has got to and
-                      not a second control: the one gesture is the button
-                      below, so a tick on top of it would be the same list
-                      kept twice. */}
                   <span
-                    aria-hidden="true"
-                    className={`tick font-black no-underline ${handedOut ? "tick-done" : ""}`}
-                  >
-                    {handedOut ? "✓" : ""}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                  {/* Read at a gate, one-handed, in the dark. The block is
-                      where you are standing and the name is who you are
-                      looking for, so those two are the big type and
-                      everything else gets out of their way. */}
-                  <span className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="text-[17px] font-extrabold">{entry.name}</span>
-                    <span className="tag bg-wash text-ink">{entry.hostel}</span>
-                  </span>
-                  <span className="mt-1.5 block space-y-1 text-sm">
-                    {entry.items.map((item) => (
-                      <span key={item} className="block leading-snug">
-                        {item}
+                    className="block h-full rounded-full bg-mint"
+                    style={{
+                      width: `${Math.round((block.out / block.bags.length) * 100)}%`,
+                    }}
+                  />
+                </span>
+              </span>
+              <span aria-hidden className="shrink-0 text-lg text-muted lg:hidden">
+                ›
+              </span>
+            </button>
+
+            <ul className={`space-y-2 ${open ? "" : "hidden lg:block"}`}>
+            {block.shown.map((entry) => {
+              const handedOut = entry.orders.every(
+                (order) => order.status === "delivered"
+              );
+              const ids = entry.orders.map((order) => order.id).join(",");
+              const refs = entry.orders.map((order) => order.ref).join(" and ");
+
+              return (
+                <li
+                  key={entry.id}
+                  className={`soft ${handedOut ? "border-mint bg-mint-tint" : ""}`}
+                >
+                  <div>
+                    <div
+                      className={`flex gap-3 px-3 py-2.5 ${
+                        handedOut ? "text-muted line-through" : ""
+                      }`}
+                    >
+                      {/* The board puts a tick box at the head of every handout
+                          row. It is a picture of where this bag has got to and
+                          not a second control: the one gesture is the button
+                          below, so a tick on top of it would be the same list
+                          kept twice. */}
+                      <span
+                        aria-hidden="true"
+                        className={`tick font-black no-underline ${handedOut ? "tick-done" : ""}`}
+                      >
+                        {handedOut ? "✓" : ""}
                       </span>
-                    ))}
-                  </span>
-                  <span className="hint mt-1.5 block">
-                    {entry.orders.map((order) => order.ref).join(" ")} ·{" "}
-                    {entry.phone}
-                  </span>
-                  </span>
-                </div>
-              </div>
-
-              {/* Everything this bag needs, on this bag. With twenty bags,
-                  scrolling to a second list to message one of them is not a
-                  thing anybody does at a gate in the dark. */}
-              <div className="space-y-2 border-t-[1.5px] border-rule px-3 py-2.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <a
-                    href={`tel:${entry.phone.replace(/\s/g, "")}`}
-                    className={ROW_ACTION}
-                  >
-                    Call {entry.name}
-                  </a>
-
-                  {/* The one thing here a customer sees the result of. A bag
-                      can hold more than one order, so it says which it
-                      covers. */}
-                  <form action={setDelivered}>
-                    <input type="hidden" name="order_ids" value={ids} />
-                    <input type="hidden" name="delivered" value={String(!handedOut)} />
-                    <ConfirmButton
-                      tone="admin"
-                      className={THUMB}
-                      confirm={
-                        handedOut
-                          ? `Yes, undo ${refs}`
-                          : `Yes, ${refs} delivered`
-                      }
-                    >
-                      {handedOut
-                        ? "Undo delivered"
-                        : entry.orders.length > 1
-                          ? `Mark all ${entry.orders.length} delivered`
-                          : "Mark delivered"}
-                    </ConfirmButton>
-                  </form>
-                </div>
-
-                {entry.orders.map((order) => (
-                  <div key={order.id} className="flex flex-wrap items-center gap-2">
-                    <Link
-                      href={`/admin/orders/${order.id}`}
-                      className={ROW_ACTION}
-                    >
-                      View {order.ref}
-                      <span className="text-muted">
-                        {order.status} · {order.total}
+                      <span className="min-w-0 flex-1">
+                      {/* Read at a gate, one-handed, in the dark. The block is
+                          where you are standing and the name is who you are
+                          looking for, so those two are the big type and
+                          everything else gets out of their way. */}
+                      <span className="flex flex-wrap items-baseline justify-between gap-2">
+                        <span className="text-[17px] font-extrabold">{entry.name}</span>
+                        <span className="tag bg-wash text-ink">{entry.hostel}</span>
                       </span>
-                    </Link>
-                    <a
-                      href={order.message}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={ROW_ACTION}
-                    >
-                      Confirm on WhatsApp
-                    </a>
-                    {entry.orders.length > 1 && order.status !== "delivered" && (
+                      <span className="mt-1.5 block space-y-1 text-sm">
+                        {entry.items.map((item) => (
+                          <span key={item} className="block leading-snug">
+                            {item}
+                          </span>
+                        ))}
+                      </span>
+                      <span className="hint mt-1.5 block">
+                        {entry.orders.map((order) => order.ref).join(" ")} ·{" "}
+                        {entry.phone}
+                      </span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Everything this bag needs, on this bag. With twenty bags,
+                      scrolling to a second list to message one of them is not a
+                      thing anybody does at a gate in the dark. */}
+                  <div className="space-y-2 border-t-[1.5px] border-rule px-3 py-2.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <a
+                        href={`tel:${entry.phone.replace(/\s/g, "")}`}
+                        className={ROW_ACTION}
+                      >
+                        Call {entry.name}
+                      </a>
+
+                      {/* The one thing here a customer sees the result of. A bag
+                          can hold more than one order, so it says which it
+                          covers. */}
                       <form action={setDelivered}>
-                        <input type="hidden" name="order_ids" value={order.id} />
-                        <input type="hidden" name="delivered" value="true" />
+                        <input type="hidden" name="order_ids" value={ids} />
+                        <input type="hidden" name="delivered" value={String(!handedOut)} />
                         <ConfirmButton
                           tone="admin"
                           className={THUMB}
-                          confirm={`Yes, ${order.ref} only`}
+                          confirm={
+                            handedOut
+                              ? `Yes, undo ${refs}`
+                              : `Yes, ${refs} delivered`
+                          }
                         >
-                          Deliver {order.ref} only
+                          {handedOut
+                            ? "Undo delivered"
+                            : entry.orders.length > 1
+                              ? `Mark all ${entry.orders.length} delivered`
+                              : "Mark delivered"}
                         </ConfirmButton>
                       </form>
-                    )}
-                    <form action={refund}>
-                      <input type="hidden" name="order_id" value={order.id} />
-                      <ConfirmButton
-                        tone="bad"
-                        className={THUMB}
-                        confirm={`Yes, refund ${order.ref}`}
-                      >
-                        Refund
-                      </ConfirmButton>
-                    </form>
+                    </div>
+
+                    {entry.orders.map((order) => (
+                      <div key={order.id} className="flex flex-wrap items-center gap-2">
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className={ROW_ACTION}
+                        >
+                          View {order.ref}
+                          <span className="text-muted">
+                            {order.status} · {order.total}
+                          </span>
+                        </Link>
+                        <a
+                          href={order.message}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={ROW_ACTION}
+                        >
+                          Confirm on WhatsApp
+                        </a>
+                        {entry.orders.length > 1 && order.status !== "delivered" && (
+                          <form action={setDelivered}>
+                            <input type="hidden" name="order_ids" value={order.id} />
+                            <input type="hidden" name="delivered" value="true" />
+                            <ConfirmButton
+                              tone="admin"
+                              className={THUMB}
+                              confirm={`Yes, ${order.ref} only`}
+                            >
+                              Deliver {order.ref} only
+                            </ConfirmButton>
+                          </form>
+                        )}
+                        <form action={refund}>
+                          <input type="hidden" name="order_id" value={order.id} />
+                          <ConfirmButton
+                            tone="bad"
+                            className={THUMB}
+                            confirm={`Yes, refund ${order.ref}`}
+                          >
+                            Refund
+                          </ConfirmButton>
+                        </form>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+                </li>
+              );
+            })}
+            </ul>
+          </div>
+        );
+      })}
     </div>
   );
 }

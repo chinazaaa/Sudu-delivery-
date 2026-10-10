@@ -18,7 +18,7 @@ import { notFound } from "next/navigation";
 import HandoutList from "@/components/HandoutList";
 import Figure from "@/components/admin/Figure";
 import Panel from "@/components/admin/Panel";
-import Tabs from "@/components/admin/Tabs";
+import SheetShape from "@/components/admin/SheetShape";
 import Checklist from "@/components/admin/Checklist";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import ActionButton from "@/components/admin/ActionButton";
@@ -35,17 +35,18 @@ import { runSchedule, WEEKDAYS } from "@/lib/schedule";
 import Link from "next/link";
 import { naira, orderRef, refsIn } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
-import { clockLabel, runDateLabel } from "@/lib/time";
+import { clockLabel, lagosToday, runDateLabel } from "@/lib/time";
+import { profitBetween } from "@/lib/profit";
 import { bandTable, parseBands } from "@/lib/fees";
 import { narration, template, whatsappTo } from "@/lib/messages";
 import { getSettings } from "@/lib/settings";
 import { sheetAsText } from "@/lib/sheet-text";
 import {
-  PARCEL_ACTION,
   STAGES,
   STAGE_ACTION,
   STAGE_LABEL,
   stageIndex,
+  type BatchStage,
 } from "@/lib/stages";
 import {
   markDelivered,
@@ -76,16 +77,103 @@ export const dynamic = "force-dynamic";
  */
 const THUMB = "min-h-[44px] sm:min-h-[34px]";
 
+/*
+ * How thin is thin, for the day of the week a run is on.
+ *
+ * The same shape of calculation the schedule page makes for a day that is
+ * losing money: ten weeks back finds six of any weekday even with a closure
+ * or two in the way, and three is the fewest that is an average rather than
+ * one bad night. Copied rather than invented so the two cards cannot
+ * disagree about what a Sunday normally does.
+ */
+const WEEKS_BACK = 10;
+const FEWEST = 3;
+const MOST_BACK = 6;
+
+function addDays(date: string, days: number): string {
+  // Midday UTC, so adding days cannot slip across a midnight.
+  const at = new Date(`${date}T12:00:00Z`);
+  return new Date(at.getTime() + days * 86400000).toISOString().slice(0, 10);
+}
+
+function weekdayOf(runDate: string): number {
+  return new Date(`${runDate}T12:00:00Z`).getUTCDay();
+}
+
+/**
+ * What this run's weekday usually brings in, when this one is under it.
+ *
+ * Null unless there is a real average to quote and this run is genuinely
+ * below it: a card that turns up every week to say everything is fine is a
+ * card nobody reads, and a figure nobody can stand behind is worse than no
+ * card at all.
+ */
+async function thinForItsDay(
+  batch: Batch,
+  paid: number
+): Promise<{ days: number; orders: number; weekday: string } | null> {
+  const today = lagosToday();
+  const money = await profitBetween(addDays(today, -(WEEKS_BACK * 7 - 1)), today);
+  const weekday = weekdayOf(batch.run_date);
+  // Runs only, and never this run itself: a run cannot be thin against its
+  // own takings.
+  const mine = money.byRun.filter(
+    (run) =>
+      run.kind === "run" &&
+      run.runDate !== batch.run_date &&
+      weekdayOf(run.runDate) === weekday
+  );
+  const dates = [...new Set(mine.map((run) => run.runDate))]
+    .sort()
+    .reverse()
+    .slice(0, MOST_BACK);
+  if (dates.length < FEWEST) return null;
+
+  const on = mine.filter((run) => dates.includes(run.runDate));
+  const average = on.reduce((sum, run) => sum + run.orders, 0) / dates.length;
+  const usual = Math.round(average);
+  if (usual <= 0 || paid >= usual) return null;
+  return { days: dates.length, orders: usual, weekday: WEEKDAYS[weekday] };
+}
+
+/**
+ * The run in four parts, which is what the phone board draws.
+ *
+ * Six cells of stage is a desk's worth of detail: at three hundred and
+ * ninety pixels it came to six tall boxes above the only thing the screen
+ * is for. Four phases fit across one bar, and every one of the six stages
+ * has a home in them, so the bar never names a step the run cannot be in.
+ * Driving belongs to the handout rather than to the buying: the food is
+ * bought, and the road is the first leg of giving it out.
+ */
+const PHASES: { label: string; parcel: string; stages: BatchStage[] }[] = [
+  { label: "Ordering", parcel: "Not paid", stages: ["ordering"] },
+  { label: "Buying", parcel: "Collecting", stages: ["closed", "at_counter"] },
+  {
+    label: "Handout",
+    parcel: "Handing over",
+    stages: ["on_the_road", "at_drop", "handed_out"],
+  },
+  // Settled is not a stage but a date: the books are closed or they are not.
+  { label: "Settled", parcel: "Settled", stages: [] },
+];
+
 /** The whole row action, for the buttons and links that are not a component. */
 const ROW_ACTION = `btn-admin btn-admin-sm ${THUMB}`;
 
 export default async function BatchPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  /** Which counter is being read, one-based. The sheet is one counter at a
+   *  time on a phone, and the counter is in the address so it can be sent
+   *  to somebody and so the back button walks the stops. */
+  searchParams: Promise<{ stop?: string }>;
 }) {
   const sheet = await batchSheet((await params).id);
   if (!sheet) notFound();
+  const query = await searchParams;
 
   const { batch, counter, handout, unpaid, summary, refunds, groupsShort, pins, callsThem } =
     sheet;
@@ -155,6 +243,74 @@ export default async function BatchPage({
   const stillAt = [...new Set(unpriced.map((one) => one.restaurant))];
   const likely = usual === null ? null : summary.profit - usual;
 
+  // Which counter is being read. One counter at a time is the phone's shape,
+  // and the counter is in the address so the sheet for one stop can be sent
+  // to whoever is driving to it.
+  const asked = Number(query.stop);
+  const stopShown =
+    Number.isInteger(asked) && asked >= 1 && asked <= counter.length
+      ? asked
+      : null;
+
+  /**
+   * A stop with a real figure against every one of its lines.
+   *
+   * The private ticks live in one browser's storage and cannot be read here,
+   * so this is the only thing the page can honestly call done: the money has
+   * been handed over and said.
+   */
+  const paidFor = (group: (typeof counter)[number]) =>
+    group.lines.length > 0 && group.lines.every((line) => line.paid !== null);
+  const doneStops = counter.filter(paidFor).length;
+
+  /**
+   * Which orders to collect at each counter.
+   *
+   * The counter list is one line per item on purpose, because a total is
+   * what gets read out at the till. Who the food is for is the other half of
+   * the same question, asked while the bags are coming over the counter, and
+   * an order's lines carry the restaurant they came from. An order standing
+   * at two counters is listed under both, which is right: it is collected at
+   * both.
+   */
+  const ordersAt = new Map<
+    string,
+    { id: string; ref: string; who: string; hostel: string; items: string; amount: number }[]
+  >();
+  for (const bag of handout) {
+    for (const order of bag.orders) {
+      const byPlace = new Map<string, typeof order.lines>();
+      for (const line of order.lines) {
+        byPlace.set(line.restaurant, [...(byPlace.get(line.restaurant) ?? []), line]);
+      }
+      for (const [place, lines] of byPlace) {
+        ordersAt.set(place, [
+          ...(ordersAt.get(place) ?? []),
+          {
+            id: order.id,
+            ref: refFor(order),
+            who: order.for_name ?? order.customer_name,
+            hostel: order.hostel,
+            items: lines
+              .map((line) => `${line.name}${line.qty > 1 ? ` ×${line.qty}` : ""}`)
+              .join(", "),
+            amount: lines.reduce(
+              (total, line) => total + line.qty * line.unit_price_at_order,
+              0
+            ),
+          },
+        ]);
+      }
+    }
+  }
+
+  // Whether this run is thin for the day of the week it is on, and only
+  // while there is still time to do something about it.
+  const thin =
+    batch.kind === "run" && batch.stage === "ordering"
+      ? await thinForItsDay(batch, summary.paidCount).catch(() => null)
+      : null;
+
   const settings = await getSettings();
   // The account the payment message quotes: the first on the list.
   const bank = (await payableAccounts(settings))[0] ?? null;
@@ -196,7 +352,7 @@ export default async function BatchPage({
     );
 
   return (
-    <div>
+    <div className={stopShown === null ? "" : "pb-[82px] lg:pb-0"}>
       <PageHeader
         backHref="/admin/runs"
         backLabel="All runs"
@@ -222,6 +378,10 @@ export default async function BatchPage({
                 // food being cooked" over two bags is a kitchen nobody is
                 // standing in.
                 parcel={batch.kind === "parcel"}
+                // Standing at a counter on a phone, the next thing is to
+                // finish the counter, and the bar at the bottom says so.
+                // Two Tomatoes and neither of them reads as the answer.
+                primary={stopShown === null}
               />
               <SendSheet
                 batchId={batch.id}
@@ -237,51 +397,73 @@ export default async function BatchPage({
         }
       />
 
-      {/* Where the run has got to, read rather than set: the picker above is
-          what moves it. Six cells because there are six real stages, and
-          naming one you cannot be in is how a sheet starts lying about where
-          the food is.
+      {/*
+        Where the run has got to, read rather than set: the picker in the
+        header is what moves it.
 
-          On a phone it is the board's strip: three across in two rows, the
-          stage named and nothing else. Two across with a numeral and a
-          second line under it came to six tall cells and a hundred and
-          seventy pixels of a page whose point is the list below it. */}
-      <ol className="card mb-3.5 grid grid-cols-3 gap-0 overflow-hidden border-ink bg-ink p-0 sm:mb-[18px] lg:grid-cols-6">
-        {STAGES.map((stage, index) => {
-          const here = stage === batch.stage;
-          const past = index < stageIndex(batch.stage);
+        Four parts, which is what both boards draw, and every one of the six
+        real stages has a home in one of them, so the bar never names a step
+        the run cannot be in. Driving belongs to the handout rather than to
+        the buying: the food is bought by then, and the road is the first leg
+        of giving it out. A phone gets the names alone, because four names
+        and four numerals and four state lines across three hundred and
+        ninety pixels is a wall; the desk gets the board's numeral and the
+        line under it saying where each part stands.
+      */}
+      <ol
+        aria-label="Where this run has got to"
+        className="card mb-3.5 flex gap-0 overflow-hidden border-ink bg-ink p-0 sm:mb-[18px]"
+      >
+        {PHASES.map((phase, index) => {
+          const settled = batch.settled_at !== null;
+          // Settled is the end of it, so once the books are closed that is
+          // the part the run is in whatever stage the food reached.
+          const here = settled
+            ? phase.stages.length === 0
+            : phase.stages.includes(batch.stage);
+          const past = settled
+            ? phase.stages.length > 0
+            : phase.stages.length > 0 &&
+              stageIndex(phase.stages[phase.stages.length - 1]) <
+                stageIndex(batch.stage);
+          const said = here
+            ? settled && phase.stages.length === 0
+              ? `closed ${runDateLabel(batch.settled_at!.slice(0, 10))}`
+              : "you are here"
+            : index === 0
+              ? `${past ? "closed" : "closes"} ${clockLabel(batch.cut_off_at)}`
+              : past
+                ? "done"
+                : phase.stages.length === 0
+                  ? "—"
+                  : "not started";
           return (
             // On Ink, so the hairline between cells and the dim text of a
-            // stage you are not in are both the page's own paper let through,
+            // part you are not in are both the page's own paper let through,
             // rather than two greys with no name in the palette.
             <li
-              key={stage}
-              className={`flex items-center gap-1.5 border-b border-r border-paper/10 px-2 py-2 sm:gap-2.5 sm:px-3.5 sm:py-3 ${
-                here ? "bg-brand text-paper" : "text-paper/55"
+              key={phase.label}
+              aria-current={here ? "step" : undefined}
+              className={`flex-1 border-r border-paper/10 px-1 py-2 text-center lg:flex lg:items-center lg:gap-2.5 lg:px-4 lg:py-3 lg:text-left ${
+                here
+                  ? "bg-brand text-paper"
+                  : past
+                    ? "text-paper/70"
+                    : "text-paper/45"
               }`}
             >
-              {/* The count is a desk thing: six numerals in three narrow
-                  cells is six numerals and no room for the words. */}
               <span
-                className={`hidden size-[22px] shrink-0 place-items-center rounded-full font-mono text-xs sm:grid ${
+                className={`hidden size-[22px] shrink-0 place-items-center rounded-full font-mono text-xs lg:grid ${
                   here ? "bg-paper text-brand" : "bg-paper/15"
                 }`}
               >
                 {index + 1}
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-[11.5px] font-bold sm:text-[14.5px]">
-                  {(batch.kind === "parcel" ? PARCEL_ACTION : STAGE_ACTION)[stage]}
+                <span className="block truncate text-[11.5px] font-bold lg:text-[14.5px]">
+                  {batch.kind === "parcel" ? phase.parcel : phase.label}
                 </span>
-                <span className="hidden text-xs opacity-85 sm:block">
-                  {here
-                    ? "you are here"
-                    : stage === "ordering"
-                      ? `${past ? "closed" : "closes"} ${clockLabel(batch.cut_off_at)}`
-                      : past
-                        ? "done"
-                        : "—"}
-                </span>
+                <span className="hidden text-xs opacity-85 lg:block">{said}</span>
               </span>
             </li>
           );
@@ -328,26 +510,33 @@ export default async function BatchPage({
           counters want, what is still to hand over, and what is left. Money
           collected is the line under the count rather than a tile of its own,
           because the count and the money are one question. */}
-      {/* Two up on a phone. One tile per row put the fourth figure a screen
-          and a half down, and these four are the answer to "how is this run
-          going", which is a question you ask in one look. */}
+      {/* Two on a phone and the board's four from a tablet up.
+          Still to spend and what is in are the two the phone board keeps,
+          because at a counter the question is what is left to pay and
+          whether the money for it is in hand. The other two are a desk's
+          question, and both are a tab of their own on a phone: the count is
+          under Unpaid and the profit is under Profit.
+
+          `sm:contents` rather than a wrapper from the tablet up, so the tile
+          goes back to being the grid's own child and the row of four lines
+          up as it always did. */}
       <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3.5 xl:grid-cols-4">
-        <Figure
-          label="Paid orders"
-          value={`${summary.paidCount}`}
-          detail={`${naira(summary.gross)} collected${
-            summary.unpaidCount > 0 ? ` · ${summary.unpaidCount} unpaid` : ""
-          }`}
-        />
-        <Figure
-          label="Pay at counters"
-          value={naira(summary.foodCost)}
-          detail={`${counter.length} stop${counter.length === 1 ? "" : "s"}${
-            summary.reconciled.lines > 0
-              ? ` · ${summary.reconciled.lines} of ${summary.reconciled.of} priced`
-              : ""
-          }`}
-        />
+        <div className="hidden sm:contents">
+          <Figure
+            label="Paid orders"
+            value={`${summary.paidCount}`}
+            detail={`${naira(summary.gross)} collected${
+              summary.unpaidCount > 0 ? ` · ${summary.unpaidCount} unpaid` : ""
+            }`}
+          />
+          <Figure
+            label="Pay at counters"
+            value={naira(summary.foodCost)}
+            detail={`${counter.length} stop${counter.length === 1 ? "" : "s"}${
+              counter.length > 0 ? ` · ${doneStops} done` : ""
+            }`}
+          />
+        </div>
         <Figure
           label="Still to spend"
           value={naira(stillToSpend)}
@@ -359,18 +548,34 @@ export default async function BatchPage({
                 : stillAt.join(" and ")
           }
         />
+        {/* The phone board's second tile: what is actually in, in mint,
+            beside what is still to go out. On a desk it is the line under
+            Paid orders instead, where the count and the money are one
+            question. */}
+        <div className="grid sm:hidden">
+          <Figure
+            label="Collected"
+            value={naira(summary.gross)}
+            tone="mint"
+            detail={`${summary.paidCount} paid order${
+              summary.paidCount === 1 ? "" : "s"
+            }${summary.unpaidCount > 0 ? ` · ${summary.unpaidCount} unpaid` : ""}`}
+          />
+        </div>
         {/* Only a profit in hand is coloured. A loss in mint reads as money
             made, which is the one thing it is not. */}
-        <Figure
-          label={finished ? "Profit" : "Profit if it ends here"}
-          value={naira(summary.profit)}
-          tone={summary.profit >= 0 ? "mint" : "ink"}
-          detail={
-            summary.costs > 0
-              ? `After ${naira(summary.costs)} ${spentOn(batch)}`
-              : "Fuel, transport and driver not entered yet"
-          }
-        />
+        <div className="hidden sm:contents">
+          <Figure
+            label={finished ? "Profit" : "Profit if it ends here"}
+            value={naira(summary.profit)}
+            tone={summary.profit >= 0 ? "mint" : "ink"}
+            detail={
+              summary.costs > 0
+                ? `After ${naira(summary.costs)} ${spentOn(batch)}`
+                : "Fuel, transport and driver not entered yet"
+            }
+          />
+        </div>
       </div>
 
       {/* A plain verdict while the run can still be called off. The numbers
@@ -394,6 +599,35 @@ export default async function BatchPage({
           last few runs.
           Put this run&apos;s real costs in under Profit and this becomes exact.
         </p>
+      )}
+
+      {/* Thin for the day it is on, while there is still time to say so in
+          the group. Only against a real average of that weekday's own last
+          few runs, and only while the run is still taking orders: after the
+          cut-off this is a fact nobody can act on. */}
+      {thin && (
+        <div className="soft mb-4 border-volt-line bg-brand-tint px-4 py-3">
+          <p className="text-[14px]">
+            <span className="font-bold">This run is thin.</span>{" "}
+            {naira(summary.gross)} in on {summary.paidCount} order
+            {summary.paidCount === 1 ? "" : "s"}. The last {thin.days}{" "}
+            {thin.weekday}s averaged {thin.orders}.
+          </p>
+          {settings.whatsapp_group_link ? (
+            <a
+              href={settings.whatsapp_group_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${ROW_ACTION} mt-2.5`}
+            >
+              Post it to the group
+            </a>
+          ) : (
+            <Link href="/admin/settings" className={`${ROW_ACTION} mt-2.5`}>
+              Add your group link
+            </Link>
+          )}
+        </div>
       )}
 
       {short.length > 0 && (
@@ -459,7 +693,7 @@ export default async function BatchPage({
       )}
 
       <SheetBody settled={batch.settled_at !== null}>
-      <Tabs
+      <SheetShape
         sections={[
           {
             id: "counter",
@@ -475,7 +709,7 @@ export default async function BatchPage({
                   </p>
                 )}
 
-                {counter.length > 1 && !shopped && (
+                {counter.length > 1 && !shopped && stopShown === null && (
                   <p className="soft px-4 py-3 text-[14px] text-muted">
                     Put the stops in the order you are driving them. Which one
                     is nearest depends on where you set off from and which
@@ -485,31 +719,155 @@ export default async function BatchPage({
                 )}
 
                 {counter.length > 0 && (
-                  <div className="flex flex-wrap items-baseline justify-between gap-2.5">
+                  <div
+                    className={`flex flex-wrap items-baseline justify-between gap-2.5 ${
+                      stopShown === null ? "" : "hidden lg:flex"
+                    }`}
+                  >
                     <h2 className="font-display text-[22px] font-black uppercase leading-none sm:text-[28px]">
                       Stop by stop
                     </h2>
                     <span className="hint">
-                      Tap a stop when you have paid for it. Ticks are yours
-                      alone.
+                      {doneStops} of {counter.length} paid for · tap a stop
+                      when you have paid for it. Ticks are yours alone.
                     </span>
                   </div>
                 )}
 
+                {/*
+                  The phone's run screen: one card per stop, and the counter
+                  itself is a screen you open.
+
+                  A counter sheet is read over a counter with somebody
+                  waiting, and all three stops on one phone screen is three
+                  times the page and none of it at arm's length. The desk has
+                  the width for the lot, so from the rail up this list goes
+                  and the stops themselves are all open below.
+                */}
+                {counter.length > 1 && stopShown === null && (
+                  <ul className="space-y-2.5 lg:hidden">
+                    {counter.map((group, index) => {
+                      const done = shopped || paidFor(group);
+                      const here = ordersAt.get(group.restaurant) ?? [];
+                      return (
+                        <li key={`stop-${group.restaurant}`}>
+                          <Link
+                            href={`/admin/batch/${batch.id}?stop=${index + 1}`}
+                            className={`card flex items-center gap-2.5 p-3.5 ${
+                              done ? "opacity-60" : ""
+                            }`}
+                          >
+                            <span
+                              aria-hidden
+                              className={`tick size-8 rounded-full text-base font-black ${
+                                done ? "tick-done" : ""
+                              }`}
+                            >
+                              {done ? "✓" : ""}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="flex flex-wrap items-center gap-1.5">
+                                <span className="text-[15.5px] font-bold">
+                                  {group.restaurant}
+                                </span>
+                                {done && (
+                                  <span className="tag bg-mint-tint text-mint">
+                                    paid for
+                                  </span>
+                                )}
+                              </span>
+                              <span className="hint block">
+                                {here.length > 0 &&
+                                  `${here.length} order${here.length === 1 ? "" : "s"} · `}
+                                {group.lines.length} line
+                                {group.lines.length === 1 ? "" : "s"}
+                              </span>
+                            </span>
+                            <span className="font-display text-[25px] font-black leading-none">
+                              {naira(group.expectedFoodTotal)}
+                            </span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+
+                {/* One Tomato per screen, and on this page it is already
+                    spent: the picker in the header carries "move the run
+                    on". So the way into the first counter is an outline,
+                    full width where the board draws it. */}
+                {counter.length > 1 && stopShown === null && (
+                  <Link
+                    href={`/admin/batch/${batch.id}?stop=${
+                      (counter.findIndex((group) => !paidFor(group)) + 1) || 1
+                    }`}
+                    className="btn-admin min-h-[52px] w-full text-[16px] lg:hidden"
+                  >
+                    Open the counter sheet →
+                  </Link>
+                )}
+
                 {counter.map((group, index) => (
-                  <section key={group.restaurant} className="card p-3.5 sm:p-5">
+                  <section
+                    key={group.restaurant}
+                    className={`card p-3.5 sm:p-5 ${
+                      // One counter at a time on a phone. Every stop is here
+                      // either way, so nothing is built twice: the others are
+                      // a tap away, and from the rail up they are all open.
+                      counter.length <= 1 || stopShown === index + 1
+                        ? ""
+                        : "hidden lg:block"
+                    }`}
+                  >
+                    {counter.length > 1 && stopShown === index + 1 && (
+                      <Link
+                        href={`/admin/batch/${batch.id}`}
+                        className="mb-1.5 block text-[12.5px] font-semibold text-muted lg:hidden"
+                      >
+                        ← All {counter.length} stops ·{" "}
+                        {naira(summary.foodCost)} to pay
+                      </Link>
+                    )}
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <h3 className="min-w-0">
                         <span className="ticket block text-muted">
-                          Stop {index + 1}
+                          Stop {index + 1} of {counter.length}
                         </span>
-                        <span className="text-[19px] font-bold">{group.restaurant}</span>
+                        <span className="block font-display text-[28px] font-black uppercase leading-[0.95] lg:font-sans lg:text-[19px] lg:font-bold lg:normal-case">
+                          {group.restaurant}
+                        </span>
+                        <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                          {(shopped || paidFor(group)) && (
+                            <span className="tag bg-mint-tint text-mint">paid for</span>
+                          )}
+                          <span className="hint">
+                            {(ordersAt.get(group.restaurant) ?? []).length} order
+                            {(ordersAt.get(group.restaurant) ?? []).length === 1
+                              ? ""
+                              : "s"}{" "}
+                            to collect
+                          </span>
+                        </span>
                       </h3>
-                      <span className="shrink-0 text-right">
-                        <span className="ticket block text-muted">
+                      {/* The phone board puts what this counter wants on an
+                          Ink card of its own, because it is the one figure
+                          you read at arm's length with a till waiting. On a
+                          desk it is the right-hand corner of the row. */}
+                      <span className="card w-full border-ink bg-ink px-3.5 py-3 text-paper lg:hidden">
+                        <span className="ticket block text-paper/60">
                           Pay at this counter
                         </span>
-                        <span className="font-display text-[25px] font-black leading-none sm:text-[34px]">
+                        <span className="block font-display text-[40px] font-black leading-none">
+                          {naira(group.expectedFoodTotal)}
+                        </span>
+                        <span className="mt-0.5 block text-[12.5px] text-paper/80">
+                          Carrying {naira(summary.foodCost)} in total today
+                        </span>
+                      </span>
+                      <span className="hidden shrink-0 text-right lg:block">
+                        <span className="ticket block text-muted">Pay here</span>
+                        <span className="font-display text-[30px] font-black leading-none">
                           {naira(group.expectedFoodTotal)}
                         </span>
                       </span>
@@ -555,11 +913,96 @@ export default async function BatchPage({
                         }))}
                       />
                     </div>
+
+                    {/*
+                      Who the food at this counter is for.
+
+                      Read while the bags are coming over: the totals above
+                      are what gets said to the till, and this is how they
+                      split back out. Read only on purpose. The ticks are the
+                      item lines above, and a second list of boxes for the
+                      same purchase is the same list kept twice, where the
+                      one that matters is whichever nobody updated.
+                    */}
+                    {(ordersAt.get(group.restaurant) ?? []).length > 0 && (
+                      <div className="mt-3 border-t-[1.5px] border-ink pt-2">
+                        <p className="ticket text-muted">Orders to collect here</p>
+                        <ul>
+                          {(ordersAt.get(group.restaurant) ?? []).map((order) => (
+                            <li
+                              key={`${group.restaurant}-${order.id}`}
+                              className="flex items-center gap-2.5 border-t-[1.5px] border-rule py-2.5"
+                            >
+                              <span className="min-w-0 flex-1">
+                                <Link
+                                  href={`/admin/orders/${order.id}`}
+                                  className="block text-[14.5px] font-semibold hover:text-brand"
+                                >
+                                  {order.ref} {order.who} · {order.hostel}
+                                </Link>
+                                <span className="hint block">{order.items}</span>
+                              </span>
+                              <span className="shrink-0 font-mono text-sm font-semibold">
+                                {naira(order.amount)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* What is left after this one, on the phone's counter
+                        screen. On a desk the next stop is the next card down,
+                        so there is nothing to say. */}
+                    {counter.length > 1 && stopShown === index + 1 && (
+                      <div className="mt-3 border-t-[1.5px] border-ink pt-2 lg:hidden">
+                        <p className="ticket text-muted">Still to go</p>
+                        <ul>
+                          {counter
+                            .map((one, at) => ({ one, at }))
+                            .filter(({ at }) => at !== index)
+                            .map(({ one, at }) => {
+                              const done = shopped || paidFor(one);
+                              return (
+                                <li key={`togo-${one.restaurant}`}>
+                                  <Link
+                                    href={`/admin/batch/${batch.id}?stop=${at + 1}`}
+                                    className={`flex items-center gap-2.5 border-t-[1.5px] border-rule py-2.5 ${
+                                      done ? "opacity-60" : ""
+                                    }`}
+                                  >
+                                    <span
+                                      aria-hidden
+                                      className={`tick size-[26px] text-[13px] font-black ${
+                                        done ? "tick-done" : ""
+                                      }`}
+                                    >
+                                      {done ? "✓" : ""}
+                                    </span>
+                                    <span className="min-w-0 flex-1 text-[14px] font-bold">
+                                      {one.restaurant}
+                                      {done && (
+                                        <span className="tag ml-1.5 bg-mint-tint text-mint">
+                                          paid for
+                                        </span>
+                                      )}
+                                    </span>
+                                    <span className="shrink-0 font-mono text-[13.5px] font-semibold">
+                                      {naira(one.expectedFoodTotal)}
+                                    </span>
+                                  </Link>
+                                </li>
+                              );
+                            })}
+                        </ul>
+                      </div>
+                    )}
                   </section>
                 ))}
                 <Panel
                   title="What you pay, stop by stop"
                   detail="Paid orders only. This is the money that leaves your hand at each restaurant. Tick things off as you buy them; the ticks are yours alone and change nothing."
+                  className={stopShown === null ? "" : "hidden lg:block"}
                 >
                   <ul className="mt-2 text-[14.5px]">
                     {counter.map((group) => (
@@ -827,6 +1270,26 @@ export default async function BatchPage({
                   </details>
                 )}
 
+                {/* The board's phone bar: the one thing this screen is for,
+                    where the thumb already is. Inside the counter's own tab,
+                    so picking another tab takes the bar with it. */}
+                {stopShown !== null && (
+                  <div className="phone-bar">
+                    <Link
+                      href={
+                        stopShown < counter.length
+                          ? `/admin/batch/${batch.id}?stop=${stopShown + 1}`
+                          : `/admin/batch/${batch.id}`
+                      }
+                      className="btn-admin btn-admin-go min-h-[52px] w-full text-[16px]"
+                    >
+                      {stopShown < counter.length
+                        ? "Counter done · next stop →"
+                        : "Last counter · back to the stops →"}
+                    </Link>
+                  </div>
+                )}
+
                 {batch.kind === "same_day" && batch.stage === "ordering" && (
                   <Panel
                     title="Move this car"
@@ -870,6 +1333,7 @@ export default async function BatchPage({
             id: "handout",
             label: "Handout",
             badge: String(handout.length),
+            column: "rail",
             content: (
               <>
                 <Panel
@@ -939,6 +1403,7 @@ export default async function BatchPage({
             id: "unpaid",
             label: "Unpaid",
             badge: String(unpaid.length),
+            column: "rail",
             content: (
               <Panel
                 title="These do not travel"
@@ -1030,6 +1495,7 @@ export default async function BatchPage({
           {
             id: "money",
             label: "Profit",
+            column: "rail",
             content: (
               <>
                 <Panel title="Profit on this run" className="space-y-2">
@@ -1150,7 +1616,11 @@ export default async function BatchPage({
                   )}
                   <form action={setRunCosts} className="space-y-3">
                     <input type="hidden" name="batch_id" value={batch.id} />
-                    <div className="grid gap-3 sm:grid-cols-3">
+                    {/* Three across on a tablet, one in the rail: from the
+                        rail up this panel is a column beside the stops, and
+                        three money boxes in a rail is three boxes nobody can
+                        read the labels of. */}
+                    <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
                       <div>
                         <label className="label" htmlFor="fuel_cost">Fuel</label>
                         <input

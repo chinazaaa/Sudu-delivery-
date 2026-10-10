@@ -25,6 +25,7 @@ export default function StagePicker({
   stage,
   action,
   parcel = false,
+  primary = true,
 }: {
   batchId: string;
   stage: BatchStage;
@@ -32,6 +33,15 @@ export default function StagePicker({
   /** A parcel is not cooked and is handed to one person, so the same six
    *  steps are said differently. */
   parcel?: boolean;
+  /**
+   * Whether moving the run on is the Tomato button on this screen.
+   *
+   * On a phone the board puts the screen's one red button along the
+   * bottom, and on the counter sheet that button is "Counter done, next
+   * stop", not this. Two Tomatoes and neither reads as the answer, so the
+   * page says which one is, and this quietens to an outline.
+   */
+  primary?: boolean;
 }) {
   const form = useRef<HTMLFormElement>(null);
   const said = parcel ? PARCEL_ACTION : STAGE_ACTION;
@@ -52,7 +62,7 @@ export default function StagePicker({
           <input type="hidden" name="stage" value={next} />
           {/* The single Tomato button on the page: the one thing to do
                next. Everything else here is an outline. */}
-          <button className="btn-admin btn-admin-go">
+          <button className={primary ? "btn-admin btn-admin-go" : "btn-admin"}>
             Move to {said[next].toLowerCase()} →
           </button>
         </form>

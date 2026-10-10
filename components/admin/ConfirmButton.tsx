@@ -57,10 +57,10 @@ export default function ConfirmButton({
                 tone === "bad"
                   ? "border-brand-dark bg-brand-dark text-white hover:bg-brand-dark"
                   : "border-ink bg-ink text-white hover:bg-ink"
-              }`
+              } ${className}`
             : `chip border-transparent ${
                 tone === "brand" ? "bg-brand text-white" : "bg-ink text-white"
-              }`
+              } ${className}`
         }
       >
         {pending ? "…" : confirm}
