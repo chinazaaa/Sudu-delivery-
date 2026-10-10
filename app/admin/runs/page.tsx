@@ -437,7 +437,7 @@ export default async function RunsPage({
             its own and the dearer price that goes with it.
           </p>
           <Link
-            href="/admin/settings"
+            href="/admin/settings#runs-land"
             className={`btn-admin mt-3 ${go("horizon")}`}
           >
             Change how far ahead people can order

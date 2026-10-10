@@ -1410,7 +1410,10 @@ export default async function BatchPage({
                         Post it to the group
                       </a>
                     ) : (
-                      <Link href="/admin/settings" className={`${ROW_ACTION} mt-2.5`}>
+                      <Link
+                        href="/admin/settings#find-us"
+                        className={`${ROW_ACTION} mt-2.5`}
+                      >
                         Add your group link
                       </Link>
                     )}

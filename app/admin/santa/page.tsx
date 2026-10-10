@@ -64,7 +64,10 @@ export default async function SantaAdminPage() {
         {fee.base > 0
           ? `Carrying somebody's gifts takes ${naira(fee.base)} out of their budget, for up to ${fee.included} ${fee.included === 1 ? "thing" : "things"}${fee.extra > 0 ? `, then ${naira(fee.extra)} each` : ""}.`
           : "Carrying a gift takes nothing out of the budget yet."}{" "}
-        <Link className="font-semibold text-brand underline" href="/admin/settings">
+        {/* To the card, not to the top of a page of twenty-six of them.
+            Settings has had an anchor on every panel for a while; this was
+            the one sentence pointing at a setting that did not use one. */}
+        <Link className="font-semibold text-brand underline" href="/admin/settings#santa">
           {fee.base > 0 ? "Change it in Settings" : "Set it in Settings"}
         </Link>
       </p>

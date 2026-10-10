@@ -248,7 +248,7 @@ export default async function SettingsAdmin() {
             </Panel>
           </div>
 
-          <form id="card-pay" action={saveSettings}>
+          <form id="card-pay" action={saveSettings} className="scroll-mt-4">
             <Panel
               title="Paying by card"
               detail={
@@ -351,7 +351,7 @@ export default async function SettingsAdmin() {
         </div>
 
         <div className="flex min-w-0 flex-col gap-[18px]">
-          <form id="strip" action={saveSettings}>
+          <form id="strip" action={saveSettings} className="scroll-mt-4">
             <Panel
               title="The strip along the top"
               detail={
@@ -451,7 +451,7 @@ export default async function SettingsAdmin() {
             </Panel>
           </form>
 
-          <form id="find-us" action={saveSettings}>
+          <form id="find-us" action={saveSettings} className="scroll-mt-4">
             <Panel
               title="Where to find us"
               detail={
@@ -537,7 +537,7 @@ export default async function SettingsAdmin() {
           card the board puts top left was spanning the full width and the
           other three fell wherever the auto-placement put them. */}
       <div className="mt-[18px] grid items-start gap-[18px] lg:grid-cols-[1.35fr_1fr]">
-        <form id="promoter-perk" action={saveSettings}>
+        <form id="promoter-perk" action={saveSettings} className="scroll-mt-4">
           <Panel
             title="What a promoter's link is worth"
             detail={
@@ -575,7 +575,7 @@ export default async function SettingsAdmin() {
           </Panel>
         </form>
 
-        <form id="footer" action={saveSettings}>
+        <form id="footer" action={saveSettings} className="scroll-mt-4">
           <Panel
             title="Footer line"
             detail={
@@ -624,7 +624,7 @@ export default async function SettingsAdmin() {
           </Panel>
         </form>
 
-        <form id="santa" action={saveSettings}>
+        <form id="santa" action={saveSettings} className="scroll-mt-4">
           <Panel
             title="Secret Santa delivery"
             detail={
@@ -703,7 +703,7 @@ export default async function SettingsAdmin() {
           </Panel>
         </form>
 
-        <form id="product-notes" action={saveSettings}>
+        <form id="product-notes" action={saveSettings} className="scroll-mt-4">
           <Panel
             title="Product page notes"
             detail={
@@ -725,7 +725,7 @@ export default async function SettingsAdmin() {
           </Panel>
         </form>
 
-        <form id="runs-land" action={saveSettings}>
+        <form id="runs-land" action={saveSettings} className="scroll-mt-4">
           <Panel
             title="When runs land"
             detail={
@@ -834,7 +834,7 @@ export default async function SettingsAdmin() {
           </Panel>
         </div>
 
-        <form id="told" action={saveSettings} className="lg:col-span-2">
+        <form id="told" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
           <Panel
             title="Who gets told"
             detail={
@@ -1183,7 +1183,7 @@ export default async function SettingsAdmin() {
           </Panel>
         </div>
 
-        <form id="fees" action={saveSettings} className="lg:col-span-2">
+        <form id="fees" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
           <Panel
             title="What delivery costs"
             detail={
@@ -1201,7 +1201,7 @@ export default async function SettingsAdmin() {
           </Panel>
         </form>
 
-        <form id="areas" action={saveSettings} className="lg:col-span-2">
+        <form id="areas" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
           <Panel
             title="Restaurants further out"
             detail={
@@ -1224,7 +1224,7 @@ export default async function SettingsAdmin() {
           </Panel>
         </form>
 
-        <form id="same-day" action={saveSettings} className="lg:col-span-2">
+        <form id="same-day" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
           <Panel
             title="Pick a time, instead of a run"
             detail={
@@ -1329,7 +1329,7 @@ export default async function SettingsAdmin() {
           </Panel>
         </form>
 
-        <form id="week" action={saveSettings} className="lg:col-span-2">
+        <form id="week" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
           <Panel
             title="Days that are different"
             detail={
@@ -1361,7 +1361,7 @@ export default async function SettingsAdmin() {
           </Panel>
         </form>
 
-        <form id="messages" action={saveSettings} className="lg:col-span-2">
+        <form id="messages" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
           <Panel
             title="WhatsApp messages"
             detail={
@@ -1424,7 +1424,7 @@ export default async function SettingsAdmin() {
           </Panel>
         </form>
 
-        <form id="paid-note" action={saveSettings}>
+        <form id="paid-note" action={saveSettings} className="scroll-mt-4">
           <Panel
             title="What a paid customer reads"
             detail={
@@ -1446,7 +1446,7 @@ export default async function SettingsAdmin() {
           </Panel>
         </form>
 
-        <form id="pitch" action={saveSettings}>
+        <form id="pitch" action={saveSettings} className="scroll-mt-4">
           <Panel
             title="The line under the headline"
             detail={
