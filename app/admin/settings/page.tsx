@@ -1,6 +1,5 @@
 import { naira } from "@/lib/money";
 import SaveButton from "@/components/SaveButton";
-import PageHeader from "@/components/admin/PageHeader";
 import BandEditor from "@/components/admin/BandEditor";
 import AreaEditor from "@/components/admin/AreaEditor";
 import { parseAreas } from "@/lib/areas";
@@ -54,15 +53,46 @@ export default async function SettingsAdmin() {
   const accounts = await allAccounts();
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Settings"
-        detail="Every word on the site, and every message you send. No redeploy, no code."
-      />
-      <section className="card space-y-3">
+    <div>
+      <header className="mb-[22px] flex flex-wrap items-start justify-between gap-3.5">
+        <div className="min-w-0">
+          <h1 className="font-display text-[46px] font-black uppercase leading-[0.95]">
+            Settings
+          </h1>
+          <p className="mt-1.5 text-[14.5px] text-muted">
+            Everything that is true across the whole shop. Every word on the site, and
+            every message you send. No redeploy, no code.
+          </p>
+        </div>
+      </header>
+
+      {/* The board draws these as filter pills. They are jump links instead,
+          because each card below keeps its own values and its own save
+          button: hiding a card behind a tab would hide a save somebody had
+          already pressed into, and the page is one sheet of settings rather
+          than six separate forms. */}
+      <nav aria-label="Jump to a section" className="mb-[18px] flex flex-wrap gap-2">
+        {[
+          ["#pay", "Money"],
+          ["#find-us", "Business"],
+          ["#strip", "The site"],
+          ["#fees", "Delivery fees"],
+          ["#messages", "Messages"],
+          ["#told", "Team"],
+        ].map(([href, said]) => (
+          <a key={href} href={href} className="chip border-ink bg-paper px-3.5 text-sm">
+            {said}
+          </a>
+        ))}
+      </nav>
+
+      <div className="grid items-start gap-[18px] xl:grid-cols-2">
+      <section id="pay" className="card space-y-3 p-5 xl:col-span-2">
         <div>
-          <h2 className="font-semibold">Where they pay</h2>
-          <p className="text-sm text-muted">
+          <h2 className="font-display text-[26px] font-black uppercase leading-none">
+            Where they pay
+          </h2>
+          <p className="text-[12.5px] text-muted">
             Every account somebody can transfer into. The first is the one the
             order page shows and the one your WhatsApp message quotes; the
             rest are one tap away, for anyone who banks where you do and would
@@ -71,7 +101,7 @@ export default async function SettingsAdmin() {
         </div>
 
         {accounts === null && (
-          <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <p className="rounded-xl border-[1.5px] border-[#e8d9a8] bg-brand-tint px-3.5 py-2.5 text-[13px] text-brand-dark">
             The database has no bank_accounts table yet, so this is still the
             single account below. Run supabase/update.sql and the list starts
             working, with that account already on it.
@@ -79,7 +109,7 @@ export default async function SettingsAdmin() {
         )}
 
         {accounts !== null && accounts.length === 0 && (
-          <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <p className="rounded-xl border-[1.5px] border-[#e8d9a8] bg-brand-tint px-3.5 py-2.5 text-[13px] text-brand-dark">
             No account on the list, so customers have nowhere to pay. Add one
             before ordering opens.
           </p>
@@ -89,15 +119,15 @@ export default async function SettingsAdmin() {
           {(accounts ?? []).map((account, index) => (
             <li
               key={account.id}
-              className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 ${
-                account.active ? "border-black/10" : "border-black/5 bg-black/[0.02]"
+              className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border-[1.5px] px-3.5 py-3 ${
+                account.active ? "border-line" : "border-line bg-shell"
               }`}
             >
               <span className={account.active ? "" : "text-muted"}>
-                <span className="block font-semibold">
+                <span className="block text-[14.5px] font-bold">
                   {account.bank_name}
                   {index === 0 && account.active && (
-                    <span className="ml-2 rounded-full bg-brand-tint px-2 py-0.5 text-xs font-bold text-brand-dark">
+                    <span className="ml-2 rounded-full bg-volt px-2.5 py-0.5 text-xs font-semibold text-ink">
                       shown first
                     </span>
                   )}
@@ -105,7 +135,7 @@ export default async function SettingsAdmin() {
                     <span className="ml-2 text-xs font-semibold">hidden</span>
                   )}
                 </span>
-                <span className="block text-sm text-muted">
+                <span className="block font-mono text-[12.5px] text-muted">
                   {account.account_number}
                   {account.account_name && ` · ${account.account_name}`}
                 </span>
@@ -119,7 +149,7 @@ export default async function SettingsAdmin() {
                     value={String(!account.active)}
                   />
                   <ActionButton
-                    className="chip border-black/10 bg-white py-1.5 text-xs"
+                    className="btn-quiet min-h-[34px] px-3 text-[13px]"
                     done="Done ✓"
                   >
                     {account.active ? "Hide" : "Show"}
@@ -129,7 +159,7 @@ export default async function SettingsAdmin() {
                   <input type="hidden" name="account_id" value={account.id} />
                   <ConfirmButton
                     tone="bare"
-                    className="chip border-black/10 bg-white py-1.5 text-xs text-brand"
+                    className="btn-quiet min-h-[34px] border-brand-dark px-3 text-[13px] text-brand-dark hover:bg-brand-dark"
                     confirm={`Yes, remove ${account.bank_name}`}
                   >
                     Remove
@@ -195,9 +225,11 @@ export default async function SettingsAdmin() {
         </p>
       </section>
 
-      <form action={saveSettings} className="card space-y-3">
-        <h2 className="border-t border-black/10 pt-3 font-semibold">Paying by card</h2>
-        <p className="text-sm text-muted">
+      <form id="card-pay" action={saveSettings} className="card space-y-3 p-5">
+        <h2 className="font-display text-[26px] font-black uppercase leading-none">
+          Paying by card
+        </h2>
+        <p className="text-[12.5px] text-muted">
           Card payers are told to message you. You send them a link, then mark the
           order paid on its batch page when the money lands.
         </p>
@@ -226,7 +258,7 @@ export default async function SettingsAdmin() {
           />
         </div>
 
-        <div className="rounded-2xl bg-shell p-3">
+        <div className="rounded-xl border-[1.5px] border-line bg-shell p-3.5">
           <input type="hidden" name="abroad_on__asked" value="1" />
           <label className="flex items-center gap-2 text-sm font-bold">
             <input
@@ -289,9 +321,11 @@ export default async function SettingsAdmin() {
         <SaveButton>Save</SaveButton>
       </form>
 
-      <form action={saveSettings} className="card space-y-3">
-        <h2 className="font-semibold">Where to find us</h2>
-        <p className="text-sm text-muted">
+      <form id="find-us" action={saveSettings} className="card space-y-3 p-5">
+        <h2 className="font-display text-[26px] font-black uppercase leading-none">
+          Where to find us
+        </h2>
+        <p className="text-[12.5px] text-muted">
           Shown at the bottom of every page. A stranger asked to prepay ₦16,000 will
           check that the business exists, and these are what they check.
         </p>
@@ -359,10 +393,12 @@ export default async function SettingsAdmin() {
         <SaveButton>Save</SaveButton>
       </form>
 
-      <form action={saveSettings} className="card space-y-3">
+      <form id="strip" action={saveSettings} className="card space-y-3 p-5">
         <div>
-          <h2 className="font-semibold">The strip along the top</h2>
-          <p className="text-sm text-muted">
+          <h2 className="font-display text-[26px] font-black uppercase leading-none">
+            The strip along the top
+          </h2>
+          <p className="text-[12.5px] text-muted">
             One line above the header, on every page. It is the place for a
             claim or a piece of news, so keep it to a few words: a strip that
             shouts above every page is a strip people learn to scroll past.
@@ -370,7 +406,7 @@ export default async function SettingsAdmin() {
         </div>
 
         {missing.length > 0 && (
-          <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <p className="rounded-xl border-[1.5px] border-[#e8d9a8] bg-brand-tint px-3.5 py-2.5 text-[13px] text-brand-dark">
             The database is missing {missing.join(" and ")}, so there is nowhere
             to keep this yet. Run supabase/update.sql and this box starts
             working.
@@ -434,9 +470,11 @@ export default async function SettingsAdmin() {
         <SaveButton>Save</SaveButton>
       </form>
 
-      <form action={saveSettings} className="card space-y-3">
-        <h2 className="font-semibold">What a promoter's link is worth</h2>
-        <p className="text-sm text-muted">
+      <form id="promoter-perk" action={saveSettings} className="card space-y-3 p-5">
+        <h2 className="font-display text-[26px] font-black uppercase leading-none">
+          What a promoter's link is worth
+        </h2>
+        <p className="text-[12.5px] text-muted">
           Every promoter has a link of their own, like{" "}
           <code>sudu.store/s/ada</code>. Name a code here and anybody who
           opens one gets it applied at the checkout without typing anything,
@@ -465,9 +503,11 @@ export default async function SettingsAdmin() {
         <SaveButton>Save</SaveButton>
       </form>
 
-      <form action={saveSettings} className="card space-y-3">
-        <h2 className="font-semibold">Footer line</h2>
-        <p className="text-sm text-muted">
+      <form id="footer" action={saveSettings} className="card space-y-3 p-5">
+        <h2 className="font-display text-[26px] font-black uppercase leading-none">
+          Footer line
+        </h2>
+        <p className="text-[12.5px] text-muted">
           The line at the bottom of every page.
         </p>
         <input name="footer_line" defaultValue={settings.footer_line} className="field" />
@@ -507,9 +547,11 @@ export default async function SettingsAdmin() {
         <SaveButton>Save</SaveButton>
       </form>
 
-      <form action={saveSettings} className="card space-y-3">
-        <h2 className="font-semibold">Secret Santa delivery</h2>
-        <p className="text-sm text-muted">
+      <form id="santa" action={saveSettings} className="card space-y-3 p-5">
+        <h2 className="font-display text-[26px] font-black uppercase leading-none">
+          Secret Santa delivery
+        </h2>
+        <p className="text-[12.5px] text-muted">
           What carrying one person&apos;s gifts costs, taken out of their
           budget. Charged once against the giver, not once per thing: their
           gifts all go to one person on one day, so a chicken, a pizza and a
@@ -565,7 +607,7 @@ export default async function SettingsAdmin() {
           </div>
         </div>
         {settings.santa_delivery > 0 ? (
-          <p className="text-sm text-muted">
+          <p className="text-[12.5px] text-muted">
             So three things costs {naira(settings.santa_delivery)}, and five
             costs{" "}
             {naira(
@@ -579,9 +621,11 @@ export default async function SettingsAdmin() {
         <SaveButton>Save</SaveButton>
       </form>
 
-      <form action={saveSettings} className="card space-y-3">
-        <h2 className="font-semibold">Product page notes</h2>
-        <p className="text-sm text-muted">
+      <form id="product-notes" action={saveSettings} className="card space-y-3 p-5">
+        <h2 className="font-display text-[26px] font-black uppercase leading-none">
+          Product page notes
+        </h2>
+        <p className="text-[12.5px] text-muted">
           The reassurance lines under the buy button, one per line. Write{" "}
           {"{restaurant}"} and the restaurant&apos;s name is filled in.
         </p>
@@ -594,10 +638,12 @@ export default async function SettingsAdmin() {
         <SaveButton>Save</SaveButton>
       </form>
 
-      <form action={saveSettings} className="card space-y-3">
+      <form id="runs-land" action={saveSettings} className="card space-y-3 p-5">
         <div>
-          <h2 className="font-semibold">When runs land</h2>
-          <p className="text-sm text-muted">
+          <h2 className="font-display text-[26px] font-black uppercase leading-none">
+            When runs land
+          </h2>
+          <p className="text-[12.5px] text-muted">
             What customers are told about a new run, before you change it on
             the run itself. It is the {"{window}"} in your messages.
           </p>
@@ -670,10 +716,12 @@ export default async function SettingsAdmin() {
         </p>
       </form>
 
-      <form action={saveSettings} className="card space-y-3">
+      <form id="told" action={saveSettings} className="card space-y-3 p-5 xl:col-span-2">
         <div>
-          <h2 className="font-semibold">Who gets told</h2>
-          <p className="text-sm text-muted">
+          <h2 className="font-display text-[26px] font-black uppercase leading-none">
+            Who gets told
+          </h2>
+          <p className="text-[12.5px] text-muted">
             Every admin who should hear when an order lands and when a cart is
             left behind. One address per line. Customers are never emailed:
             they are messaged on WhatsApp, by you.
@@ -739,10 +787,12 @@ export default async function SettingsAdmin() {
         {/* The Google Business Profile. Two links rather than one, because
             the one worth putting in front of somebody who has just been
             handed their food is the one that opens the review box. */}
-        <div className="space-y-3 border-t border-black/10 pt-4">
+        <div className="space-y-3 border-t-[1.5px] border-[#ece7df] pt-4">
           <div>
-            <h2 className="font-semibold">Google</h2>
-            <p className="text-sm text-muted">
+            <h2 className="font-display text-[26px] font-black uppercase leading-none">
+              Google
+            </h2>
+            <p className="text-[12.5px] text-muted">
               The profile goes in the footer, on Contact us, and into the
               business details search engines read. The review link is what a
               delivered order offers and what the handover message carries.
@@ -840,7 +890,7 @@ export default async function SettingsAdmin() {
           </div>
 
           <div className="space-y-3">
-            <p className="text-sm text-muted">
+            <p className="text-[12.5px] text-muted">
               Three reviews, copied word for word off your profile. Change
               nothing, not even a typo. A review nobody wrote is the one thing
               on this site worth taking the whole site down over. Leave them
@@ -884,10 +934,12 @@ export default async function SettingsAdmin() {
         {/* The dates on the small print. Typed rather than read off the
             file, because restyling a page is not a change to the policy and
             a date that moves every deploy tells a reader nothing. */}
-        <div className="space-y-3 border-t border-black/10 pt-4">
+        <div className="space-y-3 border-t-[1.5px] border-[#ece7df] pt-4">
           <div>
-            <h2 className="font-semibold">The small print</h2>
-            <p className="text-sm text-muted">
+            <h2 className="font-display text-[26px] font-black uppercase leading-none">
+              The small print
+            </h2>
+            <p className="text-[12.5px] text-muted">
               When each of these last said something different. Change the date
               when you change the wording, not when the page is restyled. Empty
               and the page carries no date at all.
@@ -920,10 +972,12 @@ export default async function SettingsAdmin() {
         <SaveButton>Save</SaveButton>
       </form>
 
-      <section className="card space-y-3">
+      <section className="card space-y-3 p-5">
         <div>
-          <h2 className="font-semibold">Where you deliver</h2>
-          <p className="text-sm text-muted">
+          <h2 className="font-display text-[26px] font-black uppercase leading-none">
+            Where you deliver
+          </h2>
+          <p className="text-[12.5px] text-muted">
             The blocks a customer picks from at checkout. With nothing on this
             list they type their own, which is how a hostel ends up spelt four
             ways on one run sheet.
@@ -934,7 +988,7 @@ export default async function SettingsAdmin() {
           {hostels.map((hostel) => (
             <li
               key={hostel.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-black/10 px-3 py-2"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-[1.5px] border-line px-3.5 py-3"
             >
               <span className={hostel.active ? "font-semibold" : "text-muted line-through"}>
                 {hostel.name}
@@ -945,7 +999,7 @@ export default async function SettingsAdmin() {
                   <input type="hidden" name="hostel_id" value={hostel.id} />
                   <input type="hidden" name="active" value={String(!hostel.active)} />
                   <ActionButton
-                    className="chip border-black/10 bg-white py-1.5 text-xs"
+                    className="btn-quiet min-h-[34px] px-3 text-[13px]"
                     done="Done ✓"
                   >
                     {hostel.active ? "Hide" : "Show"}
@@ -955,7 +1009,7 @@ export default async function SettingsAdmin() {
                   <input type="hidden" name="hostel_id" value={hostel.id} />
                   <ConfirmButton
                     tone="bare"
-                    className="chip border-black/10 bg-white py-1.5 text-xs text-brand"
+                    className="btn-quiet min-h-[34px] border-brand-dark px-3 text-[13px] text-brand-dark hover:bg-brand-dark"
                     confirm={`Yes, remove ${hostel.name}`}
                   >
                     Remove
@@ -1003,10 +1057,12 @@ export default async function SettingsAdmin() {
         </p>
       </section>
 
-      <form action={saveSettings} className="card space-y-3">
+      <form id="fees" action={saveSettings} className="card space-y-3 p-5 xl:col-span-2">
         <div>
-          <h2 className="font-semibold">What delivery costs</h2>
-          <p className="text-sm text-muted">
+          <h2 className="font-display text-[26px] font-black uppercase leading-none">
+            What delivery costs
+          </h2>
+          <p className="text-[12.5px] text-muted">
             Delivery is priced by how many containers travel, not by what the
             food costs. Set the bands here and the shop, the cart and every
             new order follow them.
@@ -1016,10 +1072,12 @@ export default async function SettingsAdmin() {
         <SaveButton>Save prices</SaveButton>
       </form>
 
-      <form action={saveSettings} className="card space-y-3">
+      <form id="areas" action={saveSettings} className="card space-y-3 p-5 xl:col-span-2">
         <div>
-          <h2 className="font-semibold">Restaurants further out</h2>
-          <p className="text-sm text-muted">
+          <h2 className="font-display text-[26px] font-black uppercase leading-none">
+            Restaurants further out
+          </h2>
+          <p className="text-[12.5px] text-muted">
             The ladders above are what Sangotedo costs, because that is the
             parade the shop was built around. A kitchen further out is the
             same order and more road, and charging the Sangotedo price for it
@@ -1034,10 +1092,12 @@ export default async function SettingsAdmin() {
         <SaveButton>Save areas</SaveButton>
       </form>
 
-      <form action={saveSettings} className="card space-y-3">
+      <form id="same-day" action={saveSettings} className="card space-y-3 p-5 xl:col-span-2">
         <div>
-          <h2 className="font-semibold">Pick a time, instead of a run</h2>
-          <p className="text-sm text-muted">
+          <h2 className="font-display text-[26px] font-black uppercase leading-none">
+            Pick a time, instead of a run
+          </h2>
+          <p className="text-[12.5px] text-muted">
             A car going out for one order at a time the customer chose, rather than
             everybody sharing one. Nothing is offered sooner than three hours from
             now, because that is how long it takes to fetch and deliver, and when
@@ -1063,7 +1123,7 @@ export default async function SettingsAdmin() {
           </span>
         </label>
 
-        <div className="border-t border-black/10 pt-3">
+        <div className="border-t-[1.5px] border-[#ece7df] pt-3.5">
           <p className="label">What it costs</p>
           <BandEditor
             initial={
@@ -1138,10 +1198,12 @@ export default async function SettingsAdmin() {
       {/* Its own card and its own save. Sitting inside the pricing form, the
           week was several decisions away from the button that kept them, and
           the button did not say it was keeping them. */}
-      <form action={saveSettings} className="card space-y-3">
+      <form id="week" action={saveSettings} className="card space-y-3 p-5 xl:col-span-2">
         <div>
-          <h2 className="font-semibold">Days that are different</h2>
-          <p className="text-sm text-muted">
+          <h2 className="font-display text-[26px] font-black uppercase leading-none">
+            Days that are different
+          </h2>
+          <p className="text-[12.5px] text-muted">
             Saturday and Wednesday are not the same business. A day left alone
             follows the hours above; closing one takes it off entirely.
           </p>
@@ -1166,17 +1228,19 @@ export default async function SettingsAdmin() {
         <SaveButton>Save the week</SaveButton>
       </form>
 
-      <form action={saveSettings} className="card space-y-4">
+      <form id="messages" action={saveSettings} className="card space-y-4 p-5 xl:col-span-2">
         <div>
-          <h2 className="font-semibold">WhatsApp messages</h2>
-          <p className="text-sm text-muted">
+          <h2 className="font-display text-[26px] font-black uppercase leading-none">
+            WhatsApp messages
+          </h2>
+          <p className="text-[12.5px] text-muted">
             The words behind every template button in Orders. Edit them and the
             buttons say what you want. Leave one blank to go back to the wording
             underneath it.
           </p>
         </div>
 
-        <div className="rounded-2xl bg-shell p-3">
+        <div className="rounded-xl border-[1.5px] border-line bg-shell p-3.5">
           <p className="text-xs font-bold uppercase tracking-wide text-muted">
             Things you can drop into a message
           </p>
@@ -1225,9 +1289,11 @@ export default async function SettingsAdmin() {
         <SaveButton>Save messages</SaveButton>
       </form>
 
-      <form action={saveSettings} className="card space-y-3">
-        <h2 className="font-semibold">What a paid customer reads</h2>
-        <p className="text-sm text-muted">
+      <form id="paid-note" action={saveSettings} className="card space-y-3 p-5">
+        <h2 className="font-display text-[26px] font-black uppercase leading-none">
+          What a paid customer reads
+        </h2>
+        <p className="text-[12.5px] text-muted">
           The line on their order page once the money lands. It takes the same
           {" "}{"{hostel}"}, {"{window}"}, {"{ref}"} and {"{name}"} as the messages.
         </p>
@@ -1240,9 +1306,11 @@ export default async function SettingsAdmin() {
         <SaveButton>Save</SaveButton>
       </form>
 
-      <form action={saveSettings} className="card space-y-3">
-        <h2 className="font-semibold">The line under the headline</h2>
-        <p className="text-sm text-muted">
+      <form id="pitch" action={saveSettings} className="card space-y-3 p-5">
+        <h2 className="font-display text-[26px] font-black uppercase leading-none">
+          The line under the headline
+        </h2>
+        <p className="text-[12.5px] text-muted">
           The first thing a student reads. Reword it whenever the pitch changes.
         </p>
         <textarea
@@ -1253,6 +1321,7 @@ export default async function SettingsAdmin() {
         />
         <SaveButton>Save</SaveButton>
       </form>
+      </div>
     </div>
   );
 }

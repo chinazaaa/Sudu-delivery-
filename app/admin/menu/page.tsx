@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Diagnostic from "@/components/Diagnostic";
+import Panel from "@/components/admin/Panel";
 import Reorder from "@/components/admin/Reorder";
 import Thumb from "@/components/Thumb";
 import SaveButton from "@/components/SaveButton";
@@ -64,95 +65,192 @@ export default async function RestaurantsAdmin() {
   const nameOf = (id: string) =>
     list.find((one) => one.id === id)?.name ?? "";
 
+  // The two gaps, drawn as one pair of tiles. A bar needs something to be a
+  // share of, and the only honest denominator is the items actually on sale:
+  // seventy missing photographs out of eighty is a different morning from
+  // seventy out of eight hundred.
+  const gaps = [
+    {
+      key: "photo",
+      count: noPhoto.length,
+      said: "with no photo",
+      items: noPhoto,
+      // Tomato Deep rather than Tomato, because this is a number being read
+      // on a light ground rather than a button being pressed.
+      colour: "#b8230f",
+      fix: "Add the photos",
+    },
+    {
+      key: "words",
+      count: noWords.length,
+      said: "with no description",
+      items: noWords,
+      // Amber sits between the two, which is the point: a missing
+      // description costs less than a missing photograph.
+      colour: "#c9961b",
+      fix: "Write the descriptions",
+    },
+  ].filter((gap) => gap.count > 0);
+
   return (
-    <div className="space-y-4">
-      <section>
-        <h1 className="text-xl font-extrabold tracking-tight">Restaurants</h1>
-        <p className="text-sm text-muted">
-          Each one holds its own categories, items and choices. Switch a restaurant off
-          to take it off the site without losing its menu.
-        </p>
-        {/* The form is at the bottom, under however many restaurants there
-            are, which is the right place for it and the wrong place to have
-            to scroll to. */}
-        <div className="mt-2 flex flex-wrap gap-2">
-          <a href="#add" className="btn-quiet inline-block px-4 py-2 text-sm">
-            Add a restaurant
-          </a>
+    <div>
+      <header className="mb-[22px] flex flex-wrap items-start justify-between gap-3.5">
+        <div className="min-w-0">
+          <h1 className="font-display text-[46px] font-black uppercase leading-[0.95]">
+            Restaurants
+          </h1>
+          <p className="mt-1.5 text-[14.5px] text-muted">
+            Each one holds its own categories, items and choices. Switch one off to
+            take it off the site without losing its menu.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           {/* Taking one thing off sale does not need any of this page. It
               needs a search box, and that is somewhere else. */}
-          <Link href="/admin/stock" className="btn-quiet inline-block px-4 py-2 text-sm">
+          <Link href="/admin/stock" className="btn-quiet px-4 py-2.5 text-sm">
             Something sold out?
           </Link>
+          {/* The form is at the bottom, under however many restaurants there
+              are, which is the right place for it and the wrong place to have
+              to scroll to. */}
+          <a href="#add" className="btn-primary px-4 py-2.5 text-sm">
+            Add a restaurant
+          </a>
         </div>
-      </section>
+      </header>
 
       {problem && !problem.ok && (
-        <>
+        <div className="mb-[18px] space-y-3.5">
           <Diagnostic title={problem.title} detail={problem.detail} />
-          <form action={seedLaunchRestaurants} className="card space-y-2">
-            <h2 className="font-semibold">Start with the launch two</h2>
-            <p className="text-sm text-muted">
+          <form action={seedLaunchRestaurants} className="card p-5">
+            <h2 className="font-display text-[26px] font-black uppercase leading-none">
+              Start with the launch two
+            </h2>
+            <p className="mb-3 mt-1 text-[12.5px] text-muted">
               Adds KFC Novare and Domino&apos;s with their usual items at placeholder
               prices.
             </p>
             <SaveButton className="w-full">Add KFC and Domino&apos;s</SaveButton>
           </form>
-        </>
+        </div>
       )}
 
-      {(noPhoto.length > 0 || noWords.length > 0) && (
-        <section className="card space-y-2">
-          <div>
-            <h2 className="font-bold">Gaps in the menu</h2>
-            <p className="text-sm text-muted">
-              Of {onSale.length} items on sale. A photo sells food better than
-              anything else on the page.
-            </p>
-          </div>
-          <ul className="space-y-2 text-sm">
-            {[
-              { label: "No photo", items: noPhoto },
-              { label: "No description", items: noWords },
-            ]
-              .filter((gap) => gap.items.length > 0)
-              .map((gap) => (
-                <li key={gap.label}>
-                  <p className="font-semibold">
-                    {gap.items.length} with {gap.label.toLowerCase()}
-                  </p>
-                  <p className="text-muted">
-                    {[...new Set(gap.items.map((item) => item.restaurant_id))].map(
-                      (id, index, all) => (
-                        <span key={id}>
+      {gaps.length > 0 && (
+        <Panel
+          title="Gaps in the menu"
+          detail={`Of ${onSale.length} items on sale. A photo sells food better than anything else on the page.`}
+          className="mb-[18px]"
+        >
+          <div className="grid items-center gap-[18px] xl:grid-cols-[1fr_auto]">
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              {gaps.map((gap) => (
+                <div
+                  key={gap.key}
+                  className="rounded-xl border-[1.5px] border-line bg-paper px-3.5 py-3"
+                >
+                  <div className="flex items-baseline gap-2">
+                    <span
+                      className="font-display text-[34px] font-black leading-none"
+                      style={{ color: gap.colour }}
+                    >
+                      {gap.count}
+                    </span>
+                    <strong className="text-sm">{gap.said}</strong>
+                  </div>
+                  <div className="my-2.5 h-[9px] rounded-full bg-[#ece7df]">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        background: gap.colour,
+                        width: `${
+                          onSale.length === 0
+                            ? 0
+                            : Math.min(100, Math.round((gap.count / onSale.length) * 100))
+                        }%`,
+                      }}
+                    />
+                  </div>
+                  {/* Which kitchens, and worst first, because the list is a
+                      work order rather than a tally: the one with sixty
+                      missing photographs is the afternoon's job. */}
+                  <p className="text-[12.5px] leading-[1.5] text-muted">
+                    {[...new Set(gap.items.map((item) => item.restaurant_id))]
+                      .map((id) => ({
+                        id,
+                        count: gap.items.filter((item) => item.restaurant_id === id).length,
+                      }))
+                      .sort((a, b) => b.count - a.count)
+                      .map((one, index, all) => (
+                        <span key={one.id}>
                           <Link
-                            href={`/admin/menu/${id}`}
-                            className="font-semibold text-brand"
+                            href={`/admin/menu/${one.id}`}
+                            className="font-semibold text-brand-dark"
                           >
-                            {nameOf(id)}
-                          </Link>
-                          <span>
-                            {" "}
-                            ({gap.items.filter((item) => item.restaurant_id === id).length})
-                            {index < all.length - 1 ? ", " : ""}
-                          </span>
+                            {nameOf(one.id)}
+                          </Link>{" "}
+                          {one.count}
+                          {index < all.length - 1 ? " · " : ""}
                         </span>
-                      )
-                    )}
+                      ))}
                   </p>
-                </li>
+                </div>
               ))}
-          </ul>
-        </section>
+            </div>
+            {/* The brand's stripes, which the design system asks a page to
+                carry somewhere. Decorative only, so it is hidden from a
+                screen reader and dropped on a phone, where the width is
+                worth more than the mark. */}
+            <div
+              aria-hidden
+              className="hidden h-[150px] w-[112px] rounded-xl border-2 border-ink xl:block"
+              style={{
+                background:
+                  "repeating-linear-gradient(-60deg,#e5321d 0 7px,transparent 7px 16px)",
+              }}
+            />
+          </div>
+        </Panel>
       )}
 
-      <p className="text-sm text-muted">
-        The order here is the order a customer sees on the home page.
+      <p className="mb-2.5 text-[12.5px] text-muted">
+        Up and down to reorder. This is the order a customer sees on the home page.
       </p>
 
-      <ul className="grid gap-3 sm:grid-cols-2">
+      <ul className="mb-[18px] grid gap-3 xl:grid-cols-2">
         {list.map((restaurant, index) => (
-          <li key={restaurant.id} className="flex items-stretch gap-2">
+          <li key={restaurant.id} className="card flex items-center gap-3 px-4 py-3.5">
+            <Link
+              href={`/admin/menu/${restaurant.id}`}
+              className="flex min-w-0 flex-1 items-center gap-3"
+            >
+              <span className="size-[46px] shrink-0 overflow-hidden rounded-[10px] border-[1.5px] border-line">
+                <Thumb
+                  src={restaurant.logo_url}
+                  name={restaurant.name}
+                  rounded="rounded-none"
+                />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-base font-bold">
+                  {restaurant.name}
+                </span>
+                <span className="block text-[12.5px] text-muted">
+                  {countFor(restaurant.id)} item
+                  {countFor(restaurant.id) === 1 ? "" : "s"} · closes{" "}
+                  {restaurant.closes_at.slice(0, 5)}
+                </span>
+              </span>
+            </Link>
+            {/* The word as well as the colour. Green on its own is unreadable
+                in sunlight, which is where this page gets opened. */}
+            <span
+              className={`chip shrink-0 border-0 px-2.5 py-0.5 text-xs ${
+                restaurant.active ? "bg-[#dff0e6] text-mint" : "bg-[#f1ede6] text-ink"
+              }`}
+              style={{ minHeight: 0 }}
+            >
+              {restaurant.active ? "on the site" : "off"}
+            </span>
             <Reorder
               action={moveRestaurant}
               field="restaurant_id"
@@ -161,55 +259,45 @@ export default async function RestaurantsAdmin() {
               last={index === list.length - 1}
               label={restaurant.name}
             />
-            <Link
-              href={`/admin/menu/${restaurant.id}`}
-              className="card flex grow items-center gap-3 transition hover:border-brand"
-            >
-              <span className="size-14 shrink-0 overflow-hidden rounded-xl">
-                <Thumb
-                  src={restaurant.logo_url}
-                  name={restaurant.name}
-                  rounded="rounded-none"
-                />
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate font-semibold">{restaurant.name}</span>
-                <span className="block text-sm text-muted">
-                  {countFor(restaurant.id)} item
-                  {countFor(restaurant.id) === 1 ? "" : "s"} · closes{" "}
-                  {restaurant.closes_at.slice(0, 5)}
-                </span>
-                <span
-                  className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                    restaurant.active
-                      ? "bg-green-100 text-green-800"
-                      : "bg-black/[0.06] text-muted"
-                  }`}
-                >
-                  {restaurant.active ? "On the site" : "Hidden"}
-                </span>
-              </span>
-            </Link>
           </li>
         ))}
       </ul>
 
-      <form id="add" action={addRestaurant} className="card space-y-3">
-        <h2 className="font-semibold">Add a restaurant</h2>
-        <div className="flex flex-wrap items-end gap-2">
+      <form id="add" action={addRestaurant} className="card p-5">
+        <h2 className="font-display text-[26px] font-black uppercase leading-none">
+          Add a restaurant
+        </h2>
+        <div className="mt-3 flex flex-wrap items-end gap-3">
           <div className="grow">
-            <label className="label">Name</label>
-            <input name="name" required placeholder="Chicken Republic" className="field" />
+            <label className="label" htmlFor="new_name">Name</label>
+            <input
+              id="new_name"
+              name="name"
+              required
+              placeholder="Chicken Republic"
+              className="field"
+            />
           </div>
           <div className="w-32">
-            <label className="label">Closes</label>
-            <input name="closes_at" type="time" defaultValue="21:00" className="field" />
+            <label className="label" htmlFor="new_closes">Closes</label>
+            <input
+              id="new_closes"
+              name="closes_at"
+              type="time"
+              defaultValue="21:00"
+              className="field"
+            />
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="label">Address</label>
-            <input name="address" placeholder="Novare Mall, Sangotedo" className="field" />
+            <label className="label" htmlFor="new_address">Address</label>
+            <input
+              id="new_address"
+              name="address"
+              placeholder="Novare Mall, Sangotedo"
+              className="field"
+            />
           </div>
           <div>
             <label className="label" htmlFor="new_area">Which area</label>
@@ -228,7 +316,9 @@ export default async function RestaurantsAdmin() {
             </p>
           </div>
         </div>
-        <SaveButton>Add restaurant</SaveButton>
+        <div className="mt-3.5">
+          <SaveButton>Add restaurant</SaveButton>
+        </div>
       </form>
     </div>
   );
