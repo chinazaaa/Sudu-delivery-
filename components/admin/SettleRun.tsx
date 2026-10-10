@@ -22,6 +22,7 @@ export default function SettleRun({
   untouched,
   action,
   batchId,
+  primary = false,
 }: {
   /** What is still outstanding, in the words somebody would use. */
   open: string[];
@@ -33,6 +34,15 @@ export default function SettleRun({
   untouched: boolean;
   action: (form: FormData) => Promise<void>;
   batchId: string;
+  /**
+   * Whether closing the books is the one thing left to do on the page.
+   *
+   * There is one Tomato button per screen, and on a run still moving that
+   * button is "move it on" at the top. Once the last bag is handed over
+   * there is no stage left to move to, so this becomes the thing to do next
+   * and takes the colour.
+   */
+  primary?: boolean;
 }) {
   const [asking, setAsking] = useState(false);
   const [showing, setShowing] = useState(false);
@@ -40,9 +50,11 @@ export default function SettleRun({
 
   if (open.length > 0) {
     return (
-      <div className="card border-amber-200 bg-amber-50">
-        <h2 className="font-bold text-amber-900">This run is not finished</h2>
-        <ul className="mt-2 space-y-1 text-sm text-amber-900/90">
+      <div className="card border-volt-line bg-brand-tint">
+        <h2 className="font-display text-[24px] font-black uppercase leading-none">
+          This run is not finished
+        </h2>
+        <ul className="mt-2 space-y-1 text-sm">
           {open.map((one) => (
             <li key={one}>· {one}</li>
           ))}
@@ -50,11 +62,11 @@ export default function SettleRun({
         <button
           type="button"
           disabled
-          className="btn-quiet mt-3 px-4 py-2.5 text-sm opacity-50"
+          className="btn-admin mt-3 opacity-40"
         >
           Close the books
         </button>
-        <p className="mt-2 text-xs text-amber-900/75">
+        <p className="hint mt-2">
           Sort those and this becomes a button. A run closed with money still
           out is a run nobody thinks to look at again.
         </p>
@@ -64,8 +76,10 @@ export default function SettleRun({
 
   return (
     <div className="card">
-      <h2 className="font-bold">Everything on this run is settled</h2>
-      <p className="mt-0.5 text-sm text-muted">
+      <h2 className="font-display text-[24px] font-black uppercase leading-none">
+        Everything on this run is settled
+      </h2>
+      <p className="hint mt-1">
         Delivered, paid for, and the costs are in.
         {unpriced > 0 &&
           ` ${unpriced} counter line${
@@ -77,7 +91,7 @@ export default function SettleRun({
         <button
           type="button"
           onClick={() => setAsking(true)}
-          className="btn-primary mt-3 px-4 py-2.5 text-sm"
+          className={`btn-admin mt-3 ${primary ? "btn-admin-go" : ""}`}
         >
           Close the books
         </button>
@@ -93,7 +107,7 @@ export default function SettleRun({
               one person knows which. Asked rather than assumed, because the
               assumption is worth money and the tick costs a second. */}
           {untouched && (
-            <label className="flex items-start gap-2 rounded-xl bg-shell px-3 py-2 text-sm">
+            <label className="soft flex items-start gap-2 bg-shell px-3 py-2 text-sm">
               <input
                 type="checkbox"
                 name="counter_checked"
@@ -109,11 +123,11 @@ export default function SettleRun({
           )}
 
           <div className="flex flex-wrap gap-2">
-            <Confirm ready={!untouched || checked} />
+            <Confirm ready={!untouched || checked} primary={primary} />
             <button
               type="button"
               onClick={() => setAsking(false)}
-              className="chip border-black/10 bg-white"
+              className="btn-admin btn-admin-sm"
             >
               Not yet
             </button>
@@ -126,12 +140,12 @@ export default function SettleRun({
       <button
         type="button"
         onClick={() => setShowing((was) => !was)}
-        className="mt-3 text-xs font-bold text-brand"
+        className="mt-3 text-xs font-bold text-brand-dark"
       >
         {showing ? "Hide the working" : "Show the working"}
       </button>
       {showing && (
-        <p className="mt-1 text-xs text-muted">
+        <p className="hint mt-1">
           Scroll on for the counter sheet, the handout list and the costs.
         </p>
       )}
@@ -139,11 +153,11 @@ export default function SettleRun({
   );
 }
 
-function Confirm({ ready }: { ready: boolean }) {
+function Confirm({ ready, primary }: { ready: boolean; primary: boolean }) {
   const { pending } = useFormStatus();
   return (
     <button
-      className="btn-primary px-4 py-2.5 text-sm disabled:opacity-50"
+      className={`btn-admin disabled:opacity-40 ${primary ? "btn-admin-go" : ""}`}
       disabled={pending || !ready}
     >
       {pending ? "Closing…" : "Yes, the books are closed"}

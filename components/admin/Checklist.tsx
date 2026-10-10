@@ -62,8 +62,21 @@ export default function Checklist({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm text-muted">
-          {checked}/{items.length} {label}
+        <p className="flex items-center gap-2.5 text-sm text-muted">
+          {/* The whole stop, at a glance. Not a control: ticking every line
+              is what fills it, because a stop is done when the things in it
+              are, and a second way to say so would let the two disagree. */}
+          <span
+            aria-hidden
+            className={`tick size-[34px] rounded-full text-[17px] font-black ${
+              checked === items.length && items.length > 0 ? "tick-done" : ""
+            }`}
+          >
+            {checked === items.length && items.length > 0 ? "✓" : ""}
+          </span>
+          <span>
+            {checked}/{items.length} {label}
+          </span>
         </p>
         {checked > 0 && !done && (
           <button
@@ -95,11 +108,7 @@ export default function Checklist({
               }`}
             >
               <span
-                className={`grid size-7 shrink-0 place-items-center rounded-lg border-2 text-[15px] font-black ${
-                  done || ticked[item.key]
-                    ? "border-mint bg-mint text-white"
-                    : "border-ink bg-paper"
-                }`}
+                className={`tick font-black ${done || ticked[item.key] ? "tick-done" : ""}`}
               >
                 {done || ticked[item.key] ? "✓" : ""}
               </span>

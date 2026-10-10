@@ -129,6 +129,21 @@ body {
   .btn-admin-dark {
     @apply border-[#4a443c] bg-transparent text-shell hover:bg-white/10;
   }
+  /* The box you tap when the bag is in the car. Twenty-eight pixels with
+     the same 2px outline as everything else, filled mint once it is done,
+     and it was written out inline in two places with a third on the way. */
+  .tick {
+    @apply flex size-7 shrink-0 items-center justify-center rounded-lg border-2 border-ink bg-paper text-[15px];
+  }
+  .tick-done {
+    @apply border-mint bg-mint text-white;
+  }
+  /* The board's input is forty-two pixels; the shop's field is forty-eight,
+     because a thumb needs the extra six and a mouse does not. Pages were
+     getting there with an ad-hoc py-1.5 that left no two boxes the same. */
+  .field-admin {
+    @apply min-h-[42px] py-0 text-[14.5px];
+  }
   .pill-admin {
     @apply inline-flex min-h-[38px] items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-ink bg-paper px-3.5 text-sm font-semibold transition;
   }

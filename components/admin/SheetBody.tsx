@@ -26,7 +26,7 @@ export default function SheetBody({
       <button
         type="button"
         onClick={() => setOpen((was) => !was)}
-        className="btn-quiet w-full px-4 py-2.5 text-sm"
+        className="btn-admin w-full"
       >
         {open ? "Hide the full sheet" : "Show the full sheet"}
       </button>

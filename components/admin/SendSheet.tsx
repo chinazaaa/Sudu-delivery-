@@ -29,7 +29,7 @@ export default function SendSheet({
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="btn-quiet w-full justify-center px-4 py-2.5 text-sm sm:w-auto"
+        className="btn-admin w-full sm:w-auto"
       >
         Send sheet to my WhatsApp
       </a>
@@ -41,7 +41,7 @@ export default function SendSheet({
       <button
         type="button"
         onClick={() => setAsking(true)}
-        className="btn-quiet w-full justify-center px-4 py-2.5 text-sm sm:w-auto"
+        className="btn-admin w-full sm:w-auto"
       >
         Send sheet to my WhatsApp
       </button>
@@ -61,7 +61,7 @@ export default function SendSheet({
       <button
         type="submit"
         onClick={() => window.open(href, "_blank", "noopener")}
-        className="btn-primary w-full justify-center px-4 py-2.5 text-sm sm:w-auto"
+        className="btn-admin w-full sm:w-auto"
       >
         Send and close the run
       </button>
@@ -70,7 +70,7 @@ export default function SendSheet({
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => setAsking(false)}
-        className="btn-quiet w-full justify-center px-4 py-2.5 text-sm sm:w-auto"
+        className="btn-admin w-full sm:w-auto"
       >
         Just send it
       </a>

@@ -25,8 +25,8 @@ export default function Tabs({
             key={section.id}
             type="button"
             onClick={() => setActive(section.id)}
-            className={`chip px-3.5 ${
-              current?.id === section.id ? "chip-on" : "bg-paper"
+            className={`pill-admin ${
+              current?.id === section.id ? "pill-admin-on" : "bg-paper"
             }`}
           >
             {section.label}

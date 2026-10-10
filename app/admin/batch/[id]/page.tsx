@@ -124,6 +124,21 @@ export default async function BatchPage({
   // Shared deliveries where somebody has not paid, and what that leaves the
   // car short by.
   const short = await shortfalls(batch.id);
+  // What is still to be handed over at the counters, at menu prices: every
+  // line nobody has typed a real figure against yet. The private ticks beside
+  // a stop are in one browser's storage, so they cannot be counted here, and
+  // a figure that said "still to spend" while meaning "everything" would be
+  // worse than no figure at all.
+  const unpriced = counter.flatMap((group) =>
+    group.lines
+      .filter((line) => line.paid === null)
+      .map((line) => ({ restaurant: group.restaurant, line }))
+  );
+  const stillToSpend = unpriced.reduce(
+    (total, one) => total + one.line.qty * one.line.unitPrice,
+    0
+  );
+  const stillAt = [...new Set(unpriced.map((one) => one.restaurant))];
   const likely = usual === null ? null : summary.profit - usual;
 
   const settings = await getSettings();
@@ -217,15 +232,18 @@ export default async function BatchPage({
           const here = stage === batch.stage;
           const past = index < stageIndex(batch.stage);
           return (
+            // On Ink, so the hairline between cells and the dim text of a
+            // stage you are not in are both the page's own paper let through,
+            // rather than two greys with no name in the palette.
             <li
               key={stage}
-              className={`flex items-center gap-2.5 border-b border-r border-[#2c2721] px-3.5 py-3 ${
-                here ? "bg-brand text-white" : "text-[#8a8178]"
+              className={`flex items-center gap-2.5 border-b border-r border-paper/10 px-3.5 py-3 ${
+                here ? "bg-brand text-paper" : "text-paper/55"
               }`}
             >
               <span
                 className={`grid size-[22px] shrink-0 place-items-center rounded-full font-mono text-xs ${
-                  here ? "bg-white text-brand" : "bg-[#2c2721]"
+                  here ? "bg-paper text-brand" : "bg-paper/15"
                 }`}
               >
                 {index + 1}
@@ -250,7 +268,7 @@ export default async function BatchPage({
       </ol>
 
       {batch.settled_at ? (
-        <section className="card mb-4 border-mint bg-mint/[0.06]">
+        <section className="card mb-4 border-mint bg-mint-tint">
           <h2 className="font-display text-[24px] font-black uppercase leading-none text-mint">
             Closed on {runDateLabel(batch.settled_at.slice(0, 10))}
           </h2>
@@ -261,11 +279,7 @@ export default async function BatchPage({
           </p>
           <form action={reopenRun} className="mt-3">
             <input type="hidden" name="batch_id" value={batch.id} />
-            <ConfirmButton
-              tone="bare"
-              className="chip bg-paper"
-              confirm="Yes, open it again"
-            >
+            <ConfirmButton tone="admin" confirm="Yes, open it again">
               Something was wrong, open it again
             </ConfirmButton>
           </form>
@@ -281,33 +295,50 @@ export default async function BatchPage({
               }
               action={settleRun}
               batchId={batch.id}
+              // Nothing is left to move the run on to, so closing the books
+              // is the thing to do next and carries the one Tomato button.
+              primary={finished}
             />
           </div>
         )
       )}
 
+      {/* The board's four, in its order: how many are coming, what the
+          counters want, what is still to hand over, and what is left. Money
+          collected is the line under the count rather than a tile of its own,
+          because the count and the money are one question. */}
       <div className="mb-4 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         <Figure
           label="Paid orders"
           value={`${summary.paidCount}`}
-          detail={`${summary.paidCount + summary.unpaidCount} ordered${
-            summary.unpaidCount > 0 ? `, ${summary.unpaidCount} unpaid` : ""
+          detail={`${naira(summary.gross)} collected${
+            summary.unpaidCount > 0 ? ` · ${summary.unpaidCount} unpaid` : ""
           }`}
-        />
-        <Figure
-          label="Money collected"
-          value={naira(summary.gross)}
-          detail="Across paid orders"
         />
         <Figure
           label="Pay at counters"
           value={naira(summary.foodCost)}
-          detail={`${counter.length} stop${counter.length === 1 ? "" : "s"}`}
+          detail={`${counter.length} stop${counter.length === 1 ? "" : "s"}${
+            summary.reconciled.lines > 0
+              ? ` · ${summary.reconciled.lines} of ${summary.reconciled.of} priced`
+              : ""
+          }`}
+        />
+        <Figure
+          label="Still to spend"
+          value={naira(stillToSpend)}
+          detail={
+            stillAt.length === 0
+              ? "Every line on this run has a real figure against it"
+              : stillAt.length > 2
+                ? `${stillAt.slice(0, 2).join(", ")} and ${stillAt.length - 2} more`
+                : stillAt.join(" and ")
+          }
         />
         {/* Only a profit in hand is coloured. A loss in mint reads as money
             made, which is the one thing it is not. */}
         <Figure
-          label="Profit"
+          label={finished ? "Profit" : "Profit if it ends here"}
           value={naira(summary.profit)}
           tone={summary.profit >= 0 ? "mint" : "ink"}
           detail={
@@ -323,9 +354,9 @@ export default async function BatchPage({
           the arithmetic. */}
       {batch.stage !== "handed_out" && likely !== null && (
         <p
-          className={`mb-4 rounded-xl border-[1.5px] px-4 py-3 text-[14px] ${
+          className={`soft mb-4 px-4 py-3 text-[14px] ${
             likely >= 0
-              ? "border-mint/40 bg-mint/10 text-mint"
+              ? "border-mint bg-mint-tint text-mint"
               : "border-volt-line bg-brand-tint text-ink"
           }`}
         >
@@ -348,7 +379,7 @@ export default async function BatchPage({
           className="mb-4 space-y-3"
         >
           {short.map((one) => (
-            <div key={one.groupId} className="rounded-xl border-[1.5px] border-line p-3">
+            <div key={one.groupId} className="soft p-3">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <span className="font-bold">{one.leader}&apos;s delivery</span>
                 <span className="text-sm text-muted">
@@ -377,15 +408,15 @@ export default async function BatchPage({
                     <span className="flex shrink-0 gap-2">
                       <a
                         href={`tel:${who.phone}`}
-                        className="chip bg-paper py-1 text-xs"
+                        className="btn-admin btn-admin-sm"
                       >
                         Call
                       </a>
                       <Link
                         href={`/admin/orders/${who.id}`}
-                        className="chip bg-paper py-1 text-xs"
+                        className="btn-admin btn-admin-sm"
                       >
-                        Open
+                        Open →
                       </Link>
                     </span>
                   </li>
@@ -397,7 +428,7 @@ export default async function BatchPage({
       )}
 
       {losingMoney && (
-        <p className="mb-4 rounded-xl border-[1.5px] border-volt-line bg-brand-tint px-4 py-3 text-[14px]">
+        <p className="soft mb-4 border-volt-line bg-brand-tint px-4 py-3 text-[14px]">
           This run is {naira(Math.abs(summary.profit))} down after costs. Cancel
           and refund in full, or carry it and make it back on the next one.
         </p>
@@ -413,7 +444,7 @@ export default async function BatchPage({
             content: (
               <>
                 {shopped && (
-                  <p className="rounded-xl border-[1.5px] border-mint/40 bg-mint/10 px-4 py-3 text-[14px] font-semibold text-mint">
+                  <p className="soft border-mint bg-mint-tint px-4 py-3 text-[14px] font-semibold text-mint">
                     {finished
                       ? "This run is finished. The list is here for the record, and what you actually paid still goes in below."
                       : "The food is bought and on the road. The list is here for the record, and what you actually paid still goes in below."}
@@ -421,12 +452,24 @@ export default async function BatchPage({
                 )}
 
                 {counter.length > 1 && !shopped && (
-                  <p className="rounded-xl border-[1.5px] border-line bg-paper px-4 py-3 text-[14px] text-muted">
+                  <p className="soft px-4 py-3 text-[14px] text-muted">
                     Put the stops in the order you are driving them. Which one
                     is nearest depends on where you set off from and which
                     branch you are using, so it is yours to say rather than
                     ours to guess.
                   </p>
+                )}
+
+                {counter.length > 0 && (
+                  <div className="flex flex-wrap items-baseline justify-between gap-2.5">
+                    <h2 className="font-display text-[28px] font-black uppercase leading-none">
+                      Stop by stop
+                    </h2>
+                    <span className="hint">
+                      Tap a stop when you have paid for it. Ticks are yours
+                      alone.
+                    </span>
+                  </div>
                 )}
 
                 {counter.map((group, index) => (
@@ -538,7 +581,7 @@ export default async function BatchPage({
                         the end of the day is one line rather than a scroll
                         back through every item. */}
                     {summary.reconciled.lines > 0 && (
-                      <div className="rounded-xl border-[1.5px] border-line bg-shell p-3">
+                      <div className="soft bg-shell p-3">
                         <p className="text-sm">
                           <span className="font-bold">
                             {summary.reconciled.lines} of {summary.reconciled.of}
@@ -592,7 +635,7 @@ export default async function BatchPage({
                           <form
                             key={`fixed-${line.key}`}
                             action={setCounterSpend}
-                            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border-[1.5px] border-line px-3 py-2"
+                            className="soft flex flex-wrap items-center justify-between gap-2 px-3 py-2"
                           >
                             <input type="hidden" name="batch_id" value={batch.id} />
                             <input type="hidden" name="line_key" value={line.key} />
@@ -647,7 +690,9 @@ export default async function BatchPage({
                                   )}
                                 </span>
                               )}
-                              <SaveButton>Save</SaveButton>
+                              <SaveButton look="btn-admin btn-admin-sm">
+                                Save
+                              </SaveButton>
                             </span>
                           </form>
                         ))
@@ -674,7 +719,7 @@ export default async function BatchPage({
                             <form
                               key={`raise-${line.key}`}
                               action={raiseMenuPrice}
-                              className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-brand-tint px-3 py-2"
+                              className="soft flex flex-wrap items-center justify-between gap-2 border-volt-line bg-brand-tint px-3 py-2"
                             >
                               <input type="hidden" name="item_id" value={line.itemId} />
                               <input type="hidden" name="by" value={upBy} />
@@ -687,7 +732,9 @@ export default async function BatchPage({
                                 . Put the menu up to{" "}
                                 {naira(line.menuPrice + upBy)}?
                               </span>
-                              <SaveButton>Put it up</SaveButton>
+                              <SaveButton look="btn-admin btn-admin-sm">
+                                Put it up
+                              </SaveButton>
                             </form>
                           );
                         })
@@ -741,7 +788,7 @@ export default async function BatchPage({
                         />
                         <input type="hidden" name="recovered" value="" />
                       </div>
-                      <SaveButton>Add</SaveButton>
+                      <SaveButton look="btn-admin btn-admin-sm">Add</SaveButton>
                     </form>
                     )}
 
@@ -775,7 +822,7 @@ export default async function BatchPage({
                           ))}
                         </select>
                       </div>
-                      <SaveButton>Move it</SaveButton>
+                      <SaveButton look="btn-admin btn-admin-sm">Move it</SaveButton>
                     </form>
                     {windows.length === 0 && (
                       <p className="text-sm text-muted">
@@ -800,7 +847,7 @@ export default async function BatchPage({
                   className="space-y-2"
                 >
                   {handout.length > 0 && finished && (
-                    <p className="rounded-xl border-[1.5px] border-mint/40 bg-mint/10 px-4 py-3 text-[14px] font-semibold text-mint">
+                    <p className="soft border-mint bg-mint-tint px-4 py-3 text-[14px] font-semibold text-mint">
                       Every bag on this run is marked delivered.
                     </p>
                   )}
@@ -813,7 +860,7 @@ export default async function BatchPage({
                       />
                       <input type="hidden" name="delivered" value="true" />
                       <ConfirmButton
-                        className="px-4 py-2 text-sm"
+                        tone="admin"
                         confirm={`Yes, all ${handout.length} handed over`}
                       >
                         Mark every bag delivered
@@ -871,7 +918,7 @@ export default async function BatchPage({
                 ) : (
                   <ul className="space-y-3">
                     {unpaid.map((order) => (
-                      <li key={order.id} className="rounded-xl border-[1.5px] border-line p-3">
+                      <li key={order.id} className="soft p-3">
                         <p className="font-semibold">
                           <Link
                             href={`/admin/orders/${order.id}`}
@@ -880,10 +927,13 @@ export default async function BatchPage({
                             {refFor(order)}
                           </Link>{" "}
                           {order.for_name ?? order.customer_name} · {naira(order.total)}
+                          {/* A label saying what this order is, so it is the
+                              tinted tag the board draws rather than a filled
+                              pill that reads as something to press. */}
                           <span
-                            className={`ml-2 rounded-full px-2 py-0.5 text-xs font-bold ${
+                            className={`tag ml-2 ${
                               order.payment_method === "card"
-                                ? "bg-brand text-white"
+                                ? "bg-brand-wash text-brand-dark"
                                 : "bg-wash text-ink"
                             }`}
                           >
@@ -907,15 +957,15 @@ export default async function BatchPage({
                         <div className="mt-2 flex flex-wrap gap-2">
                           <Link
                             href={`/admin/orders/${order.id}`}
-                            className="chip bg-paper"
+                            className="btn-admin btn-admin-sm"
                           >
-                            View order
+                            View order →
                           </Link>
                           <a
                             href={messageFor(order)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="chip bg-paper"
+                            className="btn-admin btn-admin-sm"
                           >
                             Send payment details on WhatsApp
                           </a>
@@ -928,7 +978,8 @@ export default async function BatchPage({
                             className="field py-1.5 text-sm"
                           />
                           <ConfirmButton
-                            className="shrink-0 px-3 py-1.5 text-sm"
+                            tone="admin"
+                            className="shrink-0"
                             confirm={`Yes, ${naira(order.total)} received`}
                           >
                             Mark paid
@@ -1035,7 +1086,7 @@ export default async function BatchPage({
                   {batch.food_spend > 0 && summary.reconciled.lines === 0 && (
                     <form
                       action={setRunCosts}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border-[1.5px] border-line bg-shell px-3 py-2"
+                      className="soft flex flex-wrap items-center justify-between gap-2 bg-shell px-3 py-2"
                     >
                       <input type="hidden" name="batch_id" value={batch.id} />
                       <input type="hidden" name="fuel_cost" value={batch.fuel_cost || ""} />
@@ -1054,8 +1105,7 @@ export default async function BatchPage({
                         {" "}for the whole shop.
                       </span>
                       <ConfirmButton
-                        tone="bare"
-                        className="chip bg-paper text-brand"
+                        tone="bad"
                         confirm="Yes, back to menu prices"
                       >
                         Clear it
@@ -1127,7 +1177,7 @@ export default async function BatchPage({
                         className="field"
                       />
                     </div>
-                    <SaveButton>Save costs</SaveButton>
+                    <SaveButton look="btn-admin btn-admin-sm">Save costs</SaveButton>
                   </form>
                 </Panel>
 
@@ -1176,11 +1226,9 @@ export default async function BatchPage({
                         <input type="hidden" name="batch_id" value={batch.id} />
                         <input type="hidden" name="stage" value={stage} />
                         <ActionButton
-                          className={
-                            batch.stage === stage
-                              ? "btn-primary px-3 py-2 text-sm"
-                              : "btn-quiet px-3 py-2 text-sm"
-                          }
+                          className={`btn-admin btn-admin-sm ${
+                            batch.stage === stage ? "bg-ink text-shell" : ""
+                          }`}
                           done="Set ✓"
                         >
                           {STAGE_ACTION[stage]}
@@ -1205,7 +1253,7 @@ export default async function BatchPage({
                     </div>
 
                     {areas.length > 0 && (
-                      <div className="space-y-2 rounded-xl border-[1.5px] border-line bg-shell p-3">
+                      <div className="soft space-y-2 bg-shell p-3">
                         <input type="hidden" name="areas_set" value="1" />
                         <p className="label mb-0">
                           Where this {batch.kind === "skincare" ? "drop" : "car"} goes
@@ -1235,7 +1283,7 @@ export default async function BatchPage({
                         person, wherever they asked, and the skincare drop is
                         its own shop. */}
                     {batch.kind === "run" && counters.length > 0 && (
-                      <div className="space-y-2 rounded-xl border-[1.5px] border-line bg-shell p-3">
+                      <div className="soft space-y-2 bg-shell p-3">
                         <input type="hidden" name="places_set" value="1" />
                         <p className="label mb-0">Which counters it stops at</p>
                         <p className="text-xs text-muted">
@@ -1329,7 +1377,9 @@ export default async function BatchPage({
                           className="field"
                         />
                       </div>
-                      <SaveButton className="shrink-0">Save</SaveButton>
+                      <SaveButton look="btn-admin btn-admin-sm" className="shrink-0">
+                        Save
+                      </SaveButton>
                     </div>
                   </form>
                 </section>
@@ -1369,9 +1419,11 @@ export default async function BatchPage({
                           className="field"
                         />
                       </div>
-                      <SaveButton className="shrink-0">Save</SaveButton>
+                      <SaveButton look="btn-admin btn-admin-sm" className="shrink-0">
+                        Save
+                      </SaveButton>
                     </div>
-                    <p className="text-xs text-muted">
+                    <p className="hint">
                       {batch.flash_fee === null
                         ? `Normal bands: ${bandTable(null, bands).map((b) => `${b.label} ${naira(b.fee)}`).join(", ")}`
                         : `Tonight: ${bandTable(batch.flash_fee, bands).map((b) => `${b.label} ${naira(b.fee)}`).join(", ")}`}
@@ -1393,7 +1445,9 @@ export default async function BatchPage({
                         className="field"
                       />
                     </div>
-                    <SaveButton className="shrink-0">Save</SaveButton>
+                    <SaveButton look="btn-admin btn-admin-sm" className="shrink-0">
+                      Save
+                    </SaveButton>
                   </form>
 
                   <div className="border-t-[1.5px] border-rule pt-3">
@@ -1409,7 +1463,7 @@ export default async function BatchPage({
                         <input type="hidden" name="batch_id" value={batch.id} />
                         <input type="hidden" name="status" value="open" />
                         <ActionButton
-                          className="btn-quiet px-3 py-2 text-sm"
+                          className="btn-admin btn-admin-sm disabled:opacity-40"
                           disabled={batch.status === "open"}
                           done="Open ✓"
                         >
@@ -1420,7 +1474,7 @@ export default async function BatchPage({
                         <input type="hidden" name="batch_id" value={batch.id} />
                         <input type="hidden" name="status" value="closed" />
                         <ActionButton
-                          className="btn-quiet px-3 py-2 text-sm"
+                          className="btn-admin btn-admin-sm disabled:opacity-40"
                           disabled={batch.status === "closed"}
                           done="Closed ✓"
                         >
@@ -1430,11 +1484,7 @@ export default async function BatchPage({
                       <form action={setBatchStatus}>
                         <input type="hidden" name="batch_id" value={batch.id} />
                         <input type="hidden" name="status" value="cancelled" />
-                        <ConfirmButton
-                          tone="brand"
-                          className="px-3 py-2 text-sm"
-                          confirm="Yes, cancel the run"
-                        >
+                        <ConfirmButton tone="bad" confirm="Yes, cancel the run">
                           Cancel this run
                         </ConfirmButton>
                       </form>
@@ -1469,11 +1519,7 @@ export default async function BatchPage({
                           )}
                         </p>
                         <span className="mt-2 block">
-                          <ConfirmButton
-                            tone="brand"
-                            className="px-4 py-2 text-sm"
-                            confirm="Yes, delete it"
-                          >
+                          <ConfirmButton tone="bad" confirm="Yes, delete it">
                             Delete this run
                           </ConfirmButton>
                         </span>

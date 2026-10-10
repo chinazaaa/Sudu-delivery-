@@ -40,7 +40,7 @@ export default function StagePicker({
 
   return (
     <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-      <span className="rounded-full bg-black/5 px-3 py-1.5 text-sm font-bold">
+      <span className="tag bg-wash py-1.5 text-[13px]">
         {/* Where it is, spelled out. A pip nobody can name is a pip nobody
             trusts at nine at night. */}
         Now: {said[stage]}
@@ -50,7 +50,9 @@ export default function StagePicker({
         <form action={action}>
           <input type="hidden" name="batch_id" value={batchId} />
           <input type="hidden" name="stage" value={next} />
-          <button className="btn-primary px-4 py-2 text-sm">
+          {/* The single Tomato button on the page: the one thing to do
+               next. Everything else here is an outline. */}
+          <button className="btn-admin btn-admin-go">
             Move to {said[next].toLowerCase()} →
           </button>
         </form>
@@ -71,7 +73,7 @@ export default function StagePicker({
           key={stage}
           defaultValue={stage}
           onChange={() => form.current?.requestSubmit()}
-          className="field w-auto py-2 text-sm font-semibold"
+          className="field h-[44px] w-auto py-0 text-sm font-semibold"
         >
           {STAGES.map((step) => (
             <option key={step} value={step}>

@@ -175,6 +175,25 @@ export default async function RunsPage({
   const paid = live.reduce((total, batch) => total + batch.paidCount, 0);
   const profit = live.reduce((total, batch) => total + batch.profit, 0);
 
+  /*
+   * One Tomato button per screen, on whatever is actually the thing to do
+   * next.
+   *
+   * Four of them were orange at once: open a month, widen the horizon, make
+   * a one-off run and create it. Two red buttons and neither reads as the
+   * answer, so the colour goes to the most urgent one that is on the page
+   * and everything else is an outline.
+   */
+  const needsMonth = !until || coverDays(until) < 14;
+  const doNext = needsMonth
+    ? "month"
+    : hidden
+      ? "horizon"
+      : showForm
+        ? "create"
+        : "new";
+  const go = (which: string) => (doNext === which ? "btn-admin-go" : "");
+
   return (
     <div>
       <PageHeader
@@ -186,12 +205,12 @@ export default async function RunsPage({
         }
         actions={
           <>
-            <Link href="/admin/schedule" className="btn-quiet px-4 py-2.5 text-sm">
+            <Link href="/admin/schedule" className="btn-admin">
               Schedule
             </Link>
             <Link
               href={showForm ? "/admin/runs" : "/admin/runs?new=1"}
-              className="btn-primary px-4 py-2.5 text-sm"
+              className={`btn-admin ${go("new")}`}
             >
               {showForm ? "Close" : "One-off run"}
             </Link>
@@ -216,7 +235,7 @@ export default async function RunsPage({
                       late for. It used to read "X to Y", which looks like one
                       long delivery window rather than two separate cars. */}
                   <span className="font-bold">{trip.label}</span>
-                  <span className="block text-xs text-muted">
+                  <span className="hint block">
                     {trip.times.length > 1 &&
                       `${trip.times.length} cars · `}
                     {trip.orders} {trip.orders === 1 ? "order" : "orders"} ·{" "}
@@ -231,9 +250,9 @@ export default async function RunsPage({
                   </span>
                   <Link
                     href={`/admin/trip/${encodeURIComponent(trip.at)}`}
-                    className="text-sm font-bold text-brand"
+                    className="btn-admin btn-admin-sm"
                   >
-                    Open the trip
+                    Open the trip →
                   </Link>
                 </span>
               </li>
@@ -248,13 +267,13 @@ export default async function RunsPage({
       <div className="mb-3 flex flex-wrap gap-2">
         <Link
           href="/admin/runs"
-          className={`chip px-3.5 ${window === "recent" ? "chip-on" : "bg-paper"}`}
+          className={`pill-admin ${window === "recent" ? "pill-admin-on" : ""}`}
         >
           This week
         </Link>
         <Link
           href="/admin/runs?show=all"
-          className={`chip px-3.5 ${window === "all" ? "chip-on" : "bg-paper"}`}
+          className={`pill-admin ${window === "all" ? "pill-admin-on" : ""}`}
         >
           Every run so far
         </Link>
@@ -264,7 +283,7 @@ export default async function RunsPage({
           to order into. */}
       <div
         className={`card mb-4 ${
-          coverDays(until) < 14 ? "border-volt-line bg-brand-tint" : ""
+          needsMonth ? "border-volt-line bg-brand-tint" : ""
         }`}
       >
         <h2 className="font-display text-[22px] font-black uppercase leading-none">
@@ -272,15 +291,15 @@ export default async function RunsPage({
             ? `Ordering is open through ${runDateLabel(until)}`
             : "No runs are open"}
         </h2>
-        <p className="mt-1.5 text-[13.5px] text-ink/75">
+        <p className="hint mt-1.5">
           {!until
             ? "Nobody can order anything until a month is opened."
             : coverDays(until) < 14
               ? `That is ${coverDays(until)} day${coverDays(until) === 1 ? "" : "s"} away. Open the next month before it runs out.`
               : `Customers see the runs closing in the next ${horizon} days; the rest are yours to plan.`}
         </p>
-        {(!until || coverDays(until) < 14) && (
-          <Link href="/admin/schedule" className="btn-primary mt-3 px-4 py-2.5 text-sm">
+        {needsMonth && (
+          <Link href="/admin/schedule" className={`btn-admin mt-3 ${go("month")}`}>
             Open a month
           </Link>
         )}
@@ -295,7 +314,7 @@ export default async function RunsPage({
           <h2 className="font-display text-[22px] font-black uppercase leading-none">
             Nobody can order onto a run right now
           </h2>
-          <p className="mt-1.5 text-[13.5px] text-ink/75">
+          <p className="hint mt-1.5">
             The next run is {runDateLabel(soonestRun!)}, {daysAway} days away,
             and customers only see runs closing in the next {horizon}. Until
             that number is at least {daysAway}, the checkout offers a car of
@@ -303,7 +322,7 @@ export default async function RunsPage({
           </p>
           <Link
             href="/admin/settings"
-            className="btn-primary mt-3 px-4 py-2.5 text-sm"
+            className={`btn-admin mt-3 ${go("horizon")}`}
           >
             Change how far ahead people can order
           </Link>
@@ -375,10 +394,10 @@ export default async function RunsPage({
                 className="field"
               />
             </div>
-            <ActionButton className="btn-primary" done="Run created ✓">
+            <ActionButton className={`btn-admin ${go("create")}`} done="Run created ✓">
               Create run
             </ActionButton>
-            <p className="text-xs text-muted">
+            <p className="hint">
               Times are Lagos time. A day holds one afternoon run and one night
               run. Leave the wording blank to use the default from Settings.
             </p>
@@ -441,7 +460,7 @@ export default async function RunsPage({
                           ? batch.delivery_window_text || "Parcel"
                           : `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`}
                   </p>
-                  <p className="text-[12.5px] text-muted">
+                  <p className="hint">
                     {batch.kind === "same_day"
                       ? `One car, asked for on ${runDateLabel(batch.run_date)}`
                       : batch.kind === "parcel"
@@ -452,22 +471,18 @@ export default async function RunsPage({
                   </p>
                   <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     {batch.status === "cancelled" && (
-                      <span className="rounded-full bg-wash px-2.5 py-1 text-xs font-semibold">
-                        Not running
-                      </span>
+                      <span className="tag bg-wash text-ink">Not running</span>
                     )}
                     {batch.kind === "same_day" && (
-                      <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-semibold text-brand-dark">
-                        Same day
-                      </span>
+                      <span className="tag bg-brand-tint text-brand-dark">Same day</span>
                     )}
                     {batch.kind === "skincare" && (
-                      <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-semibold text-brand-dark">
+                      <span className="tag bg-brand-tint text-brand-dark">
                         Skincare, not food
                       </span>
                     )}
                     {batch.kind === "parcel" && (
-                      <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-semibold text-brand-dark">
+                      <span className="tag bg-brand-tint text-brand-dark">
                         {batch.deliver_at ? "Parcel" : "Parcel · day not agreed"}
                       </span>
                     )}
@@ -475,7 +490,7 @@ export default async function RunsPage({
                         the list: it is the thing that explains why an order
                         could not go on it. */}
                     {batch.kind === "run" && placesOfRun(batch.only_places ?? "").length > 0 && (
-                      <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-semibold text-brand-dark">
+                      <span className="tag bg-brand-tint text-brand-dark">
                         {placesOfRun(batch.only_places ?? "")
                           .map((id) => counterNames.get(id) ?? "one counter")
                           .join(", ")}{" "}
@@ -483,8 +498,8 @@ export default async function RunsPage({
                       </span>
                     )}
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        open ? "bg-[#dff0e6] text-mint" : "bg-wash text-ink"
+                      className={`tag ${
+                        open ? "bg-mint-tint text-mint" : "bg-wash text-ink"
                       }`}
                     >
                       {batch.status}
@@ -500,13 +515,13 @@ export default async function RunsPage({
                   >
                     {batch.paidCount}
                   </p>
-                  <p className="mt-1 text-[12.5px] text-muted">
+                  <p className="hint mt-1">
                     {batch.orderCount} ordered
                     {batch.orderCount > batch.paidCount &&
                       ` · ${batch.orderCount - batch.paidCount} unpaid`}
                   </p>
                   {batch.orderCount === 0 && (
-                    <p className="mt-1 text-[12.5px] text-muted">Nothing ordered yet</p>
+                    <p className="hint mt-1">Nothing ordered yet</p>
                   )}
                   {batch.paidCount > 0 && (
                     <p

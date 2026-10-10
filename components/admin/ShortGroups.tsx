@@ -18,8 +18,10 @@ export default function ShortGroups({ groups }: { groups: GroupShortfall[] }) {
   return (
     <section className="card space-y-3">
       <div>
-        <h2 className="font-bold">Groups you are covering</h2>
-        <p className="text-sm text-muted">
+        <h2 className="font-display text-[26px] font-black uppercase leading-none">
+          Groups you are covering
+        </h2>
+        <p className="hint mt-1">
           Somebody in these has not paid yet, so their food is not travelling and
           the car is smaller. The fee for what is actually going costs more than
           the people who did pay were charged between them, and the difference is
@@ -31,15 +33,15 @@ export default function ShortGroups({ groups }: { groups: GroupShortfall[] }) {
       {groups.map((one) => (
         <div
           key={one.groupId}
-          className="space-y-2 rounded-2xl border border-black/10 bg-paper p-3"
+          className="soft space-y-2 p-3"
         >
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="font-bold">{one.leaderName}&apos;s group</h3>
-            <span className="font-extrabold text-brand-dark">
+            <span className="font-mono font-bold text-brand-dark">
               {naira(one.short)} short
             </span>
           </div>
-          <p className="text-xs text-muted">
+          <p className="hint">
             The trip costs {naira(one.owed)} for what is going. {one.paid.length}{" "}
             {one.paid.length === 1 ? "person has" : "people have"} paid{" "}
             {naira(one.collected)} between them.
@@ -57,8 +59,8 @@ export default function ShortGroups({ groups }: { groups: GroupShortfall[] }) {
               .join(", ")}
           </p>
 
-          <div className="space-y-1 border-t border-black/10 pt-2">
-            <p className="text-xs text-muted">
+          <div className="space-y-1 border-t-[1.5px] border-rule pt-2">
+            <p className="hint">
               {naira(one.eachToCover)} each from the {one.paid.length} who paid
               would cover it. Ask them, or chase the ones above, or let it go.
             </p>
@@ -75,12 +77,12 @@ export default function ShortGroups({ groups }: { groups: GroupShortfall[] }) {
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between gap-2 rounded-xl bg-black/[0.04] px-3 py-1.5 text-sm"
+                className="flex items-center justify-between gap-2 rounded-xl bg-wash px-3 py-2 text-sm"
               >
                 <span>
                   {person.name} · {formatPhone(person.phone)}
                 </span>
-                <span className="font-semibold text-brand">Message</span>
+                <span className="font-semibold text-brand-dark">Message</span>
               </a>
             ))}
           </div>

@@ -42,7 +42,7 @@ export default function HandoutList({
 
   return (
     <div className="space-y-2">
-      <p className="text-sm text-muted">
+      <p className="hint">
         {done}/{entries.length} handed over
       </p>
       <ul className="space-y-2">
@@ -56,25 +56,33 @@ export default function HandoutList({
           return (
             <li
               key={entry.id}
-              className={`rounded-xl border ${
-                handedOut
-                  ? "border-mint/30 bg-mint/5"
-                  : "border-black/15 bg-white"
-              }`}
+              className={`soft ${handedOut ? "border-mint bg-mint-tint" : ""}`}
             >
               <div>
                 <div
-                  className={`px-3 py-2 ${handedOut ? "text-muted line-through" : ""}`}
+                  className={`flex gap-3 px-3 py-2.5 ${
+                    handedOut ? "text-muted line-through" : ""
+                  }`}
                 >
+                  {/* The board puts a tick box at the head of every handout
+                      row. It is a picture of where this bag has got to and
+                      not a second control: the one gesture is the button
+                      below, so a tick on top of it would be the same list
+                      kept twice. */}
+                  <span
+                    aria-hidden="true"
+                    className={`tick font-black no-underline ${handedOut ? "tick-done" : ""}`}
+                  >
+                    {handedOut ? "✓" : ""}
+                  </span>
+                  <span className="min-w-0 flex-1">
                   {/* Read at a gate, one-handed, in the dark. The block is
                       where you are standing and the name is who you are
                       looking for, so those two are the big type and
                       everything else gets out of their way. */}
                   <span className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="text-base font-extrabold">{entry.name}</span>
-                    <span className="chip border-transparent bg-black/5 text-xs font-bold text-ink">
-                      {entry.hostel}
-                    </span>
+                    <span className="text-[17px] font-extrabold">{entry.name}</span>
+                    <span className="tag bg-wash text-ink">{entry.hostel}</span>
                   </span>
                   <span className="mt-1.5 block space-y-1 text-sm">
                     {entry.items.map((item) => (
@@ -83,9 +91,10 @@ export default function HandoutList({
                       </span>
                     ))}
                   </span>
-                  <span className="mt-1.5 block text-xs text-muted">
+                  <span className="hint mt-1.5 block">
                     {entry.orders.map((order) => order.ref).join(" ")} ·{" "}
                     {entry.phone}
+                  </span>
                   </span>
                 </div>
               </div>
@@ -93,10 +102,10 @@ export default function HandoutList({
               {/* Everything this bag needs, on this bag. With twenty bags,
                   scrolling to a second list to message one of them is not a
                   thing anybody does at a gate in the dark. */}
-              <div className="space-y-2 border-t border-black/5 px-3 py-2">
+              <div className="space-y-2 border-t-[1.5px] border-rule px-3 py-2.5">
                 <a
                   href={`tel:${entry.phone.replace(/\s/g, "")}`}
-                  className="chip border-black/10 bg-white py-1.5 text-xs"
+                  className="btn-admin btn-admin-sm"
                 >
                   Call {entry.name}
                 </a>
@@ -107,7 +116,7 @@ export default function HandoutList({
                   <input type="hidden" name="order_ids" value={ids} />
                   <input type="hidden" name="delivered" value={String(!handedOut)} />
                   <ConfirmButton
-                    className="py-1.5 text-xs"
+                    tone="admin"
                     confirm={
                       handedOut
                         ? `Yes, undo ${refs}`
@@ -126,7 +135,7 @@ export default function HandoutList({
                   <div key={order.id} className="flex flex-wrap items-center gap-2">
                     <Link
                       href={`/admin/orders/${order.id}`}
-                      className="chip border-black/10 bg-white py-1.5 text-xs"
+                      className="btn-admin btn-admin-sm"
                     >
                       View {order.ref}
                       <span className="text-muted">
@@ -137,7 +146,7 @@ export default function HandoutList({
                       href={order.message}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="chip border-black/10 bg-white py-1.5 text-xs"
+                      className="btn-admin btn-admin-sm"
                     >
                       Confirm on WhatsApp
                     </a>
@@ -146,7 +155,7 @@ export default function HandoutList({
                         <input type="hidden" name="order_ids" value={order.id} />
                         <input type="hidden" name="delivered" value="true" />
                         <ConfirmButton
-                          className="py-1.5 text-xs"
+                          tone="admin"
                           confirm={`Yes, ${order.ref} only`}
                         >
                           Deliver {order.ref} only
@@ -156,8 +165,7 @@ export default function HandoutList({
                     <form action={refund}>
                       <input type="hidden" name="order_id" value={order.id} />
                       <ConfirmButton
-                        tone="brand"
-                        className="py-1.5 text-xs"
+                        tone="bad"
                         confirm={`Yes, refund ${order.ref}`}
                       >
                         Refund
