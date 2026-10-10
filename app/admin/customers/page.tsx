@@ -16,7 +16,7 @@ import {
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import SaveButton from "@/components/SaveButton";
-import { addCustomer } from "../actions";
+import { addCustomer, markManyReviewed } from "../actions";
 import { Bar, Composer, Picking, Room, Tick, TickAll } from "@/components/admin/CustomerBulk";
 /* The cuts and the address of the message screen come from the plain module,
    not from the composer. The composer is a client component, and a server
@@ -387,6 +387,7 @@ export default async function CustomersPage({
           view={view}
           by={by}
           q={query.q ?? ""}
+          markReviewed={markManyReviewed}
         />
 
         {/* The one thing a cut of the book is for, said as a sentence with

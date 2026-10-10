@@ -1743,6 +1743,11 @@ export async function deleteCustomer(form: FormData): Promise<void> {
   if (error) throw new Error(`Could not delete that customer: ${error.message}`);
 
   revalidatePath("/admin", "layout");
+  // Back to the book, because the page this was pressed on was very likely
+  // theirs and that page no longer has anybody on it. Staying put left the
+  // shop's own 404 sitting inside admin, offering to take somebody back to
+  // the menu.
+  redirect("/admin/customers");
 }
 
 export async function saveCustomerNote(form: FormData): Promise<void> {
@@ -1774,6 +1779,35 @@ export async function setCustomerReviewed(form: FormData): Promise<void> {
   // The whole of admin, because the tick is on the order card now as well
   // as in the book: ticking it there and finding the order still offering
   // to ask would be the page disagreeing with itself.
+  revalidatePath("/admin", "layout");
+}
+
+/**
+ * Several people ticked off as having left a review at once.
+ *
+ * The same thing the single tick does, for the moment somebody sits down
+ * with the reviews that came in this week and works down the list. Doing
+ * that one person at a time is the page reloading nine times.
+ *
+ * Only ever on, never off. Taking a tick back is a correction and
+ * corrections are made one at a time, where you can see who you are
+ * correcting: a bulk untick is nine mistakes made at once and no way to
+ * know which nine.
+ */
+export async function markManyReviewed(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const phones = form.getAll("phone").map(String).filter(Boolean);
+  if (phones.length === 0) return;
+
+  await db()
+    .from("customers")
+    .update({ reviewed_at: new Date().toISOString() })
+    .in("phone", phones)
+    // Whoever was already ticked keeps the day they were ticked on, which is
+    // the day they actually left it rather than the day somebody tidied up.
+    .is("reviewed_at", null);
+
   revalidatePath("/admin", "layout");
 }
 

@@ -171,9 +171,14 @@ export function Bar({
   view = "",
   by = "",
   q = "",
+  markReviewed,
 }: {
   viewLabel: string;
   codeHref: string;
+  /** Ticking everybody picked off as having left a review. The other half
+   *  of asking: the reviews come in over a week and are read in one go, and
+   *  doing that one at a time is the page reloading nine times. */
+  markReviewed?: (form: FormData) => Promise<void>;
   /** The cut the list is on, so the way back out of the message screen is
    *  this list rather than everybody. */
   view?: string;
@@ -226,8 +231,27 @@ export function Bar({
             href={broadcastHref({ phones, view, by, q, start: asking })}
             className="btn-admin btn-admin-sm"
           >
-            Ask for a review
+            Ask
           </a>
+        )}
+        {/* The answer to the ask beside it, as a tick rather than a third
+            button: three buttons and a count do not fit a phone bar, and
+            this is a thing you note rather than a thing you do. The same
+            shape as the tick on a delivered order, so the two read as the
+            same gesture. */}
+        {markReviewed && (
+          <form action={markReviewed}>
+            {phones.map((phone) => (
+              <input key={phone} type="hidden" name="phone" value={phone} />
+            ))}
+            <button
+              type="submit"
+              className="flex min-h-[42px] items-center gap-1.5 px-1 text-[13px] font-bold"
+            >
+              <span aria-hidden className="tick size-6 text-[13px]" />
+              Reviewed
+            </button>
+          </form>
         )}
         <a
           href={broadcastHref({ phones, view, by, q })}
@@ -260,6 +284,19 @@ export function Bar({
             >
               Ask for a review
             </a>
+          )}
+          {markReviewed && (
+            <form action={markReviewed}>
+              {phones.map((phone) => (
+                <input key={phone} type="hidden" name="phone" value={phone} />
+              ))}
+              <button
+                type="submit"
+                className="btn-admin btn-admin-sm btn-admin-dark font-bold"
+              >
+                Mark reviewed
+              </button>
+            </form>
           )}
           <a
             href="#send-a-message"
