@@ -62,8 +62,25 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
-        /** Condensed, loud, all caps: headlines, prices, numbers. */
-        display: ["var(--font-display)", "Arial Narrow", "Impact", "sans-serif"],
+        /*
+         * Condensed, loud, all caps: headlines, prices, numbers.
+         *
+         * The mono face sits second on purpose. Big Shoulders has no naira
+         * sign, and a browser falls through the stack one glyph at a time,
+         * so every price on the site was drawing its ₦ in whatever the
+         * system happened to offer: on a phone it came out as overlapping
+         * strokes that read as "NO" in front of the number. IBM Plex Mono
+         * has the glyph, is already loaded, and is the face the design
+         * system puts money in anyway, so the symbol lands somewhere
+         * deliberate instead of somewhere accidental.
+         */
+        display: [
+          "var(--font-display)",
+          "var(--font-mono)",
+          "Arial Narrow",
+          "Impact",
+          "sans-serif",
+        ],
         /** Ticket labels, run times, counters. Uppercase and tracked. */
         mono: ["var(--font-mono)", "ui-monospace", "Menlo", "monospace"],
       },

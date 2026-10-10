@@ -186,6 +186,14 @@ export default async function AdminHome() {
     .slice(-5);
   const best = Math.max(1, ...ran.map((batch) => batch.profit));
   const topped = Math.max(1, ...(stats?.topItems ?? []).map((one) => one.qty));
+  /*
+   * A panel as the mobile board draws it: a twenty-one pixel heading in a
+   * fourteen pixel card, back to the desk's twenty-six and twenty from sm.
+   *
+   * An override rather than a prop because Panel is shared with every other
+   * admin page and takes a single size for both widths; the change worth
+   * making there is a responsive heading inside the component itself.
+   */
   const dot = {
     red: "bg-brand-dark",
     amber: "bg-amber",
@@ -209,11 +217,18 @@ export default async function AdminHome() {
             {/* The board's two sizes: an outline button for the second thing,
                 and the one tomato button on the screen for the run being
                 driven. */}
-            <Link href="/admin/runs?new=1" className="btn-admin">
+            <Link href="/admin/runs?new=1" className="btn-admin flex-1 sm:flex-none">
               New run
             </Link>
             {working && (
-              <Link href={`/admin/batch/${working.id}`} className="btn-admin-go">
+              /* The board gives the phone one full width tomato button at
+                 fifty-four pixels, above everything else on the screen,
+                 because it is the thumb's first stop in the morning. On a
+                 desk it goes back to sitting beside New run. */
+              <Link
+                href={`/admin/batch/${working.id}`}
+                className="btn-admin-go order-first min-h-[54px] w-full text-base sm:order-none sm:min-h-[44px] sm:w-auto sm:text-[15px]"
+              >
                 Open {workingLabel.toLowerCase()} →
               </Link>
             )}
@@ -226,7 +241,12 @@ export default async function AdminHome() {
       )}
 
       {stats && (
-        <div className="mb-[18px] grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+        /* The board sets a phone's figure at twenty-five pixels in a two up
+           grid, not forty in a column: four tiles are then one glance
+           rather than most of the screen. Written as a descendant override
+           because Figure carries one size for both widths, and giving it a
+           responsive size is the change to make there. */
+        <div className="mb-3 grid grid-cols-2 gap-[9px] [&_.card]:px-[13px] [&_.card]:py-[11px] sm:mb-[18px] sm:gap-3.5 xl:grid-cols-4">
           <Figure
             label="Paid orders"
             value={String(stats.paidOrders)}
@@ -251,8 +271,9 @@ export default async function AdminHome() {
         </div>
       )}
 
-      <div className="grid items-start gap-[18px] xl:grid-cols-[1.35fr_1fr]">
+      <div className="grid items-start gap-3 sm:gap-[18px] xl:grid-cols-[1.35fr_1fr]">
         <Panel
+         
           title="Needs doing today"
           detail="Everything here costs you money if it is left. Clearing the list is the whole job."
           aside={
@@ -290,6 +311,7 @@ export default async function AdminHome() {
         </Panel>
 
         <Panel
+         
           title="Runs"
           aside={
             <Link href="/admin/runs" className="text-[13.5px] font-semibold text-brand-dark">
@@ -325,6 +347,7 @@ export default async function AdminHome() {
         </Panel>
 
         <Panel
+         
           title="What sells"
           detail="Last 28 days. Use it to decide which kitchens go on a run."
         >
@@ -351,6 +374,7 @@ export default async function AdminHome() {
         </Panel>
 
         <Panel
+         
           title="By day of the week"
           detail="Last 28 days, busiest first. A day near the bottom is a car that went out half full."
         >
@@ -392,7 +416,7 @@ export default async function AdminHome() {
           )}
         </Panel>
 
-        <div className="flex flex-col gap-[18px]">
+        <div className="flex flex-col gap-3 sm:gap-[18px]">
           <Panel title="Profit per run">
             {ran.length === 0 ? (
               <p className="pt-2 text-[14.5px] text-muted">

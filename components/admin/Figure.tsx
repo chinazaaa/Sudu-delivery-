@@ -27,10 +27,10 @@ export default function Figure({
   tone?: "ink" | "mint" | "brand";
 }) {
   return (
-    <div className="card p-4">
+    <div className="card px-3.5 py-3 sm:p-4">
       <p className="ticket text-muted">{label}</p>
       <p
-        className={`mt-0.5 font-display text-[40px] font-black leading-[1.05] ${
+        className={`mt-0.5 font-display text-[26px] font-black leading-[1.05] sm:text-[40px] ${
           tone === "mint" ? "text-mint" : tone === "brand" ? "text-brand-dark" : "text-ink"
         }`}
       >

@@ -27,11 +27,11 @@ export default function Panel({
   className?: string;
 }) {
   return (
-    <section className={`card p-5 ${className}`}>
+    <section className={`card p-3.5 sm:p-5 ${className}`}>
       <div className="flex items-center justify-between gap-2.5">
         <h2
           className={`font-display font-black uppercase leading-none ${
-            size === "sm" ? "text-[24px]" : "text-[26px]"
+            size === "sm" ? "text-[19px] sm:text-[24px]" : "text-[21px] sm:text-[26px]"
           }`}
         >
           {title}

@@ -15,8 +15,14 @@ import { GROUPS } from "@/lib/admin-nav";
  */
 export default function MoreList({
   waiting = {},
+  notice,
 }: {
   waiting?: Record<string, number>;
+  /** Anything that belongs between the jump box and the first heading. The
+   *  board puts the home screen note there, where it is read once on the
+   *  way past, rather than under twenty-eight links where nobody scrolls
+   *  to find it. */
+  notice?: React.ReactNode;
 }) {
   const [typed, setTyped] = useState("");
   const term = typed.trim().toLowerCase();
@@ -33,11 +39,13 @@ export default function MoreList({
         onChange={(event) => setTyped(event.target.value)}
         placeholder="Jump to a page"
         aria-label="Jump to a page"
-        className="field border-[1.5px] border-line bg-paper"
+        className="field field-admin border-[1.5px] border-line bg-paper"
       />
 
+      {notice}
+
       {shown.length === 0 && (
-        <p className="card text-sm text-muted">No page here is called that.</p>
+        <p className="card !p-3.5 text-sm text-muted">No page here is called that.</p>
       )}
 
       {shown.map((group) => (
