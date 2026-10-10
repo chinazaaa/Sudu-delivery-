@@ -10,7 +10,7 @@ import { Bar, Picking, Tick } from "@/components/admin/BulkOrders";
 import { orderFeed, statusCounts } from "@/lib/admin-data";
 import { isGone } from "@/lib/orders";
 import { batchOverview } from "@/lib/admin";
-import { getSettings } from "@/lib/settings";
+import { getSettings, googleLinks } from "@/lib/settings";
 import { payableAccounts } from "@/lib/banks";
 import { siteUrl, toCard } from "@/lib/admin-templates";
 import { SLOT_LABEL } from "@/lib/config";
@@ -581,15 +581,24 @@ export default async function OrdersPage({
                 id: one.id,
                 label: `${runDateLabel(one.run_date)} · ${SLOT_LABEL[one.slot]}`,
               }))}
+            reviewLabel={
+              googleLinks(settings).review === ""
+                ? "Ask for a review"
+                : "Ask for a Google review"
+            }
             links={Object.fromEntries(
               orders.map((order) => [
                 order.id,
                 {
                   name: order.customer_name.split(" ")[0],
+                  // The Google one where there is a link for it, the shop's
+                  // own where there is not. The same single ask the card
+                  // makes, so ticking twelve and sending from the bar does
+                  // not send a different message from tapping one of them.
                   review: whatsappTo(
                     order.customer_phone,
                     templateFor({
-                      kind: "review",
+                      kind: googleLinks(settings).review === "" ? "review" : "google",
                       name: order.customer_name,
                       settings,
                       siteUrl: url,

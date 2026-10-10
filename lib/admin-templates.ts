@@ -35,15 +35,23 @@ function kindsFor(order: FeedOrder, settings: Settings): TemplateKind[] {
   // food on its way, and offering them on a bag somebody ate an hour ago is
   // four buttons nobody will press hiding the one they want.
   if (order.status === "delivered") {
-    // Asking for the Google review here, on the bag that has just gone, is
-    // the only moment anybody is pleased enough to leave one. The other
-    // review button points at their own order page, which is the shop's own
-    // stars; this one points at Google, which is what a stranger reads.
-    //
-    // Only where there is somewhere to send them. Without a review link the
-    // message ends on a colon and a space, which is worse than no button.
-    const google = googleLinks(settings).review.trim() === "" ? [] : (["google"] as const);
-    return ["review", ...google, "pin"];
+    /*
+     * One ask, and it is the Google one.
+     *
+     * Asking here, on the bag that has just gone, is the only moment
+     * anybody is pleased enough to leave anything. Two buttons asking for
+     * two reviews is one message too many to send a person who has just
+     * eaten: a Google review can be pasted into the shop's own, so the
+     * Google one is the one worth having. Nothing stops somebody leaving
+     * both, because the stars on their own order page are still there for
+     * them to tap.
+     *
+     * The shop's own is the fallback rather than a second button, for a
+     * shop with no Google link set: without one that message ends on a
+     * colon and a space, and no ask at all is worse than the other ask.
+     */
+    const asGoogle = googleLinks(settings).review.trim() !== "";
+    return [asGoogle ? "google" : "review", "pin"];
   }
   return ["confirmed", "ready", "late", "pin"];
 }

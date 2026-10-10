@@ -75,8 +75,13 @@ export function Tick({ id, total, name }: { id: string; total: number; name: str
 export function Bar({
   runs,
   links,
+  reviewLabel = "Ask for a review",
 }: {
   runs: { id: string; label: string }[];
+  /** Which review is being asked for, which depends on whether the shop has
+   *  a Google link set. The button must not say Google when the message it
+   *  opens points at an order page. */
+  reviewLabel?: string;
   /** Per-person WhatsApp links, by order id, for the two that cannot be
    *  done in bulk however much one would like them to be. */
   links: Record<string, { review: string; pin: string; name: string }>;
@@ -148,7 +153,7 @@ export function Bar({
             onClick={() => setShowing(showing === "review" ? "" : "review")}
             className="btn-admin btn-admin-sm btn-admin-dark font-bold"
           >
-            Ask for a review
+            {reviewLabel}
           </button>
           <button
             type="button"
