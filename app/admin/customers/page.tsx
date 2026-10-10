@@ -318,7 +318,17 @@ export default async function CustomersPage({
                   <article key={row.phone} className="card">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h3 className="truncate text-[15px] font-bold">{row.name}</h3>
+                        {/* The name is the way in to their own page, where
+                            every order they have placed and what they are
+                            worth after fuel is on one screen. */}
+                        <h3 className="truncate text-[15px] font-bold">
+                          <Link
+                            href={`/admin/customers/${encodeURIComponent(row.phone)}`}
+                            className="hover:underline"
+                          >
+                            {row.name || formatPhone(row.phone)}
+                          </Link>
+                        </h3>
                         <p className="text-[12.5px] text-muted">
                           {formatPhone(row.phone)} · {row.hostel || "No block saved"} ·{" "}
                           {row.pays === "card" ? "pays by card" : "pays by transfer"}
