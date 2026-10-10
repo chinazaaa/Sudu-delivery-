@@ -56,6 +56,33 @@ export default function ProductSearch({
     setTyped(start);
   }, [start]);
 
+  /*
+   * The search button in the header, when you are already on this page.
+   *
+   * It is a link to /products, which does nothing at all when /products is
+   * where you are standing: you tap the magnifier on the menu, the page you
+   * wanted is already under you, and the button reads as broken. It is the
+   * one place somebody is most likely to tap it.
+   *
+   * So the header points at #find, and the box answers to it: it scrolls
+   * itself into view and takes the keyboard, which is what tapping a
+   * magnifier is asking for whichever page you were on.
+   */
+  const box = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const take = () => {
+      if (window.location.hash !== "#find") return;
+      box.current?.scrollIntoView({ block: "center" });
+      box.current?.focus();
+    };
+
+    take();
+    window.addEventListener("hashchange", take);
+    return () => window.removeEventListener("hashchange", take);
+  }, []);
+
   const waiting = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const now = params.get("q") ?? "";
@@ -81,6 +108,8 @@ export default function ProductSearch({
       className={big ? "relative max-w-[640px]" : "relative"}
     >
       <input
+        id="find"
+        ref={box}
         value={typed}
         onChange={(event) => setTyped(event.target.value)}
         placeholder={

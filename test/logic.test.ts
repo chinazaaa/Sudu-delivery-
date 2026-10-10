@@ -8,6 +8,7 @@ import { googleTagId, numberOr } from "../lib/settings";
 import { isExtra } from "../lib/shelf";
 import { howLong, needsDoing } from "../lib/needs-doing";
 import { howPaid, orderStory } from "../lib/order-story";
+import { codeFrom } from "../lib/promoter-applications";
 import { templateFor } from "../lib/messages";
 import { EMPTY } from "../lib/settings";
 import { test } from "node:test";
@@ -2076,4 +2077,25 @@ test("how they paid names the account once there is one", () => {
   assert.equal(howPaid({ payment_method: "transfer" }), "transfer");
   assert.equal(howPaid({ payment_method: "transfer", paid_into: "GTBank" }), "transfer, GTBank");
   assert.equal(howPaid({ payment_method: "card" }), "card");
+});
+
+/*
+ * A promoter's code, from their name.
+ *
+ * It is what they type to sign in and what goes in a caption, so it has to
+ * be theirs, readable, and never somebody else's.
+ */
+test("a code comes off a name and never collides", () => {
+  assert.equal(codeFrom("Onize", []), "onize");
+  // Spaces, case and punctuation are not part of a code, and a name is not
+  // cut in half to make one: "chichiokek" is a misspelling of somebody's
+  // own name to hand them as their identity.
+  assert.equal(codeFrom("Chi-Chi Okeke", []), "chichiokeke");
+  assert.equal(codeFrom("Oluwaseun Adebayo-Johnson", []), "oluwaseunadebayo");
+  // Taken, so the next one along.
+  assert.equal(codeFrom("Onize", ["onize"]), "onize2");
+  assert.equal(codeFrom("Onize", ["onize", "onize2", "onize3"]), "onize4");
+  // Nothing usable in the name at all still produces something to type.
+  assert.equal(codeFrom("陳", []), "promoter");
+  assert.equal(codeFrom("", ["promoter"]), "promoter2");
 });

@@ -53,7 +53,11 @@ export default function SiteFooter({
         // because a student on the front page is not one and should not have
         // to read past a card asking whether they are.
         { href: "/parents", said: "For parents" },
-        ...(showPromoterLink ? [{ href: "/promoter", said: "Promoters" }] : []),
+        // The offer, then the way in for somebody already doing it. The
+        // offer first, because far more people read this footer wondering
+        // what we are than wondering where to sign in.
+        { href: "/become-a-promoter", said: "Get paid to share us" },
+        ...(showPromoterLink ? [{ href: "/promoter", said: "Promoter sign in" }] : []),
         ...(instagram ? [{ href: instagram, said: "Instagram", away: true }] : []),
       ],
     },

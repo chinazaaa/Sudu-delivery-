@@ -380,3 +380,31 @@ export async function promoterCalledName(code: string): Promise<string> {
 function firstName(full: string): string {
   return full.trim().split(/\s+/)[0] ?? "";
 }
+
+/**
+ * What a promoter is typically on, for the page that offers the job.
+ *
+ * Read off the people already doing it rather than typed into a page, so
+ * the figure somebody is shown is the one they would actually be paid, and
+ * nobody has to remember to come back and change it. With nobody signed up
+ * yet it falls back to the rate the shop was built around.
+ */
+export async function typicalRate(): Promise<number> {
+  try {
+    const { data } = await db()
+      .from("promoters")
+      .select("rate")
+      .eq("active", true);
+    const rates = (data ?? [])
+      .map((one) => Number((one as { rate: number }).rate))
+      .filter((one) => Number.isFinite(one) && one > 0);
+    if (rates.length === 0) return 500;
+    // The commonest, not the average: an average of 500 and 1,000 is a
+    // figure nobody is actually on.
+    const seen = new Map<number, number>();
+    for (const rate of rates) seen.set(rate, (seen.get(rate) ?? 0) + 1);
+    return [...seen.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  } catch {
+    return 500;
+  }
+}

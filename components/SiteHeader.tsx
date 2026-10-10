@@ -166,9 +166,14 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
           </Link>
 
           {/* The phone's pair. Search goes to the menu, which is where the
-              search box lives and always has. */}
+              search box lives and always has.
+
+              To the box itself, not just the page. A plain link to
+              /products does nothing when /products is already under you,
+              which is exactly where somebody is most likely to reach for a
+              magnifier, and a button that does nothing reads as broken. */}
           <Link
-            href="/products"
+            href="/products#find"
             aria-label="Search the menu"
             className="grid size-11 place-items-center rounded-full md:hidden"
           >
