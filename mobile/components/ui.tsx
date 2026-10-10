@@ -57,7 +57,20 @@ export function Display({
         {
           fontFamily: F.display,
           fontSize: size,
-          lineHeight: size * 0.95,
+          /*
+           * Taller than the letters, not shorter.
+           *
+           * This was 0.95, which is the web's leading-none written in a
+           * place where it does not mean the same thing. A browser lets a
+           * glyph overflow its line box; React Native clips to it. Big
+           * Shoulders is a tall condensed face, so at 0.95 the tops and
+           * tails were being shaved off every headline, and worst on the
+           * two-line ones where the first line lost its feet to the second.
+           *
+           * 1.08 is as tight as this face goes without losing anything,
+           * which keeps the stacked look the boards draw.
+           */
+          lineHeight: Math.round(size * 1.08),
           color: colour,
           textTransform: "uppercase",
         },

@@ -11,7 +11,8 @@ import {
   type GroupBoard,
 } from "@/lib/api";
 import { cart, countItems, me, party, pastParties, useStored, type Party } from "@/lib/store";
-import { T } from "@/lib/theme";
+import { F, T } from "@/lib/theme";
+import { Display, Ticket } from "@/components/ui";
 
 const SITE = "https://sudu.store";
 
@@ -201,10 +202,9 @@ export default function Group() {
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60, gap: 12 }}>
       {!seated && (
         <View style={{ gap: 4 }}>
-          <Text style={{ fontSize: 20, fontWeight: "800", color: T.ink }}>
-            Ordering together
-          </Text>
-          <Text style={{ color: T.muted }}>
+          <Ticket>One car, many people</Ticket>
+          <Display size={34}>Ordering together</Display>
+          <Text style={{ color: T.muted, fontFamily: F.body, lineHeight: 21 }}>
             One delivery for the whole car, split evenly between everybody in it.
             You each order your own food and pay for your own.
           </Text>
@@ -227,7 +227,9 @@ export default function Group() {
       {!seated && (
         <>
           <View style={card()}>
-            <Text style={{ fontWeight: "800", color: T.brandDark }}>Start a group</Text>
+            <Display size={24} colour={T.brandDark}>
+              Start a group
+            </Display>
 
             <Text style={{ color: T.muted, marginTop: 8, marginBottom: 4 }}>
               Your first name
@@ -313,9 +315,9 @@ export default function Group() {
           </View>
 
           <View style={card()}>
-            <Text style={{ fontWeight: "800", color: T.ink }}>
+            <Display size={24}>
               {arrived ? "Join this group" : "Somebody sent you a link?"}
-            </Text>
+            </Display>
             <Text style={{ color: T.muted, marginTop: 2 }}>
               {arrived
                 ? "Say who you are and you are in their car. Everybody orders their own food and pays for their own."
@@ -615,18 +617,35 @@ function Board({
   );
 }
 
+/*
+ * The card and the field this screen draws everything with.
+ *
+ * They were a borderless white box and a hairline input, which is the shape
+ * the app had before the redesign: this screen was the one the conversion
+ * missed, so it kept them while every other tab moved on. Both now match
+ * the Card and the fields the rest of the app uses, which is most of what
+ * made this screen look like a different app.
+ */
 function card() {
-  return { backgroundColor: T.paper, borderRadius: T.radius, padding: 14 } as const;
+  return {
+    backgroundColor: T.paper,
+    borderWidth: 2,
+    borderColor: T.ink,
+    borderRadius: T.radius,
+    padding: 14,
+  } as const;
 }
 
 function field() {
   return {
-    borderWidth: 1,
-    borderColor: T.line,
-    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: T.ink,
+    borderRadius: 12,
+    minHeight: 50,
     paddingHorizontal: 14,
-    paddingVertical: 12,
     color: T.ink,
-    backgroundColor: T.paper,
+    backgroundColor: T.field,
+    fontFamily: F.body,
+    fontSize: 15,
   } as const;
 }
