@@ -169,9 +169,20 @@ export default async function PromotersAdmin({
         title="Promoters"
         detail="A customer belongs to whoever brought them, for life, and every order they pay for counts at that promoter's rate."
         actions={
-          <a href="#add" className="btn-admin">
-            Add a promoter
-          </a>
+          <>
+            <a href="#add" className="btn-admin">
+              Add a promoter
+            </a>
+            {/* The board's one red button on this screen. Nothing is paid
+                from a list: it cuts the list down to whoever is owed, which
+                is the round of transfers to make, each settled on their own
+                screen where the account number is. */}
+            {owed > 0 && (
+              <Link href={link({ view: "owed" })} className="btn-admin-go">
+                Pay everyone owed · {naira(owed)}
+              </Link>
+            )}
+          </>
         }
       />
 
@@ -401,7 +412,12 @@ export default async function PromotersAdmin({
 
           <Panel
             title="Waiting to be confirmed"
-            detail="You have sent these. Until the promoter confirms it on their own page, they stay here."
+            detail={
+              <>
+                Sent, but not yet confirmed by the promoter. Chase sends them a WhatsApp
+                asking them to tap <strong>It landed</strong>.
+              </>
+            }
           >
             {unconfirmed.length === 0 ? (
               <p className="hint mt-1">
@@ -442,6 +458,16 @@ export default async function PromotersAdmin({
                   </a>
                 </div>
               ))
+            )}
+            {unconfirmed.length > 0 && (
+              /* Why a list of money already sent is worth keeping on the
+                 screen at all, which is the thing somebody reaches for a
+                 tick to make go away. */
+              <p className="hint mt-2.5 leading-[1.5]">
+                Only the promoter can confirm, on their own page. That is the point of
+                it: a transfer that never landed stays visible here instead of being
+                ticked off by mistake.
+              </p>
             )}
           </Panel>
         </div>
@@ -547,6 +573,15 @@ async function OnePromoter({
                 Call
               </a>
             )}
+            {/* The board gives this screen one red button, and it is the
+                money. It cannot pay anybody by itself, because paying is a
+                transfer in a banking app and each run is settled on its own
+                row, so it goes to the rows that do it. */}
+            {promoter.owed > 0 && (
+              <a href="#payout" className="btn-admin-go">
+                Pay {naira(promoter.owed)}
+              </a>
+            )}
           </>
         }
       />
@@ -573,7 +608,7 @@ async function OnePromoter({
         <Figure
           label="Earned"
           value={naira(promoter.earned)}
-          detail={`${promoter.orders} paid order${promoter.orders === 1 ? "" : "s"} at their rate`}
+          detail={`${promoter.orders} order${promoter.orders === 1 ? "" : "s"} at their rate`}
         />
         <Figure
           label="Owed"
@@ -591,6 +626,7 @@ async function OnePromoter({
         <div className="flex flex-col gap-4">
           <Panel
             title="Every payout"
+            className="scroll-mt-4"
             aside={
               <span className="hint">
                 {naira(promoter.earned)} earned · {naira(sent)} sent ·{" "}
@@ -598,6 +634,7 @@ async function OnePromoter({
               </span>
             }
           >
+            <div id="payout" />
             <table className="mt-2 w-full border-collapse">
               <tbody>
                 {/* What is owed first, because it is the decision. One row
@@ -667,21 +704,12 @@ async function OnePromoter({
                       {naira(payout.amount)}
                     </td>
                     <td className={`${TD} text-right`}>
-                      {!payout.confirmed_at && promoter.phone && (
-                        <a
-                          href={whatsappTo(
-                            promoter.phone,
-                            `Hi ${first}, we sent you ${naira(payout.amount)}. Open ` +
-                              `${url}/promoter and confirm it landed so we both have ` +
-                              `the same record.`
-                          )}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn-admin btn-admin-sm"
-                        >
-                          Chase
-                        </a>
-                      )}
+                      {/* Words, not a button, because there is nothing for
+                          anybody here to press: only the promoter can say
+                          the money landed, on their own page. Chasing them
+                          for it is on the list, where everybody waiting is
+                          in one place. */}
+                      {!payout.confirmed_at && <span className="hint">they confirm</span>}
                     </td>
                   </tr>
                 ))}
@@ -815,11 +843,13 @@ async function OnePromoter({
                 themselves, on their own page.
               </p>
             )}
+            {/* The whole arrangement in one sentence, in the board's words:
+                paying is the only thing admin can do to a payout, and
+                confirming is the promoter's. */}
             <p className="hint mt-2.5 leading-[1.5]">
-              Nothing here pays anybody: the transfer is made in your banking app, and
-              recording it marks it sent. It stays &ldquo;not confirmed&rdquo; until{" "}
-              {first} confirms it on their own page, so a transfer that never lands does
-              not disappear.
+              Paying marks it sent. It stays &ldquo;not confirmed&rdquo; until {first}{" "}
+              confirms it on their own page, so a transfer that never lands does not
+              disappear.
             </p>
           </Panel>
 
