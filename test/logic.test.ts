@@ -2828,3 +2828,40 @@ test("a run is completed in admin only once the books are closed", () => {
   // What the customer reads is untouched by any of it.
   assert.equal(STAGE_LABEL.handed_out, "Delivered");
 });
+
+test("the last step of an order says whether a review came back", () => {
+  const base = {
+    created_at: "2026-10-09T18:43:00Z",
+    paid_at: "2026-10-09T19:29:00Z",
+    done_at: "2026-10-09T21:00:00Z",
+    rated_at: null,
+    status: "delivered",
+    payment_method: "transfer",
+    hostel: "Trinity",
+    batchStage: "handed_out",
+  };
+  const last = (order: Parameters<typeof orderStory>[0]) =>
+    orderStory(order, () => "19:29").at(-1)!;
+
+  // Nothing back. The step is the only one on the list not done.
+  assert.deepEqual(last(base), { label: "Reviewed", when: "", done: false });
+
+  // Ticked off as having reviewed on Google. It used to read "Review asked
+  // / Not yet" for somebody who had written one, which is the whole bug.
+  assert.deepEqual(last({ ...base, reviewed: true }), {
+    label: "Reviewed",
+    when: "On Google",
+    done: true,
+  });
+
+  // Stars on this order are the other kind, and carry their own moment.
+  assert.deepEqual(last({ ...base, rated_at: "2026-10-09T22:00:00Z" }), {
+    label: "Reviewed",
+    when: "19:29",
+    done: true,
+  });
+
+  // The stars win the line where somebody has done both, because only one
+  // of the two happened at a time anybody can name.
+  assert.equal(last({ ...base, rated_at: "2026-10-09T22:00:00Z", reviewed: true }).when, "19:29");
+});

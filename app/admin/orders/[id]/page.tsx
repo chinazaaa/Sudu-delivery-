@@ -906,6 +906,7 @@ async function orderPage(id: string, said: string) {
                   hostel: order.hostel,
                   batchStage: order.batch?.stage ?? "",
                   counters,
+                  reviewed: them?.reviewed ?? false,
                 },
                 (iso) => lagosClock(iso)
               ).map((step, at, all) => (
