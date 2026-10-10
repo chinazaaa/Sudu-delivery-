@@ -283,7 +283,7 @@ export default async function SchedulePage() {
             <a href="#add" className="btn-admin btn-admin-sm">
               Add a slot
             </a>
-            <Link href="/admin/runs?new=1" className="btn-admin btn-admin-sm">
+            <Link href="/admin/runs?new=1#new" className="btn-admin btn-admin-sm">
               New run
             </Link>
           </>

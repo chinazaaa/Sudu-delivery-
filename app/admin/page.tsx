@@ -296,7 +296,7 @@ export default async function AdminHome() {
                 being driven. Neither is in the phone's header, where the
                 board puts the red one under the two urgent tiles instead,
                 so both are the desk's. */}
-            <Link href="/admin/runs?new=1" className="btn-admin hidden sm:inline-flex">
+            <Link href="/admin/runs?new=1#new" className="btn-admin hidden sm:inline-flex">
               New run
             </Link>
             {working && (

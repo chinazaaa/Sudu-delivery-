@@ -124,6 +124,18 @@ export function Bar({
           >
             {busy ? "Working…" : "Mark paid"}
           </button>
+          {/* Handing several bags over at once, which is what a doorway
+              actually looks like. Only the paid ones go, and the runs they
+              were on follow, so ticking every order on a run and pressing
+              this finishes the run as well. */}
+          <button
+            name="what"
+            value="delivered"
+            disabled={busy}
+            className="btn-admin btn-admin-sm btn-admin-dark font-bold disabled:opacity-50"
+          >
+            {busy ? "Working…" : "Mark delivered"}
+          </button>
           <button
             type="button"
             onClick={() => setShowing(showing === "move" ? "" : "move")}

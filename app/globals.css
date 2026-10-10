@@ -57,15 +57,37 @@ body {
    * Safari on an iPhone gives a date or time input an intrinsic width of
    * its own and will not shrink it below that, whatever the box it is in
    * says, so the cut-off on the diary hung out past the right edge of the
-   * card it belongs to. Full width is not enough on its own: the minimum
-   * has to be told it may be nothing. This is every one of them at once,
-   * because the same box is on the run sheet and in settings.
+   * card it belongs to. This is every one of them at once, because the same
+   * box is on the run sheet, in the diary and in settings.
+   *
+   * The minimum told it may be nothing is not enough on its own: while the
+   * input keeps its native appearance, iOS sizes the widget itself and a
+   * width is simply ignored. Turning the appearance off is what makes it
+   * obey, and nothing is lost by it, because the border, the ground and the
+   * height all come from .field anyway and the picker still opens on a tap.
+   *
+   * That half is asked for only where the problem is. -webkit-touch-callout
+   * is an iOS-only property, so this block is iOS and nothing else: a desk
+   * browser keeps its own calendar button, which is the thing somebody
+   * clicks there and which appearance:none would take away. The widths a
+   * page sets by hand, the pair of times on a run among them, still win,
+   * because a utility beats a base rule.
    */
   input[type="time"],
   input[type="date"],
   input[type="datetime-local"] {
     min-width: 0;
     max-width: 100%;
+  }
+
+  @supports (-webkit-touch-callout: none) {
+    input[type="time"],
+    input[type="date"],
+    input[type="datetime-local"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+    }
   }
 }
 

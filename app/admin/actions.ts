@@ -22,6 +22,7 @@ import {
 } from "@/lib/batches";
 import { closeGroup } from "@/lib/groups";
 import { moveOrder, NOT_ORDERS_SQL } from "@/lib/orders";
+import { followRun, followRuns } from "@/lib/run-follow";
 import { canTravel, groupCarts } from "@/lib/group-carts";
 import {
   deleteCheckoutLink,
@@ -187,17 +188,37 @@ export async function setBagDelivered(form: FormData): Promise<void> {
   // buzzes "delivered" and then buzzes again is worse than one that waited.
   if (delivered) void tellDelivered(ids);
 
+  // The run keeps up with its bags: the last one ticked finishes the run.
+  const { data: on } = await db().from("orders").select("batch_id").in("id", ids);
+  await followRuns(((on ?? []) as { batch_id: string | null }[]).map((one) => one.batch_id));
+
   revalidatePath("/admin", "layout");
   revalidatePath("/orders");
   revalidatePath("/o", "layout");
 }
 
+/**
+ * One order handed over.
+ *
+ * The run follows it afterwards, so the only order on a Tuesday car finishes
+ * the car, and one of six moves the car to the hostels and leaves it there
+ * until the other five have gone too. That is the whole reason this can be
+ * done from the orders screen rather than only from the run.
+ */
 export async function markDelivered(form: FormData): Promise<void> {
   await assertAdmin();
   const id = String(form.get("order_id"));
-  await db().from("orders").update({ status: "delivered" }).eq("id", id);
+  const { data } = await db()
+    .from("orders")
+    .update({ status: "delivered" })
+    .eq("id", id)
+    .select("batch_id")
+    .maybeSingle();
   void tellDelivered([id]);
+  await followRun((data as { batch_id: string | null } | null)?.batch_id);
   revalidatePath("/admin", "layout");
+  revalidatePath("/orders");
+  revalidatePath("/o", "layout");
 }
 
 /** Refunds are same-night and in full. There are no partial refunds here. */
@@ -233,7 +254,16 @@ export async function cancelOrder(form: FormData): Promise<void> {
 
   if (!order || order.paid_at || order.status !== "pending") return;
 
-  await db().from("orders").update({ status: "cancelled" }).eq("id", id);
+  const { data: was } = await db()
+    .from("orders")
+    .update({ status: "cancelled" })
+    .eq("id", id)
+    .select("batch_id")
+    .maybeSingle();
+
+  // A cancelled order is no longer something the run is waiting on, so a run
+  // whose only outstanding order this was can finish now.
+  await followRun((was as { batch_id: string | null } | null)?.batch_id);
   revalidatePath("/admin", "layout");
 }
 
@@ -4408,6 +4438,49 @@ export async function doManyOrders(
 
     revalidatePath("/admin", "layout");
     return { error: null, done: `${many} marked paid.` };
+  }
+
+  /*
+   * Several bags handed over at once.
+   *
+   * The same rule as one: only an order that was paid for can be delivered,
+   * because an unpaid one never travelled, and the runs they were on follow
+   * afterwards. Ticking every order on a run and pressing this finishes the
+   * run, which is the point of being able to do it from here.
+   */
+  if (what === "delivered") {
+    const { data, error } = await db()
+      .from("orders")
+      .update({ status: "delivered" })
+      .in("id", ids)
+      .eq("status", "paid")
+      .select("id, batch_id");
+    if (error) return { error: error.message, done: null };
+
+    const moved = (data ?? []) as { id: string; batch_id: string | null }[];
+    if (moved.length === 0) {
+      return {
+        error: "None of those were paid for, so none of them could go out.",
+        done: null,
+      };
+    }
+
+    void tellDelivered(moved.map((one) => one.id));
+    await followRuns(moved.map((one) => one.batch_id));
+
+    revalidatePath("/admin", "layout");
+    revalidatePath("/orders");
+    revalidatePath("/o", "layout");
+    // Said as what happened rather than as what was ticked: ticking eight
+    // and delivering six is a thing somebody needs to know about.
+    const went = `${moved.length} order${moved.length === 1 ? "" : "s"}`;
+    return {
+      error:
+        moved.length < ids.length
+          ? `${ids.length - moved.length} were not paid for and stayed put.`
+          : null,
+      done: `${went} marked delivered.`,
+    };
   }
 
   if (what === "move") {

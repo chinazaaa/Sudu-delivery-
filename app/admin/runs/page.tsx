@@ -249,7 +249,7 @@ export default async function RunsPage({
               Schedule
             </Link>
             <Link
-              href={showForm ? "/admin/runs" : "/admin/runs?new=1"}
+              href={showForm ? "/admin/runs" : "/admin/runs?new=1#new"}
               className={`btn-admin ${go("new")}`}
             >
               {showForm ? "Close" : "One-off run"}
@@ -442,11 +442,17 @@ export default async function RunsPage({
         />
       </div>
 
+      {/* Anchored, because the form is below the runs themselves and the
+          button that opens it is in the header or on another page
+          altogether. Without this, "New run" loaded a page that looked
+          exactly as it did before, with the form it had just opened a
+          screen and a half further down. */}
       {showForm && (
         <Panel
+          id="new"
           title="A one-off run"
           detail="For a day that is not in your week: exam week, a match, a request. Creating one that already exists updates it."
-          className="mb-4"
+          className="mb-4 scroll-mt-4"
         >
           <form action={createBatch} className="mt-3 space-y-3">
             <div className="grid gap-3 sm:grid-cols-3">

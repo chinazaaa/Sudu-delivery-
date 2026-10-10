@@ -12,6 +12,7 @@ export default function Panel({
   children,
   size = "lg",
   className = "",
+  id,
 }: {
   /** A node, not a string: a phone and a desk do not always want the
    *  same words, and two whole panels behind display:none to say one
@@ -28,9 +29,11 @@ export default function Panel({
   detail?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  /** An anchor, for a panel somebody is sent to from another page. */
+  id?: string;
 }) {
   return (
-    <section className={`card p-3.5 sm:p-5 ${className}`}>
+    <section id={id} className={`card p-3.5 sm:p-5 ${className}`}>
       <div className="flex items-center justify-between gap-2.5">
         <h2
           className={`font-display font-black uppercase leading-none ${

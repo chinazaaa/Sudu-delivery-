@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { closureSaid, isOn, rangeLabel } from "../lib/closures";
+import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
 import { containersIn } from "../lib/containers";
+import { runShouldBe } from "../lib/run-follow";
 import { channelOfSite, tidyChannel, tidyHandle } from "../lib/came-from";
 import { weekAround } from "../lib/time";
 import { monthOf, nextMonth } from "../lib/standing";
@@ -2714,4 +2715,93 @@ test("a closure on now counts down, and one ahead names its days", () => {
     closureSaid({ ...off, name: "  " }, "2026-10-20"),
     "No runs 26 to 30 October"
   );
+});
+
+test("a run follows its orders, forwards only", () => {
+  // The only order on the car, handed over. The car is done, and all that is
+  // left is closing the books.
+  assert.equal(runShouldBe("on_the_road", ["delivered"]), "handed_out");
+
+  // One of five. That one is out, the car is at the hostels, and it stays
+  // there until the other four have gone too.
+  assert.equal(
+    runShouldBe("on_the_road", ["delivered", "paid", "paid", "paid", "paid"]),
+    "at_drop"
+  );
+  assert.equal(
+    runShouldBe("at_drop", ["delivered", "delivered", "delivered", "delivered", "delivered"]),
+    "handed_out"
+  );
+
+  // An unpaid order is still something the run is waiting on, so the last
+  // paid bag going out does not finish the run.
+  assert.equal(runShouldBe("at_drop", ["delivered", "pending"]), null);
+  // Cancelling it is the decision that does. A refunded one counts the same.
+  assert.equal(runShouldBe("at_drop", ["delivered", "cancelled"]), "handed_out");
+  assert.equal(runShouldBe("at_drop", ["delivered", "refunded"]), "handed_out");
+
+  // Nothing delivered yet is nothing to say. The run keeps the stage it was
+  // given by hand.
+  assert.equal(runShouldBe("at_counter", ["paid", "paid"]), null);
+
+  // Never backwards: a run already handed out is not pulled back to the
+  // hostels by one more order appearing on it.
+  assert.equal(runShouldBe("handed_out", ["delivered", "paid"]), null);
+  // And an at_drop run is not told to be at_drop again.
+  assert.equal(runShouldBe("at_drop", ["delivered", "paid"]), null);
+
+  // An empty run is an empty run, not a delivered one.
+  assert.equal(runShouldBe("closed", []), null);
+  assert.equal(runShouldBe("closed", ["cancelled", "cancelled"]), null);
+
+  // A run nobody had moved along at all, with its one order handed over in
+  // the doorway. It jumps to the end, because it is at the end.
+  assert.equal(runShouldBe("ordering", ["delivered"]), "handed_out");
+});
+
+test("a closure takes every day it covers inside the window, and none outside", () => {
+  const breakWeek = [{ starts_on: "2026-10-26", ends_on: "2026-10-30" }];
+
+  // The whole of it, when the window is wider.
+  assert.deepEqual(
+    [...datesIn(breakWeek, "2026-10-20", "2026-11-10")].sort(),
+    ["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30"]
+  );
+
+  // A closure that started before the window still takes its days inside
+  // it. This is the one that matters: the opener asks about three weeks at
+  // a time, so a break is nearly always already running when it asks.
+  assert.deepEqual(
+    [...datesIn(breakWeek, "2026-10-28", "2026-11-02")].sort(),
+    ["2026-10-28", "2026-10-29", "2026-10-30"]
+  );
+
+  // And one that ends after it.
+  assert.deepEqual(
+    [...datesIn(breakWeek, "2026-10-20", "2026-10-27")].sort(),
+    ["2026-10-26", "2026-10-27"]
+  );
+
+  // No overlap is no days.
+  assert.deepEqual([...datesIn(breakWeek, "2026-11-01", "2026-11-05")], []);
+
+  // One day is one day, and two closures merge rather than double-count.
+  assert.deepEqual(
+    [
+      ...datesIn(
+        [
+          { starts_on: "2026-12-25", ends_on: "2026-12-25" },
+          { starts_on: "2026-12-25", ends_on: "2026-12-26" },
+        ],
+        "2026-12-01",
+        "2026-12-31"
+      ),
+    ].sort(),
+    ["2026-12-25", "2026-12-26"]
+  );
+
+  // A window nobody can read, and a row nobody can read, are both nothing
+  // rather than a crash on the path that opens the shop's runs.
+  assert.deepEqual([...datesIn(breakWeek, "", "")], []);
+  assert.deepEqual([...datesIn([{ starts_on: "", ends_on: "" }], "2026-10-20", "2026-10-30")], []);
 });

@@ -83,7 +83,28 @@ export async function closedDates(from: string, to: string): Promise<Set<string>
     .gte("ends_on", from);
   if (error) return shut;
 
-  for (const one of (data ?? []) as { starts_on: string; ends_on: string }[]) {
+  return datesIn((data ?? []) as { starts_on: string; ends_on: string }[], from, to);
+}
+
+/**
+ * The rows a closure query came back with, expanded to the days inside a
+ * window and clipped to it.
+ *
+ * Pure, and its own function, because whether a run opens on a given morning
+ * is decided here and has to be provable without a database. The clipping is
+ * the part worth proving: a closure that starts before the window or ends
+ * after it still takes the days it covers inside it, and nothing outside.
+ */
+export function datesIn(
+  rows: { starts_on: string; ends_on: string }[],
+  from: string,
+  to: string
+): Set<string> {
+  const shut = new Set<string>();
+  if (!DATE.test(from) || !DATE.test(to) || to < from) return shut;
+
+  for (const one of rows) {
+    if (!DATE.test(one.starts_on) || !DATE.test(one.ends_on)) continue;
     const start = one.starts_on > from ? one.starts_on : from;
     const end = one.ends_on < to ? one.ends_on : to;
     for (let date = start; date <= end; date = addDays(date, 1)) shut.add(date);

@@ -4,15 +4,17 @@ import AdminLive from "@/components/admin/AdminLive";
 import Figure from "@/components/admin/Figure";
 import OrderCard from "@/components/admin/OrderCard";
 import WaitingCard from "@/components/admin/WaitingCard";
+import HandOverCard from "@/components/admin/HandOverCard";
 import ChaseAll from "@/components/admin/ChaseAll";
 import { Bar, Picking, Tick } from "@/components/admin/BulkOrders";
 import { orderFeed, statusCounts } from "@/lib/admin-data";
+import { isGone } from "@/lib/orders";
 import { batchOverview } from "@/lib/admin";
 import { getSettings } from "@/lib/settings";
 import { payableAccounts } from "@/lib/banks";
 import { siteUrl, toCard } from "@/lib/admin-templates";
 import { SLOT_LABEL } from "@/lib/config";
-import { lagosClock, runDateLabel } from "@/lib/time";
+import { lagosClock, lagosToday, runDateLabel } from "@/lib/time";
 import { naira } from "@/lib/money";
 import { templateFor, whatsappTo } from "@/lib/messages";
 import {
@@ -61,7 +63,7 @@ export default async function OrdersPage({
   // Card payers are unpaid orders, narrowed by how they said they would pay.
   const status = (tab === "card" ? "pending" : tab) as OrderStatus | "all";
 
-  const [orders, batches, settings, url, counts, unpaid] = await Promise.all([
+  const [orders, batches, settings, url, counts, unpaid, everything] = await Promise.all([
     orderFeed({
       status,
       batchId: query.batch ?? null,
@@ -76,6 +78,12 @@ export default async function OrdersPage({
     // The New in cut, whichever cut is being read: the number on the control
     // has to be right before anybody taps it.
     orderFeed({ status: "pending", limit: 200 }),
+    // Today, whatever state it is in. The cut is the day's work and not a
+    // list of debts: an order that was paid for the moment it arrived still
+    // has to be handed to somebody, and reading only the unpaid ones is how
+    // the one order on a Tuesday ended up invisible on the screen that is
+    // supposed to be about today.
+    orderFeed({ status: "all", limit: 200 }),
   ]);
   // The account every payment message quotes: the first on the list.
   const bank = (await payableAccounts(settings))[0] ?? null;
@@ -100,6 +108,37 @@ export default async function OrdersPage({
   const waiting = [...unpaid].sort(
     (a, b) => a.runDate.localeCompare(b.runDate) || a.created_at.localeCompare(b.created_at)
   );
+
+  /*
+   * Today, in the order it gets dealt with.
+   *
+   * Unpaid first, because money is the thing with a deadline on it, then the
+   * ones paid for and still to go out, then the ones already handed over.
+   * The delivered ones stay on the screen rather than vanishing: a list that
+   * empties itself as you work gives no way to check you have finished, and
+   * "did I do that one" is the question this cut exists to answer.
+   */
+  const today = lagosToday();
+  const rank = (status: string) =>
+    status === "pending" ? 0 : status === "delivered" ? 2 : 1;
+  const todays = everything
+    .filter((order) => order.runDate === today && !isGone(order.status))
+    .sort(
+      (a, b) =>
+        rank(a.status) - rank(b.status) || a.created_at.localeCompare(b.created_at)
+    );
+
+  // Money still out on a run that is not today. The chasing list the cut
+  // started as, kept because an order from last Friday is the one most worth
+  // a message and today's screen would otherwise drop it.
+  const olderUnpaid = waiting.filter((order) => order.runDate !== today);
+
+  // Paid for and still to be handed over, today. The other half of the work.
+  const toHandOver = todays.filter((order) => order.status === "paid");
+
+  // What the badge on the control counts: everything on this screen that
+  // somebody still has to do something about.
+  const jobs = waiting.length + toHandOver.length;
   // The soonest car still taking orders, which is the clock the New in cut
   // is read against.
   const closing = batches
@@ -146,13 +185,13 @@ export default async function OrdersPage({
         }`}
       >
         New in
-        {waiting.length > 0 && (
+        {jobs > 0 && (
           <span
             className={`rounded-full px-[7px] py-px font-mono text-[11px] ${
               cut === "new" ? "bg-paper text-brand" : "bg-brand text-white"
             }`}
           >
-            {waiting.length}
+            {jobs}
           </span>
         )}
       </Link>
@@ -177,10 +216,10 @@ export default async function OrdersPage({
           title="Orders"
           detail={
             closing
-              ? `Orders that need you before the run closes at ${lagosClock(
+              ? `Today's orders, and anything still owed. The run closes at ${lagosClock(
                   closing.cut_off_at
                 )}.`
-              : "Orders waiting on money or on a card link."
+              : "Today's orders, and anything still owed from a run that has gone."
           }
         />
         {cuts}
@@ -199,7 +238,7 @@ export default async function OrdersPage({
           <Figure
             label="Waiting"
             value={String(waiting.length)}
-            detail="Orders needing you"
+            detail="Orders needing money"
           />
           <Figure
             label="Not in yet"
@@ -207,20 +246,70 @@ export default async function OrdersPage({
             tone={waiting.length > 0 ? "brand" : "mint"}
             detail="Across all of them"
           />
+          <Figure
+            label="To hand over"
+            value={String(toHandOver.length)}
+            detail="Paid for, today"
+          />
         </div>
 
-        {waiting.length > 0 && (
-          <div className="space-y-3">
-            {waiting.map((order) => (
-              <WaitingCard
-                key={order.id}
-                order={toCard(order, settings, url, bank)}
-                into={bank?.bank_name ?? ""}
-                markPaid={markPaid}
-                savePaymentLink={savePaymentLink}
-              />
-            ))}
-          </div>
+        {/*
+          Today, whatever state it is in.
+
+          One card per order, carrying the one thing that order needs: the
+          money, or the doorway. Marking the last one delivered marks the run
+          delivered too, so a day with one order on it never needs the run
+          screen at all. The run screen is still there, and still the right
+          place for a stage that has nothing to do with any one order.
+        */}
+        {todays.length > 0 && (
+          <>
+            <p className="ticket mb-2 text-muted">
+              Today · {todays.length} {todays.length === 1 ? "order" : "orders"}
+            </p>
+            <div className="space-y-3">
+              {todays.map((order) =>
+                order.status === "pending" ? (
+                  <WaitingCard
+                    key={order.id}
+                    order={toCard(order, settings, url, bank)}
+                    into={bank?.bank_name ?? ""}
+                    markPaid={markPaid}
+                    savePaymentLink={savePaymentLink}
+                  />
+                ) : (
+                  <HandOverCard
+                    key={order.id}
+                    order={toCard(order, settings, url, bank)}
+                    markDelivered={markDelivered}
+                  />
+                )
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Money still out on a run that has already been and gone. Under
+            today rather than mixed into it, because it is chasing rather
+            than the day's work, and losing it altogether is how an order
+            from last Friday stops being anybody's job. */}
+        {olderUnpaid.length > 0 && (
+          <>
+            <p className="ticket mb-2 mt-3.5 text-muted">
+              Still unpaid from earlier runs
+            </p>
+            <div className="space-y-3">
+              {olderUnpaid.map((order) => (
+                <WaitingCard
+                  key={order.id}
+                  order={toCard(order, settings, url, bank)}
+                  into={bank?.bank_name ?? ""}
+                  markPaid={markPaid}
+                  savePaymentLink={savePaymentLink}
+                />
+              ))}
+            </div>
+          </>
         )}
 
         {/* The board's running line under the cards, drawn whether or not
@@ -228,13 +317,19 @@ export default async function OrdersPage({
             an empty state it only ever appeared on the mornings when nobody
             needed to ask. */}
         <div className="soft mt-3 px-3.5 py-3">
-          <strong className="text-[14px]">Everything else is paid</strong>
+          <strong className="text-[14px]">
+            {jobs === 0 ? "Nothing is waiting on you" : "That is everything for today"}
+          </strong>
           <p className="hint">
-            {closing
-              ? `${closing.paidCount} order${
-                  closing.paidCount === 1 ? "" : "s"
-                } on this run paid for, nothing else outstanding.`
-              : "No other order anywhere is waiting on money."}
+            {todays.length === 0
+              ? closing
+                ? `Nothing is on today's run yet. It closes at ${lagosClock(closing.cut_off_at)}.`
+                : "No run is open, so nothing can be ordered onto today."
+              : jobs === 0
+                ? `All ${todays.length} of today's ${
+                    todays.length === 1 ? "order has" : "orders have"
+                  } been paid for and handed over.`
+                : `${waiting.length} waiting on money, ${toHandOver.length} paid for and still to go out.`}
           </p>
         </div>
 
