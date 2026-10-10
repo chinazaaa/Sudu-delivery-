@@ -5,9 +5,10 @@ import Panel from "@/components/admin/Panel";
 import { naira } from "@/lib/money";
 import { lagosToday, runDateLabel, weekdayLabel } from "@/lib/time";
 import { SLOT_LABEL } from "@/lib/config";
-import { profitBetween } from "@/lib/profit";
+import { profitBetween, profitByKitchen } from "@/lib/profit";
 import { costsByKind, madeOn } from "@/lib/other-money";
 import { catchUpStanding } from "@/lib/standing";
+import { typicalCosts } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,27 @@ function spans(today: string): Span[] {
 /** Monday first, because that is how a week is read off a wall. */
 const WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
+/**
+ * The window said the short way, for the line under the profit.
+ *
+ * "1–10 October" is how somebody says the window out loud. Spelling both ends
+ * out in full under a forty pixel figure makes the date longer than the
+ * number it belongs to, and the number is the thing being read.
+ */
+function windowLabel(from: string, to: string): string {
+  const at = (iso: string) => new Date(`${iso}T12:00:00Z`);
+  const dayOf = (iso: string) => String(at(iso).getUTCDate());
+  const monthOf = (iso: string) =>
+    new Intl.DateTimeFormat("en-NG", { timeZone: "UTC", month: "long" }).format(at(iso));
+  const yearOf = (iso: string) => at(iso).getUTCFullYear();
+
+  if (from === to) return `${dayOf(from)} ${monthOf(from)}`;
+  if (monthOf(from) === monthOf(to) && yearOf(from) === yearOf(to)) {
+    return `${dayOf(from)}–${dayOf(to)} ${monthOf(from)}`;
+  }
+  return `${dayOf(from)} ${monthOf(from)} to ${dayOf(to)} ${monthOf(to)}`;
+}
+
 export default async function ProfitPage({
   searchParams,
 }: {
@@ -78,23 +100,38 @@ export default async function ProfitPage({
   await catchUpStanding();
 
   const sums = await profitBetween(from, to);
+  // Food only, and only the runs that have been reconciled, which is why it
+  // is its own question rather than a column on the table above.
+  const byKitchen = await profitByKitchen(from, to);
+  // What a run usually costs to drive, which is the figure a run with nothing
+  // typed into it is standing in for.
+  const typical = await typicalCosts();
   // Hosting, bank charges, data: what is actually eating the money, which a
   // single "paid out" figure cannot answer.
   const costs = costsByKind(sums.aside);
 
-  // What the counters were actually paid, which is the figure the board puts
-  // beside money in: the menu price plus anything the shopping came to over
-  // it on the runs that have been reconciled.
-  const kitchens = sums.foodAtMenu + sums.overMenu;
+  // Everything taken off, in one figure, which is the board's third card:
+  // the car, what the promoters earned on these orders, and anything the shop
+  // paid out that was not a run.
+  const allCosts = sums.runCosts + sums.commission + sums.otherOut;
   const share =
     sums.gross === 0 ? 0 : Math.round((sums.profit / sums.gross) * 100);
 
   // The runs nobody has typed a cost into. The one thing on this page that
   // makes every figure above it a guess, so it is both the red button at the
-  // top and the note under the working.
+  // top and a panel of its own.
   const estimated = sums.byRun.filter((run) => run.estimated);
   const lost = sums.byRun.filter((run) => run.profit < 0);
   const worst = [...lost].sort((a, b) => a.profit - b.profit)[0] ?? null;
+
+  // Whether the worst run is one bad night or a standing habit of that
+  // weekday, which is the difference between a shrug and a decision.
+  const sameDay = worst
+    ? sums.byRun
+        .filter((run) => weekdayLabel(run.runDate) === weekdayLabel(worst.runDate))
+        .slice(0, 6)
+    : [];
+  const sameDayLost = sameDay.filter((run) => run.profit < 0).length;
 
   // Profit by the day of the week the car went out, over whatever window is
   // being read. A day below the line is a day worth not driving.
@@ -109,7 +146,16 @@ export default async function ProfitPage({
   });
   const tallest = Math.max(1, ...byDay.map((one) => Math.abs(one.profit)));
   const below = byDay.filter((one) => one.runs > 0 && one.profit < 0);
-  const best = [...byDay].sort((a, b) => b.profit - a.profit)[0] ?? null;
+  // The two days that carry the week, which is what the board names. One day
+  // ahead of six is a different week from two carrying it between them.
+  const ahead = byDay
+    .filter((one) => one.runs > 0 && one.profit > 0)
+    .sort((a, b) => b.profit - a.profit)
+    .slice(0, 2);
+
+  // The widest bar is the best kitchen, not a hundred per cent: six bars all
+  // at a quarter of the panel say nothing about which of them to keep.
+  const bestShare = Math.max(1, ...byKitchen.kitchens.map((one) => one.share));
 
   const link = (next: Record<string, string | undefined>) => {
     const params = new URLSearchParams();
@@ -127,7 +173,7 @@ export default async function ProfitPage({
           ignores the window somebody set is one they redo by hand. */}
       <PageHeader
         title="Profit"
-        detail={`${runDateLabel(from)} to ${runDateLabel(to)}. Every figure here is money that moved, and you can see how each one is worked out.`}
+        detail="Money in, everything taken off it, and what is left."
         backHref="/admin"
         backLabel="Dashboard"
         actions={
@@ -195,216 +241,326 @@ export default async function ProfitPage({
         </form>
       </div>
 
-      <div className="mb-4 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Money in, the margin the delivery itself earns, everything taken off
+          and what is left: the four figures in the order they happen. */}
+      <div className="mb-[18px] grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         <Figure
           label="Money in"
           value={naira(sums.gross)}
           detail={`${sums.orders} paid order${sums.orders === 1 ? "" : "s"}`}
         />
         <Figure
-          label="Paid to kitchens"
-          value={naira(kitchens)}
-          detail="What left your hand at counters"
+          label="Delivery margin"
+          value={naira(sums.margin)}
+          detail="Money in, less the food"
         />
         <Figure
-          label="Run costs"
-          value={naira(sums.runCosts)}
-          detail="Fuel, driver, transport"
+          label="Costs"
+          value={naira(allCosts)}
+          detail="Runs, commission and anything paid out"
         />
         <Figure
           label="Profit"
-          value={naira(sums.profit)}
+          value={
+            sums.profit < 0 ? `−${naira(Math.abs(sums.profit))}` : naira(sums.profit)
+          }
           tone={sums.profit >= 0 ? "mint" : "brand"}
           detail={
-            sums.gross === 0 ? "Nothing came in" : `${share}% of everything that came in`
+            sums.gross === 0
+              ? `${windowLabel(from, to)} · nothing came in`
+              : `${windowLabel(from, to)} · ${share}% of money in`
           }
         />
       </div>
 
-      <Panel
-        title="The working"
-        detail="Nothing hidden. If a number here looks wrong, the run that caused it is in the table below."
-        className="mb-[18px]"
-      >
-        {/* Money in, everything taken off it in the order it is taken, and
-            what is left. The same arithmetic as the list under it, at the
-            size somebody reads across a desk. */}
-        <div className="mt-2.5 flex flex-wrap items-stretch gap-2.5">
-          <Box label="Money in" value={sums.gross} note="food + delivery collected" />
-          <Sign>−</Sign>
-          <Box label="Kitchens" value={kitchens} note="paid at counters" />
-          <Sign>−</Sign>
-          <Box label="Commission" value={sums.commission} note="earned by promoters" />
-          <Sign>−</Sign>
-          <Box label="Run costs" value={sums.runCosts} note="fuel, driver, transport" />
-          <Sign>+</Sign>
-          <Box
-            label="Other money"
-            value={sums.otherIn - sums.otherOut}
-            note={`${sums.aside.length} entr${sums.aside.length === 1 ? "y" : "ies"}`}
-          />
-          <Sign>=</Sign>
-          <Box
-            label="Profit"
-            value={sums.profit}
-            note={sums.gross === 0 ? "nothing came in" : `${share}% margin`}
-            dark
-          />
-        </div>
-
-        {/* Every line that moved it, including the ones too small for a box
-            of their own. A figure somebody disputes is disputed at this
-            level, not at the summary's. */}
-        <dl className="mt-3.5 text-[14.5px]">
-          <Line label={`Money in, from ${sums.orders} paid orders`} value={sums.gross} />
-          <Line label="The food, at menu prices" value={-sums.foodAtMenu} />
-          {sums.overMenu !== 0 && (
-            <Line
-              label={
-                sums.overMenu < 0
-                  ? "The counters charged less than the menu"
-                  : "The counters charged more than the menu"
-              }
-              value={-sums.overMenu}
-              note="Only across the runs you have reconciled."
-            />
-          )}
-          <Line
-            label="Promoter commission"
-            value={-sums.commission}
-            note="Earned on these orders, whether or not it has been handed over."
-          />
-          <Line
-            label={`Fuel, driver and the rest, across ${sums.runs} runs`}
-            value={-sums.runCosts}
-          />
-          {sums.otherIn > 0 && (
-            <Line label="Errands and sales with no run behind them" value={sums.otherIn} />
-          )}
-          {sums.otherOut > 0 && (
-            <Line label="What those cost, and anything else paid out" value={-sums.otherOut} />
-          )}
-          <div className="flex justify-between gap-3 border-t-[1.5px] border-rule pt-2.5 font-bold">
-            <dt>Profit</dt>
-            <dd className={`font-mono ${sums.profit >= 0 ? "text-mint" : "text-brand-dark"}`}>
-              {naira(sums.profit)}
-            </dd>
-          </div>
-        </dl>
-
-        {estimated.length > 0 && (
-          <div className="soft mt-3.5 border-volt-line bg-brand-tint px-3.5 py-2.5 text-[13.5px]">
-            <strong>
-              {estimated.length} run{estimated.length === 1 ? "" : "s"}
-            </strong>{" "}
-            still {estimated.length === 1 ? "has" : "have"} no costs typed in, so the profit
-            above is the best case. Put the real figures in and this becomes exact.
-          </div>
-        )}
-      </Panel>
-
-      <div className="grid items-start gap-[18px] xl:grid-cols-[1.55fr_1fr]">
-        <Panel
-          title="Run by run"
-          aside={
-            <span className="hint">
-              {sums.byRun.length} run{sums.byRun.length === 1 ? "" : "s"}
-              {lost.length > 0 && ` · ${lost.length} lost money`}
-            </span>
-          }
-        >
-          {sums.byRun.length === 0 ? (
-            <p className="pt-2 text-[14.5px] text-muted">
-              No car went out in this window, so there is nothing to take apart.
-            </p>
-          ) : (
-            <>
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    <Head>Run</Head>
-                    <Head right>Took</Head>
-                    <Head right>Food</Head>
-                    <Head right>Delivery</Head>
-                    <Head right>Costs</Head>
-                    <Head right>Profit</Head>
-                    <Head> </Head>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sums.byRun.map((run) => (
-                    <tr key={run.id} className="border-t-[1.5px] border-rule">
-                      <td className="py-[11px] pr-2.5">
-                        <Link href={`/admin/batch/${run.id}`} className="hover:text-brand">
-                          <strong className="text-[14.5px]">
-                            {runDateLabel(run.runDate)} · {SLOT_LABEL[run.slot] ?? run.kind}
-                          </strong>
-                        </Link>
-                        <p className="hint">
-                          {run.orders} order{run.orders === 1 ? "" : "s"}
-                        </p>
-                      </td>
-                      <td className="py-[11px] pr-2.5 text-right font-mono text-[14.5px]">
-                        {naira(run.took)}
-                      </td>
-                      <td className="py-[11px] pr-2.5 text-right font-mono text-[14.5px] text-muted">
-                        {naira(run.food)}
-                      </td>
-                      <td className="py-[11px] pr-2.5 text-right font-mono text-[14.5px]">
-                        {naira(run.delivery)}
-                      </td>
-                      <td className="py-[11px] pr-2.5 text-right font-mono text-[14.5px] text-muted">
-                        {naira(run.costs)}
-                        {run.estimated && <span className="hint"> est</span>}
-                      </td>
-                      <td
-                        className={`py-[11px] pr-2.5 text-right font-mono text-[14.5px] font-semibold ${
-                          run.profit < 0 ? "text-brand-dark" : "text-mint"
-                        }`}
-                      >
-                        {run.profit < 0
-                          ? `−${naira(Math.abs(run.profit))}`
-                          : naira(run.profit)}
-                      </td>
-                      <td className="py-[11px] text-right">
-                        {run.estimated && (
-                          <Link
-                            href={`/admin/batch/${run.id}`}
-                            className="btn-admin btn-admin-sm"
-                          >
-                            Add costs
-                          </Link>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p className="hint mt-2.5">
-                Took, less what the counters charged and what the car and the promoters cost,
-                is the profit on the line. Delivery is what is left of the orders once the menu
-                price of the food is out.
-              </p>
-              {worst && (
-                <div className="soft mt-2.5 border-volt-line bg-brand-tint px-3.5 py-2.5 text-[13.5px]">
-                  <strong>
-                    {runDateLabel(worst.runDate)} · {SLOT_LABEL[worst.slot] ?? worst.kind} lost{" "}
-                    {naira(Math.abs(worst.profit))}.
-                  </strong>{" "}
-                  {worst.orders} order{worst.orders === 1 ? "" : "s"}, {naira(worst.delivery)} of
-                  delivery, against {naira(worst.costs)} of fuel, driver and commission.
-                </div>
-              )}
-            </>
-          )}
-        </Panel>
-
+      <div className="grid items-start gap-[18px] xl:grid-cols-[1.5fr_1fr]">
         <div className="flex flex-col gap-4">
           <Panel
-            title="By day of the week"
-            size="sm"
-            detail="Which days pay for the car, over the window you are reading."
+            title="How it is worked out"
+            detail="Every line is money that moved. Tap one to see the orders or runs behind it."
           >
+            {/* Every line that moved it, in the order it is taken off. A
+                figure somebody disputes is disputed at this level, not at
+                the summary's. */}
+            <dl className="text-[14.5px]">
+              <Line
+                label={`Money in, from ${sums.orders} paid order${
+                  sums.orders === 1 ? "" : "s"
+                }`}
+                value={sums.gross}
+                href="/admin/orders"
+              />
+              <Line
+                label="The food, at menu prices"
+                value={-sums.foodAtMenu}
+                href="/admin/orders"
+              />
+              {sums.overMenu !== 0 && (
+                <Line
+                  label={
+                    sums.overMenu < 0
+                      ? "The counters charged less than the menu"
+                      : "The counters charged more than the menu"
+                  }
+                  value={-sums.overMenu}
+                  note="Only across the runs you have reconciled."
+                  href="/admin/runs"
+                />
+              )}
+              <Line
+                label="Promoter commission"
+                value={-sums.commission}
+                note="Earned on these orders, whether or not it has been handed over."
+                href="/admin/promoters"
+              />
+              <Line
+                label={`Fuel, driver and the rest, across ${sums.runs} run${
+                  sums.runs === 1 ? "" : "s"
+                }`}
+                value={-sums.runCosts}
+                href="/admin/runs"
+              />
+              {sums.otherIn > 0 && (
+                <Line
+                  label="Errands and sales with no run behind them"
+                  value={sums.otherIn}
+                  href="/admin/money"
+                />
+              )}
+              {sums.otherOut > 0 && (
+                <Line
+                  label="What those cost, and anything else paid out"
+                  value={-sums.otherOut}
+                  href="/admin/money"
+                />
+              )}
+              <div className="mt-0.5 flex items-baseline justify-between gap-3.5 border-t-2 border-ink pt-3">
+                <dt className="text-[17px] font-bold">Profit</dt>
+                <dd
+                  className={`font-display text-[30px] font-black leading-none ${
+                    sums.profit >= 0 ? "text-mint" : "text-brand-dark"
+                  }`}
+                >
+                  {sums.profit < 0
+                    ? `−${naira(Math.abs(sums.profit))}`
+                    : naira(sums.profit)}
+                </dd>
+              </div>
+            </dl>
+          </Panel>
+
+          <Panel
+            title="Run by run"
+            aside={
+              <span className="hint">
+                {sums.byRun.length} run{sums.byRun.length === 1 ? "" : "s"}
+                {lost.length > 0 && ` · ${lost.length} lost money`}
+                {estimated.length > 0 && ` · ${estimated.length} still estimated`}
+              </span>
+            }
+          >
+            {sums.byRun.length === 0 ? (
+              <p className="pt-2 text-[14.5px] text-muted">
+                No car went out in this window, so there is nothing to take apart.
+              </p>
+            ) : (
+              <>
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <Head>Run</Head>
+                      <Head right>Took</Head>
+                      <Head right>Food</Head>
+                      <Head right>Costs</Head>
+                      <Head right>Profit</Head>
+                      <Head> </Head>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sums.byRun.map((run) => (
+                      <tr key={run.id} className="border-t-[1.5px] border-rule">
+                        <td className="py-[11px] pr-2.5">
+                          <Link href={`/admin/batch/${run.id}`} className="hover:text-brand">
+                            <strong className="text-[14.5px]">
+                              {runDateLabel(run.runDate)} · {SLOT_LABEL[run.slot] ?? run.kind}
+                            </strong>
+                          </Link>
+                          <p className="hint">
+                            {run.orders} order{run.orders === 1 ? "" : "s"}
+                          </p>
+                        </td>
+                        <td className="py-[11px] pr-2.5 text-right font-mono text-[14.5px]">
+                          {naira(run.took)}
+                        </td>
+                        <td className="py-[11px] pr-2.5 text-right font-mono text-[14.5px] text-muted">
+                          {naira(run.food)}
+                        </td>
+                        <td className="py-[11px] pr-2.5 text-right font-mono text-[14.5px] text-muted">
+                          {naira(run.costs)}
+                          {run.estimated && <span className="hint"> est</span>}
+                        </td>
+                        <td
+                          className={`py-[11px] pr-2.5 text-right font-mono text-[14.5px] font-semibold ${
+                            run.profit < 0 ? "text-brand-dark" : "text-mint"
+                          }`}
+                        >
+                          {run.profit < 0
+                            ? `−${naira(Math.abs(run.profit))}`
+                            : naira(run.profit)}
+                        </td>
+                        <td className="py-[11px] text-right">
+                          {run.estimated && (
+                            <Link
+                              href={`/admin/batch/${run.id}`}
+                              className="btn-admin btn-admin-sm"
+                            >
+                              Add costs
+                            </Link>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="hint mt-2.5">
+                  Took, less what the counters charged and what the car and the promoters
+                  cost, is the profit on the line.
+                </p>
+                {worst && (
+                  <div className="soft mt-3 border-volt-line bg-brand-tint px-3.5 py-2.5 text-[13.5px]">
+                    <strong>
+                      {runDateLabel(worst.runDate)} lost {naira(Math.abs(worst.profit))}.
+                    </strong>{" "}
+                    {worst.orders} order{worst.orders === 1 ? "" : "s"},{" "}
+                    {naira(worst.delivery)} of delivery, against {naira(worst.costs)} of fuel,
+                    driver and commission.
+                    {sameDayLost > 1 &&
+                      ` ${sameDayLost} of the last ${sameDay.length} ${weekdayLabel(
+                        worst.runDate
+                      )}s look like this.`}
+                  </div>
+                )}
+              </>
+            )}
+          </Panel>
+
+          <Panel
+            title="Money with no run behind it"
+            aside={
+              <Link href="/admin/money" className="btn-admin btn-admin-sm">
+                Add one
+              </Link>
+            }
+            detail="Errands, sales settled by hand, and anything the shop paid out that was not a run: hosting, data, printing. A cost here is a line with nothing coming in."
+          >
+            {sums.aside.length === 0 ? (
+              <p className="pt-2 text-[14.5px] text-muted">Nothing in this window.</p>
+            ) : (
+              <ul className="text-[14.5px]">
+                {sums.aside.map((one) => (
+                  <li
+                    key={one.id}
+                    className="flex items-center justify-between gap-3 border-t-[1.5px] border-rule py-[11px]"
+                  >
+                    <span className="min-w-0">
+                      <strong className="block text-[14.5px]">{one.what}</strong>
+                      <span className="hint block">
+                        {one.happened_on}
+                        {one.who ? ` · ${one.who}` : ""}
+                      </span>
+                    </span>
+                    <span
+                      className={`shrink-0 font-mono font-semibold ${
+                        madeOn(one) >= 0 ? "text-mint" : "text-brand-dark"
+                      }`}
+                    >
+                      {madeOn(one) < 0
+                        ? `−${naira(Math.abs(madeOn(one)))}`
+                        : naira(madeOn(one))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          {/* Food only. The delivery fee is one fee per car, so it belongs to
+              the run and not to any one kitchen, and only the reconciled runs
+              are in here: at the menu price every kitchen keeps nothing. */}
+          <Panel
+            title="What each kitchen keeps"
+            size="sm"
+            detail="Food only. The delivery fee is one fee per car, so it belongs to the run, not to any one kitchen, so splitting it between kitchens would be a number nobody could check."
+          >
+            {byKitchen.kitchens.length === 0 ? (
+              <p className="pt-2 text-[14.5px] text-muted">
+                No run in this window has been reconciled yet, so there is nothing here that
+                is money rather than a menu price.
+              </p>
+            ) : (
+              <>
+                {byKitchen.kitchens.map((one) => (
+                  <div
+                    key={one.restaurant}
+                    className="border-t-[1.5px] border-rule py-[11px]"
+                  >
+                    <div className="flex items-baseline justify-between gap-2.5">
+                      <strong className="text-[15px]">{one.restaurant}</strong>
+                      <span
+                        className={`font-mono font-semibold ${
+                          one.kept < 0 ? "text-brand-dark" : "text-mint"
+                        }`}
+                      >
+                        {one.kept < 0
+                          ? `−${naira(Math.abs(one.kept))}`
+                          : naira(one.kept)}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-2.5">
+                      <div className="h-[7px] flex-1 rounded-full bg-rule">
+                        <div
+                          className="h-full rounded-full bg-brand"
+                          style={{
+                            width: `${Math.max(
+                              0,
+                              Math.round((Math.max(0, one.share) / bestShare) * 100)
+                            )}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="hint w-[74px] shrink-0 text-right font-mono">
+                        {one.share}% kept
+                      </span>
+                    </div>
+                    <p className="hint mt-0.5">
+                      {naira(one.through)} through it · {one.runs} run
+                      {one.runs === 1 ? "" : "s"} ·{" "}
+                      {one.over === 0 ? (
+                        "counters matched the menu"
+                      ) : (
+                        <span className={one.over < 0 ? "text-mint" : "text-brand-dark"}>
+                          counters charged {naira(Math.abs(one.over))}{" "}
+                          {one.over < 0 ? "less" : "more"} than the menu
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                ))}
+                <p className="soft mt-3 border-volt-line bg-brand-tint px-3 py-2.5 text-[13px]">
+                  Built from{" "}
+                  <strong>
+                    {byKitchen.runs} reconciled run{byKitchen.runs === 1 ? "" : "s"}
+                  </strong>
+                  , the ones where you entered what you really paid. Runs still on estimates
+                  are left out, so every figure here is money that moved.
+                </p>
+              </>
+            )}
+          </Panel>
+
+          <Panel title="By day of the week" size="sm">
             <div className="flex h-[116px] items-end gap-2 pb-1 pt-2.5">
               {byDay.map((one) => (
                 <div
@@ -434,8 +590,10 @@ export default async function ProfitPage({
               ))}
             </div>
             <p className="hint border-t-[1.5px] border-rule pt-2.5">
-              {best && best.profit > 0
-                ? `${best.name} carries the window, at ${naira(best.profit)}.`
+              {ahead.length > 0
+                ? `${ahead.map((one) => one.name).join(" and ")} ${
+                    ahead.length === 1 ? "carries" : "carry"
+                  } the week.`
                 : "No day is ahead in this window."}
               {below.length > 0 &&
                 ` ${below.map((one) => one.name).join(" and ")} ${
@@ -443,6 +601,37 @@ export default async function ProfitPage({
                 } below the line.`}
             </p>
           </Panel>
+
+          {estimated.length > 0 && (
+            <Panel
+              title="Still estimated"
+              size="sm"
+              detail={`${estimated.length} run${
+                estimated.length === 1 ? "" : "s"
+              } use the average of your last few. Put the real figures in and the profit above becomes exact.`}
+            >
+              {estimated.map((run) => (
+                <div
+                  key={run.id}
+                  className="flex items-center gap-2.5 border-t-[1.5px] border-rule py-2.5"
+                >
+                  <div className="min-w-0 flex-1">
+                    <strong className="text-sm">
+                      {runDateLabel(run.runDate)} · {SLOT_LABEL[run.slot] ?? run.kind}
+                    </strong>
+                    <p className="hint">
+                      {typical === null
+                        ? "nothing typed in, and no run yet to average"
+                        : `using ${naira(typical)} estimated`}
+                    </p>
+                  </div>
+                  <Link href={`/admin/batch/${run.id}`} className="btn-admin btn-admin-sm">
+                    Add
+                  </Link>
+                </div>
+              ))}
+            </Panel>
+          )}
 
           {costs.length > 0 && (
             <Panel
@@ -475,81 +664,8 @@ export default async function ProfitPage({
               </ul>
             </Panel>
           )}
-
-          <Panel
-            title="Other money"
-            size="sm"
-            detail="Errands, sales settled by hand, and anything the shop paid out that was not a run: hosting, data, printing. A cost here is a line with nothing coming in."
-          >
-            {sums.aside.length === 0 ? (
-              <p className="pt-2 text-[14.5px] text-muted">Nothing in this window.</p>
-            ) : (
-              <ul className="text-[14.5px]">
-                {sums.aside.map((one) => (
-                  <li
-                    key={one.id}
-                    className="flex items-center justify-between gap-3 border-t-[1.5px] border-rule py-2.5"
-                  >
-                    <span className="min-w-0">
-                      <strong className="block text-sm">{one.what}</strong>
-                      <span className="hint block">
-                        {one.happened_on}
-                        {one.who ? ` · ${one.who}` : ""} · not through a run
-                      </span>
-                    </span>
-                    <span
-                      className={`shrink-0 font-mono font-semibold ${
-                        madeOn(one) >= 0 ? "text-mint" : "text-brand-dark"
-                      }`}
-                    >
-                      {naira(madeOn(one))}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <Link href="/admin/money" className="btn-admin btn-admin-sm mt-2.5 w-full">
-              Add an entry
-            </Link>
-          </Panel>
         </div>
       </div>
-    </div>
-  );
-}
-
-/** One figure in the working, at the board's thirty-one pixels. */
-function Box({
-  label,
-  value,
-  note,
-  dark = false,
-}: {
-  label: string;
-  value: number;
-  note: string;
-  dark?: boolean;
-}) {
-  return (
-    <div
-      className={`min-w-[150px] flex-1 rounded-xl border-2 border-ink px-[15px] py-[13px] ${
-        dark ? "bg-ink text-paper" : "bg-paper text-ink"
-      }`}
-    >
-      <p className={`ticket ${dark ? "text-paper/65" : "text-muted"}`}>{label}</p>
-      <p className="font-display text-[31px] font-black leading-[1.05]">
-        {value < 0 ? `−${naira(Math.abs(value))}` : naira(value)}
-      </p>
-      <p className="mt-0.5 text-[12.5px] opacity-80">{note}</p>
-    </div>
-  );
-}
-
-/** The operator between two boxes, which is what makes it a sum. */
-function Sign({ children }: { children: React.ReactNode }) {
-  return (
-    <div aria-hidden className="flex items-center text-[26px] font-bold text-muted">
-      {children}
     </div>
   );
 }
@@ -567,22 +683,40 @@ function Head({ children, right = false }: { children: React.ReactNode; right?: 
   );
 }
 
+/**
+ * One line of the working.
+ *
+ * The label is a link wherever there is a page behind it, because the panel's
+ * own hint promises that tapping a line shows the orders or the runs it came
+ * from, and a figure you cannot walk back to its cause is the kind of figure
+ * this page exists to replace.
+ */
 function Line({
   label,
   value,
   note,
+  href,
 }: {
   label: string;
   value: number;
   note?: string;
+  href?: string;
 }) {
   return (
-    <div className="flex justify-between gap-3 border-t-[1.5px] border-rule py-2.5">
+    <div className="flex justify-between gap-3.5 border-t-[1.5px] border-rule py-[11px]">
       <dt className="min-w-0">
-        <span className="block">{label}</span>
+        {href ? (
+          <Link href={href} className="block hover:text-brand">
+            {label}
+          </Link>
+        ) : (
+          <span className="block">{label}</span>
+        )}
         {note && <span className="hint block">{note}</span>}
       </dt>
-      <dd className={`shrink-0 font-mono font-semibold ${value < 0 ? "text-brand-dark" : ""}`}>
+      <dd
+        className={`shrink-0 font-mono font-semibold ${value < 0 ? "text-brand-dark" : ""}`}
+      >
         {value < 0 ? `−${naira(Math.abs(value))}` : naira(value)}
       </dd>
     </div>

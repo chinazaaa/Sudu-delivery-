@@ -883,18 +883,8 @@ export async function overMenu(
 
   for (const id of reconciledIds) {
     const mine = lines.filter((line) => batchOfOrder.get(line.order_id) === id);
-    const everyLine = groupForCounter(mine).flatMap((place) => place.lines);
-    const rows = spend.filter((row) => row.batch_id === id);
-    const spentOn = new Map(rows.map((row) => [row.line_key, row.paid]));
-    const gotBack = new Map(rows.map((row) => [row.line_key, row.recovered ?? 0]));
-
-    // Lines nobody typed stay at the menu price, exactly as the sheet has it.
-    const real = everyLine.reduce(
-      (total, line) =>
-        total +
-        (spentOn.has(line.key)
-          ? (spentOn.get(line.key) as number) - (gotBack.get(line.key) ?? 0)
-          : line.qty * line.unitPrice),
+    const real = chargedByRestaurant(mine, spend.filter((row) => row.batch_id === id)).reduce(
+      (total, place) => total + place.charged,
       0
     );
     // The per line figures win over one figure for the whole shop, which is
@@ -903,6 +893,49 @@ export async function overMenu(
   }
 
   return out;
+}
+
+/** What one restaurant's share of a run came to, at the menu and in the end. */
+export type CounterCharge = {
+  restaurant: string;
+  /** The menu value of its lines: what we expected to hand over. */
+  menu: number;
+  /** What the counter was really charged for those same lines, less anything
+   *  handed back, with untyped lines left at the menu price. */
+  charged: number;
+};
+
+/**
+ * The menu value and the real charge of a set of order lines, per restaurant.
+ *
+ * This is the line-key rule, in one place. A counter line is what somebody
+ * reads aloud at the counter, so what was paid for it is recorded against
+ * that same key, and a line nobody typed stays at the menu price because the
+ * sheet is what was reconciled and silence on a line is not a saving.
+ *
+ * Both the per-run correction the dashboard takes off and the per-kitchen
+ * figures on the profit page are this sum, summed differently. They were a
+ * line-key rule and a copy of a line-key rule, which is one rule too many.
+ */
+export function chargedByRestaurant(
+  lines: OrderLine[],
+  spend: { line_key: string; paid: number; recovered?: number | null }[]
+): CounterCharge[] {
+  const spentOn = new Map(spend.map((row) => [row.line_key, Number(row.paid ?? 0)]));
+  const gotBack = new Map(spend.map((row) => [row.line_key, Number(row.recovered ?? 0)]));
+
+  return groupForCounter(lines).map((place) => ({
+    restaurant: place.restaurant,
+    menu: place.expectedFoodTotal,
+    charged: place.lines.reduce(
+      (total, line) =>
+        total +
+        (spentOn.has(line.key)
+          ? (spentOn.get(line.key) as number) - (gotBack.get(line.key) ?? 0)
+          : line.qty * line.unitPrice),
+      0
+    ),
+  }));
 }
 
 export type PromoterPayout = {

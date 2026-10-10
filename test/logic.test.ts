@@ -10,10 +10,11 @@ import { howLong, needsDoing } from "../lib/needs-doing";
 import { howPaid, orderStory } from "../lib/order-story";
 import { codeFrom } from "../lib/promoter-applications";
 import { toCsv } from "../lib/csv";
+import { kitchenTotals } from "../lib/profit";
 import { templateFor } from "../lib/messages";
 import { EMPTY } from "../lib/settings";
 import { test } from "node:test";
-import { groupForCounter } from "../lib/admin";
+import { chargedByRestaurant, groupForCounter } from "../lib/admin";
 import { normalisePhone, formatPhone } from "../lib/phone";
 import { countdown, lagosInstant, lagosToday } from "../lib/time";
 import {
@@ -2136,4 +2137,141 @@ test("a csv survives Excel", () => {
     toCsv([{ Name: "Ada", Block: "Queen Mary" }, { Name: "Chisom" }]),
     "Name,Block\r\nAda,Queen Mary\r\nChisom,"
   );
+});
+
+test("a counter line that was typed in is charged at what was paid, less anything handed back", () => {
+  const lines = [
+    line({ order_id: "a", name: "8pc bucket", qty: 2, unit_price_at_order: 18000 }),
+    line({
+      order_id: "b",
+      name: "Medium pepperoni",
+      qty: 1,
+      unit_price_at_order: 11000,
+      restaurant: "Domino's Pizza",
+    }),
+  ];
+  const keyOf = (name: string) =>
+    groupForCounter(lines)
+      .flatMap((place) => place.lines)
+      .find((one) => one.name === name)!.key;
+
+  const charges = chargedByRestaurant(lines, [
+    { line_key: keyOf("8pc bucket"), paid: 37000, recovered: 1500 },
+    { line_key: keyOf("Medium pepperoni"), paid: 11000 },
+  ]);
+
+  const kfc = charges.find((one) => one.restaurant === "KFC Novare")!;
+  // The menu asked for ₦36,000, the counter took ₦37,000 and ₦1,500 came
+  // back, so the shop is ₦400 under the menu rather than ₦1,000 over it.
+  assert.equal(kfc.menu, 36000);
+  assert.equal(kfc.charged, 35500);
+
+  const dominos = charges.find((one) => one.restaurant === "Domino's Pizza")!;
+  assert.equal(dominos.menu, 11000);
+  assert.equal(dominos.charged, 11000);
+});
+
+test("a counter line nobody typed in stays at the menu price, because silence is not a saving", () => {
+  const lines = [
+    line({ name: "8pc bucket", qty: 1, unit_price_at_order: 18000 }),
+    line({ name: "Wrap meal", qty: 2, unit_price_at_order: 5500 }),
+  ];
+  const typed = groupForCounter(lines)[0].lines.find((one) => one.name === "Wrap meal")!;
+
+  const [kfc] = chargedByRestaurant(lines, [{ line_key: typed.key, paid: 10000 }]);
+
+  // The wrap meals came in ₦1,000 under, and the bucket nobody typed is
+  // still ₦18,000: half a reconciled run used to read as a whole one, and
+  // the untyped half showed up as money saved that nobody had saved.
+  assert.equal(kfc.menu, 29000);
+  assert.equal(kfc.charged, 28000);
+});
+
+test("a run with no counter lines at all is charged the menu price throughout", () => {
+  const [kfc] = chargedByRestaurant(
+    [line({ name: "8pc bucket", qty: 3, unit_price_at_order: 18000 })],
+    []
+  );
+  assert.equal(kfc.menu, 54000);
+  assert.equal(kfc.charged, 54000);
+});
+
+test("a kitchen keeps the menu value of its food less what its counter really charged", () => {
+  const [kfc] = kitchenTotals([
+    { restaurant: "KFC Novare", batchId: "r1", menu: 40000, charged: 30000 },
+  ]);
+
+  // Food only: the delivery fee is one fee per car and belongs to the run,
+  // so nothing about it reaches a kitchen's line.
+  assert.equal(kfc.through, 40000);
+  assert.equal(kfc.kept, 10000);
+  assert.equal(kfc.share, 25);
+  assert.equal(kfc.runs, 1);
+  // The same money from the counter's side, which is how the panel's own
+  // line says it: ₦10,000 less than the menu.
+  assert.equal(kfc.over, -10000);
+});
+
+test("a kitchen's runs are counted once each, however many restaurants a run stopped at", () => {
+  const totals = kitchenTotals([
+    { restaurant: "KFC Novare", batchId: "r1", menu: 10000, charged: 9000 },
+    { restaurant: "Domino's Pizza", batchId: "r1", menu: 20000, charged: 20000 },
+    { restaurant: "KFC Novare", batchId: "r2", menu: 30000, charged: 28000 },
+  ]);
+
+  const kfc = totals.find((one) => one.restaurant === "KFC Novare")!;
+  assert.equal(kfc.runs, 2);
+  assert.equal(kfc.through, 40000);
+  assert.equal(kfc.kept, 3000);
+
+  const dominos = totals.find((one) => one.restaurant === "Domino's Pizza")!;
+  assert.equal(dominos.runs, 1);
+  assert.equal(dominos.kept, 0);
+  assert.equal(dominos.over, 0);
+});
+
+test("a counter that charged above the menu reads as money the kitchen took, not kept", () => {
+  const [kfc] = kitchenTotals([
+    { restaurant: "KFC Novare", batchId: "r1", menu: 10000, charged: 10340 },
+  ]);
+
+  assert.equal(kfc.kept, -340);
+  // Over the menu by ₦340, which is the figure the panel prints in the
+  // dark red rather than the mint.
+  assert.equal(kfc.over, 340);
+  assert.equal(kfc.share, -3);
+});
+
+test("kitchens are ordered by the percentage they keep, not by how big they are", () => {
+  const totals = kitchenTotals([
+    // A large kitchen keeping a twentieth of what goes through it.
+    { restaurant: "Chicken Republic", batchId: "r1", menu: 100000, charged: 95000 },
+    // A small one keeping a third, which is the thing worth seeing.
+    { restaurant: "Krispy Kreme", batchId: "r1", menu: 6000, charged: 4000 },
+  ]);
+
+  assert.deepEqual(
+    totals.map((one) => one.restaurant),
+    ["Krispy Kreme", "Chicken Republic"]
+  );
+});
+
+test("two kitchens keeping the same share are ordered by the larger, so the panel does not shuffle", () => {
+  const totals = kitchenTotals([
+    { restaurant: "Krispy Kreme", batchId: "r1", menu: 10000, charged: 9000 },
+    { restaurant: "Market Square", batchId: "r1", menu: 50000, charged: 45000 },
+  ]);
+
+  assert.deepEqual(
+    totals.map((one) => one.restaurant),
+    ["Market Square", "Krispy Kreme"]
+  );
+});
+
+test("a kitchen nothing went through has no percentage rather than all of nothing", () => {
+  const [one] = kitchenTotals([
+    { restaurant: "KFC Novare", batchId: "r1", menu: 0, charged: 0 },
+  ]);
+  assert.equal(one.share, 0);
+  assert.equal(one.kept, 0);
 });

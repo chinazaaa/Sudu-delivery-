@@ -1,11 +1,11 @@
 import { db } from "./supabase";
-import { isPaid, NOT_ORDERS_SQL } from "./orders";
+import { isPaid, linesFor, NOT_ORDERS_SQL } from "./orders";
 import { otherMoneyTotals, type OtherMoney } from "./other-money";
 // The same two sums the dashboard and the run list use. This page had its
 // own copies, and they drifted: food nobody typed into a sheet was counted
 // as having cost nothing, so a half-reconciled run read as a large saving
 // and this page claimed a profit the dashboard never agreed with.
-import { commissionByRun, overMenu } from "./admin";
+import { chargedByRestaurant, commissionByRun, overMenu } from "./admin";
 import type { Batch, Order } from "./types";
 
 /**
@@ -231,4 +231,156 @@ async function asideBetween(from: string, to: string): Promise<OtherMoney[]> {
   } catch {
     return [];
   }
+}
+
+/**
+ * What one kitchen kept over the window, on the runs that have been reconciled.
+ *
+ * Food only. The delivery fee is one fee per car, so it belongs to the run and
+ * not to any one kitchen: splitting it between the five counters a car stops
+ * at would need a rule nobody could check against anything, and a figure that
+ * cannot be checked is a figure that gets argued about instead of used.
+ */
+export type KitchenLine = {
+  restaurant: string;
+  /** The menu value of its lines on paid orders: what went through it. */
+  through: number;
+  /** That menu value, less what the counters were really charged for those
+   *  same lines. Negative when a counter charged above the menu. */
+  kept: number;
+  /** Kept as a percentage of what went through, which is what the panel
+   *  sorts on: a small kitchen keeping a third of its own takings is the
+   *  thing worth seeing, not the big one keeping a twentieth. */
+  share: number;
+  /** Reconciled runs it appeared on, so a figure built from one night can be
+   *  told apart from one built from seven. */
+  runs: number;
+  /** What the counters charged above the menu. Negative is a saving. This is
+   *  the same money as kept, said from the counter's side, which is the way
+   *  the panel's own line says it. */
+  over: number;
+};
+
+export type ByKitchen = {
+  from: string;
+  to: string;
+  /** Reconciled runs the whole panel is built from, for the footnote that
+   *  says so. Runs still on estimates are not in any figure here. */
+  runs: number;
+  kitchens: KitchenLine[];
+};
+
+/** One restaurant's share of one reconciled run, before the folding. */
+type KitchenRunRow = {
+  restaurant: string;
+  batchId: string;
+  menu: number;
+  charged: number;
+};
+
+/**
+ * Per-run, per-restaurant charges folded into one line per kitchen.
+ *
+ * Kept apart from the queries because this is the whole arithmetic of the
+ * panel and the thing anybody would dispute, and a sum nobody can run on a
+ * handful of made-up rows is a sum that gets believed rather than checked.
+ *
+ * Sorted by the percentage kept, highest first, the way the board prints it.
+ * Ties fall to the larger kitchen, so the order does not shuffle between two
+ * reads of the same window.
+ */
+export function kitchenTotals(rows: KitchenRunRow[]): KitchenLine[] {
+  const bags = new Map<string, { through: number; charged: number; runs: Set<string> }>();
+
+  for (const row of rows) {
+    const bag = bags.get(row.restaurant) ?? { through: 0, charged: 0, runs: new Set<string>() };
+    bag.through += row.menu;
+    bag.charged += row.charged;
+    bag.runs.add(row.batchId);
+    bags.set(row.restaurant, bag);
+  }
+
+  return [...bags.entries()]
+    .map(([restaurant, bag]) => {
+      const kept = Math.round(bag.through - bag.charged);
+      return {
+        restaurant,
+        through: Math.round(bag.through),
+        kept,
+        // A kitchen nothing went through has no percentage to show rather
+        // than a hundred per cent of nothing.
+        share: bag.through === 0 ? 0 : Math.round((kept / bag.through) * 100),
+        runs: bag.runs.size,
+        over: Math.round(bag.charged - bag.through),
+      };
+    })
+    .sort((a, b) => (b.share === a.share ? b.through - a.through : b.share - a.share));
+}
+
+/**
+ * What each kitchen kept between two days, and how much went through it.
+ *
+ * Only runs somebody has reconciled are in here, which means runs with lines
+ * in counter_spend. A run with nothing typed into it is left out entirely
+ * rather than counted at the menu price, because at the menu price every
+ * kitchen keeps exactly nothing and a panel of zeroes reads as a fact about
+ * the kitchens instead of a fact about the typing.
+ */
+export async function profitByKitchen(from: string, to: string): Promise<ByKitchen> {
+  const empty: ByKitchen = { from, to, runs: 0, kitchens: [] };
+
+  const { data: batchRows } = await db()
+    .from("batches")
+    .select("id")
+    .gte("run_date", from)
+    .lte("run_date", to);
+  const ids = ((batchRows ?? []) as { id: string }[]).map((one) => String(one.id));
+  if (ids.length === 0) return empty;
+
+  // What was really handed over, per counter line. This is also what says a
+  // run has been reconciled at all: no rows, no run.
+  let spend: { batch_id: string; line_key: string; paid: number; recovered?: number | null }[] = [];
+  try {
+    const { data, error } = await db()
+      .from("counter_spend")
+      .select("batch_id, line_key, paid, recovered")
+      .in("batch_id", ids);
+    if (error) throw new Error(error.message);
+    spend = (data ?? []) as typeof spend;
+  } catch {
+    return empty;
+  }
+  if (spend.length === 0) return empty;
+
+  const reconciled = [...new Set(spend.map((row) => String(row.batch_id)))];
+
+  const { data: orderRows } = await db()
+    .from("orders")
+    .select("id, batch_id, status")
+    .in("batch_id", reconciled)
+    .not("status", "in", NOT_ORDERS_SQL);
+  const paid = ((orderRows ?? []) as Pick<Order, "id" | "batch_id" | "status">[]).filter(
+    (one) => isPaid(one.status)
+  );
+  if (paid.length === 0) return { ...empty, runs: reconciled.length };
+
+  const lines = await linesFor(paid.map((one) => one.id));
+  const runOfOrder = new Map(paid.map((one) => [one.id, String(one.batch_id)]));
+
+  // One run at a time, because a line key is only unique inside its own run:
+  // the same bucket at the same price is a different purchase on a different
+  // night, and pooling the keys would pay for one of them twice.
+  const rows: KitchenRunRow[] = reconciled.flatMap((id) =>
+    chargedByRestaurant(
+      lines.filter((line) => runOfOrder.get(line.order_id) === id),
+      spend.filter((row) => String(row.batch_id) === id)
+    ).map((place) => ({
+      restaurant: place.restaurant,
+      batchId: id,
+      menu: place.menu,
+      charged: place.charged,
+    }))
+  );
+
+  return { from, to, runs: reconciled.length, kitchens: kitchenTotals(rows) };
 }
