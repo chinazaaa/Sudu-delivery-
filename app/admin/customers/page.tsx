@@ -21,8 +21,11 @@ import {
   Bar,
   Composer,
   Picking,
+  Room,
   Tick,
   TickAll,
+  VIEWS,
+  broadcastHref,
   type Pattern,
   type Picked,
 } from "@/components/admin/CustomerBulk";
@@ -71,14 +74,6 @@ function daysSince(when: string | null): number | null {
   if (Number.isNaN(then)) return null;
   return Math.floor((Date.now() - then) / 86400000);
 }
-
-const VIEWS = [
-  { value: "", label: "Everyone" },
-  { value: "repeat", label: "Ordered twice or more" },
-  { value: "quiet", label: "Quiet 30 days" },
-  { value: "unreviewed", label: "Never reviewed" },
-  { value: "big", label: "Big spenders" },
-] as const;
 
 export default async function CustomersPage({
   searchParams,
@@ -219,7 +214,11 @@ export default async function CustomersPage({
     ...(google.review !== "" ? [pattern("google")] : []),
   ];
 
-  const viewLabel = VIEWS.find((one) => one.value === view)?.label ?? "";
+  const cut = VIEWS.find((one) => one.value === view) ?? null;
+  const viewLabel = cut?.label ?? "";
+  // What the cut says about the people in it, as a sentence rather than a
+  // pill: "9 have not ordered in 30 days" is the reason to write to them.
+  const nudge = cut?.nudge ?? "";
 
   return (
     <div>
@@ -237,7 +236,22 @@ export default async function CustomersPage({
             <a href="#add-somebody" className="btn-admin">
               Add somebody
             </a>
-            <a href="#send-a-message" className="btn-admin">
+            {/* The composer is a card beside the table on a desk and a screen
+                of its own on a phone, so the button that opens it is a jump
+                down the page at one width and a link at the other. Both go
+                to the same composer; neither sends anything. */}
+            <a href="#send-a-message" className="btn-admin hidden lg:inline-flex">
+              Send a message
+            </a>
+            <a
+              href={broadcastHref({
+                phones: shown.map((row) => row.phone),
+                view,
+                by,
+                q: query.q ?? "",
+              })}
+              className="btn-admin lg:hidden"
+            >
               Send a message
             </a>
             {/* The book as it is filtered on the screen. The bar above the
@@ -255,7 +269,7 @@ export default async function CustomersPage({
         }
       />
 
-      <div className="mb-4 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3.5 xl:grid-cols-4">
         <Figure
           label="Customers"
           value={String(shown.length)}
@@ -282,12 +296,12 @@ export default async function CustomersPage({
       {/* The named cuts of the book, as links rather than a dropdown: the
           counts are the point, and a count inside a closed select is a count
           nobody reads. */}
-      <div className="mb-3 flex flex-wrap gap-2">
+      <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
         {VIEWS.map((one) => (
           <Link
             key={one.value || "all"}
             href={link({ view: one.value || undefined })}
-            className={`pill-admin ${view === one.value ? "pill-admin-on" : ""}`}
+            className={`pill-admin shrink-0 ${view === one.value ? "pill-admin-on" : ""}`}
           >
             {one.label}
             <span className="font-mono opacity-60">{counts[one.value] ?? 0}</span>
@@ -331,13 +345,43 @@ export default async function CustomersPage({
       </form>
 
       <Picking people={people} patterns={patterns}>
-        <Bar viewLabel={viewLabel === "Everyone" ? "" : viewLabel} codeHref="/admin/coupons?new=1" />
+        <Bar
+          viewLabel={viewLabel === "Everyone" ? "" : viewLabel}
+          codeHref="/admin/coupons?new=1"
+          view={view}
+          by={by}
+          q={query.q ?? ""}
+        />
+
+        {/* The one thing a cut of the book is for, said as a sentence with
+            the answer under it. On a desk the same answer is the composer
+            sitting beside the table, which is why this is the phone's: there
+            the card would be a second way to reach a card already on screen. */}
+        {view !== "" && shown.length > 0 && nudge !== "" && (
+          <div className="card mb-3 border-volt-line bg-brand-tint p-3.5 lg:hidden">
+            <strong className="text-[14.5px]">
+              {shown.length} {nudge}
+            </strong>
+            <p className="hint">{naira(spend)} of lifetime spend between them.</p>
+            <a
+              href={broadcastHref({
+                phones: shown.map((row) => row.phone),
+                view,
+                by,
+                q: query.q ?? "",
+              })}
+              className="btn-admin-go mt-2.5 w-full"
+            >
+              Message all {shown.length}
+            </a>
+          </div>
+        )}
 
         <div className="grid items-start gap-[18px] xl:grid-cols-[1.55fr_1fr]">
           {shown.length === 0 ? (
             <p className="card hint">
               {rows.length === 0
-                ? "No customers yet. A customer is created by their first order, or by hand on the right."
+                ? "No customers yet. A customer is created by their first order, or by hand in Add somebody."
                 : view !== ""
                   ? "Nobody in the book is in that state right now."
                   : brought
@@ -347,95 +391,63 @@ export default async function CustomersPage({
                       : "Nobody here matches that."}
             </p>
           ) : (
-            <div className="card overflow-x-auto p-4">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    <th className="w-7 pb-2 pr-2.5">
-                      <TickAll />
-                    </th>
-                    {["Who", "How they are", "Brought by", "Spent", "Orders", "PIN", ""].map(
-                      (head, at) => (
-                        <th
-                          key={head || `end-${at}`}
-                          className="pb-2 pr-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted"
-                        >
-                          {head}
-                        </th>
-                      )
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {shown.map((row) => {
-                    const since = daysSince(row.lastOrder);
-                    const errand = aside.get(row.phone);
-                    const promoter =
-                      promoters.find((one) => one.code === row.promoterCode) ?? null;
-                    const greeting = firstName(row.name, row.callsThem);
-                    // The one message that is nobody's template: the owner
-                    // opens the chat and says whatever this person needs.
-                    const message = whatsappTo(row.phone, `Hi ${greeting}, `);
-                    const rooms = santa.get(row.phone);
-                    const door =
-                      row.uses === "app"
-                        ? "Mostly the app"
-                        : row.uses === "web"
-                          ? "Mostly the website"
-                          : row.uses === ""
-                            ? ""
-                            : "App and website";
-                    const second = [door, row.pays === "card" ? "Pays by card" : ""].filter(
-                      (part) => part !== ""
-                    );
-                    return (
-                      <tr key={row.phone} className="border-t-[1.5px] border-rule align-middle">
-                        <td className="w-7 py-[11px] pr-2.5">
-                          <Tick phone={row.phone} name={row.name || row.phone} />
-                        </td>
-                        <td className="py-[11px] pr-2.5 text-[14.5px]">
-                          {/* The name is the way in to their own page, where
-                              every order they have placed, what they are
-                              worth after fuel, and every form about them
-                              sits on one screen. */}
-                          <Link
-                            href={`/admin/customers/${encodeURIComponent(row.phone)}`}
-                            className="text-[15px] font-bold hover:underline"
-                          >
+            <div className="min-w-0">
+              {/* A card for each person on a phone, because a table of seven
+                  columns on a three hundred and ninety pixel screen is a
+                  table read sideways. The card is a link to them with the
+                  tick beside it, so picking nine people and opening one are
+                  different taps rather than the same tap twice. */}
+              <div className="mb-2.5 lg:hidden">
+                <TickAll label="Pick everybody shown" />
+              </div>
+              <ul className="grid gap-2.5 lg:hidden">
+                {shown.map((row) => {
+                  const since = daysSince(row.lastOrder);
+                  const promoter =
+                    promoters.find((one) => one.code === row.promoterCode) ?? null;
+                  const errand = aside.get(row.phone);
+                  const rooms = santa.get(row.phone);
+                  return (
+                    <li key={row.phone} className="card flex items-start gap-1.5 p-3">
+                      <Tick phone={row.phone} name={row.name || row.phone} tap />
+                      <Link
+                        href={`/admin/customers/${encodeURIComponent(row.phone)}`}
+                        className="min-w-0 grow"
+                      >
+                        <span className="flex items-baseline justify-between gap-2">
+                          <strong className="truncate text-[15px]">
                             {row.name || formatPhone(row.phone)}
-                          </Link>
-                          <p className="hint">
-                            {formatPhone(row.phone)} · {row.hostel || "No block saved"}
-                          </p>
-                          {/* Which door they come through, over everything
-                              they have ordered. Nothing is said for somebody
-                              whose orders all predate the shop writing it
-                              down. */}
-                          {second.length > 0 && <p className="hint">{second.join(" · ")}</p>}
-                        </td>
-                        <td className="py-[11px] pr-2.5 text-[14.5px]">
-                          <div className="flex flex-wrap gap-1.5">
-                            {/* How they are, in the words the board uses. One
-                                state, the loudest one, rather than a row of
-                                tags saying the same thing three ways. */}
-                            {row.orders === 0 ? (
-                              <Tag>No orders yet</Tag>
-                            ) : since !== null && since > 30 ? (
-                              <Tag tone="quiet">{since} days quiet</Tag>
-                            ) : row.orders > 1 ? (
-                              <Tag tone="mint">Regular</Tag>
-                            ) : (
-                              <Tag>Ordered once</Tag>
-                            )}
-                            {row.reviewed && <Tag tone="volt">Reviewed</Tag>}
-                            {/* A Secret Santa room is a door into the shop,
-                                and somebody who came through it has no orders
-                                behind them. Naming the room turns a puzzling
-                                row into a fact. */}
-                            {rooms && <Tag tone="mint">Secret Santa · {rooms.join(", ")}</Tag>}
-                          </div>
-                        </td>
-                        <td className="py-[11px] pr-2.5 text-[14.5px]">
+                          </strong>
+                          {/* Money is mono, even where the board sets this one
+                              in the display face: a column of prices only
+                              lines up in the one face that is monospaced. */}
+                          <span className="shrink-0 font-mono text-[15px] font-semibold">
+                            {naira(row.spend)}
+                          </span>
+                        </span>
+                        <span className="hint block">
+                          {row.hostel || "No block saved"} · {row.orders}{" "}
+                          {row.orders === 1 ? "order" : "orders"}
+                          {row.pin !== "" && ` · PIN ${row.pin}`}
+                        </span>
+                        {(errand?.count ?? 0) > 0 && (
+                          <span className="block text-xs font-semibold text-mint">
+                            {naira(errand!.took)} on {errand!.count} errand
+                            {errand!.count === 1 ? "" : "s"}
+                          </span>
+                        )}
+                        <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          {row.orders === 0 ? (
+                            <Tag>No orders yet</Tag>
+                          ) : since !== null && since > 30 ? (
+                            <Tag tone="quiet">{since} days quiet</Tag>
+                          ) : row.orders > 1 ? (
+                            <Tag tone="mint">Regular</Tag>
+                          ) : (
+                            <Tag>Ordered once</Tag>
+                          )}
+                          {row.reviewed && <Tag tone="volt">Reviewed</Tag>}
+                          {rooms && <Tag tone="mint">Secret Santa</Tag>}
                           {promoter ? (
                             <Tag tone="volt">
                               <span className="flex h-[13px] w-[13px] items-center justify-center rounded-full bg-ink text-[8.5px] font-bold text-volt">
@@ -446,56 +458,172 @@ export default async function CustomersPage({
                           ) : (
                             <Tag>found us</Tag>
                           )}
-                        </td>
-                        <td className="py-[11px] pr-2.5 font-mono text-[14.5px] font-semibold">
-                          {naira(row.spend)}
-                          {/* Errands they paid for with no order behind them.
-                              A row reading "0 orders" beside somebody who has
-                              paid us twenty thousand naira is not the
-                              truth. */}
-                          {(errand?.count ?? 0) > 0 && (
-                            <span className="block font-sans text-xs font-semibold text-mint">
-                              {naira(errand!.took)} on {errand!.count} errand
-                              {errand!.count === 1 ? "" : "s"}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-[11px] pr-2.5 font-mono text-[14.5px]">{row.orders}</td>
-                        <td className="py-[11px] pr-2.5 font-mono text-[14.5px] text-muted">
-                          {row.pin || "none"}
-                        </td>
-                        <td className="whitespace-nowrap py-[11px] text-right">
-                          <a
-                            href={message}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn-admin btn-admin-sm"
+                          <span aria-hidden className="ml-auto text-[17px] text-muted">
+                            ›
+                          </span>
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div className="card hidden overflow-x-auto p-4 lg:block">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="w-7 pb-2 pr-2.5">
+                        <TickAll />
+                      </th>
+                      {["Who", "How they are", "Brought by", "Spent", "Orders", "PIN", ""].map(
+                        (head, at) => (
+                          <th
+                            key={head || `end-${at}`}
+                            className="pb-2 pr-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted"
                           >
-                            Message
-                          </a>{" "}
-                          {/* Their PIN, the review ask, the tick, the call,
-                              their orders in the book, the note, who brought
-                              them and what to call them are all one tap away
-                              on their own page: a form does not fit in a
-                              table row, and splitting them across two places
-                              is how one of them gets forgotten. */}
-                          <Link
-                            href={`/admin/customers/${encodeURIComponent(row.phone)}`}
-                            className="btn-admin btn-admin-sm"
-                          >
-                            Open →
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                            {head}
+                          </th>
+                        )
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shown.map((row) => {
+                      const since = daysSince(row.lastOrder);
+                      const errand = aside.get(row.phone);
+                      const promoter =
+                        promoters.find((one) => one.code === row.promoterCode) ?? null;
+                      const greeting = firstName(row.name, row.callsThem);
+                      // The one message that is nobody's template: the owner
+                      // opens the chat and says whatever this person needs.
+                      const message = whatsappTo(row.phone, `Hi ${greeting}, `);
+                      const rooms = santa.get(row.phone);
+                      const door =
+                        row.uses === "app"
+                          ? "Mostly the app"
+                          : row.uses === "web"
+                            ? "Mostly the website"
+                            : row.uses === ""
+                              ? ""
+                              : "App and website";
+                      const second = [door, row.pays === "card" ? "Pays by card" : ""].filter(
+                        (part) => part !== ""
+                      );
+                      return (
+                        <tr key={row.phone} className="border-t-[1.5px] border-rule align-middle">
+                          <td className="w-7 py-[11px] pr-2.5">
+                            <Tick phone={row.phone} name={row.name || row.phone} />
+                          </td>
+                          <td className="py-[11px] pr-2.5 text-[14.5px]">
+                            {/* The name is the way in to their own page, where
+                                every order they have placed, what they are
+                                worth after fuel, and every form about them
+                                sits on one screen. */}
+                            <Link
+                              href={`/admin/customers/${encodeURIComponent(row.phone)}`}
+                              className="text-[15px] font-bold hover:underline"
+                            >
+                              {row.name || formatPhone(row.phone)}
+                            </Link>
+                            <p className="hint">
+                              {formatPhone(row.phone)} · {row.hostel || "No block saved"}
+                            </p>
+                            {/* Which door they come through, over everything
+                                they have ordered. Nothing is said for somebody
+                                whose orders all predate the shop writing it
+                                down. */}
+                            {second.length > 0 && <p className="hint">{second.join(" · ")}</p>}
+                          </td>
+                          <td className="py-[11px] pr-2.5 text-[14.5px]">
+                            <div className="flex flex-wrap gap-1.5">
+                              {/* How they are, in the words the board uses. One
+                                  state, the loudest one, rather than a row of
+                                  tags saying the same thing three ways. */}
+                              {row.orders === 0 ? (
+                                <Tag>No orders yet</Tag>
+                              ) : since !== null && since > 30 ? (
+                                <Tag tone="quiet">{since} days quiet</Tag>
+                              ) : row.orders > 1 ? (
+                                <Tag tone="mint">Regular</Tag>
+                              ) : (
+                                <Tag>Ordered once</Tag>
+                              )}
+                              {row.reviewed && <Tag tone="volt">Reviewed</Tag>}
+                              {/* A Secret Santa room is a door into the shop,
+                                  and somebody who came through it has no orders
+                                  behind them. Naming the room turns a puzzling
+                                  row into a fact. */}
+                              {rooms && <Tag tone="mint">Secret Santa · {rooms.join(", ")}</Tag>}
+                            </div>
+                          </td>
+                          <td className="py-[11px] pr-2.5 text-[14.5px]">
+                            {promoter ? (
+                              <Tag tone="volt">
+                                <span className="flex h-[13px] w-[13px] items-center justify-center rounded-full bg-ink text-[8.5px] font-bold text-volt">
+                                  {promoter.name.slice(0, 1).toUpperCase()}
+                                </span>
+                                {promoter.name}
+                              </Tag>
+                            ) : (
+                              <Tag>found us</Tag>
+                            )}
+                          </td>
+                          <td className="py-[11px] pr-2.5 font-mono text-[14.5px] font-semibold">
+                            {naira(row.spend)}
+                            {/* Errands they paid for with no order behind them.
+                                A row reading "0 orders" beside somebody who has
+                                paid us twenty thousand naira is not the
+                                truth. */}
+                            {(errand?.count ?? 0) > 0 && (
+                              <span className="block font-sans text-xs font-semibold text-mint">
+                                {naira(errand!.took)} on {errand!.count} errand
+                                {errand!.count === 1 ? "" : "s"}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-[11px] pr-2.5 font-mono text-[14.5px]">{row.orders}</td>
+                          <td className="py-[11px] pr-2.5 font-mono text-[14.5px] text-muted">
+                            {row.pin || "none"}
+                          </td>
+                          <td className="whitespace-nowrap py-[11px] text-right">
+                            <a
+                              href={message}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn-admin btn-admin-sm"
+                            >
+                              Message
+                            </a>{" "}
+                            {/* Their PIN, the review ask, the tick, the call,
+                                their orders in the book, the note, who brought
+                                them and what to call them are all one tap away
+                                on their own page: a form does not fit in a
+                                table row, and splitting them across two places
+                                is how one of them gets forgotten. */}
+                            <Link
+                              href={`/admin/customers/${encodeURIComponent(row.phone)}`}
+                              className="btn-admin btn-admin-sm"
+                            >
+                              Open →
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
           <div className="flex flex-col gap-4">
-            <Composer hasOwnNumber={Boolean(settings.whatsapp_number)} />
+            {/* Beside the table on a desk, where the list is what tells you
+                whether the wording suits the people on it. On a phone it is
+                /admin/broadcast, a screen of its own, because here it would
+                be a card below everybody it is written to. */}
+            <div className="hidden lg:block">
+              <Composer hasOwnNumber={Boolean(settings.whatsapp_number)} />
+            </div>
 
             <Panel
               title="Who comes back"
@@ -603,6 +731,8 @@ export default async function CustomersPage({
             </div>
           </div>
         </div>
+
+        <Room />
       </Picking>
     </div>
   );

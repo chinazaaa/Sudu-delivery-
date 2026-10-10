@@ -65,6 +65,20 @@ import Reorder from "@/components/admin/Reorder";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * The height a row action stands at.
+ *
+ * The design system draws these at thirty-four pixels, which is right for a
+ * mouse at a desk. The six rules say nothing a thumb must hit goes under
+ * forty-four, and this sheet is worked through at a counter with one hand,
+ * so the phone keeps the full tap area and only the desk gets the small
+ * one.
+ */
+const THUMB = "min-h-[44px] sm:min-h-[34px]";
+
+/** The whole row action, for the buttons and links that are not a component. */
+const ROW_ACTION = `btn-admin btn-admin-sm ${THUMB}`;
+
 export default async function BatchPage({
   params,
 }: {
@@ -226,8 +240,13 @@ export default async function BatchPage({
       {/* Where the run has got to, read rather than set: the picker above is
           what moves it. Six cells because there are six real stages, and
           naming one you cannot be in is how a sheet starts lying about where
-          the food is. */}
-      <ol className="card mb-[18px] grid grid-cols-2 gap-0 overflow-hidden border-ink bg-ink p-0 sm:grid-cols-3 lg:grid-cols-6">
+          the food is.
+
+          On a phone it is the board's strip: three across in two rows, the
+          stage named and nothing else. Two across with a numeral and a
+          second line under it came to six tall cells and a hundred and
+          seventy pixels of a page whose point is the list below it. */}
+      <ol className="card mb-3.5 grid grid-cols-3 gap-0 overflow-hidden border-ink bg-ink p-0 sm:mb-[18px] lg:grid-cols-6">
         {STAGES.map((stage, index) => {
           const here = stage === batch.stage;
           const past = index < stageIndex(batch.stage);
@@ -237,22 +256,24 @@ export default async function BatchPage({
             // rather than two greys with no name in the palette.
             <li
               key={stage}
-              className={`flex items-center gap-2.5 border-b border-r border-paper/10 px-3.5 py-3 ${
+              className={`flex items-center gap-1.5 border-b border-r border-paper/10 px-2 py-2 sm:gap-2.5 sm:px-3.5 sm:py-3 ${
                 here ? "bg-brand text-paper" : "text-paper/55"
               }`}
             >
+              {/* The count is a desk thing: six numerals in three narrow
+                  cells is six numerals and no room for the words. */}
               <span
-                className={`grid size-[22px] shrink-0 place-items-center rounded-full font-mono text-xs ${
+                className={`hidden size-[22px] shrink-0 place-items-center rounded-full font-mono text-xs sm:grid ${
                   here ? "bg-paper text-brand" : "bg-paper/15"
                 }`}
               >
                 {index + 1}
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-[14.5px] font-bold">
+                <span className="block truncate text-[11.5px] font-bold sm:text-[14.5px]">
                   {(batch.kind === "parcel" ? PARCEL_ACTION : STAGE_ACTION)[stage]}
                 </span>
-                <span className="block text-xs opacity-85">
+                <span className="hidden text-xs opacity-85 sm:block">
                   {here
                     ? "you are here"
                     : stage === "ordering"
@@ -269,7 +290,7 @@ export default async function BatchPage({
 
       {batch.settled_at ? (
         <section className="card mb-4 border-mint bg-mint-tint">
-          <h2 className="font-display text-[24px] font-black uppercase leading-none text-mint">
+          <h2 className="font-display text-[19px] font-black uppercase leading-none text-mint sm:text-[24px]">
             Closed on {runDateLabel(batch.settled_at.slice(0, 10))}
           </h2>
           <p className="mt-1.5 text-[13.5px] text-ink/80">
@@ -279,7 +300,7 @@ export default async function BatchPage({
           </p>
           <form action={reopenRun} className="mt-3">
             <input type="hidden" name="batch_id" value={batch.id} />
-            <ConfirmButton tone="admin" confirm="Yes, open it again">
+            <ConfirmButton tone="admin" className={THUMB} confirm="Yes, open it again">
               Something was wrong, open it again
             </ConfirmButton>
           </form>
@@ -307,7 +328,10 @@ export default async function BatchPage({
           counters want, what is still to hand over, and what is left. Money
           collected is the line under the count rather than a tile of its own,
           because the count and the money are one question. */}
-      <div className="mb-4 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Two up on a phone. One tile per row put the fourth figure a screen
+          and a half down, and these four are the answer to "how is this run
+          going", which is a question you ask in one look. */}
+      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3.5 xl:grid-cols-4">
         <Figure
           label="Paid orders"
           value={`${summary.paidCount}`}
@@ -408,13 +432,13 @@ export default async function BatchPage({
                     <span className="flex shrink-0 gap-2">
                       <a
                         href={`tel:${who.phone}`}
-                        className="btn-admin btn-admin-sm"
+                        className={ROW_ACTION}
                       >
                         Call
                       </a>
                       <Link
                         href={`/admin/orders/${who.id}`}
-                        className="btn-admin btn-admin-sm"
+                        className={ROW_ACTION}
                       >
                         Open →
                       </Link>
@@ -462,7 +486,7 @@ export default async function BatchPage({
 
                 {counter.length > 0 && (
                   <div className="flex flex-wrap items-baseline justify-between gap-2.5">
-                    <h2 className="font-display text-[28px] font-black uppercase leading-none">
+                    <h2 className="font-display text-[22px] font-black uppercase leading-none sm:text-[28px]">
                       Stop by stop
                     </h2>
                     <span className="hint">
@@ -473,7 +497,7 @@ export default async function BatchPage({
                 )}
 
                 {counter.map((group, index) => (
-                  <section key={group.restaurant} className="card p-5">
+                  <section key={group.restaurant} className="card p-3.5 sm:p-5">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <h3 className="min-w-0">
                         <span className="ticket block text-muted">
@@ -485,7 +509,7 @@ export default async function BatchPage({
                         <span className="ticket block text-muted">
                           Pay at this counter
                         </span>
-                        <span className="font-display text-[34px] font-black leading-none">
+                        <span className="font-display text-[25px] font-black leading-none sm:text-[34px]">
                           {naira(group.expectedFoodTotal)}
                         </span>
                       </span>
@@ -558,7 +582,7 @@ export default async function BatchPage({
                       <span className="ticket text-muted">
                         {counter.length} stop{counter.length === 1 ? "" : "s"}
                       </span>
-                      <span className="font-display text-[34px] font-black leading-none">
+                      <span className="font-display text-[25px] font-black leading-none sm:text-[34px]">
                         {naira(summary.foodCost)}
                       </span>
                     </li>
@@ -566,7 +590,7 @@ export default async function BatchPage({
                 </Panel>
 
                 {counter.length > 0 && (
-                  <details className="card p-5">
+                  <details className="card p-3.5 sm:p-5">
                     <summary className="cursor-pointer font-display text-[22px] font-black uppercase leading-none text-brand">
                       What it actually cost
                     </summary>
@@ -635,7 +659,7 @@ export default async function BatchPage({
                           <form
                             key={`fixed-${line.key}`}
                             action={setCounterSpend}
-                            className="soft flex flex-wrap items-center justify-between gap-2 px-3 py-2"
+                            className="soft flex flex-wrap items-center justify-between gap-2 px-3 py-2.5"
                           >
                             <input type="hidden" name="batch_id" value={batch.id} />
                             <input type="hidden" name="line_key" value={line.key} />
@@ -648,13 +672,13 @@ export default async function BatchPage({
                                 {naira(line.qty * line.unitPrice)}
                               </span>
                             </span>
-                            <span className="flex shrink-0 items-center gap-2">
+                            <span className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
                               <input
                                 name="paid"
                                 inputMode="numeric"
                                 defaultValue={line.paid ?? ""}
                                 aria-label={`What you paid for ${line.name}`}
-                                className="field w-24 py-1.5 text-sm"
+                                className="field field-admin w-24 min-h-[44px] text-sm sm:min-h-[42px]"
                               />
                               {/* Only where the gap is big enough to have been
                                   worth asking about. Nobody chases two hundred
@@ -667,7 +691,7 @@ export default async function BatchPage({
                                   defaultValue={line.recovered || ""}
                                   placeholder="they paid back"
                                   aria-label={`What the customer gave back for ${line.name}`}
-                                  className="field w-32 py-1.5 text-sm"
+                                  className="field field-admin w-32 min-h-[44px] text-sm sm:min-h-[42px]"
                                 />
                               )}
                               {(line.paid ?? 0) <= line.qty * line.unitPrice && (
@@ -690,7 +714,7 @@ export default async function BatchPage({
                                   )}
                                 </span>
                               )}
-                              <SaveButton look="btn-admin btn-admin-sm">
+                              <SaveButton look={ROW_ACTION}>
                                 Save
                               </SaveButton>
                             </span>
@@ -732,7 +756,7 @@ export default async function BatchPage({
                                 . Put the menu up to{" "}
                                 {naira(line.menuPrice + upBy)}?
                               </span>
-                              <SaveButton look="btn-admin btn-admin-sm">
+                              <SaveButton look={ROW_ACTION}>
                                 Put it up
                               </SaveButton>
                             </form>
@@ -747,14 +771,14 @@ export default async function BatchPage({
                     {counter.some((group) => group.lines.some((line) => line.paid === null)) && (
                     <form
                       action={setCounterSpend}
-                      className="flex flex-wrap items-end gap-2 border-t-[1.5px] border-rule pt-3"
+                      className="flex flex-col gap-2 border-t-[1.5px] border-rule pt-3 sm:flex-row sm:flex-wrap sm:items-end"
                     >
                       <input type="hidden" name="batch_id" value={batch.id} />
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 sm:flex-1">
                         <label className="label" htmlFor="line_key">
                           Which one was different?
                         </label>
-                        <select id="line_key" name="line_key" className="field">
+                        <select id="line_key" name="line_key" className="field field-admin min-h-[44px] sm:min-h-[42px]">
                           {counter
                             .map((group) => ({
                               ...group,
@@ -784,11 +808,13 @@ export default async function BatchPage({
                           name="paid"
                           inputMode="numeric"
                           placeholder="0"
-                          className="field w-32"
+                          className="field field-admin w-full min-h-[44px] sm:min-h-[42px] sm:w-32"
                         />
                         <input type="hidden" name="recovered" value="" />
                       </div>
-                      <SaveButton look="btn-admin btn-admin-sm">Add</SaveButton>
+                      <SaveButton look={ROW_ACTION} className="w-full sm:w-auto">
+                        Add
+                      </SaveButton>
                     </form>
                     )}
 
@@ -807,13 +833,16 @@ export default async function BatchPage({
                     detail="Ring them, ask whether another window suits, and put it here. A car moved into a window somebody else already asked for becomes one trip with theirs, which is one walk to the counter instead of two. Nobody is told by this: the agreement happened on the phone."
                     className="space-y-3"
                   >
-                    <form action={moveSameDayCar} className="flex flex-wrap items-end gap-2">
+                    <form
+                      action={moveSameDayCar}
+                      className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end"
+                    >
                       <input type="hidden" name="batch_id" value={batch.id} />
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 sm:flex-1">
                         <label className="label" htmlFor="deliver_at">
                           Which window instead?
                         </label>
-                        <select id="deliver_at" name="deliver_at" className="field">
+                        <select id="deliver_at" name="deliver_at" className="field field-admin min-h-[44px] sm:min-h-[42px]">
                           {windows.map((slot) => (
                             <option key={slot.at} value={slot.at}>
                               {slot.label}
@@ -822,7 +851,9 @@ export default async function BatchPage({
                           ))}
                         </select>
                       </div>
-                      <SaveButton look="btn-admin btn-admin-sm">Move it</SaveButton>
+                      <SaveButton look={ROW_ACTION} className="w-full sm:w-auto">
+                        Move it
+                      </SaveButton>
                     </form>
                     {windows.length === 0 && (
                       <p className="text-sm text-muted">
@@ -861,6 +892,7 @@ export default async function BatchPage({
                       <input type="hidden" name="delivered" value="true" />
                       <ConfirmButton
                         tone="admin"
+                        className={THUMB}
                         confirm={`Yes, all ${handout.length} handed over`}
                       >
                         Mark every bag delivered
@@ -957,7 +989,7 @@ export default async function BatchPage({
                         <div className="mt-2 flex flex-wrap gap-2">
                           <Link
                             href={`/admin/orders/${order.id}`}
-                            className="btn-admin btn-admin-sm"
+                            className={ROW_ACTION}
                           >
                             View order →
                           </Link>
@@ -965,21 +997,24 @@ export default async function BatchPage({
                             href={messageFor(order)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="btn-admin btn-admin-sm"
+                            className={ROW_ACTION}
                           >
                             Send payment details on WhatsApp
                           </a>
                         </div>
-                        <form action={markPaid} className="mt-2 flex gap-2">
+                        <form
+                          action={markPaid}
+                          className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center"
+                        >
                           <input type="hidden" name="order_id" value={order.id} />
                           <input
                             name="payment_ref"
                             placeholder={`Transfer ref (they should send ${narration(order)})`}
-                            className="field py-1.5 text-sm"
+                            className="field field-admin min-h-[44px] text-sm sm:min-h-[42px]"
                           />
                           <ConfirmButton
                             tone="admin"
-                            className="shrink-0"
+                            className={`${THUMB} shrink-0`}
                             confirm={`Yes, ${naira(order.total)} received`}
                           >
                             Mark paid
@@ -1106,6 +1141,7 @@ export default async function BatchPage({
                       </span>
                       <ConfirmButton
                         tone="bad"
+                        className={THUMB}
                         confirm="Yes, back to menu prices"
                       >
                         Clear it
@@ -1177,7 +1213,7 @@ export default async function BatchPage({
                         className="field"
                       />
                     </div>
-                    <SaveButton look="btn-admin btn-admin-sm">Save costs</SaveButton>
+                    <SaveButton look={ROW_ACTION}>Save costs</SaveButton>
                   </form>
                 </Panel>
 
@@ -1226,7 +1262,7 @@ export default async function BatchPage({
                         <input type="hidden" name="batch_id" value={batch.id} />
                         <input type="hidden" name="stage" value={stage} />
                         <ActionButton
-                          className={`btn-admin btn-admin-sm ${
+                          className={`${ROW_ACTION} ${
                             batch.stage === stage ? "bg-ink text-shell" : ""
                           }`}
                           done="Set ✓"
@@ -1238,11 +1274,11 @@ export default async function BatchPage({
                   </div>
                 </Panel>
 
-                <section className="card space-y-3 p-5">
+                <section className="card space-y-3 p-3.5 sm:p-5">
                   <form action={updateRun} className="space-y-3">
                     <input type="hidden" name="batch_id" value={batch.id} />
                     <div>
-                      <h2 className="font-display text-[26px] font-black uppercase leading-none">
+                      <h2 className="font-display text-[21px] font-black uppercase leading-none sm:text-[26px]">
                         This run
                       </h2>
                       <p className="mt-1 text-[12.5px] text-muted">
@@ -1340,8 +1376,8 @@ export default async function BatchPage({
                         can be compared with a same day window rather than
                         read out of prose. What the customer is told is built
                         from them. */}
-                    <div className="flex flex-wrap items-end gap-2">
-                      <div className="grow">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+                      <div className="sm:grow">
                         <p className="label">This run arrives between</p>
                         <div className="flex items-center gap-2">
                           <input
@@ -1365,7 +1401,7 @@ export default async function BatchPage({
                           empty to keep it as it is.
                         </p>
                       </div>
-                      <div className="w-36">
+                      <div className="sm:w-36">
                         <label className="label" htmlFor="cut_off_time">
                           Orders close
                         </label>
@@ -1377,17 +1413,17 @@ export default async function BatchPage({
                           className="field"
                         />
                       </div>
-                      <SaveButton look="btn-admin btn-admin-sm" className="shrink-0">
+                      <SaveButton look={ROW_ACTION} className="w-full sm:w-auto sm:shrink-0">
                         Save
                       </SaveButton>
                     </div>
                   </form>
                 </section>
 
-                <section className="card space-y-3 p-5">
+                <section className="card space-y-3 p-3.5 sm:p-5">
                   <form action={setFlashFee} className="space-y-2">
                     <input type="hidden" name="batch_id" value={batch.id} />
-                    <h2 className="font-display text-[26px] font-black uppercase leading-none">
+                    <h2 className="font-display text-[21px] font-black uppercase leading-none sm:text-[26px]">
                       Flash fee drop
                     </h2>
                     <p className="text-xs text-muted">
@@ -1395,8 +1431,8 @@ export default async function BatchPage({
                       announce it in advance, never make it a fixed day, and always
                       give a reason.
                     </p>
-                    <div className="flex flex-wrap items-end gap-2">
-                      <div className="w-32">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+                      <div className="sm:w-32">
                         <label className="label" htmlFor="flash_fee">Entry fee</label>
                         <input
                           id="flash_fee"
@@ -1407,7 +1443,7 @@ export default async function BatchPage({
                           className="field"
                         />
                       </div>
-                      <div className="grow">
+                      <div className="sm:grow">
                         <label className="label" htmlFor="flash_fee_reason">
                           Reason shown
                         </label>
@@ -1419,7 +1455,7 @@ export default async function BatchPage({
                           className="field"
                         />
                       </div>
-                      <SaveButton look="btn-admin btn-admin-sm" className="shrink-0">
+                      <SaveButton look={ROW_ACTION} className="w-full sm:w-auto sm:shrink-0">
                         Save
                       </SaveButton>
                     </div>
@@ -1431,9 +1467,12 @@ export default async function BatchPage({
                     </p>
                   </form>
 
-                  <form action={setBatchCapacity} className="flex items-end gap-2 border-t-[1.5px] border-rule pt-3">
+                  <form
+                    action={setBatchCapacity}
+                    className="flex flex-col gap-2 border-t-[1.5px] border-rule pt-3 sm:flex-row sm:items-end"
+                  >
                     <input type="hidden" name="batch_id" value={batch.id} />
-                    <div className="grow">
+                    <div className="sm:grow">
                       <label className="label" htmlFor="capacity">
                         Capacity (blank = no cap)
                       </label>
@@ -1445,13 +1484,13 @@ export default async function BatchPage({
                         className="field"
                       />
                     </div>
-                    <SaveButton look="btn-admin btn-admin-sm" className="shrink-0">
+                    <SaveButton look={ROW_ACTION} className="w-full sm:w-auto sm:shrink-0">
                       Save
                     </SaveButton>
                   </form>
 
                   <div className="border-t-[1.5px] border-rule pt-3">
-                    <h2 className="font-display text-[26px] font-black uppercase leading-none">
+                    <h2 className="font-display text-[21px] font-black uppercase leading-none sm:text-[26px]">
                       Is this run taking orders?
                     </h2>
                     <p className="mt-1 text-[12.5px] text-muted">
@@ -1463,7 +1502,7 @@ export default async function BatchPage({
                         <input type="hidden" name="batch_id" value={batch.id} />
                         <input type="hidden" name="status" value="open" />
                         <ActionButton
-                          className="btn-admin btn-admin-sm disabled:opacity-40"
+                          className={`${ROW_ACTION} disabled:opacity-40`}
                           disabled={batch.status === "open"}
                           done="Open ✓"
                         >
@@ -1474,7 +1513,7 @@ export default async function BatchPage({
                         <input type="hidden" name="batch_id" value={batch.id} />
                         <input type="hidden" name="status" value="closed" />
                         <ActionButton
-                          className="btn-admin btn-admin-sm disabled:opacity-40"
+                          className={`${ROW_ACTION} disabled:opacity-40`}
                           disabled={batch.status === "closed"}
                           done="Closed ✓"
                         >
@@ -1484,7 +1523,7 @@ export default async function BatchPage({
                       <form action={setBatchStatus}>
                         <input type="hidden" name="batch_id" value={batch.id} />
                         <input type="hidden" name="status" value="cancelled" />
-                        <ConfirmButton tone="bad" confirm="Yes, cancel the run">
+                        <ConfirmButton tone="bad" className={THUMB} confirm="Yes, cancel the run">
                           Cancel this run
                         </ConfirmButton>
                       </form>
@@ -1519,7 +1558,7 @@ export default async function BatchPage({
                           )}
                         </p>
                         <span className="mt-2 block">
-                          <ConfirmButton tone="bad" confirm="Yes, delete it">
+                          <ConfirmButton tone="bad" className={THUMB} confirm="Yes, delete it">
                             Delete this run
                           </ConfirmButton>
                         </span>

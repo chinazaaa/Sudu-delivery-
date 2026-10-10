@@ -29,6 +29,16 @@ import ActionButton from "@/components/admin/ActionButton";
 export const dynamic = "force-dynamic";
 
 /**
+ * A row action, at a thumb's size on a phone.
+ *
+ * The design system draws these at thirty-four pixels for a mouse at a
+ * desk. The six rules say nothing a thumb must hit goes under forty-four,
+ * so the phone keeps the full tap area and only the desk gets the small
+ * one.
+ */
+const ROW_ACTION = "btn-admin btn-admin-sm min-h-[44px] sm:min-h-[34px]";
+
+/**
  * A same day car's window, without the day it was written with.
  *
  * The window is frozen when the order is placed, and "Today" was true that
@@ -245,12 +255,12 @@ export default async function RunsPage({
                   </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-3">
-                  <span className="font-display text-[26px] font-black leading-none">
+                  <span className="font-display text-[22px] font-black leading-none sm:text-[26px]">
                     {naira(trip.gross)}
                   </span>
                   <Link
                     href={`/admin/trip/${encodeURIComponent(trip.at)}`}
-                    className="btn-admin btn-admin-sm"
+                    className={ROW_ACTION}
                   >
                     Open the trip →
                   </Link>
@@ -329,7 +339,7 @@ export default async function RunsPage({
         </div>
       )}
 
-      <div className="mb-4 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3.5 xl:grid-cols-4">
         <Figure
           label="Runs listed"
           value={String(live.length)}
@@ -394,7 +404,10 @@ export default async function RunsPage({
                 className="field"
               />
             </div>
-            <ActionButton className={`btn-admin ${go("create")}`} done="Run created ✓">
+            <ActionButton
+              className={`btn-admin w-full sm:w-auto ${go("create")}`}
+              done="Run created ✓"
+            >
               Create run
             </ActionButton>
             <p className="hint">
@@ -441,7 +454,7 @@ export default async function RunsPage({
                     ? `/admin/orders/${batch.parcelOrderId}`
                     : `/admin/batch/${batch.id}`
                 }
-                className="card flex items-center justify-between gap-3 transition hover:border-brand/40 hover:shadow-lift"
+                className="card flex items-center justify-between gap-2.5 p-3.5 transition hover:border-brand/40 hover:shadow-lift sm:gap-3 sm:p-4"
               >
                 <div className="min-w-0">
                   {/* A same day car borrows a run's date and slot, so titled
@@ -509,7 +522,7 @@ export default async function RunsPage({
                 <div className="shrink-0 text-right">
                   <p className="ticket text-muted">Paid</p>
                   <p
-                    className={`font-display text-[30px] font-black leading-none ${
+                    className={`font-display text-[24px] font-black leading-none sm:text-[30px] ${
                       batch.paidCount === 0 ? "text-muted" : "text-mint"
                     }`}
                   >

@@ -1,8 +1,24 @@
 "use client";
 
 import { createContext, useContext, useMemo, useState } from "react";
+import PageHeader from "@/components/admin/PageHeader";
 import { whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
+
+/**
+ * The named cuts of the book.
+ *
+ * It lived on the customers page until the phone's own message screen had to
+ * name the cut it was started from, and a list of views written out twice is
+ * a list that disagrees with itself by the second change.
+ */
+export const VIEWS = [
+  { value: "", label: "Everyone", nudge: "" },
+  { value: "repeat", label: "Ordered twice or more", nudge: "have ordered twice or more" },
+  { value: "quiet", label: "Quiet 30 days", nudge: "have not ordered in 30 days" },
+  { value: "unreviewed", label: "Never reviewed", nudge: "have never left a review" },
+  { value: "big", label: "Big spenders", nudge: "spend above the house average" },
+] as const;
 
 /** One person in the book, as much of them as a message needs. */
 export type Picked = {
@@ -48,14 +64,24 @@ const Held = createContext<Holding | null>(null);
 export function Picking({
   people,
   patterns,
+  start,
+  opening = "",
   children,
 }: {
   people: Picked[];
   patterns: Pattern[];
+  /** Who is ticked to begin with. The book starts with nobody; the phone's
+   *  message screen starts with everybody it was handed in the address,
+   *  because the picking already happened on the page before it. */
+  start?: string[];
+  /** The message already in the box. Used where the screen was opened from
+   *  a button that named a template, so the owner lands on the wording
+   *  rather than on an empty box. */
+  opening?: string;
   children: React.ReactNode;
 }) {
-  const [on, setOn] = useState<Set<string>>(new Set());
-  const [draft, setDraft] = useState("");
+  const [on, setOn] = useState<Set<string>>(() => new Set(start ?? []));
+  const [draft, setDraft] = useState(opening);
 
   const value = useMemo<Holding>(
     () => ({
@@ -83,12 +109,28 @@ export function Picking({
 }
 
 /** The tick beside one person. */
-export function Tick({ phone, name }: { phone: string; name: string }) {
+export function Tick({
+  phone,
+  name,
+  tap = false,
+}: {
+  phone: string;
+  name: string;
+  /** Forty-four pixels of label around the box, for the card on a phone.
+   *  The six rules put a floor under a tap target, and a seventeen pixel
+   *  checkbox sitting beside a link the size of the card is a tick nobody
+   *  can hit without opening the person instead. */
+  tap?: boolean;
+}) {
   const held = useContext(Held);
   if (!held) return null;
 
   return (
-    <label className="flex cursor-pointer items-center">
+    <label
+      className={`flex cursor-pointer items-center ${
+        tap ? "-m-1 size-11 shrink-0 justify-center" : ""
+      }`}
+    >
       <input
         type="checkbox"
         checked={held.on.has(phone)}
@@ -101,13 +143,13 @@ export function Tick({ phone, name }: { phone: string; name: string }) {
 }
 
 /** The tick in the header, which takes everybody shown or lets them all go. */
-export function TickAll() {
+export function TickAll({ label }: { label?: string }) {
   const held = useContext(Held);
   if (!held) return null;
   const phones = held.people.map((one) => one.phone);
 
   return (
-    <label className="flex cursor-pointer items-center">
+    <label className="flex cursor-pointer items-center gap-2">
       <input
         type="checkbox"
         checked={phones.length > 0 && held.on.size >= phones.length}
@@ -115,6 +157,9 @@ export function TickAll() {
         aria-label="Pick everybody shown"
         className="size-[17px] accent-brand"
       />
+      {/* Named where there is no column heading to say what it does, which
+          is the list of cards on a phone. */}
+      {label !== undefined && <span className="hint">{label}</span>}
     </label>
   );
 }
@@ -125,13 +170,63 @@ function chosen(held: Holding): Picked[] {
 }
 
 /**
- * The dark bar over the table, once anything is ticked.
+ * The address of the phone's message screen, with the people in it.
  *
- * Nothing on it claims to send anything. The three message buttons load the
- * composer beside the table with a template and leave the sending to the
- * owner, because WhatsApp opens one chat at a time whatever a button says.
+ * Who the message is for travels in the address rather than in a store, so
+ * the screen can be linked to, reloaded, and sent to somebody else without
+ * the list of nine people quietly turning into nobody. The cut it was
+ * started from travels too, so the way back is the list as it was left.
  */
-export function Bar({ viewLabel, codeHref }: { viewLabel: string; codeHref: string }) {
+export function broadcastHref({
+  phones,
+  view = "",
+  by = "",
+  q = "",
+  start = "",
+}: {
+  phones: string[];
+  view?: string;
+  by?: string;
+  q?: string;
+  /** The template to land on, where the button that opened this named one. */
+  start?: string;
+}): string {
+  const params = new URLSearchParams();
+  params.set("who", phones.join(","));
+  for (const [key, value] of Object.entries({ view, by, q, start })) {
+    if (value !== "") params.set(key, value);
+  }
+  return `/admin/broadcast?${params.toString()}`;
+}
+
+/**
+ * The bar that appears once anything is ticked.
+ *
+ * On a desk it is the dark strip over the table, where the mouse already is
+ * and there is room for every answer at once. On a phone the board puts the
+ * two that matter at the bottom of the screen under the thumb, and the
+ * composer is a screen of its own rather than a card the list has to be
+ * scrolled past, so Message is a link to it carrying the people along.
+ *
+ * Nothing on either claims to send anything. The message buttons load a
+ * template and leave the sending to the owner, because WhatsApp opens one
+ * chat at a time whatever a button says.
+ */
+export function Bar({
+  viewLabel,
+  codeHref,
+  view = "",
+  by = "",
+  q = "",
+}: {
+  viewLabel: string;
+  codeHref: string;
+  /** The cut the list is on, so the way back out of the message screen is
+   *  this list rather than everybody. */
+  view?: string;
+  by?: string;
+  q?: string;
+}) {
   const held = useContext(Held);
   if (!held || held.on.size === 0) return null;
 
@@ -161,54 +256,96 @@ export function Bar({ viewLabel, codeHref }: { viewLabel: string; codeHref: stri
     URL.revokeObjectURL(file);
   };
 
+  const phones = picked.map((one) => one.phone);
+  const asking = held.patterns.some((one) => one.kind === "google")
+    ? "google"
+    : held.patterns.some((one) => one.kind === "review")
+      ? "review"
+      : "";
+
   return (
-    <div className="mb-3.5 flex flex-wrap items-center gap-3 rounded-xl bg-ink px-4 py-2.5 text-shell">
-      <strong className="text-sm">{held.on.size} selected</strong>
-      <span className="text-[13.5px] opacity-60">
-        {viewLabel === "" ? "" : `${viewLabel} · `}
-        {naira(worth)} lifetime
-      </span>
-      <div className="ml-auto flex flex-wrap gap-1.5">
-        <a
-          href="#send-a-message"
-          className="btn-admin btn-admin-sm border-brand bg-brand text-white hover:bg-brand-dark"
-        >
-          Send a WhatsApp
-        </a>
-        {held.patterns.some((one) => one.kind === "google" || one.kind === "review") && (
+    <>
+      {/* The phone's own bar, fixed over the list and under the tab bar. */}
+      <div className="phone-bar flex items-center gap-2">
+        <strong className="grow text-sm">{held.on.size} selected</strong>
+        {asking !== "" && (
           <a
-            href="#send-a-message"
-            onClick={() =>
-              load(held.patterns.some((one) => one.kind === "google") ? "google" : "review")
-            }
-            className="btn-admin btn-admin-sm border-shell/25 bg-transparent text-shell hover:bg-shell/10"
+            href={broadcastHref({ phones, view, by, q, start: asking })}
+            className="btn-admin btn-admin-sm"
           >
             Ask for a review
           </a>
         )}
         <a
-          href="#send-a-message"
-          onClick={() => load("pin")}
-          className="btn-admin btn-admin-sm border-shell/25 bg-transparent text-shell hover:bg-shell/10"
+          href={broadcastHref({ phones, view, by, q })}
+          className="btn-admin-go btn-admin-sm min-h-[42px]"
         >
-          Send PINs
+          Message
         </a>
-        <a
-          href={codeHref}
-          className="btn-admin btn-admin-sm border-shell/25 bg-transparent text-shell hover:bg-shell/10"
-        >
-          Give them a code
-        </a>
-        <button
-          type="button"
-          onClick={exportThem}
-          className="btn-admin btn-admin-sm border-shell/25 bg-transparent text-shell hover:bg-shell/10"
-        >
-          Export
-        </button>
       </div>
-    </div>
+
+      <div className="mb-3.5 hidden flex-wrap items-center gap-3 rounded-xl bg-ink px-4 py-2.5 text-shell lg:flex">
+        <strong className="text-sm">{held.on.size} selected</strong>
+        <span className="text-[13.5px] opacity-60">
+          {viewLabel === "" ? "" : `${viewLabel} · `}
+          {naira(worth)} lifetime
+        </span>
+        <div className="ml-auto flex flex-wrap gap-1.5">
+          <a
+            href="#send-a-message"
+            className="btn-admin btn-admin-sm border-brand bg-brand text-white hover:bg-brand-dark"
+          >
+            Send a WhatsApp
+          </a>
+          {held.patterns.some((one) => one.kind === "google" || one.kind === "review") && (
+            <a
+              href="#send-a-message"
+              onClick={() =>
+                load(held.patterns.some((one) => one.kind === "google") ? "google" : "review")
+              }
+              className="btn-admin btn-admin-sm border-shell/25 bg-transparent text-shell hover:bg-shell/10"
+            >
+              Ask for a review
+            </a>
+          )}
+          <a
+            href="#send-a-message"
+            onClick={() => load("pin")}
+            className="btn-admin btn-admin-sm border-shell/25 bg-transparent text-shell hover:bg-shell/10"
+          >
+            Send PINs
+          </a>
+          <a
+            href={codeHref}
+            className="btn-admin btn-admin-sm border-shell/25 bg-transparent text-shell hover:bg-shell/10"
+          >
+            Give them a code
+          </a>
+          <button
+            type="button"
+            onClick={exportThem}
+            className="btn-admin btn-admin-sm border-shell/25 bg-transparent text-shell hover:bg-shell/10"
+          >
+            Export
+          </button>
+        </div>
+      </div>
+    </>
   );
+}
+
+/**
+ * The gap the phone bar stands in, at the end of the page.
+ *
+ * A fixed bar is out of the flow, so without this the last person in the
+ * list sits under it and cannot be read or tapped. It knows whether the bar
+ * is showing, because a permanent gap above the tab bar on a page where
+ * nobody is ticked is a hole in the page.
+ */
+export function Room() {
+  const held = useContext(Held);
+  if (!held || held.on.size === 0) return null;
+  return <div aria-hidden className="h-[72px] lg:hidden" />;
 }
 
 /** Fills a draft in for one person. Anything else is left exactly as typed. */
@@ -342,5 +479,246 @@ export function Composer({ hasOwnNumber }: { hasOwnNumber: boolean }) {
           " Set your own WhatsApp number in Settings so replies land on the same number."}
       </p>
     </section>
+  );
+}
+
+/**
+ * The message screen, which is the composer given a screen of its own.
+ *
+ * On a desk the composer sits beside the book, because the list is what tells
+ * you whether the wording is right for the people on it. A phone has no
+ * beside: the card was below nine cards of customers, so writing the message
+ * meant scrolling away from everybody it was going to. So the board gives it
+ * its own screen, reached from the list, and the people it is for travel in
+ * the address.
+ *
+ * It is the same sending as the card beside the table, because there is only
+ * one: WhatsApp opens a single chat at a time, so this reveals one link per
+ * person, in order, and ticks each one off as it is opened. There is no
+ * server action behind this screen and there must not be. A button claiming
+ * to have sent nine messages would be a button that sent none.
+ */
+export function Broadcast({
+  viewLabel,
+  backHref,
+  hasOwnNumber,
+}: {
+  /** The cut of the book these people came out of, named in the sentence
+   *  under the title so the screen says who it is talking to. */
+  viewLabel: string;
+  backHref: string;
+  hasOwnNumber: boolean;
+}) {
+  const held = useContext(Held);
+  const [opened, setOpened] = useState<Set<string>>(new Set());
+  if (!held) return null;
+
+  const picked = chosen(held);
+  const dropped = held.people.filter((one) => !held.on.has(one.phone));
+  const worth = picked.reduce((total, one) => total + one.spend, 0);
+  const first = picked[0] ?? null;
+  // The next person who has not been opened yet, and where they come in the
+  // list, which is the whole of the bar's label: one of nine, then two.
+  const at = picked.findIndex((one) => !opened.has(one.phone));
+  const next = at === -1 ? null : picked[at];
+  const ready = held.draft.trim() !== "";
+
+  // A token on the end of what is already typed, because the cursor is not
+  // ours to move: a pill that overwrote the message would be a pill nobody
+  // taps twice.
+  const put = (token: string) =>
+    held.setDraft(
+      held.draft === "" || held.draft.endsWith(" ")
+        ? held.draft + token
+        : `${held.draft} ${token}`
+    );
+
+  const open = (
+    <a
+      href={next ? whatsappTo(next.phone, fill(held.draft, next)) : undefined}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-disabled={!ready || next === null}
+      onClick={(event) => {
+        if (!ready || next === null) {
+          event.preventDefault();
+          return;
+        }
+        setOpened((was) => new Set(was).add(next.phone));
+      }}
+      className={`btn-admin-go w-full min-h-[54px] text-base ${
+        !ready || next === null ? "pointer-events-none opacity-40 shadow-none" : ""
+      }`}
+    >
+      {!ready
+        ? "Write the message first"
+        : next === null
+          ? `All ${picked.length} opened ✓`
+          : `Open WhatsApp · ${at + 1} of ${picked.length} →`}
+    </a>
+  );
+
+  return (
+    <div>
+      <PageHeader
+        backHref={backHref}
+        backLabel="Customers"
+        title={`Message ${picked.length} ${picked.length === 1 ? "person" : "people"}`}
+        detail={
+          <>
+            {viewLabel === "" ? "" : `${viewLabel} · `}
+            {naira(worth)} of lifetime spend
+          </>
+        }
+      />
+
+      <div className="grid items-start gap-4 lg:grid-cols-[1.1fr_1fr]">
+        <div>
+          {held.patterns.length > 0 && (
+            <>
+              <p className="ticket mb-1.5 text-muted">Start from one</p>
+              {/* A row that scrolls sideways on a phone and wraps on a desk.
+                  Four templates stacked are four cards before the message
+                  itself, which is the thing this screen is for. */}
+              <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+                {held.patterns.map((pattern) => {
+                  const on = held.draft === pattern.body;
+                  return (
+                    <button
+                      key={pattern.kind}
+                      type="button"
+                      onClick={() => held.setDraft(pattern.body)}
+                      className={`w-[168px] shrink-0 rounded-xl border-[1.5px] p-3 text-left sm:w-[196px] ${
+                        on ? "border-2 border-brand bg-brand-tint" : "border-line bg-paper"
+                      }`}
+                    >
+                      <span className="block text-sm font-bold">{pattern.label}</span>
+                      <span className="hint mt-0.5 block line-clamp-2">{pattern.body}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          <div className="card mb-3 p-3.5">
+            <textarea
+              rows={4}
+              value={held.draft}
+              onChange={(event) => held.setDraft(event.target.value)}
+              placeholder="Hi {name}, we have not seen you in a while. There is a run to {block} today."
+              aria-label="The message"
+              className="field min-h-[104px] py-2.5 text-[15px]"
+            />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {["{name}", "{block}", "{pin}"].map((token) => (
+                <button
+                  key={token}
+                  type="button"
+                  onClick={() => put(token)}
+                  className="pill-admin min-h-[32px] px-3 text-[12.5px]"
+                >
+                  + {token.slice(1, -1)}
+                </button>
+              ))}
+            </div>
+            <p className="hint mt-2">These fill themselves in for each person.</p>
+          </div>
+
+          {/* What one real person will read, in the shape they will read it
+              in. It is the only way to catch a token that did not fill. */}
+          {first && ready && (
+            <>
+              <p className="ticket mb-1.5 text-muted">{first.greet} would read</p>
+              <div className="mb-3 rounded-[14px] rounded-tr-[4px] border-[1.5px] border-mint/30 bg-mint-tint p-3">
+                <p className="whitespace-pre-wrap text-sm leading-[1.45]">
+                  {fill(held.draft, first)}
+                </p>
+                <p className="hint mt-1 text-right">WhatsApp · one chat at a time</p>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div>
+          <div className="card mb-3 p-3.5">
+            <p className="ticket mb-1.5 text-muted">Going to</p>
+            {picked.length === 0 ? (
+              <p className="hint">
+                Nobody left. Put somebody back below, or go back to the book and tick again.
+              </p>
+            ) : (
+              picked.map((who) => (
+                <div
+                  key={who.phone}
+                  className="flex items-center gap-2.5 border-t-[1.5px] border-rule py-2"
+                >
+                  <span
+                    aria-hidden
+                    className={`flex size-[26px] shrink-0 items-center justify-center rounded-full border-[1.5px] text-[11px] font-bold ${
+                      opened.has(who.phone)
+                        ? "border-mint bg-mint text-white"
+                        : "border-line bg-shell"
+                    }`}
+                  >
+                    {opened.has(who.phone) ? "✓" : who.greet.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="min-w-0 grow truncate text-sm font-semibold">{who.name}</span>
+                  <span className="hint hidden shrink-0 sm:block">
+                    {who.block || "no block"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => held.toggle(who.phone)}
+                    aria-label={`Take ${who.name} off the list`}
+                    className="btn-admin btn-admin-sm shrink-0 px-2.5"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))
+            )}
+            {dropped.length > 0 && (
+              <div className="mt-2.5 border-t-[1.5px] border-rule pt-2.5">
+                <p className="hint mb-1.5">
+                  {dropped.length} taken off. Tap to put somebody back.
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {dropped.map((who) => (
+                    <button
+                      key={who.phone}
+                      type="button"
+                      onClick={() => held.toggle(who.phone)}
+                      className="pill-admin min-h-[32px] px-3 text-[12.5px]"
+                    >
+                      + {who.greet}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="soft border-volt-line bg-brand-tint p-3.5">
+            <strong className="text-sm">Nothing sends on its own</strong>
+            <p className="hint mt-1">
+              WhatsApp opens with each message typed out. You tap send, then come back here and
+              the button has moved on to the next person.
+              {!hasOwnNumber &&
+                " Set your own WhatsApp number in Settings so replies land on the same number."}
+            </p>
+          </div>
+
+          {/* On a desk the one button lives at the end of the column it
+              belongs to; on a phone the board puts it in the bar under the
+              thumb, which is the same button in the place a hand can reach
+              without letting go of the car door. */}
+          <div className="mt-3 hidden lg:block">{open}</div>
+        </div>
+      </div>
+
+      <div className="phone-bar">{open}</div>
+      <div aria-hidden className="h-[78px] lg:hidden" />
+    </div>
   );
 }

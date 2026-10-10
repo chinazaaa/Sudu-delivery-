@@ -108,7 +108,7 @@ export default function Checklist({
               }`}
             >
               <span
-                className={`tick font-black ${done || ticked[item.key] ? "tick-done" : ""}`}
+                className={`tick size-[34px] font-black sm:size-7 ${done || ticked[item.key] ? "tick-done" : ""}`}
               >
                 {done || ticked[item.key] ? "✓" : ""}
               </span>

@@ -40,6 +40,10 @@ type Row = {
  * there are thousands of items: pulling them all through to filter here would
  * hit the thousand-row cap and quietly search a sample of the menu, which is
  * worse than not searching at all.
+ *
+ * The board gives the box the whole top of the screen rather than a corner of
+ * it, because the box is the page: this is used standing at a counter with
+ * one hand, and everything under it is the answer to what was typed.
  */
 export default async function StockPage({
   searchParams,
@@ -87,10 +91,10 @@ export default async function StockPage({
     .eq("available", false);
 
   return (
-    <div className="space-y-4">
+    <div>
       <PageHeader
         title="Stock"
-        detail="Find anything on sale anywhere and switch it off, without opening its restaurant first."
+        detail="Anything on sale anywhere. Switch it off without opening its restaurant first."
         backHref="/admin/menu"
         backLabel="Restaurants"
       />
@@ -102,8 +106,8 @@ export default async function StockPage({
           actually missing. */}
       {last && (
         <div
-          className={`card flex flex-wrap items-center gap-3 border-l-4 ${
-            last.available ? "border-l-mint" : "border-l-amber-500"
+          className={`card mb-3.5 flex flex-wrap items-center gap-3 border-l-[6px] p-3.5 sm:p-4 ${
+            last.available ? "border-l-mint" : "border-l-amber"
           }`}
         >
           <span className="min-w-0 flex-1">
@@ -123,15 +127,26 @@ export default async function StockPage({
               name="available"
               value={last.available ? "false" : "true"}
             />
-            <ActionButton busy="…" done="✓" className="btn-quiet px-4 py-2 text-sm">
+            <ActionButton busy="…" done="Undone ✓" className="btn-admin">
               Undo
             </ActionButton>
           </form>
         </div>
       )}
 
-      <div className="card space-y-3">
+      <div className="card mb-3.5 space-y-3 p-3.5 sm:p-4">
         <StockSearch start={asked} />
+
+        {/* The way out of a search, and the count of what is off right now
+            in the same tap. Clearing the box by hand on a phone is four
+            taps and a keyboard; this is one. */}
+        {asked !== "" && (
+          <Link href="/admin/stock" className="pill-admin min-h-[44px]">
+            Switched off
+            <span className="font-mono opacity-60">{offNow ?? 0}</span>
+          </Link>
+        )}
+
         <p className="text-sm text-muted">
           {asked === "" ? (
             <>
@@ -152,6 +167,21 @@ export default async function StockPage({
         </p>
       </div>
 
+      {/* Why the empty list is the useful one: kitchens restock overnight,
+          so the first job of the morning is putting back what yesterday
+          took off. */}
+      {asked === "" && (offNow ?? 0) > 0 && (
+        <div className="soft mb-3.5 border-volt-line bg-brand-tint p-3.5">
+          <p className="text-sm font-bold">
+            {offNow} switched off right now
+          </p>
+          <p className="hint mt-1">
+            Kitchens restock overnight. Put back whatever is in again before
+            the run opens, and the shop stops showing it as sold out.
+          </p>
+        </div>
+      )}
+
       {rows.length === 0 && asked !== "" && (
         <Empty icon="bag" title="Nothing by that name" href="/admin/menu" action="Open Restaurants">
           Try a shorter word. The search looks at the item&apos;s own name, not
@@ -160,16 +190,18 @@ export default async function StockPage({
         </Empty>
       )}
 
-      <ul className="space-y-2">
+      <ul className="space-y-2.5">
         {rows.map((item) => (
-          <li key={item.id} className="card flex items-center gap-3">
-            <span className="size-12 shrink-0 overflow-hidden rounded-xl">
+          <li key={item.id} className="card flex min-h-[62px] items-center gap-3 p-3">
+            <span className="size-[42px] shrink-0 overflow-hidden rounded-[9px] border-[1.5px] border-line">
               <Thumb src={item.image_url ?? ""} name={item.name} rounded="rounded-none" />
             </span>
 
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold">{item.name}</span>
-              <span className="block truncate text-sm text-muted">
+              <span className="block truncate text-[14.5px] font-semibold leading-[1.25]">
+                {item.name}
+              </span>
+              <span className="hint block truncate">
                 {/* Which kitchen, because the whole point of this page is not
                     having to know that before you start. */}
                 {item.restaurants?.name ?? "—"}
@@ -182,7 +214,7 @@ export default async function StockPage({
                 only one. */}
             <Link
               href={`/admin/menu/${item.restaurant_id}#item-${item.id}`}
-              className="shrink-0 text-xs font-semibold text-muted underline hover:text-ink"
+              className="btn-admin btn-admin-sm shrink-0 px-2.5"
             >
               Edit
             </Link>
@@ -197,7 +229,7 @@ export default async function StockPage({
               />
               <ActionButton
                 busy="…"
-                done="✓"
+                done="Switched ✓"
                 // Nothing with no price may go on sale: the menu prints a
                 // zero rather than hiding it, so that is free food on the
                 // website. Said here rather than left as a tap that appears
@@ -208,8 +240,13 @@ export default async function StockPage({
                     ? "Give it a price before it can go on sale"
                     : undefined
                 }
-                className={`rounded-full px-3 py-1.5 text-xs font-bold transition disabled:opacity-40 ${
-                  item.available ? "bg-mint/15 text-mint" : "bg-black/[0.06] text-muted"
+                // Stays a word and not only a colour, because this is read
+                // in sunlight at a counter, which is where colour alone
+                // fails. Mint is on sale, the neutral wash is off.
+                className={`btn-admin w-[94px] shrink-0 px-2.5 text-[13px] disabled:opacity-40 ${
+                  item.available
+                    ? "bg-mint-tint text-mint hover:bg-mint-tint"
+                    : "bg-wash text-muted hover:bg-wash"
                 }`}
               >
                 {item.available ? "On sale" : "Sold out"}
@@ -218,6 +255,14 @@ export default async function StockPage({
           </li>
         ))}
       </ul>
+
+      {rows.length > 0 && (
+        <p className="hint mt-3 leading-[1.5]">
+          Switching is instant: there is no save button and no going back to a
+          list. Edit opens the item where it lives, for its price, its
+          photograph and its choices.
+        </p>
+      )}
     </div>
   );
 }

@@ -3,6 +3,18 @@
 import Link from "next/link";
 import ConfirmButton from "./admin/ConfirmButton";
 
+/**
+ * A row action, at a thumb's size on a phone.
+ *
+ * Thirty-four pixels is the design system's size for a mouse at a desk. The
+ * six rules say nothing a thumb must hit goes under forty-four, and every
+ * button in this list is hit with a thumb while holding a bag.
+ */
+const THUMB = "min-h-[44px] sm:min-h-[34px]";
+
+/** The whole row action, for the links that are not a component. */
+const ROW_ACTION = `btn-admin btn-admin-sm ${THUMB}`;
+
 export type HandoutEntry = {
   id: string;
   name: string;
@@ -42,9 +54,35 @@ export default function HandoutList({
 
   return (
     <div className="space-y-2">
-      <p className="hint">
-        {done}/{entries.length} handed over
-      </p>
+      {/* How far through the handout you are, which the board draws as the
+          first thing on the screen: the count big, what is left in volt
+          beside it, and a bar under both. A line of grey nine-point text
+          was the only answer to "how many more" on a page read at a gate
+          with a boot full of bags. */}
+      <div className="card border-ink bg-ink px-3.5 py-3 text-paper">
+        <p className="flex items-baseline gap-2.5">
+          <span className="font-display text-[26px] font-black leading-none sm:text-[40px]">
+            {done}
+          </span>
+          <span className="text-sm opacity-75">of {entries.length} done</span>
+          {entries.length - done > 0 && (
+            <span className="ml-auto font-mono text-[13px] font-semibold text-volt">
+              {entries.length - done} left
+            </span>
+          )}
+        </p>
+        <span
+          aria-hidden
+          className="mt-2.5 block h-[7px] overflow-hidden rounded-full bg-paper/15"
+        >
+          <span
+            className="block h-full rounded-full bg-volt"
+            style={{
+              width: `${entries.length === 0 ? 0 : Math.round((done / entries.length) * 100)}%`,
+            }}
+          />
+        </span>
+      </div>
       <ul className="space-y-2">
         {entries.map((entry) => {
           const handedOut = entry.orders.every(
@@ -103,39 +141,43 @@ export default function HandoutList({
                   scrolling to a second list to message one of them is not a
                   thing anybody does at a gate in the dark. */}
               <div className="space-y-2 border-t-[1.5px] border-rule px-3 py-2.5">
-                <a
-                  href={`tel:${entry.phone.replace(/\s/g, "")}`}
-                  className="btn-admin btn-admin-sm"
-                >
-                  Call {entry.name}
-                </a>
-
-                {/* The one thing here a customer sees the result of. A bag can
-                    hold more than one order, so it says which it covers. */}
-                <form action={setDelivered} className="inline">
-                  <input type="hidden" name="order_ids" value={ids} />
-                  <input type="hidden" name="delivered" value={String(!handedOut)} />
-                  <ConfirmButton
-                    tone="admin"
-                    confirm={
-                      handedOut
-                        ? `Yes, undo ${refs}`
-                        : `Yes, ${refs} delivered`
-                    }
+                <div className="flex flex-wrap items-center gap-2">
+                  <a
+                    href={`tel:${entry.phone.replace(/\s/g, "")}`}
+                    className={ROW_ACTION}
                   >
-                    {handedOut
-                      ? "Undo delivered"
-                      : entry.orders.length > 1
-                        ? `Mark all ${entry.orders.length} delivered`
-                        : "Mark delivered"}
-                  </ConfirmButton>
-                </form>
+                    Call {entry.name}
+                  </a>
+
+                  {/* The one thing here a customer sees the result of. A bag
+                      can hold more than one order, so it says which it
+                      covers. */}
+                  <form action={setDelivered}>
+                    <input type="hidden" name="order_ids" value={ids} />
+                    <input type="hidden" name="delivered" value={String(!handedOut)} />
+                    <ConfirmButton
+                      tone="admin"
+                      className={THUMB}
+                      confirm={
+                        handedOut
+                          ? `Yes, undo ${refs}`
+                          : `Yes, ${refs} delivered`
+                      }
+                    >
+                      {handedOut
+                        ? "Undo delivered"
+                        : entry.orders.length > 1
+                          ? `Mark all ${entry.orders.length} delivered`
+                          : "Mark delivered"}
+                    </ConfirmButton>
+                  </form>
+                </div>
 
                 {entry.orders.map((order) => (
                   <div key={order.id} className="flex flex-wrap items-center gap-2">
                     <Link
                       href={`/admin/orders/${order.id}`}
-                      className="btn-admin btn-admin-sm"
+                      className={ROW_ACTION}
                     >
                       View {order.ref}
                       <span className="text-muted">
@@ -146,7 +188,7 @@ export default function HandoutList({
                       href={order.message}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn-admin btn-admin-sm"
+                      className={ROW_ACTION}
                     >
                       Confirm on WhatsApp
                     </a>
@@ -156,6 +198,7 @@ export default function HandoutList({
                         <input type="hidden" name="delivered" value="true" />
                         <ConfirmButton
                           tone="admin"
+                          className={THUMB}
                           confirm={`Yes, ${order.ref} only`}
                         >
                           Deliver {order.ref} only
@@ -166,6 +209,7 @@ export default function HandoutList({
                       <input type="hidden" name="order_id" value={order.id} />
                       <ConfirmButton
                         tone="bad"
+                        className={THUMB}
                         confirm={`Yes, refund ${order.ref}`}
                       >
                         Refund

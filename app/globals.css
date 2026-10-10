@@ -118,7 +118,7 @@ body {
     @apply btn-admin border-ink bg-brand text-white shadow-card hover:bg-brand-dark active:translate-x-0.5 active:translate-y-0.5 active:shadow-press;
   }
   .btn-admin-sm {
-    @apply min-h-[34px] border-[1.5px] px-3 text-[13px] font-bold;
+    @apply min-h-[44px] border-[1.5px] px-3 text-[13px] font-bold sm:min-h-[34px];
   }
   /* Destructive is an outline, never filled. */
   .btn-admin-bad {
@@ -158,6 +158,18 @@ body {
   .phone-bar {
     @apply fixed inset-x-0 z-30 border-t-[1.5px] border-line bg-shell px-3.5 py-2.5 lg:hidden;
     bottom: calc(51px + env(safe-area-inset-bottom));
+  }
+  /* The same bar, for a control that is also the header's action on a
+     desk. A second copy in the markup would be a second form and a second
+     select, which is how two controls end up disagreeing. */
+  .phone-bar-lift {
+    @apply fixed inset-x-0 z-30 border-t-[1.5px] border-line bg-shell px-3.5 py-2.5 lg:static lg:border-0 lg:bg-transparent lg:p-0;
+    bottom: calc(51px + env(safe-area-inset-bottom));
+  }
+  @screen lg {
+    .phone-bar-lift {
+      bottom: auto;
+    }
   }
   .pill-admin {
     @apply inline-flex min-h-[38px] items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-ink bg-paper px-3.5 text-sm font-semibold transition;

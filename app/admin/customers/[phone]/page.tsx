@@ -134,26 +134,42 @@ export default async function CustomerPage({
             {since !== "" && ` · customer since ${since}`}
           </>
         }
+        /* On a desk every answer sits in the header, where the mouse
+           already is. On a phone the header is the far end of a reach, so
+           the board splits them: calling and messaging are a pair of
+           full-width buttons under the tags, and the PIN and the review ask
+           are in the bar at the bottom under the thumb. Same four buttons at
+           both widths, each in the place the hand is. */
         actions={
           <>
             {person.pin !== "" && (
-              <a href={sendPin} target="_blank" rel="noopener noreferrer" className="btn-admin">
+              <a
+                href={sendPin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-admin hidden lg:inline-flex"
+              >
                 Send their PIN
               </a>
             )}
             {askReview !== "" && !person.reviewed && (
-              <a href={askReview} target="_blank" rel="noopener noreferrer" className="btn-admin">
+              <a
+                href={askReview}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-admin hidden lg:inline-flex"
+              >
                 Ask for a review
               </a>
             )}
-            <a href={`tel:${person.phone}`} className="btn-admin">
+            <a href={`tel:${person.phone}`} className="btn-admin hidden lg:inline-flex">
               Call
             </a>
             <a
               href={message}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-admin-go"
+              className="btn-admin-go hidden lg:inline-flex"
             >
               Message {greeting || "them"}
             </a>
@@ -198,7 +214,24 @@ export default async function CustomerPage({
         )}
       </div>
 
-      <div className="mb-[18px] grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      {/* The two things this page is opened for in a hurry, where a thumb
+          lands. Outlines both: the one red button on a phone is in the bar
+          at the bottom. */}
+      <div className="mb-3 grid grid-cols-2 gap-2 lg:hidden">
+        <a href={`tel:${person.phone}`} className="btn-admin min-h-[48px]">
+          Call
+        </a>
+        <a
+          href={message}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-admin min-h-[48px]"
+        >
+          WhatsApp
+        </a>
+      </div>
+
+      <div className="mb-[18px] grid grid-cols-2 gap-2.5 sm:gap-3.5 xl:grid-cols-4">
         <Figure
           label="Lifetime spend"
           value={naira(person.spend)}
@@ -253,7 +286,13 @@ export default async function CustomerPage({
           title="Every order"
           aside={
             <span className="flex items-center gap-2.5">
-              <span className="hint">
+              {/* The count alone where there is no room for the word, which
+                  is beside a title and a button on a phone. */}
+              <span className="hint sm:hidden">
+                {person.orders.length}
+                {person.refunded > 0 && ` · ${person.refunded} refunded`}
+              </span>
+              <span className="hint hidden sm:block">
                 {person.orders.length} order{person.orders.length === 1 ? "" : "s"}
                 {person.refunded > 0 && ` · ${person.refunded} refunded`}
               </span>
@@ -273,30 +312,36 @@ export default async function CustomerPage({
               Nothing yet. They are in the book, so they can sign in and order whenever they like.
             </p>
           ) : (
-            <div className="mt-2 overflow-x-auto">
-              <table className="w-full border-collapse">
-                <tbody>
-                  {person.orders.map((order) => {
-                    const places = [
-                      ...new Set(order.lines.map((line) => line.restaurant).filter(Boolean)),
-                    ];
-                    const items = order.lines.reduce((count, line) => count + line.qty, 0);
-                    return (
-                      <tr key={order.id} className="border-t-[1.5px] border-rule">
-                        <td className="py-[11px] pr-2.5 font-mono text-[14.5px] text-muted">
-                          {shareRef(order, order.groupOrders)}
-                        </td>
-                        <td className="py-[11px] pr-2.5">
-                          <strong className="text-[14.5px]">
+            <div>
+              {/* A row per order on a phone, each one a link into it. The
+                  table is five columns of money and status, which on a three
+                  hundred and ninety pixel screen is a table read sideways. */}
+              <ul className="mt-1 lg:hidden">
+                {person.orders.map((order) => {
+                  const places = [
+                    ...new Set(order.lines.map((line) => line.restaurant).filter(Boolean)),
+                  ];
+                  const items = order.lines.reduce((count, line) => count + line.qty, 0);
+                  return (
+                    <li key={order.id} className="border-t-[1.5px] border-rule">
+                      <Link
+                        href={`/admin/orders/${order.id}`}
+                        className="flex min-h-[56px] items-center gap-2.5 py-3"
+                      >
+                        <span className="min-w-0 grow">
+                          <span className="block text-sm font-semibold leading-[1.3]">
                             {places.join(", ") || "Nothing itemised"}
                             {items > 0 && ` · ${items} item${items === 1 ? "" : "s"}`}
-                          </strong>
-                          <p className="text-[12.5px] text-muted">
-                            {runDateLabel(order.runDate)} · {SLOT_LABEL[order.slot] ?? ""} ·{" "}
-                            {order.hostel || "no block"}
-                          </p>
-                        </td>
-                        <td className="py-[11px] pr-2.5">
+                          </span>
+                          <span className="hint block">
+                            {shareRef(order, order.groupOrders)} ·{" "}
+                            {runDateLabel(order.runDate)} · {SLOT_LABEL[order.slot] ?? ""}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-right">
+                          <span className="block font-mono text-sm font-semibold">
+                            {naira(order.total)}
+                          </span>
                           <Tag
                             tone={
                               order.status === "refunded"
@@ -308,23 +353,66 @@ export default async function CustomerPage({
                           >
                             {order.status}
                           </Tag>
-                        </td>
-                        <td className="py-[11px] pr-2.5 text-right font-mono text-[14.5px] font-semibold">
-                          {naira(order.total)}
-                        </td>
-                        <td className="py-[11px] text-right">
-                          <Link
-                            href={`/admin/orders/${order.id}`}
-                            className="btn-admin btn-admin-sm"
-                          >
-                            Open →
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div className="mt-2 hidden overflow-x-auto lg:block">
+                <table className="w-full border-collapse">
+                  <tbody>
+                    {person.orders.map((order) => {
+                      const places = [
+                        ...new Set(order.lines.map((line) => line.restaurant).filter(Boolean)),
+                      ];
+                      const items = order.lines.reduce((count, line) => count + line.qty, 0);
+                      return (
+                        <tr key={order.id} className="border-t-[1.5px] border-rule">
+                          <td className="py-[11px] pr-2.5 font-mono text-[14.5px] text-muted">
+                            {shareRef(order, order.groupOrders)}
+                          </td>
+                          <td className="py-[11px] pr-2.5">
+                            <strong className="text-[14.5px]">
+                              {places.join(", ") || "Nothing itemised"}
+                              {items > 0 && ` · ${items} item${items === 1 ? "" : "s"}`}
+                            </strong>
+                            <p className="text-[12.5px] text-muted">
+                              {runDateLabel(order.runDate)} · {SLOT_LABEL[order.slot] ?? ""} ·{" "}
+                              {order.hostel || "no block"}
+                            </p>
+                          </td>
+                          <td className="py-[11px] pr-2.5">
+                            <Tag
+                              tone={
+                                order.status === "refunded"
+                                  ? "bad"
+                                  : order.status === "pending"
+                                    ? "shell"
+                                    : "mint"
+                              }
+                            >
+                              {order.status}
+                            </Tag>
+                          </td>
+                          <td className="py-[11px] pr-2.5 text-right font-mono text-[14.5px] font-semibold">
+                            {naira(order.total)}
+                          </td>
+                          <td className="py-[11px] text-right">
+                            <Link
+                              href={`/admin/orders/${order.id}`}
+                              className="btn-admin btn-admin-sm"
+                            >
+                              Open →
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </Panel>
@@ -526,6 +614,41 @@ export default async function CustomerPage({
           )}
         </div>
       </div>
+
+      {/* The bar the board puts at the bottom of this page: their PIN, which
+          is what they ring about, and the review ask, which is the one thing
+          worth doing to somebody who is already happy. Only drawn where
+          there is something on it, because an empty bar is a bar that eats
+          the end of the page for nothing. */}
+      {(person.pin !== "" || (askReview !== "" && !person.reviewed)) && (
+        <>
+          <div className="phone-bar flex gap-2">
+            {person.pin !== "" && (
+              <a
+                href={sendPin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-admin min-h-[50px] grow"
+              >
+                Send PIN
+              </a>
+            )}
+            {askReview !== "" && !person.reviewed && (
+              <a
+                href={askReview}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-admin-go min-h-[50px] grow-[1.4]"
+              >
+                Ask for a review
+              </a>
+            )}
+          </div>
+          {/* A fixed bar is out of the flow, so the last panel would sit
+              under it without this. */}
+          <div aria-hidden className="h-[74px] lg:hidden" />
+        </>
+      )}
     </div>
   );
 }
