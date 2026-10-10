@@ -24,6 +24,7 @@ import SaveButton from "@/components/SaveButton";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
 import { clockLabel, lagosToday, runDateLabel } from "@/lib/time";
+import { adminStatusWord } from "@/lib/stages";
 import ActionButton from "@/components/admin/ActionButton";
 import { STAGES, STAGE_LABEL, stageIndex } from "@/lib/stages";
 
@@ -146,20 +147,28 @@ export default async function RunsPage({
     );
   }
 
-  // Today leads, whatever time it is.
-  //
-  // The list ran oldest first, so a run being driven this afternoon sat
-  // below everything already finished, under a heading reading "Still to
-  // come". The run somebody is working is the reason this page is open, and
-  // on a phone it was a scroll past the morning's history to reach it.
-  //
-  // Only today is lifted. Everything else keeps the order it had, because
-  // the rest of the page is a record of a week and a record reads in the
-  // order it happened.
+  /*
+   * Today, then what is coming, then what has been.
+   *
+   * The list ran oldest first, so the run being driven this afternoon sat
+   * below everything already finished, and the run somebody is working is
+   * the reason this page is open. Lifting today fixed that and left the
+   * next oddity behind it: the week's history sat between today and the
+   * days still to come, so "still to come" was at the bottom of the page
+   * under everything that had already happened.
+   *
+   * Forwards first, then back. What is still to be done is what the page is
+   * for, and what has been done is the record underneath it.
+   *
+   * Inside each group the order it had is kept, which is soonest first
+   * ahead and oldest first behind, because a record reads in the order it
+   * happened.
+   */
   const todayIs = lagosToday();
   batches = [
     ...batches.filter((batch) => batch.run_date === todayIs),
-    ...batches.filter((batch) => batch.run_date !== todayIs),
+    ...batches.filter((batch) => batch.run_date > todayIs),
+    ...batches.filter((batch) => batch.run_date < todayIs),
   ];
 
   /*
@@ -647,7 +656,7 @@ export default async function RunsPage({
                         open ? "bg-mint-tint text-mint" : "bg-wash text-ink"
                       }`}
                     >
-                      {batch.status}
+                      {adminStatusWord(batch.status, batch.settled_at)}
                     </span>
                   </span>
                 </div>

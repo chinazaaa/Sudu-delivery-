@@ -58,3 +58,38 @@ export const PARCEL_ACTION: Record<BatchStage, string> = {
   at_drop: "Nearly there",
   handed_out: "Handed it over",
 };
+
+/**
+ * What a finished run is called in admin, which is not what a customer is
+ * told.
+ *
+ * To somebody waiting for food, "Delivered" is the end of the story and the
+ * word they should read, settled or not: the books are the shop's business
+ * and nothing to do with whether their bag arrived. STAGE_LABEL stays
+ * exactly as it is and the customer's page is untouched.
+ *
+ * Inside the shop there is one more step. A run that has been handed out
+ * still owes an answer about what it cost and what it made, and "Delivered"
+ * on both sides of closing the books is a list where the finished ones and
+ * the ones still waiting on you look identical. Once the books are closed it
+ * is completed, and nothing else about it is anybody's job.
+ */
+export function adminStageLabel(
+  stage: BatchStage,
+  settledAt: string | null | undefined
+): string {
+  return stage === "handed_out" && settledAt ? "Completed" : STAGE_LABEL[stage];
+}
+
+/**
+ * The same distinction for a run's status, which is the word the runs list
+ * prints on each card. Lower case, because that list prints the status as
+ * the database spells it and a single capitalised word in a row of
+ * lower-case tags reads as a different kind of thing.
+ */
+export function adminStatusWord(
+  status: string,
+  settledAt: string | null | undefined
+): string {
+  return status === "delivered" && settledAt ? "completed" : status;
+}

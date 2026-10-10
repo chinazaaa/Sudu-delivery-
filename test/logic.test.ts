@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
 import { containersIn } from "../lib/containers";
 import { runShouldBe } from "../lib/run-follow";
+import { adminStageLabel, adminStatusWord, STAGE_LABEL } from "../lib/stages";
 import { channelOfSite, tidyChannel, tidyHandle } from "../lib/came-from";
 import { weekAround } from "../lib/time";
 import { monthOf, nextMonth } from "../lib/standing";
@@ -2804,4 +2805,26 @@ test("a closure takes every day it covers inside the window, and none outside", 
   // rather than a crash on the path that opens the shop's runs.
   assert.deepEqual([...datesIn(breakWeek, "", "")], []);
   assert.deepEqual([...datesIn([{ starts_on: "", ends_on: "" }], "2026-10-20", "2026-10-30")], []);
+});
+
+test("a run is completed in admin only once the books are closed", () => {
+  // Handed out, books still open. There is something left to do, so the
+  // word has to say so.
+  assert.equal(adminStageLabel("handed_out", null), "Delivered");
+  assert.equal(adminStatusWord("delivered", null), "delivered");
+
+  // Books closed. Nothing about this run is anybody's job now.
+  assert.equal(adminStageLabel("handed_out", "2026-10-10T18:00:00Z"), "Completed");
+  assert.equal(adminStatusWord("delivered", "2026-10-10T18:00:00Z"), "completed");
+
+  // Every other stage is untouched, settled or not. Settling is only ever
+  // the last step, so this should never arise, and a run that somehow
+  // carries both still says where its food got to.
+  assert.equal(adminStageLabel("on_the_road", "2026-10-10T18:00:00Z"), "On the road to you");
+  assert.equal(adminStageLabel("ordering", null), "Ordering is open");
+  assert.equal(adminStatusWord("open", null), "open");
+  assert.equal(adminStatusWord("cancelled", "2026-10-10T18:00:00Z"), "cancelled");
+
+  // What the customer reads is untouched by any of it.
+  assert.equal(STAGE_LABEL.handed_out, "Delivered");
 });

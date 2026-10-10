@@ -44,7 +44,7 @@ import { sheetAsText } from "@/lib/sheet-text";
 import {
   STAGES,
   STAGE_ACTION,
-  STAGE_LABEL,
+  adminStageLabel,
   stageIndex,
   type BatchStage,
 } from "@/lib/stages";
@@ -358,7 +358,7 @@ export default async function BatchPage({
         detail={
           <>
             Closes {clockLabel(batch.cut_off_at)} · {batch.delivery_window_text} ·{" "}
-            {STAGE_LABEL[batch.stage]}
+            {adminStageLabel(batch.stage, batch.settled_at)}
           </>
         }
         actions={
