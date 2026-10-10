@@ -10,7 +10,7 @@ import {
   type Ordered,
   type TemplateKind,
 } from "./messages";
-import type { Settings } from "./settings";
+import { googleLinks, type Settings } from "./settings";
 import { parseRoutes, routeById } from "./parcels";
 import type { FeedOrder } from "./admin-data";
 import type { OrderCardData } from "@/components/admin/OrderCard";
@@ -24,7 +24,7 @@ export async function siteUrl(): Promise<string> {
 }
 
 /** Which templates are worth offering depends on where the order has got to. */
-function kindsFor(order: FeedOrder): TemplateKind[] {
+function kindsFor(order: FeedOrder, settings: Settings): TemplateKind[] {
   // Card is offered on any unpaid order, not only one that chose card at
   // checkout. People change their mind about how they want to pay, and the
   // answer should not be to go and edit the order first.
@@ -34,7 +34,17 @@ function kindsFor(order: FeedOrder): TemplateKind[] {
   // saying the food is here and warning that a run is late are all about
   // food on its way, and offering them on a bag somebody ate an hour ago is
   // four buttons nobody will press hiding the one they want.
-  if (order.status === "delivered") return ["review", "pin"];
+  if (order.status === "delivered") {
+    // Asking for the Google review here, on the bag that has just gone, is
+    // the only moment anybody is pleased enough to leave one. The other
+    // review button points at their own order page, which is the shop's own
+    // stars; this one points at Google, which is what a stranger reads.
+    //
+    // Only where there is somewhere to send them. Without a review link the
+    // message ends on a colon and a space, which is worse than no button.
+    const google = googleLinks(settings).review.trim() === "" ? [] : (["google"] as const);
+    return ["review", ...google, "pin"];
+  }
   return ["confirmed", "ready", "late", "pin"];
 }
 
@@ -204,7 +214,7 @@ export function toCard(
       for_name: line.for_name,
       unit_price_at_order: line.unit_price_at_order,
     })),
-    templates: kindsFor(order).map((kind) => ({
+    templates: kindsFor(order, settings).map((kind) => ({
       kind,
       label: templateLabel(kind, what),
       href: whatsappTo(order.customer_phone, write(kind)),

@@ -397,12 +397,12 @@ export default async function ProfitPage({
                   sums.orders === 1 ? "" : "s"
                 }`}
                 value={sums.gross}
-                href="/admin/orders"
+                href="/admin/orders?view=all&status=paid"
               />
               <Line
                 label="The food, at menu prices"
                 value={-sums.foodAtMenu}
-                href="/admin/orders"
+                href="/admin/orders?view=all&status=paid"
               />
               {sums.overMenu !== 0 && (
                 <Line

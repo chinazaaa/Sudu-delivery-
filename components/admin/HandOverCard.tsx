@@ -24,6 +24,12 @@ export default function HandOverCard({
   markDelivered: (form: FormData) => Promise<void>;
 }) {
   const done = order.status === "delivered";
+  // Only on a bag that has gone, and only where a Google link is set: the
+  // template is built with the link in it, so there is no button at all
+  // when there is nowhere to send anybody.
+  const google = done
+    ? order.templates.find((one) => one.kind === "google") ?? null
+    : null;
 
   return (
     <article
@@ -79,6 +85,21 @@ export default function HandOverCard({
             Mark delivered
           </ConfirmButton>
         </form>
+      )}
+
+      {/* The moment to ask. Somebody is pleased about the food now, and in
+          an hour they are not thinking about it at all. WhatsApp is opened
+          by hand with the message already written, the way every other
+          message this shop sends goes out. */}
+      {google && (
+        <a
+          href={google.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-admin min-h-[44px] w-full justify-center text-[14.5px] sm:w-auto"
+        >
+          Ask for a Google review
+        </a>
       )}
 
       <Link

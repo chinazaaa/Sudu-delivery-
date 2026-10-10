@@ -56,14 +56,45 @@ export default async function OrdersPage({
   }>;
 }) {
   const query = await searchParams;
-  const cut = query.view === "new" ? "new" : "all";
+
+  /*
+   * Which cut, when nobody said.
+   *
+   * Opening Orders and landing on an empty screen is a tap wasted every
+   * time: the answer is always to go to the other one, which the page could
+   * have worked out itself. So an address with no view on it means "the one
+   * with something in it", and only an explicit view pins it.
+   *
+   * A filter counts as having said. Somebody arriving on
+   * /admin/orders?status=paid from the dashboard asked for the list, and
+   * bouncing them into New in because today happens to be busy would be the
+   * same wasted tap the other way round.
+   */
+  const filtered = Boolean(query.status || query.batch || query.q || query.promoter);
+  const askedCut =
+    query.view === "new" ? "new" : query.view === "all" || filtered ? "all" : null;
+
+  // Counted before anything else is asked for, because the tab to open is
+  // worked out from these and the feed cannot be fetched until the tab is
+  // known. One small query, and only this page pays for it.
+  const counts = await statusCounts();
+
+  /*
+   * Which tab, when nobody said.
+   *
+   * The first one with anything in it, in the order the work gets done:
+   * money owed, then a card link outstanding, then paid and waiting to go
+   * out, then the history. A default of Unpaid was right on a Saturday
+   * morning and wrong every other hour, when it opened on nothing.
+   */
+  const FALLBACK = ["pending", "card", "paid", "delivered", "refunded", "cancelled"];
   const tab = TABS.some((item) => item.value === query.status)
     ? (query.status as string)
-    : "pending";
+    : FALLBACK.find((one) => (counts[one] ?? 0) > 0) ?? "all";
   // Card payers are unpaid orders, narrowed by how they said they would pay.
   const status = (tab === "card" ? "pending" : tab) as OrderStatus | "all";
 
-  const [orders, batches, settings, url, counts, unpaid, everything] = await Promise.all([
+  const [orders, batches, settings, url, unpaid, everything] = await Promise.all([
     orderFeed({
       status,
       batchId: query.batch ?? null,
@@ -74,7 +105,6 @@ export default async function OrdersPage({
     batchOverview(),
     getSettings(),
     siteUrl(),
-    statusCounts(),
     // The New in cut, whichever cut is being read: the number on the control
     // has to be right before anybody taps it.
     orderFeed({ status: "pending", limit: 200 }),
@@ -139,6 +169,10 @@ export default async function OrdersPage({
   // What the badge on the control counts: everything on this screen that
   // somebody still has to do something about.
   const jobs = waiting.length + toHandOver.length;
+
+  // Decided here rather than at the top, because "is there anything in New
+  // in" cannot be answered until today has been read.
+  const cut = askedCut ?? (todays.length > 0 || waiting.length > 0 ? "new" : "all");
   // The soonest car still taking orders, which is the clock the New in cut
   // is read against.
   const closing = batches
@@ -155,6 +189,9 @@ export default async function OrdersPage({
   const link = (next: Record<string, string | undefined>) => {
     const params = new URLSearchParams();
     const merged = {
+      // Said out loud, so a filter link never gets re-read as "decide for
+      // me" and bounced into New in.
+      view: "all",
       status: tab,
       batch: query.batch,
       q: query.q,
@@ -196,7 +233,7 @@ export default async function OrdersPage({
         )}
       </Link>
       <Link
-        href="/admin/orders"
+        href="/admin/orders?view=all"
         aria-current={cut === "all" ? "page" : undefined}
         className={`flex min-h-[40px] flex-1 items-center justify-center rounded-full text-[14.5px] font-bold ${
           cut === "all" ? "bg-ink text-shell" : "text-muted"
@@ -337,7 +374,7 @@ export default async function OrdersPage({
             as well as in the control at the top: somebody who has dealt with
             the three jobs is usually looking for a fourth order by name. */}
         <Link
-          href="/admin/orders"
+          href="/admin/orders?view=all"
           className="card mt-3 flex min-h-[52px] items-center gap-2.5 px-3.5 py-3"
         >
           <span className="min-w-0 flex-1">
