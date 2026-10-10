@@ -162,6 +162,22 @@ export default async function RunsPage({
     ...batches.filter((batch) => batch.run_date !== todayIs),
   ];
 
+  /*
+   * A day that has been and gone with nothing on it is not a run.
+   *
+   * It opened because the week said Tuesday, nobody ordered, and nobody
+   * drove. Listing it puts a card on the page for a car that never existed,
+   * and on a quiet week there are more of those than real ones.
+   *
+   * Only ones whose day has passed. Today's run and everything after it
+   * stay on the page whether or not anybody has ordered yet: an empty
+   * Friday is a Friday somebody can still order onto, and it is the card
+   * you open to set its costs or move it along.
+   */
+  batches = batches.filter(
+    (batch) => batch.orderCount > 0 || batch.run_date >= todayIs
+  );
+
   const live = batches.filter((batch) => batch.status !== "cancelled");
   // The nearest run a customer could actually reach. Runs exist weeks out so
   // they can be planned, but only the ones closing inside the order horizon
@@ -182,6 +198,14 @@ export default async function RunsPage({
     .sort()[0];
   const daysAway = soonestRun ? coverDays(soonestRun) : null;
   const hidden = daysAway !== null && daysAway > horizon;
+  // A run somebody actually drove, which is a run with an order on it. The
+  // rest either have not happened yet or opened and were never used, and
+  // those two are not the same thing: a Friday nobody has ordered on at
+  // Tuesday lunchtime is a Friday, not a wasted car.
+  const ran = live.filter((batch) => batch.orderCount > 0).length;
+  const gone = (batch: { cut_off_at: string }) =>
+    new Date(batch.cut_off_at).getTime() < Date.now();
+  const empty = live.filter((batch) => batch.orderCount === 0 && gone(batch)).length;
   const orders = live.reduce((total, batch) => total + batch.orderCount, 0);
   const paid = live.reduce((total, batch) => total + batch.paidCount, 0);
   const profit = live.reduce((total, batch) => total + batch.profit, 0);
@@ -413,10 +437,26 @@ export default async function RunsPage({
       )}
 
       <div className="mb-4 grid grid-cols-2 gap-2.5 sm:gap-3.5 xl:grid-cols-4">
+        {/*
+          Runs that happened, not runs that exist.
+
+          A run with nothing on it is a car that never went: it opened
+          because the week said Tuesday, nobody ordered, and nobody drove.
+          Counting it said five when two had been done, which is a number
+          that answers no question anybody has. The ones that opened and
+          went unused are said underneath instead, where they read as what
+          they are.
+        */}
         <Figure
-          label="Runs listed"
-          value={String(live.length)}
-          detail={window === "all" ? "Every run so far" : "This week"}
+          label="Runs done"
+          value={String(ran)}
+          detail={
+            empty === 0
+              ? window === "all"
+                ? "Every run so far"
+                : "This week"
+              : `${empty} closed with nothing on ${empty === 1 ? "it" : "them"}`
+          }
         />
         {/* `sm:contents` rather than a wrapper from the tablet up, so each
             tile goes back to being the grid's own child and the row of four
@@ -510,29 +550,35 @@ export default async function RunsPage({
           // and one above today where today has been lifted out of the
           // order. Both read off the row before rather than off the clock,
           // because today's run is no longer in time order with the rest.
-          const isToday = batch.run_date === todayIs;
-          const past = new Date(batch.cut_off_at).getTime() <= Date.now();
-          const firstUpcoming =
-            !isToday &&
-            !past &&
-            index > 0 &&
-            batches[index - 1].run_date !== todayIs &&
-            new Date(batches[index - 1].cut_off_at).getTime() <= Date.now();
-          // The first row after the lifted ones, so the rest of the week is
-          // not read as more of today.
-          const firstRest =
-            !isToday && index > 0 && batches[index - 1].run_date === todayIs;
+          /*
+           * Which of the three this row belongs to.
+           *
+           * Read off the date rather than off the clock: a run that closed
+           * at half past eleven is still today's run at four in the
+           * afternoon, and "still to come" has to mean another day or it
+           * means nothing.
+           *
+           * The heading is drawn wherever the group changes, rather than by
+           * naming the one row each heading sits above. That way a week
+           * with no run today, or nothing in the past, or nothing ahead,
+           * still labels what it does have instead of silently dropping a
+           * heading and running two groups together.
+           */
+          const group = (one: { run_date: string }) =>
+            one.run_date === todayIs ? "today" : one.run_date > todayIs ? "ahead" : "past";
+          const mine = group(batch);
+          const opens = index === 0 || group(batches[index - 1]) !== mine;
           const open = batch.status === "open";
           return (
             <li key={batch.id}>
-              {index === 0 && isToday && (
-                <p className="ticket mb-2 text-brand-dark">Today</p>
-              )}
-              {firstRest && (
-                <p className="ticket mb-2 mt-4 text-muted">The rest of the week</p>
-              )}
-              {firstUpcoming && (
-                <p className="ticket mb-2 mt-4 text-muted">Still to come</p>
+              {opens && (
+                <p
+                  className={`ticket mb-2 ${index === 0 ? "" : "mt-4"} ${
+                    mine === "today" ? "text-brand-dark" : "text-muted"
+                  }`}
+                >
+                  {mine === "today" ? "Today" : mine === "ahead" ? "Still to come" : "Past"}
+                </p>
               )}
               <Link
                 href={

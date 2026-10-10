@@ -30,6 +30,9 @@ export type FeedOrder = Order & {
   /** What to greet them as, where the shop has said. Empty means the first
    *  word of their name. */
   callsThem: string;
+  /** Whether this customer has been ticked as having left a Google review,
+   *  so the order that has just gone out can carry the tick. */
+  reviewed: boolean;
   /** In a shared delivery that has not closed, so it has no fee yet and
    *  marking it paid would take the food money alone. */
   awaitingGroup: boolean;
@@ -108,6 +111,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
   const batches = await batchMap(orders.map((o) => o.batch_id));
   const pins = await pinMap(orders.map((o) => o.customer_phone));
   const called = await callsThemMap(orders.map((o) => o.customer_phone));
+  const reviewed = await reviewedMap(orders.map((o) => o.customer_phone));
 
  return orders.map((order) => {
     const batch = batches.get(order.batch_id);
@@ -146,6 +150,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
       slot: batch?.slot ?? "afternoon",
       pin: pins.get(order.customer_phone) ?? null,
       callsThem: called.get(order.customer_phone) ?? "",
+      reviewed: reviewed.has(order.customer_phone),
       awaitingGroup: order.group_id ? stillOpen.has(order.group_id) : false,
       promoter: promoters.get(order.customer_phone) ?? null,
       // Older orders have no column and no answer, which reads as empty and
@@ -247,6 +252,36 @@ async function pinMap(phones: string[]): Promise<Map<string, string>> {
   if (unique.length === 0) return new Map();
   const { data } = await db().from("customers").select("phone, pin").in("phone", unique);
   return new Map((data ?? []).map((row) => [row.phone as string, row.pin as string]));
+}
+
+/**
+ * Who has already left a Google review, by number.
+ *
+ * Ticked by hand in admin, because Google never says who wrote what. It is
+ * here so an order that has gone out can carry the tick itself: the moment
+ * somebody tells you they left one is the moment you are looking at their
+ * order, not the moment you are reading the customer book.
+ *
+ * Forgiving of a database without the column, for the same reason every
+ * other lookup here is: an order feed must not fall over for a tick.
+ */
+async function reviewedMap(phones: string[]): Promise<Set<string>> {
+  const unique = [...new Set(phones)];
+  if (unique.length === 0) return new Set();
+  try {
+    const { data, error } = await db()
+      .from("customers")
+      .select("phone, reviewed_at")
+      .in("phone", unique);
+    if (error) return new Set();
+    return new Set(
+      ((data ?? []) as { phone: string; reviewed_at: string | null }[])
+        .filter((row) => Boolean(row.reviewed_at))
+        .map((row) => row.phone)
+    );
+  } catch {
+    return new Set();
+  }
 }
 
 /**

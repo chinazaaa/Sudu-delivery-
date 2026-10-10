@@ -515,9 +515,9 @@ export default async function BatchPage({
       {/* Two on a phone and the board's four from a tablet up.
           Still to spend and what is in are the two the phone board keeps,
           because at a counter the question is what is left to pay and
-          whether the money for it is in hand. The other two are a desk's
-          question, and both are a tab of their own on a phone: the count is
-          under Unpaid and the profit is under Profit.
+          whether the money for it is in hand. The profit goes under them,
+          across both columns. The count is the one left to a tab on a
+          phone, under Unpaid, because it is a list rather than a figure.
 
           `sm:contents` rather than a wrapper from the tablet up, so the tile
           goes back to being the grid's own child and the row of four lines
@@ -564,9 +564,15 @@ export default async function BatchPage({
             }${summary.unpaidCount > 0 ? ` · ${summary.unpaidCount} unpaid` : ""}`}
           />
         </div>
-        {/* Only a profit in hand is coloured. A loss in mint reads as money
+        {/* On a phone it goes across both columns, under the two, which is
+            where it belongs: what came in and what went out are the
+            question, and this is the answer to it. It used to be a desk's
+            tile only, with the phone sent to a Profit tab for a number that
+            is the point of the whole screen.
+
+            Only a profit in hand is coloured. A loss in mint reads as money
             made, which is the one thing it is not. */}
-        <div className="hidden sm:contents">
+        <div className="col-span-2 grid sm:contents">
           <Figure
             label={finished ? "Profit" : "Profit if it ends here"}
             value={naira(summary.profit)}

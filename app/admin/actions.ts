@@ -1771,7 +1771,10 @@ export async function setCustomerReviewed(form: FormData): Promise<void> {
     .update({ reviewed_at: on ? new Date().toISOString() : null })
     .eq("phone", String(form.get("phone")));
 
-  revalidatePath("/admin/customers");
+  // The whole of admin, because the tick is on the order card now as well
+  // as in the book: ticking it there and finding the order still offering
+  // to ask would be the page disagreeing with itself.
+  revalidatePath("/admin", "layout");
 }
 
 /**

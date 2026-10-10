@@ -45,6 +45,9 @@ export type OrderCardData = {
   createdAt: string;
   paymentMethod: string;
   pin: string | null;
+  /** Whether this customer has been ticked as having left a Google
+   *  review. Not a fact Google ever tells anybody: ticked by hand. */
+  reviewed?: boolean;
   paymentLink: string | null;
   /** That person's other orders in the same run, which this one tops up. */
   otherItems: number;

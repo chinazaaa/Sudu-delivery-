@@ -19,9 +19,13 @@ import { naira } from "@/lib/money";
 export default function HandOverCard({
   order,
   markDelivered,
+  setReviewed,
 }: {
   order: OrderCardData;
   markDelivered: (form: FormData) => Promise<void>;
+  /** Ticking somebody off as having left a review. Google never says who
+   *  wrote what, so this is only ever somebody's own hand. */
+  setReviewed?: (form: FormData) => Promise<void>;
 }) {
   const done = order.status === "delivered";
   // Only on a bag that has gone, and only where a Google link is set: the
@@ -30,6 +34,9 @@ export default function HandOverCard({
   const google = done
     ? order.templates.find((one) => one.kind === "google") ?? null
     : null;
+  // Asking somebody who has already left one is the one thing this is all
+  // meant to prevent, so the button goes once the tick is on.
+  const ask = order.reviewed ? null : google;
 
   return (
     <article
@@ -68,6 +75,46 @@ export default function HandOverCard({
             PIN <span className="font-mono font-semibold">{order.pin}</span>
           </span>
         )}
+
+        {/*
+          Ticking off a review, in the chip row rather than as a third
+          button.
+
+          Asking and being told are two different events and both have to be
+          recordable, but the card is two buttons and should stay two
+          buttons: a stack of three is a card nobody reads the bottom of. So
+          the ask is the button, because it is the thing you do, and the
+          answer is a tick beside the state, because it is a thing you
+          merely note. It reads as part of the chip row and sits in the
+          forty-four pixels the row already has.
+
+          Against the person and not the order, because that is what it
+          means: somebody who has left a review has left one, whichever bag
+          they are collecting today.
+        */}
+        {google && setReviewed && (
+          <form action={setReviewed} className="ml-auto">
+            <input type="hidden" name="phone" value={order.phone} />
+            <input
+              type="hidden"
+              name="reviewed"
+              value={String(!order.reviewed)}
+            />
+            <button
+              type="submit"
+              aria-pressed={Boolean(order.reviewed)}
+              className="flex min-h-[44px] items-center gap-1.5 text-[13px] font-semibold text-muted"
+            >
+              <span
+                aria-hidden
+                className={`tick size-6 text-[13px] ${order.reviewed ? "tick-done" : ""}`}
+              >
+                {order.reviewed ? "✓" : ""}
+              </span>
+              {order.reviewed ? "Reviewed" : "Mark reviewed"}
+            </button>
+          </form>
+        )}
       </div>
 
       {!done && (
@@ -91,9 +138,9 @@ export default function HandOverCard({
           an hour they are not thinking about it at all. WhatsApp is opened
           by hand with the message already written, the way every other
           message this shop sends goes out. */}
-      {google && (
+      {ask && (
         <a
-          href={google.href}
+          href={ask.href}
           target="_blank"
           rel="noopener noreferrer"
           className="btn-admin min-h-[44px] w-full justify-center text-[14.5px] sm:w-auto"

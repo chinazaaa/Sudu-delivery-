@@ -25,6 +25,7 @@ import {
   refundOrder,
   savePaymentLink,
   saveOrderNote,
+  setCustomerReviewed,
 } from "../actions";
 import type { OrderStatus } from "@/lib/types";
 
@@ -351,6 +352,7 @@ export default async function OrdersPage({
                     key={order.id}
                     order={toCard(order, settings, url, bank)}
                     markDelivered={markDelivered}
+                    setReviewed={setCustomerReviewed}
                   />
                 )
               )}

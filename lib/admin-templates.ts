@@ -190,6 +190,7 @@ export function toCard(
     createdAt: order.created_at,
     paymentMethod: order.payment_method,
     pin: order.pin,
+    reviewed: order.reviewed,
     paymentLink: order.payment_link,
     otherItems: order.otherItems,
     otherFee: order.otherFee,
