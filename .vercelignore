@@ -1,1 +1,8 @@
 mobile
+
+# The tests never run on Vercel, and one of them reaches into mobile/
+# to prove the app and the website build a WhatsApp link the same way.
+# With mobile/ not uploaded, type-checking that import is what failed the
+# deploy of 77a0499, so the tests stay off the build as well. They are
+# already excluded from function tracing in next.config.mjs.
+test
