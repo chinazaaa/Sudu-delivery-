@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { hasReviewedUs } from "@/lib/customer";
 import { boxWhere } from "@/lib/boxes";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -61,6 +62,16 @@ export default async function OrderPage({
   if (!order) notFound();
 
   const settings = await getSettings();
+  /*
+   * Whether they have already left us a Google review.
+   *
+   * Asking twice is worse than not asking: somebody who went and wrote one
+   * is being told their last order did not count, and the one thing the ask
+   * has going for it is that it arrives once, at the moment they are
+   * holding the food. Read off the customer rather than the order, because
+   * a review is about the shop and is left once, not once per order.
+   */
+  const reviewedBefore = await hasReviewedUs(order.customer_phone);
   const bands = await bandsFor(order.batch);
   // Every account they may pay into, best first.
   const accounts = await payableAccounts(settings);
@@ -633,7 +644,7 @@ export default async function OrderPage({
             orderId={order.id}
             rating={order.rating ?? null}
             feedback={order.feedback ?? ""}
-            google={googleLinks(settings).review}
+            google={reviewedBefore ? "" : googleLinks(settings).review}
           />
         )}
 

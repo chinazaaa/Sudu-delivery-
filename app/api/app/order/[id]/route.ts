@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { hasReviewedUs } from "@/lib/customer";
 import { carLabel } from "@/lib/view";
 import { getOrder } from "@/lib/orders";
 import { narration } from "@/lib/messages";
@@ -45,6 +46,10 @@ export async function GET(
       // What they said last time, so the app can show it already answered.
       rating: order.rating ?? null,
       feedback: order.feedback ?? "",
+      // Whether they have already left us a Google review, so the app can
+      // stop asking. Asking twice is worse than not asking: somebody who
+      // went and wrote one is being told it did not count.
+      reviewedUs: await hasReviewedUs(order.customer_phone).catch(() => false),
       // Which car it is on, so the app can leave it out of the list of runs
       // it offers to move onto.
       runId: order.batch.id,

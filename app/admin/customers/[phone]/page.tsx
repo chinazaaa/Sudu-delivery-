@@ -9,7 +9,7 @@ import { getSettings, googleLinks } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
 import { firstName, templateFor, whatsappTo } from "@/lib/messages";
 import { naira, shareRef } from "@/lib/money";
-import { formatPhone } from "@/lib/phone";
+import { formatPhone, showNumber } from "@/lib/phone";
 import { SLOT_LABEL } from "@/lib/config";
 import { runDateLabel } from "@/lib/time";
 import { namedPromoters } from "@/lib/promoters";
@@ -802,7 +802,7 @@ export default async function CustomerPage({
                 name="whatsapp"
                 inputMode="tel"
                 defaultValue={person.whatsapp}
-                placeholder="0803 000 0000"
+                placeholder="0803 000 0000, or +44 7440 419145"
                 className="field w-full py-2 text-sm"
               />
               <div className="flex items-center gap-2.5">
@@ -812,7 +812,7 @@ export default async function CustomerPage({
                 <span className="hint">
                   {person.whatsapp === ""
                     ? `Messages go to ${formatPhone(person.phone)}.`
-                    : `Messages go to ${formatPhone(person.whatsapp)}.`}
+                    : `Messages go to ${showNumber(person.whatsapp)}.`}
                 </span>
               </div>
               {/* Said on the form rather than only in the code, because it

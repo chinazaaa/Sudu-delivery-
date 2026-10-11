@@ -1,7 +1,7 @@
 "use server";
 
 import { tidyHandle } from "@/lib/came-from";
-import { normalisePhone } from "@/lib/phone";
+import { messagingNumber, normalisePhone } from "@/lib/phone";
 import { openDaysText } from "@/lib/open-days";
 import { redirect } from "next/navigation";
 import { revalidatePath, updateTag } from "next/cache";
@@ -2007,13 +2007,17 @@ export async function saveCustomerWhatsapp(form: FormData): Promise<void> {
     return;
   }
 
-  const to = normalisePhone(typed);
+  // Not normalisePhone: that is the rule for an ordering number, which is
+  // the shop's identity for somebody and is always a Nigerian mobile. This
+  // is only an address, and students have numbers from everywhere. A UK
+  // number that WhatsApp is actually on was being turned away.
+  const to = messagingNumber(typed);
   if (to === null) {
     redirect(
       `/admin/customers/${encodeURIComponent(phone)}?problem=${encodeURIComponent(
         typed === ""
           ? "Give the WhatsApp number, or untick the box."
-          : `"${typed}" is not a Nigerian mobile number.`
+          : `Could not read "${typed}". A Nigerian number as 0803… , anywhere else with its country code, like +44 7440 419145.`
       )}`
     );
   }

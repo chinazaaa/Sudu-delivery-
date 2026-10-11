@@ -365,6 +365,9 @@ export type OrderView = {
   /** What they said about it last time, if they have answered. */
   rating?: number | null;
   feedback?: string;
+  /** Whether they have already left us a Google review. Older servers send
+   *  nothing, and then the ask behaves as it always did. */
+  reviewedUs?: boolean;
   run: {
     sameDay?: boolean;
     label: string;

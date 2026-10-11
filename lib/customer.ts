@@ -325,3 +325,27 @@ export async function reachNumbers(
   }
   return found;
 }
+
+/**
+ * Whether somebody has already left us a Google review.
+ *
+ * Marked in admin, because Google does not tell us who wrote what: the
+ * review arrives with a name on it and somebody ticks the customer it
+ * belongs to.
+ *
+ * Used to stop asking. Asking twice is worse than not asking at all:
+ * somebody who went and wrote one is being told it did not count.
+ */
+export async function hasReviewedUs(phone: string): Promise<boolean> {
+  const wanted = String(phone ?? "").trim();
+  if (wanted === "") return false;
+
+  const { data, error } = await db()
+    .from("customers")
+    .select("reviewed_at")
+    .eq("phone", wanted)
+    .maybeSingle();
+  // Not knowing means asking, which is what it did before this existed.
+  if (error || !data) return false;
+  return Boolean((data as { reviewed_at?: string | null }).reviewed_at);
+}

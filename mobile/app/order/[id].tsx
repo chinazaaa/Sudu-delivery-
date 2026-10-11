@@ -477,7 +477,9 @@ export default function Order() {
           order, from somebody who has just had their food. Only where admin
           has put a link in, and never instead of the stars above, which are
           ours to read. */}
-      {done && order.status !== "refunded" && google !== "" && (
+      {/* Not to somebody who has already written one. Asking twice tells
+          them the last one did not count. */}
+      {done && order.status !== "refunded" && google !== "" && !order.reviewedUs && (
         <Pressable
           onPress={() => void Linking.openURL(google)}
           accessibilityRole="link"
