@@ -131,21 +131,14 @@ export default async function OrdersPage({
 
       {/* The tab bar carries the group now, and the header's own link to this
           is hidden on a phone, so ordering the same thing again lives here
-          where the same things are listed. */}
-      {orders.length > 0 && (
-        <Link
-          href="/reorder"
-          className="flex items-center justify-between gap-3 rounded-2xl border border-black/10 bg-paper px-4 py-3"
-        >
-          <span>
-            <span className="block font-bold">Order the same thing again</span>
-            <span className="block text-sm text-muted">
-              Rebuilt at today&apos;s prices, ready for the next run.
-            </span>
-          </span>
-          <span className="shrink-0 text-sm font-extrabold text-brand">Open</span>
-        </Link>
-      )}
+          where the same things are listed.
+
+          Above the list only when nothing is on its way. With a live order
+          it goes underneath: somebody with food on the road opened this page
+          to find out where it is, and a card about ordering again pushed the
+          answer off the screen. Two live orders pushed it further. Wanting
+          it again is a thing you decide after you have been fed. */}
+      {orders.length > 0 && live.length === 0 && <RepeatCard />}
 
       {orders.length === 0 ? (
         <Empty icon="bag" title="No orders yet" href="/" action="Browse the menu">
@@ -211,6 +204,10 @@ export default async function OrdersPage({
               ))}
             </ul>
           )}
+
+          {/* Under the live orders, where somebody lands once they have the
+              answer they came for. */}
+          {live.length > 0 && <RepeatCard />}
 
           {past.length > 0 && (
             <section className="space-y-3">
@@ -309,4 +306,31 @@ function Chip({
             : ([STAGE_LABEL[order.batch.stage], "bg-brand text-white"] as const);
 
   return <span className={`ticket px-2 py-1 ${look}`}>{said}</span>;
+}
+
+/**
+ * Ordering the same thing again.
+ *
+ * Drawn in two places on this page and so written once: above the list when
+ * nothing is on its way, and under the live orders when something is.
+ * Somebody with food on the road opened this page to find out where it is,
+ * and a card about ordering again standing over that answer pushed it off
+ * the screen. Wanting it again is a thing you decide after you have been
+ * fed.
+ */
+function RepeatCard() {
+  return (
+    <Link
+      href="/reorder"
+      className="flex items-center justify-between gap-3 rounded-2xl border border-black/10 bg-paper px-4 py-3"
+    >
+      <span>
+        <span className="block font-bold">Order the same thing again</span>
+        <span className="block text-sm text-muted">
+          Rebuilt at today&apos;s prices, ready for the next run.
+        </span>
+      </span>
+      <span className="shrink-0 text-sm font-extrabold text-brand">Open</span>
+    </Link>
+  );
 }

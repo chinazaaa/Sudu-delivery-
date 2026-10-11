@@ -1973,6 +1973,56 @@ export async function setMailDone(form: FormData): Promise<void> {
  * says which, once, for the people it gets wrong. Empty puts the guess
  * back.
  */
+/**
+ * Where to message somebody, when that is not the number they ordered on.
+ *
+ * Somebody orders with one number and has WhatsApp on another, and then
+ * there is no reaching them at all: every message the shop sends is built
+ * from the number on the order.
+ *
+ * The ordering number does not move. It is the primary key here, every
+ * order hangs off it, and it is what they type to sign in, so this is only
+ * an address for messages. Empty means use the number they ordered on,
+ * which is almost everybody.
+ *
+ * The PIN is deliberately not sent here, and the form says so. A PIN is the
+ * key to an order history kept against the ordering number, and sending a
+ * key to a number nobody has checked belongs to them is how somebody else
+ * reads their orders.
+ */
+export async function saveCustomerWhatsapp(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const phone = String(form.get("phone") ?? "").trim();
+  if (phone === "") return;
+
+  // Unticked clears it, whatever is left in the box: the tick is the
+  // decision and the number is only how it is carried out.
+  const elsewhere = String(form.get("elsewhere") ?? "") !== "";
+  const typed = String(form.get("whatsapp") ?? "").trim();
+
+  if (!elsewhere) {
+    await db().from("customers").update({ whatsapp: "" }).eq("phone", phone);
+    revalidatePath("/admin/customers", "layout");
+    return;
+  }
+
+  const to = normalisePhone(typed);
+  if (to === null) {
+    redirect(
+      `/admin/customers/${encodeURIComponent(phone)}?problem=${encodeURIComponent(
+        typed === ""
+          ? "Give the WhatsApp number, or untick the box."
+          : `"${typed}" is not a Nigerian mobile number.`
+      )}`
+    );
+  }
+
+  await db().from("customers").update({ whatsapp: to }).eq("phone", phone);
+  revalidatePath("/admin/customers", "layout");
+  redirect(`/admin/customers/${encodeURIComponent(phone)}?saved=whatsapp`);
+}
+
 export async function saveCustomerName(form: FormData): Promise<void> {
   await assertAdmin();
   await db()

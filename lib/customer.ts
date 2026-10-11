@@ -45,6 +45,9 @@ export type OneCustomer = {
   pin: string;
   note: string;
   callsThem: string;
+  /** Where to message them, when that is not the number they order on.
+   *  Empty for almost everybody, and then the ordering number is used. */
+  whatsapp: string;
   pays: "transfer" | "card";
   promoterCode: string | null;
   reviewed: boolean;
@@ -98,7 +101,7 @@ export async function oneCustomer(phone: string): Promise<OneCustomer | null> {
   const full = await db()
     .from("customers")
     .select(
-      "phone, name, hostel, pin, admin_note, payment_method, promoter_code, calls_them, reviewed_at, first_order_at"
+      "phone, name, hostel, pin, admin_note, payment_method, promoter_code, calls_them, whatsapp, reviewed_at, first_order_at"
     )
     .eq("phone", wanted)
     .maybeSingle();
@@ -164,6 +167,7 @@ export async function oneCustomer(phone: string): Promise<OneCustomer | null> {
     pin: (said.pin as string) ?? "",
     note: (said.admin_note as string) ?? "",
     callsThem: (said.calls_them as string) ?? "",
+    whatsapp: (said.whatsapp as string) ?? "",
     pays: said.payment_method === "card" ? "card" : "transfer",
     promoterCode: code === "" ? null : code,
     reviewed: Boolean(said.reviewed_at),
@@ -287,4 +291,37 @@ export async function shareOfProfit(
     profit: Math.round(margin - overShare - commission - runShare),
     estimated,
   };
+}
+
+/**
+ * Where to message each of these people.
+ *
+ * Almost everybody is reachable on the number they ordered with, and this
+ * only answers for the ones who are not: somebody who orders on one number
+ * and has WhatsApp on another. Asked in one query for a whole page of
+ * orders, because the alternative is a round trip per row.
+ *
+ * A phone that is not in the answer is one to message on the number it
+ * already carries, which is what every caller does with a miss.
+ */
+export async function reachNumbers(
+  phones: string[]
+): Promise<Record<string, string>> {
+  const unique = [...new Set(phones.filter(Boolean))];
+  if (unique.length === 0) return {};
+
+  const { data, error } = await db()
+    .from("customers")
+    .select("phone, whatsapp")
+    .in("phone", unique)
+    .neq("whatsapp", "");
+  // Before the migration there is no column, and everybody is reachable on
+  // the number they ordered with, which is how it was.
+  if (error) return {};
+
+  const found: Record<string, string> = {};
+  for (const one of (data ?? []) as { phone: string; whatsapp: string }[]) {
+    if (one.whatsapp) found[one.phone] = one.whatsapp;
+  }
+  return found;
 }

@@ -17,6 +17,7 @@ import ConfirmButton from "@/components/admin/ConfirmButton";
 import {
   deleteCustomer,
   saveCustomerName,
+  saveCustomerWhatsapp,
   saveCustomerNote,
   setCustomerPromoter,
   setCustomerReviewed,
@@ -186,11 +187,14 @@ function daysSince(when: string | null): number | null {
  */
 export default async function CustomerPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ phone: string }>;
+  searchParams: Promise<{ problem?: string; saved?: string }>;
 }) {
   const { phone } = await params;
   const who = decodeURIComponent(phone);
+  const said = await searchParams;
 
   const [person, settings, url, promoters] = await Promise.all([
     oneCustomer(who),
@@ -205,17 +209,30 @@ export default async function CustomerPage({
   const since = monthOf(person.since);
   const quiet = daysSince(person.orders[0]?.created_at ?? null);
 
+  /*
+   * Where messages go.
+   *
+   * The number they ordered on unless somebody has said they are not on
+   * WhatsApp there, which happens: the number that takes the order and the
+   * number that takes the messages are not always the same handset.
+   */
+  const reachOn = person.whatsapp || person.phone;
+
+  // Not reachOn, on purpose. A PIN is the key to an order history kept
+  // against the ordering number, and the ordering number is what they type
+  // to sign in. Sending that key to a second number nobody has checked
+  // belongs to them is how somebody else reads their orders.
   const sendPin = whatsappTo(
     person.phone,
     `Hi ${greeting}, here is your Sudu PIN: ${person.pin}.\n\n` +
       `Open ${url}/orders, put in your number and that PIN, and every ` +
       `order you have placed is there.`
   );
-  const message = whatsappTo(person.phone, `Hi ${greeting}, `);
+  const message = whatsappTo(reachOn, `Hi ${greeting}, `);
   const askReview =
     google.review !== "" && person.orders.length > 0
       ? whatsappTo(
-          person.phone,
+          reachOn,
           templateFor({
             kind: "google",
             name: person.name,
@@ -755,6 +772,65 @@ export default async function CustomerPage({
               <SaveButton look="btn-admin btn-admin-sm" className="shrink-0">Save</SaveButton>
             </form>
           </Panel>
+
+          {/* Somebody orders with one number and has WhatsApp on another,
+              and then there is no reaching them at all. The ordering number
+              does not move: it is what their orders hang off and what they
+              type to sign in, so this is only an address for messages.
+
+              The tick is the decision and the number is how it is carried
+              out, which is why unticking clears the number rather than
+              leaving it lying there doing nothing. */}
+          <Panel
+            title="Not on WhatsApp on that number?"
+            detail="Message them somewhere else. Their orders and sign-in stay on the number they ordered with."
+            size="sm"
+          >
+            <form action={saveCustomerWhatsapp} className="mt-1 space-y-2.5">
+              <input type="hidden" name="phone" value={person.phone} />
+              <label className="flex items-center gap-2 text-sm font-semibold">
+                <input
+                  type="checkbox"
+                  name="elsewhere"
+                  value="1"
+                  defaultChecked={person.whatsapp !== ""}
+                  className="peer size-4"
+                />
+                They are on WhatsApp on a different number
+              </label>
+              <input
+                name="whatsapp"
+                inputMode="tel"
+                defaultValue={person.whatsapp}
+                placeholder="0803 000 0000"
+                className="field w-full py-2 text-sm"
+              />
+              <div className="flex items-center gap-2.5">
+                <SaveButton look="btn-admin btn-admin-sm" className="shrink-0">
+                  Save
+                </SaveButton>
+                <span className="hint">
+                  {person.whatsapp === ""
+                    ? `Messages go to ${formatPhone(person.phone)}.`
+                    : `Messages go to ${formatPhone(person.whatsapp)}.`}
+                </span>
+              </div>
+              {/* Said on the form rather than only in the code, because it
+                  is the one thing somebody would otherwise assume. */}
+              <p className="hint">
+                Send PIN still goes to {formatPhone(person.phone)}. The PIN
+                opens the orders kept against that number, and it is the
+                number they type to sign in.
+              </p>
+              {said.problem ? (
+                <p className="text-sm font-semibold text-brand-dark">{said.problem}</p>
+              ) : null}
+              {said.saved === "whatsapp" ? (
+                <p className="text-sm font-semibold text-mint">Saved.</p>
+              ) : null}
+            </form>
+          </Panel>
+
 
           {promoters.length > 0 && (
             <Panel

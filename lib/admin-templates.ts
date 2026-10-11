@@ -139,7 +139,10 @@ export function toCard(
   settings: Settings,
   url: string,
   /** The account the message quotes. The first on the list. */
-  bank?: { bank_name: string; account_name: string; account_number: string } | null
+  bank?: { bank_name: string; account_name: string; account_number: string } | null,
+  /** Where to message them, where that is not the number they ordered on.
+   *  Empty for almost everybody, and then the ordering number is used. */
+  messageOn?: string
 ): OrderCardData {
   // Which of the three shops this order came from, for the one word that
   // changes between them: food, order or parcel.
@@ -226,7 +229,7 @@ export function toCard(
     templates: kindsFor(order, settings).map((kind) => ({
       kind,
       label: templateLabel(kind, what),
-      href: whatsappTo(order.customer_phone, write(kind)),
+      href: whatsappTo(messageOn || order.customer_phone, write(kind)),
     })),
   };
 }

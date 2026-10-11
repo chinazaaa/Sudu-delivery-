@@ -8,7 +8,7 @@ import { StatusPill } from "@/components/admin/OrderCard";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import SaveButton from "@/components/SaveButton";
 import { orderFeed } from "@/lib/admin-data";
-import { oneCustomer, shareOfProfit } from "@/lib/customer";
+import { oneCustomer, shareOfProfit , reachNumbers } from "@/lib/customer";
 import { getOrder } from "@/lib/orders";
 import { getBatch } from "@/lib/batches";
 import { SLOT_LABEL, TZ } from "@/lib/config";
@@ -165,7 +165,12 @@ async function orderPage(id: string, said: string) {
   // Worked out once, because the header borrows two of the card's message
   // templates: the board opens an order with their PIN and the review ask,
   // and the card below then does not offer the same two links again.
-  const shown = card ? toCard(card, settings, url, bank) : null;
+  // Where to message them, which is not always the number on the order:
+  // somebody can order with one number and have WhatsApp on another.
+  const reach = await reachNumbers([order.customer_phone]);
+  const shown = card
+    ? toCard(card, settings, url, bank, reach[order.customer_phone])
+    : null;
   const pin = shown?.templates.find((one) => one.kind === "pin") ?? null;
   const review = shown?.templates.find((one) => one.kind === "review") ?? null;
   // The rest of them, for the actions panel: the PIN and the review ask are
