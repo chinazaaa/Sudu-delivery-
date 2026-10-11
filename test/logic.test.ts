@@ -70,6 +70,7 @@ import { groupNames, lineKey as cartLineKey, reclaim } from "../lib/cart";
 import { renderEmail, renderText, type Block } from "../lib/email-html";
 import { deliverySlots, slotFee, slotsToday } from "../lib/same-day";
 import { nextArrival } from "../lib/arrival";
+import { emptyRunClosesAt, windowEndsAt } from "../lib/run-window";
 import { parseCatalogue, parseProducts } from "../lib/skincare-import";
 import { feeForValue, parseValueBands } from "../lib/value-bands";
 import { isExampleNumber, sprung, tooFast } from "../lib/guard";
@@ -3131,4 +3132,69 @@ test("an order number in the alert outranks the names, when there ever is one", 
   assert.equal(mentions("Ref 1,036", 1036), true);
   assert.equal(mentions("Ref 1036", 1037), false);
   assert.equal(mentions("anything", null), false);
+});
+
+
+/*
+ * An empty run is not closed at its cut-off.
+ *
+ * The cut-off exists so there is time to go and fetch the food. A run with
+ * nothing on it has nothing to fetch, so closing it at noon only turns away
+ * the one person who was going to order at two. It is held to three hours
+ * before the last delivery instead.
+ *
+ * The window is free text written in admin, and there is no column holding
+ * the end of it, so these cover the ways it is actually written. Anything
+ * unreadable must come back null: a cut-off moved on a sentence nobody
+ * could parse is a run closing at the wrong time.
+ */
+const lagosClock = (iso: string | null) =>
+  iso === null
+    ? null
+    : new Date(iso).toLocaleTimeString("en-GB", {
+        timeZone: "Africa/Lagos",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+test("the end of a delivery window is read out of the sentence", () => {
+  const on = "2026-10-29";
+  assert.equal(lagosClock(windowEndsAt("Between 5pm and 7pm", on)), "19:00");
+  assert.equal(lagosClock(windowEndsAt("Between 3:30pm and 5:30pm", on)), "17:30");
+  assert.equal(lagosClock(windowEndsAt("Between 3pm and 5pm", on)), "17:00");
+  assert.equal(lagosClock(windowEndsAt("5pm - 7pm", on)), "19:00");
+  assert.equal(lagosClock(windowEndsAt("Between 11am and 1pm", on)), "13:00");
+  assert.equal(lagosClock(windowEndsAt("Between 12pm and 2pm", on)), "14:00");
+
+  // Nothing to read, so nothing is claimed.
+  assert.equal(windowEndsAt("anytime", on), null);
+  assert.equal(windowEndsAt("", on), null);
+});
+
+test("an empty run is held to three hours before the last delivery", () => {
+  const on = "2026-10-29";
+  const morning = new Date("2026-10-29T09:00:00+01:00");
+  const run = (delivery_window_text: string, kind = "run") => ({
+    run_date: on,
+    delivery_window_text,
+    kind,
+  });
+
+  // The shop's own example: a 5pm-7pm run stays open until 4pm.
+  assert.equal(lagosClock(emptyRunClosesAt(run("Between 5pm and 7pm"), morning)), "16:00");
+  assert.equal(lagosClock(emptyRunClosesAt(run("Between 3:30pm and 5:30pm"), morning)), "14:30");
+
+  // Only a shared run. A car going out for one order, a parcel and a box
+  // day each have a cut-off that means something of its own.
+  assert.equal(emptyRunClosesAt(run("Between 5pm and 7pm", "same_day"), morning), null);
+  assert.equal(emptyRunClosesAt(run("Between 5pm and 7pm", "parcel"), morning), null);
+
+  // Past the held time already: late rather than quiet, so it closes.
+  assert.equal(
+    emptyRunClosesAt(run("Between 5pm and 7pm"), new Date("2026-10-29T18:00:00+01:00")),
+    null
+  );
+
+  // Unreadable window: left exactly as it behaved before.
+  assert.equal(emptyRunClosesAt(run("whenever we get there"), morning), null);
 });

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { svixSigned } from "@/lib/svix";
+import { tellAdmin } from "@/lib/admin-alerts";
+import { emailAdmins } from "@/lib/email";
+import { isAlert, senderName, snippet } from "@/lib/mail";
 
 export const dynamic = "force-dynamic";
 
@@ -91,7 +94,68 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Only a letter that is new here. A retry is the same letter arriving a
+  // second time, and being told about it twice is how somebody learns to
+  // ignore the telling.
+  if (!error) await tell(row);
+
   return NextResponse.json({ ok: true });
+}
+
+/**
+ * Saying that something came in.
+ *
+ * Mail sat in admin until somebody thought to look, which for a question
+ * from a customer is a day of silence, and for a bank alert is an order
+ * nobody has marked paid.
+ *
+ * A letter gets both a push and an email; an alert gets the push only. The
+ * alert is already an email, sitting in the same inbox this would be
+ * mailing about, so mailing about it is the same news twice. The push is
+ * worth it either way: the amount and the name on a lock screen is the
+ * whole of what an alert says.
+ *
+ * Nothing here is allowed to throw. Resend reads the status code, and a
+ * failed notification must never turn a letter that was filed properly
+ * into one Resend sends again.
+ */
+async function tell(row: {
+  from_addr: string;
+  to_addr: string;
+  subject: string;
+  text_body: string;
+}): Promise<void> {
+  try {
+    // Us, writing to ourselves. Nothing we send is news, and notifying on
+    // it is the shape of a loop.
+    if (/@sudu\.store\b/i.test(row.from_addr)) return;
+
+    const alert = isAlert(row.to_addr);
+    const subject = row.subject.trim() || "(no subject)";
+    const who = senderName(row.from_addr) || "Somebody";
+
+    await tellAdmin({
+      title: alert ? "Payment alert" : who,
+      // An alert's subject carries the amount and the payer, which is the
+      // whole message. A letter needs its first line as well as its
+      // heading before it means anything.
+      body: alert ? subject : snippet(`${subject} — ${row.text_body}`, 110),
+      url: "/admin/inbox",
+    }).catch(() => undefined);
+
+    if (alert) return;
+
+    await emailAdmins(
+      `Sudu inbox: ${subject}`,
+      `${who} <${row.from_addr}> wrote to ${row.to_addr}.\n\n` +
+        `${snippet(row.text_body, 600)}\n\n` +
+        `Read it and reply in admin: /admin/inbox`,
+      undefined,
+      "mail"
+    ).catch(() => undefined);
+  } catch {
+    /* Told or not, the letter is filed, which is the part that matters. */
+  }
 }
 
 type Full = {

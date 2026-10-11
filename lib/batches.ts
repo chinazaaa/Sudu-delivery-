@@ -1,6 +1,7 @@
 import { db } from "./supabase";
 import { NOT_ORDERS_SQL } from "./orders";
 import { closedDates } from "./closures";
+import { emptyRunClosesAt } from "./run-window";
 import { deliveryWindows, safeSettings } from "./settings";
 import { runSchedule } from "./schedule";
 import { RUN_HORIZON_DAYS, TZ } from "./config";
@@ -245,17 +246,75 @@ export async function openUntil(): Promise<string | null> {
  * every split group in it. That is the moment unpaid shares stop travelling.
  */
 export async function closeExpiredBatches(): Promise<void> {
-  const { data } = await db()
+  const now = new Date();
+
+  // Read first rather than closing in one statement, because an empty run
+  // is not closed at all now and whether it is empty is a second question
+  // the update cannot ask.
+  const { data: due } = await db()
     .from("batches")
-    .update({ status: "closed", stage: "closed", stage_updated_at: new Date().toISOString() })
+    .select("*")
     .eq("status", "open")
-    .lt("cut_off_at", new Date().toISOString())
-    .select("*");
+    .lt("cut_off_at", now.toISOString());
 
   const { settleGroupFees } = await import("./groups");
-  for (const batch of (data ?? []) as Batch[]) {
-    await settleGroupFees(batch);
+
+  for (const batch of (due ?? []) as Batch[]) {
+    // A run with nothing on it has nothing to collect, so its cut-off is
+    // not protecting anything: it is only turning away the person who was
+    // going to order at two. Held open instead, to three hours before the
+    // last delivery, which is the point where there is no longer time to
+    // go and fetch the food.
+    //
+    // The cut-off on the row is moved rather than the closing being
+    // skipped, so every other thing that asks whether a run is open, and
+    // there are a dozen, keeps reading one column and needs no telling
+    // about any of this.
+    //
+    // It cannot run away with itself: once the new cut-off passes, the
+    // same sum gives a time in the past, and the run closes as it always
+    // would have.
+    const held = (await isEmptyRun(batch)) ? emptyRunClosesAt(batch, now) : null;
+
+    if (held !== null) {
+      await db().from("batches").update({ cut_off_at: held }).eq("id", batch.id);
+      continue;
+    }
+
+    const { data: shut } = await db()
+      .from("batches")
+      .update({
+        status: "closed",
+        stage: "closed",
+        stage_updated_at: now.toISOString(),
+      })
+      .eq("id", batch.id)
+      // Still open: anything that moved underneath us is somebody else's
+      // to finish.
+      .eq("status", "open")
+      .select("*")
+      .maybeSingle();
+
+    if (shut) await settleGroupFees(shut as Batch);
   }
+}
+
+/**
+ * Whether a run has anything on it worth going out for.
+ *
+ * An order somebody cancelled leaves the car as empty as it was before
+ * they placed it, so it does not hold the cut-off where it is.
+ */
+async function isEmptyRun(batch: Batch): Promise<boolean> {
+  const { count, error } = await db()
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("batch_id", batch.id)
+    .not("status", "in", "(cancelled,refunded)");
+
+  // Not knowing means closing, which is what it did before any of this.
+  if (error) return false;
+  return (count ?? 0) === 0;
 }
 
 /**

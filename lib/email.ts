@@ -9,7 +9,7 @@ import { safeSettings } from "./settings";
  * key set, sending is skipped rather than failing whatever asked for it: an
  * order must never be lost because a notification could not go out.
  */
-export type EmailKind = "order" | "group" | "abandoned";
+export type EmailKind = "order" | "group" | "abandoned" | "mail";
 
 export async function emailAdmins(
   subject: string,
@@ -82,7 +82,7 @@ export function muted(raw: string): EmailKind[] {
     .split(/[\n,;]+/)
     .map((one) => one.trim().toLowerCase())
     .filter((one): one is EmailKind =>
-      one === "order" || one === "group" || one === "abandoned"
+      one === "order" || one === "group" || one === "abandoned" || one === "mail"
     );
 }
 

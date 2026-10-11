@@ -870,6 +870,7 @@ export default async function SettingsAdmin() {
                       ["order", "Every new order"],
                       ["group", "A group closing"],
                       ["abandoned", "Carts left behind"],
+                      ["mail", "Somebody writing in"],
                     ] as const
                   ).map(([kind, label]) => (
                     <label key={kind} className="flex items-center gap-2 text-sm">
