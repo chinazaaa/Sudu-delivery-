@@ -126,7 +126,10 @@ export default function Layout() {
             them: nobody browses skincare and food in the same breath. */}
         {/* Everything in one list, for whoever has decided what they want
             to eat rather than where from. */}
-        <Stack.Screen name="products" options={{ title: "Everything on the menu" }} />
+        <Stack.Screen name="products" options={{ title: "" }} />
+        {/* Every kitchen, with a search and the areas, for whoever got to
+            the end of the handful the home screen shows. */}
+        <Stack.Screen name="kitchens" options={{ title: "" }} />
 
         {/* Food somebody has already packed. Its own door rather than a
             card in the menu, for the same reason skincare has one. */}

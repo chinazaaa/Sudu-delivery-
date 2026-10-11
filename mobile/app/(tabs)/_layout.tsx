@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Image, Pressable, Text, View } from "react-native";
 import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -129,15 +128,15 @@ export default function TabsLayout() {
  */
 function DeliverTo() {
   const router = useRouter();
-  const [block, setBlock] = useState("");
-
-  useEffect(() => {
-    void me.read().then((one) => setBlock(one.hostel ?? ""));
-  }, []);
+  // Through the store rather than a one-off read, so changing the block on
+  // the You tab changes this line too. A header that still named the old
+  // block was the thing that made the control look broken.
+  const [saved] = useStored(me.read, { name: "", phone: "", hostel: "", token: null });
+  const block = saved.hostel ?? "";
 
   return (
     <Pressable
-      onPress={() => router.push("/account" as never)}
+      onPress={() => router.push("/account?edit=block" as never)}
       style={{
         flexDirection: "row",
         alignItems: "center",

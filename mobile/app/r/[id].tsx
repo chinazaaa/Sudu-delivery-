@@ -12,10 +12,11 @@ import {
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { api, naira, type Item, type Place } from "@/lib/api";
+import { api, lagosToday, naira, nextArrival, type Item, type Place } from "@/lib/api";
 import { cart, cartTotal, countItems, useStored, type Line } from "@/lib/store";
 import Thumb from "@/components/Thumb";
 import { F, T } from "@/lib/theme";
+import { useShop } from "@/lib/use-shop";
 import { AddButton, Display, FloatingBar, Stripes, Ticket } from "@/components/ui";
 import Deals, { type Deal } from "@/components/Deals";
 
@@ -89,6 +90,25 @@ export default function Restaurant() {
 
   /** The menu under its own headings, in the order admin arranged them.
    *  A hundred and forty dishes in one unbroken list is not a menu. */
+  /*
+   * The two facts the board heads this screen with: where the kitchen is,
+   * and when the next run leaves. Both come off the shop the phone already
+   * has, so neither costs a request.
+   *
+   * Sangotedo unless the shop says otherwise, which is what every kitchen
+   * was before there were areas.
+   */
+  const shop = useShop();
+  const where = useMemo(() => {
+    const id = shop?.areaOf?.[String(place?.restaurant.id ?? "")] ?? "";
+    const named = (shop?.areas ?? []).find((one) => one.id === id)?.name ?? "";
+    return named || "Sangotedo";
+  }, [shop, place]);
+  const arriving = useMemo(() => {
+    const runs = (shop?.runs ?? []).filter((one) => !one.closed && !one.full);
+    return nextArrival(runs, shop?.sameDay?.slots ?? [], lagosToday())?.said ?? "";
+  }, [shop]);
+
   const sections = useMemo(() => {
     if (!place) return [];
     const only = place.categories.filter((category) => tab === "" || category.id === tab);
@@ -150,9 +170,20 @@ export default function Restaurant() {
           }}
         >
           <Stripes style={{ right: -10, width: "34%", opacity: 0.85 }} />
-          <Display size={60} colour={T.shell}>
+          <Display size={72} colour={T.shell}>
             {place.restaurant.name}
           </Display>
+
+          {/* Where it is and when it next goes, as the board draws them:
+              two outlined pills on the Ink, before the promise about
+              mixing kitchens. Somebody deciding whether to order from here
+              is asking both of these questions. */}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+            {where !== "" && <HeroChip icon="location-outline">{where}</HeroChip>}
+            {arriving !== "" && (
+              <HeroChip icon="time-outline">Next run {arriving}</HeroChip>
+            )}
+          </View>
           <View
             style={{
               alignSelf: "flex-start",
@@ -195,7 +226,7 @@ export default function Restaurant() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+            contentContainerStyle={{ gap: 18, paddingVertical: 2 }}
           >
             {[{ id: "", name: "All" }, ...place.categories].map((category) => {
               const on = tab === category.id;
@@ -206,20 +237,17 @@ export default function Restaurant() {
                   accessibilityRole="tab"
                   accessibilityState={{ selected: on }}
                   style={{
-                    borderRadius: 999,
-                    borderWidth: 2,
-                    borderColor: T.ink,
-                    paddingHorizontal: 16,
-                    minHeight: 40,
+                    minHeight: 46,
                     justifyContent: "center",
-                    backgroundColor: on ? T.ink : "transparent",
+                    borderBottomWidth: 3,
+                    borderBottomColor: on ? T.brand : "transparent",
                   }}
                 >
                   <Text
                     style={{
-                      color: on ? T.shell : T.ink,
-                      fontFamily: F.bodySemi,
-                      fontSize: 14,
+                      color: T.ink,
+                      fontFamily: on ? F.bodyBold : F.bodyMedium,
+                      fontSize: 15,
                     }}
                   >
                     {category.name}
@@ -567,4 +595,37 @@ function round() {
     alignItems: "center",
     justifyContent: "center",
   } as const;
+}
+
+/**
+ * One outlined pill on the Ink hero.
+ *
+ * A hairline rather than the 2px rule the cards use: these sit on Ink, and
+ * a two pixel Ink border on Ink is a border nobody can see. The board draws
+ * them in the line between the kitchens' own colour and the dark.
+ */
+function HeroChip({
+  icon,
+  children,
+}: {
+  icon: "location-outline" | "time-outline";
+  children: React.ReactNode;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        borderWidth: 1,
+        borderColor: "#4A423B",
+        borderRadius: 999,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+      }}
+    >
+      <Ionicons name={icon} size={14} color={T.onInk} />
+      <Text style={{ fontFamily: F.body, fontSize: 13, color: T.onInk }}>{children}</Text>
+    </View>
+  );
 }

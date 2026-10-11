@@ -11,8 +11,8 @@ import {
   type GroupBoard,
 } from "@/lib/api";
 import { cart, countItems, me, party, pastParties, useStored, type Party } from "@/lib/store";
-import { F, T } from "@/lib/theme";
-import { Display, Ticket } from "@/components/ui";
+import { F, shadow, T } from "@/lib/theme";
+import { Display, Stripes, Ticket } from "@/components/ui";
 
 const SITE = "https://sudu.store";
 
@@ -198,17 +198,124 @@ export default function Group() {
 
   const link = seated ? `${SITE}/g/${seated.short ?? seated.id}` : "";
 
+  /**
+   * The fee the hero divides, and a quarter of it.
+   *
+   * The shop's smallest band, which is what a handful of items costs, so
+   * the sentence is the same arithmetic somebody will see at the checkout.
+   * Null until the shop has answered: an invented number here would be the
+   * one claim on the screen nobody could check.
+   */
+  const split = (() => {
+    const fee = shop?.bands?.[0]?.fee ?? 0;
+    if (fee <= 0) return null;
+    return { fee, each: Math.round(fee / 4) };
+  })();
+
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60, gap: 12 }}>
+      {/*
+        The board opens this screen with the arithmetic rather than the idea:
+        a fee named, divided, and the share underneath it. "Ordering
+        together" over a paragraph is a description of a feature; a number
+        somebody can check against their own last order is a reason.
+
+        The fee is the shop's own smallest band rather than a figure typed
+        in here, so it cannot drift from what the checkout charges, and the
+        hero waits for the shop rather than printing a guess.
+      */}
       {!seated && (
-        <View style={{ gap: 4 }}>
-          <Ticket>One car, many people</Ticket>
-          <Display size={34}>Ordering together</Display>
-          <Text style={{ color: T.muted, fontFamily: F.body, lineHeight: 21 }}>
-            One delivery for the whole car, split evenly between everybody in it.
-            You each order your own food and pay for your own.
-          </Text>
-        </View>
+        <>
+          <View style={{ marginBottom: 2 }}>
+            <View style={shadow(T.brand, 5)} />
+            <View
+              style={{
+                overflow: "hidden",
+                backgroundColor: T.ink,
+                borderWidth: 2,
+                borderColor: T.ink,
+                borderRadius: 18,
+                padding: 18,
+              }}
+            >
+              <Stripes style={{ right: -10, width: "30%" }} />
+              <Ticket colour={T.volt}>Order together</Ticket>
+              <Display size={38} colour={T.shell} style={{ marginTop: 6 }}>
+                {split === null ? "One fee, split" : "Four of you, one fee"}
+              </Display>
+              <Text
+                style={{
+                  color: T.onInk,
+                  fontFamily: F.body,
+                  fontSize: 13.5,
+                  lineHeight: 20,
+                  marginTop: 8,
+                }}
+              >
+                {split === null
+                  ? "One delivery for the whole car, divided evenly between everybody in it. Same food, a fraction of the fee."
+                  : `${naira(split.fee)} split four ways is ${naira(
+                      split.each
+                    )} each. Same food, a quarter of the delivery.`}
+              </Text>
+            </View>
+          </View>
+
+          <View style={{ ...card(), paddingTop: 4, paddingBottom: 2 }}>
+            <Text
+              style={{
+                fontFamily: F.mono,
+                fontSize: 11,
+                letterSpacing: 0.9,
+                color: T.muted,
+                paddingTop: 12,
+                paddingBottom: 2,
+              }}
+            >
+              HOW IT WORKS
+            </Text>
+            {(
+              [
+                ["Start it", "You pick the run and open the basket."],
+                ["Share the link", "Drop it in your block chat. No app needed to join."],
+                ["Everyone adds theirs", "They pay for their own food as they add it."],
+                ["One fee, split", "The delivery fee divides by however many joined."],
+              ] as const
+            ).map(([title, said], at) => (
+              <View
+                key={title}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "flex-start",
+                  gap: 14,
+                  paddingVertical: 13,
+                  borderTopWidth: 1,
+                  borderTopColor: "#ece7df",
+                }}
+              >
+                <Display size={34} colour={T.brand} style={{ width: 30 }}>
+                  {String(at + 1)}
+                </Display>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.ink }}>
+                    {title}
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: F.body,
+                      fontSize: 13,
+                      color: T.muted,
+                      lineHeight: 19,
+                      marginTop: 1,
+                    }}
+                  >
+                    {said}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </>
       )}
 
       {seated && board?.started && (

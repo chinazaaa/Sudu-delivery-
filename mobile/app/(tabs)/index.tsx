@@ -524,7 +524,7 @@ export default function Home() {
               }}
             >
               <Display size={30}>Kitchens</Display>
-              <Pressable onPress={() => router.push("/products" as never)}>
+              <Pressable onPress={() => router.push("/kitchens" as never)}>
                 <Text style={{ fontFamily: F.bodySemi, color: T.ink }}>
                   See all {shop!.menu.length}
                 </Text>
@@ -532,7 +532,11 @@ export default function Home() {
             </View>
 
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-              {shop!.menu.map((place, at) => {
+              {/* The first eight, which is four rows. The board shows a
+                  handful here and puts the rest behind "See all", because a
+                  front page thirteen tiles tall is one nobody scrolls past
+                  to the boxes underneath. */}
+              {shop!.menu.slice(0, 8).map((place, at) => {
                 const tile = tileAt(at);
                 const badge = shop?.offers?.[place.restaurant.id]?.badge ?? "";
                 return (

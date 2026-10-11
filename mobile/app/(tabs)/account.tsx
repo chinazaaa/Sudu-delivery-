@@ -1,6 +1,16 @@
-import { useEffect, useState } from "react";
-import { Alert, Linking, Pressable, ScrollView, Switch, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import {
+  Alert,
+  Linking,
+  Modal,
+  Pressable,
+  ScrollView,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api";
@@ -26,6 +36,10 @@ export default function Account() {
   const [here] = useStored(mine.read, []);
   const shop = useShop();
   const [busy, setBusy] = useState(false);
+  /** Whether the sheet behind Edit is open, and what is typed in it. */
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState("");
+  const [block, setBlock] = useState("");
 
   /** This phone's push token, once it has allowed notifications at all. Null
    *  means there is nothing to offer a switch over yet. */
@@ -134,6 +148,49 @@ export default function Account() {
     router.replace("/");
   };
 
+  /**
+   * The sheet behind Edit.
+   *
+   * The name and the block, and not the number: the number is what the
+   * shop's record is kept against, so changing it here would not move a
+   * record, it would quietly point this phone at a different one. It is
+   * asked for where it belongs, at the checkout, and changing it there is
+   * what saves it.
+   */
+  const open = () => {
+    // Straight from the store rather than from this render's copy, so the
+    // sheet is right even when it is opened before the first read has
+    // landed, which is what the home screen's DELIVER TO does.
+    void me.read().then((one) => {
+      setName(one.name ?? "");
+      setBlock(one.hostel ?? "");
+    });
+    setEditing(true);
+  };
+
+  /*
+   * Arriving here from the home screen's DELIVER TO, which is a control
+   * about the block and nothing else: landing on the page with the sheet
+   * shut would be a tap that appeared to do nothing.
+   */
+  const asked = useLocalSearchParams<{ edit?: string | string[] }>();
+  const wantsEdit =
+    (Array.isArray(asked.edit) ? asked.edit[0] : asked.edit) === "block";
+  const opened = useRef(false);
+  useEffect(() => {
+    // Once, on arrival, and only once whatever else the store does later:
+    // a sheet that came back after Cancel would be worse than no sheet.
+    if (!wantsEdit || opened.current) return;
+    opened.current = true;
+    open();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantsEdit]);
+
+  const keep = async () => {
+    await me.save({ name: name.trim(), hostel: block.trim() });
+    setEditing(false);
+  };
+
   const help = shop?.shop.whatsapp ?? "";
   const version = String(Constants.expoConfig?.version ?? "");
 
@@ -177,6 +234,13 @@ export default function Account() {
             {saved.hostel === "" ? "" : ` · ${saved.hostel.toUpperCase()}`}
           </Text>
         </View>
+
+        {/* The board puts an Edit here, and it is the only place in the app
+            that changes a block without ordering something: the home
+            screen's DELIVER TO comes here for exactly that. */}
+        <Pressable onPress={open} accessibilityRole="button" style={{ minHeight: 44, justifyContent: "center" }}>
+          <Text style={{ fontFamily: F.bodyBold, fontSize: 14, color: T.volt }}>Edit</Text>
+        </Pressable>
       </View>
 
       {/* Two facts rather than three: a figure for what splitting has saved
@@ -252,6 +316,12 @@ export default function Account() {
           />
         )}
         <Line
+          icon="location-outline"
+          label="Saved block"
+          note={saved.hostel === "" ? "Not set yet" : saved.hostel}
+          onPress={open}
+        />
+        <Line
           icon="people-outline"
           label="Group orders"
           note="Start or join a run"
@@ -310,6 +380,136 @@ export default function Account() {
       >
         SUDU · 速度{version === "" ? "" : ` · VERSION ${version}`}
       </Text>
+
+      <Modal visible={editing} animationType="slide" transparent onRequestClose={() => setEditing(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(21,17,14,0.45)", justifyContent: "flex-end" }}>
+          <View
+            style={{
+              backgroundColor: T.shell,
+              borderTopWidth: 2,
+              borderTopColor: T.ink,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              padding: 16,
+              paddingBottom: 32,
+              gap: 12,
+            }}
+          >
+            <Display size={34}>Your details</Display>
+
+            <View style={{ gap: 6 }}>
+              <Text style={{ fontFamily: F.bodySemi, fontSize: 13, color: T.ink }}>Name</Text>
+              <TextInput
+                value={name}
+                onChangeText={setName}
+                placeholder="What the driver calls you"
+                placeholderTextColor={T.muted}
+                style={{
+                  borderWidth: 2,
+                  borderColor: T.ink,
+                  borderRadius: 12,
+                  minHeight: 50,
+                  paddingHorizontal: 14,
+                  backgroundColor: T.field,
+                  fontFamily: F.body,
+                  fontSize: 16,
+                  color: T.ink,
+                }}
+              />
+            </View>
+
+            <View style={{ gap: 6 }}>
+              <Text style={{ fontFamily: F.bodySemi, fontSize: 13, color: T.ink }}>
+                Your block
+              </Text>
+              {/* Picked rather than typed wherever the shop has a list: a
+                  misspelt block is a run sheet nobody can sort. */}
+              {(shop?.hostels ?? []).length === 0 ? (
+                <TextInput
+                  value={block}
+                  onChangeText={setBlock}
+                  placeholder="Where the food comes to"
+                  placeholderTextColor={T.muted}
+                  style={{
+                    borderWidth: 2,
+                    borderColor: T.ink,
+                    borderRadius: 12,
+                    minHeight: 50,
+                    paddingHorizontal: 14,
+                    backgroundColor: T.field,
+                    fontFamily: F.body,
+                    fontSize: 16,
+                    color: T.ink,
+                  }}
+                />
+              ) : (
+                <ScrollView style={{ maxHeight: 220 }}>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                    {(shop?.hostels ?? []).map((one) => {
+                      const on = one === block;
+                      return (
+                        <Pressable
+                          key={one}
+                          onPress={() => setBlock(one)}
+                          accessibilityRole="button"
+                          style={{
+                            minHeight: 42,
+                            paddingHorizontal: 14,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: 999,
+                            borderWidth: 2,
+                            borderColor: on ? T.ink : T.line,
+                            backgroundColor: on ? T.brand : T.paper,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontFamily: on ? F.bodyBold : F.bodySemi,
+                              fontSize: 14,
+                              color: on ? T.paper : T.ink,
+                            }}
+                          >
+                            {one}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+              )}
+            </View>
+
+            <Text style={{ fontFamily: F.body, fontSize: 13, color: T.muted, lineHeight: 19 }}>
+              Your number stays as it is. It is what your orders are kept
+              against, so it is changed at the checkout rather than here.
+            </Text>
+
+            <Pressable
+              onPress={() => void keep()}
+              accessibilityRole="button"
+              style={{
+                minHeight: 54,
+                borderRadius: 999,
+                borderWidth: 2,
+                borderColor: T.ink,
+                backgroundColor: T.brand,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text style={{ fontFamily: F.bodyBold, fontSize: 16, color: T.paper }}>Save</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setEditing(false)}
+              style={{ minHeight: 44, alignItems: "center", justifyContent: "center" }}
+            >
+              <Text style={{ fontFamily: F.bodySemi, fontSize: 14, color: T.muted }}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }

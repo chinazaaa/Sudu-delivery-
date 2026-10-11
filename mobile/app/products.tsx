@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -9,12 +9,13 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 import { api, naira, type Product } from "@/lib/api";
 import Thumb from "@/components/Thumb";
 import AskUs from "@/components/AskUs";
 import { F, T } from "@/lib/theme";
-import { Display, Ticket } from "@/components/ui";
+import { Display } from "@/components/ui";
 
 /**
  * Everything, in one list.
@@ -25,6 +26,10 @@ import { Display, Ticket } from "@/components/ui";
  *
  * A page at a time, off the same two functions the website uses, so the two
  * cannot drift into showing different things.
+ *
+ * The board draws this as a column of wide rows rather than a grid: a dish
+ * is read by its name and the kitchen under it, and a name is the one thing
+ * a two-up grid has no room for.
  */
 export default function ProductsScreen() {
   const router = useRouter();
@@ -77,32 +82,70 @@ export default function ProductsScreen() {
     setPage(1);
   };
 
+  // How many kitchens the list covers, which is the half of the board's
+  // count line that says the order can be mixed. Counted off what has
+  // loaded, so it grows as the list does rather than claiming a number
+  // nothing on screen backs up.
+  const kitchens = useMemo(
+    () => new Set(rows.map((one) => one.restaurant)).size,
+    [rows]
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: T.shell }}>
-      <View style={{ padding: 16, gap: 10 }}>
-        <TextInput
-          value={typed}
-          onChangeText={setTyped}
-          onSubmitEditing={() => start(() => setQuery(typed))}
-          returnKeyType="search"
-          placeholder="Search wings, pizza, rice…"
-          placeholderTextColor={T.muted}
+      <View style={{ paddingHorizontal: 16, paddingBottom: 12, gap: 12 }}>
+        {/* The board heads the screen with the thing being looked at, in the
+            display face, rather than a navigation bar title: a category
+            opened from the home screen should say so in letters that size. */}
+        <Display size={44}>{category === "" ? "Menu" : category}</Display>
+
+        {/* The board's search: a pill with the glass in it, not a boxed
+            field, because this one is a search and not a form. */}
+        <View
           style={{
-            backgroundColor: T.field,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            backgroundColor: T.paper,
             borderWidth: 2,
             borderColor: T.ink,
-            borderRadius: 12,
-            paddingHorizontal: 14,
-            paddingVertical: 12,
-            fontFamily: F.body,
-            color: T.ink,
+            borderRadius: 999,
+            paddingHorizontal: 16,
+            minHeight: 50,
           }}
-        />
+        >
+          <Ionicons name="search" size={18} color={T.ink} />
+          <TextInput
+            value={typed}
+            onChangeText={setTyped}
+            onSubmitEditing={() => start(() => setQuery(typed))}
+            returnKeyType="search"
+            placeholder="Search wings, pizza, rice…"
+            placeholderTextColor={T.muted}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              fontFamily: F.body,
+              fontSize: 16,
+              color: T.ink,
+            }}
+          />
+        </View>
 
         {/* Chips rather than a menu, because a filter you can see is one
             people use and a filter behind a tap is one they never find. */}
+        {categories.length > 0 && (
+          <Chips
+            options={[
+              { id: "", name: "Anything" },
+              ...categories.map((one) => ({ id: one, name: one })),
+            ]}
+            picked={category}
+            onPick={(id) => start(() => setCategory(id))}
+          />
+        )}
+
         <Chips
-          label="Where from"
           options={[{ id: "", name: "Everywhere" }, ...places]}
           picked={place}
           onPick={(id) =>
@@ -114,47 +157,53 @@ export default function ProductsScreen() {
           }
         />
 
-        {categories.length > 0 && (
-          <Chips
-            label="What kind"
-            options={[
-              { id: "", name: "Anything" },
-              ...categories.map((one) => ({ id: one, name: one })),
-            ]}
-            picked={category}
-            onPick={(id) => start(() => setCategory(id))}
-          />
-        )}
-
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <View style={{ flex: 1 }}>
-            {busy && page === 1 ? (
-              <Text style={{ color: T.muted }}>…</Text>
-            ) : total === 0 ? (
-              <Text style={{ color: T.muted }}>Nothing matches that.</Text>
-            ) : (
-              <Ticket>{total} things</Ticket>
-            )}
+        {/* What the list is, in one line, and how to reorder it. */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          <Text
+            style={{
+              flex: 1,
+              minWidth: 0,
+              color: T.muted,
+              fontFamily: F.body,
+              fontSize: 13,
+            }}
+          >
+            {busy && page === 1
+              ? "…"
+              : total === 0
+                ? "Nothing matches that."
+                : `${total} dish${total === 1 ? "" : "es"}${
+                    kitchens > 1 ? ` · ${kitchens} kitchens` : ""
+                  } · all on the next run`}
+          </Text>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            {(
+              [
+                ["", "A to Z"],
+                ["cheap", "Cheapest"],
+                ["dear", "Dearest"],
+              ] as const
+            ).map(([value, label]) => (
+              <Pressable key={value || "az"} onPress={() => start(() => setSort(value))}>
+                <Text
+                  style={{
+                    color: sort === value ? T.brandDark : T.muted,
+                    fontFamily: sort === value ? F.bodyBold : F.bodySemi,
+                    fontSize: 13,
+                  }}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            ))}
           </View>
-          {(
-            [
-              ["", "A to Z"],
-              ["cheap", "Cheapest"],
-              ["dear", "Dearest"],
-            ] as const
-          ).map(([value, label]) => (
-            <Pressable key={value || "az"} onPress={() => start(() => setSort(value))}>
-              <Text
-                style={{
-                  color: sort === value ? T.brandDark : T.muted,
-                  fontFamily: sort === value ? F.bodyBold : F.bodySemi,
-                  fontSize: 13,
-                }}
-              >
-                {label}
-              </Text>
-            </Pressable>
-          ))}
         </View>
       </View>
 
@@ -165,9 +214,7 @@ export default function ProductsScreen() {
       <FlatList
         data={rows}
         keyExtractor={(one) => one.id}
-        numColumns={2}
-        columnWrapperStyle={{ gap: 12, paddingHorizontal: 16 }}
-        contentContainerStyle={{ gap: 12, paddingBottom: 32 }}
+        contentContainerStyle={{ gap: 10, paddingHorizontal: 16, paddingBottom: 32 }}
         onEndReachedThreshold={0.5}
         onEndReached={() => {
           if (!busy && rows.length < total) setPage((was) => was + 1);
@@ -178,35 +225,88 @@ export default function ProductsScreen() {
           ) : total === 0 ? (
             // The one moment somebody has said exactly what they want and
             // been told we have not got it.
-            <View style={{ paddingHorizontal: 16 }}>
-              <AskUs q={query} />
-            </View>
-          ) : null
+            <AskUs q={query} />
+          ) : (
+            <Text
+              style={{
+                color: T.muted,
+                fontFamily: F.body,
+                fontSize: 13,
+                lineHeight: 19,
+                marginTop: 10,
+              }}
+            >
+              Mix kitchens freely. It is still one delivery fee for the whole
+              order.
+            </Text>
+          )
         }
         renderItem={({ item }) => (
           <Pressable
             onPress={() => router.push(`/r/${item.restaurantId}?item=${item.id}` as never)}
             style={{
-              flex: 1,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
               backgroundColor: T.paper,
               borderWidth: 2,
               borderColor: T.ink,
               borderRadius: T.radius,
-              overflow: "hidden",
+              padding: 12,
             }}
           >
-            <Thumb src={item.imageUrl} name={item.name} />
-            <View style={{ padding: 10 }}>
+            <View
+              style={{
+                width: 62,
+                height: 62,
+                borderRadius: 12,
+                borderWidth: 2,
+                borderColor: T.ink,
+                overflow: "hidden",
+              }}
+            >
+              <Thumb src={item.imageUrl} name={item.name} ratio={1} />
+            </View>
+
+            <View style={{ flex: 1, minWidth: 0 }}>
               <Text
-                style={{ fontFamily: F.bodyBold, color: T.ink }}
+                style={{
+                  fontFamily: F.bodyBold,
+                  fontSize: 15.5,
+                  lineHeight: 20,
+                  color: T.ink,
+                }}
                 numberOfLines={2}
               >
                 {item.name}
               </Text>
-              <Text style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>{item.restaurant}</Text>
-              <Display size={22} style={{ marginTop: 4 }}>
+              <Text
+                style={{ color: T.muted, fontFamily: F.body, fontSize: 13, marginTop: 2 }}
+                numberOfLines={1}
+              >
+                {item.restaurant}
+              </Text>
+            </View>
+
+            <View style={{ alignItems: "flex-end", gap: 5 }}>
+              <Text style={{ fontFamily: F.mono, fontSize: 15, color: T.ink }}>
                 {naira(item.price)}
-              </Display>
+              </Text>
+              {/* Part of the row rather than a button of its own: a dish can
+                  want a size or a side picked, so the only honest thing one
+                  tap can do is open it. */}
+              <View
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 999,
+                  backgroundColor: T.brand,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons name="add" size={20} color={T.paper} />
+              </View>
             </View>
           </Pressable>
         )}
@@ -215,50 +315,51 @@ export default function ProductsScreen() {
   );
 }
 
+/** One row of the board's filter pills: Ink when it is the one you are on. */
 function Chips({
-  label,
   options,
   picked,
   onPick,
 }: {
-  label: string;
   options: { id: string; name: string }[];
   picked: string;
   onPick: (id: string) => void;
 }) {
   return (
-    <View>
-      <Text style={{ color: T.muted, fontSize: 12, fontFamily: F.bodySemi, marginBottom: 4 }}>
-        {label}
-      </Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {options.map((one) => (
-            <Pressable
-              key={one.id || "any"}
-              onPress={() => onPick(one.id)}
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ flexDirection: "row", gap: 8 }}
+    >
+      {options.map((one) => {
+        const on = picked === one.id;
+        return (
+          <Pressable
+            key={one.id || "any"}
+            onPress={() => onPick(one.id)}
+            style={{
+              minHeight: 40,
+              paddingHorizontal: 16,
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 999,
+              borderWidth: 2,
+              borderColor: T.ink,
+              backgroundColor: on ? T.ink : "transparent",
+            }}
+          >
+            <Text
               style={{
-                paddingHorizontal: 12,
-                paddingVertical: 7,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: picked === one.id ? T.brand : T.line,
-                backgroundColor: picked === one.id ? T.tint : T.paper,
+                color: on ? T.shell : T.ink,
+                fontFamily: F.bodySemi,
+                fontSize: 14,
               }}
             >
-              <Text
-                style={{
-                  color: picked === one.id ? T.brandDark : T.ink,
-                  fontWeight: picked === one.id ? "800" : "500",
-                  fontSize: 13,
-                }}
-              >
-                {one.name}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </ScrollView>
-    </View>
+              {one.name}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
   );
 }
