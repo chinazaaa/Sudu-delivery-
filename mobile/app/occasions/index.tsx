@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { api, naira } from "@/lib/api";
-import { T } from "@/lib/theme";
+import { F, T } from "@/lib/theme";
 import { Display, Ticket } from "@/components/ui";
 
 type Row = {
@@ -89,7 +89,7 @@ export default function OccasionsScreen() {
             // by leaving the standing ones with no card at all. The date in
             // Tomato above the name is what says it now.
             borderWidth: 2,
-            borderColor: row.happensAt ? "rgba(255,90,31,0.4)" : "transparent",
+            borderColor: T.ink,
           }}
         >
           {(row.image ?? "") !== "" && (
@@ -112,9 +112,9 @@ export default function OccasionsScreen() {
               <Text style={{ color: T.muted, marginTop: 2 }}>{row.blurb}</Text>
             )}
             {row.from !== null && (
-              <Text style={{ marginTop: 8, fontWeight: "700", color: T.brandDark }}>
+              <Text style={{ marginTop: 8, fontFamily: F.bodyBold, color: T.brandDark }}>
                 {row.boxes === 1 ? "One box" : `${row.boxes} boxes`} from {naira(row.from)}
-                <Text style={{ fontWeight: "600" }}> · delivery in it</Text>
+                <Text style={{ fontFamily: F.bodySemi }}> · delivery in it</Text>
               </Text>
             )}
           </View>

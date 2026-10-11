@@ -238,17 +238,20 @@ export default function Home() {
               autoCorrect={false}
               style={{
                 flex: 1,
-                backgroundColor: T.paper,
+                backgroundColor: T.field,
+                borderWidth: 2,
+                borderColor: T.ink,
                 borderRadius: T.radius,
                 paddingHorizontal: 16,
                 paddingVertical: 14,
                 fontSize: 16,
+                fontFamily: F.body,
                 color: T.ink,
               }}
             />
             {query !== "" && (
               <Pressable onPress={() => setQuery("")} style={{ paddingHorizontal: 8 }}>
-                <Text style={{ color: T.muted, fontWeight: "800" }}>Clear</Text>
+                <Text style={{ color: T.muted, fontFamily: F.bodyBold }}>Clear</Text>
               </Pressable>
             )}
           </View>
@@ -293,7 +296,7 @@ export default function Home() {
                     {naira(item.price)}
                   </Display>
                   {!item.available && (
-                    <Text style={{ color: T.muted, fontWeight: "700", marginTop: 2 }}>
+                    <Text style={{ color: T.muted, fontFamily: F.bodyBold, marginTop: 2 }}>
                       Sold out today
                     </Text>
                   )}
@@ -335,7 +338,7 @@ export default function Home() {
               gap: 10,
             }}
           >
-            <Text style={{ color: T.paper, fontWeight: "700", flex: 1, lineHeight: 20 }}>
+            <Text style={{ color: T.paper, fontFamily: F.bodyBold, flex: 1, lineHeight: 20 }}>
               {shop!.shop.ribbon}
             </Text>
             {(shop?.shop.ribbonTo ?? "") !== "" && (
@@ -354,10 +357,10 @@ export default function Home() {
               gap: 4,
             }}
           >
-            <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: "700" }}>
+            <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, fontFamily: F.bodyBold }}>
               YOUR ORDER {latest.ref}
             </Text>
-            <Text style={{ color: T.paper, fontSize: 17, fontWeight: "800" }}>
+            <Text style={{ color: T.paper, fontSize: 17, fontFamily: F.bodyBold }}>
               {statusLine(latest)}
             </Text>
             <Text style={{ color: "rgba(255,255,255,0.7)" }}>
@@ -436,7 +439,7 @@ export default function Home() {
 
         {error !== "" && (
           <View style={[card(), { backgroundColor: "#fff4ed" }]}>
-            <Text style={{ color: T.brandDark, fontWeight: "700" }}>{error}</Text>
+            <Text style={{ color: T.brandDark, fontFamily: F.bodyBold }}>{error}</Text>
             <Text style={{ color: T.muted, marginTop: 4 }}>Pull down to try again.</Text>
           </View>
         )}
@@ -637,6 +640,8 @@ function statusLine(order: OrderView): string {
 export function card() {
   return {
     backgroundColor: T.paper,
+    borderWidth: 2,
+    borderColor: T.ink,
     borderRadius: T.radius,
     padding: 14,
   } as const;

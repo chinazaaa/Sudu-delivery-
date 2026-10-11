@@ -11,7 +11,8 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api, naira, type ParcelSetup } from "@/lib/api";
 import { me, useStored } from "@/lib/store";
-import { T } from "@/lib/theme";
+import { F, T  } from "@/lib/theme";
+import { Display } from "@/components/ui";
 
 /**
  * Sending something that is not food.
@@ -124,7 +125,7 @@ export default function Parcel() {
   if (error !== "" && setup === null) {
     return (
       <View style={{ flex: 1, backgroundColor: T.shell, padding: 16 }}>
-        <Text style={{ color: T.brandDark, fontWeight: "700" }}>{error}</Text>
+        <Text style={{ color: T.brandDark, fontFamily: F.bodyBold }}>{error}</Text>
       </View>
     );
   }
@@ -141,7 +142,7 @@ export default function Parcel() {
     return (
       <ScrollView style={{ flex: 1, backgroundColor: T.shell }} contentContainerStyle={{ padding: 16 }}>
         <View style={card()}>
-          <Text style={{ fontSize: 20, fontWeight: "800", color: T.ink }}>Parcels</Text>
+          <Display size={24}>Parcels</Display>
           <Text style={{ color: T.muted, marginTop: 4 }}>
             We are not carrying parcels just now.
           </Text>
@@ -160,7 +161,7 @@ export default function Parcel() {
         <Pressable onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="chevron-back" size={24} color={T.ink} />
         </Pressable>
-        <Text style={{ fontSize: 22, fontWeight: "800", color: T.ink }}>Send a parcel</Text>
+        <Display size={26}>Send a parcel</Display>
       </View>
 
       <View style={card()}>
@@ -174,7 +175,7 @@ export default function Parcel() {
           ways this goes wrong, and somebody who reads it afterwards has
           already agreed to it. */}
       <View style={card()}>
-        <Text style={{ fontWeight: "800", color: T.ink }}>Before you send it</Text>
+        <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>Before you send it</Text>
         {setup.terms.map((line) => (
           <Text key={line} style={{ color: T.muted, marginTop: 6 }}>
             • {line}
@@ -278,7 +279,7 @@ export default function Parcel() {
       </View>
 
       <View style={[card(), { gap: 12 }]}>
-        <Text style={{ fontWeight: "800", color: T.ink }}>You</Text>
+        <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>You</Text>
         <Label text="Your name" />
         <Field value={name} onChangeText={setName} />
         <Label text="Your number" />
@@ -344,7 +345,7 @@ export default function Parcel() {
 
       {error !== "" && (
         <View style={[card(), { backgroundColor: "#fdecec" }]}>
-          <Text style={{ color: "#b3261e", fontWeight: "700" }}>{error}</Text>
+          <Text style={{ color: "#b3261e", fontFamily: F.bodyBold }}>{error}</Text>
         </View>
       )}
 
@@ -358,7 +359,7 @@ export default function Parcel() {
           alignItems: "center",
         }}
       >
-        <Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>
+        <Text style={{ color: "#fff", fontFamily: F.bodyBold, fontSize: 16 }}>
           {sending
             ? "Sending…"
             : tooDear
@@ -378,7 +379,7 @@ export default function Parcel() {
 }
 
 function Label({ text }: { text: string }) {
-  return <Text style={{ fontWeight: "700", color: T.ink }}>{text}</Text>;
+  return <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>{text}</Text>;
 }
 
 /** A row of taps rather than a dropdown: a phone has no good select. */
@@ -479,5 +480,5 @@ function Row({ label, value, bold = false }: { label: string; value: string; bol
 }
 
 function card() {
-  return { backgroundColor: T.paper, borderRadius: T.radius, padding: 14 } as const;
+  return { backgroundColor: T.paper, borderWidth: 2, borderColor: T.ink, borderRadius: T.radius, padding: 14 } as const;
 }

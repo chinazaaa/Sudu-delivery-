@@ -256,18 +256,18 @@ export default function OccasionScreen() {
           }}
         >
           <Text style={{ flex: 1, color: T.ink, lineHeight: 20 }}>
-            <Text style={{ fontWeight: "800", color: T.brandDark }}>
+            <Text style={{ fontFamily: F.bodyBold, color: T.brandDark }}>
               Not paying for it yourself?
             </Text>{" "}
             We will write the message for your mum or dad.
           </Text>
-          <Text style={{ fontWeight: "800", color: T.brandDark }}>Ask</Text>
+          <Text style={{ fontFamily: F.bodyBold, color: T.brandDark }}>Ask</Text>
         </Pressable>
       )}
 
       {data.when.length === 0 && (data.day?.timed ?? true) && (
         <Card>
-          <Text style={{ fontWeight: "700", color: T.ink }}>
+          <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>
             Nothing can get there in time any more.
           </Text>
           <Text style={{ color: T.muted, marginTop: 4 }}>
@@ -315,7 +315,7 @@ export default function OccasionScreen() {
               <Text key={l.id} style={{ color: T.ink, opacity: 0.75 }}>
                 {"\u2022  "}
                 {l.qty > 1 && (
-                  <Text style={{ fontWeight: "700" }}>{l.qty} × </Text>
+                  <Text style={{ fontFamily: F.bodyBold }}>{l.qty} × </Text>
                 )}
                 {l.name}
               </Text>
@@ -331,7 +331,7 @@ export default function OccasionScreen() {
                 backgroundColor: "rgba(20,17,15,0.06)",
                 color: "rgba(20,17,15,0.7)",
                 fontSize: 11,
-                fontWeight: "800",
+                fontFamily: F.bodyBold,
                 paddingHorizontal: 8,
                 paddingVertical: 3,
                 borderRadius: 999,
@@ -341,7 +341,7 @@ export default function OccasionScreen() {
               Fully customisable
             </Text>
           </View>
-          <Text style={{ color: T.brand, fontWeight: "700", marginTop: 4 }}>
+          <Text style={{ color: T.brand, fontFamily: F.bodyBold, marginTop: 4 }}>
             Delivery included
           </Text>
         </Pressable>
@@ -366,11 +366,11 @@ export default function OccasionScreen() {
 
               return (
                 <View key={line.id} style={{ marginTop: 10 }}>
-                  <Text style={{ fontWeight: "700", color: T.ink }}>
+                  <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>
                     {line.qty > 1 && `${line.qty} × `}
                     {shown.name}
                     {shown.choices.length > 0 && (
-                      <Text style={{ fontWeight: "700" }}> · {shown.choices.join(", ")}</Text>
+                      <Text style={{ fontFamily: F.bodyBold }}> · {shown.choices.join(", ")}</Text>
                     )}
                   </Text>
                   <Text style={{ color: T.muted, fontSize: 13 }}>{shown.restaurant}</Text>
@@ -380,7 +380,7 @@ export default function OccasionScreen() {
                       <Pressable
                         onPress={() => setOpen((was) => ({ ...was, [line.id]: !was[line.id] }))}
                       >
-                        <Text style={{ color: T.brand, fontWeight: "600", marginTop: 4 }}>
+                        <Text style={{ color: T.brand, fontFamily: F.bodySemi, marginTop: 4 }}>
                           {open[line.id] ? "Close" : "Swap"}
                         </Text>
                       </Pressable>
@@ -416,7 +416,7 @@ export default function OccasionScreen() {
                                 {/* The choice, where it is often the only
                                     thing telling two rows apart. */}
                                 {option.choices.length > 0 && (
-                                  <Text style={{ fontWeight: "700" }}>
+                                  <Text style={{ fontFamily: F.bodyBold }}>
                                     {" "}· {option.choices.join(", ")}
                                   </Text>
                                 )}
@@ -425,7 +425,7 @@ export default function OccasionScreen() {
                                 {option.restaurant}
                               </Text>
                             </View>
-                            <Text style={{ color: T.muted, fontWeight: "600" }}>
+                            <Text style={{ color: T.muted, fontFamily: F.bodySemi }}>
                               {option.delta === 0
                                 ? index === 0
                                   ? "as packed"
@@ -469,7 +469,7 @@ export default function OccasionScreen() {
                           backgroundColor: one.date === day ? T.tint : T.paper,
                         }}
                       >
-                        <Text style={{ fontWeight: "700", color: T.ink }}>{weekday(one.date)}</Text>
+                        <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>{weekday(one.date)}</Text>
                         <Text style={{ color: T.muted, fontSize: 12 }}>{short(one.date)}</Text>
                       </Pressable>
                     ))}
@@ -493,12 +493,12 @@ export default function OccasionScreen() {
                     }}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontWeight: "700", color: T.ink }}>{one.window}</Text>
+                      <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>{one.window}</Text>
                       <Text style={{ color: T.muted, fontSize: 13 }}>
                         {one.onARun ? "On the run" : "A car of its own"}
                       </Text>
                     </View>
-                    <Text style={{ fontWeight: "700", color: T.ink }}>
+                    <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>
                       {naira(box.food + (one.onARun ? box.runFee : box.carFee) + moved(box))}
                     </Text>
                   </Pressable>
@@ -529,10 +529,10 @@ export default function OccasionScreen() {
                           backgroundColor: mode === "day" && wantedOn === date ? T.tint : T.paper,
                         }}
                       >
-                        <Text style={{ fontWeight: "700", color: T.ink }}>{weekday(date)}</Text>
+                        <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>{weekday(date)}</Text>
                         <Text style={{ color: T.muted, fontSize: 12 }}>{short(date)}</Text>
                         {soonest !== "" && date < soonest && (
-                          <Text style={{ color: T.brand, fontSize: 11, fontWeight: "700" }}>
+                          <Text style={{ color: T.brand, fontSize: 11, fontFamily: F.bodyBold }}>
                             rush
                           </Text>
                         )}
@@ -552,13 +552,13 @@ export default function OccasionScreen() {
                     backgroundColor: mode === "any" ? T.tint : T.paper,
                   }}
                 >
-                  <Text style={{ fontWeight: "700", color: T.ink }}>
+                  <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>
                     Any day is fine, tell me
                   </Text>
                 </Pressable>
 
                 <Text style={{ color: T.ink, marginTop: 10 }}>
-                  <Text style={{ fontWeight: "800" }}>{naira(priceOf(box))}</Text>
+                  <Text style={{ fontFamily: F.bodyBold }}>{naira(priceOf(box))}</Text>
                   <Text style={{ color: T.muted }}>
                     {mode === "any"
                       ? " delivery in it. We message you to agree the day."
@@ -591,7 +591,7 @@ export default function OccasionScreen() {
               >
                 {again && <Ionicons name="checkmark" size={15} color="#fff" />}
               </View>
-              <Text style={{ fontWeight: "700", color: T.ink, flex: 1 }}>
+              <Text style={{ fontFamily: F.bodyBold, color: T.ink, flex: 1 }}>
                 Send this again, every so often
               </Text>
             </Pressable>
@@ -617,7 +617,7 @@ export default function OccasionScreen() {
                       backgroundColor: howOften === value ? T.tint : T.paper,
                     }}
                   >
-                    <Text style={{ color: T.ink, fontWeight: "600" }}>{label}</Text>
+                    <Text style={{ color: T.ink, fontFamily: F.bodySemi }}>{label}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -667,7 +667,7 @@ export default function OccasionScreen() {
                     backgroundColor: pays === value ? T.tint : T.paper,
                   }}
                 >
-                  <Text style={{ fontWeight: "700", color: T.ink }}>{label}</Text>
+                  <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>{label}</Text>
                 </Pressable>
               ))}
             </View>
@@ -676,7 +676,7 @@ export default function OccasionScreen() {
                 forget, and half of one is refused with a sentence rather
                 than quietly becoming an ordinary order. */}
             <Pressable onPress={() => setGifting((was) => !was)} style={{ marginTop: 12 }}>
-              <Text style={{ color: T.brand, fontWeight: "700" }}>
+              <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>
                 {gifting ? "Not a gift after all" : "It is a gift for somebody else"}
               </Text>
             </Pressable>
@@ -747,7 +747,7 @@ export default function OccasionScreen() {
                         backgroundColor: money === one.code ? T.tint : T.paper,
                       }}
                     >
-                      <Text style={{ color: T.ink, fontWeight: "600" }}>{one.label}</Text>
+                      <Text style={{ color: T.ink, fontFamily: F.bodySemi }}>{one.label}</Text>
                       {/* What the link will actually say. A chip reading
                           "Pounds" and nothing else leaves a mother in London
                           with no idea what she is about to be asked for. */}
@@ -795,7 +795,7 @@ export default function OccasionScreen() {
           </Card>
 
           {problem !== "" && (
-            <Text style={{ color: "#b42318", fontWeight: "700" }}>{problem}</Text>
+            <Text style={{ color: "#b42318", fontFamily: F.bodyBold }}>{problem}</Text>
           )}
 
           <Pressable
@@ -808,7 +808,7 @@ export default function OccasionScreen() {
               alignItems: "center",
             }}
           >
-            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>
+            <Text style={{ color: "#fff", fontFamily: F.bodyBold, fontSize: 16 }}>
               {busy ? "Placing…" : `Order this box · ${naira(priceOf(box))}`}
             </Text>
           </Pressable>
@@ -861,7 +861,7 @@ function Field({
 }) {
   return (
     <View style={{ marginTop: 10 }}>
-      <Text style={{ color: T.muted, fontSize: 12, fontWeight: "600" }}>{label}</Text>
+      <Text style={{ color: T.muted, fontSize: 12, fontFamily: F.bodySemi }}>{label}</Text>
       <TextInput
         value={value}
         onChangeText={onChange}

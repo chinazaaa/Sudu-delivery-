@@ -3,7 +3,8 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { api, naira } from "@/lib/api";
 import { cart, cartTotal, countItems, me, party, useStored } from "@/lib/store";
-import { T } from "@/lib/theme";
+import { F, T  } from "@/lib/theme";
+import { Display } from "@/components/ui";
 
 /**
  * Putting this cart into the car.
@@ -59,11 +60,11 @@ export default function Finalise() {
   if (!seated) {
     return (
       <View style={{ padding: 24, gap: 10 }}>
-        <Text style={{ fontWeight: "800", fontSize: 18, color: T.ink }}>
+        <Display size={22}>
           You are not in a group
-        </Text>
+        </Display>
         <Pressable onPress={() => router.replace("/checkout")}>
-          <Text style={{ color: T.brand, fontWeight: "800" }}>Check out on your own</Text>
+          <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>Check out on your own</Text>
         </Pressable>
       </View>
     );
@@ -101,8 +102,8 @@ export default function Finalise() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 60 }}>
-      <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 4 }}>
-        <Text style={{ fontWeight: "800", color: T.ink }}>
+      <View style={{ backgroundColor: T.paper, borderWidth: 2, borderColor: T.ink, borderRadius: T.radius, padding: 14, gap: 4 }}>
+        <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>
           {items} item{items === 1 ? "" : "s"} · {naira(cartTotal(lines))}
         </Text>
         <Text style={{ color: T.muted, fontSize: 13 }}>
@@ -114,7 +115,7 @@ export default function Finalise() {
         </Text>
       </View>
 
-      <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14, gap: 10 }}>
+      <View style={{ backgroundColor: T.paper, borderWidth: 2, borderColor: T.ink, borderRadius: T.radius, padding: 14, gap: 10 }}>
         <View>
           <Text style={{ color: T.muted, marginBottom: 4 }}>Your phone number</Text>
           <TextInput
@@ -174,7 +175,7 @@ export default function Finalise() {
         </View>
 
         <View>
-          <Text style={{ fontWeight: "800", color: T.ink, marginBottom: 6 }}>
+          <Text style={{ fontFamily: F.bodyBold, color: T.ink, marginBottom: 6 }}>
             How are you paying? Transfer or card
           </Text>
           {(
@@ -202,12 +203,12 @@ export default function Finalise() {
                 }}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <Text style={{ fontWeight: "800", color: T.ink }}>{title}</Text>
+                  <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>{title}</Text>
                   {way === "transfer" && (
                     <Text
                       style={{
                         fontSize: 11,
-                        fontWeight: "800",
+                        fontFamily: F.bodyBold,
                         color: T.brandDark,
                         backgroundColor: T.tint,
                         borderRadius: 999,
@@ -226,7 +227,7 @@ export default function Finalise() {
         </View>
 
         {problem !== "" && (
-          <Text style={{ color: T.brandDark, fontWeight: "700" }}>{problem}</Text>
+          <Text style={{ color: T.brandDark, fontFamily: F.bodyBold }}>{problem}</Text>
         )}
 
         <Pressable
@@ -239,27 +240,30 @@ export default function Finalise() {
             alignItems: "center",
           }}
         >
-          <Text style={{ color: T.paper, fontWeight: "800", fontSize: 16 }}>
+          <Text style={{ color: T.paper, fontFamily: F.bodyBold, fontSize: 16 }}>
             {busy ? "Saving…" : "Put my food in"}
           </Text>
         </Pressable>
 
         <Pressable onPress={() => router.back()} style={{ alignItems: "center", paddingVertical: 6 }}>
-          <Text style={{ color: T.muted, fontWeight: "700" }}>No, I am still choosing</Text>
+          <Text style={{ color: T.muted, fontFamily: F.bodyBold }}>No, I am still choosing</Text>
         </Pressable>
       </View>
     </ScrollView>
   );
 }
 
+/** The same field the checkout and the rest of the app are typed into. */
 function field() {
   return {
-    borderWidth: 1,
-    borderColor: T.line,
-    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: T.ink,
+    borderRadius: 12,
+    minHeight: 50,
     paddingHorizontal: 14,
-    paddingVertical: 12,
     color: T.ink,
-    backgroundColor: T.paper,
+    backgroundColor: T.field,
+    fontFamily: F.body,
+    fontSize: 15,
   } as const;
 }

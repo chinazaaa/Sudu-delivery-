@@ -76,10 +76,13 @@ export default function ProductsScreen() {
           placeholder="Search wings, pizza, rice…"
           placeholderTextColor={T.muted}
           style={{
-            backgroundColor: T.paper,
+            backgroundColor: T.field,
+            borderWidth: 2,
+            borderColor: T.ink,
             borderRadius: 12,
             paddingHorizontal: 14,
             paddingVertical: 12,
+            fontFamily: F.body,
             color: T.ink,
           }}
         />
@@ -213,7 +216,7 @@ function Chips({
 }) {
   return (
     <View>
-      <Text style={{ color: T.muted, fontSize: 12, fontWeight: "600", marginBottom: 4 }}>
+      <Text style={{ color: T.muted, fontSize: 12, fontFamily: F.bodySemi, marginBottom: 4 }}>
         {label}
       </Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>

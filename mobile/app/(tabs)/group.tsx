@@ -248,7 +248,7 @@ export default function Group() {
             {going && (
               <View style={{ marginTop: 12 }}>
                 <Text style={{ color: T.muted, marginBottom: 2 }}>When it arrives</Text>
-                <Text style={{ fontWeight: "800", color: T.ink }}>
+                <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>
                   Order now, get it {going.said}
                 </Text>
                 <Text style={{ color: T.muted, fontSize: 12, marginTop: 4 }}>
@@ -275,7 +275,7 @@ export default function Group() {
                       paddingVertical: 10,
                     }}
                   >
-                    <Text style={{ color: T.brandDark, fontWeight: "700", fontSize: 13 }}>
+                    <Text style={{ color: T.brandDark, fontFamily: F.bodyBold, fontSize: 13 }}>
                       {(takeOther ? decided : other)?.onARun
                         ? `Rather pay less? A run gets it to you ${(takeOther ? decided : other)?.said}.`
                         : `In a hurry? A car of its own can be there ${(takeOther ? decided : other)?.said}, for more.`}
@@ -289,7 +289,7 @@ export default function Group() {
             )}
 
             {problem !== "" && (
-              <Text style={{ color: T.brandDark, fontWeight: "700", marginTop: 8 }}>
+              <Text style={{ color: T.brandDark, fontFamily: F.bodyBold, marginTop: 8 }}>
                 {problem}
               </Text>
             )}
@@ -308,7 +308,7 @@ export default function Group() {
                 alignItems: "center",
               }}
             >
-              <Text style={{ color: T.paper, fontWeight: "800" }}>
+              <Text style={{ color: T.paper, fontFamily: F.bodyBold }}>
                 {busy ? "Starting…" : "Start the group"}
               </Text>
             </Pressable>
@@ -344,7 +344,7 @@ export default function Group() {
                 alignItems: "center",
               }}
             >
-              <Text style={{ fontWeight: "800", color: T.ink }}>
+              <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>
                 {busy ? "Joining…" : "Join their group"}
               </Text>
             </Pressable>
@@ -354,17 +354,17 @@ export default function Group() {
 
       {past.length > 0 && !seated && (
         <View style={card()}>
-          <Text style={{ fontWeight: "800", color: T.ink }}>Groups you ordered in</Text>
+          <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>Groups you ordered in</Text>
           {past.map((one) => (
             <Pressable
               key={one.id}
               onPress={() => void Linking.openURL(`${SITE}/g/${one.id}?split=1`)}
               style={{ paddingVertical: 10 }}
             >
-              <Text style={{ fontWeight: "700", color: T.ink }}>
+              <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>
                 {one.leader || "A group"}
               </Text>
-              <Text style={{ color: T.brand, fontWeight: "700", fontSize: 13 }}>
+              <Text style={{ color: T.brand, fontFamily: F.bodyBold, fontSize: 13 }}>
                 See the split
               </Text>
             </Pressable>
@@ -425,11 +425,11 @@ function Board({
   return (
     <View style={{ gap: 12 }}>
       <View style={card()}>
-        <Text style={{ fontWeight: "800", color: T.brandDark, fontSize: 12 }}>
+        <Text style={{ fontFamily: F.bodyBold, color: T.brandDark, fontSize: 12 }}>
           {(board.leader ?? "").toUpperCase()}
           {board.leader ? "'S DELIVERY" : "YOUR GROUP"}
         </Text>
-        <Text style={{ fontSize: 20, fontWeight: "800", color: T.ink, marginTop: 2 }}>
+        <Text style={{ fontSize: 20, fontFamily: F.bodyBold, color: T.ink, marginTop: 2 }}>
           {(board.people ?? 0) === 0
             ? "Nobody has joined yet"
             : `${board.people} ${board.people === 1 ? "person" : "people"} · ${
@@ -449,7 +449,7 @@ function Board({
               padding: 12,
             }}
           >
-            <Text style={{ fontWeight: "800", color: T.brandDark }}>
+            <Text style={{ fontFamily: F.bodyBold, color: T.brandDark }}>
               About {naira(board.eachNow ?? 0)} each right now
             </Text>
             <Text style={{ color: T.ink, fontSize: 13, marginTop: 2 }}>
@@ -460,7 +460,7 @@ function Board({
           </View>
         )}
 
-        <Text style={{ color: T.brandDark, fontWeight: "700", marginTop: 10 }}>{left}</Text>
+        <Text style={{ color: T.brandDark, fontFamily: F.bodyBold, marginTop: 10 }}>{left}</Text>
       </View>
 
       {/* Their own food, and the one button that finishes it. Finalising asks
@@ -468,7 +468,7 @@ function Board({
           the cart, so this never asks any of it. */}
       {!mine?.finalised && (
         <View style={{ ...card(), backgroundColor: T.tint }}>
-          <Text style={{ fontWeight: "800", color: T.brandDark }}>
+          <Text style={{ fontFamily: F.bodyBold, color: T.brandDark }}>
             {waiting > 0 ? `You have ${waiting} item${waiting === 1 ? "" : "s"} in your cart` : "Pick your food"}
           </Text>
           <Text style={{ color: T.ink, marginTop: 2 }}>
@@ -486,7 +486,7 @@ function Board({
               alignItems: "center",
             }}
           >
-            <Text style={{ color: T.paper, fontWeight: "800" }}>
+            <Text style={{ color: T.paper, fontFamily: F.bodyBold }}>
               {waiting > 0 ? "Review and finalise my food" : "Open the menu"}
             </Text>
           </Pressable>
@@ -500,7 +500,7 @@ function Board({
             borderRadius: 12,
             padding: 10,
             textAlign: "center",
-            fontWeight: "700",
+            fontFamily: F.bodyBold,
             color: "#1f8a70",
           }}
         >
@@ -509,7 +509,7 @@ function Board({
       )}
 
       <View style={card()}>
-        <Text style={{ fontWeight: "800", color: T.ink }}>Who is in</Text>
+        <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>Who is in</Text>
         {(board.members ?? []).map((one, index) => (
           <View
             key={`${one.name}-${index}`}
@@ -523,7 +523,7 @@ function Board({
             }}
           >
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: "700", color: T.ink }}>
+              <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>
                 {one.name}
                 {one.isMine ? " · you" : ""}
               </Text>
@@ -533,7 +533,7 @@ function Board({
                   : one.summary || `${one.items} item${one.items === 1 ? "" : "s"}`}
               </Text>
             </View>
-            <Text style={{ color: one.ready ? "#1f8a70" : T.muted, fontWeight: "700" }}>
+            <Text style={{ color: one.ready ? "#1f8a70" : T.muted, fontFamily: F.bodyBold }}>
               {one.ready ? "Ready" : "Adding"}
             </Text>
           </View>
@@ -541,7 +541,7 @@ function Board({
       </View>
 
       {problem !== "" && (
-        <Text style={{ color: T.brandDark, fontWeight: "700" }}>{problem}</Text>
+        <Text style={{ color: T.brandDark, fontFamily: F.bodyBold }}>{problem}</Text>
       )}
 
       <View style={{ gap: 8 }}>
@@ -555,21 +555,21 @@ function Board({
           }
           style={{
             borderRadius: 999,
-            borderWidth: 1,
-            borderColor: T.line,
+            borderWidth: 2,
+            borderColor: T.ink,
             paddingVertical: 12,
             alignItems: "center",
             backgroundColor: T.paper,
           }}
         >
-          <Text style={{ fontWeight: "800", color: T.ink }}>Send somebody the link</Text>
+          <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>Send somebody the link</Text>
         </Pressable>
 
         <Pressable
           onPress={() => void Clipboard.setStringAsync(link)}
           style={{ paddingVertical: 8, alignItems: "center" }}
         >
-          <Text style={{ color: T.muted, fontWeight: "700" }}>Copy link</Text>
+          <Text style={{ color: T.muted, fontFamily: F.bodyBold }}>Copy link</Text>
         </Pressable>
 
         {/* Only whoever made the link, exactly as the website has it. The
@@ -587,7 +587,7 @@ function Board({
               alignItems: "center",
             }}
           >
-            <Text style={{ color: T.paper, fontWeight: "800" }}>
+            <Text style={{ color: T.paper, fontFamily: F.bodyBold }}>
               {busy
                 ? "Closing…"
                 : (board.ready ?? 0) === (board.people ?? 0)
@@ -610,7 +610,7 @@ function Board({
         )}
 
         <Pressable onPress={onLeave} disabled={busy} style={{ paddingVertical: 10, alignItems: "center" }}>
-          <Text style={{ color: T.muted, fontWeight: "700" }}>Leave this group</Text>
+          <Text style={{ color: T.muted, fontFamily: F.bodyBold }}>Leave this group</Text>
         </Pressable>
       </View>
     </View>

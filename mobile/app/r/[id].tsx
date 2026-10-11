@@ -113,9 +113,9 @@ export default function Restaurant() {
     // Either way there is a way out of here rather than a wheel.
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <Text style={{ fontSize: 18, fontWeight: "800", color: T.ink }}>
+        <Display size={22}>
           That counter is not on
-        </Text>
+        </Display>
         <Text style={{ color: T.muted, textAlign: "center", marginTop: 6 }}>
           It may have closed for the day, or the link is an old one.
         </Text>
@@ -129,7 +129,7 @@ export default function Restaurant() {
             paddingVertical: 12,
           }}
         >
-          <Text style={{ color: T.paper, fontWeight: "800" }}>See the whole menu</Text>
+          <Text style={{ color: T.paper, fontFamily: F.bodyBold }}>See the whole menu</Text>
         </Pressable>
       </View>
     );
@@ -465,12 +465,12 @@ function ItemSheet({
             style={{ width: "100%", height: 200, borderRadius: T.radius }}
           />
         )}
-        <Text style={{ fontSize: 24, fontWeight: "800", color: T.ink }}>{item.name}</Text>
+        <Display size={28}>{item.name}</Display>
         {blurbOf(item) !== "" && <Text style={{ color: T.muted }}>{blurbOf(item)}</Text>}
 
         {item.groups.map((group) => (
-          <View key={group.id} style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 14 }}>
-            <Text style={{ fontWeight: "800", color: T.ink }}>{group.name}</Text>
+          <View key={group.id} style={{ backgroundColor: T.paper, borderWidth: 2, borderColor: T.ink, borderRadius: T.radius, padding: 14 }}>
+            <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>{group.name}</Text>
             <Text style={{ color: T.muted, marginBottom: 8 }}>
               {group.maxSelect > 1 ? `Pick up to ${group.maxSelect}` : "Pick one"}
               {group.required ? "" : ", or none"}
@@ -513,6 +513,8 @@ function ItemSheet({
           padding: 16,
           paddingBottom: 16 + insets.bottom,
           backgroundColor: T.paper,
+          borderWidth: 2,
+          borderColor: T.ink,
           flexDirection: "row",
           gap: 12,
           alignItems: "center",
@@ -521,7 +523,7 @@ function ItemSheet({
         <Pressable onPress={() => setQty((was) => Math.max(1, was - 1))} style={round()}>
           <Text style={{ fontSize: 20 }}>−</Text>
         </Pressable>
-        <Text style={{ fontWeight: "800", fontSize: 16 }}>{qty}</Text>
+        <Text style={{ fontFamily: F.bodyBold, fontSize: 16 }}>{qty}</Text>
         <Pressable onPress={() => setQty((was) => was + 1)} style={round()}>
           <Text style={{ fontSize: 20 }}>+</Text>
         </Pressable>
@@ -537,7 +539,7 @@ function ItemSheet({
             alignItems: "center",
           }}
         >
-          <Text style={{ color: T.paper, fontWeight: "800" }}>
+          <Text style={{ color: T.paper, fontFamily: F.bodyBold }}>
             {missing.length > 0
               ? `Choose ${missing[0].name.toLowerCase()}`
               : `Add · ${naira((item.price + extra) * qty)}`}

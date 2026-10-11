@@ -12,7 +12,8 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api, feeFor, naira, type Shelf } from "@/lib/api";
 import { me, shelf as basket, shelfTotal, useStored } from "@/lib/store";
-import { T } from "@/lib/theme";
+import { F, T  } from "@/lib/theme";
+import { Display } from "@/components/ui";
 
 /**
  * Paying for skincare.
@@ -97,11 +98,11 @@ export default function SkincareCheckout() {
   if (lines.length === 0) {
     return (
       <View style={{ padding: 16, gap: 8 }}>
-        <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink }}>
+        <Display size={21}>
           Nothing in the basket
-        </Text>
+        </Display>
         <Pressable onPress={() => router.replace("/skincare")}>
-          <Text style={{ color: T.brand, fontWeight: "700" }}>Back to the shelf</Text>
+          <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>Back to the shelf</Text>
         </Pressable>
       </View>
     );
@@ -113,10 +114,10 @@ export default function SkincareCheckout() {
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60, gap: 14 }}>
       <View style={card()}>
-        <Text style={{ fontWeight: "800", color: T.ink }}>When it arrives</Text>
-        <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink, marginTop: 2 }}>
+        <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>When it arrives</Text>
+        <Display size={21} style={{ marginTop: 2 }}>
           {data.when}
-        </Text>
+        </Display>
         <Text style={{ color: T.muted, marginTop: 4 }}>
           {data.window ? `${data.window}. ` : ""}One car a week. Orders for it
           close at {data.cutOff} that morning, and anything after goes on the
@@ -125,7 +126,7 @@ export default function SkincareCheckout() {
       </View>
 
       <View style={card()}>
-        <Text style={{ fontWeight: "800", color: T.ink }}>What you are getting</Text>
+        <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>What you are getting</Text>
         <Text style={{ color: T.muted, marginTop: 2 }}>{data.promise}</Text>
 
         {lines.map((line) => (
@@ -141,7 +142,7 @@ export default function SkincareCheckout() {
               )}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: T.ink, fontWeight: "600" }} numberOfLines={2}>
+              <Text style={{ color: T.ink, fontFamily: F.bodySemi }} numberOfLines={2}>
                 {line.name}
               </Text>
               <Text style={{ color: T.muted, fontSize: 12 }}>
@@ -152,7 +153,7 @@ export default function SkincareCheckout() {
             <Pressable onPress={() => void basket.setQty(line.id, line.qty - 1)} hitSlop={8}>
               <Ionicons name="remove-circle-outline" size={24} color={T.ink} />
             </Pressable>
-            <Text style={{ fontWeight: "800", color: T.ink, minWidth: 18, textAlign: "center" }}>
+            <Text style={{ fontFamily: F.bodyBold, color: T.ink, minWidth: 18, textAlign: "center" }}>
               {line.qty}
             </Text>
             <Pressable onPress={() => void basket.setQty(line.id, line.qty + 1)} hitSlop={8}>
@@ -163,7 +164,7 @@ export default function SkincareCheckout() {
       </View>
 
       <View style={card()}>
-        <Text style={{ fontWeight: "800", color: T.ink, marginBottom: 8 }}>Where it goes</Text>
+        <Text style={{ fontFamily: F.bodyBold, color: T.ink, marginBottom: 8 }}>Where it goes</Text>
 
         <Field value={name} onChangeText={setName} placeholder="John Doe" />
         <Field value={phone} onChangeText={setPhone} placeholder="0803 123 4567" keyboardType="phone-pad" />
@@ -186,7 +187,7 @@ export default function SkincareCheckout() {
                 backgroundColor: inPau === one.at ? T.ink : T.paper,
               }}
             >
-              <Text style={{ fontWeight: "700", color: inPau === one.at ? T.paper : T.ink }}>
+              <Text style={{ fontFamily: F.bodyBold, color: inPau === one.at ? T.paper : T.ink }}>
                 {one.label}
               </Text>
             </Pressable>
@@ -257,7 +258,7 @@ export default function SkincareCheckout() {
                 backgroundColor: method === value ? T.tint : T.paper,
               }}
             >
-              <Text style={{ fontWeight: "700", color: T.ink }}>{label}</Text>
+              <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>{label}</Text>
             </Pressable>
           ))}
         </View>
@@ -286,7 +287,7 @@ export default function SkincareCheckout() {
                     backgroundColor: heard === one.code ? T.tint : T.paper,
                   }}
                 >
-                  <Text style={{ color: T.ink, fontWeight: "600" }}>{one.name}</Text>
+                  <Text style={{ color: T.ink, fontFamily: F.bodySemi }}>{one.name}</Text>
                 </Pressable>
               )
             )}
@@ -313,7 +314,7 @@ export default function SkincareCheckout() {
                   backgroundColor: money === one.code ? T.tint : T.paper,
                 }}
               >
-                <Text style={{ color: T.ink, fontWeight: "600" }}>{one.label}</Text>
+                <Text style={{ color: T.ink, fontFamily: F.bodySemi }}>{one.label}</Text>
                 {/* What the link will actually say. A chip reading "Pounds"
                     and nothing else leaves whoever is paying with no idea
                     what they are about to be asked for. */}
@@ -341,7 +342,7 @@ export default function SkincareCheckout() {
       </View>
 
       {error !== "" && (
-        <Text style={{ color: T.brandDark, fontWeight: "700" }}>{error}</Text>
+        <Text style={{ color: T.brandDark, fontFamily: F.bodyBold }}>{error}</Text>
       )}
 
       <Pressable
@@ -354,7 +355,7 @@ export default function SkincareCheckout() {
           alignItems: "center",
         }}
       >
-        <Text style={{ color: T.paper, fontWeight: "800", fontSize: 16 }}>
+        <Text style={{ color: T.paper, fontFamily: F.bodyBold, fontSize: 16 }}>
           {busy ? "Placing…" : `Place order · ${naira(food + fee)}`}
         </Text>
       </Pressable>
@@ -393,5 +394,5 @@ function Row({ label, value, bold = false }: { label: string; value: string; bol
 }
 
 function card() {
-  return { backgroundColor: T.paper, borderRadius: T.radius, padding: 14 } as const;
+  return { backgroundColor: T.paper, borderWidth: 2, borderColor: T.ink, borderRadius: T.radius, padding: 14 } as const;
 }

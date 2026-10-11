@@ -12,7 +12,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api, naira, type LinkView } from "@/lib/api";
 import { me, useStored } from "@/lib/store";
-import { T } from "@/lib/theme";
+import { F, T  } from "@/lib/theme";
+import { Display } from "@/components/ui";
 
 /**
  * Ordering off a link somebody sent.
@@ -61,12 +62,12 @@ export default function LinkScreen() {
   if (gone !== "") {
     return (
       <View style={{ padding: 16, gap: 10 }}>
-        <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink }}>{gone}</Text>
+        <Display size={21}>{gone}</Display>
         <Text style={{ color: T.muted }}>
           Nothing was charged. The same food is on the menu.
         </Text>
         <Pressable onPress={() => router.replace("/(tabs)")}>
-          <Text style={{ color: T.brand, fontWeight: "700" }}>See what is on</Text>
+          <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>See what is on</Text>
         </Pressable>
       </View>
     );
@@ -113,19 +114,19 @@ export default function LinkScreen() {
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60, gap: 14 }}>
       <View style={card()}>
-        <Text style={{ color: T.brandDark, fontWeight: "800", fontSize: 12, letterSpacing: 0.5 }}>
+        <Text style={{ color: T.brandDark, fontFamily: F.bodyBold, fontSize: 12, letterSpacing: 0.5 }}>
           {view.title.toUpperCase()}
         </Text>
-        <Text style={{ fontWeight: "800", fontSize: 22, color: T.ink, marginTop: 2 }}>
+        <Display size={26} style={{ marginTop: 2 }}>
           {items} item{items === 1 ? "" : "s"} · {naira(food)}
-        </Text>
+        </Display>
         {view.when !== "" && <Text style={{ color: T.ink, marginTop: 4 }}>{view.when}</Text>}
         <Text style={{ color: T.muted, marginTop: 2 }}>{view.estimate}</Text>
         {view.note !== "" && <Text style={{ color: T.muted, marginTop: 6 }}>{view.note}</Text>}
       </View>
 
       <View style={card()}>
-        <Text style={{ fontWeight: "800", color: T.ink, marginBottom: 8 }}>
+        <Text style={{ fontFamily: F.bodyBold, color: T.ink, marginBottom: 8 }}>
           What you are getting
         </Text>
 
@@ -162,12 +163,12 @@ export default function LinkScreen() {
                     color={on ? T.brand : T.line}
                   />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: T.ink, fontWeight: "700" }}>{one.name}</Text>
+                    <Text style={{ color: T.ink, fontFamily: F.bodyBold }}>{one.name}</Text>
                     <Text style={{ color: T.muted, fontSize: 12 }}>
                       {[one.restaurant, ...one.choices].filter(Boolean).join(" · ")}
                     </Text>
                   </View>
-                  <Text style={{ color: T.ink, fontWeight: "800" }}>{naira(one.food)}</Text>
+                  <Text style={{ color: T.ink, fontFamily: F.bodyBold }}>{naira(one.food)}</Text>
                 </Pressable>
               );
             })}
@@ -184,14 +185,14 @@ export default function LinkScreen() {
               style={{ flexDirection: "row", gap: 10, paddingVertical: 6 }}
             >
               <View style={{ flex: 1 }}>
-                <Text style={{ color: T.ink, fontWeight: "700" }}>
+                <Text style={{ color: T.ink, fontFamily: F.bodyBold }}>
                   {line.qty}× {line.name}
                 </Text>
                 <Text style={{ color: T.muted, fontSize: 12 }}>
                   {[line.restaurant, ...line.choices].filter(Boolean).join(" · ")}
                 </Text>
               </View>
-              <Text style={{ color: T.ink, fontWeight: "800" }}>{naira(line.total)}</Text>
+              <Text style={{ color: T.ink, fontFamily: F.bodyBold }}>{naira(line.total)}</Text>
             </View>
           ))
         )}
@@ -210,7 +211,7 @@ export default function LinkScreen() {
       </View>
 
       <View style={card()}>
-        <Text style={{ fontWeight: "800", color: T.ink }}>Where does it go?</Text>
+        <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>Where does it go?</Text>
 
         <Field value={name} onChangeText={setName} placeholder="John Doe" />
         <Field value={phone} onChangeText={setPhone} placeholder="0803 123 4567" keyboardType="phone-pad" />
@@ -281,7 +282,7 @@ export default function LinkScreen() {
                 backgroundColor: method === value ? T.tint : T.paper,
               }}
             >
-              <Text style={{ fontWeight: "700", color: T.ink }}>{label}</Text>
+              <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>{label}</Text>
             </Pressable>
           ))}
         </View>
@@ -292,7 +293,7 @@ export default function LinkScreen() {
         )}
       </View>
 
-      {error !== "" && <Text style={{ color: T.brandDark, fontWeight: "700" }}>{error}</Text>}
+      {error !== "" && <Text style={{ color: T.brandDark, fontFamily: F.bodyBold }}>{error}</Text>}
 
       <Pressable
         onPress={place}
@@ -304,14 +305,14 @@ export default function LinkScreen() {
           alignItems: "center",
         }}
       >
-        <Text style={{ color: T.paper, fontWeight: "800", fontSize: 16 }}>
+        <Text style={{ color: T.paper, fontFamily: F.bodyBold, fontSize: 16 }}>
           {busy ? "Placing…" : "Place my order"}
         </Text>
       </Pressable>
 
       {view.askUs !== "" && (
         <Pressable onPress={() => void Linking.openURL(view.askUs)} style={{ alignItems: "center" }}>
-          <Text style={{ color: T.brand, fontWeight: "700" }}>Ask us to change something</Text>
+          <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>Ask us to change something</Text>
         </Pressable>
       )}
     </ScrollView>
@@ -349,5 +350,5 @@ function Row({ label, value, bold = false }: { label: string; value: string; bol
 }
 
 function card() {
-  return { backgroundColor: T.paper, borderRadius: T.radius, padding: 14 } as const;
+  return { backgroundColor: T.paper, borderWidth: 2, borderColor: T.ink, borderRadius: T.radius, padding: 14 } as const;
 }

@@ -11,7 +11,8 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "@/lib/api";
 import { me, useStored } from "@/lib/store";
-import { T } from "@/lib/theme";
+import { F, T  } from "@/lib/theme";
+import { Display } from "@/components/ui";
 
 /**
  * "We have not got it. Shall we go and find it?"
@@ -71,10 +72,10 @@ export default function AskScreen() {
       <>
         <Stack.Screen options={{ title: "Asked" }} />
         <View style={{ flex: 1, backgroundColor: T.shell, padding: 16, gap: 12 }}>
-          <View style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 16, gap: 8 }}>
-            <Text style={{ fontSize: 20, fontWeight: "800", color: T.ink }}>
+          <View style={{ backgroundColor: T.paper, borderWidth: 2, borderColor: T.ink, borderRadius: T.radius, padding: 16, gap: 8 }}>
+            <Display size={24}>
               We are on it
-            </Text>
+            </Display>
             <Text style={{ color: T.muted, lineHeight: 21 }}>
               We will find it, price it, and message you on WhatsApp with what
               it comes to. Nothing is owed until you say yes.
@@ -89,7 +90,7 @@ export default function AskScreen() {
               alignItems: "center",
             }}
           >
-            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>
+            <Text style={{ color: "#fff", fontFamily: F.bodyBold, fontSize: 16 }}>
               Back to the menu
             </Text>
           </Pressable>
@@ -181,7 +182,7 @@ export default function AskScreen() {
           </Field>
 
           {error !== "" && (
-            <Text style={{ color: T.brand, fontWeight: "700" }}>{error}</Text>
+            <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>{error}</Text>
           )}
 
           <Pressable
@@ -194,7 +195,7 @@ export default function AskScreen() {
               alignItems: "center",
             }}
           >
-            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>
+            <Text style={{ color: "#fff", fontFamily: F.bodyBold, fontSize: 16 }}>
               {busy ? "Sending…" : "Ask us to get it"}
             </Text>
           </Pressable>
@@ -211,6 +212,8 @@ export default function AskScreen() {
 
 const box = {
   backgroundColor: T.paper,
+  borderWidth: 2,
+  borderColor: T.ink,
   borderRadius: T.radius,
   paddingHorizontal: 16,
   paddingVertical: 14,
@@ -221,7 +224,7 @@ const box = {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <View style={{ gap: 6 }}>
-      <Text style={{ fontWeight: "700", color: T.ink }}>{label}</Text>
+      <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>{label}</Text>
       {children}
     </View>
   );

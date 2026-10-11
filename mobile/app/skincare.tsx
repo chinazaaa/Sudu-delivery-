@@ -14,7 +14,8 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api, naira, type Shelf, type ShelfProduct } from "@/lib/api";
 import { shelf as basket, shelfCount, useStored } from "@/lib/store";
-import { T } from "@/lib/theme";
+import { F, T  } from "@/lib/theme";
+import { Display } from "@/components/ui";
 
 /**
  * Skincare: the same shop, a different delivery day.
@@ -71,7 +72,7 @@ export default function SkincareScreen() {
   if (error !== "") {
     return (
       <View style={{ padding: 16 }}>
-        <Text style={{ color: T.brandDark, fontWeight: "700" }}>{error}</Text>
+        <Text style={{ color: T.brandDark, fontFamily: F.bodyBold }}>{error}</Text>
       </View>
     );
   }
@@ -81,9 +82,9 @@ export default function SkincareScreen() {
   if (!data.on) {
     return (
       <View style={{ padding: 16, gap: 8 }}>
-        <Text style={{ fontWeight: "800", fontSize: 17, color: T.ink }}>
+        <Display size={21}>
           The skincare shelf is closed
-        </Text>
+        </Display>
         <Text style={{ color: T.muted }}>The food menu is still open.</Text>
       </View>
     );
@@ -115,12 +116,12 @@ export default function SkincareScreen() {
         ListHeaderComponent={
           <View style={{ padding: 16, gap: 10 }}>
             <View style={{ gap: 2 }}>
-              <Text style={{ fontWeight: "800", fontSize: 22, color: T.ink }}>{data.name}</Text>
+              <Display size={26}>{data.name}</Display>
               <Text style={{ color: T.ink }}>Order any day. It comes {data.when}.</Text>
               {/* Where the products come from, said before anybody decides
                   rather than at the checkout. Skincare is the one thing
                   people are right to be careful about. */}
-              <Text style={{ color: T.brandDark, fontWeight: "700" }}>
+              <Text style={{ color: T.brandDark, fontFamily: F.bodyBold }}>
                 {data.promise} To PAU, or anywhere in Lagos.
               </Text>
             </View>
@@ -155,7 +156,7 @@ export default function SkincareScreen() {
                   borderColor: on.length > 0 ? T.ink : T.line,
                 }}
               >
-                <Text style={{ fontWeight: "800", color: on.length > 0 ? T.paper : T.ink }}>
+                <Text style={{ fontFamily: F.bodyBold, color: on.length > 0 ? T.paper : T.ink }}>
                   Filter{on.length > 0 ? ` ${on.length}` : ""}
                 </Text>
               </Pressable>
@@ -195,7 +196,7 @@ export default function SkincareScreen() {
                       paddingVertical: 6,
                     }}
                   >
-                    <Text style={{ color: T.brandDark, fontWeight: "700" }}>{one.label} ×</Text>
+                    <Text style={{ color: T.brandDark, fontFamily: F.bodyBold }}>{one.label} ×</Text>
                   </Pressable>
                 ))}
               </View>
@@ -261,7 +262,7 @@ export default function SkincareScreen() {
               }}
             >
               <Pressable disabled={page <= 1} onPress={() => setPage(page - 1)}>
-                <Text style={{ color: page <= 1 ? T.muted : T.brand, fontWeight: "700" }}>
+                <Text style={{ color: page <= 1 ? T.muted : T.brand, fontFamily: F.bodyBold }}>
                   Back
                 </Text>
               </Pressable>
@@ -269,7 +270,7 @@ export default function SkincareScreen() {
                 Page {page} of {pages}
               </Text>
               <Pressable disabled={page >= pages} onPress={() => setPage(page + 1)}>
-                <Text style={{ color: page >= pages ? T.muted : T.brand, fontWeight: "700" }}>
+                <Text style={{ color: page >= pages ? T.muted : T.brand, fontFamily: F.bodyBold }}>
                   More
                 </Text>
               </Pressable>
@@ -304,10 +305,10 @@ export default function SkincareScreen() {
               justifyContent: "center",
             }}
           >
-            <Text style={{ color: T.paper, fontWeight: "800" }}>{count}</Text>
+            <Text style={{ color: T.paper, fontFamily: F.bodyBold }}>{count}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: T.paper, fontWeight: "800" }}>Checkout</Text>
+            <Text style={{ color: T.paper, fontFamily: F.bodyBold }}>Checkout</Text>
             <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 12 }}>
               Comes {data.when}
             </Text>
@@ -351,7 +352,7 @@ function Chip({
         paddingVertical: 8,
       }}
     >
-      <Text style={{ color: on ? T.paper : T.ink, fontWeight: "700" }}>{children}</Text>
+      <Text style={{ color: on ? T.paper : T.ink, fontFamily: F.bodyBold }}>{children}</Text>
     </Pressable>
   );
 }
@@ -372,6 +373,8 @@ function Product({
       style={{
         flex: 1,
         backgroundColor: T.paper,
+        borderWidth: 2,
+        borderColor: T.ink,
         borderRadius: T.radius,
         padding: 10,
         gap: 6,
@@ -383,21 +386,21 @@ function Product({
         )}
       </View>
       {product.brand !== "" && (
-        <Text style={{ color: T.muted, fontSize: 11, fontWeight: "800" }} numberOfLines={1}>
+        <Text style={{ color: T.muted, fontSize: 11, fontFamily: F.bodyBold }} numberOfLines={1}>
           {product.brand.toUpperCase()}
         </Text>
       )}
-      <Text style={{ color: T.ink, fontWeight: "600" }} numberOfLines={2}>
+      <Text style={{ color: T.ink, fontFamily: F.bodySemi }} numberOfLines={2}>
         {product.name}
       </Text>
-      <Text style={{ color: T.ink, fontWeight: "800" }}>{naira(product.price)}</Text>
+      <Text style={{ color: T.ink, fontFamily: F.bodyBold }}>{naira(product.price)}</Text>
 
       {qty > 0 ? (
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <Pressable onPress={() => onQty(qty - 1)} hitSlop={8}>
             <Ionicons name="remove-circle-outline" size={26} color={T.ink} />
           </Pressable>
-          <Text style={{ fontWeight: "800", color: T.ink }}>{qty}</Text>
+          <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>{qty}</Text>
           <Pressable onPress={() => onQty(qty + 1)} hitSlop={8}>
             <Ionicons name="add-circle" size={26} color={T.brand} />
           </Pressable>
@@ -413,7 +416,7 @@ function Product({
             alignItems: "center",
           }}
         >
-          <Text style={{ fontWeight: "700", color: T.ink }}>Add</Text>
+          <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>Add</Text>
         </Pressable>
       )}
     </View>
@@ -461,7 +464,7 @@ function Filters({
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", padding: 14, gap: 8 }}>
-            <Text style={{ flex: 1, fontWeight: "800", fontSize: 17, color: T.ink }}>
+            <Text style={{ flex: 1, fontFamily: F.bodyBold, fontSize: 17, color: T.ink }}>
               Narrow it down
             </Text>
             <Pressable onPress={onClose} hitSlop={8} accessibilityLabel="Close">
@@ -527,7 +530,7 @@ function Pickable({
   return (
     <View style={{ gap: 8 }}>
       <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
-        <Text style={{ flex: 1, fontWeight: "800", color: T.ink }}>{title}</Text>
+        <Text style={{ flex: 1, fontFamily: F.bodyBold, color: T.ink }}>{title}</Text>
         <Text style={{ color: T.muted, fontSize: 12 }}>{total}</Text>
       </View>
 
