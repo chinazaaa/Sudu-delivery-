@@ -32,6 +32,10 @@ export const FOOD_KINDS: FoodKind[] = [
   { label: "Burgers", emoji: "🍔", q: "burger" },
   { label: "Shawarma", emoji: "🌯", q: "shawarma" },
   { label: "Wings", emoji: "🔥", q: "wings" },
+  // By category rather than by word, for the same reason pizza is: the
+  // things in a small chops platter are called spring rolls and samosas
+  // and puff puff, and not one of them says "small chops" in its name.
+  { label: "Small chops", emoji: "🍢", category: "Small Chops" },
   { label: "Pasta", emoji: "🍝", q: "pasta" },
   { label: "Cake", emoji: "🍰", q: "cake" },
   { label: "Doughnuts", emoji: "🍩", q: "doughnut" },
