@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { api, naira } from "@/lib/api";
 import { T } from "@/lib/theme";
+import { Display, Ticket } from "@/components/ui";
 
 type Row = {
   slug: string;
@@ -61,9 +62,7 @@ export default function OccasionsScreen() {
       contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
     >
       <View>
-        <Text style={{ fontSize: 24, fontWeight: "800", color: T.ink }}>
-          Food for a room full of people
-        </Text>
+        <Display size={34}>Food for a room full of people</Display>
         <Text style={{ marginTop: 4, color: T.muted }}>
           Already worked out. One price with delivery in it, and nothing to
           decide but when you want it.
@@ -85,9 +84,11 @@ export default function OccasionsScreen() {
             flexDirection: "row",
             alignItems: "center",
             gap: 12,
-            // A timed one is the urgent one and should not look like the
-            // standing ones beside it.
-            borderWidth: row.happensAt ? 2 : 0,
+            // Every card in the app carries the 2px Ink rule, so the border
+            // can no longer be what marks a timed one out: it said "urgent"
+            // by leaving the standing ones with no card at all. The date in
+            // Tomato above the name is what says it now.
+            borderWidth: 2,
             borderColor: row.happensAt ? "rgba(255,90,31,0.4)" : "transparent",
           }}
         >
@@ -100,19 +101,13 @@ export default function OccasionsScreen() {
           )}
           <View style={{ flex: 1 }}>
             {row.happensAt && (
-              <Text
-                style={{
-                  color: T.brandDark,
-                  fontWeight: "800",
-                  fontSize: 12,
-                  textTransform: "uppercase",
-                  marginBottom: 2,
-                }}
-              >
-                {row.whenWord} {whenLabel(row.happensAt)}
-              </Text>
+              <View style={{ marginBottom: 2 }}>
+                <Ticket colour={T.brandDark}>
+                  {row.whenWord} {whenLabel(row.happensAt)}
+                </Ticket>
+              </View>
             )}
-            <Text style={{ fontSize: 18, fontWeight: "800", color: T.ink }}>{row.name}</Text>
+            <Display size={24}>{row.name}</Display>
             {row.blurb !== "" && (
               <Text style={{ color: T.muted, marginTop: 2 }}>{row.blurb}</Text>
             )}

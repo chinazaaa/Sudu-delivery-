@@ -13,7 +13,8 @@ import { useRouter } from "expo-router";
 import { api, naira, type Product } from "@/lib/api";
 import Thumb from "@/components/Thumb";
 import AskUs from "@/components/AskUs";
-import { T } from "@/lib/theme";
+import { F, T } from "@/lib/theme";
+import { Display, Ticket } from "@/components/ui";
 
 /**
  * Everything, in one list.
@@ -111,9 +112,15 @@ export default function ProductsScreen() {
         )}
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Text style={{ color: T.muted, flex: 1 }}>
-            {busy && page === 1 ? "…" : total === 0 ? "Nothing matches that." : `${total} things`}
-          </Text>
+          <View style={{ flex: 1 }}>
+            {busy && page === 1 ? (
+              <Text style={{ color: T.muted }}>…</Text>
+            ) : total === 0 ? (
+              <Text style={{ color: T.muted }}>Nothing matches that.</Text>
+            ) : (
+              <Ticket>{total} things</Ticket>
+            )}
+          </View>
           {(
             [
               ["", "A to Z"],
@@ -125,7 +132,7 @@ export default function ProductsScreen() {
               <Text
                 style={{
                   color: sort === value ? T.brandDark : T.muted,
-                  fontWeight: sort === value ? "800" : "600",
+                  fontFamily: sort === value ? F.bodyBold : F.bodySemi,
                   fontSize: 13,
                 }}
               >
@@ -167,19 +174,24 @@ export default function ProductsScreen() {
             style={{
               flex: 1,
               backgroundColor: T.paper,
+              borderWidth: 2,
+              borderColor: T.ink,
               borderRadius: T.radius,
               overflow: "hidden",
             }}
           >
             <Thumb src={item.imageUrl} name={item.name} />
             <View style={{ padding: 10 }}>
-              <Text style={{ fontWeight: "700", color: T.ink }} numberOfLines={2}>
+              <Text
+                style={{ fontFamily: F.bodyBold, color: T.ink }}
+                numberOfLines={2}
+              >
                 {item.name}
               </Text>
               <Text style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>{item.restaurant}</Text>
-              <Text style={{ fontWeight: "800", color: T.ink, marginTop: 4 }}>
+              <Display size={22} style={{ marginTop: 4 }}>
                 {naira(item.price)}
-              </Text>
+              </Display>
             </View>
           </Pressable>
         )}

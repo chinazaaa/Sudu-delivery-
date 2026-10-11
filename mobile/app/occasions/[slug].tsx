@@ -14,7 +14,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { api, BASE, naira, type BoxView, type WhenOption } from "@/lib/api";
 import { me as stored } from "@/lib/store";
-import { T } from "@/lib/theme";
+import { F, T } from "@/lib/theme";
+import { Display } from "@/components/ui";
 
 /**
  * One occasion and the boxes packed for it.
@@ -211,9 +212,7 @@ export default function OccasionScreen() {
       contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 60 }}
     >
       <View>
-        <Text style={{ fontSize: 24, fontWeight: "800", color: T.ink }}>
-          {data.occasion.name}
-        </Text>
+        <Display size={34}>{data.occasion.name}</Display>
         {data.occasion.blurb !== "" && (
           <Text style={{ marginTop: 4, color: T.muted }}>{data.occasion.blurb}</Text>
         )}
@@ -303,12 +302,10 @@ export default function OccasionScreen() {
           }}
         >
           <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-            <Text style={{ fontSize: 18, fontWeight: "800", color: T.ink, flex: 1 }}>
+            <Text style={{ fontSize: 17, fontFamily: F.bodyBold, color: T.ink, flex: 1 }}>
               {one.name}
             </Text>
-            <Text style={{ fontSize: 18, fontWeight: "800", color: T.ink }}>
-              {naira(priceOf(one))}
-            </Text>
+            <Display size={24}>{naira(priceOf(one))}</Display>
           </View>
           {one.serves !== "" && <Text style={{ color: T.muted }}>{one.serves}</Text>}
           {/* A list, not a paragraph. Twenty things separated by dots is
@@ -831,14 +828,22 @@ const Card = ({
 }) => (
   <View
     onLayout={onLayout}
-    style={{ backgroundColor: T.paper, borderRadius: T.radius, padding: 16 }}
+    style={{
+      backgroundColor: T.paper,
+      // The 2px Ink rule every card in the app is drawn with. This page
+      // was written before the redesign and kept the borderless box.
+      borderWidth: 2,
+      borderColor: T.ink,
+      borderRadius: T.radius,
+      padding: 16,
+    }}
   >
     {children}
   </View>
 );
 
 const Heading = ({ children }: { children: React.ReactNode }) => (
-  <Text style={{ fontWeight: "800", fontSize: 16, color: T.ink }}>{children}</Text>
+  <Display size={22}>{children}</Display>
 );
 
 function Field({
