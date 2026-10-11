@@ -8,7 +8,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { api, naira, type Product } from "@/lib/api";
 import Thumb from "@/components/Thumb";
@@ -32,7 +32,19 @@ export default function ProductsScreen() {
   const [typed, setTyped] = useState("");
   const [query, setQuery] = useState("");
   const [place, setPlace] = useState("");
-  const [category, setCategory] = useState("");
+  /*
+   * The kind of food the home screen was tapped for, if it was.
+   *
+   * The chips there send a category along, and this screen used to ignore
+   * it: a tap on Chicken opened the whole menu, which reads as a chip that
+   * does nothing. Only the first value, because a screen opened twice
+   * carries the parameter twice.
+   */
+  const asked = useLocalSearchParams<{ category?: string | string[] }>();
+  const wanted = Array.isArray(asked.category)
+    ? asked.category[0] ?? ""
+    : asked.category ?? "";
+  const [category, setCategory] = useState(wanted);
   const [sort, setSort] = useState("");
   const [page, setPage] = useState(1);
 

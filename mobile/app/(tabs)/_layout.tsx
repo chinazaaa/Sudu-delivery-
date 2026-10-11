@@ -1,7 +1,8 @@
-import { Image, Text, View } from "react-native";
-import { Tabs } from "expo-router";
+import { useEffect, useState } from "react";
+import { Image, Pressable, Text, View } from "react-native";
+import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { cart, countItems, shelf, shelfCount, useStored } from "@/lib/store";
+import { cart, countItems, me, shelf, shelfCount, useStored } from "@/lib/store";
 import { F, T } from "@/lib/theme";
 
 /**
@@ -38,11 +39,20 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Sudu",
-          // The mark beside the name rather than instead of it: the bag is
-          // too small up here to be read on its own, and a shop nobody has
-          // heard of yet cannot afford to stop saying what it is called.
-          headerTitle: () => (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          /*
+           * Where it is going on the left, the shop's name on the right.
+           *
+           * The board heads the home screen with the block the food is
+           * coming to, because that is the one thing about an order the
+           * customer changes and the one thing they check. The wordmark
+           * moves to the right to make room for it, which is where the
+           * board has it. Nothing is centred any more, so the title is
+           * emptied rather than left to fight for the middle.
+           */
+          headerTitle: () => null,
+          headerLeft: () => <DeliverTo />,
+          headerRight: () => (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingRight: 16 }}>
               <Image
                 source={require("@/assets/icon.png")}
                 style={{ width: 26, height: 26, borderRadius: 7 }}
@@ -103,5 +113,69 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+  );
+}
+
+/**
+ * Where the food is going, at the top of the home screen.
+ *
+ * The board leads with it because it is the one thing about an order a
+ * customer changes and the one thing they check before ordering. It shows
+ * the block they last had delivered to, and opens the account screen, which
+ * is where a block is saved.
+ *
+ * Nothing saved yet says "Pick a block" rather than a blank: an empty line
+ * under DELIVER TO reads as something that failed to load.
+ */
+function DeliverTo() {
+  const router = useRouter();
+  const [block, setBlock] = useState("");
+
+  useEffect(() => {
+    void me.read().then((one) => setBlock(one.hostel ?? ""));
+  }, []);
+
+  return (
+    <Pressable
+      onPress={() => router.push("/account" as never)}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        minHeight: 44,
+        paddingLeft: 16,
+      }}
+    >
+      <View
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 999,
+          backgroundColor: T.ink,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Ionicons name="location" size={18} color={T.volt} />
+      </View>
+      <View>
+        <Text
+          style={{
+            fontFamily: F.mono,
+            fontSize: 10,
+            letterSpacing: 0.8,
+            color: T.muted,
+          }}
+        >
+          DELIVER TO
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+          <Text style={{ fontFamily: F.bodyBold, fontSize: 16, color: T.ink }}>
+            {block.trim() === "" ? "Pick a block" : block}
+          </Text>
+          <Ionicons name="chevron-down" size={14} color={T.ink} />
+        </View>
+      </View>
+    </Pressable>
   );
 }

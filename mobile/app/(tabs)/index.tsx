@@ -26,6 +26,7 @@ import CutOff from "@/components/CutOff";
 import OfferNudge from "@/components/OfferNudge";
 import Thumb from "@/components/Thumb";
 import AskUs from "@/components/AskUs";
+import { Ionicons } from "@expo/vector-icons";
 import { F, T } from "@/lib/theme";
 import { tileAt } from "@/lib/tiles";
 import { Display, Stripes, Ticket } from "@/components/ui";
@@ -195,6 +196,27 @@ export default function Home() {
   // The order of the doors, as the website has it. An older server sends
   // none, and then the app keeps the order both of them ship with.
   const doors = shop?.homeOrder ?? ["food", "shelves", "parcel", "skincare"];
+
+  /*
+   * The kinds of food the shop sells, commonest first.
+   *
+   * Counted across every kitchen's own categories rather than written down
+   * here, so the row cannot name a thing nobody sells any more. Eight is
+   * what fits before the row stops being a glance and becomes a list.
+   */
+  const kinds = useMemo(() => {
+    const tally = new Map<string, number>();
+    for (const place of shop?.menu ?? []) {
+      for (const one of place.categories) {
+        const name = one.name.trim();
+        if (name !== "") tally.set(name, (tally.get(name) ?? 0) + 1);
+      }
+    }
+    return [...tally.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 8)
+      .map(([name]) => name);
+  }, [shop]);
 
   const runs = (shop?.runs ?? []).filter((one) => !one.closed && !one.full);
   const slots = shop?.sameDay?.slots ?? [];
@@ -448,6 +470,45 @@ export default function Home() {
 
 
 
+        {/*
+          What people come looking for, as a row that scrolls sideways.
+
+          The board puts this between the run and the kitchens, and the app
+          had nothing in its place: somebody who wants chicken had to know
+          which of thirteen kitchens sells it. The words are the shop's own
+          categories, counted across every menu, so the row says what the
+          shop actually has rather than a list somebody typed once.
+        */}
+        {found === null && kinds.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginHorizontal: -16 }}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+          >
+            {kinds.map((kind) => (
+              <Pressable
+                key={kind}
+                onPress={() =>
+                  router.push(`/products?category=${encodeURIComponent(kind)}` as never)
+                }
+                style={{
+                  minHeight: 40,
+                  paddingHorizontal: 16,
+                  justifyContent: "center",
+                  borderRadius: 999,
+                  borderWidth: 2,
+                  borderColor: T.ink,
+                }}
+              >
+                <Text style={{ fontFamily: F.bodySemi, fontSize: 14, color: T.ink }}>
+                  {kind}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
+
         {/* The kitchens, as the board's tiles: two to a row, the name as
             big as the tile allows, and our own colours rotating through
             them. Never the restaurant's: a tile in KFC's red with KFC's
@@ -510,112 +571,110 @@ export default function Home() {
           </View>
         )}
 
-        {/* The doors, under the food rather than over it.
+        {/*
+          Boxes, as the board draws them: a row that scrolls sideways.
 
-            They were above the restaurants, so the first thing on a shop was
-            four cards naming categories and the first photograph of anything
-            to eat was a screen and a half down. Nobody opens a food app
-            wanting a category. The website was fixed the same way and for
-            the same reason, and the two should read alike. Under the search
-            results too, where they are the answer to "not that, then"
-            rather than something in the way.
+          They were full width rows with the word "See" on the right, under a
+          black card counting the whole shop. That shape is not on the board
+          at all, and the word on the end of each row was being cut off by
+          the edge of the card it sat in.
 
-            Their order is the one admin set on the website. The app used to
-            hold its own opinion — food, then parcels, then skincare, then
-            the shelves — so the two drifted the moment anybody moved a card.
-            Both read the same line now, and a door switched off in admin is
-            off in both. */}
-        {doors.map((key) => {
-          if (key === "food") {
-            return (
-              <Pressable
-                key="food"
-                onPress={() => router.push("/products" as never)}
-                style={door()}
-              >
-                <View style={{ flex: 1 }}>
-                  <Display size={20}>Food</Display>
-                  <Text style={{ color: T.muted, marginTop: 2 }}>
-                    {shop
-                      ? `${shop.menu.length} restaurant${shop.menu.length === 1 ? "" : "s"} in one list`
-                      : "Every restaurant in one list"}
-                  </Text>
-                </View>
-                <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>Browse</Text>
-              </Pressable>
-            );
-          }
+          The first is Tomato and the rest are Ink, so the row has one thing
+          leading it rather than four cards of equal weight. The price is the
+          only other thing on a card, in Volt on the dark ones, because a box
+          is bought on the price and the name.
+        */}
+        {shelves.length > 0 && (
+          <>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+              }}
+            >
+              <Display size={30}>Boxes</Display>
+              <Ticket>Delivery included</Ticket>
+            </View>
 
-          // Nobody is looking for a parcel service. They have a dress sitting
-          // in a shop in Lekki, so the line says every place it goes.
-          if (key === "parcel") {
-            if (parcels === "") return null;
-            return (
-              <Pressable
-                key="parcel"
-                onPress={() => router.push("/parcel" as never)}
-                style={door()}
-              >
-                <View style={{ flex: 1 }}>
-                  <Display size={20}>Send a parcel</Display>
-                  <Text style={{ color: T.muted, marginTop: 2 }}>{parcels}</Text>
-                </View>
-                <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>Send</Text>
-              </Pressable>
-            );
-          }
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginHorizontal: -16 }}
+              contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}
+            >
+              {shelves.map((one, at) => {
+                // The first leads the row, so it is the loud one.
+                const lead = at === 0;
+                return (
+                  <Pressable
+                    key={one.slug}
+                    onPress={() => router.push(`/occasions/${one.slug}` as never)}
+                    style={{
+                      width: 170,
+                      minHeight: 150,
+                      borderRadius: 16,
+                      padding: 14,
+                      justifyContent: "space-between",
+                      backgroundColor: lead ? T.brand : T.ink,
+                    }}
+                  >
+                    <Display size={26} colour={lead ? T.paper : T.shell}>
+                      {one.name}
+                    </Display>
+                    <Text
+                      style={{
+                        fontFamily: F.bodySemi,
+                        fontSize: 14,
+                        color: lead ? T.paper : T.volt,
+                      }}
+                    >
+                      {one.from === null
+                        ? "One price, delivery in it"
+                        : `from ${naira(one.from)}`}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </>
+        )}
 
-          // The other half of the shop. It is not a restaurant and it does
-          // not come today, so it is a door rather than a card in the row.
-          if (key === "skincare") {
-            if (skincare === "") return null;
-            return (
-              <Pressable key="skincare" onPress={() => router.push("/skincare")} style={door()}>
-                <View style={{ flex: 1 }}>
-                  <Display size={20}>Skincare</Display>
-                  <Text style={{ color: T.muted, marginTop: 2 }}>{skincare}</Text>
-                </View>
-                <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>Shop</Text>
-              </Pressable>
-            );
-          }
+        {/*
+          The four other ways in, two across.
 
-          // One card each, by name, with the price on it. "Care package,
-          // from N23,400" is a reason to tap.
-          if (key === "shelves") {
-            return shelves.map((one) => (
-              <Pressable
-                key={one.slug}
-                onPress={() => router.push(`/occasions/${one.slug}` as never)}
-                style={door()}
-              >
-                {one.image !== "" && (
-                  <Image
-                    source={{ uri: one.image }}
-                    style={{ width: 64, height: 64, borderRadius: 12 }}
-                    // Cover, because these are photographs of food. Contain
-                    // would letterbox a wide shot of a pizza inside a square
-                    // and leave two grey bars where the appetite should be.
-                    resizeMode="cover"
-                  />
-                )}
-                <View style={{ flex: 1 }}>
-                  <Display size={20}>{one.name}</Display>
-                  <Text style={{ color: T.muted, marginTop: 2 }}>
-                    {one.from === null
-                      ? "One price, delivery in it"
-                      : `From ${naira(one.from)}, delivery in it`}
-                  </Text>
-                </View>
-                <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>See</Text>
-              </Pressable>
-            ));
-          }
-
-          // "custom" and "group" are doors on the website and tabs down the
-          // bottom here, so the app does not draw them twice.
-          return null;
-        })}
+          Small pills with an icon rather than a row each: they are the ways
+          into the shop that are not food, and on the board they take one
+          screen's worth of corner between them rather than four full width
+          cards. A door admin has switched off is not drawn, which is why
+          each one asks before it appears.
+        */}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+          <Door
+            label="Group order"
+            glyph="group"
+            onPress={() => router.push("/group" as never)}
+          />
+          {parcels !== "" && (
+            <Door
+              label="Parcels"
+              glyph="parcel"
+              onPress={() => router.push("/parcel" as never)}
+            />
+          )}
+          {skincare !== "" && (
+            <Door
+              label="Skincare"
+              glyph="skincare"
+              onPress={() => router.push("/skincare" as never)}
+            />
+          )}
+          <Door
+            label="Anything else"
+            glyph="ask"
+            onPress={() => router.push("/ask" as never)}
+          />
+        </View>
       </ScrollView>
 
       {/* Over the page rather than in it: the page carries on underneath and
@@ -667,3 +726,65 @@ const door = () => ({
   alignItems: "center" as const,
   gap: 10,
 });
+
+/**
+ * One of the four small ways into the shop that are not food.
+ *
+ * The board draws them two across at fifty-six pixels, an icon in Tomato
+ * and the word beside it, rather than a full width row each with the action
+ * written on the far right. Four of those took a screen and a half to say
+ * what these say in two rows.
+ */
+function Door({
+  label,
+  glyph,
+  onPress,
+}: {
+  label: string;
+  glyph: "group" | "parcel" | "skincare" | "ask";
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flexBasis: "48%",
+        flexGrow: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        minHeight: 56,
+        backgroundColor: T.paper,
+        borderWidth: 2,
+        borderColor: T.ink,
+        borderRadius: 14,
+        paddingHorizontal: 12,
+      }}
+    >
+      <Glyph kind={glyph} />
+      <Text style={{ fontFamily: F.bodyBold, color: T.ink, flexShrink: 1 }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+/**
+ * The line drawing beside a door, in Tomato.
+ *
+ * Ionicons, which the app already carries for the checkout, rather than the
+ * board's own inline SVG: drawing those would mean react-native-svg, and a
+ * native module cannot arrive in an over-the-air update. The shapes are the
+ * same four things the board names.
+ */
+function Glyph({ kind }: { kind: "group" | "parcel" | "skincare" | "ask" }) {
+  const name =
+    kind === "group"
+      ? "people-outline"
+      : kind === "parcel"
+        ? "cube-outline"
+        : kind === "skincare"
+          ? "flask-outline"
+          : "help-circle-outline";
+  return <Ionicons name={name} size={22} color={T.brand} />;
+}
