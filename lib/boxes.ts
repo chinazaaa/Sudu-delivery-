@@ -27,6 +27,19 @@ export type BoxLine = {
   option_ids: string[];
   qty: number;
   swaps: BoxSwap[];
+  /**
+   * What to call this line instead of whatever item is under it.
+   *
+   * A box that says "a large pizza, pick your own" still has to hold a real
+   * item, because a price comes off an item and the counter has to be told
+   * what to buy. Without this the shelf named that item, so a box meant to
+   * offer any large pizza announced itself as Extravaganza and read as a
+   * box of Extravaganza with the rest hidden behind a swap.
+   *
+   * Empty for nearly every line: a box of a particular thing should say
+   * what that thing is.
+   */
+  as?: string;
 };
 
 export type Box = {
@@ -123,6 +136,7 @@ export function readLines(raw: unknown): BoxLine[] {
         menu_item_id: itemId,
         option_ids: ids(line.option_ids),
         qty: Number.isFinite(qty) && qty > 0 ? Math.round(qty) : 1,
+        as: typeof line.as === "string" ? line.as.trim() : "",
         swaps: Array.isArray(line.swaps)
           ? line.swaps.flatMap((swap) => {
               const id = typeof swap?.menu_item_id === "string" ? swap.menu_item_id : "";

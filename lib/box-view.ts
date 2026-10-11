@@ -172,7 +172,12 @@ function one(
 
     return {
       id: line.id,
-      name: here.item.name,
+      // What the shop called this line, where it called it anything. A box
+      // offering any large pizza should say that, not name the one pizza
+      // the price happens to be taken from.
+      name: line.as || here.item.name,
+      // The kitchen goes with the name: "any large pizza" is still only
+      // from one of them, and which one is the thing somebody checks.
       restaurant: names.get(here.item.restaurant_id) ?? "",
       choices: here.options.map((one) => one.name),
       qty: line.qty,
