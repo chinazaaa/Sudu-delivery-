@@ -736,6 +736,36 @@ export default async function SettingsAdmin() {
             }
           >
             <div className="space-y-3">
+              {/* The latest anything is ever delivered, which is what an
+                  empty run is held open against: a run nobody has ordered
+                  on stays open until three hours before this, instead of
+                  closing at a cut-off that is protecting nothing. Its own
+                  number rather than the same-day one, which is about a car
+                  going out for one person and stops earlier. */}
+              <div className="w-56">
+                <label className="label" htmlFor="run_last_hour">
+                  Last delivery of the day
+                </label>
+                <select
+                  id="run_last_hour"
+                  name="run_last_hour"
+                  defaultValue={settings.run_last_hour || "19"}
+                  className="field"
+                >
+                  {HOURS.map((hour) => (
+                    <option key={hour.value} value={hour.value}>
+                      {hour.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="hint mt-1">
+                  A run with nothing on it stays open until three hours before
+                  this, rather than closing at its own cut-off, and its window
+                  is rewritten to match. Runs going to a far area are left
+                  alone, because three hours will not get there and back.
+                </p>
+              </div>
+
               {/* Times rather than a sentence. The words the customer reads are
                   built from these, and because they are times the shop can compare
                   them: a same day window a run already covers is left out of the

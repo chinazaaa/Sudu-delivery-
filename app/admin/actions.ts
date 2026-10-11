@@ -2541,6 +2541,7 @@ const SETTING_FIELDS = [
   "same_day_first_hour",
   "same_day_last_hour",
   "same_day_day_hours",
+  "run_last_hour",
   "admin_emails",
   "abandon_minutes",
   "window_afternoon",

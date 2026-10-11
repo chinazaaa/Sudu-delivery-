@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Linking,
@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/lib/api";
@@ -177,15 +177,27 @@ export default function Account() {
   const asked = useLocalSearchParams<{ edit?: string | string[] }>();
   const wantsEdit =
     (Array.isArray(asked.edit) ? asked.edit[0] : asked.edit) === "block";
-  const opened = useRef(false);
-  useEffect(() => {
-    // Once, on arrival, and only once whatever else the store does later:
-    // a sheet that came back after Cancel would be worse than no sheet.
-    if (!wantsEdit || opened.current) return;
-    opened.current = true;
-    open();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wantsEdit]);
+
+  /*
+   * On arrival, every time, not once.
+   *
+   * This is a tab, so it is mounted once and never again: the first tap on
+   * DELIVER TO opened the sheet and every tap after it did nothing at all,
+   * because the screen it was asking had never gone away to come back. So
+   * it hangs on focus rather than on mount, and the parameter is cleared as
+   * it is read, which is what stops the sheet reappearing when the tab is
+   * come back to for its own sake.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      if (!wantsEdit) return;
+      // Blanked rather than removed: expo-router keeps the key either
+      // way, and an empty value is one this screen reads as "nothing asked".
+      router.setParams({ edit: "" });
+      open();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [wantsEdit])
+  );
 
   const keep = async () => {
     await me.save({ name: name.trim(), hostel: block.trim() });

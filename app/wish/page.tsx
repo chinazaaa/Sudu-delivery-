@@ -66,7 +66,7 @@ export default async function WishPage({
       <PageHead
         ticket="Wish list · one box · no account"
         title="What do you wish you could order?"
-        lead="A restaurant, a snack, a brand, a thing from home. Tell us and we will find out if we can bring it to PAU."
+        lead="A restaurant, a snack, a thing from home. Or a brand you wish would come to PAU: tell us who, and we will go and ask them."
         rule={false}
         narrow
       >
@@ -84,6 +84,15 @@ export default async function WishPage({
             <label className="label text-base" htmlFor="wanted">
               Your wish
             </label>
+            {/* Said here as well as in the lead, because the lead is read
+                once and the box is what somebody is looking at when they
+                start typing. A brand is the wish worth having most: one
+                name, said often enough, is the thing we take to them. */}
+            <p className="hint mb-1.5">
+              A dish, a shop, or a brand you want on campus. Naming a brand
+              helps most: enough people asking for the same one is what we
+              take to them.
+            </p>
             <textarea
               id="wanted"
               name="wanted"
@@ -91,7 +100,7 @@ export default async function WishPage({
               required
               autoFocus
               className="field text-lg"
-              placeholder="e.g. Cold Stone, my mum's jollof…"
+              placeholder="e.g. Krispy Kreme on campus, my mum's jollof…"
             />
           </div>
 

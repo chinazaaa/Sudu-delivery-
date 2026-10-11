@@ -118,7 +118,13 @@ export async function boxViews(boxes: Box[]): Promise<BoxView[]> {
   });
 
   const priced = await priceLines(asked.flatMap((one) => [...one.wanted, ...one.swapCarts]));
-  if ("error" in priced) return [];
+  if ("error" in priced) {
+    // Said out loud rather than swallowed. An empty shelf and a shelf the
+    // shop could not price look identical from the outside, and the last
+    // time these were told apart it was by reading the database by hand.
+    console.error("boxViews could not price a shelf:", priced.error);
+    return [];
+  }
 
   const names = await restaurantNames(
     priced.lines.map((one) => one.item.restaurant_id)
@@ -207,11 +213,31 @@ function one(
 async function livingItems(ids: string[]): Promise<Set<string>> {
   const unique = [...new Set(ids)].filter(Boolean);
   if (unique.length === 0) return new Set();
-  const { data, error } = await db().from("menu_items").select("id").in("id", unique);
+  const { data, error } = await db()
+    .from("menu_items")
+    .select("id, available")
+    .in("id", unique);
   // A database that cannot answer must not silently strip every swap, so the
   // benefit of the doubt goes to the swap and pricing decides.
   if (error) return new Set(unique);
-  return new Set((data ?? []).map((row: any) => row.id as string));
+
+  // Sold out counts as gone, not only deleted.
+  //
+  // This asked whether the row existed and nothing else, which is a
+  // different question from whether it can be bought today. A swap pointing
+  // at something ticked unavailable in admin sailed through here, went to
+  // the pricing call with the box, and the pricing call quite correctly
+  // refused the lot: "Margherita is unavailable today". boxViews turns an
+  // error into no boxes at all, so one sold-out alternative flavour emptied
+  // an entire shelf, and the Food boxes page said the shop had nothing.
+  //
+  // It is the same bug the comment above this function describes being
+  // fixed once already. That fix only covered the deleted ones.
+  return new Set(
+    (data ?? [])
+      .filter((row: any) => row.available !== false)
+      .map((row: any) => row.id as string)
+  );
 }
 
 async function restaurantNames(ids: string[]): Promise<Map<string, string>> {

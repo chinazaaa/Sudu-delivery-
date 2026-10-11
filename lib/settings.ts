@@ -3,6 +3,7 @@ import {
   parseBands,
   FIRST_DELIVERY_HOUR,
   LAST_DELIVERY_HOUR,
+  RUN_LAST_HOUR,
   SAME_DAY_BANDS,
   URGENT_EXTRA,
   type Band,
@@ -103,6 +104,10 @@ export type Settings = {
   /** Per weekday hours as JSON, where a day differs from the pair above. */
   same_day_day_hours: string;
   same_day_last_hour: string;
+  /** The latest a shared run ever delivers, as an hour of the Lagos clock.
+   *  Not the same number as the one above: a car going out for one person
+   *  stops earlier than the last run of the day. */
+  run_last_hour: string;
   /**
    * A discount code to announce beside it. The strip reads the code itself
    * for what it is worth and who it is for, and says nothing while the code
@@ -231,6 +236,7 @@ export const EMPTY: Settings = {
   same_day_first_hour: "",
   same_day_day_hours: "",
   same_day_last_hour: "",
+  run_last_hour: "",
   offer_code: "",
   promoter_perk_code: "",
   auto_headline: "",
@@ -413,6 +419,20 @@ export function numberOr(raw: unknown, fallback: number): number {
   if (text === "") return fallback;
   const value = Number(text);
   return Number.isFinite(value) ? value : fallback;
+}
+
+/**
+ * The latest a shared run ever delivers, as an hour of the Lagos clock.
+ *
+ * What holding an empty run open is measured back from. Seven unless admin
+ * says otherwise, which is what the runs actually do: the same-day hour is
+ * two hours earlier and is about a car going out for one person, so the two
+ * cannot share a number.
+ */
+export async function runLastHour(): Promise<number> {
+  const settings = await safeSettings();
+  const hour = numberOr(settings.run_last_hour, RUN_LAST_HOUR);
+  return hour >= 1 && hour <= 23 ? hour : RUN_LAST_HOUR;
 }
 
 export async function deliveryHours(): Promise<{ first: number; last: number }> {

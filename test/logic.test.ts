@@ -70,7 +70,7 @@ import { groupNames, lineKey as cartLineKey, reclaim } from "../lib/cart";
 import { renderEmail, renderText, type Block } from "../lib/email-html";
 import { deliverySlots, slotFee, slotsToday } from "../lib/same-day";
 import { nextArrival } from "../lib/arrival";
-import { emptyRunClosesAt, windowEndsAt } from "../lib/run-window";
+import { emptyRunClosesAt, windowAfterHolding } from "../lib/run-window";
 import { parseCatalogue, parseProducts } from "../lib/skincare-import";
 import { feeForValue, parseValueBands } from "../lib/value-bands";
 import { isExampleNumber, sprung, tooFast } from "../lib/guard";
@@ -3141,12 +3141,8 @@ test("an order number in the alert outranks the names, when there ever is one", 
  * The cut-off exists so there is time to go and fetch the food. A run with
  * nothing on it has nothing to fetch, so closing it at noon only turns away
  * the one person who was going to order at two. It is held to three hours
- * before the last delivery instead.
- *
- * The window is free text written in admin, and there is no column holding
- * the end of it, so these cover the ways it is actually written. Anything
- * unreadable must come back null: a cut-off moved on a sentence nobody
- * could parse is a run closing at the wrong time.
+ * before the last delivery of the day instead, which is a fact about the
+ * shop rather than about this run.
  */
 const lagosClock = (iso: string | null) =>
   iso === null
@@ -3157,46 +3153,41 @@ const lagosClock = (iso: string | null) =>
         minute: "2-digit",
       });
 
-test("the end of a delivery window is read out of the sentence", () => {
-  const on = "2026-10-29";
-  assert.equal(lagosClock(windowEndsAt("Between 5pm and 7pm", on)), "19:00");
-  assert.equal(lagosClock(windowEndsAt("Between 3:30pm and 5:30pm", on)), "17:30");
-  assert.equal(lagosClock(windowEndsAt("Between 3pm and 5pm", on)), "17:00");
-  assert.equal(lagosClock(windowEndsAt("5pm - 7pm", on)), "19:00");
-  assert.equal(lagosClock(windowEndsAt("Between 11am and 1pm", on)), "13:00");
-  assert.equal(lagosClock(windowEndsAt("Between 12pm and 2pm", on)), "14:00");
-
-  // Nothing to read, so nothing is claimed.
-  assert.equal(windowEndsAt("anytime", on), null);
-  assert.equal(windowEndsAt("", on), null);
+const onDay = "2026-10-29";
+const morning = new Date("2026-10-29T09:00:00+01:00");
+const aRun = (over: Record<string, unknown> = {}) => ({
+  run_date: onDay,
+  delivery_window_text: "Between 3:30pm and 5:30pm",
+  kind: "run",
+  areas: "",
+  ...over,
 });
 
 test("an empty run is held to three hours before the last delivery", () => {
-  const on = "2026-10-29";
-  const morning = new Date("2026-10-29T09:00:00+01:00");
-  const run = (delivery_window_text: string, kind = "run") => ({
-    run_date: on,
-    delivery_window_text,
-    kind,
-  });
+  // The shop's own example: deliveries stop at seven, so a quiet run stays
+  // open until four, whatever its own window said.
+  assert.equal(lagosClock(emptyRunClosesAt(aRun(), morning, [], 19)), "16:00");
 
-  // The shop's own example: a 5pm-7pm run stays open until 4pm.
-  assert.equal(lagosClock(emptyRunClosesAt(run("Between 5pm and 7pm"), morning)), "16:00");
-  assert.equal(lagosClock(emptyRunClosesAt(run("Between 3:30pm and 5:30pm"), morning)), "14:30");
+  // The window it was given makes no difference: the anchor is the shop's
+  // last delivery, not this run's own text.
+  assert.equal(
+    lagosClock(emptyRunClosesAt(aRun({ delivery_window_text: "Between 3pm and 5pm" }), morning, [], 19)),
+    "16:00"
+  );
+
+  // A shop that stops delivering earlier holds its runs for less.
+  assert.equal(lagosClock(emptyRunClosesAt(aRun(), morning, [], 18)), "15:00");
 
   // Only a shared run. A car going out for one order, a parcel and a box
   // day each have a cut-off that means something of its own.
-  assert.equal(emptyRunClosesAt(run("Between 5pm and 7pm", "same_day"), morning), null);
-  assert.equal(emptyRunClosesAt(run("Between 5pm and 7pm", "parcel"), morning), null);
+  assert.equal(emptyRunClosesAt(aRun({ kind: "same_day" }), morning, [], 19), null);
+  assert.equal(emptyRunClosesAt(aRun({ kind: "parcel" }), morning, [], 19), null);
 
   // Past the held time already: late rather than quiet, so it closes.
   assert.equal(
-    emptyRunClosesAt(run("Between 5pm and 7pm"), new Date("2026-10-29T18:00:00+01:00")),
+    emptyRunClosesAt(aRun(), new Date("2026-10-29T18:00:00+01:00"), [], 19),
     null
   );
-
-  // Unreadable window: left exactly as it behaved before.
-  assert.equal(emptyRunClosesAt(run("whenever we get there"), morning), null);
 });
 
 /*
@@ -3208,28 +3199,41 @@ test("an empty run is held to three hours before the last delivery", () => {
  * next is covered the day somebody ticks the box in admin.
  */
 test("an empty run going somewhere far is not held open", () => {
-  const morning = new Date("2026-10-29T09:00:00+01:00");
-  // The shop's own areas, as admin has them.
-  const areas = [
+  const far = [
     { id: "l", name: "Lekki/Ikoyi", runExtra: 5000, sameDayExtra: 0, sameDay: false },
   ];
-  const run = (runAreas: string) => ({
-    run_date: "2026-10-29",
-    delivery_window_text: "Between 5pm and 7pm",
-    kind: "run",
-    areas: runAreas,
-  });
 
   // Sangotedo only: held to four, as before.
-  assert.equal(lagosClock(emptyRunClosesAt(run(""), morning, areas)), "16:00");
+  assert.equal(lagosClock(emptyRunClosesAt(aRun(), morning, far, 19)), "16:00");
 
   // The same run, routed through Lekki: not held at all.
-  assert.equal(emptyRunClosesAt(run("|l|"), morning, areas), null);
+  assert.equal(emptyRunClosesAt(aRun({ areas: "|l|" }), morning, far, 19), null);
 
   // An area the shop can reach in three hours does not stop it.
   const near = [{ id: "n", name: "Novare", runExtra: 500, sameDayExtra: 0, sameDay: true }];
-  assert.equal(lagosClock(emptyRunClosesAt(run("|n|"), morning, near)), "16:00");
+  assert.equal(lagosClock(emptyRunClosesAt(aRun({ areas: "|n|" }), morning, near, 19)), "16:00");
 
   // No areas configured at all is the shop as it was before areas existed.
-  assert.equal(lagosClock(emptyRunClosesAt(run(""), morning, [])), "16:00");
+  assert.equal(lagosClock(emptyRunClosesAt(aRun(), morning, [], 19)), "16:00");
 });
+
+/*
+ * The window moves with the cut-off.
+ *
+ * Leaving "Between 3:30pm and 5:30pm" over a run that now closes at four
+ * promises a delivery before ordering has even shut.
+ */
+test("a held run is given a window it can actually meet", () => {
+  const heldAtFour = new Date("2026-10-29T16:00:00+01:00").toISOString();
+  assert.equal(windowAfterHolding(heldAtFour, 19), "Between 5pm and 7pm");
+
+  // A half past close keeps its half past.
+  const heldAtHalfTwo = new Date("2026-10-29T14:30:00+01:00").toISOString();
+  assert.equal(windowAfterHolding(heldAtHalfTwo, 19), "Between 3:30pm and 7pm");
+
+  // Held so late there is no room for a window: said as a deadline rather
+  // than as a range that starts after it ends.
+  const heldAtSix = new Date("2026-10-29T18:00:00+01:00").toISOString();
+  assert.equal(windowAfterHolding(heldAtSix, 19), "By 7pm");
+});
+

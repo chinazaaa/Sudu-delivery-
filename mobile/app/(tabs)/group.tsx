@@ -40,7 +40,18 @@ export default function Group() {
   const [lines] = useStored(cart.read, []);
 
   const [board, setBoard] = useState<GroupBoard | null>(null);
-  const [name, setName] = useState("");
+  /**
+   * What they are called, as typed, falling back to what the shop knows.
+   *
+   * It used to be read once when this screen mounted and dropped into the
+   * box. A tab mounts before anybody signs in, so somebody who signed in on
+   * My orders came back here to an empty box for ever: the read had already
+   * happened and there was nothing to make it happen again.
+   *
+   * Through the store instead, so signing in fills it the moment it lands,
+   * and typing still wins over it.
+   */
+  const [typedName, setName] = useState("");
   const [when, setWhen] = useState("");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -71,9 +82,8 @@ export default function Group() {
     if (going) setWhen(going.onARun ? `run:${going.runId}` : going.at);
   }, [going?.runId, going?.at]);
 
-  useEffect(() => {
-    void me.read().then((saved) => setName((was) => was || saved.name.split(" ")[0]));
-  }, []);
+  const [saved] = useStored(me.read, { name: "", phone: "", hostel: "", token: null });
+  const name = typedName || (saved.name ?? "").trim().split(" ")[0];
 
   useEffect(() => {
     if (arrived) setCode(String(arrived));

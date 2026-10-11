@@ -229,6 +229,16 @@ export const DELIVERY_LEAD_HOURS = 3;
 /** What the last delivery of the day is, because nothing goes out after it. */
 export const LAST_DELIVERY_HOUR = 18;
 
+/**
+ * The latest a shared run ever delivers.
+ *
+ * Later than the same-day hour above, and deliberately a different number:
+ * that one is the last time a car will go out for one person, where three
+ * hours has to cover fetching and driving. A run is already going, so it
+ * delivers later than the last car anybody can summon.
+ */
+export const RUN_LAST_HOUR = 19;
+
 /** The first hour of the day a same day delivery can be asked for. */
 export const FIRST_DELIVERY_HOUR = 12;
 

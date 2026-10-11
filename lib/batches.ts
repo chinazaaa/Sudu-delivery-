@@ -1,7 +1,7 @@
 import { db } from "./supabase";
 import { NOT_ORDERS_SQL } from "./orders";
 import { closedDates } from "./closures";
-import { emptyRunClosesAt } from "./run-window";
+import { emptyRunClosesAt, windowAfterHolding } from "./run-window";
 import { deliveryWindows, safeSettings } from "./settings";
 import { runSchedule } from "./schedule";
 import { RUN_HORIZON_DAYS, TZ } from "./config";
@@ -261,7 +261,10 @@ export async function closeExpiredBatches(): Promise<void> {
   // Read once rather than per run: a sweep usually has one or two runs on
   // it and the area list is the same answer for all of them.
   const { allAreas } = await import("./areas-server");
-  const areas = (due ?? []).length > 0 ? await allAreas().catch(() => []) : [];
+  const { runLastHour } = await import("./settings");
+  const any = (due ?? []).length > 0;
+  const areas = any ? await allAreas().catch(() => []) : [];
+  const lastHour = any ? await runLastHour().catch(() => 19) : 19;
 
   for (const batch of (due ?? []) as Batch[]) {
     // A run with nothing on it has nothing to collect, so its cut-off is
@@ -278,10 +281,21 @@ export async function closeExpiredBatches(): Promise<void> {
     // It cannot run away with itself: once the new cut-off passes, the
     // same sum gives a time in the past, and the run closes as it always
     // would have.
-    const held = (await isEmptyRun(batch)) ? emptyRunClosesAt(batch, now, areas) : null;
+    const held = (await isEmptyRun(batch))
+      ? emptyRunClosesAt(batch, now, areas, lastHour)
+      : null;
 
     if (held !== null) {
-      await db().from("batches").update({ cut_off_at: held }).eq("id", batch.id);
+      // The window goes with it. The one admin wrote was built around a
+      // cut-off that no longer applies, and a delivery promised before
+      // ordering has even shut is read as a time we did not bother to keep.
+      await db()
+        .from("batches")
+        .update({
+          cut_off_at: held,
+          delivery_window_text: windowAfterHolding(held, lastHour),
+        })
+        .eq("id", batch.id);
       continue;
     }
 

@@ -11,6 +11,7 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "@/lib/api";
 import { me, useStored } from "@/lib/store";
+import { useShop } from "@/lib/use-shop";
 import { F, T  } from "@/lib/theme";
 import { Display } from "@/components/ui";
 
@@ -36,6 +37,9 @@ export default function AskScreen() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [hostel, setHostel] = useState("");
+  // The blocks admin delivers to, so this asks the way the checkout asks.
+  const shop = useShop();
+  const blocks = shop?.hostels ?? [];
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
@@ -122,7 +126,7 @@ export default function AskScreen() {
             <TextInput
               value={wanted}
               onChangeText={setWanted}
-              placeholder="A 32 in 1 pack of sanitary pads"
+              placeholder="A tub of Greek yoghurt, a phone charger…"
               placeholderTextColor={T.muted}
               multiline
               style={[box, { minHeight: 76, textAlignVertical: "top" }]}
@@ -160,14 +164,54 @@ export default function AskScreen() {
             />
           </Field>
 
+          {/* Picked rather than typed wherever the shop has a list. A
+              misspelt block is a run sheet nobody can sort, which is why
+              the checkout stopped asking for one in a text box. With no
+              list set up it is still the text box, so a shop that has not
+              filled one in works exactly as it did. */}
           <Field label="Your block">
-            <TextInput
-              value={theHostel}
-              onChangeText={setHostel}
-              placeholder="Queen Mary, or wherever it goes"
-              placeholderTextColor={T.muted}
-              style={box}
-            />
+            {blocks.length === 0 ? (
+              <TextInput
+                value={theHostel}
+                onChangeText={setHostel}
+                placeholder="Queen Mary, or wherever it goes"
+                placeholderTextColor={T.muted}
+                style={box}
+              />
+            ) : (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                {blocks.map((one) => {
+                  const on = one === theHostel;
+                  return (
+                    <Pressable
+                      key={one}
+                      onPress={() => setHostel(one)}
+                      accessibilityRole="button"
+                      style={{
+                        minHeight: 42,
+                        paddingHorizontal: 14,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: 999,
+                        borderWidth: 2,
+                        borderColor: on ? T.ink : T.line,
+                        backgroundColor: on ? T.brand : T.paper,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: on ? F.bodyBold : F.bodySemi,
+                          fontSize: 14,
+                          color: on ? T.paper : T.ink,
+                        }}
+                      >
+                        {one}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
           </Field>
 
           <Field label="Anything else">

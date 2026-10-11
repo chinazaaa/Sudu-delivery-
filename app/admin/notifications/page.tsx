@@ -102,8 +102,6 @@ export default async function NotificationsPage() {
             </div>
           </div>
 
-        </div>
-
         {/*
           What has already gone.
 
@@ -113,14 +111,16 @@ export default async function NotificationsPage() {
           notification is worth sending if orders follow it, and nothing
           else on this page can say whether any ever have.
 
-          A cell of its own rather than part of the aside, because of the
-          phone. The aside stands over the form there, which is right for
-          the two figures and wrong for this: last in the order on a phone,
-          under the form, and the foot of the second column from the desk
-          width.
+          Stacked under the two figures in the same column, rather than
+          placed in a grid cell of its own. A cell of its own could only
+          land on the second row, and the second row cannot start until the
+          first one ends: the form is the first row and it is tall, so this
+          sat level with the bottom of it, past the fold, with the whole of
+          column two empty above it. It is the thing you check before
+          writing another one, so it has to be visible without scrolling.
         */}
         {sends.length > 0 && (
-          <div className="card order-3 min-w-0 lg:col-start-2">
+          <div className="card min-w-0">
             <p className="ticket text-muted">Sent before</p>
             {sends.map((one) => {
               const chip = outcomeChip(one);
@@ -157,6 +157,7 @@ export default async function NotificationsPage() {
             </p>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
