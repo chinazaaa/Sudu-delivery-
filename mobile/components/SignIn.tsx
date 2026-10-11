@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 import { me } from "@/lib/store";
 import { greetPush } from "@/lib/push";
 import { T } from "@/lib/theme";
+import { whatsappTo } from "@/lib/whatsapp";
 
 /**
  * Phone and PIN, for a phone that has not ordered from this app before.
@@ -73,9 +74,7 @@ export default function SignIn({ onDone }: { onDone?: () => void }) {
       "Hi, I cannot find my Sudu PIN." +
       (typed ? ` My number is ${typed}.` : "") +
       " Please send it to me.";
-    void Linking.openURL(
-      `https://wa.me/${whatsapp.replace(/[^\d]/g, "")}?text=${encodeURIComponent(text)}`
-    );
+    void Linking.openURL(whatsappTo(whatsapp, text));
   };
 
   return (

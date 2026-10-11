@@ -59,6 +59,7 @@ import { hushNote, hushedPhones, quietUntil, QUIET_DAYS } from "../lib/carts";
 import { sayWindow } from "../lib/settings";
 import { sheetAsText } from "../lib/sheet-text";
 import { template, whatsappTo } from "../lib/messages";
+import { whatsappTo as appWhatsappTo } from "../mobile/lib/whatsapp";
 import { newPin } from "../lib/customer-auth";
 import { parseMenuText } from "../lib/menu-import";
 import { adminEmails } from "../lib/email";
@@ -291,6 +292,32 @@ test("the run sheet reads as plain text that survives a dead signal", () => {
 test("a WhatsApp link carries a Nigerian number in international form", () => {
   assert.match(whatsappTo("08031112222", "hi"), /^https:\/\/wa\.me\/2348031112222\?text=hi$/);
   assert.match(whatsappTo("2348031112222", "hi"), /wa\.me\/2348031112222/);
+});
+
+/*
+ * The same rule, in the app.
+ *
+ * Three screens there built the link by stripping punctuation and nothing
+ * else, so a number typed the Nigerian way came out as wa.me/09032175147
+ * and the tap went nowhere. The sign-in one was the worst of them: somebody
+ * asking for the PIN that gets them to their own orders. Tested beside the
+ * website's so the two are read together and cannot drift apart again.
+ */
+test("the app builds the same WhatsApp link as the website", () => {
+  assert.equal(appWhatsappTo("0903 217 5147"), "https://wa.me/2349032175147");
+  assert.equal(appWhatsappTo("08031112222", "hi"), "https://wa.me/2348031112222?text=hi");
+
+  // Already international, with or without the plus and the spaces: left be,
+  // so a shop that types the country code in itself still works.
+  assert.equal(appWhatsappTo("2348031112222"), "https://wa.me/2348031112222");
+  assert.equal(appWhatsappTo("+234 803 111 2222"), "https://wa.me/2348031112222");
+
+  // No number set means no link at all, rather than wa.me/ with nothing on
+  // the end of it.
+  assert.equal(appWhatsappTo(""), "");
+
+  // The two halves of the shop agree, which is the whole point of this.
+  assert.equal(appWhatsappTo("08031112222", "hi"), whatsappTo("08031112222", "hi"));
 });
 
 test("PINs are four digits, zero padded", () => {

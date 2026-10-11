@@ -17,6 +17,7 @@ import { api } from "@/lib/api";
 import { enablePush, pushPermission, pushTokenIfAllowed } from "@/lib/push";
 import { cart, me, mine, people, useStored } from "@/lib/store";
 import { useShop } from "@/lib/use-shop";
+import { whatsappTo } from "@/lib/whatsapp";
 import { Display } from "@/components/ui";
 import { F, T } from "@/lib/theme";
 
@@ -312,7 +313,7 @@ export default function Account() {
             icon="logo-whatsapp"
             label="Help on WhatsApp"
             note={help}
-            onPress={() => Linking.openURL(`https://wa.me/${help.replace(/[^0-9]/g, "")}`)}
+            onPress={() => Linking.openURL(whatsappTo(help))}
           />
         )}
         <Line

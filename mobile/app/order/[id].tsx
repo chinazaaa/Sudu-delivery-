@@ -13,6 +13,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { api, naira, type OrderView } from "@/lib/api";
 import { me, useStored } from "@/lib/store";
+import { whatsappTo } from "@/lib/whatsapp";
 import { Button, Card, Display, Stripes, Ticket } from "@/components/ui";
 import { F, T } from "@/lib/theme";
 
@@ -508,7 +509,7 @@ export default function Order() {
       {help !== "" && (
         <Pressable
           onPress={() =>
-            void Linking.openURL(`https://wa.me/${help.replace(/[^0-9]/g, "")}`)
+            void Linking.openURL(whatsappTo(help))
           }
           accessibilityRole="link"
           style={{
