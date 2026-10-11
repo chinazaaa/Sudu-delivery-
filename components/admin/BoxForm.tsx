@@ -97,6 +97,14 @@ export default function BoxForm({
         One flat price each way, whatever is in the box. The ladder would count
         eight containers as eight thousand and there would be no box to sell.
       </p>
+      {/* The sum, said out loud. Somebody filling this in is choosing the
+          price on the shelf and had no way of knowing what it would be. */}
+      <p className="text-xs text-muted">
+        What the customer pays is the food above <strong>plus</strong> this, and
+        the run one is what the shelf quotes. Never set it below{" "}
+        <strong>₦4,000</strong>: a box that charges less for delivery than the
+        car costs loses money on every one sold.
+      </p>
 
       <div className="flex flex-wrap items-center gap-4">
         <label className="flex items-center gap-2 text-sm">

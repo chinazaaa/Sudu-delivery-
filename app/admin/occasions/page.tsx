@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { allBoxes, allOccasions, foodCatalogue } from "@/lib/box-admin";
+import { allBoxes, allOccasions, boxPrices, foodCatalogue } from "@/lib/box-admin";
 import { readLines } from "@/lib/boxes";
 import { openBatches } from "@/lib/batches";
 import { runDateLabel, whenLabel } from "@/lib/time";
@@ -25,6 +25,11 @@ export default async function AdminOccasionsPage() {
     allBoxes(),
     foodCatalogue(),
   ]);
+
+  // What each box comes to, because the editor used to show the delivery
+  // figure and nothing else: the one number anybody wants, what the
+  // customer pays, was not on the screen at all.
+  const prices = await boxPrices(boxes as any);
 
   const runs = (await openBatches(30)).map((one) => ({
     id: one.id,
@@ -98,10 +103,36 @@ export default async function AdminOccasionsPage() {
                       {box.name}
                       <span className="font-normal text-muted">
                         {" "}
-                        · {box.serves || "no size said"} · delivery{" "}
-                        {naira(box.run_fee)} / {naira(box.car_fee)}
+                        · {box.serves || "no size said"}
                         {box.active ? "" : " · off"}
                       </span>
+                      {/* The sum, written out, because "delivery ₦4,400"
+                          on its own answers no question anybody has. The
+                          run price is the one that matters: it is what the
+                          shelf quotes and what nearly everybody pays. */}
+                      <span className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs font-normal">
+                        <span className="text-muted">
+                          Food {naira(prices.get(box.id)?.food ?? 0)}
+                        </span>
+                        <span className="text-muted">
+                          + delivery {naira(box.run_fee)}
+                        </span>
+                        <span className="font-bold text-ink">
+                          = {naira(prices.get(box.id)?.onARun ?? 0)} on a run
+                        </span>
+                        <span className="text-muted">
+                          ({naira(prices.get(box.id)?.inACar ?? 0)} in a car of its own)
+                        </span>
+                      </span>
+                      {/* A box with something off the menu in it cannot be
+                          priced, so the whole shelf it sits on comes back
+                          empty. That used to be invisible from here. */}
+                      {(prices.get(box.id)?.gone.length ?? 0) > 0 && (
+                        <span className="mt-1 block text-xs font-semibold text-red-700">
+                          Not on sale: {prices.get(box.id)!.gone.join(", ")}. This box
+                          cannot be priced, so the whole shelf hides until it is fixed.
+                        </span>
+                      )}
                     </summary>
                     <div className="mt-3">
                       <BoxForm

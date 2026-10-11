@@ -120,3 +120,92 @@ export async function allBoxes() {
     .order("sort_order", { ascending: true });
   return data ?? [];
 }
+
+/** What a box comes to, and whether anything in it has gone off the menu. */
+export type BoxPrice = {
+  /** The food, off today's menu. */
+  food: number;
+  /** What somebody pays, delivery in it, on a shared run and in a car. */
+  onARun: number;
+  inACar: number;
+  /** Lines pointing at something sold out or deleted. A box with any of
+   *  these cannot be priced for a customer and quietly disappears from the
+   *  shelf, so admin has to be told rather than left to wonder. */
+  gone: string[];
+};
+
+/**
+ * What every box costs, for the page that edits them.
+ *
+ * The editor showed the delivery figure and nothing else, so the one number
+ * anybody actually wants — what the customer pays — was not on the screen,
+ * and the food it is made of was not either. Working it out meant reading
+ * the database by hand, which is not a thing admin should ever require.
+ *
+ * Priced here rather than off the picker, because the picker only carries
+ * what is on sale: a box holding something sold out would price as though
+ * that line were free, which is worse than not pricing it at all.
+ */
+export async function boxPrices(
+  boxes: { id: string; lines: unknown; run_fee: number; car_fee: number }[]
+): Promise<Map<string, BoxPrice>> {
+  const found = new Map<string, BoxPrice>();
+  if (boxes.length === 0) return found;
+
+  const read = (raw: unknown): { menu_item_id: string; qty: number; option_ids: string[] }[] =>
+    Array.isArray(raw) ? (raw as any[]) : [];
+
+  const itemIds = [
+    ...new Set(boxes.flatMap((box) => read(box.lines).map((line) => line.menu_item_id))),
+  ].filter(Boolean);
+  const optionIds = [
+    ...new Set(boxes.flatMap((box) => read(box.lines).flatMap((line) => line.option_ids ?? []))),
+  ].filter(Boolean);
+
+  const [items, options] = await Promise.all([
+    itemIds.length > 0
+      ? db().from("menu_items").select("id, name, price_food, available").in("id", itemIds)
+      : Promise.resolve({ data: [] as any[] }),
+    optionIds.length > 0
+      ? db().from("item_options").select("id, price_delta").in("id", optionIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+
+  const price = new Map((items.data ?? []).map((row: any) => [row.id as string, Number(row.price_food ?? 0)]));
+  const named = new Map((items.data ?? []).map((row: any) => [row.id as string, String(row.name ?? "")]));
+  const off = new Set(
+    (items.data ?? []).filter((row: any) => row.available === false).map((row: any) => row.id as string)
+  );
+  const delta = new Map((options.data ?? []).map((row: any) => [row.id as string, Number(row.price_delta ?? 0)]));
+
+  for (const box of boxes) {
+    let food = 0;
+    const gone: string[] = [];
+
+    for (const line of read(box.lines)) {
+      const qty = Number(line.qty ?? 0);
+      const unit = price.get(line.menu_item_id);
+      if (unit === undefined) {
+        gone.push("something since deleted");
+        continue;
+      }
+      if (off.has(line.menu_item_id)) {
+        gone.push(named.get(line.menu_item_id) || "something sold out");
+      }
+      const extras = (line.option_ids ?? []).reduce(
+        (sum: number, id: string) => sum + (delta.get(id) ?? 0),
+        0
+      );
+      food += qty * (unit + extras);
+    }
+
+    found.set(box.id, {
+      food,
+      onARun: food + Number(box.run_fee ?? 0),
+      inACar: food + Number(box.car_fee ?? 0),
+      gone,
+    });
+  }
+
+  return found;
+}
