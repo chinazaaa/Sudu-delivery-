@@ -258,6 +258,10 @@ export async function closeExpiredBatches(): Promise<void> {
     .lt("cut_off_at", now.toISOString());
 
   const { settleGroupFees } = await import("./groups");
+  // Read once rather than per run: a sweep usually has one or two runs on
+  // it and the area list is the same answer for all of them.
+  const { allAreas } = await import("./areas-server");
+  const areas = (due ?? []).length > 0 ? await allAreas().catch(() => []) : [];
 
   for (const batch of (due ?? []) as Batch[]) {
     // A run with nothing on it has nothing to collect, so its cut-off is
@@ -274,7 +278,7 @@ export async function closeExpiredBatches(): Promise<void> {
     // It cannot run away with itself: once the new cut-off passes, the
     // same sum gives a time in the past, and the run closes as it always
     // would have.
-    const held = (await isEmptyRun(batch)) ? emptyRunClosesAt(batch, now) : null;
+    const held = (await isEmptyRun(batch)) ? emptyRunClosesAt(batch, now, areas) : null;
 
     if (held !== null) {
       await db().from("batches").update({ cut_off_at: held }).eq("id", batch.id);

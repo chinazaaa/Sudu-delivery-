@@ -1,4 +1,5 @@
 import { lagosInstant } from "./time";
+import { areasOfRun, type Area } from "./areas";
 
 /**
  * How long an empty run is allowed to stay open.
@@ -61,13 +62,35 @@ export function windowEndsAt(windowText: string, runDate: string): string | null
  * every run still does the moment it has an order on it.
  */
 export function emptyRunClosesAt(
-  batch: { run_date: string; delivery_window_text: string; kind?: string },
-  now: Date = new Date()
+  batch: {
+    run_date: string;
+    delivery_window_text: string;
+    kind?: string;
+    /** Which areas this car goes to, beyond Sangotedo, as "|l|". */
+    areas?: string | null;
+  },
+  now: Date = new Date(),
+  /** Every area the shop delivers from, as admin has them. */
+  areas: Area[] = []
 ): string | null {
   // Only shared runs. A same-day car, a parcel and a box day each have a
   // cut-off that means something of its own, and a box being packed on the
   // day is not waiting for company.
   if (batch.kind !== undefined && batch.kind !== "run") return null;
+
+  // A car going somewhere far cannot be held to three hours, because three
+  // hours is not enough to get there and back. That is not a new judgement:
+  // it is the same one an area already carries. sameDay is off for exactly
+  // the areas where three hours does not cover the trip, which is why a car
+  // of its own is never offered to them, and it is the same three hours
+  // here. So a run that goes anywhere with it off keeps its cut-off.
+  //
+  // Read off the flag rather than off the name, so the far area the shop
+  // adds next is covered the day somebody ticks the box in admin, with
+  // nobody having to remember this sum exists.
+  const goes = areasOfRun(batch.areas);
+  const far = areas.some((one) => !one.sameDay && goes.includes(one.id));
+  if (far) return null;
 
   const ends = windowEndsAt(batch.delivery_window_text, batch.run_date);
   if (ends === null) return null;

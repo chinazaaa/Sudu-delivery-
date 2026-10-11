@@ -3198,3 +3198,38 @@ test("an empty run is held to three hours before the last delivery", () => {
   // Unreadable window: left exactly as it behaved before.
   assert.equal(emptyRunClosesAt(run("whenever we get there"), morning), null);
 });
+
+/*
+ * A run that goes to Lekki keeps its cut-off.
+ *
+ * Three hours is not enough to reach Lekki or Ikoyi and come back, which is
+ * the same reason a car of its own is never offered there. So the rule is
+ * read off that flag rather than off the name: the far area the shop adds
+ * next is covered the day somebody ticks the box in admin.
+ */
+test("an empty run going somewhere far is not held open", () => {
+  const morning = new Date("2026-10-29T09:00:00+01:00");
+  // The shop's own areas, as admin has them.
+  const areas = [
+    { id: "l", name: "Lekki/Ikoyi", runExtra: 5000, sameDayExtra: 0, sameDay: false },
+  ];
+  const run = (runAreas: string) => ({
+    run_date: "2026-10-29",
+    delivery_window_text: "Between 5pm and 7pm",
+    kind: "run",
+    areas: runAreas,
+  });
+
+  // Sangotedo only: held to four, as before.
+  assert.equal(lagosClock(emptyRunClosesAt(run(""), morning, areas)), "16:00");
+
+  // The same run, routed through Lekki: not held at all.
+  assert.equal(emptyRunClosesAt(run("|l|"), morning, areas), null);
+
+  // An area the shop can reach in three hours does not stop it.
+  const near = [{ id: "n", name: "Novare", runExtra: 500, sameDayExtra: 0, sameDay: true }];
+  assert.equal(lagosClock(emptyRunClosesAt(run("|n|"), morning, near)), "16:00");
+
+  // No areas configured at all is the shop as it was before areas existed.
+  assert.equal(lagosClock(emptyRunClosesAt(run(""), morning, [])), "16:00");
+});
