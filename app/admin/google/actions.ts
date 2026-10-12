@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/supabase";
 import { isSignedIn } from "@/lib/admin-auth";
 import { getSettings, googleQuotes, type GoogleQuote } from "@/lib/settings";
+import { saidOnOrders } from "@/lib/says";
 
 async function assertAdmin(): Promise<void> {
   if (!(await isSignedIn())) throw new Error("Not signed in.");
@@ -76,16 +77,26 @@ export async function removeQuote(form: FormData): Promise<void> {
   await writeQuotes(quotes.filter((_, index) => index !== at));
 }
 
-/** One place up the page, so the best one can be made to lead. */
-export async function raiseQuote(form: FormData): Promise<void> {
-  await assertAdmin();
-  const at = Number(form.get("at"));
+/** One place either way, so the list can be put in the order you want. */
+async function shuffle(at: number, by: 1 | -1): Promise<void> {
   const quotes = await current();
-  if (!Number.isInteger(at) || at < 1 || at >= quotes.length) return;
+  const to = at + by;
+  if (!Number.isInteger(at) || at < 0 || at >= quotes.length) return;
+  if (to < 0 || to >= quotes.length) return;
 
   const moved = [...quotes];
-  [moved[at - 1], moved[at]] = [moved[at], moved[at - 1]];
+  [moved[to], moved[at]] = [moved[at], moved[to]];
   await writeQuotes(moved);
+}
+
+export async function raiseQuote(form: FormData): Promise<void> {
+  await assertAdmin();
+  await shuffle(Number(form.get("at")), -1);
+}
+
+export async function lowerQuote(form: FormData): Promise<void> {
+  await assertAdmin();
+  await shuffle(Number(form.get("at")), 1);
 }
 
 /**
@@ -115,32 +126,53 @@ export async function saveScore(form: FormData): Promise<void> {
 }
 
 /**
- * Put one order review at the front of the band.
+ * Move one order review up or down the band, or straight to the front.
  *
- * "To the front" rather than "up one". Moving nine cards up one at a time
- * to get the good one leading is nine presses and a page reload each; the
- * thing anybody actually wants is this one first, and they want it now.
+ * The ranks are rewritten from the order on screen every time, highest
+ * first. That is more writes than swapping two rows, and it is the only
+ * version that cannot drift: ranks start at zero on everything, so there
+ * is no pair to swap until something has been moved, and half-ranked
+ * lists sort in an order nobody chose.
  */
-export async function leadWith(form: FormData): Promise<void> {
-  await assertAdmin();
+async function reorder(id: string, place: (at: number, many: number) => number): Promise<void> {
+  const shown = await saidOnOrders();
+  if (shown === null || shown.length < 2) return;
 
-  const id = String(form.get("id") ?? "");
-  if (id === "") return;
+  const at = shown.findIndex((one) => one.id === id);
+  if (at < 0) return;
 
-  const { data } = await db()
-    .from("orders")
-    .select("review_rank")
-    .eq("show_review", true)
-    .order("review_rank", { ascending: false })
-    .limit(1);
-  const top = Number((data ?? [])[0]?.review_rank ?? 0);
+  const to = Math.max(0, Math.min(shown.length - 1, place(at, shown.length)));
+  if (to === at) return;
 
-  const { error } = await db()
-    .from("orders")
-    .update({ review_rank: top + 1 })
-    .eq("id", id);
-  if (error) throw new Error(`Could not save that: ${error.message}`);
+  const moved = [...shown];
+  const [one] = moved.splice(at, 1);
+  moved.splice(to, 0, one);
+
+  // Highest first, and every row written, so the list on screen and the
+  // list in the database are the same list.
+  for (let index = 0; index < moved.length; index += 1) {
+    const { error } = await db()
+      .from("orders")
+      .update({ review_rank: moved.length - index })
+      .eq("id", moved[index].id);
+    if (error) throw new Error(`Could not save that: ${error.message}`);
+  }
 
   revalidatePath("/admin/google");
   revalidatePath("/", "layout");
+}
+
+export async function raiseOrderReview(form: FormData): Promise<void> {
+  await assertAdmin();
+  await reorder(String(form.get("id") ?? ""), (at) => at - 1);
+}
+
+export async function lowerOrderReview(form: FormData): Promise<void> {
+  await assertAdmin();
+  await reorder(String(form.get("id") ?? ""), (at) => at + 1);
+}
+
+export async function leadWith(form: FormData): Promise<void> {
+  await assertAdmin();
+  await reorder(String(form.get("id") ?? ""), () => 0);
 }

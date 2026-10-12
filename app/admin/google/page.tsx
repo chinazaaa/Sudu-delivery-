@@ -5,7 +5,17 @@ import Panel from "@/components/admin/Panel";
 import Stars from "@/components/Stars";
 import { getSettings, googleLinks, googleQuotes } from "@/lib/settings";
 import { saidOnOrders } from "@/lib/says";
-import { addQuote, leadWith, raiseQuote, removeQuote, saveQuote, saveScore } from "./actions";
+import {
+  addQuote,
+  leadWith,
+  lowerOrderReview,
+  lowerQuote,
+  raiseOrderReview,
+  raiseQuote,
+  removeQuote,
+  saveQuote,
+  saveScore,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -193,18 +203,35 @@ export default async function GoogleReviewsAdmin() {
               >
                 <Stars out={one.stars} size={13} />
                 <p className="text-sm">{one.said}</p>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   {one.who !== "" && (
                     <span className="text-xs text-muted">{one.who}</span>
                   )}
-                  {at > 0 && (
-                    <form action={leadWith} className="ml-auto">
-                      <input type="hidden" name="id" value={one.id} />
-                      <button className="text-xs font-semibold text-brand">
-                        Move to front
-                      </button>
-                    </form>
-                  )}
+                  {/* Up and down for a nudge, front for the one that should
+                      lead: with nine reviews, getting the best one to the
+                      top is eight presses otherwise. */}
+                  <span className="ml-auto flex items-center gap-3">
+                    {at > 0 && (
+                      <form action={raiseOrderReview}>
+                        <input type="hidden" name="id" value={one.id} />
+                        <button className="text-xs font-semibold text-brand">Up</button>
+                      </form>
+                    )}
+                    {at < onOrders.length - 1 && (
+                      <form action={lowerOrderReview}>
+                        <input type="hidden" name="id" value={one.id} />
+                        <button className="text-xs font-semibold text-brand">Down</button>
+                      </form>
+                    )}
+                    {at > 0 && (
+                      <form action={leadWith}>
+                        <input type="hidden" name="id" value={one.id} />
+                        <button className="text-xs font-semibold text-muted">
+                          To the front
+                        </button>
+                      </form>
+                    )}
+                  </span>
                 </div>
               </li>
             ))}
@@ -262,7 +289,13 @@ export default async function GoogleReviewsAdmin() {
                   {at > 0 && (
                     <form action={raiseQuote}>
                       <input type="hidden" name="at" value={at} />
-                      <button className="text-xs font-semibold text-brand">Move up</button>
+                      <button className="text-xs font-semibold text-brand">Up</button>
+                    </form>
+                  )}
+                  {at < quotes.length - 1 && (
+                    <form action={lowerQuote}>
+                      <input type="hidden" name="at" value={at} />
+                      <button className="text-xs font-semibold text-brand">Down</button>
                     </form>
                   )}
                   <form action={removeQuote} className="ml-auto">
