@@ -26,7 +26,6 @@ export default function BoxForm({
     blurb: string;
     serves: string;
     run_fee: number;
-    car_fee: number;
     is_extra: boolean;
     active: boolean;
     sort_order: number;
@@ -73,37 +72,27 @@ export default function BoxForm({
         <BoxLines catalogue={catalogue} start={box?.lines ?? []} />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label className="label">Delivery on a run</label>
-          <input
-            name="run_fee"
-            inputMode="numeric"
-            defaultValue={box?.run_fee ?? 4000}
-            className="field"
-          />
-        </div>
-        <div>
-          <label className="label">Delivery in a car of its own</label>
-          <input
-            name="car_fee"
-            inputMode="numeric"
-            defaultValue={box?.car_fee ?? 6500}
-            className="field"
-          />
-        </div>
+      <div>
+        <label className="label">Delivery</label>
+        <input
+          name="run_fee"
+          inputMode="numeric"
+          defaultValue={box?.run_fee ?? 4000}
+          className="field"
+        />
       </div>
       <p className="text-xs text-muted">
-        One flat price each way, whatever is in the box. The ladder would count
-        eight containers as eight thousand and there would be no box to sell.
+        One flat price, whatever is in the box. The ladder would count eight
+        containers as eight thousand and there would be no box to sell.
       </p>
       {/* The sum, said out loud. Somebody filling this in is choosing the
           price on the shelf and had no way of knowing what it would be. */}
       <p className="text-xs text-muted">
-        What the customer pays is the food above <strong>plus</strong> this, and
-        the run one is what the shelf quotes. Never set it below{" "}
+        What the customer pays is the food above <strong>plus</strong> this,
+        and that is what the shelf quotes. Never set it below{" "}
         <strong>₦4,000</strong>: a box that charges less for delivery than the
-        car costs loses money on every one sold.
+        car costs loses money on every one sold. Anything with Uncle Stan&apos;s
+        in it is <strong>₦7,000</strong>, because Ikoyi is its own trip.
       </p>
 
       <div className="flex flex-wrap items-center gap-4">

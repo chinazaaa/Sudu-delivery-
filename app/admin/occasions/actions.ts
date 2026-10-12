@@ -121,8 +121,10 @@ export async function saveBox(_prev: SaveState, form: FormData): Promise<SaveSta
       blurb: String(form.get("blurb") ?? "").trim(),
       custom_hint: String(form.get("custom_hint") ?? "").trim().slice(0, 120),
       serves: String(form.get("serves") ?? "").trim(),
+      // One delivery price, because a box only ever goes on a run. The
+      // column stays for the orders that recorded a car before that, and
+      // the shop no longer has a figure to fill in.
       run_fee: number(form.get("run_fee"), 4000),
-      car_fee: number(form.get("car_fee"), 6500),
       is_extra: form.get("is_extra") === "on",
       active: form.get("active") === "on",
       sort_order: number(form.get("sort_order"), 100),
