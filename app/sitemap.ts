@@ -60,6 +60,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Written for the search rather than for the shop, so it has to be
     // findable: nothing in the header or the tab bar points at it.
     { url: `${site}/delivery-to-pau`, changeFrequency: "monthly" as const, priority: 0.8 },
+    // The other three written the same way, one per question somebody types.
+    // Each answers a different one: what is there to snack on, how do I send
+    // something from far away, what does a room need.
+    { url: `${site}/pau-snacks`, changeFrequency: "monthly" as const, priority: 0.8 },
+    {
+      url: `${site}/send-a-gift-to-pau`,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    },
+    {
+      url: `${site}/pau-student-store`,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    },
     // Who the shop is, for anybody asking that rather than asking for food.
     { url: `${site}/about`, changeFrequency: "monthly" as const, priority: 0.6 },
     // The job, for anybody searching for a way to earn around campus.

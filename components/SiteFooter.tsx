@@ -49,6 +49,12 @@ export default function SiteFooter({
       links: [
         { href: "/about", said: "About us" },
         { href: "/delivery-to-pau", said: "Delivery to PAU" },
+        // The other pages written for a search rather than for the shop.
+        // Nothing in the header points at any of them, so this is how they
+        // are reached and how a crawler finds them at all.
+        { href: "/pau-snacks", said: "Snacks at PAU" },
+        { href: "/send-a-gift-to-pau", said: "Send a gift to PAU" },
+        { href: "/pau-student-store", said: "What to buy at PAU" },
         // The page written to a parent. Down here rather than in the header
         // because a student on the front page is not one and should not have
         // to read past a card asking whether they are.

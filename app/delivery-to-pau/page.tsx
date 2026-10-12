@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PageHead from "@/components/PageHead";
+import { AlsoSee } from "@/components/Guide";
 
 import { openRestaurants } from "@/lib/menu";
 import { activeBands } from "@/lib/settings";
@@ -408,6 +409,8 @@ export default async function DeliveryToPauPage() {
           ))}
         </dl>
       </Section>
+
+      <AlsoSee not="/delivery-to-pau" />
 
       <p className="text-sm">
         <Link href="/products" className="font-extrabold text-brand">
