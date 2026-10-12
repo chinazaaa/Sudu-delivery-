@@ -2570,6 +2570,7 @@ const SETTING_FIELDS = [
   "whatsapp_number",
   "card_note",
   "instagram_handle",
+  "x_handle",
   "ios_app_id",
   "android_package",
   "abroad_on",

@@ -473,6 +473,20 @@ export default async function SettingsAdmin() {
                   />
                 </div>
                 <div>
+                  <label className="label" htmlFor="x_handle">X handle</label>
+                  <input
+                    id="x_handle"
+                    name="x_handle"
+                    defaultValue={settings.x_handle}
+                    placeholder="sudu_store"
+                    className="field"
+                  />
+                  <p className="hint mt-1">
+                    The handle or the whole address, either way. Empty and the
+                    site does not mention X at all.
+                  </p>
+                </div>
+                <div>
                   <label className="label" htmlFor="ios_app_id">iPhone app, App Store id</label>
                   <input
                     id="ios_app_id"

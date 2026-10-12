@@ -1232,3 +1232,10 @@ create index if not exists orders_shown_review_idx
 -- everything means newest first, exactly as before.
 alter table orders
   add column if not exists review_rank integer not null default 0;
+
+-- The shop on X, beside the shop on Instagram.
+--
+-- A handle rather than a link, the same way Instagram is held, so admin
+-- cannot paste a profile address that turns out to be somebody's post.
+alter table settings
+  add column if not exists x_handle text not null default '';

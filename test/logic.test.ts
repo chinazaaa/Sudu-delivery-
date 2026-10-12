@@ -13,7 +13,7 @@ import { adminStageLabel, adminStatusWord, STAGE_LABEL } from "../lib/stages";
 import { channelOfSite, tidyChannel, tidyHandle } from "../lib/came-from";
 import { weekAround } from "../lib/time";
 import { monthOf, nextMonth } from "../lib/standing";
-import { googleTagId, numberOr } from "../lib/settings";
+import { googleTagId, instagramLink, numberOr, xLink } from "../lib/settings";
 import { isExtra } from "../lib/shelf";
 import { cartsInTime, howLong, needsDoing } from "../lib/needs-doing";
 import { howPaid, orderStory } from "../lib/order-story";
@@ -3237,3 +3237,31 @@ test("a held run is given a window it can actually meet", () => {
   assert.equal(windowAfterHolding(heldAtSix, 19), "By 7pm");
 });
 
+
+/*
+ * A handle, however it was typed.
+ *
+ * The footer's Instagram link was dead because the field held the whole
+ * address and the link builder encoded it as if it were a name.
+ */
+test("a social handle survives being pasted as a whole address", () => {
+  assert.equal(instagramLink("sudustore"), "https://instagram.com/sudustore");
+  assert.equal(instagramLink("@sudustore"), "https://instagram.com/sudustore");
+  assert.equal(
+    instagramLink("https://www.instagram.com/sudustore"),
+    "https://instagram.com/sudustore"
+  );
+  // A trailing slash, and whatever the app hangs off the end of a profile.
+  assert.equal(
+    instagramLink("https://instagram.com/sudustore/?hl=en"),
+    "https://instagram.com/sudustore"
+  );
+  assert.equal(instagramLink("  "), null);
+
+  // X, and twitter.com, which is what half of these will be copied from.
+  assert.equal(xLink("sudu_store"), "https://x.com/sudu_store");
+  assert.equal(xLink("@sudu_store"), "https://x.com/sudu_store");
+  assert.equal(xLink("https://x.com/sudu_store"), "https://x.com/sudu_store");
+  assert.equal(xLink("https://twitter.com/sudu_store"), "https://x.com/sudu_store");
+  assert.equal(xLink(""), null);
+});

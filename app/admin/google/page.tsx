@@ -3,19 +3,9 @@ import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import Panel from "@/components/admin/Panel";
 import Stars from "@/components/Stars";
-import { getSettings, googleLinks, googleQuotes } from "@/lib/settings";
-import { saidOnOrders } from "@/lib/says";
-import {
-  addQuote,
-  leadWith,
-  lowerOrderReview,
-  lowerQuote,
-  raiseOrderReview,
-  raiseQuote,
-  removeQuote,
-  saveQuote,
-  saveScore,
-} from "./actions";
+import { getSettings, googleLinks } from "@/lib/settings";
+import { bandSays, keyOf } from "@/lib/says";
+import { addQuote, leadWith, lowerSay, raiseSay, removeQuote, saveQuote, saveScore } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -33,11 +23,9 @@ export const dynamic = "force-dynamic";
  */
 export default async function GoogleReviewsAdmin() {
   const settings = await getSettings();
-  const quotes = googleQuotes(settings.google_quotes);
+  // One list, exactly as the home page draws it.
+  const band = await bandSays(settings.google_quotes);
   const google = googleLinks(settings);
-  // The other half of the band: reviews customers left on their own orders
-  // and somebody ticked on the Reviews page.
-  const onOrders = await saidOnOrders();
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -164,147 +152,120 @@ export default async function GoogleReviewsAdmin() {
         </form>
       </Panel>
 
-      {/* Read-only here on purpose: these belong to an order, and the one
-          place to change your mind about one is beside the order it came
-          from. */}
+      {/* One list, in the band's own order, because the band is one row.
+          Two panels could each be ordered and neither could put a review
+          from the other half above its own. */}
       <Panel
-        title={`From order reviews${onOrders && onOrders.length > 0 ? ` · ${onOrders.length}` : ""}`}
+        title={`On the site${band.length > 0 ? ` · ${band.length}` : ""}`}
         detail={
           <>
-            Reviews customers left on their own orders, ticked onto the site
-            from{" "}
-            <Link href="/admin/reviews" className="font-semibold text-brand">
-              Reviews
-            </Link>
-            . They show under the typed ones, first name only, in this
-            order: move the best one to the front and it leads the band.
-          </>
-        }
-      >
-        {onOrders === null ? (
-          <p className="text-sm text-red-700">
-            The database has not got the show_review column yet. Run
-            supabase/update.sql in Supabase.
-          </p>
-        ) : onOrders.length === 0 ? (
-          <p className="text-sm text-muted">
-            None ticked yet. Open{" "}
+            Left to right on the home page, in this order. Reviews from{" "}
             <Link href="/admin/reviews" className="font-semibold text-brand">
               Reviews
             </Link>{" "}
-            and press &ldquo;Put on the site&rdquo; under any one worth showing.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {onOrders.map((one, at) => (
-              <li
-                key={`${at}-${one.said}`}
-                className="flex flex-col gap-1.5 rounded-xl bg-black/[0.03] p-3"
-              >
-                <Stars out={one.stars} size={13} />
-                <p className="text-sm">{one.said}</p>
-                <div className="flex flex-wrap items-center gap-3">
-                  {one.who !== "" && (
-                    <span className="text-xs text-muted">{one.who}</span>
-                  )}
-                  {/* Up and down for a nudge, front for the one that should
-                      lead: with nine reviews, getting the best one to the
-                      top is eight presses otherwise. */}
-                  <span className="ml-auto flex items-center gap-3">
-                    {at > 0 && (
-                      <form action={raiseOrderReview}>
-                        <input type="hidden" name="id" value={one.id} />
-                        <button className="text-xs font-semibold text-brand">Up</button>
-                      </form>
-                    )}
-                    {at < onOrders.length - 1 && (
-                      <form action={lowerOrderReview}>
-                        <input type="hidden" name="id" value={one.id} />
-                        <button className="text-xs font-semibold text-brand">Down</button>
-                      </form>
-                    )}
-                    {at > 0 && (
-                      <form action={leadWith}>
-                        <input type="hidden" name="id" value={one.id} />
-                        <button className="text-xs font-semibold text-muted">
-                          To the front
-                        </button>
-                      </form>
-                    )}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Panel>
-
-      <Panel
-        title={`Typed in${quotes.length > 0 ? ` · ${quotes.length}` : ""}`}
-        detail="Reviews with no order behind them, copied off your profile. These lead the band, in this order."
+            are shown first name only and are edited beside the order they
+            came from; the ones you typed can be edited here.
+          </>
+        }
       >
-        {quotes.length === 0 ? (
+        {band.length === 0 ? (
           <p className="text-sm text-muted">
-            None yet. Add one above and it appears on the home page and on
-            Parents, under the score.
+            Nothing yet. Add one above, or open{" "}
+            <Link href="/admin/reviews" className="font-semibold text-brand">
+              Reviews
+            </Link>{" "}
+            and press &ldquo;Put on the site&rdquo; under one worth showing.
           </p>
         ) : (
           <ul className="space-y-3">
-            {quotes.map((one, at) => (
-              <li key={`${at}-${one.said}`} className="rounded-xl bg-black/[0.03] p-3">
-                <form action={saveQuote} className="space-y-2">
-                  <input type="hidden" name="at" value={at} />
-                  <textarea
-                    name="said"
-                    rows={2}
-                    defaultValue={one.said}
-                    className="field"
-                    aria-label={`Review ${at + 1}`}
-                  />
-                  <div className="grid gap-2 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
-                    <input
-                      name="who"
-                      defaultValue={one.who}
-                      placeholder="Who said it"
-                      className="field"
-                      aria-label="Who said it"
-                    />
-                    <select
-                      name="stars"
-                      defaultValue={String(one.stars)}
-                      className="field"
-                      aria-label="Stars"
-                    >
-                      {[5, 4, 3, 2, 1].map((many) => (
-                        <option key={many} value={many}>
-                          {many} star{many === 1 ? "" : "s"}
-                        </option>
-                      ))}
-                    </select>
-                    <button className="btn-admin">Save</button>
+            {band.map((one, at) => {
+              const key = keyOf(one);
+              return (
+                <li key={key} className="rounded-xl bg-black/[0.03] p-3">
+                  {one.from === "typed" ? (
+                    <form action={saveQuote} className="space-y-2">
+                      <input type="hidden" name="at" value={one.at} />
+                      <textarea
+                        name="said"
+                        rows={2}
+                        defaultValue={one.said}
+                        className="field"
+                        aria-label={`Review ${at + 1}`}
+                      />
+                      <div className="grid gap-2 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
+                        <input
+                          name="who"
+                          defaultValue={one.who}
+                          placeholder="Who said it"
+                          className="field"
+                          aria-label="Who said it"
+                        />
+                        <select
+                          name="stars"
+                          defaultValue={String(one.stars)}
+                          className="field"
+                          aria-label="Stars"
+                        >
+                          {[5, 4, 3, 2, 1].map((many) => (
+                            <option key={many} value={many}>
+                              {many} star{many === 1 ? "" : "s"}
+                            </option>
+                          ))}
+                        </select>
+                        <button className="btn-admin">Save</button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <p className="text-sm">{one.said}</p>
+                      {one.who !== "" && (
+                        <span className="text-xs text-muted">{one.who}</span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-black/5 pt-2">
+                    <Stars out={one.stars} size={13} />
+                    <span className="ticket text-[10px] text-muted">
+                      {one.from === "typed" ? "Typed in" : "From an order"}
+                    </span>
+                    {/* Up and down for a nudge, front for the one that
+                        should lead: with nine reviews, getting the best one
+                        to the top is eight presses otherwise. */}
+                    <span className="ml-auto flex items-center gap-3">
+                      {at > 0 && (
+                        <form action={raiseSay}>
+                          <input type="hidden" name="key" value={key} />
+                          <button className="text-xs font-semibold text-brand">Up</button>
+                        </form>
+                      )}
+                      {at < band.length - 1 && (
+                        <form action={lowerSay}>
+                          <input type="hidden" name="key" value={key} />
+                          <button className="text-xs font-semibold text-brand">Down</button>
+                        </form>
+                      )}
+                      {at > 0 && (
+                        <form action={leadWith}>
+                          <input type="hidden" name="key" value={key} />
+                          <button className="text-xs font-semibold text-muted">
+                            To the front
+                          </button>
+                        </form>
+                      )}
+                      {one.from === "typed" && (
+                        <form action={removeQuote}>
+                          <input type="hidden" name="at" value={one.at} />
+                          <button className="text-xs font-semibold text-red-700">
+                            Delete
+                          </button>
+                        </form>
+                      )}
+                    </span>
                   </div>
-                </form>
-                <div className="mt-2 flex items-center gap-4 border-t border-black/5 pt-2">
-                  <Stars out={one.stars} size={13} />
-                  {at > 0 && (
-                    <form action={raiseQuote}>
-                      <input type="hidden" name="at" value={at} />
-                      <button className="text-xs font-semibold text-brand">Up</button>
-                    </form>
-                  )}
-                  {at < quotes.length - 1 && (
-                    <form action={lowerQuote}>
-                      <input type="hidden" name="at" value={at} />
-                      <button className="text-xs font-semibold text-brand">Down</button>
-                    </form>
-                  )}
-                  <form action={removeQuote} className="ml-auto">
-                    <input type="hidden" name="at" value={at} />
-                    <button className="text-xs font-semibold text-red-700">Delete</button>
-                  </form>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </Panel>

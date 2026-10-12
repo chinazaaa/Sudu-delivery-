@@ -20,6 +20,7 @@ type Group = { heading: string; links: { href: string; said: string; away?: bool
 export default function SiteFooter({
   line,
   instagram,
+  x,
   groupLink,
   google = "",
   showPromoterLink,
@@ -27,6 +28,8 @@ export default function SiteFooter({
   /** Written in admin. Empty means the shop says nothing here. */
   line: string;
   instagram: string | null;
+  /** The shop on X. Empty and it is not offered. */
+  x?: string | null;
   groupLink: string;
   /** The shop's Google Business Profile. Empty and it is not offered. */
   google?: string;
@@ -65,6 +68,7 @@ export default function SiteFooter({
         { href: "/become-a-promoter", said: "Get paid to share us" },
         ...(showPromoterLink ? [{ href: "/promoter", said: "Promoter sign in" }] : []),
         ...(instagram ? [{ href: instagram, said: "Instagram", away: true }] : []),
+        ...(x ? [{ href: x, said: "X", away: true }] : []),
       ],
     },
     {

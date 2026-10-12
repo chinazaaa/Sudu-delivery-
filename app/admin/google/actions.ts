@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/supabase";
 import { isSignedIn } from "@/lib/admin-auth";
 import { getSettings, googleQuotes, type GoogleQuote } from "@/lib/settings";
-import { saidOnOrders } from "@/lib/says";
+import { bandSays, keyOf } from "@/lib/says";
 
 async function assertAdmin(): Promise<void> {
   if (!(await isSignedIn())) throw new Error("Not signed in.");
@@ -37,18 +37,25 @@ async function current(): Promise<GoogleQuote[]> {
   return googleQuotes((await getSettings()).google_quotes);
 }
 
-function read(form: FormData): GoogleQuote {
+function read(form: FormData, rank: number): GoogleQuote {
   return {
     said: String(form.get("said") ?? "").trim(),
     who: String(form.get("who") ?? "").trim(),
     stars: Math.min(5, Math.max(1, Math.round(Number(form.get("stars")) || 5))),
+    rank,
   };
 }
 
-/** Newest at the top, which is the order they are read in. */
+/** One above everything on the band, so a new review leads it. */
+async function topRank(): Promise<number> {
+  const shown = await bandSays((await getSettings()).google_quotes);
+  return shown.reduce((most, one) => Math.max(most, one.rank), 0) + 1;
+}
+
+/** A new one leads the band, which is where somebody adding it is looking. */
 export async function addQuote(form: FormData): Promise<void> {
   await assertAdmin();
-  const one = read(form);
+  const one = read(form, await topRank());
   if (one.said === "") return;
   await writeQuotes([one, ...(await current())]);
 }
@@ -59,7 +66,8 @@ export async function saveQuote(form: FormData): Promise<void> {
   const quotes = await current();
   if (!Number.isInteger(at) || at < 0 || at >= quotes.length) return;
 
-  const one = read(form);
+  // Editing the words is not moving it, so it keeps the place it had.
+  const one = read(form, quotes[at].rank);
   // Emptying the words is how a review is deleted from its own row, which
   // is what somebody who cleared the box meant.
   if (one.said === "") {
@@ -75,28 +83,6 @@ export async function removeQuote(form: FormData): Promise<void> {
   const quotes = await current();
   if (!Number.isInteger(at) || at < 0 || at >= quotes.length) return;
   await writeQuotes(quotes.filter((_, index) => index !== at));
-}
-
-/** One place either way, so the list can be put in the order you want. */
-async function shuffle(at: number, by: 1 | -1): Promise<void> {
-  const quotes = await current();
-  const to = at + by;
-  if (!Number.isInteger(at) || at < 0 || at >= quotes.length) return;
-  if (to < 0 || to >= quotes.length) return;
-
-  const moved = [...quotes];
-  [moved[to], moved[at]] = [moved[at], moved[to]];
-  await writeQuotes(moved);
-}
-
-export async function raiseQuote(form: FormData): Promise<void> {
-  await assertAdmin();
-  await shuffle(Number(form.get("at")), -1);
-}
-
-export async function lowerQuote(form: FormData): Promise<void> {
-  await assertAdmin();
-  await shuffle(Number(form.get("at")), 1);
 }
 
 /**
@@ -126,19 +112,27 @@ export async function saveScore(form: FormData): Promise<void> {
 }
 
 /**
- * Move one order review up or down the band, or straight to the front.
+ * Move one review up or down the band, or straight to the front.
  *
- * The ranks are rewritten from the order on screen every time, highest
- * first. That is more writes than swapping two rows, and it is the only
- * version that cannot drift: ranks start at zero on everything, so there
- * is no pair to swap until something has been moved, and half-ranked
- * lists sort in an order nobody chose.
+ * One list, both kinds. They used to be reordered separately, which could
+ * not work: the band is one row and the two halves were glued end to end,
+ * so moving a review within its half moved nothing anybody could see.
+ *
+ * Every row is renumbered from the list on screen on every move, highest
+ * first. More writes than swapping a pair, and the only version that cannot
+ * drift: ranks start at zero on everything, so until something is moved
+ * there is no pair to swap, and a half-ranked list sorts in an order
+ * nobody chose.
  */
-async function reorder(id: string, place: (at: number, many: number) => number): Promise<void> {
-  const shown = await saidOnOrders();
-  if (shown === null || shown.length < 2) return;
+async function reorder(
+  key: string,
+  place: (at: number, many: number) => number
+): Promise<void> {
+  const settings = await getSettings();
+  const shown = await bandSays(settings.google_quotes);
+  if (shown.length < 2) return;
 
-  const at = shown.findIndex((one) => one.id === id);
+  const at = shown.findIndex((one) => keyOf(one) === key);
   if (at < 0) return;
 
   const to = Math.max(0, Math.min(shown.length - 1, place(at, shown.length)));
@@ -148,13 +142,26 @@ async function reorder(id: string, place: (at: number, many: number) => number):
   const [one] = moved.splice(at, 1);
   moved.splice(to, 0, one);
 
-  // Highest first, and every row written, so the list on screen and the
-  // list in the database are the same list.
-  for (let index = 0; index < moved.length; index += 1) {
+  const ranked = moved.map((row, index) => ({ row, rank: moved.length - index }));
+
+  // The typed ones go back as one column, in their new order and carrying
+  // their new ranks.
+  const quotes: GoogleQuote[] = ranked
+    .filter((entry) => entry.row.from === "typed")
+    .map((entry) => ({
+      said: entry.row.said,
+      who: entry.row.who,
+      stars: entry.row.stars,
+      rank: entry.rank,
+    }));
+  await writeQuotes(quotes);
+
+  for (const entry of ranked) {
+    if (entry.row.from !== "order") continue;
     const { error } = await db()
       .from("orders")
-      .update({ review_rank: moved.length - index })
-      .eq("id", moved[index].id);
+      .update({ review_rank: entry.rank })
+      .eq("id", entry.row.id);
     if (error) throw new Error(`Could not save that: ${error.message}`);
   }
 
@@ -162,17 +169,17 @@ async function reorder(id: string, place: (at: number, many: number) => number):
   revalidatePath("/", "layout");
 }
 
-export async function raiseOrderReview(form: FormData): Promise<void> {
+export async function raiseSay(form: FormData): Promise<void> {
   await assertAdmin();
-  await reorder(String(form.get("id") ?? ""), (at) => at - 1);
+  await reorder(String(form.get("key") ?? ""), (at) => at - 1);
 }
 
-export async function lowerOrderReview(form: FormData): Promise<void> {
+export async function lowerSay(form: FormData): Promise<void> {
   await assertAdmin();
-  await reorder(String(form.get("id") ?? ""), (at) => at + 1);
+  await reorder(String(form.get("key") ?? ""), (at) => at + 1);
 }
 
 export async function leadWith(form: FormData): Promise<void> {
   await assertAdmin();
-  await reorder(String(form.get("id") ?? ""), () => 0);
+  await reorder(String(form.get("key") ?? ""), () => 0);
 }

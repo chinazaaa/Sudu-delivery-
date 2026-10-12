@@ -149,6 +149,7 @@ export async function GET(): Promise<Response> {
     "",
     ...(settings.whatsapp_number ? [`WhatsApp: ${settings.whatsapp_number}`] : []),
     ...(settings.instagram_handle ? [`Instagram: ${settings.instagram_handle}`] : []),
+    ...(settings.x_handle ? [`X: ${settings.x_handle}`] : []),
     ""
   );
 

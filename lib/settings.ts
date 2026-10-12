@@ -31,6 +31,7 @@ export type Settings = {
   whatsapp_number: string;
   card_note: string;
   instagram_handle: string;
+  x_handle: string;
   /** The App Store id, digits only. Empty means the site never mentions an
    *  iPhone app: no bar in Safari, no link in the footer. */
   ios_app_id: string;
@@ -197,6 +198,7 @@ export const EMPTY: Settings = {
   whatsapp_number: "",
   card_note: "",
   instagram_handle: "",
+  x_handle: "",
   ios_app_id: "",
   android_package: "",
   abroad_on: "",
@@ -343,6 +345,8 @@ export type GoogleQuote = {
   who: string;
   /** How many stars they left, 1 to 5. Five where none was recorded. */
   stars: number;
+  /** Where it sits on the band. Higher goes first; zero means unplaced. */
+  rank: number;
 };
 
 /**
@@ -363,6 +367,7 @@ export function googleQuotes(json: string | null | undefined): GoogleQuote[] {
         // Written long after the first reviews were pasted in, so a quote
         // without it is one of those: five, which is what they all were.
         stars: Math.min(5, Math.max(1, Math.round(Number(one?.stars) || 5))),
+        rank: Math.max(0, Math.round(Number(one?.rank) || 0)),
       }))
       .filter((one) => one.said !== "");
   } catch {
@@ -377,10 +382,42 @@ export function whatsappLink(number: string, message: string): string | null {
   return `https://wa.me/${international}?text=${encodeURIComponent(message)}`;
 }
 
-/** "@sudu.ng" or "sudu.ng" both work; the link needs it bare. */
+/**
+ * "@sudu.ng", "sudu.ng" or the whole address, all three.
+ *
+ * It took the handle bare and encoded whatever it was given, so the
+ * address somebody copies out of their own address bar came back as
+ * instagram.com/https%3A%2F%2Fwww.instagram.com%2Fsudustore. That is what
+ * was in the footer: a link to nothing, from a field that looked right in
+ * admin. Pasting a profile address is the reasonable thing to do, so it
+ * works.
+ */
 export function instagramLink(handle: string): string | null {
-  const name = handle.trim().replace(/^@/, "");
+  const name = bareHandle(handle, /^https?:\/\/(www\.)?instagram\.com\//i);
   return name ? `https://instagram.com/${encodeURIComponent(name)}` : null;
+}
+
+/** A handle out of whatever was typed: an address, an @, or the name. */
+function bareHandle(said: string, site: RegExp): string {
+  return said
+    .trim()
+    .replace(site, "")
+    .replace(/[/?#].*$/, "")
+    .replace(/^@/, "")
+    .trim();
+}
+
+/**
+ * The same for X, which is also still twitter.com to half the people who
+ * will paste a handle in here.
+ *
+ * A whole address pasted in works too: somebody copying their own profile
+ * from the address bar has done the reasonable thing, and rejecting it
+ * because it was not bare would be the site being pedantic at them.
+ */
+export function xLink(handle: string): string | null {
+  const name = bareHandle(handle, /^https?:\/\/(www\.)?(x|twitter)\.com\//i);
+  return name ? `https://x.com/${encodeURIComponent(name)}` : null;
 }
 
 /** The product page notes, one per line, with {restaurant} filled in. */

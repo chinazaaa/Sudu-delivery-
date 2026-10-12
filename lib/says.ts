@@ -8,8 +8,14 @@ import { googleQuotes, type GoogleQuote } from "./settings";
  * other. A customer who rated their own order is in the orders table with
  * the order they are talking about; somebody who left a review on Google
  * without ever ordering through the site has no order to attach it to, so
- * the shop types that one in. Both end up as the same three things: what
- * was said, who said it, how many stars.
+ * the shop types that one in.
+ *
+ * They are one list, in one order, and that is the whole point of this
+ * file. Gluing the two sources end to end gave the band an order nobody
+ * chose and no way to change: admin showed the order reviews above the
+ * typed ones and the site drew the typed one first, so moving a review in
+ * admin moved nothing anybody could see. Both kinds now carry the same
+ * rank, and the band is simply that list sorted.
  *
  * Nothing from an order appears until it is ticked on that review in admin.
  * Feedback is given in private, to the shop, by somebody answering a
@@ -22,17 +28,17 @@ function firstName(said: string): string {
   return said.trim().split(/\s+/)[0] ?? "";
 }
 
-/** One ticked review, with the order it belongs to, so admin can move it. */
-export type OrderSays = GoogleQuote & { id: string };
+/** Where one review came from, so admin knows which row to write back to. */
+export type Says = GoogleQuote &
+  ({ from: "order"; id: string } | { from: "typed"; at: number });
 
-/**
- * The ones a customer left on their own order and the shop ticked.
- *
- * Ranked first, newest second. The rank is zero on everything until
- * somebody moves one to the front, so out of the box this is still simply
- * newest first.
- */
-export async function saidOnOrders(): Promise<OrderSays[] | null> {
+/** What a button sends back to name one row of a two-source list. */
+export function keyOf(one: Says): string {
+  return one.from === "order" ? `order:${one.id}` : `typed:${one.at}`;
+}
+
+/** The ones a customer left on their own order and the shop ticked. */
+export async function saidOnOrders(): Promise<Says[] | null> {
   const { data, error } = await db()
     .from("orders")
     .select("id, customer_name, for_name, rating, feedback, rated_at, review_rank")
@@ -49,32 +55,57 @@ export async function saidOnOrders(): Promise<OrderSays[] | null> {
 
   return (data ?? [])
     .map((row: any) => ({
+      from: "order" as const,
       id: String(row.id),
       said: String(row.feedback ?? "").trim(),
       who: firstName(String(row.for_name || row.customer_name || "")),
       stars: Math.min(5, Math.max(1, Math.round(Number(row.rating) || 5))),
+      rank: Math.max(0, Math.round(Number(row.review_rank) || 0)),
     }))
     .filter((one) => one.said !== "");
 }
 
-export async function shownSays(typed: string | null | undefined): Promise<GoogleQuote[]> {
-  const hand = googleQuotes(typed);
+/**
+ * Both kinds, in the order the band draws them.
+ *
+ * Ranked first, highest leading. Anything unranked sits under the ranked
+ * ones in the order it arrived, which is how a shop that has never touched
+ * the order still gets a sensible band.
+ */
+export async function bandSays(typed: string | null | undefined): Promise<Says[]> {
+  const hand: Says[] = googleQuotes(typed).map((one, at) => ({
+    ...one,
+    from: "typed" as const,
+    at,
+  }));
   const fromOrders = await saidOnOrders();
   // A band that disappears because of one missing column is worse than a
   // band with fewer cards in it.
-  if (fromOrders === null) return hand;
+  const orders = fromOrders ?? [];
 
-  // Typed first, because those are the ones chosen for the front page. The
-  // same words from both sources is one review copied across rather than
-  // two people saying the same thing, so it is only shown once.
+  // The same words from both sources is one review copied across rather
+  // than two people saying the same thing, so it is only shown once.
   const seen = new Set(hand.map((one) => one.said.toLowerCase()));
-  return [
+  const both = [
     ...hand,
-    ...fromOrders.filter((one) => {
+    ...orders.filter((one) => {
       const key = one.said.toLowerCase();
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     }),
   ];
+
+  // Stable, so two unranked reviews keep the order they came in.
+  return both
+    .map((one, at) => ({ one, at }))
+    .sort((a, b) => b.one.rank - a.one.rank || a.at - b.at)
+    .map((row) => row.one);
+}
+
+/** What the band itself needs: the words, nothing about where they live. */
+export async function shownSays(
+  typed: string | null | undefined
+): Promise<GoogleQuote[]> {
+  return bandSays(typed);
 }

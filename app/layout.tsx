@@ -12,7 +12,7 @@ import ShopOnly from "@/components/ShopOnly";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import { offerNudge, publicOffer } from "@/lib/coupons";
-import { googleLinks, googleTagId, instagramLink, safeSettings } from "@/lib/settings";
+import { googleLinks, googleTagId, instagramLink, safeSettings, xLink } from "@/lib/settings";
 import { liveRibbon } from "@/lib/ribbon";
 import { closureNotice, closureSaid } from "@/lib/closures";
 import { qrSvg } from "@/lib/qr";
@@ -93,6 +93,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     () => null
   );
   const instagram = instagramLink(settings.instagram_handle);
+  const x = xLink(settings.x_handle);
   // Where the shop is on Google: the footer link, and the business details
   // a search engine reads below.
   const google = googleLinks(settings);
@@ -163,7 +164,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     // Every other page that is also this shop, so the ones that read this
     // can tell the website and the Google profile apart from two shops with
     // the same name.
-    sameAs: [instagram, google.profile].filter(Boolean),
+    sameAs: [instagram, x, google.profile].filter(Boolean),
   };
   const site = {
     "@context": "https://schema.org",
@@ -247,6 +248,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <SiteFooter
               line={settings.footer_line}
               instagram={instagram}
+              x={x}
               groupLink={settings.whatsapp_group_link}
               google={google.profile}
               showPromoterLink={showPromoterLink}
