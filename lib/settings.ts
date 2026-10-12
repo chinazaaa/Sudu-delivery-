@@ -338,7 +338,12 @@ export function googleLinks(settings: {
 }
 
 /** One review, as the shop pasted it. */
-export type GoogleQuote = { said: string; who: string };
+export type GoogleQuote = {
+  said: string;
+  who: string;
+  /** How many stars they left, 1 to 5. Five where none was recorded. */
+  stars: number;
+};
 
 /**
  * The quotes, parsed.
@@ -355,6 +360,9 @@ export function googleQuotes(json: string | null | undefined): GoogleQuote[] {
       .map((one) => ({
         said: String(one?.said ?? "").trim(),
         who: String(one?.who ?? "").trim(),
+        // Written long after the first reviews were pasted in, so a quote
+        // without it is one of those: five, which is what they all were.
+        stars: Math.min(5, Math.max(1, Math.round(Number(one?.stars) || 5))),
       }))
       .filter((one) => one.said !== "");
   } catch {

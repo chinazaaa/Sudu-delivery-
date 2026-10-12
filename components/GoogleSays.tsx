@@ -85,7 +85,10 @@ export default function GoogleSays({
                 key={one.said}
                 className="flex flex-col gap-3 rounded-2xl border-2 border-ink bg-paper p-5"
               >
-                <Stars />
+                {/* Their stars, not five by default: the shop has fours
+                    on its profile and showing them as fives would be
+                    writing a review nobody left. */}
+                <Stars out={one.stars} />
                 <blockquote className="text-[17px] leading-relaxed">
                   &ldquo;{one.said}&rdquo;
                 </blockquote>

@@ -2712,18 +2712,9 @@ export async function saveSettings(form: FormData): Promise<void> {
     }
   }
 
-  // The three review slots arrive as three pairs of fields and are kept as
-  // one column, because they are a list rather than three settings. Only
-  // the ones with words in them are kept, so clearing a box removes it.
-  if (form.get("quote_said_0") !== null) {
-    const quotes = [0, 1, 2]
-      .map((at) => ({
-        said: String(form.get(`quote_said_${at}`) ?? "").trim(),
-        who: String(form.get(`quote_who_${at}`) ?? "").trim(),
-      }))
-      .filter((one) => one.said !== "");
-    patch.google_quotes = quotes.length > 0 ? JSON.stringify(quotes) : "";
-  }
+  // The reviews used to arrive here as three pairs of fields. They have a
+  // page of their own now, at /admin/google, which writes the same column
+  // and is not limited to three.
 
   // Tick boxes say what to send; the setting holds what to stop. Unticked
   // boxes post nothing at all, so the form says it is answering this
