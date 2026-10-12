@@ -225,8 +225,13 @@ export default function Home({
                   <span className="ticket inline-block border-2 border-ink px-2.5 py-1.5">
                     On PAU campus since 2018
                   </span>
+                  {/* On a phone too. It was held back to keep the row of
+                      stickers to one line on a narrow screen, which cost
+                      the one claim nobody else on this campus can make, on
+                      the screen nearly everybody reads the page on. The row
+                      wraps; that is what it is for. */}
                   {award !== "" && (
-                    <span className="sticker hidden px-2.5 py-1.5 sm:inline-block">
+                    <span className="sticker inline-block px-2.5 py-1.5">
                       {award}
                     </span>
                   )}
