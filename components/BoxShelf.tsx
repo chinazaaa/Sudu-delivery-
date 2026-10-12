@@ -215,7 +215,10 @@ export default async function BoxShelf({
         </div>
       )}
 
-      {/* The other shelf, and then the menu. Neither of these is a dead end. */}
+      {/* The other shelf, and then the menu. Neither of these is a dead end.
+          The two were drawn side by side whatever they pointed at, which
+          since the two shelves became one is the same button twice: this
+          page's "other" is the menu, and so was the one beside it. */}
       {worth.length > 0 && (
         <section className="bleed border-t-2 border-ink bg-paper">
           <div className="shell flex flex-wrap items-center justify-between gap-5 py-10">
@@ -224,9 +227,11 @@ export default async function BoxShelf({
               <Link href={other.href} className="btn bg-ink text-white">
                 {other.said}
               </Link>
-              <Link href="/products" className="btn-quiet">
-                Put your own together
-              </Link>
+              {other.href !== "/products" && (
+                <Link href="/products" className="btn-quiet">
+                  Put your own together
+                </Link>
+              )}
             </div>
           </div>
         </section>
