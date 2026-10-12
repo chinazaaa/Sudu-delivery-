@@ -3,6 +3,7 @@ import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import { feedback } from "@/lib/analytics";
 import { runDateLabel } from "@/lib/time";
+import { showReview } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -119,6 +120,24 @@ export default async function ReviewsPage({
               </div>
               {one.feedback.trim() !== "" && (
                 <p className="mt-1 text-sm text-ink/80">{one.feedback}</p>
+              )}
+              {/* Only a review with words in it is worth printing, and only
+                  once somebody has said so: this is private feedback until
+                  it is ticked. First name only on the site. */}
+              {one.feedback.trim() !== "" && (
+                <form action={showReview} className="mt-2 flex items-center gap-2">
+                  <input type="hidden" name="id" value={one.id} />
+                  <input type="hidden" name="on" value={one.shown ? "no" : "yes"} />
+                  <button
+                    className={`chip py-1 text-xs ${
+                      one.shown
+                        ? "border-mint bg-mint/20 font-semibold"
+                        : "border-black/10 bg-white text-muted"
+                    }`}
+                  >
+                    {one.shown ? "On the site" : "Put on the site"}
+                  </button>
+                </form>
               )}
             </li>
           ))}

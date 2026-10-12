@@ -261,6 +261,8 @@ export type Verdict = {
   feedback: string;
   when: string;
   run: string;
+  /** Whether the shop has put this one on the site. */
+  shown: boolean;
 };
 
 export type Feedback = {
@@ -288,7 +290,9 @@ export async function feedback(days = 28): Promise<Feedback> {
 
   const { data } = await db()
     .from("orders")
-    .select("id, order_no, customer_name, for_name, rating, feedback, rated_at, batch_id")
+    .select(
+      "id, order_no, customer_name, for_name, rating, feedback, rated_at, batch_id, show_review"
+    )
     .not("rating", "is", null)
     .gte("rated_at", since)
     .order("rated_at", { ascending: false })
@@ -303,6 +307,7 @@ export async function feedback(days = 28): Promise<Feedback> {
     feedback: string;
     rated_at: string;
     batch_id: string;
+    show_review: boolean | null;
   }[];
 
   const spread: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
@@ -324,6 +329,7 @@ export async function feedback(days = 28): Promise<Feedback> {
       feedback: row.feedback,
       when: row.rated_at,
       run: labels.get(row.batch_id) ?? "",
+      shown: row.show_review === true,
     })),
     recent: rows
       .filter((row) => row.feedback.trim() !== "")
@@ -336,6 +342,7 @@ export async function feedback(days = 28): Promise<Feedback> {
         feedback: row.feedback,
         when: row.rated_at,
         run: labels.get(row.batch_id) ?? "",
+        shown: row.show_review === true,
       })),
   };
 }

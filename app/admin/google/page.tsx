@@ -4,6 +4,7 @@ import PageHeader from "@/components/admin/PageHeader";
 import Panel from "@/components/admin/Panel";
 import Stars from "@/components/Stars";
 import { getSettings, googleLinks, googleQuotes } from "@/lib/settings";
+import { saidOnOrders } from "@/lib/says";
 import { addQuote, raiseQuote, removeQuote, saveQuote, saveScore } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,9 @@ export default async function GoogleReviewsAdmin() {
   const settings = await getSettings();
   const quotes = googleQuotes(settings.google_quotes);
   const google = googleLinks(settings);
+  // The other half of the band: reviews customers left on their own orders
+  // and somebody ticked on the Reviews page.
+  const onOrders = await saidOnOrders();
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -150,9 +154,54 @@ export default async function GoogleReviewsAdmin() {
         </form>
       </Panel>
 
+      {/* Read-only here on purpose: these belong to an order, and the one
+          place to change your mind about one is beside the order it came
+          from. */}
       <Panel
-        title={`On the site${quotes.length > 0 ? ` · ${quotes.length}` : ""}`}
-        detail="In this order, top left first. Every one of them shows; there is no limit."
+        title={`From order reviews${onOrders && onOrders.length > 0 ? ` · ${onOrders.length}` : ""}`}
+        detail={
+          <>
+            Reviews customers left on their own orders, ticked onto the site
+            from{" "}
+            <Link href="/admin/reviews" className="font-semibold text-brand">
+              Reviews
+            </Link>
+            . They show under the typed ones, first name only.
+          </>
+        }
+      >
+        {onOrders === null ? (
+          <p className="text-sm text-red-700">
+            The database has not got the show_review column yet. Run
+            supabase/update.sql in Supabase.
+          </p>
+        ) : onOrders.length === 0 ? (
+          <p className="text-sm text-muted">
+            None ticked yet. Open{" "}
+            <Link href="/admin/reviews" className="font-semibold text-brand">
+              Reviews
+            </Link>{" "}
+            and press &ldquo;Put on the site&rdquo; under any one worth showing.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {onOrders.map((one, at) => (
+              <li
+                key={`${at}-${one.said}`}
+                className="flex flex-col gap-1.5 rounded-xl bg-black/[0.03] p-3"
+              >
+                <Stars out={one.stars} size={13} />
+                <p className="text-sm">{one.said}</p>
+                {one.who !== "" && <span className="text-xs text-muted">{one.who}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+
+      <Panel
+        title={`Typed in${quotes.length > 0 ? ` · ${quotes.length}` : ""}`}
+        detail="Reviews with no order behind them, copied off your profile. These lead the band, in this order."
       >
         {quotes.length === 0 ? (
           <p className="text-sm text-muted">

@@ -10,10 +10,10 @@ import Home from "@/components/Home";
 import { openBatches } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
 import { listSlides } from "@/lib/slides";
+import { shownSays } from "@/lib/says";
 import {
   activeBands,
   googleLinks,
-  googleQuotes,
   safeSettings,
   hoursByDay,
 } from "@/lib/settings";
@@ -245,7 +245,7 @@ export default async function HomePage() {
         ...googleLinks(settings),
         rating: Number(settings.google_rating) || 0,
         count: Number(settings.google_reviews) || 0,
-        quotes: googleQuotes(settings.google_quotes),
+        quotes: await shownSays(settings.google_quotes),
       }}
       iosAppId={settings.ios_app_id}
       androidPackage={settings.android_package}

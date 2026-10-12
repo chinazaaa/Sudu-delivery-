@@ -1208,3 +1208,18 @@ create index if not exists orders_box_idx on orders (box_id) where box_id is not
 -- Only ever an order nobody has paid for. Money that has moved needs a
 -- refund, which is a different thing and already has its own status.
 alter type order_status add value if not exists 'cancelled';
+
+-- A review the shop has chosen to put on the site.
+--
+-- Feedback on an order is given in private, to the shop, by somebody who was
+-- asked how their food was. Quoting that on the home page because it happens
+-- to be five stars is publishing a sentence nobody agreed to publish, so
+-- nothing is shown until this is ticked on that one review.
+--
+-- False everywhere to begin with, which is the honest default: every review
+-- already given stays private until somebody says otherwise.
+alter table orders
+  add column if not exists show_review boolean not null default false;
+
+create index if not exists orders_shown_review_idx
+  on orders (rated_at desc) where show_review;

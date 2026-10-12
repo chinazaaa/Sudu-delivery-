@@ -8,7 +8,8 @@ import { boxesAcross, liveOccasions, onShelf, type Occasion } from "@/lib/boxes"
 import { cheapestBoxes } from "@/lib/box-view";
 import { shelfPhotos } from "@/lib/shelf-photo";
 import { naira } from "@/lib/money";
-import { googleLinks, googleQuotes, safeSettings, whatsappLink } from "@/lib/settings";
+import { shownSays } from "@/lib/says";
+import { googleLinks, safeSettings, whatsappLink } from "@/lib/settings";
 
 /**
  * The page a parent is sent.
@@ -111,7 +112,7 @@ export default async function ParentsPage() {
     ...googleLinks(settings),
     rating: Number(settings.google_rating) || 0,
     count: Number(settings.google_reviews) || 0,
-    quotes: googleQuotes(settings.google_quotes),
+    quotes: await shownSays(settings.google_quotes),
   };
 
   const ask = whatsappLink(
