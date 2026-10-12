@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import LegalLayout, { Clause } from "@/components/LegalLayout";
 import { policyDate } from "@/lib/time";
 import Link from "next/link";
-import { safeSettings } from "@/lib/settings";
+import { safeSettings, shopEmails } from "@/lib/settings";
 import { parseAreas } from "@/lib/areas";
 import { liveRoutes, parcels, placesSaid } from "@/lib/parcels";
 import { naira } from "@/lib/money";
@@ -34,6 +34,7 @@ export const metadata: Metadata = {
 export default async function TermsPage() {
   const settings = await safeSettings();
   const whatsapp = settings.whatsapp_number;
+  const email = shopEmails(settings.contact_email);
 
   // Where the shop really goes, read from admin rather than written here.
   // Sangotedo is where most of the food comes from, not all of it, and a
@@ -213,6 +214,21 @@ export default async function TermsPage() {
           Anything we refund goes back to the account you paid from. Nothing
           here takes away any right you have under Nigerian consumer law.
         </p>
+        {/* The one channel that leaves both sides a record. A disagreement
+            about an order is the moment that starts to matter. */}
+        {email && (
+          <p>
+            In writing, if you would rather:{" "}
+            <a href={`mailto:${email.orders}`} className="font-semibold text-brand">
+              {email.orders}
+            </a>
+            . About these terms themselves,{" "}
+            <a href={`mailto:${email.terms}`} className="font-semibold text-brand">
+              {email.terms}
+            </a>
+            .
+          </p>
+        )}
       </Clause>
 
       <Clause n={8} title="Allergies and what is in the food">

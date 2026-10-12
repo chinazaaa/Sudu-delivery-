@@ -473,6 +473,23 @@ export default async function SettingsAdmin() {
                   />
                 </div>
                 <div>
+                  <label className="label" htmlFor="contact_email">Email address</label>
+                  <input
+                    id="contact_email"
+                    name="contact_email"
+                    type="email"
+                    defaultValue={settings.contact_email}
+                    placeholder="hello@sudu.store"
+                    className="field"
+                  />
+                  <p className="hint mt-1">
+                    The one written down. The legal pages use its neighbours on
+                    the same domain, so support@, orders@, privacy@ and terms@
+                    all have to arrive somewhere. Empty and the site offers no
+                    address at all.
+                  </p>
+                </div>
+                <div>
                   <label className="label" htmlFor="x_handle">X handle</label>
                   <input
                     id="x_handle"

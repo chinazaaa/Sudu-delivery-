@@ -32,6 +32,7 @@ export type Settings = {
   card_note: string;
   instagram_handle: string;
   x_handle: string;
+  contact_email: string;
   /** The App Store id, digits only. Empty means the site never mentions an
    *  iPhone app: no bar in Safari, no link in the footer. */
   ios_app_id: string;
@@ -199,6 +200,7 @@ export const EMPTY: Settings = {
   card_note: "",
   instagram_handle: "",
   x_handle: "",
+  contact_email: "hello@sudu.store",
   ios_app_id: "",
   android_package: "",
   abroad_on: "",
@@ -395,6 +397,44 @@ export function whatsappLink(number: string, message: string): string | null {
 export function instagramLink(handle: string): string | null {
   const name = bareHandle(handle, /^https?:\/\/(www\.)?instagram\.com\//i);
   return name ? `https://instagram.com/${encodeURIComponent(name)}` : null;
+}
+
+/** The shop's addresses: the one that is written down, and its neighbours. */
+export type ShopEmails = {
+  hello: string;
+  support: string;
+  orders: string;
+  privacy: string;
+  terms: string;
+};
+
+/**
+ * Five addresses from one.
+ *
+ * A page about returns should say orders@ and a page about data should say
+ * privacy@, because an address that says what it is for is read by a
+ * person before it is read by a mailbox. Written as five settings they
+ * would be five chances for four of them to still carry the old domain the
+ * day the shop moves, so only the first is typed and the rest are its
+ * neighbours.
+ *
+ * Nothing at all where no address is set: a mailto: to nowhere is worse
+ * than a page that only offers WhatsApp.
+ */
+export function shopEmails(said: string | null | undefined): ShopEmails | null {
+  const hello = String(said ?? "").trim().toLowerCase();
+  const at = hello.lastIndexOf("@");
+  if (at < 1 || at === hello.length - 1) return null;
+
+  const domain = hello.slice(at + 1);
+  const beside = (name: string) => `${name}@${domain}`;
+  return {
+    hello,
+    support: beside("support"),
+    orders: beside("orders"),
+    privacy: beside("privacy"),
+    terms: beside("terms"),
+  };
 }
 
 /** A handle out of whatever was typed: an address, an @, or the name. */

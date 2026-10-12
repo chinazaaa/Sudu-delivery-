@@ -13,7 +13,7 @@ import { adminStageLabel, adminStatusWord, STAGE_LABEL } from "../lib/stages";
 import { channelOfSite, tidyChannel, tidyHandle } from "../lib/came-from";
 import { weekAround } from "../lib/time";
 import { monthOf, nextMonth } from "../lib/standing";
-import { googleTagId, instagramLink, numberOr, xLink } from "../lib/settings";
+import { googleTagId, instagramLink, numberOr, shopEmails, xLink } from "../lib/settings";
 import { isExtra } from "../lib/shelf";
 import { cartsInTime, howLong, needsDoing } from "../lib/needs-doing";
 import { howPaid, orderStory } from "../lib/order-story";
@@ -3264,4 +3264,29 @@ test("a social handle survives being pasted as a whole address", () => {
   assert.equal(xLink("https://x.com/sudu_store"), "https://x.com/sudu_store");
   assert.equal(xLink("https://twitter.com/sudu_store"), "https://x.com/sudu_store");
   assert.equal(xLink(""), null);
+});
+
+/*
+ * Five addresses from one, so none of them can be left behind.
+ */
+test("the shop's other addresses are read off the one that is written down", () => {
+  const said = shopEmails("hello@sudu.store");
+  assert.deepEqual(said, {
+    hello: "hello@sudu.store",
+    support: "support@sudu.store",
+    orders: "orders@sudu.store",
+    privacy: "privacy@sudu.store",
+    terms: "terms@sudu.store",
+  });
+
+  // Whatever was typed, within reason.
+  assert.equal(shopEmails("  Hello@Sudu.Store ")?.privacy, "privacy@sudu.store");
+  // The domain moves and all five move with it.
+  assert.equal(shopEmails("hi@sudu.ng")?.orders, "orders@sudu.ng");
+
+  // Nothing rather than a mailto: to nowhere.
+  assert.equal(shopEmails(""), null);
+  assert.equal(shopEmails("not an address"), null);
+  assert.equal(shopEmails("@sudu.store"), null);
+  assert.equal(shopEmails("hello@"), null);
 });

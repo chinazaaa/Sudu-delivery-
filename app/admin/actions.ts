@@ -2571,6 +2571,7 @@ const SETTING_FIELDS = [
   "card_note",
   "instagram_handle",
   "x_handle",
+  "contact_email",
   "ios_app_id",
   "android_package",
   "abroad_on",

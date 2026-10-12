@@ -1239,3 +1239,11 @@ alter table orders
 -- cannot paste a profile address that turns out to be somebody's post.
 alter table settings
   add column if not exists x_handle text not null default '';
+
+-- Where somebody writes to, when WhatsApp is the wrong thing.
+--
+-- One address, and the rest are read off its domain: privacy@, support@,
+-- orders@, terms@. Five columns would be five chances for four of them to
+-- still say the old domain the day the shop moves.
+alter table settings
+  add column if not exists contact_email text not null default 'hello@sudu.store';

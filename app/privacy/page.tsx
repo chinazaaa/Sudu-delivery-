@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import LegalLayout, { Clause } from "@/components/LegalLayout";
 import { policyDate } from "@/lib/time";
-import { safeSettings } from "@/lib/settings";
+import { safeSettings, shopEmails } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +22,7 @@ export const metadata: Metadata = {
 export default async function PrivacyPage() {
   const settings = await safeSettings();
   const whatsapp = settings.whatsapp_number;
+  const email = shopEmails(settings.contact_email);
 
   // The date the shop typed, spelt out. Empty and the page says what it is
   // instead, which is better than a legal page carrying a date nobody set.
@@ -149,6 +150,18 @@ export default async function PrivacyPage() {
         {whatsapp && (
           <p>
             That number is <span className="font-semibold">{whatsapp}</span>.
+          </p>
+        )}
+        {/* In writing, for anybody who would rather ask in writing. A
+            request to be forgotten is exactly the sort of thing somebody
+            wants a record of having made. */}
+        {email && (
+          <p>
+            Or write to{" "}
+            <a href={`mailto:${email.privacy}`} className="font-semibold text-brand">
+              {email.privacy}
+            </a>
+            , from the address or about the number you ordered with.
           </p>
         )}
       </Clause>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { googleLinks, safeSettings, whatsappLink } from "@/lib/settings";
+import { googleLinks, safeSettings, shopEmails, whatsappLink } from "@/lib/settings";
 import PageHead from "@/components/PageHead";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +29,7 @@ export default async function SupportPage() {
     ? whatsappLink(whatsapp, "Hello Sudu, I need help with my order.")
     : null;
   const google = googleLinks(settings);
+  const email = shopEmails(settings.contact_email);
 
   return (
     <article className="-mt-4 pb-10">
@@ -159,6 +160,31 @@ export default async function SupportPage() {
             <p className="card text-sm text-ink/80">
               Message us on the WhatsApp number shown on your order.
             </p>
+          )}
+
+          {/* Under WhatsApp, not instead of it. WhatsApp is how a problem
+              with tonight's dinner gets solved; an address is for the
+              things nobody wants to put in a chat, and for anybody who
+              would rather have a record of what they asked. */}
+          {email && (
+            <div className="card flex flex-col gap-2">
+              <span className="font-bold">Or write to us</span>
+              <a href={`mailto:${email.support}`} className="font-mono text-sm hover:text-brand-dark">
+                {email.support}
+              </a>
+              <span className="text-sm text-muted">
+                Anything about an order:{" "}
+                <a href={`mailto:${email.orders}`} className="font-mono hover:text-brand-dark">
+                  {email.orders}
+                </a>
+              </span>
+              <span className="text-sm text-muted">
+                Anything else:{" "}
+                <a href={`mailto:${email.hello}`} className="font-mono hover:text-brand-dark">
+                  {email.hello}
+                </a>
+              </span>
+            </div>
           )}
 
           <div className="card flex flex-col gap-2">

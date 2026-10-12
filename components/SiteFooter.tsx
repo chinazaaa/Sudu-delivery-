@@ -21,6 +21,7 @@ export default function SiteFooter({
   line,
   instagram,
   x,
+  email,
   groupLink,
   google = "",
   showPromoterLink,
@@ -30,6 +31,8 @@ export default function SiteFooter({
   instagram: string | null;
   /** The shop on X. Empty and it is not offered. */
   x?: string | null;
+  /** Where to write. Empty and the footer offers no address. */
+  email?: string;
   groupLink: string;
   /** The shop's Google Business Profile. Empty and it is not offered. */
   google?: string;
@@ -77,6 +80,7 @@ export default function SiteFooter({
         // Both app stores require these at a public address, and they belong
         // where anybody can find them anyway.
         { href: "/support", said: "Contact us" },
+        ...(email ? [{ href: `mailto:${email}`, said: email, away: true }] : []),
         ...(groupLink ? [{ href: groupLink, said: "PAU WhatsApp group", away: true }] : []),
         ...(google ? [{ href: google, said: "Find us on Google", away: true }] : []),
         { href: "/privacy", said: "Privacy" },

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import LegalLayout, { Clause } from "@/components/LegalLayout";
 import { policyDate } from "@/lib/time";
 import Link from "next/link";
-import { safeSettings, whatsappLink } from "@/lib/settings";
+import { safeSettings, shopEmails, whatsappLink } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +30,7 @@ export const metadata: Metadata = {
  */
 export default async function ReturnPolicyPage() {
   const settings = await safeSettings();
+  const email = shopEmails(settings.contact_email);
   const whatsapp = whatsappLink(
     settings.whatsapp_number,
     "Hi Sudu, something was wrong with my order."
@@ -170,6 +171,15 @@ export default async function ReturnPolicyPage() {
             </a>
           </p>
         ) : null}
+        {email && (
+          <p>
+            Or in writing, to{" "}
+            <a href={`mailto:${email.orders}`} className="font-semibold text-brand">
+              {email.orders}
+            </a>
+            , with your order number and the photo attached.
+          </p>
+        )}
         <p className="text-muted">
           This sits alongside our{" "}
           <Link href="/terms" className="font-semibold text-brand">

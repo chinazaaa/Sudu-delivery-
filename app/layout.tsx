@@ -12,7 +12,14 @@ import ShopOnly from "@/components/ShopOnly";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import { offerNudge, publicOffer } from "@/lib/coupons";
-import { googleLinks, googleTagId, instagramLink, safeSettings, xLink } from "@/lib/settings";
+import {
+  googleLinks,
+  googleTagId,
+  instagramLink,
+  safeSettings,
+  shopEmails,
+  xLink,
+} from "@/lib/settings";
 import { liveRibbon } from "@/lib/ribbon";
 import { closureNotice, closureSaid } from "@/lib/closures";
 import { qrSvg } from "@/lib/qr";
@@ -94,6 +101,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   );
   const instagram = instagramLink(settings.instagram_handle);
   const x = xLink(settings.x_handle);
+  const email = shopEmails(settings.contact_email);
   // Where the shop is on Google: the footer link, and the business details
   // a search engine reads below.
   const google = googleLinks(settings);
@@ -148,6 +156,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     image: `${SITE.origin}/covers/sudu.png`,
     description: BLURB,
     telephone: settings.whatsapp_number || undefined,
+    // A written address as well as a number: several of the things that
+    // read this will not use a phone number at all.
+    email: email?.hello || undefined,
     priceRange: "₦₦",
     currenciesAccepted: "NGN",
     paymentAccepted: "Bank transfer, Card",
@@ -249,6 +260,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               line={settings.footer_line}
               instagram={instagram}
               x={x}
+              email={email?.hello ?? ""}
               groupLink={settings.whatsapp_group_link}
               google={google.profile}
               showPromoterLink={showPromoterLink}
