@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import BottomNav from "@/components/BottomNav";
 import Track from "@/components/Track";
+import ToTop from "@/components/ToTop";
 import GoogleTag from "@/components/GoogleTag";
 import Ribbon from "@/components/Ribbon";
 import OfferNudge from "@/components/OfferNudge";
@@ -265,6 +266,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           androidPackage={settings.android_package}
           appQr={appQr}
         />
+        {/* A new page opens at the top of itself, rather than showing the
+            footer for a frame on the way there. */}
+        <ToTop />
         {/* Counts a view after the page is up. Never in the way of anything. */}
         <Track />
         {/* The only third-party script on the shop, and only where Merchant
