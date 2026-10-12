@@ -91,7 +91,16 @@ export default function SiteFooter({
       <div className="shell">
         <div className="grid gap-8 sm:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div className="space-y-4">
-            <Wordmark size={40} tone="light" />
+            {/* The mark is the way home from the bottom of a long page,
+                which is where people look for it. It was the only one on
+                the site that was a picture rather than a link. */}
+            <Link
+              href="/"
+              aria-label="Sudu, home"
+              className="inline-block transition hover:opacity-80"
+            >
+              <Wordmark size={40} tone="light" />
+            </Link>
             {line !== "" && (
               <p className="max-w-[360px] leading-relaxed">{line}</p>
             )}
