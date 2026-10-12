@@ -108,8 +108,8 @@ export default async function AdminOccasionsPage() {
                       </span>
                       {/* The sum, written out, because "delivery ₦4,400"
                           on its own answers no question anybody has. The
-                          run price is the one that matters: it is what the
-                          shelf quotes and what nearly everybody pays. */}
+                          run price is the only one now: a box goes on a
+                          run and is not offered a car of its own. */}
                       <span className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs font-normal">
                         <span className="text-muted">
                           Food {naira(prices.get(box.id)?.food ?? 0)}
@@ -118,10 +118,7 @@ export default async function AdminOccasionsPage() {
                           + delivery {naira(box.run_fee)}
                         </span>
                         <span className="font-bold text-ink">
-                          = {naira(prices.get(box.id)?.onARun ?? 0)} on a run
-                        </span>
-                        <span className="text-muted">
-                          ({naira(prices.get(box.id)?.inACar ?? 0)} in a car of its own)
+                          = {naira(prices.get(box.id)?.onARun ?? 0)}
                         </span>
                       </span>
                       {/* A box with something off the menu in it cannot be

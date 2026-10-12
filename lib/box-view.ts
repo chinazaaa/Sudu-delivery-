@@ -1,8 +1,6 @@
 import { db } from "./supabase";
 import { priceLines, type PricedLine } from "./orders";
 import { openBatches } from "./batches";
-import { deliverySlots, slotsWorthOffering, type Slot } from "./same-day";
-import { hoursByDay, safeSettings } from "./settings";
 import { clockLabel, runDateLabel } from "./time";
 import { SLOT_LABEL } from "./config";
 import { cartOf, isTimed, type Box, type BoxLine, type Occasion } from "./boxes";
@@ -14,9 +12,10 @@ export const BOX_DAYS = 14;
 /**
  * One way of getting a box here, with what it costs that way.
  *
- * A run and a car of its own are the same food at two prices, and the
- * difference is worth seeing side by side: most people will take the run
- * and save the money, which is what the shop wants anyway.
+ * Always a run. A box used to be offered a car of its own as well, at a
+ * second price, and nobody took it: a box is planned food, and somebody
+ * who planned their food is not in the hurry that a car is for. The field
+ * stays because an order still records which it was.
  */
 export type WhenOption = {
   /** What a form sends back to say which one they picked. */
@@ -255,9 +254,9 @@ async function restaurantNames(ids: string[]): Promise<Map<string, string>> {
 /**
  * Every way this box could get to them, soonest first.
  *
- * Only things the shop has actually agreed to: runs that exist, and a car of
- * its own on a day it has hours for. Offering a Tuesday nobody is going to
- * drive is worse than not mentioning Tuesday.
+ * Only things the shop has actually agreed to: runs that exist. Offering a
+ * Tuesday nobody is going to drive is worse than not mentioning Tuesday,
+ * and a box in a car of its own is one of those: it is not offered.
  *
  * A timed occasion narrows this to one row and then to none, because a match
  * has a whistle and nothing after it is any use.
@@ -267,11 +266,9 @@ export async function whenOptions(
   box: Box,
   now: Date = new Date()
 ): Promise<WhenOption[]> {
-  const settings = await safeSettings();
-
   // Far enough to reach the thing itself. A fortnight is right for a games
   // night nobody has dated yet, and wrong for a match three weeks out that
-  // already has a run under it: the horizon would hide the very car the
+  // already has a run under it: the horizon would hide the very run the
   // occasion was pinned to.
   const days = isTimed(occasion)
     ? Math.max(
@@ -283,16 +280,6 @@ export async function whenOptions(
     : BOX_DAYS;
 
   const runs = (await openBatches(days)).filter((one) => !one.full);
-  const slots =
-    (settings.same_day_on || "") === "on"
-      ? slotsWorthOffering(
-          deliverySlots(now, await hoursByDay(), days),
-          runs.map((one) => ({
-            run_date: one.run_date,
-            window: one.delivery_window_text,
-          }))
-        )
-      : [];
 
   const onRuns: WhenOption[] = runs.map((run) => ({
     key: `run:${run.id}`,
@@ -305,24 +292,13 @@ export async function whenOptions(
     fee: box.run_fee,
   }));
 
-  const inCars: WhenOption[] = slots.map((slot: Slot) => ({
-    key: `car:${slot.at}`,
-    runId: "",
-    at: slot.at,
-    date: slot.date,
-    day: runDateLabel(slot.date),
-    window: slot.window,
-    onARun: false,
-    fee: box.car_fee,
-  }));
-
   if (!isTimed(occasion)) {
-    return [...onRuns, ...inCars].sort(byWhen);
+    return onRuns.sort(byWhen);
   }
 
-  // A time everybody shares. Before the cut-off it rides the run the shop
-  // put the occasion on. After that, a car of its own for as long as one
-  // could still land before the whistle. Then nothing, said plainly.
+  // A time everybody shares. It rides the run the shop put the occasion on,
+  // up to the cut-off, and after that there is nothing, said plainly: a box
+  // is not sent in a car of its own.
   const happens = new Date(occasion.happens_at ?? "").getTime();
   const closes = new Date(occasion.closes_at ?? "").getTime();
 
@@ -350,9 +326,7 @@ export async function whenOptions(
     }
   }
 
-  return Number.isFinite(happens)
-    ? inCars.filter((one) => new Date(one.at).getTime() <= happens)
-    : [];
+  return [];
 }
 
 const byWhen = (a: WhenOption, b: WhenOption): number =>
