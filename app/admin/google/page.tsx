@@ -5,7 +5,7 @@ import Panel from "@/components/admin/Panel";
 import Stars from "@/components/Stars";
 import { getSettings, googleLinks, googleQuotes } from "@/lib/settings";
 import { saidOnOrders } from "@/lib/says";
-import { addQuote, raiseQuote, removeQuote, saveQuote, saveScore } from "./actions";
+import { addQuote, leadWith, raiseQuote, removeQuote, saveQuote, saveScore } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -166,7 +166,8 @@ export default async function GoogleReviewsAdmin() {
             <Link href="/admin/reviews" className="font-semibold text-brand">
               Reviews
             </Link>
-            . They show under the typed ones, first name only.
+            . They show under the typed ones, first name only, in this
+            order: move the best one to the front and it leads the band.
           </>
         }
       >
@@ -192,7 +193,19 @@ export default async function GoogleReviewsAdmin() {
               >
                 <Stars out={one.stars} size={13} />
                 <p className="text-sm">{one.said}</p>
-                {one.who !== "" && <span className="text-xs text-muted">{one.who}</span>}
+                <div className="flex items-center gap-3">
+                  {one.who !== "" && (
+                    <span className="text-xs text-muted">{one.who}</span>
+                  )}
+                  {at > 0 && (
+                    <form action={leadWith} className="ml-auto">
+                      <input type="hidden" name="id" value={one.id} />
+                      <button className="text-xs font-semibold text-brand">
+                        Move to front
+                      </button>
+                    </form>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

@@ -1223,3 +1223,12 @@ alter table orders
 
 create index if not exists orders_shown_review_idx
   on orders (rated_at desc) where show_review;
+
+-- Which review leads the band.
+--
+-- Newest first is the honest default and the wrong shelf order: the best
+-- thing anybody ever wrote about the shop should not slide off the end
+-- because somebody else typed "ok" yesterday. Higher goes first; zero on
+-- everything means newest first, exactly as before.
+alter table orders
+  add column if not exists review_rank integer not null default 0;

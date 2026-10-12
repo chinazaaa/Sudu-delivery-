@@ -22,13 +22,23 @@ function firstName(said: string): string {
   return said.trim().split(/\s+/)[0] ?? "";
 }
 
-/** The ones a customer left on their own order and the shop ticked. */
-export async function saidOnOrders(): Promise<GoogleQuote[] | null> {
+/** One ticked review, with the order it belongs to, so admin can move it. */
+export type OrderSays = GoogleQuote & { id: string };
+
+/**
+ * The ones a customer left on their own order and the shop ticked.
+ *
+ * Ranked first, newest second. The rank is zero on everything until
+ * somebody moves one to the front, so out of the box this is still simply
+ * newest first.
+ */
+export async function saidOnOrders(): Promise<OrderSays[] | null> {
   const { data, error } = await db()
     .from("orders")
-    .select("customer_name, for_name, rating, feedback, rated_at")
+    .select("id, customer_name, for_name, rating, feedback, rated_at, review_rank")
     .eq("show_review", true)
     .not("rating", "is", null)
+    .order("review_rank", { ascending: false })
     .order("rated_at", { ascending: false })
     .limit(40);
 
@@ -39,6 +49,7 @@ export async function saidOnOrders(): Promise<GoogleQuote[] | null> {
 
   return (data ?? [])
     .map((row: any) => ({
+      id: String(row.id),
       said: String(row.feedback ?? "").trim(),
       who: firstName(String(row.for_name || row.customer_name || "")),
       stars: Math.min(5, Math.max(1, Math.round(Number(row.rating) || 5))),

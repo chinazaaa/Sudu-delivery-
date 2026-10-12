@@ -113,3 +113,34 @@ export async function saveScore(form: FormData): Promise<void> {
   revalidatePath("/admin/google");
   revalidatePath("/", "layout");
 }
+
+/**
+ * Put one order review at the front of the band.
+ *
+ * "To the front" rather than "up one". Moving nine cards up one at a time
+ * to get the good one leading is nine presses and a page reload each; the
+ * thing anybody actually wants is this one first, and they want it now.
+ */
+export async function leadWith(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const id = String(form.get("id") ?? "");
+  if (id === "") return;
+
+  const { data } = await db()
+    .from("orders")
+    .select("review_rank")
+    .eq("show_review", true)
+    .order("review_rank", { ascending: false })
+    .limit(1);
+  const top = Number((data ?? [])[0]?.review_rank ?? 0);
+
+  const { error } = await db()
+    .from("orders")
+    .update({ review_rank: top + 1 })
+    .eq("id", id);
+  if (error) throw new Error(`Could not save that: ${error.message}`);
+
+  revalidatePath("/admin/google");
+  revalidatePath("/", "layout");
+}

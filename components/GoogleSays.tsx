@@ -1,4 +1,5 @@
 import Stars from "./Stars";
+import SaysRail from "./SaysRail";
 import type { GoogleQuote } from "@/lib/settings";
 
 /**
@@ -78,27 +79,11 @@ export default function GoogleSays({
           </div>
         </div>
 
-        {quotes.length > 0 && (
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {quotes.map((one) => (
-              <li
-                key={one.said}
-                className="flex flex-col gap-3 rounded-2xl border-2 border-ink bg-paper p-5"
-              >
-                {/* Their stars, not five by default: the shop has fours
-                    on its profile and showing them as fives would be
-                    writing a review nobody left. */}
-                <Stars out={one.stars} />
-                <blockquote className="text-[17px] leading-relaxed">
-                  &ldquo;{one.said}&rdquo;
-                </blockquote>
-                {one.who !== "" && (
-                  <span className="ticket mt-auto text-muted">{one.who}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
+        {/* One row that scrolls, rather than a grid that grows down the
+            page. At three reviews there was no difference; at nine the grid
+            was three rows of cards and the band stopped being something you
+            glance at on the way past. */}
+        <SaysRail quotes={quotes} />
       </div>
     </section>
   );
