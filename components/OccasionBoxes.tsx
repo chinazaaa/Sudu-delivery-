@@ -91,9 +91,10 @@ export default function OccasionBoxes({
   const [pay, setPay] = useState<"transfer" | "card">(me?.paymentMethod ?? "transfer");
   const [money, setMoney] = useState("");
 
-  // Sooner than the shop can find it, buy it and pack it, so it costs what a
-  // car of its own costs. Worked out from dates the server sent, because a
-  // phone's clock is anybody's guess.
+  // Sooner than the shop can comfortably find it, buy it and pack it. It
+  // is still allowed and still costs the same: a box has one delivery
+  // price now, and the rush price it used to carry was the car fee, which
+  // is the one thing a box no longer does. Kept only to say so.
   const rush = !anyDay && wantedOn !== "" && wantedOn >= today && wantedOn < soonest;
 
   // A day that has already been. `min` on a date field is a hint rather than
@@ -163,7 +164,7 @@ export default function OccasionBoxes({
 
   const priceOf = (one: BoxView) =>
     one.food +
-    (car ? (car.onARun ? one.runFee : one.carFee) : one.runFee) +
+    one.runFee +
     (one === box ? moved(one, swaps) : 0);
 
   return (
@@ -441,14 +442,14 @@ export default function OccasionBoxes({
                         <span>
                           <span className="font-semibold">{one.window}</span>
                           <span className="block text-muted">
-                            {one.onARun ? "On the run" : "A car of its own"}
+                            On the run
                           </span>
                         </span>
                       </span>
                       <span className="shrink-0 font-semibold">
                         {naira(
                           box.food +
-                            (one.onARun ? box.runFee : box.carFee) +
+                            box.runFee +
                             moved(box, swaps)
                         )}
                       </span>
@@ -505,13 +506,13 @@ export default function OccasionBoxes({
                 ) : (
                   <p className="text-sm">
                     <span className="font-extrabold">
-                      {naira(box.food + (rush ? box.carFee : box.runFee) + moved(box, swaps))}
+                      {naira(box.food + box.runFee + moved(box, swaps))}
                     </span>{" "}
                     <span className="text-muted">
                       {anyDay
                         ? "delivery in it. We message you to agree the day."
                         : rush
-                          ? `delivery in it. Sooner than ${STANDARD_DAYS} days, so it is the rush price.`
+                          ? `delivery in it. Sooner than ${STANDARD_DAYS} days, so we will confirm we can pack it in time.`
                           : "delivery in it."}
                     </span>
                   </p>
@@ -742,7 +743,7 @@ export default function OccasionBoxes({
             {busy
               ? "Placing…"
               : `Order this box · ${naira(
-                  box.food + (car?.onARun === false ? box.carFee : box.runFee) + moved(box, swaps)
+                  box.food + box.runFee + moved(box, swaps)
                 )}`}
           </button>
         </form>

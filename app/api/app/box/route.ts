@@ -81,7 +81,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       return await finish(
         trip.id,
         "",
-        wanted !== "" && isUrgent(wanted) ? box.car_fee : box.run_fee,
+        // One price, whichever day they asked for: a box goes on a run,
+        // and the run price is the one carrying the delivery floors.
+        box.run_fee,
         wanted
       );
     }

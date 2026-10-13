@@ -87,7 +87,6 @@ async function order(form: FormData): Promise<BoxOrderState> {
       return { error: "Pick a day between today and three weeks from now." };
     }
 
-    const urgent = wanted !== "" && isUrgent(wanted);
     const trip = await tripForBox(
       wanted,
       wanted === "" ? `${occasion.name} · day to agree` : `${occasion.name} · ${box.name}`
@@ -97,7 +96,12 @@ async function order(form: FormData): Promise<BoxOrderState> {
     going = {
       runId: trip.id,
       at: "",
-      fee: urgent ? box.car_fee : box.run_fee,
+      // One price, whichever day they asked for. A box used to cost the
+      // car fee on a day close enough to count as urgent, which is the one
+      // thing a box no longer does: it goes on a run. That price also
+      // carries the floors, four thousand ordinarily and seven with Uncle
+      // Stan's in it, and car_fee carried neither.
+      fee: box.run_fee,
       wanted,
     };
   } else {
