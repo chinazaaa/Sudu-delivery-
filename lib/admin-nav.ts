@@ -72,6 +72,7 @@ export const GROUPS: Group[] = [
       { href: "/admin/money", label: "Other money" },
       { href: "/admin/analytics", label: "Analytics" },
       { href: "/admin/brands", label: "Brands" },
+      { href: "/admin/achievements", label: "Achievements" },
     ],
   },
   {

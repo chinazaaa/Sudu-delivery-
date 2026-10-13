@@ -217,6 +217,18 @@ export default async function OrdersPage({
   const closing = batches
     .filter((one) => one.status === "open")
     .sort((a, b) => a.cut_off_at.localeCompare(b.cut_off_at))[0];
+  // The soonest open run is not always today's. Saying "the run closes at
+  // 2pm" over a day with no run on it is the page inventing a deadline:
+  // there was nothing to order onto, and nothing closing.
+  const closesToday = closing !== undefined && closing.run_date === today;
+  // "closes at 2pm", or "Wednesday, closes at 2pm", so the sentence is
+  // true either way.
+  const closesWhen =
+    closing === undefined
+      ? ""
+      : closesToday
+        ? `closes at ${lagosClockWord(closing.cut_off_at)}`
+        : `${runDateLabel(closing.run_date)}, closing at ${lagosClockWord(closing.cut_off_at)}`;
 
   const unpaidTotal = orders
     .filter((order) => order.status === "pending")
@@ -291,11 +303,11 @@ export default async function OrdersPage({
         <PageHeader
           title="Orders"
           detail={
-            closing
-              ? `Today's orders, and anything still owed. The run closes at ${lagosClockWord(
-                  closing.cut_off_at
-                )}.`
-              : "Today's orders, and anything still owed from a run that has gone."
+            closesToday
+              ? `Today's orders, and anything still owed. The run ${closesWhen}.`
+              : closing
+                ? `Today's orders, and anything still owed. Nothing is running today; the next run is ${closesWhen}.`
+                : "Today's orders, and anything still owed from a run that has gone."
           }
         />
         {cuts}
@@ -400,9 +412,11 @@ export default async function OrdersPage({
           </strong>
           <p className="hint">
             {todays.length === 0
-              ? closing
-                ? `Nothing is on today's run yet. It closes at ${lagosClockWord(closing.cut_off_at)}.`
-                : "No run is open, so nothing can be ordered onto today."
+              ? closesToday
+                ? `Nothing is on today's run yet. It ${closesWhen}.`
+                : closing
+                  ? `No run today. The next one is ${closesWhen}.`
+                  : "No run is open, so nothing can be ordered onto today."
               : jobs === 0
                 ? `All ${todays.length} of today's ${
                     todays.length === 1 ? "order has" : "orders have"
