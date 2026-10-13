@@ -165,6 +165,25 @@ export function agoLabel(iso: string, now: Date = new Date()): string {
   return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
+/**
+ * "5 October 2026, 2:56pm", for a thing that happened once and is being
+ * recorded rather than glanced at.
+ *
+ * Written out in full because it is read years later: "Mon 21 Sep" is right
+ * on a card about this week and useless on a board about the whole shop.
+ */
+export function lagosStamp(iso: string, withTime = true): string {
+  const when = new Date(iso);
+  if (Number.isNaN(when.getTime())) return "";
+  const day = new Intl.DateTimeFormat("en-NG", {
+    timeZone: TZ,
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(when);
+  return withTime ? `${day}, ${lagosClockWord(iso)}` : day;
+}
+
 /** "8:52am, Mon 21 Sep", for when the exact moment is what is wanted. */
 export function whenLabel(iso: string): string {
   const when = new Date(iso);

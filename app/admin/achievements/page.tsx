@@ -2,6 +2,7 @@ import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import { board, type Badge } from "@/lib/achievements";
 import { naira } from "@/lib/money";
+import { lagosStamp } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function AchievementsPage() {
   const { badges, earned, next } = await board();
-  const got = (one: Badge) => one.got >= one.goal;
+  const got = (one: Badge) => one.when !== "";
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -56,8 +57,11 @@ export default async function AchievementsPage() {
               key={one.id}
               className={`card ${done ? "border-l-4 border-mint" : ""}`}
             >
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="flex items-baseline gap-2">
+              {/* The family stays on the right beside the name rather than
+                  wrapping under it: it is a label, and a label that takes a
+                  line to itself reads as a heading. */}
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="flex min-w-0 items-baseline gap-2">
                   {/* Earned or not, said with a mark rather than a colour
                       alone: the board is read on a phone in daylight. */}
                   <span
@@ -72,10 +76,23 @@ export default async function AchievementsPage() {
                     {one.name}
                   </span>
                 </span>
-                <span className="ticket text-[10px] text-muted">{one.group}</span>
+                <span className="ticket flex-none text-[10px] text-muted">
+                  {one.group}
+                </span>
               </div>
 
               <p className="mt-0.5 pl-7 text-sm text-muted">{one.what}</p>
+
+              {/* The day it happened, which is the part worth keeping. Said
+                  as a date alone where the books only hold the day: profit
+                  is a run's takings less what that run cost, settled later,
+                  so it has no minute of its own and pretending otherwise
+                  would be inventing one. */}
+              {done && (
+                <p className="mt-1 pl-7 text-xs font-semibold text-ink/70">
+                  Earned {lagosStamp(one.when, one.exact)}
+                </p>
+              )}
 
               {/* The bar is the whole point of a locked one, and noise on an
                   earned one, which has already said what it took. */}
@@ -104,6 +121,5 @@ export default async function AchievementsPage() {
 /** A figure in the unit it was counted in. */
 function say(many: number, unit: Badge["unit"]): string {
   if (unit === "money") return naira(many);
-  if (unit === "rating") return many.toFixed(1);
   return many.toLocaleString("en-NG");
 }
