@@ -4,7 +4,7 @@ import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import { board, type Badge } from "@/lib/achievements";
 import { naira } from "@/lib/money";
-import { lagosStamp } from "@/lib/time";
+import { lagosStamp, lagosToday } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
 export default async function AchievementsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ group?: string; show?: string }>;
+  searchParams: Promise<{ group?: string; show?: string; when?: string }>;
 }) {
   const asked = await searchParams;
   const { badges, earned, next } = await board();
@@ -37,20 +37,51 @@ export default async function AchievementsPage({
   const family = families.includes(asked.group ?? "") ? asked.group! : "";
   const show = asked.show === "locked" || asked.show === "earned" ? asked.show : "";
 
+  // Which month a badge was earned in, on the shop's clock rather than the
+  // browser's: somebody reading this at half midnight is still in the day
+  // the shop is in.
+  const monthOf = (iso: string) => (iso === "" ? "" : lagosToday(new Date(iso)).slice(0, 7));
+  const thisMonth = lagosToday().slice(0, 7);
+
+  // Every month that has anything in it, newest first, each carrying its
+  // own count. "Ten in September, twenty in October" is the question, so
+  // the answer is on the chips rather than behind them.
+  const months = [...new Set(badges.map((one) => monthOf(one.when)).filter(Boolean))]
+    .sort()
+    .reverse()
+    .map((key) => ({
+      key,
+      many: badges.filter((one) => monthOf(one.when) === key).length,
+      said: new Date(`${key}-01T12:00:00Z`).toLocaleDateString("en-NG", {
+        month: "short",
+        year: "numeric",
+      }),
+    }));
+
+  const when = months.some((one) => one.key === asked.when) ? asked.when! : "";
+  const wanted = when;
+
+  const thisCount = badges.filter((one) => monthOf(one.when) === thisMonth).length;
+
   const shown = badges
     .filter((one) => family === "" || one.group === family)
     .filter((one) =>
       show === "" ? true : show === "earned" ? got(one) : !got(one)
-    );
+    )
+    // A month is a question about what was earned, so a locked badge has no
+    // answer to it and is not shown while one is picked.
+    .filter((one) => wanted === "" || monthOf(one.when) === wanted);
 
   // Every chip keeps whatever else is set, so picking a family does not
   // silently drop "locked only".
-  const to = (next: { group?: string; show?: string }) => {
+  const to = (next: { group?: string; show?: string; when?: string }) => {
     const bits = new URLSearchParams();
     const g = next.group ?? family;
     const h = next.show ?? show;
+    const w = next.when ?? when;
     if (g) bits.set("group", g);
     if (h) bits.set("show", h);
+    if (w) bits.set("when", w);
     const query = bits.toString();
     return query === "" ? "/admin/achievements" : `/admin/achievements?${query}`;
   };
@@ -99,6 +130,22 @@ export default async function AchievementsPage({
         </Chip>
       </div>
 
+      {/* When, for the one question a board gets asked after "how many":
+          are we still moving. The count rides on the chip, because that is
+          the answer and tapping through to find it is a step for nothing. */}
+      {months.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <Chip href={to({ when: "" })} on={when === ""}>
+            Any month
+          </Chip>
+          {months.map((one) => (
+            <Chip key={one.key} href={to({ when: one.key })} on={when === one.key}>
+              {one.said} · {one.many}
+            </Chip>
+          ))}
+        </div>
+      )}
+
       <div className="mb-4 flex flex-wrap gap-2">
         <Chip href={to({ group: "" })} on={family === ""}>
           Everything
@@ -112,6 +159,7 @@ export default async function AchievementsPage({
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Stat label="Earned" value={`${earned}/${badges.length}`} hint="On the board" />
+        <Stat label="This month" value={thisCount} hint="Badges earned" />
         <Stat
           label="Next"
           value={next ? say(next.goal, next.unit) : "—"}
@@ -126,7 +174,11 @@ export default async function AchievementsPage({
 
       {shown.length === 0 ? (
         <p className="card text-sm text-muted">
-          Nothing here under that filter.
+          {when === ""
+            ? "Nothing here under that filter."
+            : `Nothing was earned in ${
+                months.find((one) => one.key === when)?.said ?? "that month"
+              }${family === "" ? "" : ` under ${family}`}.`}
         </p>
       ) : (
       <ul className="space-y-2">
