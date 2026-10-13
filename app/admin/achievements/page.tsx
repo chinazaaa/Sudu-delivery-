@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import PageHeader from "@/components/admin/PageHeader";
+import Jump from "@/components/admin/Jump";
 import Stat from "@/components/admin/Stat";
 import { board, type Badge } from "@/lib/achievements";
 import { naira } from "@/lib/money";
@@ -46,7 +47,16 @@ export default async function AchievementsPage({
   // Every month that has anything in it, newest first, each carrying its
   // own count. "Ten in September, twenty in October" is the question, so
   // the answer is on the chips rather than behind them.
-  const months = [...new Set(badges.map((one) => monthOf(one.when)).filter(Boolean))]
+  // The month we are in is always on the list, even with nothing in it yet.
+  // Built only from months that have something, the first of November shows
+  // October at the top and no way to ask "what have we done this month",
+  // which is the question.
+  const months = [
+    ...new Set([
+      thisMonth,
+      ...badges.map((one) => monthOf(one.when)).filter(Boolean),
+    ]),
+  ]
     .sort()
     .reverse()
     .map((key) => ({
@@ -130,31 +140,30 @@ export default async function AchievementsPage({
         </Chip>
       </div>
 
-      {/* When, for the one question a board gets asked after "how many":
-          are we still moving. The count rides on the chip, because that is
-          the answer and tapping through to find it is a step for nothing. */}
-      {months.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          <Chip href={to({ when: "" })} on={when === ""}>
-            Any month
-          </Chip>
-          {months.map((one) => (
-            <Chip key={one.key} href={to({ when: one.key })} on={when === one.key}>
-              {one.said} · {one.many}
-            </Chip>
-          ))}
-        </div>
-      )}
-
-      <div className="mb-4 flex flex-wrap gap-2">
-        <Chip href={to({ group: "" })} on={family === ""}>
-          Everything
-        </Chip>
-        {families.map((one) => (
-          <Chip key={one} href={to({ group: one })} on={family === one}>
-            {one}
-          </Chip>
-        ))}
+      {/* Two dropdowns rather than two dozen chips. Eighteen families drew
+          eight rows of buttons above the thing they were filtering, which
+          is a menu pretending to be a toolbar. The month keeps its count in
+          the option, because that is the answer and not a step towards it. */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Jump
+          label="Family"
+          value={to({ group: family })}
+          options={[
+            { href: to({ group: "" }), said: "Everything" },
+            ...families.map((one) => ({ href: to({ group: one }), said: one })),
+          ]}
+        />
+        <Jump
+          label="Month"
+          value={to({ when })}
+          options={[
+            { href: to({ when: "" }), said: "Any month" },
+            ...months.map((one) => ({
+              href: to({ when: one.key }),
+              said: `${one.said} · ${one.many}`,
+            })),
+          ]}
+        />
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
