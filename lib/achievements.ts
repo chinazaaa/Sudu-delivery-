@@ -146,9 +146,8 @@ async function history(): Promise<{
       ),
     db()
       .from("carts")
-      .select("alerted_at, converted_at")
-      .not("alerted_at", "is", null)
-      .not("converted_at", "is", null)
+      .select("handled_at, handled_reason")
+      .not("handled_at", "is", null)
       .limit(5_000)
       .then(
         (answer) => (answer.data ?? []) as Record<string, any>[],
@@ -258,13 +257,6 @@ async function history(): Promise<{
     oneBlock.push({ ...when, by: many });
   }
 
-  // A basket somebody walked away from, that a nudge brought back. Only
-  // where the nudge came first: a cart bought before anybody chased it was
-  // never left behind, it was somebody taking their time.
-  const rescued: Happening[] = cartRows
-    .filter((row) => String(row.converted_at) > String(row.alerted_at))
-    .map((row) => ({ at: String(row.converted_at), by: 1, exact: true }));
-
   // Orders a promoter's link brought in, and how many promoters have
   // brought one. Two different things: nine people with a code and nothing
   // through any of them is not a promoter programme, and only the second
@@ -320,7 +312,7 @@ async function history(): Promise<{
   const mixed: Happening[] = [];
   const throughKitchen = new Map<string, number>();
   const bestKitchen: Happening[] = [];
-  const groupsSeen = new Set<string>();
+  const groupsSeen = new Map<string, number>();
   const shared: Happening[] = [];
   for (const row of inOrder) {
     const order = String(row.id ?? "");
@@ -335,17 +327,39 @@ async function history(): Promise<{
       bestKitchen.push({ at, by: sofar, exact });
     }
 
+    // A shared delivery is two people on one fee. Somebody who started a
+    // group and had nobody join carries a group_id and is on their own, so
+    // counting the id counted a group of one. Dated to the second person
+    // paying, which is the moment it became shared.
     const group = String(row.group_id ?? "");
-    if (group !== "" && !groupsSeen.has(group)) {
-      groupsSeen.add(group);
-      shared.push({ at, by: 1, exact });
+    if (group !== "") {
+      const many = (groupsSeen.get(group) ?? 0) + 1;
+      groupsSeen.set(group, many);
+      if (many === 2) shared.push({ at, by: 1, exact });
     }
   }
 
+  /*
+   * A basket somebody walked away from that you went and got back.
+   *
+   * Taken from the button you press on the carts page, not from anything
+   * the site worked out for itself. The first version counted a cart that
+   * had been "alerted" and later bought, and alerted_at is the eight
+   * o'clock email to the shop rather than a word to the customer: nobody
+   * had been chased, they came back on their own, and one order closing
+   * two of their carts counted twice.
+   *
+   * Marked by hand means somebody decided it, which is the only way this
+   * is worth counting.
+   */
+  const rescued: Happening[] = cartRows
+    .filter((row) => String(row.handled_reason ?? "").toLowerCase().startsWith("ordered"))
+    .map((row) => ({ at: String(row.handled_at), by: 1, exact: true }));
+
   const streams: Record<string, Happening[]> = {
+    rescued,
     blocks,
     oneBlock,
-    rescued,
     referred,
     earners,
     mixed,
@@ -559,9 +573,9 @@ export async function board(): Promise<Board> {
       [10, "Ten earning", "10 promoters have brought in an order"],
     ]),
     tier("rescued", "Baskets saved", at("rescued"), "count", [
-      [1, "Brought back", "Somebody left a basket, you asked, and they bought it"],
-      [10, "Ten brought back", "10 abandoned baskets chased and bought"],
-      [50, "Fifty brought back", "50 abandoned baskets chased and bought"],
+      [1, "Brought back", "A left basket you marked as ordered another way"],
+      [10, "Ten brought back", "10 baskets brought back"],
+      [50, "Fifty brought back", "50 baskets brought back"],
     ]),
     best("block", "One block", at("oneBlock"), "count", [
       [5, "A block that knows you", "5 bags into the same hostel"],
