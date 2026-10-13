@@ -81,7 +81,7 @@ async function history(): Promise<{
   /** How many blocks are on the list, so "every block" is a real goal. */
   blockCount: number;
 }> {
-  const [money, orderRows, customerRows, batchRows, kitchenRows, hostelRows] =
+  const [money, orderRows, customerRows, batchRows, kitchenRows, cartRows, hostelRows] =
     await Promise.all([
     profitBetween(DAY_ONE, lagosToday()),
     db()
@@ -115,6 +115,16 @@ async function history(): Promise<{
       .from("restaurants")
       .select("created_at, active")
       .limit(1_000)
+      .then(
+        (answer) => (answer.data ?? []) as Record<string, any>[],
+        () => [] as Record<string, any>[]
+      ),
+    db()
+      .from("carts")
+      .select("alerted_at, converted_at")
+      .not("alerted_at", "is", null)
+      .not("converted_at", "is", null)
+      .limit(5_000)
       .then(
         (answer) => (answer.data ?? []) as Record<string, any>[],
         () => [] as Record<string, any>[]
@@ -223,9 +233,17 @@ async function history(): Promise<{
     oneBlock.push({ ...when, by: many });
   }
 
+  // A basket somebody walked away from, that a nudge brought back. Only
+  // where the nudge came first: a cart bought before anybody chased it was
+  // never left behind, it was somebody taking their time.
+  const rescued: Happening[] = cartRows
+    .filter((row) => String(row.converted_at) > String(row.alerted_at))
+    .map((row) => ({ at: String(row.converted_at), by: 1, exact: true }));
+
   const streams: Record<string, Happening[]> = {
     blocks,
     oneBlock,
+    rescued,
     took: paid.map((row) => ({
       at: String(row.paid_at || row.created_at),
       by: Number(row.total ?? 0),
@@ -406,6 +424,11 @@ export async function board(): Promise<Board> {
             string,
           ][])
         : []),
+    ]),
+    tier("rescued", "Baskets saved", at("rescued"), "count", [
+      [1, "Brought back", "Somebody left a basket, you asked, and they bought it"],
+      [10, "Ten brought back", "10 abandoned baskets chased and bought"],
+      [50, "Fifty brought back", "50 abandoned baskets chased and bought"],
     ]),
     best("block", "One block", at("oneBlock"), "count", [
       [5, "A block that knows you", "5 bags into the same hostel"],
