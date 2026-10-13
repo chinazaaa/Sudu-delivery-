@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+
+import { ownsThePage } from "@/lib/chrome";
 import { useEffect, useState } from "react";
 import { PARTY_CHANGED, readGroup } from "./GroupLink";
 import { countItems, useCart } from "@/lib/cart";
@@ -32,7 +34,7 @@ export default function BottomNav() {
   // The promoter's page is not the shop either: the tab bar floated over
   // the end of it, and the way back to the shop is a line at the bottom of
   // the page where the board puts it.
-  if (path.startsWith("/admin") || path.startsWith("/promoter")) return null;
+  if (ownsThePage(path)) return null;
 
   const tabs = [
     // Everything there is, one list with filters, rather than the front

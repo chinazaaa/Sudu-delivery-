@@ -2,6 +2,8 @@
 
 import { usePathname } from "next/navigation";
 
+import { ownsThePage } from "@/lib/chrome";
+
 /**
  * The column the shop is read in, and the one place that is wrong.
  *
@@ -21,12 +23,12 @@ import { usePathname } from "next/navigation";
  */
 export default function Frame({ children }: { children: React.ReactNode }) {
   const path = usePathname();
-  const ownsThePage = path.startsWith("/admin") || path.startsWith("/promoter");
+  const bare = ownsThePage(path);
 
   return (
     <main
       className={
-        ownsThePage ? "w-full" : "mx-auto w-full max-w-[1240px] px-4 pt-4 sm:px-8"
+        bare ? "w-full" : "mx-auto w-full max-w-[1240px] px-4 pt-4 sm:px-8"
       }
     >
       {children}

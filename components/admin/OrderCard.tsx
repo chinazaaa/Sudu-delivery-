@@ -369,6 +369,21 @@ export default function OrderCard({
           </form>
         ) : null}
 
+        {/* Only on an order somebody has actually paid for. A receipt for
+            money that has not arrived is a demand with the wrong word at
+            the top of it. Opens in its own tab, because it is a document
+            to send rather than a page to come back from. */}
+        {(order.status === "paid" || order.status === "delivered") && (
+          <a
+            href={`/receipt/${order.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-admin btn-admin-sm"
+          >
+            Receipt
+          </a>
+        )}
+
         {offer.map((item) => (
           <a
             key={item.kind}

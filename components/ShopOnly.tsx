@@ -2,6 +2,8 @@
 
 import { usePathname } from "next/navigation";
 
+import { ownsThePage } from "@/lib/chrome";
+
 /**
  * The shop's own furniture, which admin and the promoter's page are not
  * part of.
@@ -15,6 +17,6 @@ import { usePathname } from "next/navigation";
  */
 export default function ShopOnly({ children }: { children: React.ReactNode }) {
   const path = usePathname();
-  if (path.startsWith("/admin") || path.startsWith("/promoter")) return null;
+  if (ownsThePage(path)) return null;
   return <>{children}</>;
 }

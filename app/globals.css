@@ -339,3 +339,41 @@ body {
     animation: none;
   }
 }
+
+/*
+ * Printing, which on a phone is how a page becomes a PDF to send.
+ *
+ * Only the receipt is printed deliberately, but these rules are kept
+ * general: anything marked no-print is furniture, and furniture has no
+ * business on paper. Backgrounds are forced on, because a receipt whose
+ * Volt "PAID" sticker and Ink rules drop out is a grey document that could
+ * have come from anywhere.
+ */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #ffffff;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  /* The brand survives the printer. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Nothing a document should be split across two pages in the middle of. */
+  article,
+  li,
+  section,
+  footer {
+    break-inside: avoid;
+  }
+}

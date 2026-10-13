@@ -1,6 +1,8 @@
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
+
+import { ownsThePage } from "@/lib/chrome";
 import { Suspense, useEffect } from "react";
 import {
   FROM_COOKIE,
@@ -82,7 +84,7 @@ function Counter() {
   const query = useSearchParams();
 
   useEffect(() => {
-    if (!path || path.startsWith("/admin") || path.startsWith("/promoter")) return;
+    if (!path || ownsThePage(path)) return;
 
     // Where they came from, remembered for ninety days and never
     // overwritten: whatever introduced somebody introduced them once, and a

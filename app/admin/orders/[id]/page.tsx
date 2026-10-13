@@ -260,6 +260,20 @@ async function orderPage(id: string, said: string) {
             <Link href={`/admin/batch/${order.batch_id}`} className="btn-admin">
               {runLabel === "" ? "Open its run" : `On ${runLabel}`}
             </Link>
+            {/* Somebody asking for their receipt two days later comes here,
+                by name or by number, which is the one page that can always
+                be found again. Paid orders only: a receipt for money that
+                has not arrived is a demand with the wrong word on it. */}
+            {(order.status === "paid" || order.status === "delivered") && (
+              <a
+                href={`/receipt/${order.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-admin"
+              >
+                Receipt
+              </a>
+            )}
             {/* These two stand in the bar at the bottom on a phone, which is
                 where the board puts them and where the thumb is. Here from
                 `lg`, where the mouse is already in the header. */}

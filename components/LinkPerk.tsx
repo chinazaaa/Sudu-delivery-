@@ -1,6 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+
+import { ownsThePage } from "@/lib/chrome";
 import { useEffect, useState } from "react";
 
 /**
@@ -32,7 +34,7 @@ export default function LinkPerk({ who, line }: { who: string; line: string }) {
   // Not over the admin or the promoter portal. Whoever is signed in there
   // opened a promoter's link at some point to see what it did, and has been
   // told a friend sent them on every page of their own shop since.
-  if (path?.startsWith("/admin") || path?.startsWith("/promoter")) return null;
+  if (ownsThePage(path)) return null;
   if (shut) return null;
 
   return (

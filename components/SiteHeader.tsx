@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+
+import { ownsThePage } from "@/lib/chrome";
 import { useEffect, useRef, useState } from "react";
 import Wordmark from "./Wordmark";
 import { countItems, useCart } from "@/lib/cart";
@@ -92,7 +94,7 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
   // The promoter's page draws its own Ink bar, the same way admin does, and
   // the board has nothing above it. Two bars stacked was a shop header over
   // a page that is not the shop.
-  if (path.startsWith("/admin") || path.startsWith("/promoter")) return null;
+  if (ownsThePage(path)) return null;
 
   const deep = path !== "/";
 
