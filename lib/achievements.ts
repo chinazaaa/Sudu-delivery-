@@ -76,7 +76,7 @@ async function history(): Promise<Record<string, Happening[]>> {
     db()
       .from("orders")
       .select(
-        "status, total, box_id, rating, rated_at, paid_at, done_at, created_at, customer_phone"
+        "status, total, box_id, rating, rated_at, paid_at, done_at, created_at, customer_phone, batch_id"
       )
       .order("created_at")
       .limit(10_000)
@@ -94,7 +94,7 @@ async function history(): Promise<Record<string, Happening[]>> {
       ),
     db()
       .from("batches")
-      .select("status, settled_at, run_date")
+      .select("id, status, settled_at, run_date")
       .limit(10_000)
       .then(
         (answer) => (answer.data ?? []) as Record<string, any>[],
@@ -112,6 +112,9 @@ async function history(): Promise<Record<string, Happening[]>> {
 
   const settled = new Set(["paid", "delivered"]);
   const paid = orderRows.filter((row) => settled.has(String(row.status)));
+
+  // Which runs actually carried a bag.
+  const carried = new Set(paid.map((row) => String(row.batch_id)).filter(Boolean));
 
   // Somebody who came back is the one number that says whether any of this
   // is working, and the moment that counts is their second order, not their
@@ -154,7 +157,13 @@ async function history(): Promise<Record<string, Happening[]>> {
         exact: Boolean(row.done_at || row.paid_at),
       })),
     runs: batchRows
-      .filter((row) => String(row.status) === "closed")
+      // A run that carried something, which is the only kind worth
+      // counting. This was every batch marked closed, and a batch closes
+      // whether or not anybody ordered onto it: the badge was counting
+      // twenty empty Tuesdays and missing the fifteen real runs, which are
+      // marked delivered rather than closed. Asked of the orders instead,
+      // so no status can lie about it.
+      .filter((row) => carried.has(String(row.id)))
       .map((row) => ({
         at: String(row.settled_at || row.run_date),
         by: 1,
