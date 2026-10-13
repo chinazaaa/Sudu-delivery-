@@ -76,10 +76,11 @@ export default async function DeliveryToPauPage() {
       q: "How much is delivery to PAU?",
       a: cheapest
         ? `Delivery starts at ${naira(cheapest.fee)} for up to ${cheapest.maxItems} ` +
-          "items, and it is one fee for the car rather than a fee each. When " +
-          "several people order on the same run it is split between them."
-        : "Delivery is one fee for the car rather than a fee each, and it is " +
-          "split between everybody who orders on the same run.",
+          "items, and it is one fee for the whole order rather than a fee per " +
+          "item. Start a shared delivery with friends and that one fee is " +
+          "split between everybody in it."
+        : "Delivery is one fee for the order rather than a fee per item, and " +
+          "a shared delivery splits that fee between everybody in it.",
     },
     {
       q: "What restaurants deliver to PAU?",
@@ -314,8 +315,8 @@ export default async function DeliveryToPauPage() {
               ))}
             </ul>
             <p className="pt-1">
-              Order with other people on the same run and that one fee is split
-              between you, which is the whole point of a run.
+              Start a shared delivery and that one fee is split between
+              everybody in it, which is the cheapest way to order here.
             </p>
           </>
         ) : (

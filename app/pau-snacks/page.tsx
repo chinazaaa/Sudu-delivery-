@@ -23,7 +23,7 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
 const TITLE = "Snacks delivered to PAU, Ibeju-Lekki";
 const BLURB =
   "Small chops, doughnuts, ice cream, wings, pizza and drinks brought to " +
-  "your hostel at Pan-Atlantic University. One car, one delivery fee split " +
+  "your hostel at Pan-Atlantic University. One car, and a delivery fee you " +
   "between everybody on the run.";
 
 export const metadata: Metadata = {
@@ -69,9 +69,11 @@ export default async function PauSnacksPage() {
         ? `The snacks cost what they cost, and delivery starts at ${naira(
             cheapest.fee
           )} for the car rather than a fee each. Order on the same run as ` +
-          "your friends and that one fee splits between all of you."
+          "your friends in a shared delivery and that one fee splits between " +
+          "all of you."
         : "The snacks cost what they cost, and delivery is one fee for the " +
-          "car rather than a fee each, split between everybody on the run.",
+          "whole order rather than a fee per item, and a shared delivery " +
+          "splits it between everybody in it.",
     },
     {
       q: "Can a few of us order snacks together?",

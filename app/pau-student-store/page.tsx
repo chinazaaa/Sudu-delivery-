@@ -193,8 +193,8 @@ export default async function PauStudentStorePage() {
         <Section title="Why it is cheaper to order together">
           <p>
             The delivery fee is for the car, not for what is in it. One person
-            ordering a month of foodstuff pays it alone; four people ordering
-            on the same run split it four ways and each still gets their own
+            ordering a month of foodstuff pays it alone; four people in one
+            shared delivery split it four ways and each still gets their own
             labelled bag.{" "}
             <Link href="/group" className="font-bold text-brand">
               Start a shared delivery
