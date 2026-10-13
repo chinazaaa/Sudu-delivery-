@@ -81,13 +81,22 @@ async function history(): Promise<{
   /** How many blocks are on the list, so "every block" is a real goal. */
   blockCount: number;
 }> {
-  const [money, orderRows, customerRows, batchRows, kitchenRows, cartRows, hostelRows] =
-    await Promise.all([
+  const [
+    money,
+    orderRows,
+    customerRows,
+    batchRows,
+    kitchenRows,
+    lineRows,
+    itemRows,
+    cartRows,
+    hostelRows,
+  ] = await Promise.all([
     profitBetween(DAY_ONE, lagosToday()),
     db()
       .from("orders")
       .select(
-        "status, total, box_id, rating, rated_at, paid_at, done_at, created_at, customer_phone, batch_id, hostel"
+        "id, status, total, box_id, rating, rated_at, paid_at, done_at, created_at, customer_phone, batch_id, hostel, promoter_code, group_id"
       )
       .order("created_at")
       .limit(10_000)
@@ -115,6 +124,22 @@ async function history(): Promise<{
       .from("restaurants")
       .select("created_at, active")
       .limit(1_000)
+      .then(
+        (answer) => (answer.data ?? []) as Record<string, any>[],
+        () => [] as Record<string, any>[]
+      ),
+    db()
+      .from("order_items")
+      .select("order_id, menu_item_id, qty, unit_price_at_order")
+      .limit(50_000)
+      .then(
+        (answer) => (answer.data ?? []) as Record<string, any>[],
+        () => [] as Record<string, any>[]
+      ),
+    db()
+      .from("menu_items")
+      .select("id, restaurant_id")
+      .limit(20_000)
       .then(
         (answer) => (answer.data ?? []) as Record<string, any>[],
         () => [] as Record<string, any>[]
@@ -240,10 +265,92 @@ async function history(): Promise<{
     .filter((row) => String(row.converted_at) > String(row.alerted_at))
     .map((row) => ({ at: String(row.converted_at), by: 1, exact: true }));
 
+  // Orders a promoter's link brought in, and how many promoters have
+  // brought one. Two different things: nine people with a code and nothing
+  // through any of them is not a promoter programme, and only the second
+  // badge can tell you that.
+  const earning = new Set<string>();
+  const referred: Happening[] = [];
+  const earners: Happening[] = [];
+  for (const row of [...paid].sort((a, b) =>
+    String(a.paid_at || a.created_at) < String(b.paid_at || b.created_at) ? -1 : 1
+  )) {
+    const code = String(row.promoter_code ?? "").trim();
+    if (code === "") continue;
+    const at = String(row.paid_at || row.created_at);
+    const exact = Boolean(row.paid_at);
+    referred.push({ at, by: 1, exact });
+    if (!earning.has(code)) {
+      earning.add(code);
+      earners.push({ at, by: 1, exact });
+    }
+  }
+
+  /*
+   * What each order drew on, and what each kitchen has taken.
+   *
+   * An order from two counters on one car is the thing no other way of
+   * getting food onto this campus can do, so it is worth a badge of its
+   * own rather than being buried in the order count.
+   */
+  const kitchenOf = new Map<string, string>(
+    itemRows.map((row) => [String(row.id), String(row.restaurant_id)])
+  );
+  const drewOn = new Map<string, Set<string>>();
+  const spentWith = new Map<string, Map<string, number>>();
+  for (const line of lineRows) {
+    const place = kitchenOf.get(String(line.menu_item_id));
+    if (!place) continue;
+    const order = String(line.order_id);
+    if (!drewOn.has(order)) drewOn.set(order, new Set());
+    drewOn.get(order)!.add(place);
+    if (!spentWith.has(order)) spentWith.set(order, new Map());
+    const mine = spentWith.get(order)!;
+    mine.set(
+      place,
+      (mine.get(place) ?? 0) +
+        Number(line.unit_price_at_order ?? 0) * Number(line.qty ?? 1)
+    );
+  }
+
+  const inOrder = [...paid].sort((a, b) =>
+    String(a.paid_at || a.created_at) < String(b.paid_at || b.created_at) ? -1 : 1
+  );
+
+  const mixed: Happening[] = [];
+  const throughKitchen = new Map<string, number>();
+  const bestKitchen: Happening[] = [];
+  const groupsSeen = new Set<string>();
+  const shared: Happening[] = [];
+  for (const row of inOrder) {
+    const order = String(row.id ?? "");
+    const at = String(row.paid_at || row.created_at);
+    const exact = Boolean(row.paid_at);
+
+    if ((drewOn.get(order)?.size ?? 0) > 1) mixed.push({ at, by: 1, exact });
+
+    for (const [place, spent] of spentWith.get(order) ?? []) {
+      const sofar = (throughKitchen.get(place) ?? 0) + spent;
+      throughKitchen.set(place, sofar);
+      bestKitchen.push({ at, by: sofar, exact });
+    }
+
+    const group = String(row.group_id ?? "");
+    if (group !== "" && !groupsSeen.has(group)) {
+      groupsSeen.add(group);
+      shared.push({ at, by: 1, exact });
+    }
+  }
+
   const streams: Record<string, Happening[]> = {
     blocks,
     oneBlock,
     rescued,
+    referred,
+    earners,
+    mixed,
+    bestKitchen,
+    shared,
     took: paid.map((row) => ({
       at: String(row.paid_at || row.created_at),
       by: Number(row.total ?? 0),
@@ -424,6 +531,32 @@ export async function board(): Promise<Board> {
             string,
           ][])
         : []),
+    ]),
+    tier("mixed", "Mixed orders", at("mixed"), "count", [
+      [1, "Two counters, one car", "An order drawing on more than one kitchen"],
+      [10, "Ten mixed orders", "10 orders from more than one kitchen"],
+      [50, "Fifty mixed orders", "50 orders from more than one kitchen"],
+    ]),
+    best("brand", "One kitchen", at("bestKitchen"), "money", [
+      [50_000, "A kitchen worth having", "₦50,000 of food through one kitchen"],
+      [250_000, "A kitchen that counts", "₦250,000 through one kitchen"],
+      [1_000_000, "A kitchen worth a meeting", "₦1,000,000 through one kitchen"],
+    ]),
+    tier("shared", "Shared deliveries", at("shared"), "count", [
+      [1, "First group", "A delivery split between friends"],
+      [10, "Ten groups", "10 shared deliveries"],
+      [50, "Fifty groups", "50 shared deliveries"],
+    ]),
+    tier("sent", "Promoters", at("referred"), "count", [
+      [1, "Somebody sent somebody", "The first order off a promoter's link"],
+      [10, "Ten sent in", "10 orders brought in by promoters"],
+      [50, "Fifty sent in", "50 orders brought in by promoters"],
+      [200, "Two hundred sent in", "200 orders brought in by promoters"],
+    ]),
+    tier("earners", "Promoters", at("earners"), "count", [
+      [1, "One earning", "A promoter has earned something"],
+      [5, "Five earning", "5 promoters have brought in an order"],
+      [10, "Ten earning", "10 promoters have brought in an order"],
     ]),
     tier("rescued", "Baskets saved", at("rescued"), "count", [
       [1, "Brought back", "Somebody left a basket, you asked, and they bought it"],
