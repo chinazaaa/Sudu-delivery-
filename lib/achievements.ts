@@ -75,13 +75,19 @@ const by = (a: Happening, b: Happening) => (a.at < b.at ? -1 : a.at > b.at ? 1 :
  * money, the bags, the boxes, the reviews and the regulars between them,
  * and profitBetween has already walked every run.
  */
-async function history(): Promise<{ streams: Record<string, Happening[]>; profit: number }> {
-  const [money, orderRows, customerRows, batchRows, kitchenRows] = await Promise.all([
+async function history(): Promise<{
+  streams: Record<string, Happening[]>;
+  profit: number;
+  /** How many blocks are on the list, so "every block" is a real goal. */
+  blockCount: number;
+}> {
+  const [money, orderRows, customerRows, batchRows, kitchenRows, hostelRows] =
+    await Promise.all([
     profitBetween(DAY_ONE, lagosToday()),
     db()
       .from("orders")
       .select(
-        "status, total, box_id, rating, rated_at, paid_at, done_at, created_at, customer_phone, batch_id"
+        "status, total, box_id, rating, rated_at, paid_at, done_at, created_at, customer_phone, batch_id, hostel"
       )
       .order("created_at")
       .limit(10_000)
@@ -113,7 +119,16 @@ async function history(): Promise<{ streams: Record<string, Happening[]>; profit
         (answer) => (answer.data ?? []) as Record<string, any>[],
         () => [] as Record<string, any>[]
       ),
-  ]);
+    db()
+      .from("hostels")
+      .select("name", { count: "exact" })
+      .eq("active", true)
+      .limit(200)
+      .then(
+        (answer) => (answer.data ?? []) as Record<string, any>[],
+        () => [] as Record<string, any>[]
+      ),
+    ]);
 
   // Refunded went back and cancelled never left, so neither is on this
   // board. isPaid is the shop's own rule for that, used here rather than a
@@ -123,6 +138,19 @@ async function history(): Promise<{ streams: Record<string, Happening[]>; profit
 
   // Which runs actually carried a bag.
   const carried = new Set(paid.map((row) => String(row.batch_id)).filter(Boolean));
+
+  // When a bag reached somebody. done_at where the handover was recorded;
+  // where it was not, the run being settled is the closest the books come,
+  // and that is an evening's work rather than a minute, so it is not called
+  // exact. Falling back to paid_at would date "one order handed over" to
+  // the minute the money arrived, hours before the car left.
+  const handover = (row: Record<string, any>) => {
+    const settled = settledOn.get(String(row.batch_id)) ?? "";
+    return {
+      at: String(row.done_at || settled || row.paid_at || row.created_at),
+      exact: Boolean(row.done_at),
+    };
+  };
 
   // When each run was settled, which is the nearest thing the books hold to
   // when its bags were handed over.
@@ -167,28 +195,44 @@ async function history(): Promise<{ streams: Record<string, Happening[]>; profit
     })),
   ].filter((one) => one.at !== "");
 
+  const delivered = orderRows.filter((row) => String(row.status) === "delivered");
+
+  // Blocks. One badge is how much of the campus has been reached, the other
+  // is how deep into any one block the shop has got, which is a different
+  // question: a hundred bags spread one to a block is not a hostel that
+  // orders from you.
+  const reached = new Set<string>();
+  const blocks: Happening[] = [];
+  const deepest = new Map<string, number>();
+  const oneBlock: Happening[] = [];
+  for (const row of [...delivered].sort((a, b) =>
+    String(a.created_at) < String(b.created_at) ? -1 : 1
+  )) {
+    const block = String(row.hostel ?? "").trim();
+    if (block === "") continue;
+    const when = handover(row);
+    if (!reached.has(block)) {
+      reached.add(block);
+      blocks.push({ ...when, by: 1 });
+    }
+    const many = (deepest.get(block) ?? 0) + 1;
+    deepest.set(block, many);
+    // The size here is "this block has now had this many", so the biggest
+    // one is the block that orders most and the first to pass a goal is
+    // when that goal was met.
+    oneBlock.push({ ...when, by: many });
+  }
+
   const streams: Record<string, Happening[]> = {
+    blocks,
+    oneBlock,
     took: paid.map((row) => ({
       at: String(row.paid_at || row.created_at),
       by: Number(row.total ?? 0),
       exact: Boolean(row.paid_at),
     })),
     kept,
-    bags: orderRows
-      .filter((row) => String(row.status) === "delivered")
-      .map((row) => {
-        // done_at where the handover was recorded. Where it was not, the
-        // run being settled is the closest the books come, and that is a
-        // day's work rather than a minute, so it is not called exact.
-        // Falling back to paid_at would have dated "one order handed over"
-        // to the minute somebody sent the money, hours before the car left.
-        const settled = settledOn.get(String(row.batch_id)) ?? "";
-        return {
-          at: String(row.done_at || settled || row.paid_at || row.created_at),
-          by: 1,
-          exact: Boolean(row.done_at),
-        };
-      }),
+    bags: delivered.map((row) => ({ ...handover(row), by: 1 })),
     runs: batchRows
       // A run that carried something, which is the only kind worth
       // counting. This was every batch marked closed, and a batch closes
@@ -237,7 +281,7 @@ async function history(): Promise<{ streams: Record<string, Happening[]>; profit
     exact: false,
   }));
 
-  return { streams, profit: money.profit };
+  return { streams, profit: money.profit, blockCount: hostelRows.length };
 }
 
 /** The running total, and the moment it crossed each goal. */
@@ -291,7 +335,7 @@ function peak(
  * the top of that half is the one worth chasing this month.
  */
 export async function board(): Promise<Board> {
-  const { streams, profit } = await history();
+  const { streams, profit, blockCount } = await history();
   const at = (key: string) => streams[key] ?? [];
 
   const badges: Badge[] = [
@@ -341,7 +385,24 @@ export async function board(): Promise<Board> {
       [25, "Twenty five boxes", "25 boxes sold"],
       [100, "A hundred boxes", "100 boxes sold"],
     ]),
-    best("run", "Best run", at("bestRun"), [
+    tier("blocks", "Blocks", at("blocks"), "count", [
+      [1, "First block", "A bag carried into a hostel"],
+      [5, "Five blocks", "Delivered into 5 different blocks"],
+      [10, "Ten blocks", "Delivered into 10 different blocks"],
+      ...(blockCount > 10
+        ? ([[blockCount, "Every block", `All ${blockCount} blocks on the list`]] as [
+            number,
+            string,
+            string,
+          ][])
+        : []),
+    ]),
+    best("block", "One block", at("oneBlock"), "count", [
+      [5, "A block that knows you", "5 bags into the same hostel"],
+      [25, "A block that relies on you", "25 bags into one hostel"],
+      [100, "You live there", "100 bags into one hostel"],
+    ]),
+    best("run", "Best run", at("bestRun"), "money", [
       [5_000, "A good run", "₦5,000 kept on one run"],
       [10_000, "A very good run", "₦10,000 kept on a single run"],
       [25_000, "A great run", "₦25,000 kept on one run"],
@@ -375,6 +436,7 @@ function best(
   id: string,
   group: string,
   happenings: Happening[],
+  unit: Unit,
   steps: [number, string, string][]
 ): Badge[] {
   return steps.map(([goal, name, what]) => {
@@ -386,7 +448,7 @@ function best(
       what,
       goal,
       got,
-      unit: "money" as const,
+      unit,
       when,
       exact,
       peak: true,

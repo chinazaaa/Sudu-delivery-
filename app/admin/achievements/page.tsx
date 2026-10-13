@@ -108,7 +108,7 @@ export default async function AchievementsPage() {
                     {one.peak ? (
                       <>
                         Best so far {say(one.got, one.unit)} ·{" "}
-                        {say(one.goal - one.got, one.unit)} more on one run
+                        {say(one.goal - one.got, one.unit)} more in one
                       </>
                     ) : (
                       <>
