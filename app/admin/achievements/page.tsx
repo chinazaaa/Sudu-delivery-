@@ -105,8 +105,17 @@ export default async function AchievementsPage() {
                     />
                   </div>
                   <p className="mt-1 text-xs text-muted">
-                    {say(one.got, one.unit)} of {say(one.goal, one.unit)} ·{" "}
-                    {say(one.goal - one.got, one.unit)} to go
+                    {one.peak ? (
+                      <>
+                        Best so far {say(one.got, one.unit)} ·{" "}
+                        {say(one.goal - one.got, one.unit)} more on one run
+                      </>
+                    ) : (
+                      <>
+                        {say(one.got, one.unit)} of {say(one.goal, one.unit)} ·{" "}
+                        {say(one.goal - one.got, one.unit)} to go
+                      </>
+                    )}
                   </p>
                 </div>
               )}

@@ -51,6 +51,9 @@ export type Badge = {
   when: string;
   /** False where the best the books hold is the day, not the minute. */
   exact: boolean;
+  /** Measured by the biggest single one rather than by a running total, so
+   *  the page can say "best so far" instead of "to go". */
+  peak?: boolean;
 };
 
 export type Board = {
@@ -226,6 +229,14 @@ async function history(): Promise<{ streams: Record<string, Happening[]>; profit
   // rather than from adding these events up again. The board and the
   // dashboard disagreeing about what the shop made is worse than either of
   // them being wrong, because then neither can be trusted.
+  // One run's profit is not a thing that adds up: a stream of sizes, where
+  // the badge is about the biggest single one rather than the total.
+  streams.bestRun = money.byRun.map((run) => ({
+    at: run.runDate,
+    by: run.profit,
+    exact: false,
+  }));
+
   return { streams, profit: money.profit };
 }
 
@@ -249,6 +260,27 @@ function crossing(
     }
   }
   return { got: total ?? running, when: "", exact: false };
+}
+
+/**
+ * The biggest single one, and when it happened.
+ *
+ * A different question from the running total: nobody earns "ten thousand
+ * on one run" by doing a thousand ten times, and summing these would say
+ * they had. Earliest first, so a goal is dated to the first time it was
+ * beaten rather than the best time.
+ */
+function peak(
+  happenings: Happening[],
+  goal: number
+): { got: number; when: string; exact: boolean } {
+  const most = happenings.reduce((top, one) => Math.max(top, one.by), 0);
+  const first = [...happenings].sort(by).find((one) => one.by >= goal);
+  return {
+    got: most,
+    when: first?.at ?? "",
+    exact: first?.exact ?? false,
+  };
 }
 
 /**
@@ -309,6 +341,12 @@ export async function board(): Promise<Board> {
       [25, "Twenty five boxes", "25 boxes sold"],
       [100, "A hundred boxes", "100 boxes sold"],
     ]),
+    best("run", "Best run", at("bestRun"), [
+      [5_000, "A good run", "₦5,000 kept on one run"],
+      [10_000, "A very good run", "₦10,000 kept on a single run"],
+      [25_000, "A great run", "₦25,000 kept on one run"],
+      [50_000, "The run of the year", "₦50,000 kept on one run"],
+    ]),
     tier("kitchens", "Kitchens", at("kitchens"), "count", [
       [5, "Five kitchens", "5 places on the menu at once"],
       [10, "Ten kitchens", "10 places on the menu"],
@@ -330,6 +368,30 @@ export async function board(): Promise<Board> {
     earned: badges.filter(done).length,
     next: sorted.find((one) => !done(one)) ?? null,
   };
+}
+
+/** A family measured by the biggest single one rather than the total. */
+function best(
+  id: string,
+  group: string,
+  happenings: Happening[],
+  steps: [number, string, string][]
+): Badge[] {
+  return steps.map(([goal, name, what]) => {
+    const { got, when, exact } = peak(happenings, goal);
+    return {
+      id: `${id}-${goal}`,
+      group,
+      name,
+      what,
+      goal,
+      got,
+      unit: "money" as const,
+      when,
+      exact,
+      peak: true,
+    };
+  });
 }
 
 /** One family of badges, all measuring the same thing at rising goals. */
