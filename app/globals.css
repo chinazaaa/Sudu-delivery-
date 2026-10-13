@@ -369,8 +369,13 @@ body {
     print-color-adjust: exact;
   }
 
-  /* Nothing a document should be split across two pages in the middle of. */
-  article,
+  /*
+   * Nothing a document should be split across two pages in the middle of.
+   *
+   * Not the article itself: a receipt longer than a page has to break
+   * somewhere, and forbidding it there pushes the whole thing onto page
+   * two and leaves page one empty.
+   */
   li,
   section,
   footer {

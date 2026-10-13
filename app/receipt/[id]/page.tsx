@@ -22,11 +22,23 @@ export const dynamic = "force-dynamic";
  * The design is the shop's: the display face in caps, the mono ticket
  * voice for references, Ink rules and a hard shadow on the card. It should
  * look like it came from the same place the food did.
+ *
+ * The number goes in the title, because the title is the filename.
+ *
+ * A phone saving this to Files called every one of them "Receipt · Sudu",
+ * so the second one to be saved was a question about which order it was.
  */
-export const metadata: Metadata = {
-  title: "Receipt",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const got = await receiptFor((await params).id);
+  return {
+    title: got ? `Receipt ${got.ref}` : "Receipt",
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function ReceiptPage({
   params,
@@ -41,7 +53,11 @@ export default async function ReceiptPage({
   if (!got) notFound();
 
   const email = shopEmails(settings.contact_email);
-  const instagram = instagramLink(settings.instagram_handle);
+  // The handle, not the address it lives at: the field holds a whole
+  // profile URL and printing that in capitals across the foot of a receipt
+  // is a line nobody can read out.
+  const handle = (instagramLink(settings.instagram_handle) ?? "")
+    .replace(/^https:\/\/instagram\.com\//, "");
 
   // Grouped by where it comes from, because "Margherita, from Domino's" is
   // the thing somebody checks, and a run draws on more than one counter.
@@ -50,7 +66,7 @@ export default async function ReceiptPage({
   );
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-4 py-6 print:max-w-none print:p-0">
+    <div className="mx-auto w-full max-w-[760px] px-4 py-6 print:max-w-none print:px-0 print:py-0">
       <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="hint">
           Save it as a PDF, or send this page as a link. Both show the same thing.
@@ -58,9 +74,14 @@ export default async function ReceiptPage({
         <PrintThis />
       </div>
 
-      <article className="card p-6 print:border-0 print:shadow-none sm:p-8">
+      {/* On paper it is the page, so it drops the card: no border, no
+          shadow, no padding of its own inside the printer's own margin.
+          The first version was a hair taller than A4 and pushed its own
+          footer onto a second page, which is how a receipt becomes two
+          pages of mostly nothing. */}
+      <article className="card p-6 print:border-0 print:p-0 print:shadow-none sm:p-8">
         {/* Who it is from, and what it is. */}
-        <header className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-ink pb-5">
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-ink pb-5 print:pb-4">
           <div className="space-y-2">
             <Wordmark size={34} />
             <p className="hint max-w-[260px]">
@@ -77,8 +98,12 @@ export default async function ReceiptPage({
           </div>
         </header>
 
-        {/* Who it is for, and when the food goes. */}
-        <section className="grid gap-5 border-b-2 border-ink py-5 sm:grid-cols-3">
+        {/* Who it is for and where it went, facing each other the way an
+            invoice sets them: from on the left, to on the right. Three
+            columns became three stacked rows on paper and read as three
+            sections of a form. The run belongs under the address, because
+            it is part of the answer to "where did it go". */}
+        <section className="flex flex-wrap justify-between gap-6 border-b-2 border-ink py-5 print:py-4">
           <Fact title="Billed to">
             <p className="font-bold">{got.name}</p>
             <p className="text-muted">{got.phone}</p>
@@ -89,12 +114,10 @@ export default async function ReceiptPage({
               </p>
             )}
           </Fact>
-          <Fact title="Delivered to">
+          <Fact title="Delivered to" align="right">
             <p className="font-bold">{got.block || "Pan-Atlantic University"}</p>
             <p className="text-muted">Pan-Atlantic University</p>
-          </Fact>
-          <Fact title="On">
-            <p className="font-bold">{got.day}</p>
+            <p className="mt-1.5 font-semibold">{got.day}</p>
             <p className="text-muted">{got.window}</p>
           </Fact>
         </section>
@@ -102,7 +125,7 @@ export default async function ReceiptPage({
         {/* What they bought. A box says its own name over its contents, and
             the contents are what the order actually holds: swap the pizza
             and this says the pizza they are getting. */}
-        <section className="py-5">
+        <section className="py-5 print:py-4">
           {got.box !== "" && (
             <div className="mb-4">
               <p className="ticket text-muted">The box</p>
@@ -127,7 +150,7 @@ export default async function ReceiptPage({
         </section>
 
         {/* What it came to. */}
-        <section className="border-t-2 border-ink pt-5">
+        <section className="border-t-2 border-ink pt-5 print:pt-4">
           <dl className="ml-auto max-w-[320px] space-y-1.5 text-[15px]">
             <Row said="Food">{naira(got.food)}</Row>
             <Row said="Delivery">{naira(got.fee)}</Row>
@@ -144,12 +167,16 @@ export default async function ReceiptPage({
                 {naira(got.total)}
               </dd>
             </div>
-          </dl>
 
-          <p className="ticket mt-3 text-right text-muted">
-            {got.paidBy} · {lagosStamp(got.paidOn)}
-            {got.reference !== "" ? ` · ${got.reference}` : ""}
-          </p>
+            {/* Said as rows, like everything above it. One line of mono
+                capitals saying BANK TRANSFER · 11 OCTOBER 2026, 7:30PM is a
+                log entry, and a receipt is not a log. */}
+            <div className="space-y-1.5 border-t-[1.5px] border-line pt-2 text-[13.5px]">
+              <Row said="Paid by">{got.paidBy}</Row>
+              <Row said="Paid on">{lagosStamp(got.paidOn)}</Row>
+              {got.reference !== "" && <Row said="Reference">{got.reference}</Row>}
+            </div>
+          </dl>
         </section>
 
         {got.note.trim() !== "" && (
@@ -160,7 +187,7 @@ export default async function ReceiptPage({
         )}
 
         {/* How to reach a person about it. */}
-        <footer className="mt-6 border-t-2 border-ink pt-4">
+        <footer className="mt-6 border-t-2 border-ink pt-4 print:mt-5">
           <p className="font-bold">Something not right?</p>
           <p className="hint mt-1">
             Tell us the same day and a person will answer.
@@ -170,8 +197,7 @@ export default async function ReceiptPage({
             {email ? ` Or write to ${email.orders}.` : ""}
           </p>
           <p className="ticket mt-3 text-muted">
-            sudu.store
-            {instagram ? ` · @${settings.instagram_handle.replace(/^@/, "")}` : ""}
+            sudu.store{handle === "" ? "" : ` · @${handle}`}
           </p>
         </footer>
       </article>
@@ -179,9 +205,17 @@ export default async function ReceiptPage({
   );
 }
 
-function Fact({ title, children }: { title: string; children: React.ReactNode }) {
+function Fact({
+  title,
+  align = "left",
+  children,
+}: {
+  title: string;
+  align?: "left" | "right";
+  children: React.ReactNode;
+}) {
   return (
-    <div>
+    <div className={align === "right" ? "text-right" : ""}>
       <p className="ticket mb-1 text-muted">{title}</p>
       <div className="text-[15px] leading-snug">{children}</div>
     </div>
