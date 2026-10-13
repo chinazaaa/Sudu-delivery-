@@ -81,16 +81,22 @@ export default async function ReceiptPage({
           pages of mostly nothing. */}
       <article className="card p-6 print:border-0 print:p-0 print:shadow-none sm:p-8">
         {/* Who it is from, and what it is. */}
-        <header className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-ink pb-5 print:pb-4">
-          <div className="space-y-2">
-            <Wordmark size={34} />
+        {/* Two columns that stay two columns. Allowed to wrap, a phone put
+            the whole right-hand block on its own line below the blurb,
+            where justify-between has nothing to push it against and it
+            read as left-aligned: the word RECEIPT floating under a
+            sentence rather than facing the mark across the top. */}
+        <header className="flex items-start justify-between gap-4 border-b-2 border-ink pb-5 print:pb-4">
+          <div className="min-w-0 space-y-2">
+            <Wordmark size={30} className="sm:hidden" />
+            <Wordmark size={34} className="hidden sm:block" />
             <p className="hint max-w-[260px]">
               Restaurant food, groceries and parcels to Pan-Atlantic
               University, Ibeju-Lekki, Lagos.
             </p>
           </div>
-          <div className="text-right">
-            <p className="font-display text-[40px] font-black uppercase leading-none">
+          <div className="shrink-0 text-right">
+            <p className="font-display text-[30px] font-black uppercase leading-none sm:text-[40px]">
               Receipt
             </p>
             <p className="ticket mt-1 text-muted">{got.ref}</p>
