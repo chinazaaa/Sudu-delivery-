@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import { board, type Badge } from "@/lib/achievements";
@@ -18,9 +20,59 @@ export const dynamic = "force-dynamic";
  * Nothing is stored. Every figure is counted off the orders when the page
  * is opened, so a refund takes a badge back the way it should.
  */
-export default async function AchievementsPage() {
+export default async function AchievementsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ group?: string; show?: string }>;
+}) {
+  const asked = await searchParams;
   const { badges, earned, next } = await board();
   const got = (one: Badge) => one.when !== "";
+
+  // The families, in the order the board puts them, so the chips read the
+  // same way round as the list under them. Eighteen of them is more than a
+  // page anybody scans, and "how is the kitchen money doing" should not
+  // mean reading past the hostels to find out.
+  const families = [...new Set(badges.map((one) => one.group))];
+  const family = families.includes(asked.group ?? "") ? asked.group! : "";
+  const show = asked.show === "locked" || asked.show === "earned" ? asked.show : "";
+
+  const shown = badges
+    .filter((one) => family === "" || one.group === family)
+    .filter((one) =>
+      show === "" ? true : show === "earned" ? got(one) : !got(one)
+    );
+
+  // Every chip keeps whatever else is set, so picking a family does not
+  // silently drop "locked only".
+  const to = (next: { group?: string; show?: string }) => {
+    const bits = new URLSearchParams();
+    const g = next.group ?? family;
+    const h = next.show ?? show;
+    if (g) bits.set("group", g);
+    if (h) bits.set("show", h);
+    const query = bits.toString();
+    return query === "" ? "/admin/achievements" : `/admin/achievements?${query}`;
+  };
+
+  const Chip = ({
+    href,
+    on,
+    children,
+  }: {
+    href: string;
+    on: boolean;
+    children: React.ReactNode;
+  }) => (
+    <Link
+      href={href}
+      className={`chip py-1.5 text-xs ${
+        on ? "border-ink bg-ink text-white" : "border-black/10 bg-white"
+      }`}
+    >
+      {children}
+    </Link>
+  );
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -32,6 +84,31 @@ export default async function AchievementsPage() {
             : `All ${badges.length}. There is nothing left on this board.`
         }
       />
+
+      {/* Earned and locked first, because "what is left" is the question
+          this page gets asked most, then the families. */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Chip href={to({ show: "" })} on={show === ""}>
+          All
+        </Chip>
+        <Chip href={to({ show: "earned" })} on={show === "earned"}>
+          Earned
+        </Chip>
+        <Chip href={to({ show: "locked" })} on={show === "locked"}>
+          Still to get
+        </Chip>
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Chip href={to({ group: "" })} on={family === ""}>
+          Everything
+        </Chip>
+        {families.map((one) => (
+          <Chip key={one} href={to({ group: one })} on={family === one}>
+            {one}
+          </Chip>
+        ))}
+      </div>
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Stat label="Earned" value={`${earned}/${badges.length}`} hint="On the board" />
@@ -47,8 +124,13 @@ export default async function AchievementsPage() {
         />
       </div>
 
+      {shown.length === 0 ? (
+        <p className="card text-sm text-muted">
+          Nothing here under that filter.
+        </p>
+      ) : (
       <ul className="space-y-2">
-        {badges.map((one) => {
+        {shown.map((one) => {
           const done = got(one);
           const part = Math.min(1, one.goal === 0 ? 1 : one.got / one.goal);
 
@@ -123,6 +205,7 @@ export default async function AchievementsPage() {
           );
         })}
       </ul>
+      )}
     </div>
   );
 }
