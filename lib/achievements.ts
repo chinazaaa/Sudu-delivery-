@@ -1,6 +1,7 @@
 import { db } from "./supabase";
 import { isGone, isPaid } from "./orders";
 import { profitBetween } from "./profit";
+import { madeOn } from "./other-money";
 import { lagosToday } from "./time";
 
 /**
@@ -71,7 +72,7 @@ const by = (a: Happening, b: Happening) => (a.at < b.at ? -1 : a.at > b.at ? 1 :
  * money, the bags, the boxes, the reviews and the regulars between them,
  * and profitBetween has already walked every run.
  */
-async function history(): Promise<Record<string, Happening[]>> {
+async function history(): Promise<{ streams: Record<string, Happening[]>; profit: number }> {
   const [money, orderRows, customerRows, batchRows, kitchenRows] = await Promise.all([
     profitBetween(DAY_ONE, lagosToday()),
     db()
@@ -151,14 +152,19 @@ async function history(): Promise<Record<string, Happening[]>> {
   // answer is the day rather than the minute, and the board says so.
   const kept: Happening[] = [
     ...money.byRun.map((run) => ({ at: run.runDate, by: run.profit, exact: false })),
-    ...money.aside.map((one: any) => ({
-      at: String(one.happened_on ?? one.created_at ?? ""),
-      by: Number(one.direction === "out" ? -one.amount : one.amount) || 0,
+    // Takings less costs on the line, which is what every other page in
+    // admin calls the money made on an errand. This read a "direction" and
+    // an "amount", and the table has neither: every line came out as zero,
+    // so a sold-on packet of pads was worth nothing to the board while the
+    // dashboard counted it, and the two disagreed by exactly that much.
+    ...money.aside.map((one) => ({
+      at: String(one.happened_on ?? ""),
+      by: madeOn(one),
       exact: false,
     })),
   ].filter((one) => one.at !== "");
 
-  return {
+  const streams: Record<string, Happening[]> = {
     took: paid.map((row) => ({
       at: String(row.paid_at || row.created_at),
       by: Number(row.total ?? 0),
@@ -215,12 +221,19 @@ async function history(): Promise<Record<string, Happening[]>> {
       .filter((row) => row.active !== false)
       .map((row) => ({ at: String(row.created_at), by: 1, exact: true })),
   };
+
+  // The profit figure itself comes from the one place that works it out,
+  // rather than from adding these events up again. The board and the
+  // dashboard disagreeing about what the shop made is worse than either of
+  // them being wrong, because then neither can be trusted.
+  return { streams, profit: money.profit };
 }
 
 /** The running total, and the moment it crossed each goal. */
 function crossing(
   happenings: Happening[],
-  goal: number
+  goal: number,
+  total?: number
 ): { got: number; when: string; exact: boolean } {
   let running = 0;
   for (const one of [...happenings].sort(by)) {
@@ -229,13 +242,13 @@ function crossing(
       // Keep counting for the total, but the moment is this one.
       const rest = [...happenings].sort(by);
       return {
-        got: rest.reduce((sum, row) => sum + row.by, 0),
+        got: total ?? rest.reduce((sum, row) => sum + row.by, 0),
         when: one.at,
         exact: one.exact,
       };
     }
   }
-  return { got: running, when: "", exact: false };
+  return { got: total ?? running, when: "", exact: false };
 }
 
 /**
@@ -246,8 +259,8 @@ function crossing(
  * the top of that half is the one worth chasing this month.
  */
 export async function board(): Promise<Board> {
-  const past = await history();
-  const at = (key: string) => past[key] ?? [];
+  const { streams, profit } = await history();
+  const at = (key: string) => streams[key] ?? [];
 
   const badges: Badge[] = [
     tier("took", "Money in", at("took"), "money", [
@@ -262,7 +275,7 @@ export async function board(): Promise<Board> {
       [100_000, "A hundred thousand kept", "₦100,000 of profit"],
       [500_000, "Half a million kept", "₦500,000 of profit"],
       [1_000_000, "A million kept", "₦1,000,000 of profit"],
-    ]),
+    ], profit),
     tier("bags", "Deliveries", at("bags"), "count", [
       [1, "First bag", "One order handed over"],
       [50, "Fifty bags", "50 orders delivered"],
@@ -325,10 +338,13 @@ function tier(
   group: string,
   happenings: Happening[],
   unit: Unit,
-  steps: [number, string, string][]
+  steps: [number, string, string][],
+  /** Where the running total is worked out elsewhere and this is only the
+   *  history behind it, as profit is. */
+  total?: number
 ): Badge[] {
   return steps.map(([goal, name, what]) => {
-    const { got, when, exact } = crossing(happenings, goal);
+    const { got, when, exact } = crossing(happenings, goal, total);
     return { id: `${id}-${goal}`, group, name, what, goal, got, unit, when, exact };
   });
 }
