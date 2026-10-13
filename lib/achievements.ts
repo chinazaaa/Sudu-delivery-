@@ -146,7 +146,7 @@ async function history(): Promise<{
       ),
     db()
       .from("carts")
-      .select("handled_at, handled_reason")
+      .select("phone, handled_at, handled_reason")
       .not("handled_at", "is", null)
       .limit(5_000)
       .then(
@@ -354,7 +354,27 @@ async function history(): Promise<{
    */
   const rescued: Happening[] = cartRows
     .filter((row) => String(row.handled_reason ?? "").toLowerCase().startsWith("ordered"))
-    .map((row) => ({ at: String(row.handled_at), by: 1, exact: true }));
+    .map((row) => {
+      // And the order has to have survived. Marking a cart "ordered
+      // another way" says somebody came back; it cannot know that the
+      // order they came back with was later cancelled or refunded, and a
+      // basket brought back and then handed its money back was not
+      // brought back.
+      //
+      // Dated to that order rather than to the button, because the order
+      // is the thing that happened. The day's grace is for a cart marked
+      // the morning after the order it is about.
+      const from = new Date(String(row.handled_at)).getTime() - 86_400_000;
+      const stuck = paid
+        .filter((order) => String(order.customer_phone) === String(row.phone))
+        .map((order) => String(order.paid_at || order.created_at))
+        .filter((at) => new Date(at).getTime() >= from)
+        .sort()[0];
+      return stuck === undefined
+        ? null
+        : { at: stuck, by: 1, exact: true };
+    })
+    .filter((one): one is Happening => one !== null);
 
   const streams: Record<string, Happening[]> = {
     rescued,
