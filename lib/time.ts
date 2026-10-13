@@ -78,6 +78,29 @@ export function dayLabel(iso: string): string {
   return DATE_FMT.format(at);
 }
 
+/**
+ * "2pm", "2:30pm", in Lagos, for a sentence somebody reads.
+ *
+ * lagosClock gives "14:00", which is right in a time field and wrong in
+ * prose: every other sentence on this site says 2pm, and admin was the one
+ * place telling its own shopkeeper the run closes at 14:00.
+ */
+export function lagosClockWord(iso: string): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return "";
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(at);
+  const hour = Number(parts.find((one) => one.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find((one) => one.type === "minute")?.value ?? "0");
+  const half = hour >= 12 ? "pm" : "am";
+  const show = hour % 12 === 0 ? 12 : hour % 12;
+  return minute === 0 ? `${show}${half}` : `${show}:${String(minute).padStart(2, "0")}${half}`;
+}
+
 /** "11:30 am" in Lagos time, for any ISO instant. */
 export function clockLabel(iso: string): string {
   const at = new Date(iso);

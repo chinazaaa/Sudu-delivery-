@@ -50,6 +50,14 @@ function kindsFor(order: FeedOrder, settings: Settings): TemplateKind[] {
      * shop with no Google link set: without one that message ends on a
      * colon and a space, and no ask at all is worse than the other ask.
      */
+    // Somebody who has already left one is not asked again. The hand-over
+    // card worked this out for itself and the order list did not, so a
+    // customer ticked as having reviewed still had "Ask for a Google
+    // review" on their card and ticking it changed nothing anybody could
+    // see. Decided here instead, once, so every card and the bulk bar
+    // agree.
+    if (order.reviewed) return ["pin"];
+
     const asGoogle = googleLinks(settings).review.trim() !== "";
     return [asGoogle ? "google" : "review", "pin"];
   }

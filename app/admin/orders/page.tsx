@@ -15,7 +15,7 @@ import { getSettings, googleLinks } from "@/lib/settings";
 import { payableAccounts } from "@/lib/banks";
 import { siteUrl, toCard } from "@/lib/admin-templates";
 import { SLOT_LABEL } from "@/lib/config";
-import { lagosClock, lagosToday, runDateLabel } from "@/lib/time";
+import { lagosClockWord, lagosToday, runDateLabel } from "@/lib/time";
 import { naira } from "@/lib/money";
 import { templateFor, whatsappTo } from "@/lib/messages";
 import {
@@ -292,7 +292,7 @@ export default async function OrdersPage({
           title="Orders"
           detail={
             closing
-              ? `Today's orders, and anything still owed. The run closes at ${lagosClock(
+              ? `Today's orders, and anything still owed. The run closes at ${lagosClockWord(
                   closing.cut_off_at
                 )}.`
               : "Today's orders, and anything still owed from a run that has gone."
@@ -401,7 +401,7 @@ export default async function OrdersPage({
           <p className="hint">
             {todays.length === 0
               ? closing
-                ? `Nothing is on today's run yet. It closes at ${lagosClock(closing.cut_off_at)}.`
+                ? `Nothing is on today's run yet. It closes at ${lagosClockWord(closing.cut_off_at)}.`
                 : "No run is open, so nothing can be ordered onto today."
               : jobs === 0
                 ? `All ${todays.length} of today's ${
