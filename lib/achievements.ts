@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { isGone, isPaid } from "./orders";
 import { profitBetween } from "./profit";
 import { lagosToday } from "./time";
 
@@ -110,24 +111,39 @@ async function history(): Promise<Record<string, Happening[]>> {
       ),
   ]);
 
-  const settled = new Set(["paid", "delivered"]);
-  const paid = orderRows.filter((row) => settled.has(String(row.status)));
+  // Refunded went back and cancelled never left, so neither is on this
+  // board. isPaid is the shop's own rule for that, used here rather than a
+  // list of statuses written out again: a third kind of gone should not
+  // need finding in two places.
+  const paid = orderRows.filter((row) => isPaid(String(row.status)));
 
   // Which runs actually carried a bag.
   const carried = new Set(paid.map((row) => String(row.batch_id)).filter(Boolean));
 
+  // When each run was settled, which is the nearest thing the books hold to
+  // when its bags were handed over.
+  const settledOn = new Map<string, string>(
+    batchRows
+      .filter((row) => row.settled_at)
+      .map((row) => [String(row.id), String(row.settled_at)])
+  );
+
   // Somebody who came back is the one number that says whether any of this
   // is working, and the moment that counts is their second order, not their
   // first: the badge is earned when they return.
+  // Two orders they actually paid for. A cart abandoned twice is not
+  // somebody coming back, and a refund is the shop's money returning
+  // rather than a customer's visit.
   const seen = new Map<string, number>();
   const again: Happening[] = [];
-  for (const row of orderRows) {
-    if (String(row.status) === "cancelled") continue;
-    const many = (seen.get(String(row.customer_phone)) ?? 0) + 1;
-    seen.set(String(row.customer_phone), many);
-    if (many === 2) {
-      again.push({ at: String(row.created_at), by: 1, exact: true });
-    }
+  const firstPaid: Happening[] = [];
+  for (const row of paid) {
+    const who = String(row.customer_phone);
+    const many = (seen.get(who) ?? 0) + 1;
+    seen.set(who, many);
+    const at = String(row.paid_at || row.created_at);
+    if (many === 1) firstPaid.push({ at, by: 1, exact: Boolean(row.paid_at) });
+    if (many === 2) again.push({ at, by: 1, exact: Boolean(row.paid_at) });
   }
 
   // Profit is the one figure with no moment of its own. It is a run's
@@ -151,11 +167,19 @@ async function history(): Promise<Record<string, Happening[]>> {
     kept,
     bags: orderRows
       .filter((row) => String(row.status) === "delivered")
-      .map((row) => ({
-        at: String(row.done_at || row.paid_at || row.created_at),
-        by: 1,
-        exact: Boolean(row.done_at || row.paid_at),
-      })),
+      .map((row) => {
+        // done_at where the handover was recorded. Where it was not, the
+        // run being settled is the closest the books come, and that is a
+        // day's work rather than a minute, so it is not called exact.
+        // Falling back to paid_at would have dated "one order handed over"
+        // to the minute somebody sent the money, hours before the car left.
+        const settled = settledOn.get(String(row.batch_id)) ?? "";
+        return {
+          at: String(row.done_at || settled || row.paid_at || row.created_at),
+          by: 1,
+          exact: Boolean(row.done_at),
+        };
+      }),
     runs: batchRows
       // A run that carried something, which is the only kind worth
       // counting. This was every batch marked closed, and a batch closes
@@ -169,14 +193,16 @@ async function history(): Promise<Record<string, Happening[]>> {
         by: 1,
         exact: Boolean(row.settled_at),
       })),
-    people: customerRows.map((row) => ({
-      at: String(row.first_order_at || row.created_at),
-      by: 1,
-      exact: true,
-    })),
+    // Somebody who paid, not somebody who filled a basket. A customer row
+    // is written at checkout, so counting those counted every abandoned
+    // cart as a customer.
+    people: firstPaid,
     again,
     stars: orderRows
-      .filter((row) => Number(row.rating) === 5 && row.rated_at)
+      .filter(
+        (row) =>
+          Number(row.rating) === 5 && row.rated_at && !isGone(String(row.status))
+      )
       .map((row) => ({ at: String(row.rated_at), by: 1, exact: true })),
     boxes: paid
       .filter((row) => row.box_id)
