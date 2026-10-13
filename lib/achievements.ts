@@ -105,7 +105,7 @@ async function history(): Promise<{
       ),
     db()
       .from("batches")
-      .select("id, status, settled_at, run_date, cut_off_at")
+      .select("id, status, settled_at, run_date")
       .limit(10_000)
       .then(
         (answer) => (answer.data ?? []) as Record<string, any>[],
@@ -223,35 +223,9 @@ async function history(): Promise<{
     oneBlock.push({ ...when, by: many });
   }
 
-  /*
-   * How long a run took, from closing to being handed over.
-   *
-   * Counted rather than raced. One seventeen minute run is a quiet
-   * Thursday with one bag on it, and tiers on the fastest ever would all
-   * fall to that single run and never mean anything again. A count of runs
-   * that came in under the hour cannot be won once and forgotten.
-   *
-   * Honest about what it measures: settled_at is when the run was marked
-   * delivered, not when the last bag left somebody's hand. It is the
-   * nearest thing the books hold, and it is never earlier than the truth.
-   */
-  const inside = (minutes: number): Happening[] =>
-    batchRows
-      .filter((row) => carried.has(String(row.id)) && row.settled_at && row.cut_off_at)
-      .filter(
-        (row) =>
-          (new Date(String(row.settled_at)).getTime() -
-            new Date(String(row.cut_off_at)).getTime()) /
-            60_000 <=
-          minutes
-      )
-      .map((row) => ({ at: String(row.settled_at), by: 1, exact: true }));
-
   const streams: Record<string, Happening[]> = {
     blocks,
     oneBlock,
-    underThree: inside(180),
-    underOne: inside(60),
     took: paid.map((row) => ({
       at: String(row.paid_at || row.created_at),
       by: Number(row.total ?? 0),
@@ -432,16 +406,6 @@ export async function board(): Promise<Board> {
             string,
           ][])
         : []),
-    ]),
-    tier("quick", "Speed", at("underThree"), "count", [
-      [1, "Out and back", "A run delivered within three hours of closing"],
-      [10, "Ten quick runs", "10 runs delivered inside three hours"],
-      [25, "Twenty five quick runs", "25 runs delivered inside three hours"],
-      [100, "A hundred quick runs", "100 runs delivered inside three hours"],
-    ]),
-    tier("flash", "Speed", at("underOne"), "count", [
-      [1, "Inside the hour", "A run closed and delivered within the hour"],
-      [10, "Ten inside the hour", "10 runs done inside an hour of closing"],
     ]),
     best("block", "One block", at("oneBlock"), "count", [
       [5, "A block that knows you", "5 bags into the same hostel"],
