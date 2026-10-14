@@ -25,6 +25,22 @@ export async function uploadImage(
     .upload(path, await file.arrayBuffer(), {
       contentType: file.type,
       upsert: false,
+      /*
+       * A year, because the path is a fresh UUID every time.
+       *
+       * The picture at a given address here can never change: a new
+       * photograph is a new upload at a new path, and the old one is either
+       * still true or no longer pointed at. There is nothing a short cache
+       * protects against, and the default hour costs the shop real money.
+       *
+       * Every browser and every edge of the CDN was re-fetching all 360MB
+       * of the menu's photographs once an hour. That, and nothing else, is
+       * what put this project at 228% of its egress allowance: eleven
+       * gigabytes served out of three hundred and sixty megabytes of
+       * distinct images, which is the whole library sent out thirty-odd
+       * times over.
+       */
+      cacheControl: "31536000",
     });
   if (error) throw new Error(`Could not upload that image: ${error.message}`);
 
