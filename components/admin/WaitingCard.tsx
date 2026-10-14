@@ -26,11 +26,16 @@ export default function WaitingCard({
   into = "",
   markPaid,
   savePaymentLink,
+  cancel,
 }: {
   order: OrderCardData;
   into?: string;
   markPaid: (form: FormData) => Promise<void>;
   savePaymentLink: (form: FormData) => Promise<void>;
+  /** Calling it off. Every order in this cut is unpaid, which is the one
+   *  state cancelling is allowed in, so it belongs here rather than only
+   *  two taps away on the full card. */
+  cancel?: (form: FormData) => Promise<void>;
 }) {
   const wantsCard = order.paymentMethod === "card";
   const needsLink = wantsCard && !order.paymentLink;
@@ -201,12 +206,31 @@ export default function WaitingCard({
         </div>
       </form>
 
-      <Link
-        href={`/admin/orders/${order.id}`}
-        className="btn-admin btn-admin-sm w-full sm:w-auto"
-      >
-        Everything about this order →
-      </Link>
+      {/* The way out, beside the way in. Most of these are a duplicate or
+          somebody who changed their mind before any money moved, and
+          finding that out on a phone meant opening the order and scrolling
+          past everything else on it. Quiet, and asks first: cancelling
+          keeps the order and what was in it, and their own page says so. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Link
+          href={`/admin/orders/${order.id}`}
+          className="btn-admin btn-admin-sm flex-1 text-center"
+        >
+          Everything about this order →
+        </Link>
+        {cancel && (
+          <form action={cancel} className="shrink-0">
+            <input type="hidden" name="order_id" value={order.id} />
+            <ConfirmButton
+              tone="bad"
+              className="btn-admin-sm min-h-[38px]"
+              confirm="Yes, cancel it"
+            >
+              Cancel
+            </ConfirmButton>
+          </form>
+        )}
+      </div>
     </article>
   );
 }

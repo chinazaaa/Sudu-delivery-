@@ -365,6 +365,7 @@ export default async function OrdersPage({
                     into={bank?.bank_name ?? ""}
                     markPaid={markPaid}
                     savePaymentLink={savePaymentLink}
+                    cancel={cancelOrder}
                   />
                 ) : (
                   <HandOverCard
@@ -396,6 +397,7 @@ export default async function OrdersPage({
                   into={bank?.bank_name ?? ""}
                   markPaid={markPaid}
                   savePaymentLink={savePaymentLink}
+                  cancel={cancelOrder}
                 />
               ))}
             </div>
