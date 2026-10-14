@@ -436,14 +436,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   const askUsFor = useCallback(
     (first: string) => {
       bot(
-        "We do not carry that one yet. We can go and buy it for you though. " +
-          "Tell me what you want and roughly what it costs, and a person will " +
-          "come back to you with the real price before any money moves.",
+        "Tell me what you want and where it is from, and roughly what it costs if " +
+          "you know. A person goes and buys it, and comes back to you with the real " +
+          "price before any money moves.",
         560
       );
       setAsk({
         of: "text",
-        placeholder: first || "e.g. a large Debonairs meatlovers",
+        placeholder: first || "e.g. a Caesar salad from Debonairs",
         onSay: async (wanted) => {
           me(wanted);
           setAsk({ of: "nothing" });
@@ -761,40 +761,69 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             return;
           }
           /*
-           * Nothing close at all.
+           * Nobody sells it.
            *
-           * Three doors, in the order they are worth offering. What is on
-           * today, because most of the time it is a word away. Then asking
-           * us to go and get it, because somebody who types Debonairs is
-           * not a dead end, they are a sale we have not made yet and the
-           * shop already has a list for exactly that. A person last.
+           * Not a failure of the chat, and not a dead end either: the shop
+           * buys things nobody stocks every week. So it says plainly that
+           * nothing on the menu is that, and puts the two real answers up
+           * as the two buttons. Pick something else, which is the ordinary
+           * route, or say where to get it, which is the custom order
+           * route the site already has a list for.
            */
-          bot("I could not find that one. Here is some of what is on today.", 520);
+          misses.current += 1;
+          bot(`I cannot find <b>${said}</b> anywhere on the shop today.`, 500);
+          bot(
+            "Two ways round that. Pick something else, or tell me where to get it " +
+              "and a person will go and buy it for you.",
+            520
+          );
           setAsk({
-            of: "chips",
-            chips: [
-              ...(got.instead ?? []).map((one) => ({
-                said: one.shop ? `${one.name} · ${one.shop}` : one.name,
-                go: () => {
-                  me(one.name);
-                  setAsk({ of: "nothing" });
-                  fetch("/api/bot/find", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ said: one.name }),
-                  })
-                    .then((answer) => answer.json())
-                    .then((again: { hits: Hit[] }) => {
-                      if (again.hits[0]) walk(again.hits[0], 1);
-                      else askOrder();
-                    })
-                    .catch(askOrder);
-                },
-              })),
-              { said: "Let me type it again", go: () => { me("Let me type it again"); askOrder(); } },
-              { said: "Ask us to get it", hot: true, go: () => { me("Ask us to get it"); askUsFor(said); } },
+            of: "buttons",
+            buttons: [
+              { said: "Go and buy it for me", go: () => { me("Go and buy it for me"); askUsFor(said); } },
+              {
+                said: "I'll pick something else",
+                look: "alt",
+                go: () => { me("I'll pick something else"); askOrder(true); },
+              },
+              ...((got.instead ?? []).length > 0
+                ? [
+                    {
+                      said: "Show me what is on",
+                      look: "alt" as const,
+                      go: () => {
+                        me("Show me what is on");
+                        bot("Some of what is on today.", 420);
+                        setAsk({
+                          of: "chips",
+                          chips: [
+                            ...(got.instead ?? []).map((one) => ({
+                              said: one.shop ? `${one.name} · ${one.shop}` : one.name,
+                              go: () => {
+                                me(one.name);
+                                setAsk({ of: "nothing" });
+                                fetch("/api/bot/find", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ said: one.name }),
+                                })
+                                  .then((answer) => answer.json())
+                                  .then((again: { hits: Hit[] }) => {
+                                    if (again.hits[0]) walk(again.hits[0], 1);
+                                    else askOrder();
+                                  })
+                                  .catch(() => askOrder());
+                              },
+                            })),
+                            { said: "Let me type it", go: () => { me("Let me type it"); askOrder(true); } },
+                          ],
+                          hint: "Scroll for more.",
+                        });
+                      },
+                    },
+                  ]
+                : []),
             ],
-            hint: "Or type it another way. I am not fussy about spelling.",
           });
         } catch {
           bot("Something went wrong finding that. Try saying it again?");
