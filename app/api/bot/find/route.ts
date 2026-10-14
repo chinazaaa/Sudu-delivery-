@@ -151,6 +151,24 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     /*
+     * A shelf that answers it, worked out before anything is decided.
+     *
+     * "Small chops" is four dishes at one counter and the name of a whole
+     * shelf at another. Deciding on the dishes alone sends everybody to
+     * the first counter; deciding on the shelf alone hides the second. So
+     * both are known before either is used.
+     */
+    const shelfMine = only ? shelves.filter((one) => only.has(one.shop)) : shelves;
+    const shelfHit = find(only ? without(said, named) : said, shelfMine, 1).hits[0] ?? null;
+    const shelfShop = shelfHit
+      ? (shelfMine.find((one) => one.id === shelfHit.id)?.shop ?? "")
+      : "";
+    const onShelf =
+      shelfHit && shelfHit.score >= 0.5
+        ? looking.filter((item) => item.categoryId === shelfHit.id)
+        : [];
+
+    /*
      * The same thing on four counters.
      *
      * Nearly everybody sells chicken. Asked for one across the whole
@@ -158,13 +176,18 @@ export async function POST(request: Request): Promise<NextResponse> {
      * changes the price, the menu and what the choices will be. Asked at
      * one counter, it is not a question at all.
      */
-    if (!only && found.hits.length > 1) {
+    if (!only && found.how !== "sure") {
       const where: { id: string; name: string }[] = [];
-      for (const hit of found.hits) {
-        const shop = whose.get(hit.id);
+      const add = (shop: { id: string; name: string } | undefined) => {
         if (shop && !where.some((one) => one.id === shop.id)) where.push(shop);
+      };
+      for (const hit of found.hits) add(whose.get(hit.id));
+      // A counter whose whole shelf is called this is as much an answer as
+      // a counter with four dishes called it.
+      if (onShelf.length > 1 && shelfShop !== "") {
+        add(shops.find((one) => one.restaurant.id === shelfShop)?.restaurant);
       }
-      if (where.length > 1 && found.how !== "sure") {
+      if (where.length > 1) {
         return NextResponse.json({
           how: "where",
           qty: howMany(said),
@@ -188,15 +211,13 @@ export async function POST(request: Request): Promise<NextResponse> {
      * Only where nothing was a better answer, so "pepperoni pizza" still
      * goes straight to the pepperoni.
      */
-    if (found.how !== "sure") {
-      const mine = only ? shelves.filter((one) => only.has(one.shop)) : shelves;
-      const shelf = find(only ? without(said, named) : said, mine, 1);
-      if (shelf.hits[0] && shelf.hits[0].score >= 0.5) {
-        const on = looking.filter((item) => item.categoryId === shelf.hits[0].id);
+    if (found.how !== "sure" && shelfHit) {
+      {
+        const on = onShelf;
         if (on.length > 1) {
           return NextResponse.json({
             how: "shelf",
-            shelf: shelf.hits[0].name,
+            shelf: shelfHit.name,
             qty: howMany(said),
             person: false,
             hits: [],
