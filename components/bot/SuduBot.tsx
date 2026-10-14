@@ -1274,53 +1274,87 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       return;
     }
 
+    /*
+     * One answer and two buttons, not a menu.
+     *
+     * Somebody who says they need it sooner has asked a yes or no
+     * question: can you, and what does it cost. Six rows is that question
+     * answered with homework. So the soonest is said as a sentence with
+     * the two prices in it, and the other times are behind a third button
+     * for the one person in ten who wants to pick an hour.
+     */
+    const soonest = earlier[0];
+    const carFee = lists?.carFrom ?? 0;
+    const runFee = lists?.feeFrom ?? 0;
+
     bot(
-      `A car of its own costs from <b>${naira(lists?.carFrom ?? 0)}</b> instead of ` +
-        `${naira(lists?.feeFrom ?? 0)}, because it goes out just for you.`,
-      520
+      `I can get it to you <b>${soonest.phrase || soonest.label}</b>, on a car of its own. ` +
+        `That is <b>${naira(carFee)}</b> instead of ${naira(runFee)}, because it goes out just for you.`,
+      560
     );
 
-    const rows = [
-      ...earlier.map((car) => ({
-        dow: car.dow,
-        dom: car.dom,
-        title: `Car of its own, ${car.day === "later" ? "" : `${car.day}, `}`.replace(/, $/, ""),
-        when: car.label,
-        fee: lists?.carFrom ?? 0,
-        rush: true,
-      })),
-      // The one they already have, to come back to.
-      ...(keep
-        ? [
-            {
-              dow: keep.dow,
-              dom: keep.dom,
-              title: `Keep the ${keep.said} run`,
-              when: keep.window,
-              fee: lists?.feeFrom ?? 0,
-              rush: false,
-            },
-          ]
-        : []),
-    ];
+    const takeTheCar = (car: Car) => {
+      held.current.car = car;
+      held.current.run = null;
+      me(`A car of its own, ${car.phrase || car.label}`);
+      askOrder();
+    };
+
+    const keepTheRun = () => {
+      held.current.car = null;
+      held.current.run = keep ?? null;
+      me(`Keep the ${keep?.said ?? "next"} run`);
+      askOrder();
+    };
 
     setAsk({
-      of: "slots",
-      slots: rows,
-      onPick: (which) => {
-        if (which < earlier.length) {
-          const car = earlier[which];
-          held.current.car = car;
-          held.current.run = null;
-          me(`A car of its own, ${car.phrase || car.label}`);
-          askOrder();
-          return;
-        }
-        held.current.car = null;
-        held.current.run = keep ?? null;
-        me(`Keep the ${keep?.said ?? "next"} run`);
-        askOrder();
-      },
+      of: "buttons",
+      buttons: [
+        { said: `Yes, send a car · ${naira(carFee)}`, go: () => takeTheCar(soonest) },
+        {
+          said: `Keep the ${keep?.said ?? "next"} run · ${naira(runFee)}`,
+          look: "alt",
+          go: keepTheRun,
+        },
+        ...(earlier.length > 1
+          ? [
+              {
+                said: "Other times today",
+                look: "alt" as const,
+                go: () => {
+                  me("Other times");
+                  setAsk({
+                    of: "slots",
+                    slots: [
+                      ...earlier.map((car) => ({
+                        dow: car.dow,
+                        dom: car.dom,
+                        title: "Car of its own",
+                        when: car.label,
+                        fee: carFee,
+                        rush: true,
+                      })),
+                      ...(keep
+                        ? [
+                            {
+                              dow: keep.dow,
+                              dom: keep.dom,
+                              title: `Keep the ${keep.said} run`,
+                              when: keep.window,
+                              fee: runFee,
+                              rush: false,
+                            },
+                          ]
+                        : []),
+                    ],
+                    onPick: (which) =>
+                      which < earlier.length ? takeTheCar(earlier[which]) : keepTheRun(),
+                  });
+                },
+              },
+            ]
+          : []),
+      ],
     });
   }, [askOrder, bot, me]);
 
