@@ -72,6 +72,11 @@ type Held = {
   kitchen: { id: string; name: string } | null;
   /** What has been chosen, as the server will be told it. */
   lines: { itemId: string; name: string; qty: number; optionIds: string[]; chose: string[] }[];
+  /** Once it is placed: what to poll, what to quote, and whether the shop
+   *  is marking transfers paid by itself today. */
+  orderId: string;
+  ref: string;
+  watching: boolean;
 };
 
 const EMPTY: Held = {
@@ -81,6 +86,9 @@ const EMPTY: Held = {
   run: null,
   kitchen: null,
   lines: [],
+  orderId: "",
+  ref: "",
+  watching: false,
 };
 
 export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
@@ -99,6 +107,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
      "Domino's and KFC" is two questions, taken in the order they said
      them, rather than one search that finds neither. */
   const queue = useRef<{ id: string; name: string }[]>([]);
+  /* The watch, held in a box for the step that starts it. */
+  const watchRef = useRef<(() => void) | null>(null);
+  const poll = useRef<ReturnType<typeof setTimeout> | null>(null);
   const log = useRef<HTMLDivElement | null>(null);
 
   const push = useCallback((line: Line) => setLines((all) => [...all, line]), []);
@@ -142,6 +153,31 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     };
   }, [open, start]);
 
+  /*
+   * A line that says what is happening, where the server takes a moment.
+   *
+   * Nothing is slower than a chat that has gone quiet: the dots stop, no
+   * answer comes, and the person is left wondering whether it heard them.
+   * So anything that waits on the server puts a word up after a third of
+   * a second and takes it down when the answer arrives. Under that, it
+   * stays silent, because a flash of "working on it" is worse than none.
+   */
+  const [busy, setBusy] = useState("");
+  const waiting = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const working = useCallback(
+    async <T,>(said: string, doing: Promise<T>): Promise<T> => {
+      waiting.current = setTimeout(() => setBusy(said), 350);
+      try {
+        return await doing;
+      } finally {
+        if (waiting.current) clearTimeout(waiting.current);
+        waiting.current = null;
+        setBusy("");
+      }
+    },
+    []
+  );
+
   const me = useCallback((said: string) => say({ kind: "me", said }, 0), [say]);
   const bot = useCallback(
     (html: string, pause?: number) => say({ kind: "bot", html }, pause),
@@ -169,11 +205,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         me(said);
         setAsk({ of: "nothing" });
         try {
-          const answer = await fetch("/api/bot/find", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ said, kitchen: queue.current[0]?.id ?? "" }),
-          });
+          const answer = await working(
+            "Looking through the menus…",
+            fetch("/api/bot/find", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ said, kitchen: queue.current[0]?.id ?? "" }),
+            })
+          );
           const got = (await answer.json()) as {
             how: string;
             qty: number;
@@ -343,7 +382,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     setAsk({ of: "nothing" });
     const mine = held.current;
     try {
-      const answer = await fetch("/api/bot/price", {
+      const answer = await working(
+        "Working out your total…",
+        fetch("/api/bot/price", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -354,7 +395,8 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           })),
           batchId: mine.run?.id ?? "",
         }),
-      });
+        })
+      );
       const got = (await answer.json()) as {
         error?: string;
         lines?: { name: string; said: string; qty: number; total: number }[];
@@ -416,20 +458,290 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     }
   }, [askOrder, bot, me, say, waLink]);
 
-  /* The next piece, said plainly rather than pretended at. */
-  const payNext = useCallback(() => {
+  /*
+   * Placing it, and saying how to pay.
+   *
+   * Through the same front door as the website's own checkout, so the run
+   * sheet, the counter list, the PIN and the receipt all know about it.
+   * The narration is the part that matters: without it a payment alert is
+   * an amount and a stranger's name, and somebody has to guess.
+   */
+  const payNext = useCallback(async () => {
     setAt(5);
+    setAsk({ of: "nothing" });
+    const mine = held.current;
+    try {
+      const answer = await working(
+        "Placing your order…",
+        fetch("/api/bot/order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            batchId: mine.run?.id ?? "",
+            name: mine.name,
+            phone: mine.phone,
+            hostel: mine.hostel,
+            lines: mine.lines.map((line) => ({
+              menu_item_id: line.itemId,
+              qty: line.qty,
+              option_ids: line.optionIds,
+            })),
+          }),
+        })
+      );
+      const got = (await answer.json()) as {
+        error?: string;
+        id?: string;
+        ref?: string;
+        narration?: string;
+        total?: number;
+        account?: { bank: string; name: string; number: string } | null;
+        watching?: boolean;
+      };
+
+      if (got.error || !got.id) {
+        bot(got.error || "I could not place that just now.", 450);
+        setAsk({
+          of: "buttons",
+          buttons: [
+            { said: "Try again", go: () => { me("Try again"); payNext(); } },
+            { said: "Continue on WhatsApp", look: "green", href: waLink },
+          ],
+        });
+        return;
+      }
+
+      held.current.orderId = got.id;
+      held.current.ref = got.ref ?? "";
+      held.current.watching = got.watching === true;
+
+      bot(
+        `Order <b class="mono">${got.ref}</b> is in. Transfer <b>${naira(got.total ?? 0)}</b> to:`,
+        450
+      );
+      if (got.account) {
+        say(
+          {
+            kind: "card",
+            card: {
+              of: "pay",
+              title: "Transfer to",
+              rows: [
+                { k: "Bank", d: got.account.bank },
+                { k: "Account name", d: got.account.name },
+                { k: "Account number", d: got.account.number },
+              ],
+            },
+          },
+          520
+        );
+      }
+      bot("Send it, then tap below.", 420);
+      setAsk({
+        of: "buttons",
+        buttons: [
+          { said: "I’ve sent the transfer", go: () => { me("I’ve sent the transfer"); watchRef.current?.(); } },
+        ],
+        hint: got.narration
+          ? `Put <b>${got.narration}</b> as the transfer narration.`
+          : undefined,
+      });
+    } catch {
+      bot("I could not reach the shop just then.", 420);
+      setAsk({
+        of: "buttons",
+        buttons: [
+          { said: "Try again", go: () => { me("Try again"); payNext(); } },
+          { said: "Continue on WhatsApp", look: "green", href: waLink },
+        ],
+      });
+    }
+  }, [bot, me, say, waLink, working]);
+
+  const bye = useCallback(() => {
+    setAt(6);
+    const mine = held.current;
     bot(
-      "The transfer details, the watching for your payment and the receipt are " +
-        "the next piece being built. For now a person will take it from here, " +
-        "with everything you have told me already.",
+      `All set, ${mine.name || "friend"}. Anything at all before the ${mine.run?.said ?? "next"} run, reach us here.`,
+      480
+    );
+    setAsk({
+      of: "buttons",
+      buttons: [{ said: "Message us on WhatsApp", look: "green", href: waLink }],
+      hint: `Your order is <b>${mine.ref}</b>.`,
+    });
+  }, [bot, waLink]);
+
+  /* The money landed. */
+  const paid = useCallback(
+    (receipt: string) => {
+      if (poll.current) clearTimeout(poll.current);
+      setAt(6);
+      const mine = held.current;
+      say(
+        {
+          kind: "status",
+          tone: "ok",
+          html: `<span><b>Payment confirmed.</b> Order <b class="mono">${mine.ref}</b> is on the ${mine.run?.said ?? "next"} run.</span>`,
+        },
+        380
+      );
+      bot(`The rider calls <b>${mine.phone}</b> when he is outside ${mine.hostel}.`, 500);
+      bot("Want a receipt for this one?");
+      setAsk({
+        of: "buttons",
+        buttons: [
+          ...(receipt ? [{ said: "Yes, open my receipt", href: receipt }] : []),
+          { said: "No thanks", look: "alt" as const, go: () => { me("No thanks"); bye(); } },
+        ],
+        hint: receipt ? "It opens as a page you can save as a PDF or forward." : undefined,
+      });
+    },
+    [bot, bye, me, say]
+  );
+
+  /*
+   * No alert yet, which is ordinary and is said as ordinary.
+   *
+   * The fast watching stops here, because a minute is as long as anybody
+   * should be asked to sit looking at a spinner, and an alert is sometimes
+   * an hour. But the chat does not go deaf: it keeps one quiet check a
+   * minute going in the background, so if the money lands while the panel
+   * is still open it still says so, in the same conversation. One request
+   * a minute for half an hour, then it stops asking for good, because a
+   * page left open overnight should not be knocking on the door until
+   * morning.
+   */
+  const unconfirmed = useCallback(() => {
+    if (poll.current) clearTimeout(poll.current);
+    const mine = held.current;
+
+    let quiet = 0;
+    const listen = async () => {
+      quiet += 1;
+      try {
+        const answer = await fetch(`/api/bot/order/${mine.orderId}`);
+        const got = (await answer.json()) as { how: string; receipt?: string };
+        if (got.how === "paid") {
+          paid(got.receipt ?? "");
+          return;
+        }
+      } catch {
+        /* A check that failed is a check, not an answer. */
+      }
+      if (quiet < 30) poll.current = setTimeout(listen, 60000);
+    };
+    if (mine.watching && mine.orderId !== "") poll.current = setTimeout(listen, 60000);
+    say(
+      {
+        kind: "status",
+        tone: "warn",
+        html: "<span><b>Not confirmed yet.</b> No alert has reached us.</span>",
+      },
+      380
+    );
+    bot("That is normal. Bank alerts are sometimes minutes and sometimes longer.", 500);
+    bot(
+      "You do not have to sit here. Leave this open and I will say so the moment it lands, " +
+        "or close it and we will message you.",
+      520
+    );
+    bot(
+      `Your order <b class="mono">${mine.ref}</b> is saved against the <b>${mine.run?.said ?? "next"}</b> run. ` +
+        `We will message you on WhatsApp at <b>${mine.phone}</b> the moment it lands.`,
       520
     );
     setAsk({
       of: "buttons",
-      buttons: [{ said: "Continue on WhatsApp", look: "green", href: waLink }],
+      buttons: [
+        { said: "Message us on WhatsApp", look: "green", href: waLink },
+        { said: "Check again now", look: "alt", go: () => { me("Check again now"); watchRef.current?.(); } },
+      ],
+      hint: `Quote <b>${mine.ref}</b> if you message us.`,
     });
-  }, [bot, waLink]);
+  }, [bot, me, paid, say, waLink]);
+
+  /*
+   * Watching for the money, honestly.
+   *
+   * Only where the shop marks transfers paid by itself. Where it does not,
+   * there is nothing to watch for, and a spinner that was never going to
+   * stop is the worst of both. So it says what will actually happen, which
+   * is that somebody will message them.
+   *
+   * And it gives up out loud. A bank alert is minutes sometimes and an
+   * hour others, and a chat that span for an hour would be a chat that
+   * lied about what it was doing.
+   */
+  const watch = useCallback(() => {
+    setAt(5);
+    const mine = held.current;
+
+    if (!mine.watching) {
+      say(
+        {
+          kind: "status",
+          tone: "",
+          html: "<span><b>Got it.</b> We check every transfer against the account by hand.</span>",
+        },
+        420
+      );
+      bot(
+        `Your order <b class="mono">${mine.ref}</b> is saved against the <b>${mine.run?.said ?? "next"}</b> run. ` +
+          `We will message you on WhatsApp at <b>${mine.phone}</b> the moment it lands.`,
+        520
+      );
+      setAsk({
+        of: "buttons",
+        buttons: [{ said: "Message us on WhatsApp", look: "green", href: waLink }],
+        hint: `Quote <b>${mine.ref}</b> if you message us.`,
+      });
+      return;
+    }
+
+    let tries = 0;
+    const look = async () => {
+      tries += 1;
+      try {
+        const answer = await fetch(`/api/bot/order/${mine.orderId}`);
+        const got = (await answer.json()) as { how: string; receipt?: string };
+        if (got.how === "paid") {
+          paid(got.receipt ?? "");
+          return;
+        }
+      } catch {
+        /* A check that failed is a check, not an answer. */
+      }
+      if (tries >= 6) {
+        unconfirmed();
+        return;
+      }
+      poll.current = setTimeout(look, 10000);
+    };
+
+    say({ kind: "status", tone: "", spinning: true, html: "Watching for your transfer…" }, 420);
+    poll.current = setTimeout(look, 4000);
+
+    setAsk({
+      of: "buttons",
+      buttons: [
+        {
+          said: "I’ll check back later",
+          look: "alt",
+          go: () => {
+            if (poll.current) clearTimeout(poll.current);
+            me("I’ll check back later");
+            unconfirmed();
+          },
+        },
+      ],
+      hint: "We watch for about a minute. After that we message you, so you do not have to sit here.",
+    });
+  }, [bot, me, paid, say, unconfirmed, waLink]);
+
+  useEffect(() => {
+    watchRef.current = watch;
+  }, [watch]);
 
   const askKitchen = useCallback(() => {
     setAt(2);
@@ -599,6 +911,8 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
 
   function close() {
     clear();
+    if (poll.current) clearTimeout(poll.current);
+    poll.current = null;
     setOpen(false);
   }
 
@@ -687,6 +1001,12 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               <Said key={which} line={line} />
             ))}
             {typing && <Typing />}
+            {busy !== "" && (
+              <div className="status">
+                <span className="spin" />
+                <span>{busy}</span>
+              </div>
+            )}
           </div>
 
           <Asking ask={ask} whatsapp={waLink} />

@@ -541,9 +541,11 @@ export default async function CustomersPage({
                           ? "Mostly the app"
                           : row.uses === "web"
                             ? "Mostly the website"
-                            : row.uses === ""
-                              ? ""
-                              : "App and website";
+                            : row.uses === "bot"
+                              ? "Mostly the chat"
+                              : row.uses === ""
+                                ? ""
+                                : "More than one way in";
                       const second = [door, row.pays === "card" ? "Pays by card" : ""].filter(
                         (part) => part !== ""
                       );

@@ -348,10 +348,11 @@ export type CustomerRow = {
    *  word of their name, which is only a guess. */
   callsThem: string;
   /** Which front door they use, over all their orders: "app", "web",
-   *  "mixed", or empty where none of their orders recorded it. Worth
-   *  knowing before pushing an app at somebody who already has it, or
-   *  sending a link to somebody who never opens the website. */
-  uses: "app" | "web" | "mixed" | "";
+   *  "bot", "mixed", or empty where none of their orders recorded it.
+   *  Worth knowing before pushing an app at somebody who already has it,
+   *  sending a link to somebody who never opens the website, or deciding
+   *  whether the chat is earning its keep. */
+  uses: "app" | "web" | "bot" | "mixed" | "";
   /** Whether they have left a Google review, ticked by hand. Google never
    *  says who wrote what, so the only point of this is to stop the list
    *  asking the same person twice. */
@@ -364,13 +365,15 @@ export type CustomerRow = {
  * A clear majority is named, a genuine split is called mixed. Two thirds is
  * the line: half and half is mixed, and three orders to one is not.
  */
-function doorFor(sources: string[]): "app" | "web" | "mixed" | "" {
-  const said = sources.filter((one) => one === "app" || one === "web");
+function doorFor(sources: string[]): "app" | "web" | "bot" | "mixed" | "" {
+  const doors = ["app", "web", "bot"] as const;
+  const said = sources.filter((one): one is (typeof doors)[number] =>
+    (doors as readonly string[]).includes(one)
+  );
   if (said.length === 0) return "";
-  const app = said.filter((one) => one === "app").length;
-  const web = said.length - app;
-  if (app >= said.length * 2 / 3) return "app";
-  if (web >= said.length * 2 / 3) return "web";
+  for (const door of doors) {
+    if (said.filter((one) => one === door).length >= (said.length * 2) / 3) return door;
+  }
   return "mixed";
 }
 

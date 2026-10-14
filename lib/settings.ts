@@ -33,6 +33,16 @@ export type Settings = {
   instagram_handle: string;
   x_handle: string;
   contact_email: string;
+  /**
+   * Whether a payment alert may mark its own order paid.
+   *
+   * "on" and the inbox does it, where exactly one unpaid order matches the
+   * amount exactly. Anything else and it stays a suggestion for a person,
+   * which is how it has always worked. A forged alert cannot put money in
+   * the account, but it can put food in a car, so this is a switch rather
+   * than a given, and it is off until somebody turns it on.
+   */
+  auto_paid: string;
   /** The App Store id, digits only. Empty means the site never mentions an
    *  iPhone app: no bar in Safari, no link in the footer. */
   ios_app_id: string;
@@ -201,6 +211,7 @@ export const EMPTY: Settings = {
   instagram_handle: "",
   x_handle: "",
   contact_email: "hello@sudu.store",
+  auto_paid: "",
   ios_app_id: "",
   android_package: "",
   abroad_on: "",
