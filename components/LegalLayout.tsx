@@ -4,7 +4,7 @@ import PageHead from "./PageHead";
 /**
  * The shape every page of small print on this site shares.
  *
- * Three of them say the same kind of thing at the same length, so the board
+ * They say the same kind of thing at the same length, so the board
  * gives them one layout: the head with the date it was last changed, a
  * numbered list of what is on the page down the left, and the sections
  * themselves as numbered cards. Written once, because three hand-made small
@@ -26,13 +26,17 @@ export default function LegalLayout({
   sections: string[];
   /** Which of the fine-print pages this is, so the links beside it do not
    *  offer the page somebody is already reading. */
-  here: "terms" | "privacy" | "returns";
+  here: "terms" | "privacy" | "returns" | "santa";
   children: React.ReactNode;
 }) {
   const fine = [
     { key: "terms", href: "/terms", said: "Terms of service" },
     { key: "privacy", href: "/privacy", said: "Privacy" },
     { key: "returns", href: "/return-policy", said: "Returns and refunds" },
+    // Its own page because it is its own arrangement: money held for weeks
+    // on behalf of a group, against a gift nobody has chosen yet. None of
+    // that is answered by the terms for an order of jollof.
+    { key: "santa", href: "/santa/terms", said: "Secret Santa" },
   ];
 
   return (

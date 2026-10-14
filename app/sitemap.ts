@@ -88,6 +88,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${site}/terms`, changeFrequency: "monthly" as const, priority: 0.3 },
     // A card provider or a store asks for this one by address.
     { url: `${site}/return-policy`, changeFrequency: "monthly" as const, priority: 0.3 },
+    // Its own arrangement and its own page: money held for weeks against a
+    // gift nobody has chosen yet is not answered by the food terms.
+    { url: `${site}/santa/terms`, changeFrequency: "monthly" as const, priority: 0.3 },
   ];
 
   try {

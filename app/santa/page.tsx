@@ -335,6 +335,17 @@ export default async function SantaPage({
           </div>
         ))}
       </section>
+
+      {/* The small print, where somebody who is about to hand over money
+          for a gift three weeks away can actually find it. */}
+      <p className="pb-12 text-[15px] text-ink/70">
+        Starting or joining a room means agreeing to the{" "}
+        <Link href="/santa/terms" className="font-semibold text-brand underline">
+          Secret Santa terms
+        </Link>
+        : what the budget covers, when we are holding your money, and what
+        happens if a gift costs more than the room agreed.
+      </p>
     </div>
   );
 }
