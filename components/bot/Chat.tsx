@@ -289,7 +289,9 @@ export function Asking({
             </button>
           ))}
         </div>
-        <div className="bothint">A special run is a car sent outside the schedule.</div>
+        <div className="bothint">
+          A car of its own goes out for your order alone, at the time you pick.
+        </div>
       </div>
     );
   }

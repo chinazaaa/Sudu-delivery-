@@ -53,6 +53,8 @@ type Run = {
   runDate: string;
   window: string;
   closes: string;
+  /** When the car sets off, so "sooner" can mean sooner. */
+  startsAt: string;
   dow: string;
   dom: number;
 };
@@ -1230,8 +1232,8 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
    * One card for the next run, and two buttons. Showing every run at once
    * was four near-identical rows with the same price on each, which
    * answers a question nobody asked: the next one is nearly always the
-   * answer, and the list belongs behind "I need it sooner" along with the
-   * cars, which is the only thing on this screen worth paying more for.
+   * answer, and a car of its own belongs behind "I need it sooner", which
+   * is the only thing on this screen worth paying more for.
    */
   const askSooner = useCallback(() => {
     setAt(1);
@@ -1240,7 +1242,21 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     const cars = lists?.cars ?? [];
     const keep = runs[0];
 
-    if (cars.length === 0 && runs.length <= 1) {
+    /*
+     * Sooner means sooner.
+     *
+     * Asked for something before the next run, the screen offered the
+     * next run and the four after it, which is the opposite of the
+     * question. Only what actually lands earlier is shown, with the run
+     * they already have at the bottom so there is a way back.
+     */
+    const by = keep ? new Date(keep.startsAt).getTime() : Number.MAX_SAFE_INTEGER;
+    const earlier = cars.filter((car) => {
+      const at = new Date(car.at).getTime();
+      return Number.isFinite(at) && at < by;
+    });
+
+    if (earlier.length === 0) {
       bot(`The <b>${keep?.said ?? "next"}</b> run is the soonest we can reach you.`, 480);
       setAsk({
         of: "buttons",
@@ -1258,18 +1274,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       return;
     }
 
-    if (cars.length > 0) {
-      bot(
-        `A car of its own costs from <b>${naira(lists?.carFrom ?? 0)}</b> instead of ` +
-          `${naira(lists?.feeFrom ?? 0)}, because it goes out just for you.`,
-        520
-      );
-    } else {
-      bot("These are the other runs I can put you on.", 460);
-    }
+    bot(
+      `A car of its own costs from <b>${naira(lists?.carFrom ?? 0)}</b> instead of ` +
+        `${naira(lists?.feeFrom ?? 0)}, because it goes out just for you.`,
+      520
+    );
 
     const rows = [
-      ...cars.map((car) => ({
+      ...earlier.map((car) => ({
         dow: car.dow,
         dom: car.dom,
         title: `Car of its own, ${car.day === "later" ? "" : `${car.day}, `}`.replace(/, $/, ""),
@@ -1277,32 +1289,36 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         fee: lists?.carFrom ?? 0,
         rush: true,
       })),
-      ...runs.map((run) => ({
-        dow: run.dow,
-        dom: run.dom,
-        title: `Run ${run.said}`,
-        when: run.window,
-        fee: lists?.feeFrom ?? 0,
-        rush: false,
-      })),
+      // The one they already have, to come back to.
+      ...(keep
+        ? [
+            {
+              dow: keep.dow,
+              dom: keep.dom,
+              title: `Keep the ${keep.said} run`,
+              when: keep.window,
+              fee: lists?.feeFrom ?? 0,
+              rush: false,
+            },
+          ]
+        : []),
     ];
 
     setAsk({
       of: "slots",
       slots: rows,
       onPick: (which) => {
-        if (which < cars.length) {
-          const car = cars[which];
+        if (which < earlier.length) {
+          const car = earlier[which];
           held.current.car = car;
           held.current.run = null;
           me(`A car of its own, ${car.phrase || car.label}`);
           askOrder();
           return;
         }
-        const run = runs[which - cars.length];
         held.current.car = null;
-        held.current.run = run;
-        me(`Run ${run.said}, ${run.window.charAt(0).toLowerCase()}${run.window.slice(1)}`);
+        held.current.run = keep ?? null;
+        me(`Keep the ${keep?.said ?? "next"} run`);
         askOrder();
       },
     });
@@ -1341,7 +1357,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       420
     );
 
-    const sooner = (lists?.cars ?? []).length > 0 || runs.length > 1;
+    // Only offer it where there is genuinely something earlier. Asking
+    // "do you need it sooner" and then answering "no, you cannot" is a
+    // question that should not have been put.
+    const by = new Date(first.startsAt).getTime();
+    const sooner = (lists?.cars ?? []).some((car) => {
+      const at = new Date(car.at).getTime();
+      return Number.isFinite(at) && at < by;
+    });
     setAsk({
       of: "buttons",
       buttons: [

@@ -5,7 +5,7 @@ import { hostelNames } from "@/lib/hostels";
 import { shopEmails } from "@/lib/settings";
 import { openRestaurants } from "@/lib/menu";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
-import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
+import { deliverySlots, slotsWorthOffering, windowHours } from "@/lib/same-day";
 import { headlineFee } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
 import { runDateLabel } from "@/lib/time";
@@ -70,6 +70,13 @@ export async function GET(): Promise<NextResponse> {
           runDate: batch.run_date,
           window: view.deliveryWindow,
           closes: view.cutOffLabel,
+          // When the car actually sets off, as an instant, so "sooner"
+          // can mean sooner rather than "a different row on a list".
+          startsAt: (() => {
+            const hours = windowHours(batch.delivery_window_text);
+            const at = `${batch.run_date}T${String(hours?.from ?? 17).padStart(2, "0")}:00:00+01:00`;
+            return new Date(at).toISOString();
+          })(),
           // For the little calendar block on the slot card.
           ...block(batch.run_date),
           areas: view.areas,
