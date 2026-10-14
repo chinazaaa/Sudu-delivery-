@@ -117,8 +117,17 @@ const LOOK_EVERY = 15000;
 /** And the first look, soon enough to catch an alert that beat them back. */
 const FIRST_LOOK = 8000;
 
-/** After that, one quiet look a minute, for this long. */
-const LISTEN_FOR = 30;
+/**
+ * After that, a quieter look, and for how many of them.
+ *
+ * Half a minute rather than a whole one. The alert is not what is being
+ * waited for by then so much as somebody in admin, and a minute of
+ * looking at a screen that already says paid is a minute too long: the
+ * first test of this ended with somebody pressing "check again now"
+ * because nothing had happened yet.
+ */
+const LISTEN_EVERY = 30000;
+const LISTEN_FOR = 60;
 
 const EMPTY: Held = {
   name: "",
@@ -190,6 +199,30 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   const askOrderRef = useRef<((again?: boolean) => void) | null>(null);
   const byeRef = useRef<(() => void) | null>(null);
   const poll = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /*
+   * Said once, and then never again.
+   *
+   * Pressing "check again now" while the quiet check was still running
+   * left two watchers going, and when the money landed they both
+   * announced it: two payment confirmations with a spinner between them,
+   * on a loop. One flag ends every chain, and a chain that wakes up after
+   * it is set goes quietly back to sleep.
+   */
+  const settled = useRef(false);
+
+  /**
+   * Whatever is being waited on, stopped, and the spinner taken down.
+   *
+   * A spinner is a thing happening now, not a thing that happened, so it
+   * has no business staying in the log underneath the answer it was
+   * waiting for. "Watching for your transfer…" sitting above "Payment
+   * confirmed" reads as though it is still going.
+   */
+  const stopWatching = useCallback(() => {
+    if (poll.current) clearTimeout(poll.current);
+    poll.current = null;
+    setLines((all) => all.filter((one) => !(one.kind === "status" && one.spinning)));
+  }, []);
   const log = useRef<HTMLDivElement | null>(null);
 
   const push = useCallback((line: Line) => setLines((all) => [...all, line]), []);
@@ -938,7 +971,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   /* The money landed. */
   const paid = useCallback(
     (receipt: string) => {
-      if (poll.current) clearTimeout(poll.current);
+      if (settled.current) return;
+      settled.current = true;
+      stopWatching();
       setAt(6);
       const mine = held.current;
       say(
@@ -949,7 +984,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         },
         380
       );
-      bot(`The rider calls <b>${mine.phone}</b> when he is outside ${mine.hostel}.`, 500);
+      // Whoever is driving that day. "He" was wrong the first time somebody
+      // read it, and a shop that guesses at a person's gender in writing is
+      // a shop that got it wrong in front of them.
+      bot(`We call <b>${mine.phone}</b> when we are outside ${mine.hostel}.`, 500);
       /*
        * Where to watch it from here, and how to find everything else.
        *
@@ -974,7 +1012,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         hint: receipt ? "The receipt saves as a PDF, or forwards as a link." : undefined,
       });
     },
-    [bot, bye, me, say]
+    [bot, bye, me, say, stopWatching]
   );
 
   /*
@@ -991,12 +1029,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
    * morning.
    */
   const unconfirmed = useCallback(() => {
-    if (poll.current) clearTimeout(poll.current);
+    if (settled.current) return;
+    stopWatching();
     const mine = held.current;
 
     let quiet = 0;
     const listen = async () => {
       quiet += 1;
+      if (settled.current) return;
       try {
         const answer = await fetch(`/api/bot/order/${mine.orderId}`);
         const got = (await answer.json()) as { how: string; receipt?: string };
@@ -1007,9 +1047,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       } catch {
         /* A check that failed is a check, not an answer. */
       }
-      if (quiet < LISTEN_FOR) poll.current = setTimeout(listen, 60000);
+      if (!settled.current && quiet < LISTEN_FOR) poll.current = setTimeout(listen, LISTEN_EVERY);
     };
-    if (mine.watching && mine.orderId !== "") poll.current = setTimeout(listen, 60000);
+    if (mine.orderId !== "") poll.current = setTimeout(listen, LISTEN_EVERY);
     say(
       {
         kind: "status",
@@ -1042,14 +1082,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       ],
       hint: `Quote <b>${mine.ref}</b> if you message us.`,
     });
-  }, [bot, handOver, me, paid, say]);
+  }, [bot, handOver, me, paid, say, stopWatching]);
 
   /*
    * Watching for the money, honestly.
    *
-   * Only where the shop marks transfers paid by itself. Where it does not,
-   * there is nothing to watch for, and a spinner that was never going to
-   * stop is the worst of both. So it says what will actually happen, which
+   * It watches whoever marks it: a bank alert or a thumb in admin are the
+   * same event from in here. What the setting changes is the wording, and
+   * what this says is what is actually happening, which
    * is that somebody will message them.
    *
    * And it gives up out loud. A bank alert is minutes sometimes and an
@@ -1057,6 +1097,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
    * lied about what it was doing.
    */
   const watch = useCallback(() => {
+    if (settled.current) return;
+    // Whatever was already looking, stopped first. Two chains running is
+    // two announcements of the same event.
+    stopWatching();
     setAt(5);
     const mine = held.current;
 
@@ -1085,6 +1129,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     let tries = 0;
     const look = async () => {
       tries += 1;
+      if (settled.current) return;
       try {
         const answer = await fetch(`/api/bot/order/${mine.orderId}`);
         const got = (await answer.json()) as { how: string; receipt?: string };
@@ -1095,6 +1140,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       } catch {
         /* A check that failed is a check, not an answer. */
       }
+      if (settled.current) return;
       if (tries >= WATCH_FOR) {
         unconfirmed();
         return;
@@ -1112,7 +1158,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           said: "I’ll check back later",
           look: "alt",
           go: () => {
-            if (poll.current) clearTimeout(poll.current);
+            stopWatching();
             me("I’ll check back later");
             unconfirmed();
           },
@@ -1120,7 +1166,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       ],
       hint: "We watch for about three minutes. After that we message you, so you do not have to sit here.",
     });
-  }, [bot, handOver, me, paid, say, unconfirmed]);
+  }, [bot, handOver, me, paid, say, stopWatching, unconfirmed]);
 
   useEffect(() => {
     watchRef.current = watch;
@@ -1403,7 +1449,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
 
   const askPhone = useCallback(() => {
     setAt(0);
-    bot(`Nice to meet you, <b>${held.current.name || "friend"}</b>. What number should the rider call?`);
+    bot(`Nice to meet you, <b>${held.current.name || "friend"}</b>. What number should we call on the day?`);
     let tries = 0;
     setAsk({
       of: "text",
@@ -1418,14 +1464,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           return;
         }
         tries += 1;
-        /* A number the rider cannot ring is an order nobody can deliver,
+        /* A number nobody can ring is an order nobody can deliver,
            so this one is worth insisting on. Twice, and then a person
            takes over rather than somebody being stuck in a loop with a
            box that keeps saying no. */
         if (tries >= 3) {
           bot(
             "I am not reading that as a Nigerian mobile, and I would rather not " +
-              "guess at the number the rider has to call. A person can sort this out in a second.",
+              "guess at the number we have to call on the day. A person can sort this out in a second.",
             520
           );
           setAsk({
@@ -1452,6 +1498,8 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   }, [askHostel, bot, handOver, me]);
 
   const begin = useCallback(() => {
+    settled.current = false;
+    stopWatching();
     held.current = { ...EMPTY, lines: [] };
     setLines([]);
     setAt(0);
@@ -1484,7 +1532,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         takeIt(said);
       },
     });
-  }, [askPhone, bot, me]);
+  }, [askPhone, bot, me, stopWatching]);
 
   /*
    * Said once.
@@ -1510,8 +1558,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   function close() {
     greeted.current = false;
     clear();
-    if (poll.current) clearTimeout(poll.current);
-    poll.current = null;
+    stopWatching();
     setOpen(false);
   }
 
