@@ -419,3 +419,240 @@ export function without(
   // searching a whole menu for an empty string.
   return left === "" ? said : left;
 }
+
+/** The two halves of a change: what goes, and what takes its place. */
+export type Swap = {
+  /** What they no longer want, in their own words. Empty where they only
+   *  said "change it", which means whatever is being talked about. */
+  drop: string;
+  /** What they want instead. Empty where they only asked for something to
+   *  be taken off. */
+  want: string;
+};
+
+/**
+ * Apostrophes, which flattening turns into orphaned letters.
+ *
+ * "I don't want" flattens to "i don t want", and every pattern about not
+ * wanting something then has to carry a stray t. Put back as one word, the
+ * patterns read like the sentences they are about.
+ */
+function knit(flat: string): string {
+  return flat
+    .replace(/\bdon t\b/g, "dont")
+    .replace(/\bdoesn t\b/g, "doesnt")
+    .replace(/\bwon t\b/g, "wont")
+    .replace(/\bcan t\b/g, "cant")
+    .replace(/\bi d\b/g, "id")
+    .replace(/\bi ve\b/g, "ive");
+}
+
+/** Where one half of a change sentence stops and the other begins. */
+const TURN =
+  /\b(?:anymore|any more|no more|instead|rather|and then|but|i want|id like|id prefer|change it|make it|swap it|please)\b/;
+
+/**
+ * One half of a change sentence, with the grammar filed off.
+ *
+ * What is left has to be something the finder can look up, so the leading
+ * articles go, the trailing courtesies go, and the sentence is cut where it
+ * turns into the other half: "chicken from kfc anymore i want chicken
+ * republic" is a thing to drop and a thing to add, not one long dish.
+ *
+ * "From KFC" is deliberately kept. It is the half of the phrase that says
+ * which of five chickens they meant, and the finder reads counters out of a
+ * sentence already.
+ */
+function half(part: string): string {
+  let text = part.trim();
+
+  const cut = text.search(TURN);
+  if (cut > 0) text = text.slice(0, cut);
+
+  let was = "";
+  while (was !== text) {
+    was = text;
+    text = text
+      .replace(
+        /^(?:the|my|a|an|that|this|it|them|those|of|to|for|want|wanted|order|ordered|get|have)\s+/,
+        ""
+      )
+      .trim();
+  }
+
+  return text
+    .replace(/\s+(?:please|thanks|thank you|instead|anymore|any more)$/, "")
+    .replace(/^(?:it|that|this|them)$/, "")
+    .trim();
+}
+
+/**
+ * A sentence that changes an order already half placed.
+ *
+ * "I don't want chicken from KFC anymore, I want to change it to Chicken
+ * Republic" is one sentence doing two jobs, and until the chat could read
+ * it the only answer was to start the whole order again. It is also, by
+ * some distance, the most common thing anybody says after seeing a bill.
+ *
+ * Both halves are optional. "Remove the jollof" is a drop with nothing to
+ * put back; "change it to Chicken Republic" is a swap for whatever is
+ * being talked about, which the chat already knows. Neither half found and
+ * this is not a change at all, so it goes back as nothing and the sentence
+ * is treated as the ordinary order it probably is.
+ */
+export function asksToSwap(said: string): Swap | null {
+  const flat = knit(flatten(said));
+  const changing = /\b(?:change|swap|switch|replace|instead)\b/.test(flat);
+  const dropping =
+    /\b(?:dont|no longer|remove|cancel|delete|drop|scratch|forget|take off|take out)\b/.test(
+      flat
+    );
+  if (!changing && !dropping) return null;
+
+  let drop = "";
+  let want = "";
+
+  /*
+   * Each pattern is tried and the grammar filed off before it is kept,
+   * because a pattern can match and still say nothing: "change it to
+   * Chicken Republic" offers "it" as the thing to drop, and "it" is the
+   * sentence pointing at something the chat already knows rather than at a
+   * dish. Filed down to nothing, it lets the next pattern have a go.
+   */
+  const keep = (part: string | undefined, into: "drop" | "want"): void => {
+    const got = half(part ?? "");
+    if (got === "") return;
+    if (into === "drop" && drop === "") drop = got;
+    if (into === "want" && want === "") want = got;
+  };
+
+  // "Instead of the jollof give me fried rice", and the same sentence said
+  // the other way round.
+  const instead = flat.match(/\binstead of (.+)$/);
+  if (instead) {
+    const rest = instead[1];
+    const split = rest.match(
+      /^(.+?)\s+(?:give me|gimme|i want|id like|can i get|can i have|let me have|make it|do|use|put)\s+(.+)$/
+    );
+    if (split) {
+      keep(split[1], "drop");
+      keep(split[2], "want");
+    } else {
+      keep(rest, "drop");
+      keep(flat.slice(0, instead.index ?? 0), "want");
+    }
+  }
+
+  // "Change the chicken to Chicken Republic", which is both halves in one
+  // clause and the clearest thing anybody says.
+  const swapped = flat.match(
+    /\b(?:change|swap|switch|replace)\s+(.*?)\s+(?:to|for|with|into)\s+(.+)$/
+  );
+  if (swapped) {
+    keep(swapped[1], "drop");
+    keep(swapped[2], "want");
+  }
+
+  // Said as two sentences: the thing that is off, then the thing that is on.
+  const gone = flat.match(
+    /\b(?:dont want|dont need|do not want|no longer want|no longer need|remove|cancel|delete|drop|scratch|forget|take off|take out)\s+(.+)$/
+  );
+  if (gone) keep(gone[1], "drop");
+
+  const asked = flat.match(
+    /\b(?:i want|id like|id prefer|give me|gimme|can i get|can i have|make it|rather have|rather)\s+(.+)$/
+  );
+  if (asked) keep(asked[1], "want");
+
+  // "Want" can catch the half that was already read as the drop, where
+  // somebody says "I don't want the chicken" and nothing else.
+  if (want !== "" && want === drop) want = "";
+  if (drop === "" && want === "") return null;
+
+  return { drop, want };
+}
+
+/**
+ * Which line of an order somebody means, by name.
+ *
+ * The same matcher the menu search uses, pointed at a basket of four things
+ * instead of a menu of four hundred. "The chicken" has to find "Zinger
+ * Burger Meal" from KFC, so the counter's name counts as well as the
+ * dish's: somebody who says "the KFC one" has said enough.
+ */
+export function lineLike(
+  said: string,
+  lines: { name: string; shop?: string }[],
+  /* Higher than the menu search's floor, and for the opposite reason: a
+   * menu of four hundred can afford to offer a near miss as a question,
+   * while a basket of three has to come back with nothing rather than
+   * removing the only line that scored at all. "Ice cream" against jollof
+   * rice scores a third on the bigrams alone. */
+  least = 0.45
+): number {
+  const asked = words(said);
+  if (asked.length === 0 || lines.length === 0) return -1;
+
+  let best = -1;
+  let score = 0;
+  lines.forEach((line, which) => {
+    const mine = scoreOne(asked, {
+      id: String(which),
+      name: `${line.name} ${line.shop ?? ""}`.trim(),
+    });
+    if (mine > score) {
+      score = mine;
+      best = which;
+    }
+  });
+
+  return score >= least ? best : -1;
+}
+
+/** A number at the front of a phrase, in digits or in words. */
+const COUNTED =
+  /^\s*(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|a|an)\b/i;
+
+/**
+ * An order written out as a list, split into the things on it.
+ *
+ * Plenty of people arrive with the order already written down: it was
+ * agreed in a group chat, or typed into a notepad while everybody said what
+ * they wanted, and it gets pasted in whole. "5 jollof, 2 zinger burger, 1
+ * coke" is five, two and one of three different things, and read as one
+ * sentence it matches nothing at all.
+ *
+ * Commas, new lines, semicolons and plus signs are a list and are always
+ * split on. "And" is not: "fish and chips", "jollof rice and chicken" and
+ * "half and half" are all one dish, and splitting those is worse than not
+ * splitting at all. So it only counts as a join where both sides start with
+ * a number, which is how a list written out loud reads and is not how any
+ * dish on the menu is named.
+ *
+ * Nothing that looks like one thing comes back as a list, so an ordinary
+ * sentence is still handled by the ordinary search.
+ */
+export function splitOrder(said: string): string[] {
+  const text = String(said ?? "").trim();
+  if (text === "") return [];
+
+  const parts = text
+    .split(/\s*(?:\r?\n|[,;]|\s\+\s|\sthen\s|\salso\s)\s*/i)
+    .flatMap((part) => {
+      // "2 pizza and 1 coke" is two things. "Fish and chips" is one.
+      const joined = part.split(/\s+and\s+/i);
+      if (joined.length === 2 && joined.every((side) => COUNTED.test(side))) {
+        return joined;
+      }
+      return [part];
+    })
+    .map((part) =>
+      part
+        .replace(/^\s*(?:and|plus|with|also)\s+/i, "")
+        .replace(/\s*(?:please|thanks|thank you|thats all|that is all)\s*$/i, "")
+        .trim()
+    )
+    .filter((part) => part !== "" && words(part).length > 0);
+
+  return parts.length >= 2 ? parts : [];
+}

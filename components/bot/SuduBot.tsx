@@ -3,7 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { naira } from "@/lib/money";
-import { find, looksLikeAName, phoneIn } from "@/lib/bot-match";
+import {
+  find,
+  looksLikeAName,
+  phoneIn,
+  asksToSwap,
+  lineLike,
+  splitOrder,
+  type Swap,
+} from "@/lib/bot-match";
 import { Asking, Rail, Said, Typing, useSaying, type Ask, type Line } from "./Chat";
 
 /**
@@ -92,7 +100,17 @@ type Held = {
   car: Car | null;
   kitchen: { id: string; name: string } | null;
   /** What has been chosen, as the server will be told it. */
-  lines: { itemId: string; name: string; qty: number; optionIds: string[]; chose: string[] }[];
+  lines: {
+    itemId: string;
+    name: string;
+    qty: number;
+    optionIds: string[];
+    chose: string[];
+    /** Which counter it is from. Not sent anywhere: it is how somebody
+     *  talks about the line afterwards ("the KFC one") and how the chat
+     *  tells two identical dishes from two kitchens apart. */
+    shop?: string;
+  }[];
   /** Once it is placed: what to poll, what to quote, and whether the shop
    *  is marking transfers paid by itself today. */
   orderId: string;
@@ -190,6 +208,19 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
    *  picked yet, so the chat asks rather than letting them forget. */
   const owed = useRef(0);
   const askOrderRef = useRef<((again?: boolean) => void) | null>(null);
+  /** The search, held in a box because the change step runs it too. */
+  const huntRef = useRef<((said: string, echo?: boolean) => void) | null>(null);
+  /** The basket editor, held the same way: the step that adds a line
+   *  offers it, and it offers the step that adds a line. */
+  const changeRef = useRef<((asked?: Swap | null) => void) | null>(null);
+  /* An order pasted in whole, waiting its turn. "5 jollof, 2 zinger, 1
+     coke" is three searches, taken one at a time so the questions each
+     one asks land in the right place. */
+  const list = useRef<string[]>([]);
+  /** How long that list was, so the end of it can be announced and the
+   *  bill shown rather than asking somebody who has already said
+   *  everything whether they want anything else. */
+  const listing = useRef(0);
   const byeRef = useRef<(() => void) | null>(null);
   const poll = useRef<ReturnType<typeof setTimeout> | null>(null);
   /*
@@ -511,6 +542,435 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     [bot, handOver, me, say, working]
   );
 
+  /*
+   * Looking for what somebody just said, and doing whatever that turns out
+   * to need.
+   *
+   * Lifted out of the question that asks it, because it is now asked from
+   * two places: the plain "what do you fancy", and a change to an order
+   * already taken, where "change the KFC chicken to Chicken Republic" has
+   * to run the same search on the second half of the sentence without
+   * making anybody type it again.
+   */
+  const hunt = useCallback(
+    async (said: string, echo = true) => {
+      if (echo) me(said);
+      setAsk({ of: "nothing" });
+
+      /*
+       * Said to change something already on the order.
+       *
+       * Only ever on a sentence somebody typed, and only with something on
+       * the order to change: "change it to Chicken Republic" with an empty
+       * basket is somebody ordering, not editing.
+       */
+      if (echo && held.current.lines.length > 0) {
+        const swap = asksToSwap(said);
+        if (swap) {
+          changeRef.current?.(swap);
+          return;
+        }
+      }
+
+      /*
+       * The order arriving written out, which is how it arrives whenever
+       * it was agreed somewhere else first. Taken one at a time, because
+       * each thing on it may have a question of its own.
+       */
+      if (echo && list.current.length === 0) {
+        const parts = splitOrder(said);
+        if (parts.length >= 2) {
+          list.current = parts.slice(1);
+          listing.current = parts.length;
+          bot(
+            `<b>${parts.length}</b> things. I will take them one at a time, and ` +
+              "ask about any I cannot place.",
+            460
+          );
+          huntRef.current?.(parts[0], false);
+          return;
+        }
+      }
+      try {
+        const answer = await working(
+          "Looking through the menus…",
+          fetch("/api/bot/find", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ said, kitchen: queue.current[0]?.id ?? "" }),
+          })
+        );
+        const got = (await answer.json()) as {
+          how: string;
+          qty: number;
+          hits: Hit[];
+          instead: { id: string; name: string; shop: string }[];
+          shops?: { id: string; name: string }[];
+          shelf?: string;
+        };
+        /*
+         * The same thing on four counters.
+         *
+         * Nearly everybody sells chicken, and where it comes from
+         * changes the price, the menu and the questions after it. So it
+         * is asked first, and then the search runs again at that one
+         * counter with the same words.
+         */
+        if (got.how === "where" && (got.shops ?? []).length > 1) {
+          misses.current = 0;
+          const places = got.shops ?? [];
+          const pick = (shop: { id: string; name: string }) => {
+            me(shop.name);
+            queue.current = [shop];
+            setAsk({ of: "nothing" });
+            fetch("/api/bot/find", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ said, kitchen: shop.id }),
+            })
+              .then((answer) => answer.json())
+              .then((again: { hits: Hit[] }) => {
+                queue.current = [];
+                if (again.hits[0]) walk(again.hits[0], again.hits[0].qty ?? got.qty);
+                else askOrder();
+              })
+              .catch(() => askOrder());
+          };
+
+          /*
+           * Two or three places is a question with an answer on it.
+           * Six is a list.
+           *
+           * "Small chops" is Uncle Stan's or Burger King, and naming
+           * them both in the sentence and putting them on two buttons
+           * is the whole exchange. "Chicken" is five counters, and five
+           * buttons stacked down the screen is a wall; those go as
+           * chips, which read as a row of names rather than as a
+           * decision somebody has to work through.
+           */
+          if (places.length <= 3) {
+            bot(
+              `${places.map((one) => `<b>${one.name}</b>`).join(" or ")}?`,
+              450
+            );
+            setAsk({
+              of: "buttons",
+              buttons: places.map((shop, which) => ({
+                said: shop.name,
+                look: which === 0 ? undefined : ("alt" as const),
+                go: () => pick(shop),
+              })),
+              hint: "The price and the menu change with the counter.",
+            });
+            return;
+          }
+
+          bot("A few places do that. Where from?", 450);
+          setAsk({
+            of: "chips",
+            chips: places.map((shop, which) => ({
+              said: shop.name,
+              hot: which === 0,
+              go: () => pick(shop),
+            })),
+            hint: "The price and the menu change with the counter.",
+          });
+          return;
+        }
+
+        /*
+         * A kind of thing rather than one thing. "2 medium pizza" is not
+         * a dish on any menu; it is a question, and the answer is the
+         * shelf it came from.
+         */
+        if (got.how === "shelf" && (got.instead ?? []).length > 0) {
+          misses.current = 0;
+          const kind = (got.shelf ?? "").replace(/s$/i, "");
+          bot(`Which ${kind.toLowerCase() || "one"}?`, 450);
+          setAsk({
+            of: "chips",
+            chips: [
+              ...(got.instead ?? []).map((one) => ({
+                said: one.name,
+                go: () => {
+                  me(one.name);
+                  setAsk({ of: "nothing" });
+                  fetch("/api/bot/find", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ said: one.name, kitchen: queue.current[0]?.id ?? "" }),
+                  })
+                    .then((answer) => answer.json())
+                    .then((again: { hits: Hit[] }) => {
+                      if (!again.hits[0]) {
+                        askOrder();
+                        return;
+                      }
+                      /*
+                       * Two pizzas is not necessarily two of one pizza.
+                       *
+                       * Somebody who said "2 medium pizza" and then
+                       * picked one has not said whether the second is
+                       * the same. Asked once, it is a tap; assumed, it
+                       * is two Margheritas when they wanted one of each.
+                       */
+                      if (got.qty > 1) {
+                        const hit = again.hits[0];
+                        bot(
+                          `All <b>${got.qty}</b> the same, or a different one for the rest?`,
+                          450
+                        );
+                        setAsk({
+                          of: "buttons",
+                          buttons: [
+                            {
+                              said: `${got.qty} × ${hit.name}`,
+                              go: () => {
+                                me(`${got.qty} × ${hit.name}`);
+                                walk(hit, got.qty);
+                              },
+                            },
+                            {
+                              said: `One ${hit.name}, I will pick the rest`,
+                              look: "alt",
+                              go: () => {
+                                me(`One ${hit.name}`);
+                                // The rest are still owed, so the chat
+                                // asks for them rather than leaving
+                                // somebody to remember.
+                                owed.current = got.qty - 1;
+                                walk(hit, 1);
+                              },
+                            },
+                          ],
+                        });
+                        return;
+                      }
+                      walk(again.hits[0], 1);
+                    })
+                    .catch(() => askOrder());
+                },
+              })),
+              { said: "Something else", go: () => { me("Something else"); askOrder(true); } },
+            ],
+            hint: "Scroll for more if yours is not showing.",
+          });
+          return;
+        }
+
+        /* Nearly a counter. A tap settles it, and saying nothing would
+           send somebody to WhatsApp over a spelling. */
+        if (got.how === "maybe-kitchens" && (got.shops ?? []).length > 0) {
+          const nearly = got.shops ?? [];
+          bot(
+            nearly.length === 1
+              ? `Did you mean <b>${nearly[0].name}</b>?`
+              : "Did you mean one of these?",
+            450
+          );
+          setAsk({
+            of: "chips",
+            chips: [
+              ...nearly.map((shop, which) => ({
+                said: shop.name,
+                hot: which === 0,
+                go: () => {
+                  me(shop.name);
+                  queue.current = [shop];
+                  askOrder();
+                },
+              })),
+              { said: "None of those", go: () => { me("None of those"); askOrder(); } },
+            ],
+          });
+          return;
+        }
+        if (got.how === "kitchens" && (got.shops ?? []).length > 0) {
+          queue.current = [...(got.shops ?? [])];
+          const names = queue.current.map((one) => one.name);
+          bot(
+            names.length === 1
+              ? `<b>${names[0]}</b> it is.`
+              : `<b>${names.join("</b> and <b>")}</b>. We will do them one at a time.`,
+            450
+          );
+          askOrder();
+          return;
+        }
+        if (got.how === "person") {
+          bot("Of course. A person will pick this up on WhatsApp with everything you have told me already.");
+          setAsk({
+            of: "buttons",
+            buttons: [
+              { said: "Continue on WhatsApp", look: "green", href: handOver("Could you help me finish it?") },
+              { said: "Actually, let me carry on here", look: "alt", go: askOrder },
+            ],
+          });
+          return;
+        }
+        if (got.how === "sure" && got.hits[0]) {
+          misses.current = 0;
+          walk(got.hits[0], got.hits[0].qty ?? got.qty);
+          return;
+        }
+
+        misses.current += 1;
+        if (misses.current >= 3) {
+          misses.current = 0;
+          bot(
+            "Apologies, I understand what you are asking for and I am just not " +
+              "finding it. Rather than have you tap through this again, let me " +
+              "pass you to a person with everything you have already told me.",
+            540
+          );
+          setAsk({
+            of: "buttons",
+            buttons: [
+              {
+                said: "Continue on WhatsApp",
+                look: "green",
+                href: handOver("Could you help me finish it?"),
+              },
+              { said: "Ask us to get it", look: "alt", go: () => { me("Ask us to get it"); askUsFor(said); } },
+              { said: "Let me try once more", look: "alt", go: () => { me("Let me try once more"); askOrder(); } },
+            ],
+          });
+          return;
+        }
+        if (got.hits.length > 0) {
+          bot("I think I have it. Which one did you mean?", 500);
+          setAsk({
+            of: "chips",
+            chips: [
+              ...got.hits.map((hit, which) => ({
+                /* The counter is on the chip, so one tap answers both
+                   "which dish" and "from where". */
+                said: hit.shop.name ? `${hit.name} · ${hit.shop.name}` : hit.name,
+                hot: which === 0,
+                go: () => {
+                  me(hit.name);
+                  misses.current = 0;
+                  walk(hit, hit.qty ?? got.qty);
+                },
+              })),
+              { said: "None of these", go: () => { me("None of these"); askOrder(); } },
+            ],
+            hint: "Tap the right one, or say it another way.",
+          });
+          return;
+        }
+        /*
+         * Nobody sells it.
+         *
+         * Not a failure of the chat, and not a dead end either: the shop
+         * buys things nobody stocks every week. So it says plainly that
+         * nothing on the menu is that, and puts the two real answers up
+         * as the two buttons. Pick something else, which is the ordinary
+         * route, or say where to get it, which is the custom order
+         * route the site already has a list for.
+         */
+        misses.current += 1;
+        /*
+         * Third time round, a person takes it.
+         *
+         * Nothing on the menu is that, and the two usual ways round it
+         * have already been offered twice. Offering them a third time is
+         * the loop, so the apology goes first and WhatsApp goes on the
+         * green button, with the custom-order route still there under it
+         * for anyone who would rather stay.
+         */
+        if (misses.current >= 3) {
+          misses.current = 0;
+          bot(
+            `Apologies, I cannot find <b>${said}</b> either, and I do not want ` +
+              "to keep you going round in circles.",
+            500
+          );
+          bot(
+            "A person can take it from here with everything you have already " +
+              "told me.",
+            480
+          );
+          setAsk({
+            of: "buttons",
+            buttons: [
+              {
+                said: "Continue on WhatsApp",
+                look: "green",
+                href: handOver("Could you help me finish it?"),
+              },
+              { said: "Ask us to get it", look: "alt", go: () => { me("Ask us to get it"); askUsFor(said); } },
+              { said: "Let me try once more", look: "alt", go: () => { me("Let me try once more"); askOrder(true); } },
+            ],
+          });
+          return;
+        }
+        bot(`I cannot find <b>${said}</b> anywhere on the shop today.`, 500);
+        bot(
+          "Two ways round that. Pick something else, or tell me where to get it " +
+            "and a person will go and buy it for you.",
+          520
+        );
+        setAsk({
+          of: "buttons",
+          buttons: [
+            { said: "Go and buy it for me", go: () => { me("Go and buy it for me"); askUsFor(said); } },
+            {
+              said: "I'll pick something else",
+              look: "alt",
+              go: () => { me("I'll pick something else"); askOrder(true); },
+            },
+            ...((got.instead ?? []).length > 0
+              ? [
+                  {
+                    said: "Show me what is on",
+                    look: "alt" as const,
+                    go: () => {
+                      me("Show me what is on");
+                      bot("Some of what is on today.", 420);
+                      setAsk({
+                        of: "chips",
+                        chips: [
+                          ...(got.instead ?? []).map((one) => ({
+                            said: one.shop ? `${one.name} · ${one.shop}` : one.name,
+                            go: () => {
+                              me(one.name);
+                              setAsk({ of: "nothing" });
+                              fetch("/api/bot/find", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ said: one.name }),
+                              })
+                                .then((answer) => answer.json())
+                                .then((again: { hits: Hit[] }) => {
+                                  if (again.hits[0]) walk(again.hits[0], 1);
+                                  else askOrder();
+                                })
+                                .catch(() => askOrder());
+                            },
+                          })),
+                          { said: "Let me type it", go: () => { me("Let me type it"); askOrder(true); } },
+                        ],
+                        hint: "Scroll for more.",
+                      });
+                    },
+                  },
+                ]
+              : []),
+          ],
+        });
+      } catch {
+        bot("Something went wrong finding that. Try saying it again?");
+        askOrder();
+      }
+    },
+    [bot, handOver, me, waLink, working]
+  );
+
+  useEffect(() => {
+    huntRef.current = hunt;
+  }, [hunt]);
+
   const askOrder = useCallback((again = false) => {
     setAt(2);
     /* Where somebody named counters, the question names the next one and
@@ -526,347 +986,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     setAsk({
       of: "text",
       placeholder: only ? `Something from ${only.name}` : "e.g. 2 medium bbq pizza",
-      onSay: async (said) => {
-        me(said);
-        setAsk({ of: "nothing" });
-        try {
-          const answer = await working(
-            "Looking through the menus…",
-            fetch("/api/bot/find", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ said, kitchen: queue.current[0]?.id ?? "" }),
-            })
-          );
-          const got = (await answer.json()) as {
-            how: string;
-            qty: number;
-            hits: Hit[];
-            instead: { id: string; name: string; shop: string }[];
-            shops?: { id: string; name: string }[];
-            shelf?: string;
-          };
-          /*
-           * The same thing on four counters.
-           *
-           * Nearly everybody sells chicken, and where it comes from
-           * changes the price, the menu and the questions after it. So it
-           * is asked first, and then the search runs again at that one
-           * counter with the same words.
-           */
-          if (got.how === "where" && (got.shops ?? []).length > 1) {
-            misses.current = 0;
-            const places = got.shops ?? [];
-            const pick = (shop: { id: string; name: string }) => {
-              me(shop.name);
-              queue.current = [shop];
-              setAsk({ of: "nothing" });
-              fetch("/api/bot/find", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ said, kitchen: shop.id }),
-              })
-                .then((answer) => answer.json())
-                .then((again: { hits: Hit[] }) => {
-                  queue.current = [];
-                  if (again.hits[0]) walk(again.hits[0], again.hits[0].qty ?? got.qty);
-                  else askOrder();
-                })
-                .catch(() => askOrder());
-            };
-
-            /*
-             * Two or three places is a question with an answer on it.
-             * Six is a list.
-             *
-             * "Small chops" is Uncle Stan's or Burger King, and naming
-             * them both in the sentence and putting them on two buttons
-             * is the whole exchange. "Chicken" is five counters, and five
-             * buttons stacked down the screen is a wall; those go as
-             * chips, which read as a row of names rather than as a
-             * decision somebody has to work through.
-             */
-            if (places.length <= 3) {
-              bot(
-                `${places.map((one) => `<b>${one.name}</b>`).join(" or ")}?`,
-                450
-              );
-              setAsk({
-                of: "buttons",
-                buttons: places.map((shop, which) => ({
-                  said: shop.name,
-                  look: which === 0 ? undefined : ("alt" as const),
-                  go: () => pick(shop),
-                })),
-                hint: "The price and the menu change with the counter.",
-              });
-              return;
-            }
-
-            bot("A few places do that. Where from?", 450);
-            setAsk({
-              of: "chips",
-              chips: places.map((shop, which) => ({
-                said: shop.name,
-                hot: which === 0,
-                go: () => pick(shop),
-              })),
-              hint: "The price and the menu change with the counter.",
-            });
-            return;
-          }
-
-          /*
-           * A kind of thing rather than one thing. "2 medium pizza" is not
-           * a dish on any menu; it is a question, and the answer is the
-           * shelf it came from.
-           */
-          if (got.how === "shelf" && (got.instead ?? []).length > 0) {
-            misses.current = 0;
-            const kind = (got.shelf ?? "").replace(/s$/i, "");
-            bot(`Which ${kind.toLowerCase() || "one"}?`, 450);
-            setAsk({
-              of: "chips",
-              chips: [
-                ...(got.instead ?? []).map((one) => ({
-                  said: one.name,
-                  go: () => {
-                    me(one.name);
-                    setAsk({ of: "nothing" });
-                    fetch("/api/bot/find", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ said: one.name, kitchen: queue.current[0]?.id ?? "" }),
-                    })
-                      .then((answer) => answer.json())
-                      .then((again: { hits: Hit[] }) => {
-                        if (!again.hits[0]) {
-                          askOrder();
-                          return;
-                        }
-                        /*
-                         * Two pizzas is not necessarily two of one pizza.
-                         *
-                         * Somebody who said "2 medium pizza" and then
-                         * picked one has not said whether the second is
-                         * the same. Asked once, it is a tap; assumed, it
-                         * is two Margheritas when they wanted one of each.
-                         */
-                        if (got.qty > 1) {
-                          const hit = again.hits[0];
-                          bot(
-                            `All <b>${got.qty}</b> the same, or a different one for the rest?`,
-                            450
-                          );
-                          setAsk({
-                            of: "buttons",
-                            buttons: [
-                              {
-                                said: `${got.qty} × ${hit.name}`,
-                                go: () => {
-                                  me(`${got.qty} × ${hit.name}`);
-                                  walk(hit, got.qty);
-                                },
-                              },
-                              {
-                                said: `One ${hit.name}, I will pick the rest`,
-                                look: "alt",
-                                go: () => {
-                                  me(`One ${hit.name}`);
-                                  // The rest are still owed, so the chat
-                                  // asks for them rather than leaving
-                                  // somebody to remember.
-                                  owed.current = got.qty - 1;
-                                  walk(hit, 1);
-                                },
-                              },
-                            ],
-                          });
-                          return;
-                        }
-                        walk(again.hits[0], 1);
-                      })
-                      .catch(() => askOrder());
-                  },
-                })),
-                { said: "Something else", go: () => { me("Something else"); askOrder(true); } },
-              ],
-              hint: "Scroll for more if yours is not showing.",
-            });
-            return;
-          }
-
-          /* Nearly a counter. A tap settles it, and saying nothing would
-             send somebody to WhatsApp over a spelling. */
-          if (got.how === "maybe-kitchens" && (got.shops ?? []).length > 0) {
-            const nearly = got.shops ?? [];
-            bot(
-              nearly.length === 1
-                ? `Did you mean <b>${nearly[0].name}</b>?`
-                : "Did you mean one of these?",
-              450
-            );
-            setAsk({
-              of: "chips",
-              chips: [
-                ...nearly.map((shop, which) => ({
-                  said: shop.name,
-                  hot: which === 0,
-                  go: () => {
-                    me(shop.name);
-                    queue.current = [shop];
-                    askOrder();
-                  },
-                })),
-                { said: "None of those", go: () => { me("None of those"); askOrder(); } },
-              ],
-            });
-            return;
-          }
-          if (got.how === "kitchens" && (got.shops ?? []).length > 0) {
-            queue.current = [...(got.shops ?? [])];
-            const names = queue.current.map((one) => one.name);
-            bot(
-              names.length === 1
-                ? `<b>${names[0]}</b> it is.`
-                : `<b>${names.join("</b> and <b>")}</b>. We will do them one at a time.`,
-              450
-            );
-            askOrder();
-            return;
-          }
-          if (got.how === "person") {
-            bot("Of course. A person will pick this up on WhatsApp with everything you have told me already.");
-            setAsk({
-              of: "buttons",
-              buttons: [
-                { said: "Continue on WhatsApp", look: "green", href: handOver("Could you help me finish it?") },
-                { said: "Actually, let me carry on here", look: "alt", go: askOrder },
-              ],
-            });
-            return;
-          }
-          if (got.how === "sure" && got.hits[0]) {
-            misses.current = 0;
-            walk(got.hits[0], got.hits[0].qty ?? got.qty);
-            return;
-          }
-
-          misses.current += 1;
-          if (misses.current >= 3) {
-            misses.current = 0;
-            bot(
-              "I am not getting this one, and I would rather not keep you going " +
-                "round. A person can take it from here with everything you have " +
-                "already told me.",
-              540
-            );
-            setAsk({
-              of: "buttons",
-              buttons: [
-                {
-                  said: "Continue on WhatsApp",
-                  look: "green",
-                  href: handOver("Could you help me finish it?"),
-                },
-                { said: "Ask us to get it", look: "alt", go: () => { me("Ask us to get it"); askUsFor(said); } },
-                { said: "Let me try once more", look: "alt", go: () => { me("Let me try once more"); askOrder(); } },
-              ],
-            });
-            return;
-          }
-          if (got.hits.length > 0) {
-            bot("I think I have it. Which one did you mean?", 500);
-            setAsk({
-              of: "chips",
-              chips: [
-                ...got.hits.map((hit, which) => ({
-                  /* The counter is on the chip, so one tap answers both
-                     "which dish" and "from where". */
-                  said: hit.shop.name ? `${hit.name} · ${hit.shop.name}` : hit.name,
-                  hot: which === 0,
-                  go: () => {
-                    me(hit.name);
-                    misses.current = 0;
-                    walk(hit, hit.qty ?? got.qty);
-                  },
-                })),
-                { said: "None of these", go: () => { me("None of these"); askOrder(); } },
-              ],
-              hint: "Tap the right one, or say it another way.",
-            });
-            return;
-          }
-          /*
-           * Nobody sells it.
-           *
-           * Not a failure of the chat, and not a dead end either: the shop
-           * buys things nobody stocks every week. So it says plainly that
-           * nothing on the menu is that, and puts the two real answers up
-           * as the two buttons. Pick something else, which is the ordinary
-           * route, or say where to get it, which is the custom order
-           * route the site already has a list for.
-           */
-          misses.current += 1;
-          bot(`I cannot find <b>${said}</b> anywhere on the shop today.`, 500);
-          bot(
-            "Two ways round that. Pick something else, or tell me where to get it " +
-              "and a person will go and buy it for you.",
-            520
-          );
-          setAsk({
-            of: "buttons",
-            buttons: [
-              { said: "Go and buy it for me", go: () => { me("Go and buy it for me"); askUsFor(said); } },
-              {
-                said: "I'll pick something else",
-                look: "alt",
-                go: () => { me("I'll pick something else"); askOrder(true); },
-              },
-              ...((got.instead ?? []).length > 0
-                ? [
-                    {
-                      said: "Show me what is on",
-                      look: "alt" as const,
-                      go: () => {
-                        me("Show me what is on");
-                        bot("Some of what is on today.", 420);
-                        setAsk({
-                          of: "chips",
-                          chips: [
-                            ...(got.instead ?? []).map((one) => ({
-                              said: one.shop ? `${one.name} · ${one.shop}` : one.name,
-                              go: () => {
-                                me(one.name);
-                                setAsk({ of: "nothing" });
-                                fetch("/api/bot/find", {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ said: one.name }),
-                                })
-                                  .then((answer) => answer.json())
-                                  .then((again: { hits: Hit[] }) => {
-                                    if (again.hits[0]) walk(again.hits[0], 1);
-                                    else askOrder();
-                                  })
-                                  .catch(() => askOrder());
-                              },
-                            })),
-                            { said: "Let me type it", go: () => { me("Let me type it"); askOrder(true); } },
-                          ],
-                          hint: "Scroll for more.",
-                        });
-                      },
-                    },
-                  ]
-                : []),
-            ],
-          });
-        } catch {
-          bot("Something went wrong finding that. Try saying it again?");
-          askOrder();
-        }
-      },
+      onSay: (said) => huntRef.current?.(said),
     });
   }, [bot, me, waLink]);
 
@@ -877,14 +997,136 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       const named: string[] = [];
       const wanted = hit.groups.filter((group) => group.required || group.dearest);
 
+      /*
+       * What happens once the order has one more thing on it, whether that
+       * was a new line or one more of a line already there.
+       *
+       * Written once because both routes owe the same three things: the
+       * running order kept for a person to read on WhatsApp, whatever was
+       * promised and not yet picked, and the counters somebody named that
+       * have not been asked about yet.
+       */
+      const after = () => {
+        remember(
+          held.current.lines
+            .map((line) => `${line.qty > 1 ? `${line.qty} × ` : ""}${line.name}`)
+            .join(", ")
+        );
+
+        if (owed.current > 0) {
+          const left = owed.current;
+          owed.current = 0;
+          bot(
+            left === 1 ? "And the other one?" : `And the other <b>${left}</b>?`,
+            450
+          );
+          askOrder(true);
+          return;
+        }
+
+        /* Still working down a list somebody pasted in. */
+        if (list.current.length > 0) {
+          const then = list.current.shift() as string;
+          bot(`Next: <b>${then}</b>.`, 420);
+          huntRef.current?.(then, false);
+          return;
+        }
+
+        /*
+         * And the end of one goes straight to the bill.
+         *
+         * Somebody who pasted the whole order in has already said
+         * everything they want; asking "anything else?" at the end of
+         * their own list is the chat not having listened. What they are
+         * waiting for is the total.
+         */
+        if (listing.current > 0) {
+          const many = listing.current;
+          listing.current = 0;
+          bot(`That is all <b>${many}</b> on. Here is the total.`, 440);
+          soon();
+          return;
+        }
+
+        /* Done with this counter, so the next one somebody named is the
+           next question rather than something they have to remember. */
+        if (queue.current.length > 0) queue.current.shift();
+        if (queue.current.length > 0) {
+          askOrder();
+          return;
+        }
+        setAsk({
+          of: "buttons",
+          buttons: [
+            { said: "Add something else", look: "alt", go: () => { me("Add something else"); askOrder(true); } },
+            { said: "Change something", look: "alt", go: () => { me("Change something"); changeRef.current?.(); } },
+            { said: "That's everything", go: () => { me("That's everything"); soon(); } },
+          ],
+        });
+      };
+
       const next = (which: number) => {
         if (which >= wanted.length) {
+          /*
+           * The same thing, asked for twice.
+           *
+           * Somebody who orders a Zinger, carries on, and then says
+           * "zinger" again has either forgotten or wants two, and the chat
+           * cannot know which. Added silently it is two lines on the bill
+           * that read as a mistake; refused it is rude. So it is asked,
+           * once, with the number it would become on the button.
+           *
+           * Same dish and the same choices on it: a half-and-half with
+           * different halves is a different pizza and goes on as its own
+           * line.
+           */
+          const already = held.current.lines.findIndex(
+            (line) =>
+              line.itemId === hit.id &&
+              line.optionIds.length === chosen.length &&
+              line.optionIds.every((id) => chosen.includes(id))
+          );
+          if (already >= 0) {
+            const line = held.current.lines[already];
+            bot(
+              `You already have <b>${line.qty > 1 ? `${line.qty} × ` : ""}${line.name}</b>` +
+                (named.length > 0 ? ` (${named.join(", ")})` : "") +
+                " in your order.",
+              460
+            );
+            setAsk({
+              of: "buttons",
+              buttons: [
+                {
+                  said: `Make it ${line.qty + qty}`,
+                  go: () => {
+                    me(`Make it ${line.qty + qty}`);
+                    line.qty += qty;
+                    bot(`Done, <b>${line.qty} × ${line.name}</b>.`, 420);
+                    after();
+                  },
+                },
+                {
+                  said: `Leave it at ${line.qty}`,
+                  look: "alt",
+                  go: () => {
+                    me(`Leave it at ${line.qty}`);
+                    after();
+                  },
+                },
+              ],
+              hint: "Nothing is added twice by accident.",
+            });
+            return;
+          }
+
           held.current.lines.push({
             itemId: hit.id,
             name: hit.name,
             qty,
             optionIds: chosen,
             chose: named,
+            shop: hit.shop.name || undefined,
           });
           bot(
             `Added <b>${qty > 1 ? `${qty} × ` : ""}${hit.name}</b>` +
@@ -892,37 +1134,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               (hit.shop.name ? ` from <b>${hit.shop.name}</b>.` : "."),
             450
           );
-          remember(
-            held.current.lines
-              .map((line) => `${line.qty > 1 ? `${line.qty} × ` : ""}${line.name}`)
-              .join(", ")
-          );
-
-          if (owed.current > 0) {
-            const left = owed.current;
-            owed.current = 0;
-            bot(
-              left === 1 ? "And the other one?" : `And the other <b>${left}</b>?`,
-              450
-            );
-            askOrder(true);
-            return;
-          }
-
-          /* Done with this counter, so the next one somebody named is the
-             next question rather than something they have to remember. */
-          if (queue.current.length > 0) queue.current.shift();
-          if (queue.current.length > 0) {
-            askOrder();
-            return;
-          }
-          setAsk({
-            of: "buttons",
-            buttons: [
-              { said: "Add something else", look: "alt", go: () => { me("Add something else"); askOrder(true); } },
-              { said: "That's everything", go: () => { me("That's everything"); soon(); } },
-            ],
-          });
+          after();
           return;
         }
         const group = wanted[which];
@@ -998,7 +1210,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         setAsk({
           of: "buttons",
           buttons: [
-            { said: "Change something", look: "alt", go: () => { me("Change something"); askOrder(true); } },
+            { said: "Change something", look: "alt", go: () => { me("Change something"); changeRef.current?.(); } },
             { said: "Continue on WhatsApp", look: "green", href: handOver("Could you help me finish it?") },
           ],
         });
@@ -1040,7 +1252,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         of: "buttons",
         buttons: [
           { said: "Confirm order", go: () => { me("Confirm order"); payNext(); } },
-          { said: "Change something", look: "alt", go: () => { me("Change something"); askOrder(true); } },
+          { said: "Change something", look: "alt", go: () => { me("Change something"); changeRef.current?.(); } },
         ],
         hint: "Nothing is charged until you transfer.",
       });
@@ -1052,6 +1264,205 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       });
     }
   }, [askOrder, bot, me, say, waLink]);
+
+  /*
+   * Changing an order already taken.
+   *
+   * "Change something" used to mean "what else would you like", which is
+   * not what anybody means by it: they mean take the chicken off, or make
+   * it three, or I want it from somewhere else. With nothing to answer
+   * that, the only way out was to start the whole order again, and the
+   * thing most often being changed is the bill somebody is looking at.
+   *
+   * It is also where a sentence lands. "I don't want chicken from KFC
+   * anymore, change it to Chicken Republic" is read straight through: the
+   * line it names comes off and the search runs on the other half, with
+   * nothing to type twice. Where the sentence names a line the basket does
+   * not have, it says so and shows the basket rather than guessing, because
+   * guessing here removes somebody's food.
+   */
+  const change = useCallback(
+    (asked: Swap | null = null) => {
+      setAt(2);
+      const lines = held.current.lines;
+
+      if (lines.length === 0) {
+        bot("There is nothing on your order yet.", 420);
+        askOrder(true);
+        return;
+      }
+
+      const said = (line: (typeof lines)[number]): string =>
+        `${line.qty > 1 ? `${line.qty} × ` : ""}${line.name}`;
+
+      const kept = () =>
+        remember(lines.map((line) => said(line)).join(", "));
+
+      const basket = (lead = "Here is your order. Which one?") => {
+        bot(lead, 440);
+        setAsk({
+          of: "chips",
+          chips: [
+            ...lines.map((line, which) => ({
+              said: line.shop ? `${said(line)} · ${line.shop}` : said(line),
+              go: () => {
+                me(said(line));
+                one(which);
+              },
+            })),
+            { said: "Add something else", go: () => { me("Add something else"); askOrder(true); } },
+            { said: "Nothing, carry on", go: () => { me("Nothing, carry on"); soon(); } },
+          ],
+          hint: "Tap a line to change it, or say what you want changed.",
+          placeholder: "e.g. take the chicken off",
+          onSay: (typed: string) => huntRef.current?.(typed),
+        });
+      };
+
+      /* One line, and the three things anybody wants to do to it. */
+      const one = (which: number) => {
+        const line = lines[which];
+        if (!line) {
+          basket();
+          return;
+        }
+
+        bot(`<b>${said(line)}</b>. What should I do with it?`, 430);
+        setAsk({
+          of: "buttons",
+          buttons: [
+            {
+              said: "Take it off",
+              go: () => {
+                me("Take it off");
+                lines.splice(which, 1);
+                kept();
+                bot(`Gone. <b>${line.name}</b> is off your order.`, 420);
+                if (lines.length === 0) {
+                  bot("That is everything off. What would you like instead?", 440);
+                  askOrder(true);
+                  return;
+                }
+                basket("Anything else to change?");
+              },
+            },
+            {
+              said: "One more",
+              look: "alt",
+              go: () => {
+                me("One more");
+                line.qty += 1;
+                kept();
+                bot(`Now <b>${line.qty} × ${line.name}</b>.`, 420);
+                basket("Anything else to change?");
+              },
+            },
+            ...(line.qty > 1
+              ? [
+                  {
+                    said: "One fewer",
+                    look: "alt" as const,
+                    go: () => {
+                      me("One fewer");
+                      line.qty -= 1;
+                      kept();
+                      bot(`Now <b>${line.qty} × ${line.name}</b>.`, 420);
+                      basket("Anything else to change?");
+                    },
+                  },
+                ]
+              : []),
+            {
+              said: "Swap it for something else",
+              look: "alt",
+              go: () => {
+                me("Swap it for something else");
+                lines.splice(which, 1);
+                kept();
+                /* The counter it came from is not kept: somebody swapping
+                   a line is as likely to be changing where it comes from
+                   as what it is, which is the whole of "change the KFC
+                   chicken to Chicken Republic". */
+                queue.current = [];
+                bot(`Right, <b>${line.name}</b> is off. What instead?`, 440);
+                askOrder(true);
+              },
+            },
+            { said: "Leave it", look: "alt", go: () => { me("Leave it"); basket("Anything else to change?"); } },
+          ],
+        });
+      };
+
+      /* A sentence that already said what to change. */
+      if (asked) {
+        const which =
+          asked.drop !== ""
+            ? lineLike(asked.drop, lines)
+            : // "Change it to X" with one thing on the order can only mean
+              // that thing. With four, it is a question.
+              lines.length === 1
+              ? 0
+              : -1;
+
+        if (which >= 0) {
+          const line = lines[which];
+
+          if (asked.want !== "") {
+            lines.splice(which, 1);
+            kept();
+            queue.current = [];
+            bot(
+              `<b>${line.name}</b> off, and looking for <b>${asked.want}</b> instead.`,
+              460
+            );
+            huntRef.current?.(asked.want, false);
+            return;
+          }
+
+          /* Taking something off is asked before it is done. The matcher
+             is good, not certain, and the cost of it being wrong is
+             somebody's food missing from a bill they already read. */
+          bot(`Take <b>${said(line)}</b> off your order?`, 440);
+          setAsk({
+            of: "buttons",
+            buttons: [
+              {
+                said: "Yes, take it off",
+                go: () => {
+                  me("Yes, take it off");
+                  lines.splice(which, 1);
+                  kept();
+                  bot(`Gone. <b>${line.name}</b> is off your order.`, 420);
+                  if (lines.length === 0) {
+                    bot("That is everything off. What would you like instead?", 440);
+                    askOrder(true);
+                    return;
+                  }
+                  basket("Anything else to change?");
+                },
+              },
+              { said: "No, leave it", look: "alt", go: () => { me("No, leave it"); basket(); } },
+            ],
+          });
+          return;
+        }
+
+        basket(
+          asked.drop !== ""
+            ? `I am not sure which one you mean by <b>${asked.drop}</b>. Which of these?`
+            : "Which one did you mean?"
+        );
+        return;
+      }
+
+      basket();
+    },
+    [askOrder, bot, me, remember, soon]
+  );
+
+  useEffect(() => {
+    changeRef.current = change;
+  }, [change]);
 
   /*
    * Placing it, and saying how to pay.
@@ -1802,6 +2213,8 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     misses.current = 0;
     stopWatching();
     held.current = { ...EMPTY, lines: [] };
+    list.current = [];
+    listing.current = 0;
     setLines([]);
     setAt(0);
     bot("Hey, I’m <b>Sudu Bot</b>. I can take your order right here, no app needed.", 450);

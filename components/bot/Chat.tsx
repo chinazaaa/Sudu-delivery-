@@ -29,7 +29,22 @@ export type Row = { said: string; under?: string; amount: number };
 export type Ask =
   | { of: "nothing" }
   | { of: "text"; placeholder: string; type?: "text" | "tel"; onSay: (said: string) => void }
-  | { of: "chips"; chips: Chip[]; hint?: string }
+  /*
+   * Chips, and sometimes a box under them.
+   *
+   * A row of chips is a question with its answers on it, which is right
+   * nearly everywhere. The one place it is not is the basket: the lines are
+   * worth tapping, but what somebody wants to say there is "take the
+   * chicken off" or "change it to Chicken Republic", and a row of chips with
+   * no way to say that is a wall.
+   */
+  | {
+      of: "chips";
+      chips: Chip[];
+      hint?: string;
+      onSay?: (said: string) => void;
+      placeholder?: string;
+    }
   | { of: "buttons"; buttons: Button[]; hint?: string }
   | { of: "slots"; slots: SlotRow[]; onPick: (at: number) => void };
 
@@ -247,6 +262,10 @@ export function Asking({
   }
 
   if (ask.of === "chips") {
+    const send = () => {
+      const said = typed.trim();
+      if (said !== "" && ask.onSay) ask.onSay(said);
+    };
     return (
       <div className="foot">
         <div className="chips">
@@ -261,6 +280,21 @@ export function Asking({
             </button>
           ))}
         </div>
+        {ask.onSay && (
+          <div className="ask">
+            <input
+              ref={box}
+              value={typed}
+              onChange={(event) => setTyped(event.target.value)}
+              onKeyDown={(event) => event.key === "Enter" && send()}
+              placeholder={ask.placeholder ?? "Or say it in your own words"}
+              aria-label={ask.placeholder ?? "Or say it in your own words"}
+            />
+            <button type="button" className="send" onClick={send} aria-label="Send">
+              ↑
+            </button>
+          </div>
+        )}
         {ask.hint ? <div className="bothint">{ask.hint}</div> : help}
       </div>
     );

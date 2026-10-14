@@ -21,6 +21,7 @@ import {
   updateMenuItem,
   updateOption,
   applyGroupToCategory,
+  setCategoryStock,
   toggleItemAvailable,
   importMenu,
   updateRestaurant,
@@ -31,15 +32,19 @@ import ImportCatalogue from "@/components/admin/ImportCatalogue";
 import ValueBandEditor from "@/components/admin/ValueBandEditor";
 import { parseValueBands } from "@/lib/value-bands";
 import PhotoField from "@/components/admin/PhotoField";
+import { Picking, Tick, Bar, Done } from "@/components/admin/BulkStock";
 
 export const dynamic = "force-dynamic";
 
 export default async function RestaurantAdmin({
   params,
+  searchParams,
 }: {
   params: Promise<{ restaurantId: string }>;
+  searchParams: Promise<{ did?: string; didon?: string; asked?: string }>;
 }) {
   const { restaurantId } = await params;
+  const said = await searchParams;
 
   const { data } = await db()
     .from("restaurants")
@@ -296,6 +301,57 @@ export default async function RestaurantAdmin({
         {categoryList.length > 0 && (
           <details className="rounded-xl border border-black/10 p-3">
             <summary className="cursor-pointer text-sm font-semibold">
+              Put a whole category on sale, or take it off
+            </summary>
+            <form action={setCategoryStock} className="mt-3 space-y-2">
+              <p className="text-sm text-muted">
+                A shelf goes off the day there is no cold bag and back the day
+                there is one. Fifteen items, one decision, rather than fifteen
+                taps through a list of sixty-seven.
+              </p>
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="w-48">
+                  <label className="label" htmlFor="stock_category">
+                    Category
+                  </label>
+                  <select id="stock_category" name="category_id" className="field">
+                    {categoryList.map((category) => {
+                      const on = itemList.filter(
+                        (item) => item.category_id === category.id && item.available
+                      ).length;
+                      const all = itemList.filter(
+                        (item) => item.category_id === category.id
+                      ).length;
+                      return (
+                        <option key={category.id} value={category.id}>
+                          {category.name} · {on} of {all} on sale
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                <div className="w-36">
+                  <label className="label" htmlFor="stock_available">
+                    Put them
+                  </label>
+                  <select id="stock_available" name="available" className="field">
+                    <option value="true">On sale</option>
+                    <option value="false">Sold out</option>
+                  </select>
+                </div>
+                <SaveButton>Apply</SaveButton>
+              </div>
+              <p className="text-xs text-muted">
+                Putting a shelf on sale skips anything with no price on it, because
+                an item selling at nothing is the one mistake this must not make.
+              </p>
+            </form>
+          </details>
+        )}
+
+        {categoryList.length > 0 && (
+          <details className="rounded-xl border border-black/10 p-3">
+            <summary className="cursor-pointer text-sm font-semibold">
               Give a whole category the same choices
             </summary>
             <form action={applyGroupToCategory} className="mt-3 space-y-2">
@@ -377,6 +433,25 @@ export default async function RestaurantAdmin({
           </Link>
         </div>
 
+        {said.did !== undefined && (
+          <Done
+            did={Number(said.did ?? "0")}
+            asked={Number(said.asked ?? "0")}
+            on={said.didon === "1"}
+          />
+        )}
+
+        <Picking>
+        {/*
+         * Stock is the daily job, so it is the one thing on this page that
+         * can be done to several items at once.
+         *
+         * Filter above, tick below, switch the lot. The filter is done in
+         * the browser, so "tick everything showing" means exactly the rows
+         * on screen: pick Desserts, tick all showing, take them off sale.
+         */}
+        <Bar back={`/admin/menu/${restaurant.id}`} />
+
         <AdminItemFilter
           categories={categoryList.map((c) => ({ id: c.id, name: c.name }))}
           counts={{
@@ -395,6 +470,7 @@ export default async function RestaurantAdmin({
               // The margin is what stops the sticky header landing on it.
               id={`item-${item.id}`}
               data-item
+              data-id={item.id}
               data-name={item.name.toLowerCase()}
               data-category={
                 categoryList.find((c) => c.id === item.category_id)?.name ?? ""
@@ -404,6 +480,7 @@ export default async function RestaurantAdmin({
               className="card scroll-mt-24"
             >
               <div className="flex items-center gap-3">
+                <Tick id={item.id} name={item.name} />
                 <span className="size-12 shrink-0 overflow-hidden rounded-xl">
                   <Thumb src={item.image_url} name={item.name} rounded="rounded-none" />
                 </span>
@@ -679,6 +756,7 @@ export default async function RestaurantAdmin({
           );
         })}
         </AdminItemFilter>
+        </Picking>
 
         <details className="card">
           <summary className="cursor-pointer font-semibold">

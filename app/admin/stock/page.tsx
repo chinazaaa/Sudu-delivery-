@@ -1,6 +1,8 @@
 import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import StockSearch from "@/components/admin/StockSearch";
+import Jump from "@/components/admin/Jump";
+import { Picking, Tick, Bar, Done } from "@/components/admin/BulkStock";
 import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import Thumb from "@/components/Thumb";
@@ -101,18 +103,35 @@ function onlyThe<
 export default async function StockPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; changed?: string; show?: string; put?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    changed?: string;
+    show?: string;
+    put?: string;
+    shop?: string;
+    cat?: string;
+    did?: string;
+    didon?: string;
+    asked?: string;
+  }>;
 }) {
   const said = await searchParams;
   const asked = (said.q ?? "").trim();
   const changed = (said.changed ?? "").trim();
   const put = Number(said.put ?? "");
+  const shop = (said.shop ?? "").trim();
+  // A category only means anything inside one restaurant: two kitchens both
+  // call a shelf Desserts and they are different rows.
+  const cat = shop === "" ? "" : (said.cat ?? "").trim();
 
   // With nothing typed the page opens on the other half of the job: what is
   // switched off right now, which is the list somebody comes here to put back
   // on after a delivery lands. With something typed it opens on everything by
   // that name, because narrowing a search before seeing it hides the answer.
-  const resting: View = asked === "" ? "off" : "all";
+  // A restaurant or a shelf chosen is the same as a search typed: somebody
+  // has already narrowed it, and opening that on "switched off" hides the
+  // list they just asked for.
+  const resting: View = asked === "" && shop === "" ? "off" : "all";
   const view: View =
     VIEWS.find((one) => one.key === said.show)?.key ?? resting;
 
@@ -120,6 +139,8 @@ export default async function StockPage({
     .from("menu_items")
     .select("id, name, price_food, image_url, available, restaurant_id, restaurants!inner(name, kind)");
   if (asked !== "") rows$ = rows$.ilike("name", `%${asked}%`);
+  if (shop !== "") rows$ = rows$.eq("restaurant_id", shop);
+  if (cat !== "") rows$ = rows$.eq("category_id", cat);
   rows$ = onlyThe(rows$, view);
 
   // Off first inside a search, because that is the half of the list somebody
@@ -132,7 +153,7 @@ export default async function StockPage({
 
   const rows = (data ?? []) as unknown as Row[];
 
-  const [counts, restockable, offAll, justDone] = await Promise.all([
+  const [counts, restockable, offAll, justDone, shops, shelves] = await Promise.all([
     // One head count per pill. They are counts rather than lengths because
     // the list itself stops at sixty, and a pill that says sixty when there
     // are two hundred is a lie the page tells every morning.
@@ -142,6 +163,8 @@ export default async function StockPage({
           .from("menu_items")
           .select("id", { count: "exact", head: true });
         if (asked !== "") count$ = count$.ilike("name", `%${asked}%`);
+        if (shop !== "") count$ = count$.eq("restaurant_id", shop);
+        if (cat !== "") count$ = count$.eq("category_id", cat);
         const { count } = await onlyThe(count$, one.key);
         return [one.key, count ?? 0] as const;
       })
@@ -173,6 +196,26 @@ export default async function StockPage({
           .maybeSingle()
           .then(({ data: one }) => one)
       : Promise.resolve(null),
+
+    // Every counter, for the first dropdown. Names only: this is a filter,
+    // not the restaurants page.
+    db()
+      .from("restaurants")
+      .select("id, name")
+      .order("name")
+      .then(({ data: all }) => (all ?? []) as { id: string; name: string }[]),
+
+    // And the shelves inside whichever one is chosen. Asked for only then,
+    // because every shelf in the shop is a hundred options nobody can read
+    // and half of them share a name.
+    shop === ""
+      ? Promise.resolve([] as { id: string; name: string }[])
+      : db()
+          .from("menu_categories")
+          .select("id, name")
+          .eq("restaurant_id", shop)
+          .order("sort_order")
+          .then(({ data: all }) => (all ?? []) as { id: string; name: string }[]),
   ]);
 
   const counted = new Map<View, number>(counts);
@@ -183,10 +226,29 @@ export default async function StockPage({
   const link = (wanted: View): string => {
     const next = new URLSearchParams();
     if (asked !== "") next.set("q", asked);
+    if (shop !== "") next.set("shop", shop);
+    if (cat !== "") next.set("cat", cat);
     if (wanted !== resting) next.set("show", wanted);
     const query = next.toString();
     return query === "" ? "/admin/stock" : `/admin/stock?${query}`;
   };
+
+  /** The same address with one filter swapped, for the two dropdowns.
+   *  Changing the restaurant drops the shelf, because a shelf belongs to a
+   *  restaurant and keeping it would filter to nothing. */
+  const narrowed = (next: { shop?: string; cat?: string }): string => {
+    const query = new URLSearchParams();
+    if (asked !== "") query.set("q", asked);
+    const which = next.shop ?? shop;
+    if (which !== "") query.set("shop", which);
+    const shelf = next.shop !== undefined ? "" : (next.cat ?? cat);
+    if (shelf !== "") query.set("cat", shelf);
+    if (view !== resting) query.set("show", view);
+    const made = query.toString();
+    return made === "" ? "/admin/stock" : `/admin/stock?${made}`;
+  };
+
+  const didOn = said.didon === "1";
 
   return (
     <div>
@@ -248,8 +310,53 @@ export default async function StockPage({
         </div>
       )}
 
+      {said.did !== undefined && (
+        <Done
+          did={Number(said.did ?? "0")}
+          asked={Number(said.asked ?? "0")}
+          on={didOn}
+        />
+      )}
+
       <div className="card mb-3.5 space-y-3 p-3.5 sm:p-4">
         <StockSearch start={asked} />
+
+        {/*
+         * The other way in.
+         *
+         * Typing a name finds one thing. The daily job is a shelf: every
+         * dessert off because there is no cold bag, the whole grill back on
+         * when the gas lands. That is a kitchen and then a shelf inside it,
+         * which is two dropdowns, and the shelf one only appears once a
+         * kitchen is chosen because two kitchens both call a shelf Desserts
+         * and they are different rows.
+         */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Jump
+            label="KITCHEN"
+            value={narrowed({ shop })}
+            options={[
+              { href: narrowed({ shop: "" }), said: "Every kitchen" },
+              ...shops.map((one) => ({
+                href: narrowed({ shop: one.id }),
+                said: one.name,
+              })),
+            ]}
+          />
+          {shop !== "" && shelves.length > 0 && (
+            <Jump
+              label="SHELF"
+              value={narrowed({ cat })}
+              options={[
+                { href: narrowed({ cat: "" }), said: "Every shelf" },
+                ...shelves.map((one) => ({
+                  href: narrowed({ cat: one.id }),
+                  said: one.name,
+                })),
+              ]}
+            />
+          )}
+        </div>
 
         {/* The way out of a search, and the count of what is off right now
             in the same tap. Clearing the box by hand on a phone is four
@@ -369,6 +476,11 @@ export default async function StockPage({
         </Empty>
       )}
 
+      <Picking>
+      <Bar
+        back={link(view)}
+      />
+
       <ul className="space-y-2.5">
         {rows.map((item) => {
           // Nothing with no price may go on sale: the menu prints a zero
@@ -380,6 +492,10 @@ export default async function StockPage({
           return (
             <li
               key={item.id}
+              /* Named for the tick-everything-showing button, which reads
+                 the rows off the page rather than being handed a list. */
+              data-item
+              data-id={item.id}
               /* Wraps on a phone and stays one line from `sm`. The board's row
                  is the picture, the name and the switch, and the owner's Edit
                  is a fourth thing in a space that was already only three
@@ -389,6 +505,8 @@ export default async function StockPage({
                  forty-four pixel target and the name keeps the row. */
               className="card flex min-h-[62px] flex-wrap items-center gap-x-3 gap-y-2 p-3"
             >
+              <Tick id={item.id} name={item.name} />
+
               <span className="size-[42px] shrink-0 overflow-hidden rounded-[9px] border-[1.5px] border-line">
                 <Thumb src={item.image_url ?? ""} name={item.name} rounded="rounded-none" />
               </span>
@@ -488,10 +606,12 @@ export default async function StockPage({
       {rows.length > 0 && (
         <p className="hint mt-3 leading-[1.5]">
           Green is on sale. Toggling is instant, no save button and no going
-          back to a list. Edit opens the item where it lives, for its price,
-          its photograph and its choices.
+          back to a list. Tick a few and the bar at the top switches them
+          together. Edit opens the item where it lives, for its price, its
+          photograph and its choices.
         </p>
       )}
+      </Picking>
     </div>
   );
 }

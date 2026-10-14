@@ -3427,6 +3427,90 @@ export async function importMenu(form: FormData): Promise<void> {
  * The same choice group on every item in a category. Fifteen pizzas each
  * needing Small, Medium and Large is not fifteen forms.
  */
+/**
+ * A whole shelf on sale, or off it.
+ *
+ * Domino's desserts went off the day there was no cold bag and came back
+ * the day there was one: fifteen items, one decision. Doing that item by
+ * item is fifteen taps through a list of sixty-seven, which is why it was
+ * quicker to open the database, and anything quicker to do in the
+ * database than in admin is a hole in admin.
+ *
+ * Turning a shelf on skips anything with no price on it. An item on sale
+ * at nothing is the one mistake this cannot be allowed to make, and the
+ * database refuses it anyway, which would take the whole shelf down with
+ * it.
+ */
+/**
+ * The ticked ones, on sale or off it.
+ *
+ * The stock page could switch one thing at a time, which is right at a
+ * counter with somebody waiting and wrong for a shelf of fifteen that
+ * went off the day there was no cold bag. Ticking is the obvious thing
+ * and was the missing thing, and its absence sent somebody to the
+ * database.
+ *
+ * Turning things on skips anything with no price, the same as everywhere
+ * else: an item on sale at nothing is free food on the website.
+ */
+/**
+ * A handful of items switched together.
+ *
+ * Stock is a daily job and it moves in groups: the desserts go off when
+ * there is no cold bag, the whole grill comes back on when the gas is
+ * refilled. Doing that one row at a time is twenty taps and twenty page
+ * loads, and the person doing it is standing at a counter.
+ *
+ * Priced only, when switching on, for the same reason the single switch
+ * refuses: an item with no price prints a zero on the menu, which reads as
+ * free. So ticking the lot and pressing Put on sale puts on everything that
+ * can go on, and says how many, rather than silently publishing free food.
+ *
+ * It is handed where to go back to, because the same control is on the
+ * stock board and on a restaurant's own menu and both want their own
+ * filters kept.
+ */
+export async function setManyStock(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const ids = form.getAll("id").map(String).filter(Boolean);
+  const on = String(form.get("available") ?? "") === "true";
+  const back = String(form.get("back") ?? "/admin/stock");
+
+  let did = 0;
+  if (ids.length > 0) {
+    let query = db().from("menu_items").update({ available: on }).in("id", ids);
+    if (on) query = query.gt("price_food", 0);
+    const { data } = await query.select("id");
+    did = (data ?? []).length;
+
+    revalidatePath("/admin", "layout");
+    updateTag("menu");
+    revalidatePath("/", "layout");
+  }
+
+  // Said in the address rather than remembered, so the page can report it
+  // after the redirect and a refresh does not repeat the claim.
+  const mark = back.includes("?") ? "&" : "?";
+  redirect(`${back}${mark}did=${did}&didon=${on ? "1" : "0"}&asked=${ids.length}`);
+}
+
+export async function setCategoryStock(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const categoryId = String(form.get("category_id") ?? "");
+  if (categoryId === "") return;
+  const on = form.get("available") === "true";
+
+  let query = db().from("menu_items").update({ available: on }).eq("category_id", categoryId);
+  if (on) query = query.gt("price_food", 0);
+  await query;
+
+  revalidatePath("/admin", "layout");
+  updateTag("menu");
+  revalidatePath("/", "layout");
+}
+
 export async function applyGroupToCategory(form: FormData): Promise<void> {
   await assertAdmin();
 

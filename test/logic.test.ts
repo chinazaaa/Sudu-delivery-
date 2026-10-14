@@ -106,6 +106,9 @@ import {
   without as botWithout,
   phoneIn as botPhoneIn,
   yesNo as botYesNo,
+  asksToSwap as botAsksToSwap,
+  splitOrder as botSplitOrder,
+  lineLike as botLineLike,
   type Candidate as BotCandidate,
 } from "../lib/bot-match";
 
@@ -3753,4 +3756,90 @@ test("a shelf named exactly what was asked for leads the answer", () => {
   // A shelf merely close to the words is not the same claim.
   const loose = botFind("chops", shelves, 1);
   assert.ok((loose.hits[0]?.score ?? 0) < 0.97, `scored ${loose.hits[0]?.score}`);
+});
+
+test("the chat reads a change to an order it has already taken", () => {
+  /*
+   * The most common sentence after a bill, and until the matcher could
+   * read it the only answer was to start the order again.
+   *
+   * Both halves are optional and both get found: the thing that is off and
+   * the thing that takes its place, with the counter kept on whichever
+   * half carried it, because "from KFC" is the half that says which of
+   * five chickens was meant.
+   */
+  const both = botAsksToSwap(
+    "I don't want chicken from KFC anymore, I want to change it to Chicken Republic"
+  );
+  assert.ok(both);
+  assert.equal(both?.drop, "chicken from kfc");
+  assert.equal(both?.want, "chicken republic");
+
+  const plain = botAsksToSwap("change the jollof rice to fried rice");
+  assert.equal(plain?.drop, "jollof rice");
+  assert.equal(plain?.want, "fried rice");
+
+  const other = botAsksToSwap("instead of the jollof give me fried rice");
+  assert.equal(other?.drop, "jollof");
+  assert.equal(other?.want, "fried rice");
+
+  // Taking something off is a change with nothing on the other side of it.
+  const off = botAsksToSwap("remove the moi moi please");
+  assert.equal(off?.drop, "moi moi");
+  assert.equal(off?.want, "");
+
+  // And "change it to X" is the other way round: the chat already knows
+  // which line is being talked about.
+  const it = botAsksToSwap("change it to Chicken Republic");
+  assert.equal(it?.drop, "");
+  assert.equal(it?.want, "chicken republic");
+
+  // An ordinary order is not a change, however much it mentions food.
+  assert.equal(botAsksToSwap("2 medium pizza and a coke"), null);
+});
+
+test("a line of an order is found by its dish or by its counter", () => {
+  const lines = [
+    { name: "Zinger Burger Meal", shop: "KFC" },
+    { name: "Jollof Rice and Chicken", shop: "Jay's Diner" },
+  ];
+
+  assert.equal(botLineLike("zinger", lines), 0);
+  assert.equal(botLineLike("the kfc one", lines), 0);
+  assert.equal(botLineLike("jollof", lines), 1);
+  // Nothing in the basket is that, which has to come back as nothing
+  // rather than as whichever line scored least badly.
+  assert.equal(botLineLike("ice cream", lines), -1);
+});
+
+test("an order pasted in as a list is split into the things on it", () => {
+  /*
+   * The order was agreed in a group chat or written in a notepad before
+   * anybody opened the website, and it arrives whole. Read as one sentence
+   * it matches nothing; read as a list it is three searches.
+   */
+  assert.deepEqual(botSplitOrder("5 jollof rice, 2 zinger burger, 1 coke"), [
+    "5 jollof rice",
+    "2 zinger burger",
+    "1 coke",
+  ]);
+
+  assert.deepEqual(
+    botSplitOrder("2 medium pizza\n1 chicken wings\nand a bottle of water"),
+    ["2 medium pizza", "1 chicken wings", "a bottle of water"]
+  );
+
+  // Both sides counted, so "and" is a list.
+  assert.deepEqual(botSplitOrder("2 pizza and 1 coke"), ["2 pizza", "1 coke"]);
+
+  /*
+   * And the ones that must never be split, because they are the names of
+   * single dishes. Splitting "half and half" would take the pizza rule
+   * apart, which is the most expensive thing on the menu to get wrong.
+   */
+  assert.deepEqual(botSplitOrder("fish and chips"), []);
+  assert.deepEqual(botSplitOrder("jollof rice and chicken"), []);
+  assert.deepEqual(botSplitOrder("domino's half and half bbq chicken"), []);
+  assert.deepEqual(botSplitOrder("2 jollof rice and chicken"), []);
+  assert.deepEqual(botSplitOrder("just a zinger burger"), []);
 });
