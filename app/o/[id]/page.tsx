@@ -394,11 +394,11 @@ export default async function OrderPage({
             </dd>
           </div>
         </dl>
-        {paid && order.batch.stage !== "ordering" && (
-          <p className="ticket mt-3 text-muted">
-            Updated {clockLabel(order.batch.stage_updated_at)}
-          </p>
-        )}
+        {/* No clock here any more. It read as the time of whatever step
+            was lit, and a run ticked off two hours after the bags changed
+            hands therefore told everybody their food arrived two hours
+            late. The three moments the shop actually records carry their
+            own times on the line below. */}
       </section>
 
       {!paid && !waitingOnGroup && !over && expired && (
@@ -552,7 +552,9 @@ export default async function OrderPage({
           ) : (
             <StageTimeline
               stage={order.batch.stage}
-              updatedAt={order.batch.stage_updated_at}
+              placedAt={order.created_at}
+              paidAt={order.paid_at}
+              deliveredAt={order.done_at}
             />
           )}
 

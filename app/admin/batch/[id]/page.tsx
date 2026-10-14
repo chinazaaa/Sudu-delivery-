@@ -63,6 +63,7 @@ import {
   moveStop,
 } from "../../actions";
 import Reorder from "@/components/admin/Reorder";
+import WhenHanded from "@/components/admin/WhenHanded";
 
 export const dynamic = "force-dynamic";
 
@@ -1340,6 +1341,10 @@ export default async function BatchPage({
                         value={handout.flatMap((bag) => bag.orders.map((o) => o.id)).join(",")}
                       />
                       <input type="hidden" name="delivered" value="true" />
+                      {/* The run went out at five and is being tidied up at
+                          seven more often than not, and until now that told
+                          every customer on it their food came at seven. */}
+                      <WhenHanded runDate={batch.run_date} />
                       <ConfirmButton
                         tone="admin"
                         confirm={`Yes, all ${handout.length} handed over`}
@@ -1759,6 +1764,7 @@ export default async function BatchPage({
                       <form action={setBatchStage} key={stage}>
                         <input type="hidden" name="batch_id" value={batch.id} />
                         <input type="hidden" name="stage" value={stage} />
+                        {stage === "handed_out" && <WhenHanded runDate={batch.run_date} />}
                         <ActionButton
                           className={`${ROW_ACTION} ${
                             batch.stage === stage ? "bg-ink text-shell" : ""

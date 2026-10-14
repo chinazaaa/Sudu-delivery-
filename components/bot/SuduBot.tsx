@@ -123,6 +123,16 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   const [ask, setAsk] = useState<Ask>({ of: "nothing" });
   const [at, setAt] = useState(0);
   const [start, setStart] = useState<Start | null>(null);
+  /*
+   * The lists, reachable from inside a step.
+   *
+   * The steps are closures made when the one before them ran, so a step
+   * written at the moment somebody typed their name still holds whatever
+   * the lists were then, which is nothing. Reading them out of a box
+   * instead means the hostel question asks with the hostels that have
+   * arrived by the time it is asked rather than the ones that had.
+   */
+  const startRef = useRef<Start | null>(null);
   const held = useRef<Held>({ ...EMPTY });
   /* The option walk, held in a box so the steps above it can reach it.
      They are written in the order a person meets them, which puts the
@@ -134,6 +144,8 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   const queue = useRef<{ id: string; name: string }[]>([]);
   /* The watch, held in a box for the step that starts it. */
   const watchRef = useRef<(() => void) | null>(null);
+  /** A step that asked before the lists had landed, run again when they do. */
+  const pending = useRef<(() => void) | null>(null);
   const askOrderRef = useRef<((again?: boolean) => void) | null>(null);
   const byeRef = useRef<(() => void) | null>(null);
   const poll = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -203,7 +215,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       }
     })();
     if (seen) return undefined;
-    const when = setTimeout(() => setTeasing(true), 6000);
+    // About two hops. Long enough not to pounce on somebody arriving,
+    // short enough that anybody watching the button jump is still there.
+    const when = setTimeout(() => setTeasing(true), 4200);
     return () => clearTimeout(when);
   }, [open]);
 
@@ -218,7 +232,11 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     fetch("/api/bot/start")
       .then((answer) => answer.json())
       .then((got: Start) => {
-        if (!gone) setStart(got);
+        if (gone) return;
+        startRef.current = got;
+        setStart(got);
+        pending.current?.();
+        pending.current = null;
       })
       .catch(() => undefined);
     return () => {
@@ -1001,7 +1019,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     setAsk({
       of: "chips",
       chips: [
-        ...(start?.kitchens ?? []).map((shop) => ({
+        ...(startRef.current?.kitchens ?? []).map((shop) => ({
           said: shop.name,
           go: () => {
             me(shop.name);
@@ -1041,11 +1059,11 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       ],
       hint: "Or tap the last one and say it in your own words.",
     });
-  }, [askOrder, bot, me, start]);
+  }, [askOrder, bot, me]);
 
   const askSlot = useCallback(() => {
     setAt(1);
-    const runs = start?.runs ?? [];
+    const runs = startRef.current?.runs ?? [];
     if (runs.length === 0) {
       bot("Nothing is open for orders this minute. A person can still sort you out.");
       setAsk({ of: "buttons", buttons: [{ said: "Message us on WhatsApp", look: "green", href: handOver() }] });
@@ -1062,7 +1080,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           dom: first.dom,
           title: `Run ${first.said}`,
           when: `Arrives ${first.window}`,
-          note: `Orders close ${first.closes} · delivery from ${naira(start?.feeFrom ?? 0)}`,
+          note: `Orders close ${first.closes} · delivery from ${naira(startRef.current?.feeFrom ?? 0)}`,
         },
       },
       420
@@ -1082,7 +1100,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         dom: run.dom,
         title: `Run ${run.said}`,
         when: run.window,
-        fee: start?.feeFrom ?? 0,
+        fee: startRef.current?.feeFrom ?? 0,
         rush: false,
       })),
       onPick: (which) => {
@@ -1092,14 +1110,26 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         askOrder();
       },
     });
-  }, [askOrder, bot, me, say, start, waLink]);
+  }, [askOrder, bot, me, say, waLink]);
 
   const askHostel = useCallback(() => {
     setAt(0);
+    const blocks = startRef.current?.hostels ?? [];
+    if (blocks.length === 0) {
+      // The lists are still on their way. Said rather than shown as an
+      // empty row of nothing.
+      setBusy("Just a second…");
+      setAsk({ of: "nothing" });
+      pending.current = () => {
+        setBusy("");
+        askHostel();
+      };
+      return;
+    }
     bot("Where am I bringing it? Tap your block.");
     setAsk({
       of: "chips",
-      chips: (start?.hostels ?? []).map((hostel) => ({
+      chips: blocks.map((hostel) => ({
         said: hostel,
         go: () => {
           me(hostel);
@@ -1109,7 +1139,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         },
       })),
     });
-  }, [askSlot, bot, me, remember, start]);
+  }, [askSlot, bot, me, remember]);
 
   const askPhone = useCallback(() => {
     setAt(0);
@@ -1183,7 +1213,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
            it addresses every message afterwards to a pizza shop. Asked
            once, then taken at their word: a name is not a thing to argue
            about, and somebody really called Ola Pizza exists. */
-        if (tries === 1 && !looksLikeAName(said, start?.kitchens ?? [])) {
+        if (tries === 1 && !looksLikeAName(said, startRef.current?.kitchens ?? [])) {
           bot(
             "That sounds more like what you want to eat than what you are called. " +
               "We will get to the food in a second. What should I call you?",
@@ -1194,13 +1224,31 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         takeIt(said);
       },
     });
-  }, [askPhone, bot, me, start]);
+  }, [askPhone, bot, me]);
 
+  /*
+   * Said once.
+   *
+   * This used to wait for the lists and then check whether anything had
+   * been said yet, which is a question that answers "no" for the half
+   * second the first line spends in the queue. So it greeted, re-rendered,
+   * saw an empty log and greeted again, for ever, in front of somebody
+   * trying to type their name.
+   *
+   * A flag, flipped before anything is queued. And it no longer waits for
+   * the lists: a name is not a thing the server has to be asked about, and
+   * ten seconds of silence after somebody taps is the one cost this cannot
+   * carry.
+   */
+  const greeted = useRef(false);
   useEffect(() => {
-    if (open && start && lines.length === 0) begin();
-  }, [begin, lines.length, open, start]);
+    if (!open || greeted.current) return;
+    greeted.current = true;
+    begin();
+  }, [begin, open]);
 
   function close() {
+    greeted.current = false;
     clear();
     if (poll.current) clearTimeout(poll.current);
     poll.current = null;

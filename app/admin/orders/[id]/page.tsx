@@ -7,6 +7,7 @@ import { howPaid, orderStory } from "@/lib/order-story";
 import { StatusPill } from "@/components/admin/OrderCard";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import SaveButton from "@/components/SaveButton";
+import WhenHanded from "@/components/admin/WhenHanded";
 import { orderFeed } from "@/lib/admin-data";
 import { oneCustomer, shareOfProfit , reachNumbers } from "@/lib/customer";
 import { getOrder } from "@/lib/orders";
@@ -29,6 +30,7 @@ import {
   agreeParcelDay,
   markPaid,
   markDelivered,
+  setDeliveredAt,
   moveOrderToAnother,
   cancelOrder,
   deleteOrder,
@@ -53,7 +55,7 @@ import { openBatches } from "@/lib/batches";
 import { hoursByDay } from "@/lib/settings";
 import { deliverySlots } from "@/lib/same-day";
 import { toBatchView } from "@/lib/view";
-import { dayWord, lagosClock, runDateLabel } from "@/lib/time";
+import { dayWord, lagosClock, runDateLabel, lagosBoxTime } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -534,6 +536,7 @@ async function orderPage(id: string, said: string) {
             {order.status === "paid" && (
               <form action={markDelivered} className="border-t-[1.5px] border-rule pt-3.5">
                 <input type="hidden" name="order_id" value={order.id} />
+                <WhenHanded runDate={order.batch.run_date} />
                 <ConfirmButton
                   tone="admin"
                   className="btn-admin-go min-h-[48px] w-full text-[15px] sm:min-h-[44px] sm:w-auto"
@@ -541,6 +544,42 @@ async function orderPage(id: string, said: string) {
                 >
                   Mark delivered
                 </ConfirmButton>
+              </form>
+            )}
+
+            {/*
+             * When it actually reached them.
+             *
+             * A run handed out at five and ticked off at seven told
+             * everybody on it that their food came at seven, on the page
+             * they are reading. Nobody marks twenty bags as each one
+             * changes hands, so the time has to be correctable rather than
+             * only recorded.
+             */}
+            {order.status === "delivered" && (
+              <form
+                action={setDeliveredAt}
+                className="space-y-2 border-t-[1.5px] border-rule pt-3.5"
+              >
+                <input type="hidden" name="order_id" value={order.id} />
+                <label className="label" htmlFor="delivered_at">
+                  Delivered at
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    id="delivered_at"
+                    name="delivered_at"
+                    type="datetime-local"
+                    defaultValue={lagosBoxTime(order.done_at)}
+                    className="field field-admin w-auto flex-1 border-[1.5px] border-line bg-paper px-3"
+                  />
+                  <SaveButton className="btn-admin btn-admin-sm shrink-0">Save</SaveButton>
+                </div>
+                <p className="hint">
+                  What their own page shows. Put it right where this was ticked
+                  off long after the bag changed hands. Empty takes the time off
+                  and leaves the day.
+                </p>
               </form>
             )}
 

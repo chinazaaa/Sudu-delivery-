@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { openBatches } from "@/lib/batches";
 import { hostelNames } from "@/lib/hostels";
 import { shopEmails } from "@/lib/settings";
-import { menuView } from "@/lib/menu";
+import { openRestaurants } from "@/lib/menu";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { headlineFee } from "@/lib/fees";
@@ -30,7 +30,10 @@ export async function GET(): Promise<NextResponse> {
     const [hostels, batches, menu, settings, bands, hours, sameDay] = await Promise.all([
       hostelNames(),
       openBatches().catch(() => []),
-      menuView().catch(() => []),
+      // The counters only, not every dish on every one of them. Reading
+      // the whole menu here cost the chat ten seconds of silence before
+      // it could say hello, which is the one thing it cannot afford.
+      openRestaurants().catch(() => []),
       safeSettings(),
       activeBands(),
       hoursByDay().catch(() => null),
@@ -59,12 +62,7 @@ export async function GET(): Promise<NextResponse> {
         };
       });
 
-    const kitchens = menu
-      .filter((place) => place.items.some((item) => item.available))
-      .map((place) => ({
-        id: place.restaurant.id,
-        name: place.restaurant.name,
-      }));
+    const kitchens = menu.map((place) => ({ id: place.id, name: place.name }));
 
     /*
      * A car sent out for one order, where the shop is still offering them.

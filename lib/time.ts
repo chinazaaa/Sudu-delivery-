@@ -286,3 +286,28 @@ export function weekAround(day: string = lagosToday()): {
 
   return { monday: asDay(-since), sunday: asDay(6 - since) };
 }
+
+/**
+ * An instant as a datetime-local box wants it, in Lagos time.
+ *
+ * "2026-10-14T17:05". The box has no notion of a time zone, so what goes
+ * in has to already be the wall clock somebody would read off their own
+ * phone, and the action that saves it puts the offset back on.
+ */
+export function lagosBoxTime(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const when = new Date(iso);
+  if (Number.isNaN(when.getTime())) return "";
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(when);
+  const of = (what: string) => parts.find((one) => one.type === what)?.value ?? "";
+  const hour = of("hour") === "24" ? "00" : of("hour");
+  return `${of("year")}-${of("month")}-${of("day")}T${hour}:${of("minute")}`;
+}

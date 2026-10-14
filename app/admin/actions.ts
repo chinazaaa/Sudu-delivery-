@@ -183,7 +183,13 @@ export async function setBagDelivered(form: FormData): Promise<void> {
   const delivered = form.get("delivered") === "true";
   await db()
     .from("orders")
-    .update({ status: delivered ? "delivered" : "paid" })
+    // When it reached them, not only that it did. Unticking clears it,
+    // because a correction that leaves yesterday's time behind is worse
+    // than no time at all.
+    .update({
+      status: delivered ? "delivered" : "paid",
+      done_at: delivered ? handedOverAt(form, String(form.get("run_date") ?? "")) : null,
+    })
     .in("id", ids);
 
   // Ticking a bag off is the same event as handing a run out, so it says the
@@ -213,7 +219,10 @@ export async function markDelivered(form: FormData): Promise<void> {
   const id = String(form.get("order_id"));
   const { data } = await db()
     .from("orders")
-    .update({ status: "delivered" })
+    .update({
+      status: "delivered",
+      done_at: handedOverAt(form, String(form.get("run_date") ?? "")),
+    })
     .eq("id", id)
     .select("batch_id")
     .maybeSingle();
@@ -222,6 +231,73 @@ export async function markDelivered(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
   revalidatePath("/orders");
   revalidatePath("/o", "layout");
+}
+
+/**
+ * Putting the delivery time right.
+ *
+ * A run handed out at five and ticked off at seven told everybody on it
+ * that their food arrived at seven, which is the shop telling a customer
+ * something they know is untrue. Nobody marks twenty bags the moment each
+ * one changes hands, so the time has to be correctable rather than only
+ * recorded.
+ *
+ * Read as Lagos wall time, because that is what somebody is reading off
+ * their own clock when they type it, and stored as the instant it was.
+ * Empty clears it, which is how you undo a mistake rather than guessing
+ * at a time to overwrite it with.
+ */
+/**
+ * The moment a bag changed hands, read off the box beside the button.
+ *
+ * Empty means now, which is the one-tap case: somebody ticking a bag off
+ * as they hand it over. A time typed in means the run went out earlier and
+ * this is being tidied up afterwards, which is most Saturdays.
+ *
+ * Taken as Lagos wall time on the day given, because that is the clock
+ * somebody is reading off their own phone. A time later than now belongs
+ * to yesterday's run rather than to the future.
+ */
+function handedOverAt(form: FormData, runDate?: string | null): string {
+  const said = String(form.get("at") ?? "").trim();
+  if (!/^\d{1,2}:\d{2}$/.test(said)) return new Date().toISOString();
+
+  const day = (runDate ?? "").match(/^\d{4}-\d{2}-\d{2}$/)
+    ? (runDate as string)
+    : lagosToday();
+  const when = new Date(`${day}T${said.padStart(5, "0")}:00+01:00`);
+  if (Number.isNaN(when.getTime())) return new Date().toISOString();
+  // Later than now means they meant the day before: a run handed out at
+  // eleven at night and tidied up after midnight is the commonest case.
+  if (when.getTime() > Date.now() + 60_000) {
+    return new Date(when.getTime() - 86_400_000).toISOString();
+  }
+  return when.toISOString();
+}
+
+export async function setDeliveredAt(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const id = String(form.get("order_id"));
+  if (id === "") return;
+  const said = String(form.get("delivered_at") ?? "").trim();
+
+  // "2026-10-14T17:05" off a datetime-local box. Nigeria is a fixed UTC+1
+  // with no daylight saving, so the offset is written straight on.
+  const when = said === "" ? null : new Date(`${said}:00+01:00`);
+  if (when !== null && Number.isNaN(when.getTime())) return;
+  // A delivery in the future is a typo, and one that would show on
+  // somebody's page as arriving tomorrow.
+  if (when !== null && when.getTime() > Date.now() + 60_000) return;
+
+  await db()
+    .from("orders")
+    .update({ done_at: when === null ? null : when.toISOString() })
+    .eq("id", id);
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/o", "layout");
+  revalidatePath("/orders");
 }
 
 /** Refunds are same-night and in full. There are no partial refunds here. */
@@ -2875,7 +2951,7 @@ export async function setBatchStage(form: FormData): Promise<void> {
     // be told twice, and this is the only answer that cannot drift.
     const { data: moved } = await db()
       .from("orders")
-      .update({ status: "delivered" })
+      .update({ status: "delivered", done_at: handedOverAt(form, String(form.get("run_date") ?? "")) })
       .eq("batch_id", batchId)
       .eq("status", "paid")
       .select("id");
@@ -4719,7 +4795,7 @@ export async function doManyOrders(
   if (what === "delivered") {
     const { data, error } = await db()
       .from("orders")
-      .update({ status: "delivered" })
+      .update({ status: "delivered", done_at: handedOverAt(form) })
       .in("id", ids)
       .eq("status", "paid")
       .select("id, batch_id");
