@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { menuView, menuViewFor } from "@/lib/menu";
 import type { ItemView } from "@/lib/view";
-import { find, namedIn, wantsAPerson, howMany } from "@/lib/bot-match";
+import { find, namedIn, nearlyNamed, wantsAPerson, howMany } from "@/lib/bot-match";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +97,29 @@ export async function POST(request: Request): Promise<NextResponse> {
         instead: [],
         shops: named,
       });
+    }
+
+    /*
+     * Nearly a counter, which is a question rather than a failure.
+     *
+     * "Chiken Republik" is not a counter by the strict reading and is
+     * obviously one to a person. Asking beats shrugging, and it is a tap.
+     */
+    if (found.how === "lost") {
+      const nearly = nearlyNamed(
+        said,
+        shops.map((shop) => ({ id: shop.restaurant.id, name: shop.restaurant.name }))
+      );
+      if (nearly.length > 0) {
+        return NextResponse.json({
+          how: "maybe-kitchens",
+          qty: 1,
+          person: false,
+          hits: [],
+          instead: [],
+          shops: nearly.slice(0, 4),
+        });
+      }
     }
 
     const byId = new Map(sellable.map((item) => [item.id, item]));

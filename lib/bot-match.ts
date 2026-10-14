@@ -253,7 +253,10 @@ const SHOPWORDS = new Set([
  */
 export function namedIn(
   said: string,
-  shops: { id: string; name: string }[]
+  shops: { id: string; name: string }[],
+  /** How alike a word has to be. Lower it and near misses come back, which
+   *  is what "did you mean Chicken Republic" is made of. */
+  near = 0.8
 ): { id: string; name: string }[] {
   const asked = words(said);
   if (asked.length === 0) return [];
@@ -274,8 +277,8 @@ export function namedIn(
         // A short name is matched whole. Three letters are too few for a
         // near miss to mean anything: "kfz" is not KFC, it is a typo
         // nobody can resolve.
-        const near = word.length <= 3 ? (asked[at] === word ? 1 : 0) : alike(asked[at], word);
-        if (near >= 0.8) where = where === -1 ? at : Math.min(where, at);
+        const score = word.length <= 3 ? (asked[at] === word ? 1 : 0) : alike(asked[at], word);
+        if (score >= near) where = where === -1 ? at : Math.min(where, at);
       }
     }
     if (where > -1) found.push({ id: shop.id, name: shop.name, at: where });
@@ -342,4 +345,20 @@ export function phoneIn(said: string): string | null {
   else if (digits.length === 10) local = `0${digits}`;
   else return null;
   return /^0[789]\d{9}$/.test(local) ? local : null;
+}
+
+/**
+ * Counters somebody nearly named.
+ *
+ * "Chiken Republik" is not a counter by the strict reading and is
+ * obviously one to a person, so the gap between the two is where "did you
+ * mean" lives. Whatever was named outright is left out, because there is
+ * nothing to ask about those.
+ */
+export function nearlyNamed(
+  said: string,
+  shops: { id: string; name: string }[]
+): { id: string; name: string }[] {
+  const sure = new Set(namedIn(said, shops).map((one) => one.id));
+  return namedIn(said, shops, 0.6).filter((one) => !sure.has(one.id));
 }

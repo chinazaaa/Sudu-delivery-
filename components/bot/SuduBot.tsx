@@ -141,8 +141,53 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   const { say, clear, typing } = useSaying(push, () => undefined);
 
   const wa = (start?.whatsapp || whatsapp || "").replace(/[^\d]/g, "");
-  const waLink = wa === "" ? "https://wa.me/" : `https://wa.me/${wa}`;
   const email = start?.email ?? "";
+
+  /*
+   * Handing the conversation over, not just the number.
+   *
+   * The worst thing a chat can do to somebody is make them say it all
+   * again to a person. So the message is written for them, with
+   * everything they have already answered in it, and all that is left is
+   * the bit that was missing. A shop that asks the same questions twice
+   * is a shop that was not listening the first time.
+   */
+  const handOver = useCallback(
+    (why = "") => {
+      const mine = held.current;
+      const lines: string[] = [];
+      lines.push(
+        mine.ref !== ""
+          ? `Hi, I started an order on the site. It is ${mine.ref}.`
+          : "Hi, I was ordering with the chat on your site."
+      );
+      if (why !== "") lines.push(why);
+      const them = [
+        mine.name && `Name: ${mine.name}`,
+        mine.phone && `Number: ${mine.phone}`,
+        mine.hostel && `Block: ${mine.hostel}`,
+        mine.run?.said && `Run: ${mine.run.said}${mine.run.window ? `, ${mine.run.window}` : ""}`,
+      ].filter(Boolean) as string[];
+      if (them.length > 0) lines.push("", ...them);
+      if (mine.lines.length > 0) {
+        lines.push("", "What I picked so far:");
+        for (const line of mine.lines) {
+          lines.push(
+            `· ${line.qty > 1 ? `${line.qty} × ` : ""}${line.name}` +
+              (line.chose.length > 0 ? ` (${line.chose.join(", ")})` : "")
+          );
+        }
+      }
+      const said = encodeURIComponent(lines.join("\n"));
+      return wa === "" ? `https://wa.me/?text=${said}` : `https://wa.me/${wa}?text=${said}`;
+    },
+    [wa]
+  );
+
+  /* Everything that is not a step's own button still carries whatever has
+     been said so far, because the header and the help line are exactly
+     where somebody gives up. */
+  const waLink = handOver();
 
   /* The bubble, once, after a moment. Not on arrival: a panel that opens
      itself is the thing people close without reading. */
@@ -273,6 +318,33 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             instead: { id: string; name: string; shop: string }[];
             shops?: { id: string; name: string }[];
           };
+          /* Nearly a counter. A tap settles it, and saying nothing would
+             send somebody to WhatsApp over a spelling. */
+          if (got.how === "maybe-kitchens" && (got.shops ?? []).length > 0) {
+            const nearly = got.shops ?? [];
+            bot(
+              nearly.length === 1
+                ? `Did you mean <b>${nearly[0].name}</b>?`
+                : "Did you mean one of these?",
+              450
+            );
+            setAsk({
+              of: "chips",
+              chips: [
+                ...nearly.map((shop, which) => ({
+                  said: shop.name,
+                  hot: which === 0,
+                  go: () => {
+                    me(shop.name);
+                    queue.current = [shop];
+                    askOrder();
+                  },
+                })),
+                { said: "None of those", go: () => { me("None of those"); askOrder(); } },
+              ],
+            });
+            return;
+          }
           if (got.how === "kitchens" && (got.shops ?? []).length > 0) {
             queue.current = [...(got.shops ?? [])];
             const names = queue.current.map((one) => one.name);
@@ -290,7 +362,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             setAsk({
               of: "buttons",
               buttons: [
-                { said: "Continue on WhatsApp", look: "green", href: waLink },
+                { said: "Continue on WhatsApp", look: "green", href: handOver("Could you help me finish it?") },
                 { said: "Actually, let me carry on here", look: "alt", go: askOrder },
               ],
             });
@@ -470,7 +542,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           of: "buttons",
           buttons: [
             { said: "Change something", look: "alt", go: () => { me("Change something"); askOrder(true); } },
-            { said: "Continue on WhatsApp", look: "green", href: waLink },
+            { said: "Continue on WhatsApp", look: "green", href: handOver("Could you help me finish it?") },
           ],
         });
         return;
@@ -569,7 +641,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           of: "buttons",
           buttons: [
             { said: "Try again", go: () => { me("Try again"); payNext(); } },
-            { said: "Continue on WhatsApp", look: "green", href: waLink },
+            { said: "Continue on WhatsApp", look: "green", href: handOver("Could you help me finish it?") },
           ],
         });
         return;
@@ -617,11 +689,11 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         of: "buttons",
         buttons: [
           { said: "Try again", go: () => { me("Try again"); payNext(); } },
-          { said: "Continue on WhatsApp", look: "green", href: waLink },
+          { said: "Continue on WhatsApp", look: "green", href: handOver("Could you help me finish it?") },
         ],
       });
     }
-  }, [bot, me, say, waLink, working]);
+  }, [bot, handOver, me, say, working]);
 
   const bye = useCallback(() => {
     setAt(6);
@@ -633,12 +705,12 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     setAsk({
       of: "buttons",
       buttons: [
-        { said: "Message us on WhatsApp", look: "green", href: waLink },
+        { said: "Message us on WhatsApp", look: "green", href: handOver() },
         ...(email ? [{ said: `Write to ${email}`, look: "alt" as const, href: `mailto:${email}` }] : []),
       ],
       hint: `Your order is <b>${mine.ref}</b>. Keep that and we can find it in a second.`,
     });
-  }, [bot, email, waLink]);
+  }, [bot, email, handOver]);
 
   /* The money landed. */
   const paid = useCallback(
@@ -737,12 +809,12 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     setAsk({
       of: "buttons",
       buttons: [
-        { said: "Message us on WhatsApp", look: "green", href: waLink },
+        { said: "Message us on WhatsApp", look: "green", href: handOver() },
         { said: "Check again now", look: "alt", go: () => { me("Check again now"); watchRef.current?.(); } },
       ],
       hint: `Quote <b>${mine.ref}</b> if you message us.`,
     });
-  }, [bot, me, paid, say, waLink]);
+  }, [bot, handOver, me, paid, say]);
 
   /*
    * Watching for the money, honestly.
@@ -776,7 +848,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       );
       setAsk({
         of: "buttons",
-        buttons: [{ said: "Message us on WhatsApp", look: "green", href: waLink }],
+        buttons: [{ said: "Message us on WhatsApp", look: "green", href: handOver() }],
         hint: `Quote <b>${mine.ref}</b> if you message us.`,
       });
       return;
@@ -820,7 +892,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       ],
       hint: "We watch for about three minutes. After that we message you, so you do not have to sit here.",
     });
-  }, [bot, me, paid, say, unconfirmed, waLink]);
+  }, [bot, handOver, me, paid, say, unconfirmed]);
 
   useEffect(() => {
     watchRef.current = watch;
@@ -879,7 +951,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     const runs = start?.runs ?? [];
     if (runs.length === 0) {
       bot("Nothing is open for orders this minute. A person can still sort you out.");
-      setAsk({ of: "buttons", buttons: [{ said: "Message us on WhatsApp", look: "green", href: waLink }] });
+      setAsk({ of: "buttons", buttons: [{ said: "Message us on WhatsApp", look: "green", href: handOver() }] });
       return;
     }
     const first = runs[0];
@@ -972,7 +1044,11 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           setAsk({
             of: "buttons",
             buttons: [
-              { said: "Continue on WhatsApp", look: "green", href: waLink },
+              {
+                said: "Continue on WhatsApp",
+                look: "green",
+                href: handOver("The chat could not read my number. Here it is in full."),
+              },
               { said: "Let me try once more", look: "alt", go: () => { me("Let me try once more"); askPhone(); } },
             ],
           });
@@ -986,7 +1062,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         );
       },
     });
-  }, [askHostel, bot, me, waLink]);
+  }, [askHostel, bot, handOver, me]);
 
   const begin = useCallback(() => {
     held.current = { ...EMPTY, lines: [] };
@@ -1099,7 +1175,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             </span>
             <a
               className="hbtn wa"
-              href={waLink}
+              href={handOver()}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Continue on WhatsApp instead"
@@ -1127,7 +1203,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             )}
           </div>
 
-          <Asking ask={ask} whatsapp={waLink} email={email} />
+          <Asking ask={ask} whatsapp={handOver()} email={email} />
         </div>
       )}
     </div>

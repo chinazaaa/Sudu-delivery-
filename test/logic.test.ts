@@ -100,6 +100,7 @@ import {
   wantsAPerson as botWantsAPerson,
   looksLikeAName as botLooksLikeAName,
   namedIn as botNamedIn,
+  nearlyNamed as botNearlyNamed,
   phoneIn as botPhoneIn,
   yesNo as botYesNo,
   type Candidate as BotCandidate,
@@ -3561,4 +3562,25 @@ test("a number the rider cannot ring is not a number", () => {
   assert.equal(botPhoneIn("my number"), null);
   assert.equal(botPhoneIn("0803123456"), null);
   assert.equal(botPhoneIn("0103123456"), null);
+});
+
+test("a counter nearly named is asked about, not shrugged at", () => {
+  // "Chiken Republik" is not a counter by the strict reading and is
+  // obviously one to a person. Sending somebody to WhatsApp over a
+  // spelling is the chat failing at the one thing it is for.
+  const shops = [
+    { id: "d", name: "Domino's Pizza" },
+    { id: "c", name: "Chicken Republic" },
+    { id: "p", name: "Panarottis" },
+  ];
+  // Most near misses are not near misses at all: the strict reading is
+  // already forgiving, so these are simply found and nothing is asked.
+  assert.deepEqual(botNamedIn("chiken republik", shops).map((one) => one.id), ["c"]);
+  assert.deepEqual(botNamedIn("panarotis", shops).map((one) => one.id), ["p"]);
+  assert.deepEqual(botNearlyNamed("chiken republik", shops), []);
+
+  // Further off than that is where the question lives.
+  assert.deepEqual(botNearlyNamed("chicken repulic", shops).map((one) => one.id), ["c"]);
+  // Named outright is not a question, so it is left out of the asking.
+  assert.deepEqual(botNearlyNamed("domino", shops), []);
 });
