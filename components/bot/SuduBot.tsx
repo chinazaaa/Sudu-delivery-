@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { naira } from "@/lib/money";
-import { looksLikeAName, phoneIn } from "@/lib/bot-match";
+import { find, looksLikeAName, phoneIn } from "@/lib/bot-match";
 import { Asking, Rail, Said, Typing, useSaying, type Ask, type Line } from "./Chat";
 
 /**
@@ -1159,12 +1159,49 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     });
   }, [askOrder, bot, me, say, waLink]);
 
+  /*
+   * Which block, typed rather than hunted for.
+   *
+   * Sixteen of them in a box that scrolls with nothing to say it scrolls
+   * is a list that looks like six, and somebody whose block is the
+   * fourteenth taps WhatsApp instead. Typing is two letters and the same
+   * forgiving matching the food gets: "quen mary" is Queen Mary, "edc"
+   * finds the Enterprise Development Centre.
+   *
+   * The list is still one tap away for anybody who would rather look, and
+   * it is what somebody sees when nothing they typed was close.
+   */
+  const takeBlock = useCallback(
+    (hostel: string) => {
+      held.current.hostel = hostel;
+      remember("gave their details, nothing chosen yet");
+      askSlot();
+    },
+    [askSlot, remember]
+  );
+
+  const showBlocks = useCallback(
+    (blocks: string[], said = "Here they all are.") => {
+      bot(said, 420);
+      setAsk({
+        of: "chips",
+        chips: blocks.map((hostel) => ({
+          said: hostel,
+          go: () => {
+            me(hostel);
+            takeBlock(hostel);
+          },
+        })),
+        hint: "Scroll for more if yours is not showing.",
+      });
+    },
+    [bot, me, takeBlock]
+  );
+
   const askHostel = useCallback(() => {
     setAt(0);
     const blocks = startRef.current?.hostels ?? [];
     if (blocks.length === 0) {
-      // The lists are still on their way. Said rather than shown as an
-      // empty row of nothing.
       setBusy("Just a second…");
       setAsk({ of: "nothing" });
       pending.current = () => {
@@ -1173,20 +1210,53 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       };
       return;
     }
-    bot("Where am I bringing it? Tap your block.");
+
+    bot("Which block are you in? Type it and I will find it.");
     setAsk({
-      of: "chips",
-      chips: blocks.map((hostel) => ({
-        said: hostel,
-        go: () => {
-          me(hostel);
-          held.current.hostel = hostel;
-          remember("gave their details, nothing chosen yet");
-          askSlot();
-        },
-      })),
+      of: "text",
+      placeholder: "e.g. Queen Mary",
+      onSay: (said) => {
+        me(said);
+        const found = find(
+          said,
+          blocks.map((hostel) => ({ id: hostel, name: hostel }))
+        );
+
+        if (found.how === "sure" && found.hits[0]) {
+          const hostel = found.hits[0].name;
+          bot(`<b>${hostel}</b>, got it.`, 400);
+          takeBlock(hostel);
+          return;
+        }
+
+        if (found.hits.length > 0) {
+          bot(
+            found.hits.length === 1
+              ? `Did you mean <b>${found.hits[0].name}</b>?`
+              : "Which one of these?",
+            450
+          );
+          setAsk({
+            of: "chips",
+            chips: [
+              ...found.hits.map((hit, which) => ({
+                said: hit.name,
+                hot: which === 0,
+                go: () => {
+                  me(hit.name);
+                  takeBlock(hit.name);
+                },
+              })),
+              { said: "None of those", go: () => { me("None of those"); showBlocks(blocks); } },
+            ],
+          });
+          return;
+        }
+
+        showBlocks(blocks, "I do not know that one. Here are all of them.");
+      },
     });
-  }, [askSlot, bot, me, remember]);
+  }, [bot, me, showBlocks, takeBlock]);
 
   const askPhone = useCallback(() => {
     setAt(0);

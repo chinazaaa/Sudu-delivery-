@@ -1132,6 +1132,12 @@ body {
   gap: 7px;
   max-height: 150px;
   overflow-y: auto;
+  /* A box that scrolls says so. Without this the sixteenth hostel was
+     simply not there as far as anybody could tell, and the list looked
+     like the six that happened to fit. */
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent);
+  padding-bottom: 6px;
 }
 .sudubot .chip {
   border: 2px solid var(--bot-ink);

@@ -3584,3 +3584,32 @@ test("a counter nearly named is asked about, not shrugged at", () => {
   // Named outright is not a question, so it is left out of the asking.
   assert.deepEqual(botNearlyNamed("domino", shops), []);
 });
+
+test("a block is typed, not hunted for in a list of sixteen", () => {
+  // Sixteen of them in a box that scrolls with nothing to say it scrolls
+  // is a list that looks like six, and somebody whose block is the
+  // fourteenth taps WhatsApp instead.
+  const blocks = [
+    "Cooperative Kings",
+    "Cooperative Queens",
+    "Pod Living",
+    "Faith Hostel",
+    "Amethyst Hall",
+    "Emerald",
+    "Enterprise Development Centre",
+    "Queen Mary",
+    "Trinity Hall",
+  ].map((name) => ({ id: name, name }));
+
+  // Said properly, it goes straight in.
+  assert.equal(botFind("queen mary", blocks).hits[0]?.name, "Queen Mary");
+  // Said badly, it still goes in.
+  assert.equal(botFind("quen mary", blocks).hits[0]?.name, "Queen Mary");
+  assert.equal(botFind("amethyst", blocks).hits[0]?.name, "Amethyst Hall");
+  // Two blocks share a word, so it asks rather than picking one.
+  const both = botFind("cooperative", blocks);
+  assert.equal(both.how, "asking");
+  assert.ok(both.hits.length >= 2);
+  // Nothing like any of them shows the list rather than guessing.
+  assert.equal(botFind("my room", blocks).how, "lost");
+});
