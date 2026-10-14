@@ -5,6 +5,7 @@ import { naira } from "@/lib/money";
 import {
   boxNumbers,
   channels,
+  doors,
   feedback,
   funnel,
   parcelNumbers,
@@ -27,7 +28,8 @@ export default async function AnalyticsPage({
   const days = RANGES.includes(asked as (typeof RANGES)[number]) ? asked : 7;
 
   // Null means nothing is counting yet. The rest of the page still works.
-  const [views, steps, said, shelf, boxes, parcels, settings, came] = await Promise.all([
+  const [views, steps, said, shelf, boxes, parcels, settings, came, ways] =
+    await Promise.all([
     traffic(days),
     funnel(days),
     feedback(days),
@@ -36,6 +38,7 @@ export default async function AnalyticsPage({
     parcelNumbers(days),
     safeSettings(),
     channels(days),
+    doors(days),
   ]);
   const busiest = views ? Math.max(...views.perDay.map((day) => day.views), 1) : 1;
   // A route is stored by its id, and the id is not what anybody calls it.
@@ -438,6 +441,56 @@ export default async function AnalyticsPage({
             A link opened from inside WhatsApp usually arrives with nothing
             attached, so it counts as typed or a link.
           </p>
+        </section>
+
+        {/*
+          * Which door the orders came through.
+          *
+          * Three ways in now, and each one is somebody's week of work. The
+          * chat was built on the argument that the shortest route to a
+          * pizza was four pages and fourteen taps; this is the number that
+          * says whether that was true, and the number to look at before
+          * spending another week on any of the three.
+          */}
+        <section className="card space-y-2 lg:col-span-2">
+          <h2 className="font-bold">Website, app, or the chat</h2>
+          <p className="text-sm text-muted">
+            Where the orders were placed, out of everything in the window
+            that was not cancelled or refunded.
+          </p>
+          {ways && ways.length > 0 ? (
+            <>
+              <div className="space-y-2">
+                {ways.map((one) => (
+                  <div key={one.source || "unknown"} className="space-y-1">
+                    <div className="flex items-baseline justify-between gap-3 text-sm">
+                      <span className="font-semibold">{one.label}</span>
+                      <span className="text-muted">
+                        <b className="text-ink">{one.share}%</b> · {one.orders} order
+                        {one.orders === 1 ? "" : "s"} · {one.paid} paid
+                        {one.money > 0 ? ` · ${naira(one.money)}` : ""}
+                      </span>
+                    </div>
+                    {/* A bar rather than a pie: five labels round a circle
+                        on a phone is a legend nobody reads, and the thing
+                        being compared here is one number each. */}
+                    <div className="h-2 overflow-hidden rounded-full bg-black/10">
+                      <div
+                        className="h-full rounded-full bg-brand"
+                        style={{ width: `${Math.max(one.share, 1)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted">
+                Orders placed before this was recorded sit under &quot;Not
+                known&quot; and thin out on their own.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-muted">No orders in this window yet.</p>
+          )}
         </section>
 
         <section className="card space-y-2 lg:col-span-2">

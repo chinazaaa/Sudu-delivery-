@@ -108,6 +108,9 @@ import {
   yesNo as botYesNo,
   asksToSwap as botAsksToSwap,
   splitOrder as botSplitOrder,
+  intentOf as botIntentOf,
+  nameIn as botNameIn,
+  whyNotAName as botWhyNotAName,
   lineLike as botLineLike,
   type Candidate as BotCandidate,
 } from "../lib/bot-match";
@@ -3842,4 +3845,61 @@ test("an order pasted in as a list is split into the things on it", () => {
   assert.deepEqual(botSplitOrder("domino's half and half bbq chicken"), []);
   assert.deepEqual(botSplitOrder("2 jollof rice and chicken"), []);
   assert.deepEqual(botSplitOrder("just a zinger burger"), []);
+});
+
+test("an answer about ordering is not searched for as a dish", () => {
+  /*
+   * Asked what they fancy, plenty of people say "I want to order",
+   * because every other chat box on the internet opens by asking which
+   * department they want. Searched for, it matches nothing, and the chat
+   * says it cannot find it anywhere on the shop, which reads as broken.
+   */
+  assert.equal(botIntentOf("I want to order"), "vague-order");
+  assert.equal(botIntentOf("order"), "vague-order");
+  assert.equal(botIntentOf("I am hungry"), "vague-order");
+  assert.equal(botIntentOf("I want food please"), "vague-order");
+
+  // Somebody who has not come to order at all.
+  assert.equal(botIntentOf("I have an enquiry"), "question");
+  assert.equal(botIntentOf("i want to make a complaint"), "question");
+
+  // And anything with a real word in it is left for the search.
+  assert.equal(botIntentOf("I want to order from Domino's"), "");
+  assert.equal(botIntentOf("2 medium pizza"), "");
+  assert.equal(botIntentOf("jollof rice"), "");
+});
+
+test("a name is read out of however somebody says it", () => {
+  /*
+   * "My name is Chinaza" was being stored as "My", because the first word
+   * of the answer is the name right up until somebody is polite about it.
+   */
+  assert.equal(botNameIn("my name is Chinaza"), "Chinaza");
+  assert.equal(botNameIn("I'm Tomiwa"), "Tomiwa");
+  assert.equal(botNameIn("it's Grace"), "Grace");
+  assert.equal(botNameIn("Call me Uche"), "Uche");
+  assert.equal(botNameIn("Ada"), "Ada");
+});
+
+test("words that cannot be a name are caught, and names are not", () => {
+  /*
+   * The point of the list behind this is what is not on it. Plenty of
+   * Nigerian names are ordinary English words, and a list built by feel
+   * refuses them, which is worse than greeting a pizza.
+   */
+  assert.equal(botWhyNotAName("order"), "errand");
+  assert.equal(botWhyNotAName("inquiry"), "errand");
+  assert.equal(botWhyNotAName("hello"), "errand");
+  assert.equal(botWhyNotAName("customer"), "errand");
+  assert.equal(botWhyNotAName("pizza"), "food");
+  assert.equal(botWhyNotAName("I would like to order two pizzas please"), "sentence");
+
+  for (const real of [
+    "Grace", "Faith", "Hope", "Peace", "Joy", "Blessing", "Favour",
+    "Precious", "Charity", "Patience", "Mercy", "Comfort", "Gift",
+    "Promise", "Success", "Miracle", "Destiny", "Wisdom", "Goodluck",
+    "Sunday", "Emmanuel", "Prince", "Chinaza", "Oluwaseun", "Zainab",
+  ]) {
+    assert.equal(botWhyNotAName(real), "", `${real} is somebody's name`);
+  }
 });

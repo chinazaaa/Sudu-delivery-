@@ -185,6 +185,39 @@ export async function liveOffers(): Promise<LiveOffer[]> {
 }
 
 /** The promotion on an order, read and judged in one go, for the server. */
+/**
+ * Whether there is a code anybody could type in right now.
+ *
+ * Asked by the chat before it asks for one. A box for a discount code on
+ * an order when the shop has no codes at all is a box that can only ever
+ * say no: it reads as something being withheld, and the honest answer is
+ * not to ask. So the question appears on the nights there is a code and
+ * stays away on the nights there is not.
+ *
+ * Typed-in codes only. An automatic offer applies itself and is already on
+ * the bill by the time anybody sees it, and counting those would put the
+ * box back on every night for nothing.
+ */
+export async function anyCodeToType(): Promise<boolean> {
+  try {
+    const { data, error } = await db()
+      .from("coupons")
+      .select("expires_at, max_uses, used")
+      .eq("active", true)
+      .eq("automatic", false);
+    if (error) return false;
+
+    const now = new Date();
+    return (data ?? []).some(
+      (row) =>
+        !(row.expires_at && new Date(row.expires_at as string) <= now) &&
+        !(row.max_uses !== null && Number(row.used ?? 0) >= Number(row.max_uses))
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function activePromotion(
   context: OfferContext
 ): Promise<{ offer: LiveOffer; coupon: { code: string; note: string }; fee: number } | null> {

@@ -328,17 +328,109 @@ export function looksLikeAName(
   said: string,
   kitchens: { id: string; name: string }[] = []
 ): boolean {
-  const flat = flatten(said);
-  if (flat === "") return false;
-  // Letters, and enough of them to be a name rather than a slip.
-  if (!/[a-z]{2}/.test(flat)) return false;
-  // A sentence is not a name.
-  if (flat.split(" ").length > 4) return false;
-  if (namedIn(said, kitchens).length > 0) return false;
+  return whyNotAName(said, kitchens) === "";
+}
 
-  const mine = words(said);
-  if (mine.length === 0) return false;
-  return !mine.some((word) => FOODWORDS.has(word));
+/** Why an answer to "what should I call you?" is not a name, if it is not. */
+export type NotAName = "" | "nothing" | "sentence" | "food" | "errand";
+
+/**
+ * Words that cannot be anybody's name, however the name is spelt.
+ *
+ * The point of this list is what is *not* on it. Plenty of Nigerian names
+ * are ordinary English words, and a list built by feel ends up refusing
+ * them: Grace, Faith, Hope, Peace, Joy, Blessing, Favour, Precious,
+ * Charity, Patience, Mercy, Comfort, Gift, Promise, Success, Miracle,
+ * Destiny, Wisdom, Goodluck, Sunday, Monday, Emmanuel, Prince, King,
+ * Queen. Every one of those is somebody, and a chat that tells them their
+ * name is not a name is worse than one that greets a pizza.
+ *
+ * So this is only the words that mean somebody answered a different
+ * question: what they came to do, what they want from us, and the hello
+ * they typed before reading. Nothing here is a name in any language,
+ * because none of it is a word anybody is given.
+ */
+const NOT_NAMES = new Set([
+  // What they came to do.
+  "order", "ordering", "reorder", "delivery", "deliver", "booking", "book",
+  "enquiry", "enquiries", "inquiry", "inquiries", "question", "questions",
+  "complaint", "complaints", "refund", "refunds", "payment", "payments",
+  "transfer", "receipt", "invoice", "price", "prices", "pricing", "cost",
+  "menu", "menus", "list", "catalogue", "support", "help", "info",
+  "information", "details", "cancel", "cancellation", "checkout",
+  "sudu", "shop", "store",
+  // Nobody in particular.
+  "customer", "client", "user", "guest", "admin", "anonymous", "someone",
+  "somebody", "anybody", "nobody", "myself", "person", "human", "bot",
+  "name", "names", "unknown", "nothing", "none", "nil", "na", "anything",
+  "something", "whatever", "idk", "dunno", "test", "testing", "asap",
+  // A hello rather than an answer.
+  "hello", "hi", "hey", "yo", "sup", "morning", "afternoon", "evening",
+  "greetings", "please", "thanks", "ok", "okay", "yes", "no", "yeah",
+  "yep", "nope", "sure", "maybe",
+]);
+
+/**
+ * The same judgement as looksLikeAName, but it says which way it failed.
+ *
+ * Because the sentence the chat says back has to match: somebody who typed
+ * "pizza" is told we will get to the food in a second, and somebody who
+ * typed "inquiry" is told that is what they are after rather than what
+ * they are called. One wording for both is a chat that is not listening,
+ * and being told you answered the wrong question in the wrong words is
+ * the moment people decide the thing is broken.
+ *
+ * Still generous either way. It refuses what is plainly food, plainly an
+ * errand, or plainly not letters, and accepts everything else: a name is
+ * not a thing to argue about, and somebody really called Ola Pizza will be
+ * asked once and then taken at their word.
+ */
+export function whyNotAName(
+  said: string,
+  kitchens: { id: string; name: string }[] = []
+): NotAName {
+  const given = nameIn(said);
+  const flat = flatten(given);
+  if (flat === "") return "nothing";
+  // Letters, and enough of them to be a name rather than a slip.
+  if (!/[a-z]{2}/.test(flat)) return "nothing";
+  // A sentence is not a name.
+  if (flat.split(" ").length > 4) return "sentence";
+  if (namedIn(given, kitchens).length > 0) return "food";
+
+  const mine = words(given);
+  if (mine.length === 0) {
+    // Everything in it was filtered as noise, so there is no name in there.
+    return flat.split(" ").some((word) => NOT_NAMES.has(word)) ? "errand" : "nothing";
+  }
+  if (mine.some((word) => FOODWORDS.has(word))) return "food";
+  if (mine.some((word) => NOT_NAMES.has(word))) return "errand";
+  // A word the noise filter dropped can still be the giveaway: "ok" and
+  // "yes" never survive it, and neither is a name.
+  if (flat.split(" ").every((word) => NOT_NAMES.has(word))) return "errand";
+  return "";
+}
+
+/**
+ * The name out of however somebody said it.
+ *
+ * "My name is Chinaza" was being stored as "My", because the first word of
+ * the answer is the name right up until somebody is polite about it. The
+ * introductions come off, and what is left is taken as given: anything
+ * clever here would be a chat arguing with somebody about their own name.
+ */
+export function nameIn(said: string): string {
+  let text = String(said ?? "").trim();
+
+  const lead =
+    /^(?:my name is|my name's|the name is|my name|i am|i'm|im|it is|it's|its|this is|you can call me|call me|they call me|name)\b[\s:,-]*/i;
+  for (let pass = 0; pass < 2; pass += 1) {
+    const shorter = text.replace(lead, "").trim();
+    if (shorter === text) break;
+    text = shorter;
+  }
+
+  return text.replace(/[\s.,!]+$/, "").trim();
 }
 
 /** The words that mean somebody answered the wrong question. */
@@ -655,4 +747,75 @@ export function splitOrder(said: string): string[] {
     .filter((part) => part !== "" && words(part).length > 0);
 
   return parts.length >= 2 ? parts : [];
+}
+
+/** What somebody wants, where they said it instead of saying a dish. */
+export type Intent = "" | "vague-order" | "question";
+
+/** Words that mean "I want to order" and nothing more specific. */
+const VAGUE = new Set([
+  "order", "orders", "ordering", "food", "foods", "hungry", "eat", "eating",
+  "buy", "something", "anything", "stuff", "whatever", "delivery", "deliver",
+  "lunch", "dinner", "breakfast",
+]);
+
+/**
+ * The small words a sentence about wanting something is made of.
+ *
+ * The noise list is built for matching dish names, where "am" and "now"
+ * never appear and so never needed filtering. "I am hungry now" is four
+ * words of which one carries anything, and without these it reads as a
+ * sentence with real words in it.
+ */
+const FILLER = new Set([
+  "am", "im", "is", "are", "was", "be", "been", "do", "does", "did", "dont",
+  "really", "very", "quite", "now", "today", "tonight", "later", "already",
+  "so", "well", "actually", "maybe", "think", "guess", "wanna", "gonna",
+  "make", "place", "put", "like", "looking", "look", "trying", "try",
+  "hi", "hello", "hey", "good", "day", "sir", "ma", "abeg", "biko", "jare",
+]);
+
+/**
+ * An answer that is about ordering rather than an order.
+ *
+ * Asked what they fancy, plenty of people say "I want to order", because
+ * every other chat box on the internet opens by asking which department
+ * they want. Searched for, "i want to order" matches nothing and the chat
+ * says it cannot find it anywhere on the shop, which reads as broken.
+ *
+ * And some people have not come to order at all. "I have an enquiry" is a
+ * person with a question, and the shop would rather hear it than have them
+ * pushed round a menu they are not shopping from.
+ *
+ * Anything with a real word in it is left alone: "I want to order from
+ * Domino's" names a counter and goes to the search like anything else, and
+ * "where is my order" is a question about an order rather than either of
+ * these. Lunch and dinner sit in the vague list rather than the food one
+ * because "I want lunch" is a sentence about wanting lunch, and nothing on
+ * the menu is called it.
+ */
+export function intentOf(said: string): Intent {
+  const flat = flatten(said);
+  if (flat === "") return "";
+
+  if (
+    /\b(enquiry|enquiries|enquire|inquiry|inquiries|inquire|complaint|complaints|complain|question|questions)\b/.test(
+      flat
+    )
+  ) {
+    return "question";
+  }
+
+  const mine = words(said).filter((word) => !FILLER.has(word));
+  if (mine.length > 0 && mine.every((word) => VAGUE.has(word))) return "vague-order";
+  // "I want to order" is every word filtered as noise but the one, so the
+  // whole flattened sentence is checked as well.
+  if (
+    flat
+      .split(" ")
+      .every((word) => VAGUE.has(word) || NOISE.has(word) || FILLER.has(word))
+  ) {
+    return flat.split(" ").some((word) => VAGUE.has(word)) ? "vague-order" : "";
+  }
+  return "";
 }

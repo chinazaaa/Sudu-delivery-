@@ -5,11 +5,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { naira } from "@/lib/money";
 import {
   find,
-  looksLikeAName,
+  whyNotAName,
+  nameIn,
   phoneIn,
   asksToSwap,
   lineLike,
   splitOrder,
+  intentOf,
+  namedIn,
+  without,
   type Swap,
 } from "@/lib/bot-match";
 import { Asking, Rail, Said, Typing, useSaying, type Ask, type Line } from "./Chat";
@@ -40,6 +44,8 @@ type Start = {
   cars: Car[];
   carFrom: number;
   feeFrom: number;
+  /** Whether there is a code anybody could type tonight. */
+  codes: boolean;
   whatsapp: string;
   email: string;
 };
@@ -100,6 +106,10 @@ type Held = {
   car: Car | null;
   kitchen: { id: string; name: string } | null;
   /** What has been chosen, as the server will be told it. */
+  /** A discount code, once one has been checked and found good. The
+   *  figure is never worked out here: the checkout applies it again and
+   *  its answer is the one on the receipt. */
+  code?: { code: string; label: string; discount: number } | null;
   lines: {
     itemId: string;
     name: string;
@@ -213,6 +223,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   /** The basket editor, held the same way: the step that adds a line
    *  offers it, and it offers the step that adds a line. */
   const changeRef = useRef<((asked?: Swap | null) => void) | null>(null);
+  /** The bill, held in a box so a pasted list can end at it from
+   *  anywhere, including from a line that was skipped. */
+  const soonRef = useRef<(() => void) | null>(null);
+  /** Said no to a discount code already. Asked once per version of the
+   *  order: asking again on the same bill is nagging, and asking again
+   *  after the order changed is the only honest thing to do, because what
+   *  a code is worth changed with it. */
+  const noCode = useRef(false);
   /* An order pasted in whole, waiting its turn. "5 jollof, 2 zinger, 1
      coke" is three searches, taken one at a time so the questions each
      one asks land in the right place. */
@@ -472,6 +490,92 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
    * Here it is a button, and the name, number and block are already known,
    * so all that is asked is what they want.
    */
+  /*
+   * Somebody with a question rather than an order.
+   *
+   * "I have an enquiry" is not a dish and never will be, and pushing that
+   * person round a menu they are not shopping from is how a chat loses
+   * somebody who was ready to be helped. It goes to the same list as the
+   * things nobody stocks, which is the list somebody reads and answers,
+   * marked as a question so the answer is a sentence rather than a price.
+   *
+   * WhatsApp is on the screen the whole time underneath, so anybody who
+   * would rather not wait does not have to.
+   */
+  const askAQuestion = useCallback(
+    (first = "") => {
+      bot(
+        "Of course. Type your question and I will send it over with your " +
+          "number, and somebody will come back to you.",
+        520
+      );
+      setAsk({
+        of: "text",
+        placeholder: first || "Your question",
+        onSay: async (asked) => {
+          me(asked);
+          setAsk({ of: "nothing" });
+          const mine = held.current;
+          try {
+            const answer = await working(
+              "Sending that over…",
+              fetch("/api/bot/ask", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  wanted: asked,
+                  name: mine.name,
+                  phone: mine.phone,
+                  hostel: mine.hostel,
+                  kind: "question",
+                }),
+              })
+            );
+            const got = (await answer.json()) as { ok?: boolean; error?: string };
+            if (!got.ok) {
+              bot(got.error || "Could not send that just now.", 450);
+              setAsk({
+                of: "buttons",
+                buttons: [
+                  { said: "Try again", look: "alt", go: () => { me("Try again"); askAQuestion(asked); } },
+                  { said: "Ask on WhatsApp", look: "green", href: handOver("I have a question.") },
+                ],
+              });
+              return;
+            }
+            say(
+              {
+                kind: "status",
+                tone: "ok",
+                html: "<span><b>Sent.</b> Somebody will come back to you on your number.</span>",
+              },
+              420
+            );
+            bot("Anything else while you are here?", 450);
+            setAsk({
+              of: "buttons",
+              buttons: [
+                { said: "Order something", go: () => { me("Order something"); askOrderRef.current?.(true); } },
+                { said: "Ask on WhatsApp too", look: "alt", href: handOver("I have a question.") },
+                { said: "That's all for now", look: "alt", go: () => { me("That's all for now"); byeRef.current?.(); } },
+              ],
+            });
+          } catch {
+            bot("Could not send that just now.", 420);
+            setAsk({
+              of: "buttons",
+              buttons: [
+                { said: "Try again", go: () => { me("Try again"); askAQuestion(asked); } },
+                { said: "Ask on WhatsApp", look: "green", href: handOver("I have a question.") },
+              ],
+            });
+          }
+        },
+      });
+    },
+    [bot, handOver, me, say, working]
+  );
+
   const askUsFor = useCallback(
     (first: string) => {
       bot(
@@ -573,6 +677,36 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       }
 
       /*
+       * An answer about ordering rather than an order, and the person who
+       * came with a question instead.
+       *
+       * Searched for, "I want to order" matches nothing on any menu and
+       * the chat says it cannot find it anywhere on the shop, which reads
+       * as broken to somebody who said the most reasonable sentence in the
+       * world. Both get pointed at the right next question instead.
+       */
+      if (echo) {
+        const meant = intentOf(said);
+        if (meant === "question") {
+          askAQuestion();
+          return;
+        }
+        if (meant === "vague-order") {
+          bot(
+            "Of course. What would you like? Say the dish, or the kitchen, or " +
+              "both, and a typo is fine.",
+            480
+          );
+          setAsk({
+            of: "text",
+            placeholder: "e.g. 2 medium bbq pizza",
+            onSay: (then) => huntRef.current?.(then),
+          });
+          return;
+        }
+      }
+
+      /*
        * The order arriving written out, which is how it arrives whenever
        * it was agreed somewhere else first. Taken one at a time, because
        * each thing on it may have a question of its own.
@@ -580,14 +714,35 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       if (echo && list.current.length === 0) {
         const parts = splitOrder(said);
         if (parts.length >= 2) {
-          list.current = parts.slice(1);
-          listing.current = parts.length;
+          /*
+           * A counter named once covers the whole list.
+           *
+           * "5 jollof, 2 zinger burger, 1 coke from Burger King" names the
+           * kitchen at the end and means it about all three. Read part by
+           * part, two of them would be searched across every counter in
+           * the shop and the third would carry a stray "burger king" into
+           * the dish name. So the counter is lifted out of the sentence,
+           * every part is searched there, and its words come out of each
+           * part.
+           *
+           * Only where exactly one is named. Two counters in one list is
+           * somebody saying which is which, and each part already carries
+           * its own.
+           */
+          const named = namedIn(said, startRef.current?.kitchens ?? []);
+          const one = named.length === 1 ? named[0] : null;
+          const cleaned = one ? parts.map((part) => without(part, named)) : parts;
+
+          list.current = cleaned.slice(1);
+          listing.current = cleaned.length;
+          if (one) queue.current = [one];
           bot(
-            `<b>${parts.length}</b> things. I will take them one at a time, and ` +
-              "ask about any I cannot place.",
+            `<b>${cleaned.length}</b> things` +
+              (one ? ` from <b>${one.name}</b>` : "") +
+              ". I will take them one at a time, and ask about any I cannot place.",
             460
           );
-          huntRef.current?.(parts[0], false);
+          huntRef.current?.(cleaned[0], false);
           return;
         }
       }
@@ -869,6 +1024,77 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
          * route, or say where to get it, which is the custom order
          * route the site already has a list for.
          */
+        /*
+         * Not on the counter they named, but somewhere else in the shop.
+         *
+         * "5 jollof, 2 zinger burger, 1 coke from Burger King" is three
+         * things from one kitchen right up until one of them is not on
+         * that kitchen's menu. Saying "I cannot find a coke" is plainly
+         * wrong when the shop sells four of them, so the search is run
+         * again across everywhere and the answer is offered rather than
+         * taken: a second counter is a second delivery to think about,
+         * which is theirs to decide and not the chat's.
+         */
+        const only = queue.current[0] ?? null;
+        if (only) {
+          try {
+            const wider = await fetch("/api/bot/find", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ said }),
+            });
+            const more = (await wider.json()) as { how: string; qty: number; hits: Hit[] };
+            const hit = more.hits[0];
+            if (hit && hit.shop.id !== only.id) {
+              misses.current = 0;
+              bot(
+                `<b>${said}</b> is not on <b>${only.name}</b>, but ` +
+                  `<b>${hit.shop.name}</b> has <b>${hit.name}</b>.`,
+                480
+              );
+              setAsk({
+                of: "buttons",
+                buttons: [
+                  {
+                    said: `Add it from ${hit.shop.name}`,
+                    go: () => {
+                      me(`Add it from ${hit.shop.name}`);
+                      walkRef.current?.(hit, hit.qty ?? more.qty ?? got.qty);
+                    },
+                  },
+                  {
+                    said: "Skip it",
+                    look: "alt",
+                    go: () => {
+                      me("Skip it");
+                      /* Carrying on where the list left off, because a
+                         skipped line is still a line dealt with. */
+                      if (list.current.length > 0) {
+                        const then = list.current.shift() as string;
+                        bot(`Next: <b>${then}</b>.`, 420);
+                        huntRef.current?.(then, false);
+                        return;
+                      }
+                      if (listing.current > 0) {
+                        listing.current = 0;
+                        bot("Here is the total for the rest.", 440);
+                        soonRef.current?.();
+                        return;
+                      }
+                      askOrderRef.current?.(true);
+                    },
+                  },
+                ],
+                hint: "A second kitchen is a second stop for the car.",
+              });
+              return;
+            }
+          } catch {
+            // The wider search is a kindness, not the answer. If it does
+            // not come back, the ordinary two ways round follow.
+          }
+        }
+
         misses.current += 1;
         /*
          * Third time round, a person takes it.
@@ -964,7 +1190,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         askOrder();
       }
     },
-    [bot, handOver, me, waLink, working]
+    [askAQuestion, bot, handOver, me, waLink, working]
   );
 
   useEffect(() => {
@@ -1007,6 +1233,12 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
        * have not been asked about yet.
        */
       const after = () => {
+        /* A code is worth what it is worth against one particular cart,
+           so a cart that just changed has no code on it until it is
+           checked again. Quietly, because the question comes round again
+           with the new bill. */
+        held.current.code = null;
+        noCode.current = false;
         remember(
           held.current.lines
             .map((line) => `${line.qty > 1 ? `${line.qty} × ` : ""}${line.name}`)
@@ -1248,14 +1480,164 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         },
         600
       );
-      setAsk({
-        of: "buttons",
-        buttons: [
-          { said: "Confirm order", go: () => { me("Confirm order"); payNext(); } },
-          { said: "Change something", look: "alt", go: () => { me("Change something"); changeRef.current?.(); } },
-        ],
-        hint: "Nothing is charged until you transfer.",
-      });
+      const confirm = (hint = "Nothing is charged until you transfer.") => {
+        setAsk({
+          of: "buttons",
+          buttons: [
+            { said: "Confirm order", go: () => { me("Confirm order"); payNext(); } },
+            { said: "Change something", look: "alt", go: () => { me("Change something"); changeRef.current?.(); } },
+          ],
+          hint,
+        });
+      };
+
+      /*
+       * The discount code, asked for only where there is one to type.
+       *
+       * A box for a code on a night the shop has no codes is a box that
+       * can only ever say no, and it reads as something being withheld.
+       * So the question appears on the nights there is a live code and
+       * stays away on the nights there is not.
+       *
+       * Nothing is worked out in here. The code is checked against this
+       * cart by the same door the website's checkout uses, and it is
+       * handed to the checkout when the order is placed, where it is
+       * checked again and counted as used.
+       */
+      const askCode = (first = true) => {
+        bot(
+          first
+            ? "Do you have a discount code?"
+            : "Another code to try, or shall we carry on?",
+          440
+        );
+        setAsk({
+          of: "buttons",
+          buttons: [
+            {
+              said: first ? "Yes, I have one" : "Try another code",
+              go: () => {
+                me(first ? "Yes, I have one" : "Try another code");
+                bot("Go on, type it in.", 400);
+                setAsk({
+                  of: "text",
+                  placeholder: "Your code",
+                  onSay: async (typed) => {
+                    me(typed);
+                    setAsk({ of: "nothing" });
+                    try {
+                      const checked = await working(
+                        "Checking that code…",
+                        fetch("/api/bot/code", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            code: typed,
+                            batchId: mine.run?.id ?? "",
+                            phone: mine.phone,
+                            lines: mine.lines.map((line) => ({
+                              menu_item_id: line.itemId,
+                              qty: line.qty,
+                              option_ids: line.optionIds,
+                            })),
+                          }),
+                        })
+                      );
+                      const worth = (await checked.json()) as {
+                        ok?: boolean;
+                        error?: string;
+                        code?: string;
+                        label?: string;
+                        discount?: number;
+                      };
+
+                      if (!worth.ok) {
+                        /* Said plainly, with the reason the till gave, and
+                           the order is never held up over it: a code that
+                           does not work is not a reason to lose the sale. */
+                        bot(
+                          `<b>${typed.toUpperCase()}</b> is not working: ` +
+                            (worth.error || "that code cannot be used on this order."),
+                          480
+                        );
+                        setAsk({
+                          of: "buttons",
+                          buttons: [
+                            { said: "Try another code", go: () => { me("Try another code"); askCode(false); } },
+                            {
+                              said: "Carry on without it",
+                              look: "alt",
+                              go: () => {
+                                me("Carry on without it");
+                                noCode.current = true;
+                                confirm();
+                              },
+                            },
+                          ],
+                        });
+                        return;
+                      }
+
+                      held.current.code = {
+                        code: worth.code ?? typed.toUpperCase(),
+                        label: worth.label ?? "",
+                        discount: worth.discount ?? 0,
+                      };
+                      say(
+                        {
+                          kind: "status",
+                          tone: "ok",
+                          html:
+                            `<span><b>${held.current.code.code}</b> applied · ` +
+                            `${naira(held.current.code.discount)} off. ` +
+                            `New total <b>${naira(
+                              Math.max(0, (got.total ?? 0) - held.current.code.discount)
+                            )}</b></span>`,
+                        },
+                        460
+                      );
+                      confirm("The code is applied at the till when you confirm.");
+                    } catch {
+                      bot("I could not check that code just then.", 420);
+                      setAsk({
+                        of: "buttons",
+                        buttons: [
+                          { said: "Try again", go: () => { me("Try again"); askCode(false); } },
+                          {
+                            said: "Carry on without it",
+                            look: "alt",
+                            go: () => {
+                              me("Carry on without it");
+                              noCode.current = true;
+                              confirm();
+                            },
+                          },
+                        ],
+                      });
+                    }
+                  },
+                });
+              },
+            },
+            {
+              said: first ? "No, carry on" : "Carry on",
+              look: "alt",
+              go: () => {
+                me(first ? "No, carry on" : "Carry on");
+                noCode.current = true;
+                confirm();
+              },
+            },
+          ],
+          hint: first ? "If you do not have one, nothing changes." : undefined,
+        });
+      };
+
+      if ((startRef.current?.codes ?? false) && !held.current.code && !noCode.current) {
+        askCode();
+        return;
+      }
+      confirm();
     } catch {
       bot("I could not reach the till just then. Try again?", 420);
       setAsk({
@@ -1295,8 +1677,12 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       const said = (line: (typeof lines)[number]): string =>
         `${line.qty > 1 ? `${line.qty} × ` : ""}${line.name}`;
 
-      const kept = () =>
+      const kept = () => {
+        held.current.code = null;
+        noCode.current = false;
+        noCode.current = false;
         remember(lines.map((line) => said(line)).join(", "));
+      };
 
       const basket = (lead = "Here is your order. Which one?") => {
         bot(lead, 440);
@@ -1464,6 +1850,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     changeRef.current = change;
   }, [change]);
 
+  useEffect(() => {
+    soonRef.current = soon;
+  }, [soon]);
+
   /*
    * Placing it, and saying how to pay.
    *
@@ -1492,6 +1882,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               qty: line.qty,
               option_ids: line.optionIds,
             })),
+            /* Checked once to show what it was worth, and handed over
+               here to be checked again and counted as used. The
+               checkout's figure is the one on the receipt. */
+            code: mine.code?.code ?? "",
           }),
         })
       );
@@ -2215,13 +2609,18 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     held.current = { ...EMPTY, lines: [] };
     list.current = [];
     listing.current = 0;
+    noCode.current = false;
     setLines([]);
     setAt(0);
     bot("Hey, I’m <b>Sudu Bot</b>. I can take your order right here, no app needed.", 450);
     bot("What should I call you?");
     let tries = 0;
     const takeIt = (said: string) => {
-      held.current.name = said.split(" ")[0];
+      /* "My name is Chinaza" was being stored as "My", because the first
+         word of the answer is the name right up until somebody is polite
+         about it. */
+      const given = nameIn(said) || said;
+      held.current.name = given.split(" ")[0];
       askPhone();
     };
     setAsk({
@@ -2230,17 +2629,47 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       onSay: (said) => {
         me(said);
         tries += 1;
-        /* Asked their name, a fair few people answer with what they want
-           to eat, because that is what they came for. Taken at face value
-           it addresses every message afterwards to a pizza shop. Asked
-           once, then taken at their word: a name is not a thing to argue
-           about, and somebody really called Ola Pizza exists. */
-        if (tries === 1 && !looksLikeAName(said, startRef.current?.kitchens ?? [])) {
-          bot(
-            "That sounds more like what you want to eat than what you are called. " +
-              "We will get to the food in a second. What should I call you?",
-            450
-          );
+        /*
+         * Asked their name, a fair few people answer with something else:
+         * what they want to eat, because that is what they came for, or
+         * what they came to do, because every other chat box on the
+         * internet opens by asking which department you want.
+         *
+         * Taken at face value, every message afterwards is addressed to a
+         * pizza. So it is asked again, in words that match what they
+         * actually typed, because being told you answered the wrong
+         * question in the wrong words is the moment people decide the
+         * thing is broken.
+         *
+         * Twice, and then whatever they said is their name. A name is not
+         * a thing to argue about: somebody really called Ola Pizza exists,
+         * the list of words this refuses is deliberately short, and a chat
+         * that will not let you past your own name is a chat nobody
+         * finishes.
+         */
+        const wrong = whyNotAName(said, startRef.current?.kitchens ?? []);
+        if (wrong !== "" && tries <= 2) {
+          const again = tries === 2 ? " Just a first name is plenty." : "";
+          if (wrong === "food") {
+            bot(
+              "That sounds more like what you want to eat than what you are " +
+                "called. We will get to the food in a second. What should I " +
+                "call you?" +
+                again,
+              450
+            );
+          } else if (wrong === "errand") {
+            bot(
+              "That is what you are after rather than what you are called, and " +
+                "we will get to it. Who am I talking to?" +
+                again,
+              450
+            );
+          } else if (wrong === "sentence") {
+            bot("Sorry, which bit of that is your name?" + again, 430);
+          } else {
+            bot("I did not catch a name in that. What should I call you?" + again, 430);
+          }
           return;
         }
         takeIt(said);

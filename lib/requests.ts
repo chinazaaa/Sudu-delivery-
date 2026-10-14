@@ -27,8 +27,25 @@ import { normalisePhone } from "./phone";
  */
 export const ASKED_IN_CHAT = "Asked for in the chat";
 
+/**
+ * A question rather than a shopping list.
+ *
+ * Somebody who opens the chat with "I have an enquiry" has not come to
+ * order anything, and the shop still wants to hear it. It goes into the
+ * same list as the things nobody stocked, because that list is already the
+ * one somebody reads and answers, and it is marked so the answer is not
+ * written as a quote for food.
+ */
+export const ASKED_IN_CHAT_QUESTION = "A question asked in the chat";
+
 export function fromTheChat(note: string): boolean {
-  return String(note ?? "").trim() === ASKED_IN_CHAT;
+  const said = String(note ?? "").trim();
+  return said === ASKED_IN_CHAT || said === ASKED_IN_CHAT_QUESTION;
+}
+
+/** A question, as against something to go and buy. */
+export function isAQuestion(note: string): boolean {
+  return String(note ?? "").trim() === ASKED_IN_CHAT_QUESTION;
 }
 
 export type CustomRequest = {

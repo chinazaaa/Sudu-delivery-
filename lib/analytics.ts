@@ -695,3 +695,75 @@ export async function channels(days = 28): Promise<Channel[] | null> {
     .filter((one) => one.orders > 0 || one.visitors > 0)
     .sort((a, b) => b.money - a.money || b.orders - a.orders || b.visitors - a.visitors);
 }
+
+export type Door = {
+  source: string;
+  label: string;
+  orders: number;
+  paid: number;
+  money: number;
+  /** Share of the orders counted here, as a whole number of per cent. */
+  share: number;
+};
+
+/** What each way in is called, in the words the shop uses for it. */
+function doorLabel(source: string): string {
+  if (source === "app") return "The app";
+  if (source === "web") return "The website";
+  if (source === "bot") return "Sudu Bot";
+  return "Not known";
+}
+
+/**
+ * Which door the orders came through: the website, the app, or the chat.
+ *
+ * Worth knowing on its own, and worth knowing before spending another week
+ * on any of the three. The chat was built on the argument that the shortest
+ * route to a pizza was four pages and fourteen taps; this is the number
+ * that says whether that was true.
+ *
+ * Only orders placed since the column existed can say anything, so
+ * everything older sits under "not known" rather than being spread across
+ * the three to make the card look finished. The share is of what is
+ * counted, which is every order in the window that was not cancelled or
+ * refunded, so the percentages add to a hundred.
+ */
+export async function doors(days = 28): Promise<Door[] | null> {
+  const since = new Date(Date.now() - days * 86400_000).toISOString();
+
+  let orders: { source: string | null; status: string; total: number }[];
+  try {
+    const { data, error } = await db()
+      .from("orders")
+      .select("source, status, total")
+      .gte("created_at", since)
+      .not("status", "in", NOT_ORDERS_SQL)
+      .limit(20000);
+    if (error) throw new Error(error.message);
+    orders = (data ?? []) as typeof orders;
+  } catch {
+    // The column is not there yet. Nothing to show, and nothing broken.
+    return null;
+  }
+
+  if (orders.length === 0) return [];
+
+  const counts = new Map<string, Door>();
+  for (const row of orders) {
+    const key = String(row.source ?? "");
+    const one =
+      counts.get(key) ??
+      { source: key, label: doorLabel(key), orders: 0, paid: 0, money: 0, share: 0 };
+    one.orders += 1;
+    if (isPaid(row.status)) {
+      one.paid += 1;
+      one.money += row.total ?? 0;
+    }
+    counts.set(key, one);
+  }
+
+  const all = orders.length;
+  return [...counts.values()]
+    .map((one) => ({ ...one, share: Math.round((one.orders / all) * 100) }))
+    .sort((a, b) => b.orders - a.orders);
+}

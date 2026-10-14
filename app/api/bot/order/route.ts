@@ -31,6 +31,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       phone?: unknown;
       hostel?: unknown;
       lines?: unknown;
+      /** A discount code, as typed. Checked here, by the checkout, rather
+       *  than taken on the chat's word for it. */
+      code?: unknown;
     };
 
     const phone = normalisePhone(String(body.phone ?? ""));
@@ -68,6 +71,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       // Its own door, beside the website and the app, so the books can
       // say whether the chat is earning its keep.
       source: "bot",
+      coupon: String(body.code ?? "").trim(),
       paymentMethod: "transfer",
       cameFrom: "chat",
     });

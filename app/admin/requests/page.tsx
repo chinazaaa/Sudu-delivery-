@@ -1,5 +1,5 @@
 import PageHeader from "@/components/admin/PageHeader";
-import { requestList, fromTheChat } from "@/lib/requests";
+import { requestList, fromTheChat, isAQuestion } from "@/lib/requests";
 import { safeSettings, whatsappLink } from "@/lib/settings";
 import { naira } from "@/lib/money";
 import { markRequest, settleRequest, shelveRequest } from "./actions";
@@ -120,7 +120,19 @@ export default async function RequestsPage() {
                       the form has already seen the shop, somebody who
                       asked the chat was mid-order when they hit the gap. */}
                   {fromTheChat(ask.note) && (
-                    <span className="tag mt-1 bg-brand-tint text-brand-dark">From the chat</span>
+                    <span
+                      className={`tag mt-1 ${
+                        isAQuestion(ask.note)
+                          ? "bg-amber/20 text-amber-deep"
+                          : "bg-brand-tint text-brand-dark"
+                      }`}
+                    >
+                      {/* A question is not a shopping list, and the answer
+                          is a sentence rather than a price. Said on the
+                          card so nobody opens it looking for something to
+                          go and buy. */}
+                      {isAQuestion(ask.note) ? "Question from the chat" : "From the chat"}
+                    </span>
                   )}
                   <p className="text-sm text-muted">
                     {ask.name} · {ask.phone}
