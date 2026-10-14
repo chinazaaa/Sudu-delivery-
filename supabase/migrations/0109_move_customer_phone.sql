@@ -15,7 +15,12 @@
 -- whose number it was.
 --
 -- The grants are already revoked in production, which is the half that
--- shuts the door. This is the half that takes the door away.
+-- shuts the door. This is the half that takes the door away, and it has to
+-- be run by hand from the SQL editor: DROP never completes through the
+-- tooling this was written with. That is not a lock and not this function
+-- in particular -- a throwaway function with no dependencies behaves the
+-- same way -- so there is nothing to wait for and nothing to unpick. Run
+-- it and it is gone.
 --
 -- Dropped rather than kept and locked, because the job it did is a job for
 -- an admin page with a person behind it. The body is in this project's
@@ -29,3 +34,8 @@ drop function if exists public.move_customer_phone(text, text);
 -- is no reason a browser should be able to call it. Kept, because it is
 -- used; revoked, because it is not used from out there.
 revoke all on function public.rls_auto_enable() from anon, authenticated, public;
+
+-- A throwaway from working the above out. It returns 1 and does nothing
+-- else, and its grants are already revoked, but it should not outlive the
+-- question it answered.
+drop function if exists public.zz_drop_probe();
