@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
 import { containersIn } from "../lib/containers";
 import { runShouldBe } from "../lib/run-follow";
-import { likelyOrders, mentions, nameOverlap, readAlert } from "../lib/alerts";
+import { likelyOrders, mentions, nameOverlap, readAlert, settledBy } from "../lib/alerts";
 import { svixSigned } from "../lib/svix";
 import { addressOf, isAlert, replySubject, senderName, snippet, vouchedFor } from "../lib/mail";
 import { tidyCode, whyNotACode } from "../lib/promoter-applications";
@@ -51,7 +51,9 @@ import { sameInstant, slotsWorthOffering, windowPhrase } from "../lib/same-day";
 import {
   daysSince,
   lastSentLine,
+  aimOf,
   ordersAfter,
+  othersLine,
   outcomeChip,
   sendStamp,
 } from "../lib/deal-sends";
@@ -2522,7 +2524,38 @@ test("orders are counted only inside the six hours after a send", () => {
     { created_at: "2026-10-03T13:30:00Z", total: 2500 },
     { created_at: "2026-10-03T16:00:00Z", total: 7000 },
   ]);
-  assert.deepEqual(counted, { orders: 2, value: 3500 });
+  assert.deepEqual(counted, { orders: 2, value: 3500, others: 0 });
+});
+
+test("an order of something else is counted apart, not towards the send", () => {
+  // A notification about the Liverpool boxes followed by two orders of
+  // other food is two orders of other food. The chip used to call them its
+  // own, which is the one way a number on this page can lie.
+  const counted = ordersAfter("2026-10-03T10:00:00Z", [
+    { created_at: "2026-10-03T10:30:00Z", total: 9000, wanted: true },
+    { created_at: "2026-10-03T11:00:00Z", total: 4000, wanted: false },
+    { created_at: "2026-10-03T12:00:00Z", total: 2000, wanted: false },
+  ]);
+  assert.deepEqual(counted, { orders: 1, value: 9000, others: 2 });
+  assert.equal(othersLine(2), "2 other orders in the same hours.");
+  assert.equal(othersLine(1), "1 other order in the same hours.");
+  // Nothing else happened, so the card says nothing rather than zero.
+  assert.equal(othersLine(0), "");
+});
+
+test("where a send pointed is read back off the path it went with", () => {
+  // The path is built from a dropdown rather than typed, so these are all
+  // the shapes there are. Anything else reads as the shop front, because
+  // being unable to tell what somebody was meant to order is not the same
+  // as nobody having ordered it.
+  assert.deepEqual(aimOf("/collections/liverpool-man-city"), {
+    kind: "collection",
+    slug: "liverpool-man-city",
+  });
+  assert.deepEqual(aimOf("/r/abc-123?category=pizza"), { kind: "restaurant", id: "abc-123" });
+  assert.deepEqual(aimOf("/skincare"), { kind: "skincare" });
+  assert.deepEqual(aimOf("/"), { kind: "shop" });
+  assert.deepEqual(aimOf("/c/xyz"), { kind: "shop" });
 });
 
 test("a send with nothing readable on it counts nothing", () => {
@@ -2530,12 +2563,12 @@ test("a send with nothing readable on it counts nothing", () => {
   // has ever taken, which is what a NaN window would have done.
   assert.deepEqual(
     ordersAfter("not a date", [{ created_at: "2026-10-03T10:00:00Z", total: 1000 }]),
-    { orders: 0, value: 0 }
+    { orders: 0, value: 0, others: 0 }
   );
   // An order with a broken moment is skipped rather than counted as zero.
   assert.deepEqual(
     ordersAfter("2026-10-03T10:00:00Z", [{ created_at: "", total: 1000 }]),
-    { orders: 0, value: 0 }
+    { orders: 0, value: 0, others: 0 }
   );
 });
 
@@ -2552,6 +2585,16 @@ test("the outcome chip says orders came after, never that they came from", () =>
   // chip says so plainly and the page draws it on wash rather than in mint.
   assert.deepEqual(outcomeChip({ orders: 0, value: 0 }), {
     label: "No orders after",
+    good: false,
+  });
+  // Where the send pointed at one thing, the chip is about that thing, so
+  // it can never be read as credit for an order of something else.
+  assert.equal(
+    outcomeChip({ orders: 2, value: 48025, aimed: "Liverpool v Man City boxes" }).label,
+    "2 Liverpool v Man City boxes \u00b7 \u20a648,025"
+  );
+  assert.deepEqual(outcomeChip({ orders: 0, value: 0, aimed: "Domino's boxes" }), {
+    label: "No Domino's boxes after",
     good: false,
   });
 });
@@ -3289,4 +3332,47 @@ test("the shop's other addresses are read off the one that is written down", () 
   assert.equal(shopEmails("not an address"), null);
   assert.equal(shopEmails("@sudu.store"), null);
   assert.equal(shopEmails("hello@"), null);
+});
+
+
+test("an alert with nothing unpaid names the order that was already paid", () => {
+  // The common case by far: the transfer is marked paid from the orders
+  // screen as the bank app shows it, and the alerts tab is read afterwards.
+  // "Either it is already marked paid, or this is money for something else"
+  // made somebody go and find out which. This says which.
+  const alert = { amount: 22375, payer: "ERIN TIOLUWANI RHODES" };
+  const rows = [
+    {
+      id: "a",
+      order_no: 1044,
+      customer_name: "Erin",
+      total: 22375,
+      paid_at: "2026-10-14T11:04:12Z",
+    },
+    // Same money, a different week and a different person. It is still a
+    // candidate, and it is not the first one.
+    {
+      id: "b",
+      order_no: 1002,
+      customer_name: "Somebody Else",
+      total: 22375,
+      paid_at: "2026-10-01T09:00:00Z",
+    },
+    // A different amount is a different transfer, whatever the name says.
+    {
+      id: "c",
+      order_no: 1043,
+      customer_name: "Erin",
+      total: 9000,
+      paid_at: "2026-10-14T11:00:00Z",
+    },
+  ];
+  const found = settledBy(alert, rows, Date.parse("2026-10-14T11:06:00Z"));
+  assert.equal(found.length, 2);
+  assert.equal(found[0].orderNo, 1044);
+  assert.equal(found[0].shared, 1);
+
+  // Money the shop cannot place at all stays unplaced. Inventing a match
+  // here would be worse than the sentence it replaced.
+  assert.deepEqual(settledBy({ amount: 500, payer: "ERIN" }, rows), []);
 });

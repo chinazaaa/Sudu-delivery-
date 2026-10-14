@@ -4,8 +4,8 @@ import Figure from "@/components/admin/Figure";
 import { alerts, inbox, senderName, snippet, type Letter, ALERTS_AT, READS_AT } from "@/lib/mail";
 import { agoLabel } from "@/lib/time";
 import AlertCard from "@/components/admin/AlertCard";
-import { likelyOrders, readAlert } from "@/lib/alerts";
-import { unpaidOrdersForMatching } from "@/lib/admin-data";
+import { likelyOrders, readAlert, settledBy } from "@/lib/alerts";
+import { paidOrdersForMatching, unpaidOrdersForMatching } from "@/lib/admin-data";
 import { markPaid, setMailDone } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -37,23 +37,34 @@ export default async function InboxPage({
    * Only read on the alerts tab, because it costs a query and the letters
    * tab has no use for it.
    */
-  const unpaid = onAlerts ? await unpaidOrdersForMatching() : [];
+  const [unpaid, settledOrders] = onAlerts
+    ? await Promise.all([unpaidOrdersForMatching(), paidOrdersForMatching()])
+    : [[], []];
   const read = banked.map((letter) => {
     const said = readAlert(letter.subject, letter.text);
+    const candidates = said
+      ? likelyOrders(
+          said,
+          unpaid,
+          Date.parse(letter.receivedAt),
+          // The whole letter, so an order number typed into a transfer is
+          // found wherever Catlog ends up putting it. Nothing today.
+          `${letter.subject} ${letter.text}`
+        )
+      : [];
     return {
       letter,
       amount: said?.amount ?? null,
       payer: said?.payer ?? "",
-      candidates: said
-        ? likelyOrders(
-            said,
-            unpaid,
-            Date.parse(letter.receivedAt),
-            // The whole letter, so an order number typed into a transfer is
-            // found wherever Catlog ends up putting it. Nothing today.
-            `${letter.subject} ${letter.text}`
-          )
-        : [],
+      candidates,
+      /* Nothing unpaid of that amount, which nearly always means somebody
+         has already dealt with it from the orders screen. Saying which
+         order turns a card you have to go and check into one you can read
+         in a second. */
+      settled:
+        said && candidates.length === 0
+          ? settledBy(said, settledOrders, Date.parse(letter.receivedAt))[0] ?? null
+          : null,
     };
   });
   const waiting = post.filter((one) => !one.repliedAt && !one.doneAt);
@@ -132,6 +143,7 @@ export default async function InboxPage({
                   amount={one.amount}
                   payer={one.payer}
                   candidates={one.candidates}
+                  settled={one.settled}
                   markPaid={markPaid}
                   setMailDone={setMailDone}
                 />

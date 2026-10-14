@@ -3,7 +3,7 @@ import { activeBands } from "./settings";
 import { feeFor } from "./fees";
 import { containersIn } from "./containers";
 import { carLabel } from "./view";
-import { isGone, isPaid, linesFor, type OrderLine } from "./orders";
+import { isGone, isPaid, linesFor, NOT_ORDERS_SQL, type OrderLine } from "./orders";
 import { SLOT_LABEL } from "./config";
 import { shareRef } from "./money";
 import { runDateLabel, weekdayLabel } from "./time";
@@ -667,6 +667,47 @@ export async function unpaidOrdersForMatching(): Promise<
       customer_name: string;
       total: number;
       created_at: string;
+    }[];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Orders already marked paid, for the other half of the same question.
+ *
+ * An alert with nothing unpaid of that amount is nearly always an alert for
+ * an order somebody has already dealt with, and saying which one turns a
+ * card you have to go and check into a card you can read. Paid only, and
+ * only the recent ones: an alert is about money that moved this week.
+ */
+export async function paidOrdersForMatching(): Promise<
+  {
+    id: string;
+    order_no: number | null;
+    customer_name: string;
+    total: number;
+    paid_at: string | null;
+  }[]
+> {
+  try {
+    const { data, error } = await db()
+      .from("orders")
+      .select("id, order_no, customer_name, total, paid_at")
+      .not("paid_at", "is", null)
+      // Cancelled and refunded carry a paid_at too, and neither is an
+      // answer to "where did this money go": one was never money and the
+      // other is money we sent back.
+      .not("status", "in", NOT_ORDERS_SQL)
+      .order("paid_at", { ascending: false })
+      .limit(300);
+    if (error) return [];
+    return (data ?? []) as unknown as {
+      id: string;
+      order_no: number | null;
+      customer_name: string;
+      total: number;
+      paid_at: string | null;
     }[];
   } catch {
     return [];

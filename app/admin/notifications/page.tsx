@@ -11,6 +11,7 @@ import {
   AFTER_HOURS,
   dealSendsWithOutcome,
   lastSentLine,
+  othersLine,
   outcomeChip,
   sendStamp,
 } from "@/lib/deal-sends";
@@ -137,6 +138,14 @@ export default async function NotificationsPage() {
                       {sendStamp(one.sent_at)} · {one.sent} phone
                       {one.sent === 1 ? "" : "s"}
                     </span>
+                    {/* Said under the chip rather than added into it. A
+                        notification about the Liverpool boxes followed by
+                        two orders of something else is two orders of
+                        something else, and the chip that counted them as
+                        its own was claiming work it had not done. */}
+                    {one.aimed !== "" && othersLine(one.others) !== "" && (
+                      <span className="hint block">{othersLine(one.others)}</span>
+                    )}
                   </span>
                   {/* Mint where something came of it, the page's own wash
                       where nothing did. Wash rather than Tomato on purpose:
@@ -152,8 +161,9 @@ export default async function NotificationsPage() {
               );
             })}
             <p className="hint mt-2 leading-[1.5]">
-              Orders counted in the {AFTER_HOURS} hours after sending. It is
-              the only number worth reading here.
+              Counted in the {AFTER_HOURS} hours after sending. Where a
+              notification pointed at one thing, only orders of that thing
+              count towards it. It is the only number worth reading here.
             </p>
           </div>
         )}

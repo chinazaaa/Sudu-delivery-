@@ -212,3 +212,60 @@ export function likelyOrders(
       return near(a) - near(b);
     });
 }
+
+/** An order of exactly this amount that was already marked paid. */
+export type Settled = {
+  id: string;
+  orderNo: number | null;
+  name: string;
+  total: number;
+  paidAt: string;
+  /** Words shared between the paying account and the name on the order. */
+  shared: number;
+};
+
+/**
+ * The paid order an alert was probably about, for an alert with nothing
+ * unpaid left to match.
+ *
+ * "Either it is already marked paid, or this is money for something else"
+ * is two answers, and the one that matters is which. Nearly always it is
+ * the first, because the shop marks a transfer paid from the orders screen
+ * as the bank app shows it and only looks at this tab afterwards. So the
+ * card says which order, and the alerts worth stopping at become only the
+ * ones where no order of that amount exists at all.
+ *
+ * The same amount rule as the unpaid side: a transfer is for what it is
+ * for. Best first, by name and then by how close in time it was settled,
+ * because two orders of the same amount in a week is an ordinary week.
+ */
+export function settledBy(
+  alert: Alert,
+  orders: {
+    id: string;
+    order_no: number | null;
+    customer_name: string;
+    total: number;
+    paid_at: string | null;
+  }[],
+  at: number = Date.now()
+): Settled[] {
+  return orders
+    .filter((order) => Number(order.total) === alert.amount && order.paid_at)
+    .map((order) => ({
+      id: order.id,
+      orderNo: order.order_no,
+      name: order.customer_name,
+      total: Number(order.total),
+      paidAt: String(order.paid_at),
+      shared: nameOverlap(alert.payer, order.customer_name),
+    }))
+    .sort((a, b) => {
+      if (b.shared !== a.shared) return b.shared - a.shared;
+      const near = (one: Settled) => {
+        const when = new Date(one.paidAt).getTime();
+        return Number.isNaN(when) ? Number.MAX_SAFE_INTEGER : Math.abs(at - when);
+      };
+      return near(a) - near(b);
+    });
+}

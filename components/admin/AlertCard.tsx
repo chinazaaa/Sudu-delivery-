@@ -2,7 +2,7 @@ import Link from "next/link";
 import ConfirmButton from "./ConfirmButton";
 import { naira } from "@/lib/money";
 import { agoLabel } from "@/lib/time";
-import type { Candidate } from "@/lib/alerts";
+import type { Candidate, Settled } from "@/lib/alerts";
 
 /**
  * One payment alert, with the orders it could be about.
@@ -20,6 +20,7 @@ export default function AlertCard({
   amount,
   payer,
   candidates,
+  settled = null,
   markPaid,
   setMailDone,
 }: {
@@ -27,6 +28,9 @@ export default function AlertCard({
   amount: number | null;
   payer: string;
   candidates: Candidate[];
+  /** The paid order this was probably about, where nothing unpaid is left
+   *  to match. */
+  settled?: Settled | null;
   markPaid: (form: FormData) => Promise<void>;
   setMailDone: (form: FormData) => Promise<void>;
 }) {
@@ -57,10 +61,28 @@ export default function AlertCard({
         </p>
       )}
 
-      {amount !== null && candidates.length === 0 && (
+      {/* Nothing unpaid of that amount, and an order of exactly that amount
+          that somebody has already dealt with. Which is nearly always the
+          answer, because a transfer is marked paid from the orders screen
+          as the bank app shows it and this tab is read afterwards. Saying
+          which order leaves only the alerts that are really a question. */}
+      {amount !== null && candidates.length === 0 && settled && (
         <p className="hint">
-          No unpaid order for {naira(amount)}. Either it is already marked
-          paid, or this is money for something else.
+          Already paid:{" "}
+          <Link
+            href={`/admin/orders/${settled.id}`}
+            className="font-semibold text-ink underline"
+          >
+            {settled.orderNo === null ? "this order" : `#${settled.orderNo}`}
+          </Link>{" "}
+          {settled.name}, marked paid {agoLabel(settled.paidAt)}.
+        </p>
+      )}
+
+      {amount !== null && candidates.length === 0 && !settled && (
+        <p className="hint">
+          No order at all for {naira(amount)}, paid or unpaid. This is money
+          for something else.
         </p>
       )}
 
