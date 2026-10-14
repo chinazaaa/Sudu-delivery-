@@ -176,7 +176,27 @@ export async function POST(request: Request): Promise<NextResponse> {
      * changes the price, the menu and what the choices will be. Asked at
      * one counter, it is not a question at all.
      */
-    if (!only && found.how !== "sure") {
+    /*
+     * A counter that is a shelf.
+     *
+     * Uncle Stan's whole business is small chops: they have a shelf
+     * called exactly that and fifteen things on it. Burger King has four
+     * dishes with the words in their names, filed under Sides. Asking
+     * "where from" there is asking somebody to choose between the shop
+     * that does the thing and a shop that also does it, which is a
+     * question with an obvious answer and no reason to have been put.
+     *
+     * So a shelf named exactly what was asked for wins outright. Nothing
+     * here knows what small chops are: it knows that one counter has
+     * filed a shelf under those words, and that is the strongest thing
+     * anybody has said on the subject.
+     */
+    const exactShelf =
+      shelfHit && shelfHit.score >= 0.97 && onShelf.length > 1
+        ? shops.find((one) => one.restaurant.id === shelfShop)?.restaurant ?? null
+        : null;
+
+    if (!only && !exactShelf && found.how !== "sure") {
       const where: { id: string; name: string }[] = [];
       const add = (shop: { id: string; name: string } | undefined) => {
         if (shop && !where.some((one) => one.id === shop.id)) where.push(shop);

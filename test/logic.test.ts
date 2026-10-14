@@ -3732,3 +3732,24 @@ test("a kind of thing is a question, not a dish", () => {
   // A dish is not a shelf: nothing here is close enough to offer.
   assert.equal(botFind("pepperoni", shelves, 1).how, "lost");
 });
+
+test("a shelf named exactly what was asked for beats dishes that merely say it", () => {
+  // Uncle Stan's whole business is small chops: a shelf called exactly
+  // that, fifteen things on it. Burger King has four dishes with the words
+  // in their names, filed under Sides. Asking which of the two is asking
+  // somebody to choose between the shop that does the thing and a shop
+  // that also does it.
+  const shelves = [
+    { id: "stan-chops", name: "Small Chops" },
+    { id: "bk-sides", name: "Sides" },
+    { id: "bk-burgers", name: "Burgers" },
+  ];
+  const found = botFind("small chops", shelves, 1);
+  assert.equal(found.hits[0]?.id, "stan-chops");
+  // Said exactly, it is as certain as anything gets.
+  assert.ok((found.hits[0]?.score ?? 0) >= 0.97, `scored ${found.hits[0]?.score}`);
+
+  // A shelf merely close to the words is not the same claim.
+  const loose = botFind("chops", shelves, 1);
+  assert.ok((loose.hits[0]?.score ?? 0) < 0.97, `scored ${loose.hits[0]?.score}`);
+});
