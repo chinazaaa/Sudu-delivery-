@@ -110,6 +110,7 @@ import {
   asksToSwap as botAsksToSwap,
   splitOrder as botSplitOrder,
   intentOf as botIntentOf,
+  looksLikeAQuestion as botLooksLikeAQuestion,
   nameIn as botNameIn,
   whyNotAName as botWhyNotAName,
   lineLike as botLineLike,
@@ -3941,4 +3942,52 @@ test("a question reaches the answer however it was worded", () => {
 
   // And an empty list is not an error.
   assert.equal(botPickFaq("anything", []).sure, null);
+});
+
+test("a lone word that merely resembles a dish is asked about, not added", () => {
+  /*
+   * "Can I change my order" put a packet of hangers in somebody's basket.
+   * Every word of it but one is noise, so the search ran on "change"
+   * alone, and "change" and "hangers" share four letter pairs out of six,
+   * which scores 0.73 on the bigrams and sailed past the floor for
+   * certainty. The chat said "Found it: Hangers, 6" and added it.
+   */
+  const shelf = [
+    { id: "1", name: "Hangers, 6" },
+    { id: "2", name: "Zinger Burger" },
+    { id: "3", name: "Chicken Wings" },
+  ];
+
+  const wrong = botFind("Can I change my order", shelf);
+  assert.notEqual(wrong.how, "sure", "a near-miss on one word is never certain");
+
+  // What the guard must not break: a single word that really is the dish,
+  // the start of it, or a word inside it, with a typo still allowed.
+  assert.equal(botFind("zinger", shelf).how, "sure");
+  assert.equal(botFind("hangers", shelf).how, "sure");
+  assert.equal(botFind("chicken", shelf).how, "sure");
+  // And more than one word carries its own evidence, so nothing changes.
+  assert.equal(botFind("chiken wings", shelf).how, "sure");
+});
+
+test("a question is recognised before a menu is searched for it", () => {
+  /*
+   * A menu is all the search has, so a menu is what it finds. Anything
+   * shaped like a question gets the shop's own answers tried first.
+   */
+  for (const asked of [
+    "Can I change my order",
+    "do you deliver on sundays",
+    "How much is delivery?",
+    "what time does it close",
+    "is there a minimum order",
+    "where are you based",
+  ]) {
+    assert.equal(botLooksLikeAQuestion(asked), true, asked);
+  }
+
+  // And an order is not a question, however politely it is put.
+  for (const asked of ["2 medium pizza", "jollof rice and chicken", "zinger burger"]) {
+    assert.equal(botLooksLikeAQuestion(asked), false, asked);
+  }
 });

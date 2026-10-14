@@ -13,6 +13,7 @@ import {
   lineLike,
   splitOrder,
   intentOf,
+  looksLikeAQuestion,
   namedIn,
   without,
   type Swap,
@@ -234,6 +235,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   /** The question step, held in a box because the answers above it offer
    *  it as the way out when none of them fit. */
   const askAQuestionRef = useRef<((first?: string) => void) | null>(null);
+  /** The block question, held in a box so an answer given at it can hand
+   *  the conversation back to it. */
+  const askHostelRef = useRef<(() => void) | null>(null);
   /** Said no to a discount code already. Asked once per version of the
    *  order: asking again on the same bill is nagging, and asking again
    *  after the order changed is the only honest thing to do, because what
@@ -527,7 +531,13 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
    * a person either way.
    */
   const sayFaq = useCallback(
-    (said: string): boolean => {
+    /**
+     * @param after where to go once the answer has been given. The order
+     *   question by default, because that is where nearly every question
+     *   is asked from; the block question when it was asked from there,
+     *   since the block is still needed either way.
+     */
+    (said: string, after?: () => void): boolean => {
       const all = startRef.current?.faqs ?? [];
       if (all.length === 0) return false;
 
@@ -547,7 +557,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         setAsk({
           of: "buttons",
           buttons: [
-            { said: "Yes, thanks", go: () => { me("Yes, thanks"); askOrderRef.current?.(true); } },
+            {
+              said: "Yes, thanks",
+              go: () => {
+                me("Yes, thanks");
+                if (after) after();
+                else askOrderRef.current?.(true);
+              },
+            },
             {
               said: "Not quite, ask a person",
               look: "alt",
@@ -766,6 +783,31 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           changeRef.current?.(swap);
           return;
         }
+      }
+
+      /*
+       * A question, wherever it turns up.
+       *
+       * "Can I change my order" put a packet of hangers in somebody's
+       * basket: every word of it but one is noise, the search ran on
+       * "change" alone, and "change" looks enough like "hangers" to the
+       * bigrams to be called certain. The matcher no longer trusts a lone
+       * near-miss, but the deeper mistake was searching a menu for a
+       * sentence that was never about food. A menu is all the search has,
+       * so a menu is what it finds.
+       */
+      if (echo && looksLikeAQuestion(said)) {
+        /* Asked mid-order, "can I change my order" is not a question about
+           what the shop allows. It is somebody asking to edit the thing
+           they are looking at, so they are handed it. */
+        if (
+          held.current.lines.length > 0 &&
+          /\b(chang|edit|remov|delet|swap|cancel|add)/i.test(said)
+        ) {
+          changeRef.current?.();
+          return;
+        }
+        if (sayFaq(said)) return;
       }
 
       /*
@@ -2732,6 +2774,20 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       placeholder: "e.g. Queen Mary",
       onSay: (said) => {
         me(said);
+
+        /*
+         * Not every sentence typed here is a block.
+         *
+         * Somebody who types "can I change my order" at this question is
+         * asking the shop something, and matching it against a list of
+         * hostels can only ever answer with a hostel. The question is
+         * answered if the shop has an answer, and the block is asked for
+         * again either way, because it is still needed.
+         */
+        if (looksLikeAQuestion(said) && sayFaq(said, () => askHostelRef.current?.())) {
+          return;
+        }
+
         const found = find(
           said,
           blocks.map((hostel) => ({ id: hostel, name: hostel }))
@@ -2822,6 +2878,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       },
     });
   }, [askHostel, bot, handOver, me]);
+
+  useEffect(() => {
+    askHostelRef.current = askHostel;
+  }, [askHostel]);
 
   const begin = useCallback(() => {
     settled.current = false;

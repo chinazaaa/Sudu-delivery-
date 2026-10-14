@@ -226,9 +226,73 @@ export function find(said: string, among: Candidate[], most = 4): Found {
 
   const hits = ranked.slice(0, most);
   const clear =
-    hits[0].score >= SURE && (hits.length === 1 || hits[0].score - hits[1].score >= AHEAD);
+    hits[0].score >= SURE &&
+    (hits.length === 1 || hits[0].score - hits[1].score >= AHEAD) &&
+    // One word, and only nearly that word, is never certain.
+    heard(asked, hits[0].name);
 
   return { hits, how: clear ? "sure" : "asking" };
+}
+
+/**
+ * Whether the winner was actually recognised, or merely resembled.
+ *
+ * "Can I change my order" put a packet of hangers in somebody's basket.
+ * Every word of it but one is noise, so the search ran on "change" alone;
+ * "change" and "hangers" share four letter pairs out of six, which scores
+ * 0.73 on the bigrams and sailed past the floor for certainty. The chat
+ * said "Found it: Hangers, 6" and added it.
+ *
+ * The bigrams are right for a typo and wrong for this. They measure how
+ * alike two words look, and two unrelated words can look alike, which is
+ * survivable when four words all agree and a disaster when the whole
+ * sentence came down to one.
+ *
+ * So a single-word search has to have really hit something: the same word,
+ * or the start of one, or a word inside one. "zinger" still finds Zinger
+ * Burger, "chiken" still finds Chicken, and a lone word that merely
+ * resembles a dish becomes a question rather than an answer. Nothing is
+ * lost by asking; a wrong thing in the basket costs somebody money.
+ */
+function heard(asked: string[], name: string): boolean {
+  if (asked.length > 1) return true;
+
+  const word = asked[0];
+  return words(name).some(
+    (against) =>
+      against === word ||
+      (word.length >= 4 && against.startsWith(word)) ||
+      (against.length >= 4 && word.startsWith(against)) ||
+      (word.length >= 5 && against.includes(word)) ||
+      (against.length >= 5 && word.includes(against))
+  );
+}
+
+/**
+ * A sentence shaped like a question rather than like an order.
+ *
+ * Checked before the menu is searched, for the same reason "can I speak to
+ * someone" is: a question run through a menu finds food, because a menu is
+ * all it has to find. "Can I change my order", "do you deliver on Sunday"
+ * and "how much is delivery" are all people talking to the shop, and the
+ * shop has answers for them that are not a dish.
+ *
+ * A question mark is the giveaway where somebody typed one. Most people do
+ * not, so the opening word is read as well: the words below start a
+ * question and almost never start an order. "Can I get jollof" does start
+ * one, which is why this only decides where to look first and never
+ * decides that the answer is not food.
+ */
+export function looksLikeAQuestion(said: string): boolean {
+  const text = String(said ?? "").trim();
+  if (text.endsWith("?")) return true;
+
+  const first = flatten(text).split(" ")[0] ?? "";
+  return [
+    "can", "could", "do", "does", "did", "is", "are", "was", "will", "would",
+    "should", "what", "whats", "when", "where", "why", "who", "which", "how",
+    "am", "have", "has", "may", "must", "shall",
+  ].includes(first);
 }
 
 /**
