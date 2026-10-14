@@ -285,3 +285,61 @@ export function namedIn(
     .sort((a, b) => a.at - b.at)
     .map((one) => ({ id: one.id, name: one.name }));
 }
+
+/**
+ * Whether what somebody typed is plausibly their name.
+ *
+ * Asked "what should I call you", a fair few people answer with what they
+ * want to eat, because that is what they came for and the box is the
+ * first one they met. Taking "Domino's" as a name means every message
+ * afterwards is addressed to a pizza shop, and the shop's own books fill
+ * up with customers called Chicken.
+ *
+ * Deliberately generous, because a name is not a thing to argue about: it
+ * refuses what is plainly food, a counter, or not letters at all, and
+ * accepts everything else. Somebody really called Ola Pizza will be asked
+ * once and then taken at their word.
+ */
+export function looksLikeAName(
+  said: string,
+  kitchens: { id: string; name: string }[] = []
+): boolean {
+  const flat = flatten(said);
+  if (flat === "") return false;
+  // Letters, and enough of them to be a name rather than a slip.
+  if (!/[a-z]{2}/.test(flat)) return false;
+  // A sentence is not a name.
+  if (flat.split(" ").length > 4) return false;
+  if (namedIn(said, kitchens).length > 0) return false;
+
+  const mine = words(said);
+  if (mine.length === 0) return false;
+  return !mine.some((word) => FOODWORDS.has(word));
+}
+
+/** The words that mean somebody answered the wrong question. */
+const FOODWORDS = new Set([
+  "pizza", "pizzas", "chicken", "wings", "burger", "burgers", "rice",
+  "jollof", "shawarma", "doughnut", "doughnuts", "donut", "donuts",
+  "fries", "chips", "coke", "drink", "drinks", "meal", "meals", "food",
+  "pasta", "noodles", "salad", "cake", "ice", "cream", "suya", "bread",
+  "sandwich", "wrap", "platter", "chops", "bucket", "combo", "order",
+  "hungry", "eat",
+]);
+
+/**
+ * A Nigerian mobile, however it was typed, or nothing.
+ *
+ * The same rule the rest of the shop keeps, kept here as well so the chat
+ * can say "that does not look right" while somebody is still looking at
+ * the box, rather than letting them get to the end and find out then.
+ */
+export function phoneIn(said: string): string | null {
+  const digits = String(said ?? "").replace(/[^\d+]/g, "").replace(/^\+/, "");
+  let local: string;
+  if (digits.startsWith("234")) local = `0${digits.slice(3)}`;
+  else if (digits.startsWith("0")) local = digits;
+  else if (digits.length === 10) local = `0${digits}`;
+  else return null;
+  return /^0[789]\d{9}$/.test(local) ? local : null;
+}

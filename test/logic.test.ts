@@ -98,7 +98,9 @@ import {
   find as botFind,
   howMany as botHowMany,
   wantsAPerson as botWantsAPerson,
+  looksLikeAName as botLooksLikeAName,
   namedIn as botNamedIn,
+  phoneIn as botPhoneIn,
   yesNo as botYesNo,
   type Candidate as BotCandidate,
 } from "../lib/bot-match";
@@ -3529,4 +3531,34 @@ test("naming two counters is a question about where, not about what", () => {
   // Food is not a counter. Chicken belongs to the wings and to half the
   // menu, so Chicken Republic is found by Republic or not at all.
   assert.deepEqual(botNamedIn("chicken wings", shops), []);
+});
+
+test("a name that is really an order is caught, once, and then believed", () => {
+  // Asked their name, a fair few people answer with what they came for.
+  // Taken at face value, every message afterwards is addressed to a pizza
+  // shop and the customer book fills up with people called Chicken.
+  const kitchens = [
+    { id: "d", name: "Domino's Pizza" },
+    { id: "k", name: "KFC" },
+  ];
+  assert.equal(botLooksLikeAName("Naza", kitchens), true);
+  assert.equal(botLooksLikeAName("Chinaza Okeke", kitchens), true);
+  assert.equal(botLooksLikeAName("dominos", kitchens), false);
+  assert.equal(botLooksLikeAName("chicken", kitchens), false);
+  assert.equal(botLooksLikeAName("i want pizza", kitchens), false);
+  assert.equal(botLooksLikeAName("0803", kitchens), false);
+  assert.equal(botLooksLikeAName("", kitchens), false);
+});
+
+test("a number the rider cannot ring is not a number", () => {
+  // However it is typed, it is the same person, and anything that is not a
+  // Nigerian mobile is refused while they are still looking at the box
+  // rather than at the end when it is too late to ask.
+  assert.equal(botPhoneIn("0803 123 4567"), "08031234567");
+  assert.equal(botPhoneIn("+234 803 123 4567"), "08031234567");
+  assert.equal(botPhoneIn("2348031234567"), "08031234567");
+  assert.equal(botPhoneIn("8031234567"), "08031234567");
+  assert.equal(botPhoneIn("my number"), null);
+  assert.equal(botPhoneIn("0803123456"), null);
+  assert.equal(botPhoneIn("0103123456"), null);
 });

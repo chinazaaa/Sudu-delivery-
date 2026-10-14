@@ -2,6 +2,22 @@ import { db } from "./supabase";
 import { naira } from "./money";
 import { dayLabel } from "./time";
 
+/**
+ * How a cart says it came from the chat.
+ *
+ * The chat writes a lead the moment somebody gives a number and a block,
+ * long before there is an order, so Left behind holds two kinds of thing
+ * now: a basket somebody filled and walked away from, and a conversation
+ * somebody started and did not finish. Both are a person to ring, and the
+ * difference changes what you say to them, so it is written down rather
+ * than guessed at from the wording.
+ */
+export const FROM_CHAT = "Chat · ";
+
+export function fromTheChat(summary: string): boolean {
+  return String(summary ?? "").startsWith(FROM_CHAT);
+}
+
 export type SavedCart = {
   id: string;
   phone: string;

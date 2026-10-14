@@ -177,7 +177,16 @@ function Pay({ said, detail }: { said: string; detail: string }) {
 }
 
 /** Whatever is being asked for right now. */
-export function Asking({ ask, whatsapp }: { ask: Ask; whatsapp: string }) {
+export function Asking({
+  ask,
+  whatsapp,
+  email = "",
+}: {
+  ask: Ask;
+  whatsapp: string;
+  /** The other way out, for somebody who will not open WhatsApp. */
+  email?: string;
+}) {
   const [typed, setTyped] = useState("");
   const box = useRef<HTMLInputElement | null>(null);
 
@@ -190,12 +199,22 @@ export function Asking({ ask, whatsapp }: { ask: Ask; whatsapp: string }) {
     return undefined;
   }, [ask]);
 
+  /* Under everything, always. Nobody should ever be stuck in here with no
+     way out: a chat that strands somebody is worse than no chat. */
   const help = (
     <div className="bothint">
       Stuck?{" "}
       <a href={whatsapp} target="_blank" rel="noopener noreferrer">
         <b>Continue on WhatsApp</b>
       </a>
+      {email !== "" && (
+        <>
+          {" or "}
+          <a href={`mailto:${email}`}>
+            <b>email us</b>
+          </a>
+        </>
+      )}
     </div>
   );
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   abandonedCarts,
   closedCarts,
+  fromTheChat,
   hushedCarts,
   hushNote,
   QUIET_DAYS,
@@ -335,6 +336,12 @@ export default async function CartsPage({
                     The number is on the Call button and the exact minute was
                     a second answer to a question nobody asked. */}
                 <p className="hint mt-1 line-clamp-2">
+                  {/* Said out loud, because it changes what you open with:
+                      a basket is "you left this behind", a conversation is
+                      "you started telling the bot and stopped". */}
+                  {fromTheChat(cart.summary) && (
+                    <span className="font-semibold text-brand-dark">From the chat · </span>
+                  )}
                   {agoLabel(cart.updated_at)}
                   {cart.hostel && ` · ${cart.hostel}`} · {cart.items} item
                   {cart.items === 1 ? "" : "s"} · {cart.summary}

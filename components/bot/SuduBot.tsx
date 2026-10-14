@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { naira } from "@/lib/money";
+import { looksLikeAName, phoneIn } from "@/lib/bot-match";
 import { Asking, Rail, Said, Typing, useSaying, type Ask, type Line } from "./Chat";
 
 /**
@@ -30,6 +31,7 @@ type Start = {
   kitchens: { id: string; name: string }[];
   feeFrom: number;
   whatsapp: string;
+  email: string;
 };
 
 type Run = {
@@ -140,6 +142,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
 
   const wa = (start?.whatsapp || whatsapp || "").replace(/[^\d]/g, "");
   const waLink = wa === "" ? "https://wa.me/" : `https://wa.me/${wa}`;
+  const email = start?.email ?? "";
 
   /* The bubble, once, after a moment. Not on arrival: a panel that opens
      itself is the thing people close without reading. */
@@ -200,6 +203,33 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     },
     []
   );
+
+  /*
+   * The lead, written the moment there is one and kept up to date.
+   *
+   * Somebody who gives a number and a block and then stops is a person to
+   * ring tomorrow, which is worth more than the silence it used to be. It
+   * goes in the same list as a basket somebody filled and walked away
+   * from, because a person is a person whichever one they were holding,
+   * and it is marked so the opening line can be the right one.
+   */
+  const remember = useCallback((summary: string, value = 0) => {
+    const mine = held.current;
+    if (mine.phone === "") return;
+    fetch("/api/app/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone: mine.phone,
+        name: mine.name,
+        hostel: mine.hostel,
+        batchId: mine.run?.id ?? null,
+        items: Math.max(1, mine.lines.reduce((all, line) => all + line.qty, 0)),
+        value,
+        summary: `Chat · ${summary}`.slice(0, 500),
+      }),
+    }).catch(() => undefined);
+  }, []);
 
   const me = useCallback((said: string) => say({ kind: "me", said }, 0), [say]);
   const bot = useCallback(
@@ -348,6 +378,12 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               (hit.shop.name ? ` from <b>${hit.shop.name}</b>.` : "."),
             450
           );
+          remember(
+            held.current.lines
+              .map((line) => `${line.qty > 1 ? `${line.qty} × ` : ""}${line.name}`)
+              .join(", ")
+          );
+
           /* Done with this counter, so the next one somebody named is the
              next question rather than something they have to remember. */
           if (queue.current.length > 0) queue.current.shift();
@@ -385,7 +421,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       bot(`Found it: <b>${hit.name}</b>.`, 420);
       next(0);
     },
-    [askOrder, bot, me]
+    [askOrder, bot, me, remember]
   );
 
   useEffect(() => {
@@ -440,6 +476,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         return;
       }
 
+      remember(
+        got.lines.map((line) => `${line.qty > 1 ? `${line.qty} × ` : ""}${line.name}`).join(", "),
+        got.total ?? 0
+      );
       bot("Here is your total.", 420);
       say(
         {
@@ -592,10 +632,13 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     );
     setAsk({
       of: "buttons",
-      buttons: [{ said: "Message us on WhatsApp", look: "green", href: waLink }],
-      hint: `Your order is <b>${mine.ref}</b>.`,
+      buttons: [
+        { said: "Message us on WhatsApp", look: "green", href: waLink },
+        ...(email ? [{ said: `Write to ${email}`, look: "alt" as const, href: `mailto:${email}` }] : []),
+      ],
+      hint: `Your order is <b>${mine.ref}</b>. Keep that and we can find it in a second.`,
     });
-  }, [bot, waLink]);
+  }, [bot, email, waLink]);
 
   /* The money landed. */
   const paid = useCallback(
@@ -892,41 +935,58 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         go: () => {
           me(hostel);
           held.current.hostel = hostel;
-          /* The lead, the moment there is one. Somebody who stops here is
-             a person with a number against a block, which is a WhatsApp
-             tomorrow rather than nothing at all. */
-          fetch("/api/app/cart", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              phone: held.current.phone,
-              name: held.current.name,
-              hostel,
-              items: 1,
-              value: 0,
-              summary: "Started an order in the chat",
-            }),
-          }).catch(() => undefined);
+          remember("gave their details, nothing chosen yet");
           askSlot();
         },
       })),
     });
-  }, [askSlot, bot, me, start]);
+  }, [askSlot, bot, me, remember, start]);
 
   const askPhone = useCallback(() => {
     setAt(0);
     bot(`Nice to meet you, <b>${held.current.name || "friend"}</b>. What number should the rider call?`);
+    let tries = 0;
     setAsk({
       of: "text",
       type: "tel",
       placeholder: "080…",
       onSay: (said) => {
         me(said);
-        held.current.phone = said;
-        askHostel();
+        const number = phoneIn(said);
+        if (number) {
+          held.current.phone = number;
+          askHostel();
+          return;
+        }
+        tries += 1;
+        /* A number the rider cannot ring is an order nobody can deliver,
+           so this one is worth insisting on. Twice, and then a person
+           takes over rather than somebody being stuck in a loop with a
+           box that keeps saying no. */
+        if (tries >= 3) {
+          bot(
+            "I am not reading that as a Nigerian mobile, and I would rather not " +
+              "guess at the number the rider has to call. A person can sort this out in a second.",
+            520
+          );
+          setAsk({
+            of: "buttons",
+            buttons: [
+              { said: "Continue on WhatsApp", look: "green", href: waLink },
+              { said: "Let me try once more", look: "alt", go: () => { me("Let me try once more"); askPhone(); } },
+            ],
+          });
+          return;
+        }
+        bot(
+          tries === 1
+            ? "That does not look like a phone number. Something like <b>0803 123 4567</b>."
+            : "Still not quite. Eleven digits starting 070, 080, 081, 090 or 091.",
+          450
+        );
       },
     });
-  }, [askHostel, bot, me]);
+  }, [askHostel, bot, me, waLink]);
 
   const begin = useCallback(() => {
     held.current = { ...EMPTY, lines: [] };
@@ -934,16 +994,34 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     setAt(0);
     bot("Hey, I’m <b>Sudu Bot</b>. I can take your order right here, no app needed.", 450);
     bot("What should I call you?");
+    let tries = 0;
+    const takeIt = (said: string) => {
+      held.current.name = said.split(" ")[0];
+      askPhone();
+    };
     setAsk({
       of: "text",
       placeholder: "Your name",
       onSay: (said) => {
         me(said);
-        held.current.name = said.split(" ")[0];
-        askPhone();
+        tries += 1;
+        /* Asked their name, a fair few people answer with what they want
+           to eat, because that is what they came for. Taken at face value
+           it addresses every message afterwards to a pizza shop. Asked
+           once, then taken at their word: a name is not a thing to argue
+           about, and somebody really called Ola Pizza exists. */
+        if (tries === 1 && !looksLikeAName(said, start?.kitchens ?? [])) {
+          bot(
+            "That sounds more like what you want to eat than what you are called. " +
+              "We will get to the food in a second. What should I call you?",
+            450
+          );
+          return;
+        }
+        takeIt(said);
       },
     });
-  }, [askPhone, bot, me]);
+  }, [askPhone, bot, me, start]);
 
   useEffect(() => {
     if (open && start && lines.length === 0) begin();
@@ -1049,7 +1127,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             )}
           </div>
 
-          <Asking ask={ask} whatsapp={waLink} />
+          <Asking ask={ask} whatsapp={waLink} email={email} />
         </div>
       )}
     </div>

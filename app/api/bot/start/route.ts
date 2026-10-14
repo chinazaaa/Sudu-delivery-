@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { openBatches } from "@/lib/batches";
 import { hostelNames } from "@/lib/hostels";
+import { shopEmails } from "@/lib/settings";
 import { menuView } from "@/lib/menu";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
@@ -106,6 +107,9 @@ export async function GET(): Promise<NextResponse> {
       // What delivery starts at, said as a floor rather than as the price.
       feeFrom: headlineFee(bands),
       whatsapp: String(settings.whatsapp_number ?? ""),
+      // So the way out is never only one door: somebody who will not open
+      // WhatsApp still has somewhere to write to.
+      email: shopEmails(settings.contact_email)?.orders ?? "",
     });
   } catch {
     // A chat that cannot be opened is better than a page that breaks, and
@@ -118,6 +122,7 @@ export async function GET(): Promise<NextResponse> {
       kitchens: [],
       feeFrom: 0,
       whatsapp: "",
+      email: "",
     });
   }
 }
