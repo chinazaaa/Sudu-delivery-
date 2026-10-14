@@ -84,6 +84,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({
       id: order.id,
       ref: order.order_no ? `#${order.order_no}` : (order.short ?? order.id.slice(0, 7)),
+      // The page that follows this one order from paid to handed over.
+      // The short code where there is one, because that is what every link
+      // the shop sends says.
+      link: `/o/${order.short || order.id}`,
       // What to type on the transfer. Without it a payment alert is an
       // amount and a stranger's name, and somebody has to guess.
       narration: narration(order),

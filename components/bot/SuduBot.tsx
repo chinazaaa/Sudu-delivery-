@@ -76,6 +76,8 @@ type Held = {
    *  is marking transfers paid by itself today. */
   orderId: string;
   ref: string;
+  /** The page that follows this one order, for the line after it is paid. */
+  link: string;
   watching: boolean;
 };
 
@@ -88,6 +90,7 @@ const EMPTY: Held = {
   lines: [],
   orderId: "",
   ref: "",
+  link: "",
   watching: false,
 };
 
@@ -495,6 +498,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         ref?: string;
         narration?: string;
         total?: number;
+        link?: string;
         account?: { bank: string; name: string; number: string } | null;
         watching?: boolean;
       };
@@ -513,6 +517,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
 
       held.current.orderId = got.id;
       held.current.ref = got.ref ?? "";
+      held.current.link = got.link ?? "";
       held.current.watching = got.watching === true;
 
       bot(
@@ -587,14 +592,28 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         380
       );
       bot(`The rider calls <b>${mine.phone}</b> when he is outside ${mine.hostel}.`, 500);
-      bot("Want a receipt for this one?");
+      /*
+       * Where to watch it from here, and how to find everything else.
+       *
+       * The PIN is never said in the chat. It is said on WhatsApp, to the
+       * number it belongs to, because anybody can type anybody's number
+       * into a box and a PIN read off a screen is a PIN given away.
+       */
+      bot(
+        `You can follow this one on its own page, and everything you have ever ordered ` +
+          `lives under <b>${mine.phone}</b> on the orders page. We send your PIN to that ` +
+          `number on WhatsApp, so it is never written here.`,
+        560
+      );
       setAsk({
         of: "buttons",
         buttons: [
-          ...(receipt ? [{ said: "Yes, open my receipt", href: receipt }] : []),
-          { said: "No thanks", look: "alt" as const, go: () => { me("No thanks"); bye(); } },
+          ...(mine.link ? [{ said: "Track this order", href: mine.link }] : []),
+          ...(receipt ? [{ said: "Open my receipt", look: "alt" as const, href: receipt }] : []),
+          { said: "See all my orders", look: "alt" as const, href: "/orders" },
+          { said: "That's all, thanks", look: "alt" as const, go: () => { me("That's all, thanks"); bye(); } },
         ],
-        hint: receipt ? "It opens as a page you can save as a PDF or forward." : undefined,
+        hint: receipt ? "The receipt saves as a PDF, or forwards as a link." : undefined,
       });
     },
     [bot, bye, me, say]
