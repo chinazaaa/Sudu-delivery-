@@ -3712,3 +3712,23 @@ test("a WhatsApp link carries the number the way wa.me reads it", () => {
     "https://wa.me/2349032175147?text=hi"
   );
 });
+
+test("a kind of thing is a question, not a dish", () => {
+  // "2 medium pizza from Domino's" is not a dish on any menu. Matched as
+  // one it found a Pizza Sauce Calzone and a plate of rice, because those
+  // are the only names with the word in them. The shop files its menu by
+  // kind, so the honest answer is the question: which pizza?
+  const shelves = [
+    { id: "pizzas", name: "Pizzas" },
+    { id: "bread", name: "Bread" },
+    { id: "rice", name: "Chicken & Rice" },
+    { id: "drinks", name: "Drinks" },
+  ];
+  assert.equal(botFind("medium pizza", shelves, 1).hits[0]?.id, "pizzas");
+  assert.equal(botFind("a drink", shelves, 1).hits[0]?.id, "drinks");
+  // Said in the singular, in the plural, and badly.
+  assert.equal(botFind("pizzas", shelves, 1).hits[0]?.id, "pizzas");
+  assert.equal(botFind("piza", shelves, 1).hits[0]?.id, "pizzas");
+  // A dish is not a shelf: nothing here is close enough to offer.
+  assert.equal(botFind("pepperoni", shelves, 1).how, "lost");
+});

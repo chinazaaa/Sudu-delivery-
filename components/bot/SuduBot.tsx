@@ -533,7 +533,45 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             hits: Hit[];
             instead: { id: string; name: string; shop: string }[];
             shops?: { id: string; name: string }[];
+            shelf?: string;
           };
+          /*
+           * A kind of thing rather than one thing. "2 medium pizza" is not
+           * a dish on any menu; it is a question, and the answer is the
+           * shelf it came from.
+           */
+          if (got.how === "shelf" && (got.instead ?? []).length > 0) {
+            misses.current = 0;
+            const kind = (got.shelf ?? "").replace(/s$/i, "");
+            bot(`Which ${kind.toLowerCase() || "one"}?`, 450);
+            setAsk({
+              of: "chips",
+              chips: [
+                ...(got.instead ?? []).map((one) => ({
+                  said: one.name,
+                  go: () => {
+                    me(one.name);
+                    setAsk({ of: "nothing" });
+                    fetch("/api/bot/find", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ said: one.name, kitchen: queue.current[0]?.id ?? "" }),
+                    })
+                      .then((answer) => answer.json())
+                      .then((again: { hits: Hit[] }) => {
+                        if (again.hits[0]) walk(again.hits[0], got.qty);
+                        else askOrder();
+                      })
+                      .catch(() => askOrder());
+                  },
+                })),
+                { said: "Something else", go: () => { me("Something else"); askOrder(true); } },
+              ],
+              hint: "Scroll for more if yours is not showing.",
+            });
+            return;
+          }
+
           /* Nearly a counter. A tap settles it, and saying nothing would
              send somebody to WhatsApp over a spelling. */
           if (got.how === "maybe-kitchens" && (got.shops ?? []).length > 0) {

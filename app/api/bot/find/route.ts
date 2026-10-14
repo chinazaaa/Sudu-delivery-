@@ -57,8 +57,13 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const whose = new Map<string, { id: string; name: string }>();
+    /** Every shelf on every counter in play, for a word like "pizza". */
+    const shelves: { id: string; name: string; shop: string }[] = [];
     const sellable: ItemView[] = [];
     for (const shop of shops) {
+      for (const shelf of shop.categories) {
+        shelves.push({ id: shelf.id, name: shelf.name, shop: shop.restaurant.id });
+      }
       for (const item of shop.items) {
         if (!item.available) continue;
         sellable.push(item);
@@ -142,6 +147,41 @@ export async function POST(request: Request): Promise<NextResponse> {
           instead: [],
           shops: nearly.slice(0, 4),
         });
+      }
+    }
+
+    /*
+     * A word that is a shelf rather than a dish.
+     *
+     * "2 medium pizza from Domino's" is not a dish on any menu, and
+     * matched as one it finds a Pizza Sauce Calzone and a plate of rice,
+     * because those are the only names with the word in them. It is a
+     * kind of thing, and the shop already files its menu by kind, so the
+     * honest answer is the question: which pizza?
+     *
+     * Only where nothing was a better answer, so "pepperoni pizza" still
+     * goes straight to the pepperoni.
+     */
+    if (found.how !== "sure") {
+      const mine = only ? shelves.filter((one) => only.has(one.shop)) : shelves;
+      const shelf = find(only ? without(said, named) : said, mine, 1);
+      if (shelf.hits[0] && shelf.hits[0].score >= 0.5) {
+        const on = looking.filter((item) => item.categoryId === shelf.hits[0].id);
+        if (on.length > 1) {
+          return NextResponse.json({
+            how: "shelf",
+            shelf: shelf.hits[0].name,
+            qty: howMany(said),
+            person: false,
+            hits: [],
+            instead: on.slice(0, 12).map((item) => ({
+              id: item.id,
+              name: item.name,
+              shop: whose.get(item.id)?.name ?? "",
+            })),
+            shops: [],
+          });
+        }
       }
     }
 
