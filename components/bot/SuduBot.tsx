@@ -1596,17 +1596,57 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       bot(said, 420);
       setAsk({
         of: "chips",
-        chips: blocks.map((hostel) => ({
-          said: hostel,
-          go: () => {
-            me(hostel);
-            takeBlock(hostel);
+        chips: [
+          ...blocks.map((hostel) => ({
+            said: hostel,
+            go: () => {
+              me(hostel);
+              takeBlock(hostel);
+            },
+          })),
+          /*
+           * Somewhere the shop does not list.
+           *
+           * Not a thing to wave through. Where a car goes decides what
+           * delivery costs and whether it can go at all, and an order
+           * written against a block nobody recognises is a run sheet
+           * sending somebody to an address the shop never agreed to.
+           *
+           * So it stops here and hands over, with the name and number
+           * already said, and a person decides whether it can be done.
+           */
+          {
+            said: "Mine is not on the list",
+            go: () => {
+              me("Mine is not on the list");
+              bot(
+                "Then I had better not guess. Where we deliver decides what it costs " +
+                  "and whether we can get there at all, so a person will sort this one " +
+                  "out with you. They have your name and number already.",
+                560
+              );
+              setAsk({
+                of: "buttons",
+                buttons: [
+                  {
+                    said: "Tell us where you are",
+                    look: "green",
+                    href: handOver("My block is not on your list. Can you deliver to me?"),
+                  },
+                  {
+                    said: "Actually, let me look again",
+                    look: "alt",
+                    go: () => { me("Let me look again"); showBlocks(blocks); },
+                  },
+                ],
+              });
+            },
           },
-        })),
+        ],
         hint: "Scroll for more if yours is not showing.",
       });
     },
-    [bot, me, takeBlock]
+    [bot, handOver, me, takeBlock]
   );
 
   const askHostel = useCallback(() => {
