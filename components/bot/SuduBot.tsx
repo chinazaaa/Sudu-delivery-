@@ -134,6 +134,8 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   const queue = useRef<{ id: string; name: string }[]>([]);
   /* The watch, held in a box for the step that starts it. */
   const watchRef = useRef<(() => void) | null>(null);
+  const askOrderRef = useRef<((again?: boolean) => void) | null>(null);
+  const byeRef = useRef<(() => void) | null>(null);
   const poll = useRef<ReturnType<typeof setTimeout> | null>(null);
   const log = useRef<HTMLDivElement | null>(null);
 
@@ -284,6 +286,84 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
 
   /* ---------------------------------------------------------------- steps */
 
+  /*
+   * We do not stock it, so we offer to go and get it.
+   *
+   * The shop buys things nobody stocks every week; the only reason that
+   * does not happen more is that people have to find the page for it.
+   * Here it is a button, and the name, number and block are already known,
+   * so all that is asked is what they want.
+   */
+  const askUsFor = useCallback(
+    (first: string) => {
+      bot(
+        "We do not carry that one yet. We can go and buy it for you though. " +
+          "Tell me what you want and roughly what it costs, and a person will " +
+          "come back to you with the real price before any money moves.",
+        560
+      );
+      setAsk({
+        of: "text",
+        placeholder: first || "e.g. a large Debonairs meatlovers",
+        onSay: async (wanted) => {
+          me(wanted);
+          setAsk({ of: "nothing" });
+          const mine = held.current;
+          try {
+            const answer = await working(
+              "Sending that over…",
+              fetch("/api/bot/ask", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  wanted,
+                  name: mine.name,
+                  phone: mine.phone,
+                  hostel: mine.hostel,
+                }),
+              })
+            );
+            const got = (await answer.json()) as { ok?: boolean; error?: string };
+            if (!got.ok) {
+              bot(got.error || "Could not send that just now.", 450);
+              setAsk({
+                of: "buttons",
+                buttons: [
+                  { said: "Try again", look: "alt", go: () => { me("Try again"); askUsFor(wanted); } },
+                  { said: "Continue on WhatsApp", look: "green", href: handOver("I am after something you do not stock.") },
+                ],
+              });
+              return;
+            }
+            say(
+              {
+                kind: "status",
+                tone: "ok",
+                html: "<span><b>Sent.</b> Somebody will come back to you on your number.</span>",
+              },
+              420
+            );
+            bot("Anything else while you are here?", 450);
+            setAsk({
+              of: "buttons",
+              buttons: [
+                { said: "Order something else", go: () => { me("Order something else"); askOrderRef.current?.(true); } },
+                { said: "That's all for now", look: "alt", go: () => { me("That's all for now"); byeRef.current?.(); } },
+              ],
+            });
+          } catch {
+            bot("Could not send that just now.", 420);
+            setAsk({
+              of: "buttons",
+              buttons: [{ said: "Try again", go: () => { me("Try again"); askUsFor(wanted); } }],
+            });
+          }
+        },
+      });
+    },
+    [bot, handOver, me, say, working]
+  );
+
   const askOrder = useCallback((again = false) => {
     setAt(2);
     /* Where somebody named counters, the question names the next one and
@@ -393,7 +473,15 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             });
             return;
           }
-          /* Nothing close. The kitchen's own list, not the door. */
+          /*
+           * Nothing close at all.
+           *
+           * Three doors, in the order they are worth offering. What is on
+           * today, because most of the time it is a word away. Then asking
+           * us to go and get it, because somebody who types Debonairs is
+           * not a dead end, they are a sale we have not made yet and the
+           * shop already has a list for exactly that. A person last.
+           */
           bot("I could not find that one. Here is some of what is on today.", 520);
           setAsk({
             of: "chips",
@@ -417,6 +505,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
                 },
               })),
               { said: "Let me type it again", go: () => { me("Let me type it again"); askOrder(); } },
+              { said: "Ask us to get it", hot: true, go: () => { me("Ask us to get it"); askUsFor(said); } },
             ],
             hint: "Or type it another way. I am not fussy about spelling.",
           });
@@ -499,6 +588,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   useEffect(() => {
     walkRef.current = walk;
   }, [walk]);
+
+  useEffect(() => {
+    askOrderRef.current = askOrder;
+  }, [askOrder]);
 
   /*
    * The bill, asked for rather than worked out.
@@ -897,6 +990,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   useEffect(() => {
     watchRef.current = watch;
   }, [watch]);
+
+  useEffect(() => {
+    byeRef.current = bye;
+  }, [bye]);
 
   const askKitchen = useCallback(() => {
     setAt(2);

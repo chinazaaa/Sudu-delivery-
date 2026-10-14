@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import BottomNav from "@/components/BottomNav";
+import SuduBot from "@/components/bot/SuduBot";
 import Track from "@/components/Track";
 import ToTop from "@/components/ToTop";
 import GoogleTag from "@/components/GoogleTag";
@@ -272,6 +273,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </ShopOnly>
 
         <BottomNav />
+        {/* The ordering chat, on the shop and never on admin. Off until it
+            is switched on in Settings, so it can sit in the code without
+            sitting on anybody's screen. */}
+        {settings.bot_on === "on" && (
+          <ShopOnly>
+            <SuduBot whatsapp={settings.whatsapp_number} />
+          </ShopOnly>
+        )}
         {/* A small card in the corner, once per offer, never over the cart
             or the checkout. */}
         <OfferNudge

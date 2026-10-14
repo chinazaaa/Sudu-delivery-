@@ -2657,6 +2657,8 @@ const SETTING_BOXES = [
   "hide_promoter_link",
   "abroad_on",
   "same_day_on",
+  "bot_on",
+  "auto_paid",
 ] as const;
 
 /** What a form sends to say it put this question to somebody. Not exported:

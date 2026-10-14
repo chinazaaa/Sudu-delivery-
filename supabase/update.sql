@@ -1247,3 +1247,8 @@ alter table settings
 -- still say the old domain the day the shop moves.
 alter table settings
   add column if not exists contact_email text not null default 'hello@sudu.store';
+
+-- The ordering chat, and whether a bank alert may mark its own order paid.
+-- Both off until somebody turns them on in Settings.
+insert into settings (key, value) values ('bot_on', '') on conflict (key) do nothing;
+insert into settings (key, value) values ('auto_paid', '') on conflict (key) do nothing;

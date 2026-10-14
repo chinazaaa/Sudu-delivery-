@@ -1218,6 +1218,74 @@ export default async function SettingsAdmin() {
           </Panel>
         </form>
 
+        <form id="bot" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
+          <Panel
+            title="Sudu Bot"
+            detail={
+              <>
+                The ordering chat on the shop front. It asks for a name, a number and a
+                block, finds the food across every open counter, prices it off this
+                same till, and places the order. Everything it says about a run, a fee
+                or a price is read from here, so nothing it tells a customer can
+                disagree with what you take at the door.
+              </>
+            }
+          >
+            <div className="space-y-3">
+              <input type="hidden" name="bot_on__asked" value="1" />
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  name="bot_on"
+                  value="on"
+                  defaultChecked={settings.bot_on === "on"}
+                  className="mt-1 size-5 shrink-0 accent-brand"
+                />
+                <span>
+                  <span className="block font-semibold">Show it on the shop</span>
+                  <span className="block text-sm text-muted">
+                    The jumping button at the bottom right of every customer page. Off
+                    and nobody sees it, and anything half finished in the chat is
+                    still in Left behind.
+                  </span>
+                </span>
+              </label>
+
+              <div className="border-t-[1.5px] border-rule pt-3.5">
+                <input type="hidden" name="auto_paid__asked" value="1" />
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    name="auto_paid"
+                    value="on"
+                    defaultChecked={settings.auto_paid === "on"}
+                    className="mt-1 size-5 shrink-0 accent-brand"
+                  />
+                  <span>
+                    <span className="block font-semibold">
+                      Mark orders paid automatically from bank alerts
+                    </span>
+                    <span className="block text-sm text-muted">
+                      Only where exactly one unpaid order matches the amount exactly.
+                      Two orders at the same figure stay a suggestion for you, as they
+                      are today. With this on the chat watches and turns green by
+                      itself; with it off the chat says we will message them, which is
+                      the truth.
+                    </span>
+                  </span>
+                </label>
+                <p className="hint mt-2">
+                  A forged alert cannot put money in the account, but it can put food
+                  in a car. At five orders a day that is nobody&apos;s problem. Turn it
+                  off the day it is.
+                </p>
+              </div>
+
+              <SaveButton look="btn-admin-go">Save the chat</SaveButton>
+            </div>
+          </Panel>
+        </form>
+
         <form id="same-day" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
           <Panel
             title="Pick a time, instead of a run"

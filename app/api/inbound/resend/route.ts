@@ -4,6 +4,7 @@ import { svixSigned } from "@/lib/svix";
 import { tellAdmin } from "@/lib/admin-alerts";
 import { emailAdmins } from "@/lib/email";
 import { isAlert, senderName, snippet } from "@/lib/mail";
+import { maybeMarkPaid } from "@/lib/auto-paid";
 
 export const dynamic = "force-dynamic";
 
@@ -134,13 +135,22 @@ async function tell(row: {
     const subject = row.subject.trim() || "(no subject)";
     const who = senderName(row.from_addr) || "Somebody";
 
+    // Where the shop has asked for it, and only where exactly one unpaid
+    // order matches the amount exactly. Said on the push rather than done
+    // quietly: a payment marking itself is a thing to be told about.
+    const marked = alert ? await maybeMarkPaid(row) : null;
+
     await tellAdmin({
-      title: alert ? "Payment alert" : who,
+      title: marked ? `Paid: ${marked.marked}` : alert ? "Payment alert" : who,
       // An alert's subject carries the amount and the payer, which is the
       // whole message. A letter needs its first line as well as its
       // heading before it means anything.
-      body: alert ? subject : snippet(`${subject} — ${row.text_body}`, 110),
-      url: "/admin/inbox",
+      body: marked
+        ? `${subject} — marked paid automatically`
+        : alert
+          ? subject
+          : snippet(`${subject} — ${row.text_body}`, 110),
+      url: marked ? "/admin/orders" : "/admin/inbox",
     }).catch(() => undefined);
 
     if (alert) return;
