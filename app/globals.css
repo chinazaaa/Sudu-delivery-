@@ -616,12 +616,22 @@ body {
     bottom: 0;
     left: 0;
     width: auto;
-    height: 100%;
+    /* A starting point. The height and the top are then set from the
+       visual viewport, because that is the only thing on a phone that
+       knows where the keyboard is. */
+    height: 100dvh;
     border-radius: 0;
     border-width: 0;
     box-shadow: none;
     padding-left: env(safe-area-inset-left, 0px);
     padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* With the keyboard up, the thing under the box is the keyboard rather
+     than the phone's own chin, and the gap left for the chin reads as the
+     composer floating. */
+  .sudubot-panel .foot {
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
   }
 }
 

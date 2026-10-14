@@ -133,6 +133,20 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
    * arrived by the time it is asked rather than the ones that had.
    */
   const startRef = useRef<Start | null>(null);
+  /*
+   * The part of the screen the phone is actually showing.
+   *
+   * A sheet sized to the window is the right size until the keyboard
+   * opens. iOS does not shrink the window for a keyboard, it covers it, so
+   * the bottom of the panel, which is the box somebody is typing into,
+   * ends up underneath it and the page behind starts scrolling instead.
+   *
+   * The visual viewport is the only thing that knows where the keyboard
+   * is, so the sheet is sized and placed off that, and only on a phone,
+   * where the panel is a sheet rather than a card in the corner.
+   */
+  const [seen, setSeen] = useState<{ high: number; from: number } | null>(null);
+  const [sheet, setSheet] = useState(false);
   const held = useRef<Held>({ ...EMPTY });
   /* The option walk, held in a box so the steps above it can reach it.
      They are written in the order a person meets them, which puts the
@@ -223,7 +237,40 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
 
   useEffect(() => {
     if (log.current) log.current.scrollTop = log.current.scrollHeight;
-  }, [lines, typing, ask]);
+  }, [lines, typing, ask, seen]);
+
+  useEffect(() => {
+    const narrow = window.matchMedia("(max-width: 560px)");
+    const read = () => setSheet(narrow.matches);
+    read();
+    narrow.addEventListener("change", read);
+    return () => narrow.removeEventListener("change", read);
+  }, []);
+
+  useEffect(() => {
+    const view = window.visualViewport;
+    if (!open || !view) return undefined;
+    const read = () => setSeen({ high: view.height, from: view.offsetTop });
+    read();
+    view.addEventListener("resize", read);
+    view.addEventListener("scroll", read);
+    return () => {
+      view.removeEventListener("resize", read);
+      view.removeEventListener("scroll", read);
+    };
+  }, [open]);
+
+  /* And the page behind holds still. Otherwise a tap on the box scrolls
+     the shop underneath the sheet and closing it leaves somebody halfway
+     down a page they never meant to move. */
+  useEffect(() => {
+    if (!open) return undefined;
+    const was = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = was;
+    };
+  }, [open]);
 
   /* Everything it needs to ask anything, read once when it is opened. */
   useEffect(() => {
@@ -1303,7 +1350,16 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       )}
 
       {open && (
-        <div className="sudubot-panel" role="dialog" aria-label="Sudu Bot">
+        <div
+          className="sudubot-panel"
+          role="dialog"
+          aria-label="Sudu Bot"
+          style={
+            sheet && seen
+              ? { height: `${seen.high}px`, top: `${seen.from}px`, bottom: "auto" }
+              : undefined
+          }
+        >
           <div className="phead">
             <span className="av" aria-hidden>
               <span className="avg">
