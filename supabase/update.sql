@@ -1249,6 +1249,7 @@ alter table settings
   add column if not exists contact_email text not null default 'hello@sudu.store';
 
 -- The ordering chat, and whether a bank alert may mark its own order paid.
--- Both off until somebody turns them on in Settings.
-insert into settings (key, value) values ('bot_on', '') on conflict (key) do nothing;
-insert into settings (key, value) values ('auto_paid', '') on conflict (key) do nothing;
+-- Both empty until somebody ticks them in Settings. Columns on the one
+-- settings row, like every other setting: this table is not key and value.
+alter table settings add column if not exists bot_on text not null default '';
+alter table settings add column if not exists auto_paid text not null default '';

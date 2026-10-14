@@ -2747,9 +2747,14 @@ export async function saveSettings(form: FormData): Promise<void> {
   // it: changing the delivery hours did nothing, silently, and came back
   // showing the old ones. The unknown column is dropped and the rest saved,
   // and what did not save is said out loud rather than guessed at.
+  // Tick boxes as well as text fields. A new switch is a new column just
+  // the same, and leaving them out of this is why ticking two boxes threw
+  // the whole form out with an error nobody could act on instead of
+  // saying which column was missing.
+  const everySetting: readonly string[] = [...SETTING_FIELDS, ...SETTING_BOXES];
   const missing: string[] = [];
-  while (error && missing.length < SETTING_FIELDS.length) {
-    const named = SETTING_FIELDS.find(
+  while (error && missing.length < everySetting.length) {
+    const named = everySetting.find(
       (field) => field in patch && error!.message.includes(field)
     );
     if (!named) break;
