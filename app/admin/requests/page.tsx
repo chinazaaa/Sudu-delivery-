@@ -1,5 +1,5 @@
 import PageHeader from "@/components/admin/PageHeader";
-import { requestList } from "@/lib/requests";
+import { requestList, fromTheChat } from "@/lib/requests";
 import { safeSettings, whatsappLink } from "@/lib/settings";
 import { naira } from "@/lib/money";
 import { markRequest, settleRequest, shelveRequest } from "./actions";
@@ -115,6 +115,13 @@ export default async function RequestsPage() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="font-bold">{ask.wanted}</p>
+                  {/* Which door they came through, said out loud. It
+                      changes what you open with: somebody who filled in
+                      the form has already seen the shop, somebody who
+                      asked the chat was mid-order when they hit the gap. */}
+                  {fromTheChat(ask.note) && (
+                    <span className="tag mt-1 bg-brand-tint text-brand-dark">From the chat</span>
+                  )}
                   <p className="text-sm text-muted">
                     {ask.name} · {ask.phone}
                     {ask.hostel ? ` · ${ask.hostel}` : ""}
@@ -124,7 +131,9 @@ export default async function RequestsPage() {
                       Would pay: {ask.budget}
                     </p>
                   )}
-                  {ask.note && <p className="text-sm text-muted">{ask.note}</p>}
+                  {ask.note && !fromTheChat(ask.note) && (
+                    <p className="text-sm text-muted">{ask.note}</p>
+                  )}
                 </div>
                 <span
                   className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { askFor } from "@/lib/requests";
+import { ASKED_IN_CHAT, askFor } from "@/lib/requests";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +28,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       name: String(body.name ?? ""),
       phone: String(body.phone ?? ""),
       hostel: String(body.hostel ?? ""),
-      note: "Asked for in the chat",
+      note: ASKED_IN_CHAT,
     });
 
     return NextResponse.json(

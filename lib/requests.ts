@@ -15,6 +15,22 @@ import { normalisePhone } from "./phone";
  * marketplace under this, and there does not need to be.
  */
 
+/**
+ * How a request says it came from the chat.
+ *
+ * There is no column for which door somebody came through, and one note
+ * field that nobody types into from the chat. So the chat writes this
+ * exact sentence into it and admin reads it back as a tag, rather than a
+ * line of small print somebody has to notice. A request typed on the
+ * custom order page keeps that field for whatever the customer actually
+ * said, which is what it is for.
+ */
+export const ASKED_IN_CHAT = "Asked for in the chat";
+
+export function fromTheChat(note: string): boolean {
+  return String(note ?? "").trim() === ASKED_IN_CHAT;
+}
+
 export type CustomRequest = {
   id: string;
   created_at: string;
