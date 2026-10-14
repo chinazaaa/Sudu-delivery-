@@ -93,6 +93,7 @@ import { isApple, urlBase64ToBytes } from "../lib/push-keys";
 const EMPTY_SETTINGS: Settings = { ...SETTINGS_DEFAULTS };
 
 import type { OrderLine } from "../lib/orders";
+import { halfShown, key as priceKey, pickedPrice } from "../lib/pricing";
 
 test("phone numbers normalise to one identity however they are typed", () => {
   const expected = "08031234567";
@@ -3375,4 +3376,74 @@ test("an alert with nothing unpaid names the order that was already paid", () =>
   // Money the shop cannot place at all stays unplaced. Inventing a match
   // here would be worse than the sentence it replaced.
   assert.deepEqual(settledBy({ amount: 500, payer: "ERIN" }, rows), []);
+});
+
+test("a half and half costs the dearer half, not the two added together", () => {
+  // The order that cost real money. A large Half & Half, Extravaganza on one
+  // side and BBQ Chicken on the other, was charged ₦13,375 when the
+  // Extravaganza alone is ₦15,225 at that size: less than either half as a
+  // whole pizza, on a line where the shop still buys a whole pizza.
+  const size = {
+    name: "Size",
+    options: [
+      { id: "m", name: 'Medium 12"', priceDelta: 0 },
+      { id: "l", name: 'Large 14"', priceDelta: 0 },
+    ],
+  };
+  const extravaganza = {
+    id: "ex",
+    name: "Extravaganza",
+    priceDelta: 0,
+    asItem: { base: 9800, delta: { [priceKey("Size", 'Large 14"')]: 5425 } },
+  };
+  const bbq = {
+    id: "bbq",
+    name: "BBQ Chicken",
+    priceDelta: 0,
+    asItem: { base: 9350, delta: { [priceKey("Size", 'Large 14"')]: 4300 } },
+  };
+  const groups = [
+    size,
+    { name: "First half", dearest: true, options: [extravaganza, bbq] },
+    { name: "Second half", dearest: true, options: [extravaganza, bbq] },
+  ];
+
+  // Large, Extravaganza, BBQ Chicken: the Extravaganza is dearer, so that is
+  // what the pizza costs.
+  assert.equal(pickedPrice(0, groups, ["l", "ex", "bbq"]), 15225);
+  // The same two halves at medium, where the gap between them is different,
+  // which is why no flat figure could ever have been right at both sizes.
+  assert.equal(pickedPrice(0, groups, ["m", "ex", "bbq"]), 9800);
+  // Both halves the cheaper flavour is the cheaper pizza, not two of it.
+  assert.equal(pickedPrice(0, groups, ["l", "bbq"]), 13650);
+
+  // What each half would make it, for the line beside its name.
+  assert.equal(halfShown(groups[1], extravaganza, groups, ["l", "ex", "bbq"]), 15225);
+  assert.equal(halfShown(groups[1], bbq, groups, ["l", "ex", "bbq"]), 13650);
+  // An ordinary group is not a halves group and says nothing here.
+  assert.equal(halfShown(size, size.options[0], groups, ["l"]), null);
+});
+
+test("everything that is not halves still simply adds up", () => {
+  // The rule changed for one kind of group and must not have moved for any
+  // other: a size, a crust and two extras are four things done to one pizza
+  // and each costs what it says.
+  const groups = [
+    {
+      name: "Size",
+      options: [
+        { id: "m", name: "Medium", priceDelta: 0 },
+        { id: "l", name: "Large", priceDelta: 3100 },
+      ],
+    },
+    {
+      name: "Extra toppings",
+      options: [
+        { id: "cheese", name: "Mozzarella", priceDelta: 1200 },
+        { id: "beef", name: "Beef", priceDelta: 800 },
+      ],
+    },
+  ];
+  assert.equal(pickedPrice(8800, groups, ["l", "cheese", "beef"]), 13900);
+  assert.equal(pickedPrice(8800, groups, []), 8800);
 });

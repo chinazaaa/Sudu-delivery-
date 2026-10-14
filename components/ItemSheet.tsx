@@ -7,6 +7,7 @@ import Thumb from "./Thumb";
 import { addLine, addPerson, setActivePerson, usePeople } from "@/lib/cart";
 import { naira } from "@/lib/money";
 import type { ItemView } from "@/lib/view";
+import { halfShown, pickedPrice } from "@/lib/pricing";
 
 /**
  * The choices sheet: size, flavour, extras, quantity, add. It slides up from
@@ -41,7 +42,8 @@ export default function ItemSheet({
 
   const chosenIds = Object.values(picked).flat();
   const chosen = item.groups.flatMap((g) => g.options).filter((o) => chosenIds.includes(o.id));
-  const unitPrice = item.price + chosen.reduce((sum, o) => sum + o.priceDelta, 0);
+  // Worked out by the same rule the server charges by, halves and all.
+  const unitPrice = pickedPrice(item.price, item.groups, chosenIds);
   const missing = item.groups.filter((g) => g.required && (picked[g.id] ?? []).length === 0);
 
   function toggle(groupId: string, optionId: string, maxSelect: number) {
@@ -130,11 +132,20 @@ export default function ItemSheet({
                       />
                       {option.name}
                     </span>
-                    {option.priceDelta !== 0 && (
+                    {/* A half is said as a price, not as a plus: the two
+                        flavours are the two answers to what the pizza
+                        costs, and the dearer one is what it costs. */}
+                    {halfShown(group, option, item.groups, chosenIds) !== null ? (
                       <span className="text-sm font-semibold text-muted">
-                        {option.priceDelta > 0 ? "+" : "−"}
-                        {naira(Math.abs(option.priceDelta))}
+                        {naira(halfShown(group, option, item.groups, chosenIds) ?? 0)}
                       </span>
+                    ) : (
+                      option.priceDelta !== 0 && (
+                        <span className="text-sm font-semibold text-muted">
+                          {option.priceDelta > 0 ? "+" : "−"}
+                          {naira(Math.abs(option.priceDelta))}
+                        </span>
+                      )
                     )}
                   </label>
                 );

@@ -3,6 +3,7 @@ import { onTheMenu } from "./shelf";
 import { closedWord } from "./open-days";
 import { db } from "./supabase";
 import { pctOf } from "./containers";
+import { key as priceKey } from "./pricing";
 import type { ItemView, MenuView, OptionGroupView } from "./view";
 import type {
   ItemOption,
@@ -53,7 +54,11 @@ async function readMenu(): Promise<MenuView[]> {
     ),
   ]);
 
-  const groupsByItem = await optionGroupsFor(menuItems.map((i) => i.id));
+  const groupsByItem = await optionGroupsFor(
+    menuItems.map((i) => i.id),
+    Object.fromEntries(menuItems.map((i) => [i.id, i.price_food])),
+    Object.fromEntries(menuItems.map((i) => [i.id, i.name]))
+  );
 
   return places.map((restaurant) => ({
     restaurant: {
@@ -131,7 +136,14 @@ function inBatches(ids: string[], size = 100): string[][] {
 
 /** Option groups with their options, keyed by item. */
 export async function optionGroupsFor(
-  itemIds: string[]
+  itemIds: string[],
+  /** What each item costs before its choices, so a halves choice standing
+   *  for a whole pizza can be priced off that pizza rather than off a
+   *  number typed beside it. Without it a link reads as nothing and the
+   *  choice is worth what it says, which is the old behaviour. */
+  priceOf: Record<string, number> = {},
+  /** Those items' names, so admin can say which one a choice is tied to. */
+  nameOf: Record<string, string> = {}
 ): Promise<Map<string, OptionGroupView[]>> {
   const byItem = new Map<string, OptionGroupView[]>();
   if (itemIds.length === 0) return byItem;
@@ -177,20 +189,48 @@ export async function optionGroupsFor(
     );
   }
 
+  // Every item that a halves choice stands for, with what each of its own
+  // choices adds. Built off the rows already in hand: the pizza behind half
+  // a half and half is on the same menu as the half and half.
+  const stands = new Map<string, { base: number; delta: Record<string, number> }>();
+  const linked = [
+    ...new Set(
+      optionRows
+        .map((o) => (o as { as_item_id?: string | null }).as_item_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  for (const id of linked) {
+    const delta: Record<string, number> = {};
+    for (const group of groupRows.filter((g) => g.menu_item_id === id)) {
+      for (const option of optionRows.filter((o) => o.group_id === group.id)) {
+        delta[priceKey(group.name, option.name)] = Number(option.price_delta ?? 0);
+      }
+    }
+    stands.set(id, { base: Number(priceOf[id] ?? 0), delta });
+  }
+
   for (const group of groupRows) {
+    const dearest = (group as { pricing?: string }).pricing === "dearest";
     const view: OptionGroupView = {
       id: group.id,
       name: group.name,
       required: group.required,
       maxSelect: group.max_select,
+      dearest,
       options: optionRows
         .filter((o) => o.group_id === group.id)
-        .map((o) => ({
-          id: o.id,
-          name: o.name,
-          priceDelta: o.price_delta,
-          available: o.available,
-        })),
+        .map((o) => {
+          const stood = (o as { as_item_id?: string | null }).as_item_id;
+          return {
+            id: o.id,
+            name: o.name,
+            priceDelta: o.price_delta,
+            available: o.available,
+            asItem: stood ? stands.get(stood) ?? null : null,
+            asItemName: stood ? nameOf[stood] ?? "" : "",
+          };
+        }),
     };
     byItem.set(group.menu_item_id, [...(byItem.get(group.menu_item_id) ?? []), view]);
   }
@@ -254,7 +294,11 @@ async function readMenuFor(ref: string): Promise<MenuView | null> {
     ),
   ]);
 
-  const groupsByItem = await optionGroupsFor(menuItems.map((i) => i.id));
+  const groupsByItem = await optionGroupsFor(
+    menuItems.map((i) => i.id),
+    Object.fromEntries(menuItems.map((i) => [i.id, i.price_food])),
+    Object.fromEntries(menuItems.map((i) => [i.id, i.name]))
+  );
 
   return {
     restaurant: {
@@ -356,9 +400,15 @@ export const menuViewFor = unstable_cache(readMenuFor, ["menu-view-for"], {
 async function readPrices(): Promise<{
   item: Record<string, number>;
   option: Record<string, number>;
+  /** Options that are a half of something rather than an extra on it. A
+   *  line holding one of these cannot be added back up from a base and a
+   *  list of deltas, so the basket leaves it exactly as it was priced when
+   *  it went in and the checkout has the last word, as it always does. */
+  half: Record<string, true>;
 }> {
   const item: Record<string, number> = {};
   const option: Record<string, number> = {};
+  const half: Record<string, true> = {};
 
   try {
     const items = await everyRow<{ id: string; price_food: number }>((from, to) =>
@@ -370,13 +420,34 @@ async function readPrices(): Promise<{
       db().from("item_options").select("id, price_delta").order("id").range(from, to)
     );
     for (const one of options) option[one.id] = one.price_delta ?? 0;
+
+    const halfGroups = await everyRow<{ id: string }>((from, to) =>
+      db()
+        .from("item_option_groups")
+        .select("id")
+        .eq("pricing", "dearest")
+        .order("id")
+        .range(from, to)
+    );
+    if (halfGroups.length > 0) {
+      const ids = new Set(halfGroups.map((one) => one.id));
+      const halves = await everyRow<{ id: string; group_id: string }>((from, to) =>
+        db()
+          .from("item_options")
+          .select("id, group_id")
+          .in("group_id", [...ids])
+          .order("id")
+          .range(from, to)
+      );
+      for (const one of halves) half[one.id] = true;
+    }
   } catch {
     // A cart that cannot be checked is left exactly as it is. The server
     // prices the order either way, so nobody is charged the wrong thing.
-    return { item: {}, option: {} };
+    return { item: {}, option: {}, half: {} };
   }
 
-  return { item, option };
+  return { item, option, half };
 }
 
 export const livePrices = unstable_cache(readPrices, ["live-prices"], {

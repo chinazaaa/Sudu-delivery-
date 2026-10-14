@@ -56,7 +56,7 @@ export default async function CartPage({
 
   return (
     <div className="space-y-4">
-      <Reprice itemPrice={prices.item} optionDelta={prices.option} />
+      <Reprice itemPrice={prices.item} optionDelta={prices.option} half={prices.half} />
       {/* The other basket, which is its own order on its own day. Kept in
           sight here, because one you can only see from the shelf is one
           somebody leaves behind. */}

@@ -68,7 +68,11 @@ export default async function RestaurantAdmin({
 
   const categoryList = (categories ?? []) as MenuCategory[];
   const itemList = (items ?? []) as MenuItem[];
-  const groupsByItem = await optionGroupsFor(itemList.map((i) => i.id));
+  const groupsByItem = await optionGroupsFor(
+    itemList.map((i) => i.id),
+    Object.fromEntries(itemList.map((i) => [i.id, i.price_food])),
+    Object.fromEntries(itemList.map((i) => [i.id, i.name]))
+  );
   const withPhotos = itemList.filter((item) => item.image_url).length;
 
   return (
@@ -547,6 +551,11 @@ export default async function RestaurantAdmin({
                           <span className="ml-2 text-xs font-normal text-muted">
                             {group.required ? "required" : "optional"}
                             {group.maxSelect > 1 && `, up to ${group.maxSelect}`}
+                            {/* Said out loud, because the figures beside the
+                                choices below are not what this group costs:
+                                a half is worth the pizza it names, and the
+                                dearer of the two is the price. */}
+                            {group.dearest && ", halves · charged at the dearer one"}
                           </span>
                         </h4>
                         <form action={deleteOptionGroup}>
@@ -570,13 +579,23 @@ export default async function RestaurantAdmin({
                                 <input name="name" defaultValue={option.name} className="field py-1 text-sm" />
                               </div>
                               <div className="w-28">
-                                <input
-                                  name="price_delta"
-                                  inputMode="numeric"
-                                  defaultValue={option.priceDelta}
-                                  className="field py-1 text-sm"
-                                  aria-label="Extra cost"
-                                />
+                                {option.asItemName ? (
+                                  /* Tied to a real item, so its price is that
+                                     item's price today and a figure typed
+                                     here would be a second price nobody
+                                     reads. */
+                                  <p className="pb-1 text-xs text-muted">
+                                    is the {option.asItemName}
+                                  </p>
+                                ) : (
+                                  <input
+                                    name="price_delta"
+                                    inputMode="numeric"
+                                    defaultValue={option.priceDelta}
+                                    className="field py-1 text-sm"
+                                    aria-label="Extra cost"
+                                  />
+                                )}
                               </div>
                               <label className="flex items-center gap-1 pb-1 text-xs">
                                 <input type="checkbox" name="available" defaultChecked={option.available} />

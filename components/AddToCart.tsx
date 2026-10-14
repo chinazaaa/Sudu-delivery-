@@ -14,6 +14,7 @@ import {
 import { useRouter } from "next/navigation";
 import { naira } from "@/lib/money";
 import type { ItemView } from "@/lib/view";
+import { halfShown, pickedPrice } from "@/lib/pricing";
 
 /** The product page's buy box: variants, quantity, add to cart. */
 export default function AddToCart({
@@ -58,7 +59,8 @@ export default function AddToCart({
 
   const chosenIds = Object.values(picked).flat();
   const chosen = item.groups.flatMap((g) => g.options).filter((o) => chosenIds.includes(o.id));
-  const unitPrice = item.price + chosen.reduce((sum, o) => sum + o.priceDelta, 0);
+  // Worked out by the same rule the server charges by, halves and all.
+  const unitPrice = pickedPrice(item.price, item.groups, chosenIds);
   const missing = item.groups.filter((g) => g.required && (picked[g.id] ?? []).length === 0);
 
   /**
@@ -189,11 +191,21 @@ export default function AddToCart({
                   } disabled:opacity-40`}
                 >
                   {option.name}
-                  {option.priceDelta !== 0 && (
+                  {/* A half is not an extra, so it is said as a price
+                      rather than as a plus: these two numbers are the two
+                      answers to what the pizza costs, and the dearer of
+                      them is the one that wins. */}
+                  {halfShown(group, option, item.groups, chosenIds) !== null ? (
                     <span className={isPicked ? "text-white/70" : "text-muted"}>
-                      {option.priceDelta > 0 ? "+" : "−"}
-                      {naira(Math.abs(option.priceDelta))}
+                      {naira(halfShown(group, option, item.groups, chosenIds) ?? 0)}
                     </span>
+                  ) : (
+                    option.priceDelta !== 0 && (
+                      <span className={isPicked ? "text-white/70" : "text-muted"}>
+                        {option.priceDelta > 0 ? "+" : "−"}
+                        {naira(Math.abs(option.priceDelta))}
+                      </span>
+                    )
                   )}
                 </button>
               );

@@ -46,7 +46,20 @@ export type OptionGroupView = {
   name: string;
   required: boolean;
   maxSelect: number;
-  options: { id: string; name: string; priceDelta: number; available: boolean }[];
+  /** Halves of one thing rather than extras on it, so the line is charged
+   *  the dearer of them and never both added together. */
+  dearest?: boolean;
+  options: {
+    id: string;
+    name: string;
+    priceDelta: number;
+    available: boolean;
+    /** The item on the menu this choice really is, with its own prices, so
+     *  half a pizza is worth what that pizza is worth today. */
+    asItem?: { base: number; delta: Record<string, number> } | null;
+    /** That item's name, for admin to say what this choice is tied to. */
+    asItemName?: string;
+  }[];
 };
 
 export type BatchView = {

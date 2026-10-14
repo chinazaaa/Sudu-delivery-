@@ -18,13 +18,15 @@ import { reprice } from "@/lib/cart";
 export default function Reprice({
   itemPrice,
   optionDelta,
+  half = {},
 }: {
   itemPrice: Record<string, number>;
   optionDelta: Record<string, number>;
+  half?: Record<string, true>;
 }) {
   useEffect(() => {
-    reprice(itemPrice, optionDelta);
-  }, [itemPrice, optionDelta]);
+    reprice(itemPrice, optionDelta, half);
+  }, [itemPrice, optionDelta, half]);
 
   return null;
 }

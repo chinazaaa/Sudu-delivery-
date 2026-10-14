@@ -33,6 +33,7 @@ import { areaOfCart } from "./areas-server";
 import { feeAcross } from "./value-bands";
 import { realPromoter } from "./promoters";
 import { containersIn, pctOf } from "./containers";
+import { key as priceKey, linePrice, type AsItem, type ChosenOption } from "./pricing";
 import { isExampleNumber, ordersLately, TOO_MANY } from "./guard";
 import { areasOfRun, runCovers } from "./areas";
 import { runCarries } from "./run-places";
@@ -684,15 +685,69 @@ export async function priceLines(
   const items = new Map((data ?? []).map((i) => [i.id, i as MenuItem]));
 
   const optionIds = [...new Set(wanted.flatMap((l) => l.option_ids ?? []))];
-  const options = new Map<string, PricedOption & { available: boolean }>();
+  const options = new Map<
+    string,
+    PricedOption & { available: boolean; group_id: string; as_item_id: string | null }
+  >();
 
   if (optionIds.length > 0) {
     const { data: rows, error: optionError } = await db()
       .from("item_options")
-      .select("id, name, price_delta, available")
+      .select("id, name, price_delta, available, group_id, as_item_id")
       .in("id", optionIds);
     if (optionError) return { error: optionError.message };
     for (const row of rows ?? []) options.set(row.id as string, row as any);
+  }
+
+  // How each chosen option's group is priced, and what it is called, because
+  // a halves group is the one thing that is not added on. Read here rather
+  // than trusted from the browser, like everything else about money.
+  const groups = new Map<string, { name: string; dearest: boolean }>();
+  const groupIds = [...new Set([...options.values()].map((one) => one.group_id).filter(Boolean))];
+  if (groupIds.length > 0) {
+    const { data: rows } = await db()
+      .from("item_option_groups")
+      .select("id, name, pricing")
+      .in("id", groupIds);
+    for (const row of (rows ?? []) as { id: string; name: string; pricing: string }[]) {
+      groups.set(row.id, { name: row.name ?? "", dearest: row.pricing === "dearest" });
+    }
+  }
+
+  // The real items behind a halves choice, with their own prices, so half a
+  // pizza is worth what that pizza is worth today rather than what somebody
+  // typed into a box last term.
+  const stands = new Map<string, AsItem>();
+  const linked = [
+    ...new Set(
+      [...options.values()]
+        .map((one) => one.as_item_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  if (linked.length > 0) {
+    const [{ data: realItems }, { data: realGroups }] = await Promise.all([
+      db().from("menu_items").select("id, price_food").in("id", linked),
+      db().from("item_option_groups").select("id, name, menu_item_id").in("menu_item_id", linked),
+    ]);
+    const groupRows = (realGroups ?? []) as { id: string; name: string; menu_item_id: string }[];
+    let optionRows: { group_id: string; name: string; price_delta: number }[] = [];
+    if (groupRows.length > 0) {
+      const { data } = await db()
+        .from("item_options")
+        .select("group_id, name, price_delta")
+        .in("group_id", groupRows.map((one) => one.id));
+      optionRows = (data ?? []) as typeof optionRows;
+    }
+    for (const item of (realItems ?? []) as { id: string; price_food: number }[]) {
+      const delta: Record<string, number> = {};
+      for (const group of groupRows.filter((one) => one.menu_item_id === item.id)) {
+        for (const option of optionRows.filter((one) => one.group_id === group.id)) {
+          delta[priceKey(group.name, option.name)] = Number(option.price_delta ?? 0);
+        }
+      }
+      stands.set(item.id, { base: Number(item.price_food ?? 0), delta });
+    }
   }
 
   const priced: PricedLine[] = [];
@@ -703,6 +758,7 @@ export async function priceLines(
     if (!item.available) return { error: `${item.name} is unavailable today.` };
 
     const chosen: PricedOption[] = [];
+    const asked: ChosenOption[] = [];
     for (const id of line.option_ids ?? []) {
       const option = options.get(id);
       if (!option) return { error: `A choice on ${item.name} is no longer offered.` };
@@ -710,14 +766,31 @@ export async function priceLines(
         return { error: `${option.name} is unavailable on ${item.name} today.` };
       }
       chosen.push({ id: option.id, name: option.name, price_delta: option.price_delta });
+      const group = groups.get(option.group_id);
+      // A half that says it is a pizza and cannot find that pizza has no
+      // price worth charging: its own flat figure is nothing, and nothing
+      // is how a shop sells a large Extravaganza for the cost of the box.
+      // Refuse the order rather than take the money and find out later.
+      if (group?.dearest && option.as_item_id && !stands.has(option.as_item_id)) {
+        return { error: `${option.name} cannot be priced on ${item.name} right now.` };
+      }
+      asked.push({
+        id: option.id,
+        name: option.name,
+        groupName: group?.name ?? "",
+        priceDelta: option.price_delta,
+        dearest: group?.dearest ?? false,
+        asItem: option.as_item_id ? stands.get(option.as_item_id) ?? null : null,
+      });
     }
 
     priced.push({
       ...line,
       item,
       options: chosen,
-      unitPrice:
-        item.price_food + chosen.reduce((sum, o) => sum + o.price_delta, 0),
+      // Added up for everything that adds up, and the dearer of the two for
+      // a pizza that is half one thing and half another.
+      unitPrice: linePrice(item.price_food, asked),
     });
   }
   return { lines: priced };

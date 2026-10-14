@@ -326,7 +326,12 @@ export const toServerLines = (cart: CartLine[]) =>
  */
 export function reprice(
   itemPrice: Record<string, number>,
-  optionDelta: Record<string, number>
+  optionDelta: Record<string, number>,
+  /** Choices that are a half of one thing. A line holding one cannot be
+   *  added back up from a base and a list of deltas, because the price of
+   *  it is the dearer half rather than the sum, so the line is left as it
+   *  was priced when it went in. */
+  half: Record<string, true> = {}
 ): void {
   load();
   if (lines.length === 0) return;
@@ -335,6 +340,7 @@ export function reprice(
   const next = lines.map((line) => {
     const base = itemPrice[line.itemId];
     if (base === undefined) return line;
+    if (line.optionIds.some((id) => half[id])) return line;
 
     const now =
       base +
