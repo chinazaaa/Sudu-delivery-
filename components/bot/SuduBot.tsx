@@ -51,7 +51,17 @@ type Group = {
   options: { id: string; name: string }[];
 };
 
-type Hit = { id: string; name: string; price: number; score: number; groups: Group[] };
+type Hit = {
+  id: string;
+  name: string;
+  /** Which counter it comes from, which is the answer rather than the
+   *  question: nobody arrives wanting a restaurant, they arrive wanting
+   *  wings. */
+  shop: { id: string; name: string };
+  price: number;
+  score: number;
+  groups: Group[];
+};
 
 /** What the chat has gathered so far. */
 type Held = {
@@ -81,6 +91,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   const [at, setAt] = useState(0);
   const [start, setStart] = useState<Start | null>(null);
   const held = useRef<Held>({ ...EMPTY });
+  /* The option walk, held in a box so the steps above it can reach it.
+     They are written in the order a person meets them, which puts the
+     browsing list before the thing it hands off to. */
+  const walkRef = useRef<((hit: Hit, qty: number) => void) | null>(null);
+  /* Counters still to be asked about, where somebody named more than one.
+     "Domino's and KFC" is two questions, taken in the order they said
+     them, rather than one search that finds neither. */
+  const queue = useRef<{ id: string; name: string }[]>([]);
   const log = useRef<HTMLDivElement | null>(null);
 
   const push = useCallback((line: Line) => setLines((all) => [...all, line]), []);
@@ -132,14 +150,21 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
 
   /* ---------------------------------------------------------------- steps */
 
-  const askOrder = useCallback(() => {
-    const shop = held.current.kitchen;
-    if (!shop) return;
-    setAt(3);
-    bot(`Tell me what you want from <b>${shop.name}</b>. Normal words are fine, and a typo is fine too.`);
+  const askOrder = useCallback((again = false) => {
+    setAt(2);
+    /* Where somebody named counters, the question names the next one and
+       the search is kept to it, so "wings" means their wings. */
+    const only = queue.current[0] ?? null;
+    bot(
+      only
+        ? `What would you like from <b>${only.name}</b>?`
+        : again
+          ? "Go on, what else?"
+          : "So, what do you fancy? Say it however you like, and a typo is fine."
+    );
     setAsk({
       of: "text",
-      placeholder: "e.g. 2 medium bbq pizza and wings",
+      placeholder: only ? `Something from ${only.name}` : "e.g. 2 medium bbq pizza",
       onSay: async (said) => {
         me(said);
         setAsk({ of: "nothing" });
@@ -147,14 +172,27 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           const answer = await fetch("/api/bot/find", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ kitchen: shop.id, said }),
+            body: JSON.stringify({ said, kitchen: queue.current[0]?.id ?? "" }),
           });
           const got = (await answer.json()) as {
             how: string;
             qty: number;
             hits: Hit[];
-            instead: { id: string; name: string }[];
+            instead: { id: string; name: string; shop: string }[];
+            shops?: { id: string; name: string }[];
           };
+          if (got.how === "kitchens" && (got.shops ?? []).length > 0) {
+            queue.current = [...(got.shops ?? [])];
+            const names = queue.current.map((one) => one.name);
+            bot(
+              names.length === 1
+                ? `<b>${names[0]}</b> it is.`
+                : `<b>${names.join("</b> and <b>")}</b>. We will do them one at a time.`,
+              450
+            );
+            askOrder();
+            return;
+          }
           if (got.how === "person") {
             bot("Of course. A person will pick this up on WhatsApp with everything you have told me already.");
             setAsk({
@@ -176,7 +214,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               of: "chips",
               chips: [
                 ...got.hits.map((hit, which) => ({
-                  said: hit.name,
+                  /* The counter is on the chip, so one tap answers both
+                     "which dish" and "from where". */
+                  said: hit.shop.name ? `${hit.name} · ${hit.shop.name}` : hit.name,
                   hot: which === 0,
                   go: () => {
                     me(hit.name);
@@ -190,19 +230,19 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             return;
           }
           /* Nothing close. The kitchen's own list, not the door. */
-          bot(`I could not find that on the ${shop.name} menu. Here is some of what they have.`, 520);
+          bot("I could not find that one. Here is some of what is on today.", 520);
           setAsk({
             of: "chips",
             chips: [
               ...(got.instead ?? []).map((one) => ({
-                said: one.name,
+                said: one.shop ? `${one.name} · ${one.shop}` : one.name,
                 go: () => {
                   me(one.name);
                   setAsk({ of: "nothing" });
                   fetch("/api/bot/find", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ kitchen: shop.id, said: one.name }),
+                    body: JSON.stringify({ said: one.name }),
                   })
                     .then((answer) => answer.json())
                     .then((again: { hits: Hit[] }) => {
@@ -243,13 +283,20 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           bot(
             `Added <b>${qty > 1 ? `${qty} × ` : ""}${hit.name}</b>` +
               (named.length > 0 ? ` (${named.join(", ")})` : "") +
-              ` from <b>${held.current.kitchen?.name ?? ""}</b>.`,
+              (hit.shop.name ? ` from <b>${hit.shop.name}</b>.` : "."),
             450
           );
+          /* Done with this counter, so the next one somebody named is the
+             next question rather than something they have to remember. */
+          if (queue.current.length > 0) queue.current.shift();
+          if (queue.current.length > 0) {
+            askOrder();
+            return;
+          }
           setAsk({
             of: "buttons",
             buttons: [
-              { said: "Add something else", look: "alt", go: () => { me("Add something else"); askOrder(); } },
+              { said: "Add something else", look: "alt", go: () => { me("Add something else"); askOrder(true); } },
               { said: "That's everything", go: () => { me("That's everything"); soon(); } },
             ],
           });
@@ -279,6 +326,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     [askOrder, bot, me]
   );
 
+  useEffect(() => {
+    walkRef.current = walk;
+  }, [walk]);
+
   /* As far as this is built. Said plainly rather than pretending. */
   const soon = useCallback(() => {
     setAt(4);
@@ -299,24 +350,60 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     });
   }, [bot, waLink]);
 
+  /*
+   * The list, for somebody who would rather look than type.
+   *
+   * Not the first question any more. Fourteen counters is a wall of
+   * buttons today and twenty next year, and it is the wrong question
+   * besides: nobody arrives wanting a restaurant, they arrive wanting
+   * wings, and which counter that is belongs on the answer rather than in
+   * front of it. So this is a chip under the box, not a step.
+   */
   const askKitchen = useCallback(() => {
     setAt(2);
-    const run = held.current.run;
-    bot(
-      `Locked in: <b>${run?.said ?? "the next run"}</b>, arriving ${run?.window ?? "in the usual window"}. ` +
-        "Which kitchen are we ordering from?"
-    );
+    bot("Here is who is open. Tap one and I will show you what they have.");
     setAsk({
       of: "chips",
-      chips: (start?.kitchens ?? []).map((shop) => ({
-        said: shop.name,
-        go: () => {
-          me(shop.name);
-          held.current.kitchen = shop;
-          askOrder();
-        },
-      })),
-      hint: "You can add from another kitchen afterwards.",
+      chips: [
+        ...(start?.kitchens ?? []).map((shop) => ({
+          said: shop.name,
+          go: () => {
+            me(shop.name);
+            held.current.kitchen = shop;
+            setAsk({ of: "nothing" });
+            fetch("/api/bot/find", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ kitchen: shop.id, said: shop.name }),
+            })
+              .then((answer) => answer.json())
+              .then((got: { instead: { id: string; name: string; shop: string }[]; hits: Hit[] }) => {
+                const some = got.hits.length > 0 ? got.hits : [];
+                if (some.length === 0) {
+                  askOrder();
+                  return;
+                }
+                bot(`Some of what ${shop.name} has today.`, 450);
+                setAsk({
+                  of: "chips",
+                  chips: [
+                    ...some.map((hit) => ({
+                      said: hit.name,
+                      go: () => {
+                        me(hit.name);
+                        walkRef.current?.(hit, 1);
+                      },
+                    })),
+                    { said: "Let me just type it", go: () => { me("Let me just type it"); askOrder(); } },
+                  ],
+                });
+              })
+              .catch(() => askOrder());
+          },
+        })),
+        { said: "Let me just type it", go: () => { me("Let me just type it"); askOrder(); } },
+      ],
+      hint: "Or tap the last one and say it in your own words.",
     });
   }, [askOrder, bot, me, start]);
 
@@ -347,7 +434,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     if (runs.length === 1) {
       setAsk({
         of: "buttons",
-        buttons: [{ said: "That works", go: () => { me("That works"); held.current.run = first; askKitchen(); } }],
+        buttons: [{ said: "That works", go: () => { me("That works"); held.current.run = first; askOrder(); } }],
         hint: "That is the soonest we can reach you.",
       });
       return;
@@ -366,10 +453,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         const run = runs[which];
         held.current.run = run;
         me(`Run ${run.said}, ${run.window}`);
-        askKitchen();
+        askOrder();
       },
     });
-  }, [askKitchen, bot, me, say, start, waLink]);
+  }, [askOrder, bot, me, say, start, waLink]);
 
   const askHostel = useCallback(() => {
     setAt(0);

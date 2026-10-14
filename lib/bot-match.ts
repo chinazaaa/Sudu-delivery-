@@ -231,3 +231,57 @@ export function yesNo(said: string): "yes" | "no" | "" {
   if (/\b(no|nope|nah|wrong|not that|something else|different)\b/.test(flat)) return "no";
   return "";
 }
+
+/** Words that appear in a counter's name and say nothing about which one. */
+const SHOPWORDS = new Set([
+  "pizza", "pizzas", "chicken", "kitchen", "kitchens", "food", "foods",
+  "restaurant", "store", "shop", "cafe", "grill", "grills", "express",
+  "place", "spot", "joint", "bar", "house", "company", "co", "ltd",
+]);
+
+/**
+ * The counters somebody named, in the order they named them.
+ *
+ * "Domino's and KFC" is a sentence about where, not about what, and
+ * searching a menu for it finds nothing worth offering. Read first, so the
+ * chat can answer the question that was actually asked: what would you
+ * like from Domino's, and then what from KFC.
+ *
+ * Matched on the distinctive words of each name rather than on the whole
+ * of it, because nobody types "Domino's Pizza" and "chicken republic" is
+ * two words of which one is on half the menu.
+ */
+export function namedIn(
+  said: string,
+  shops: { id: string; name: string }[]
+): { id: string; name: string }[] {
+  const asked = words(said);
+  if (asked.length === 0) return [];
+
+  const found: { id: string; name: string; at: number }[] = [];
+  for (const shop of shops) {
+    const all = words(shop.name);
+    // The word that is only theirs. "Chicken Republic" is Republic: asked
+    // for chicken wings, the chicken belongs to the wings and half the
+    // menu, and a counter picked off it would hijack the sentence.
+    const mine = all.filter((word) => !SHOPWORDS.has(word));
+    const look = mine.length > 0 ? mine : all;
+    if (look.length === 0) continue;
+
+    let where = -1;
+    for (const word of look) {
+      for (let at = 0; at < asked.length; at += 1) {
+        // A short name is matched whole. Three letters are too few for a
+        // near miss to mean anything: "kfz" is not KFC, it is a typo
+        // nobody can resolve.
+        const near = word.length <= 3 ? (asked[at] === word ? 1 : 0) : alike(asked[at], word);
+        if (near >= 0.8) where = where === -1 ? at : Math.min(where, at);
+      }
+    }
+    if (where > -1) found.push({ id: shop.id, name: shop.name, at: where });
+  }
+
+  return found
+    .sort((a, b) => a.at - b.at)
+    .map((one) => ({ id: one.id, name: one.name }));
+}

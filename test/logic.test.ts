@@ -98,6 +98,7 @@ import {
   find as botFind,
   howMany as botHowMany,
   wantsAPerson as botWantsAPerson,
+  namedIn as botNamedIn,
   yesNo as botYesNo,
   type Candidate as BotCandidate,
 } from "../lib/bot-match";
@@ -3506,4 +3507,26 @@ test("the chat reads how many, and whether somebody wants a person", () => {
   assert.equal(botYesNo("yeah that one"), "yes");
   assert.equal(botYesNo("no I meant the other"), "no");
   assert.equal(botYesNo("chicken"), "");
+});
+
+test("naming two counters is a question about where, not about what", () => {
+  // "Domino's and KFC" searched against a menu finds nothing worth
+  // offering, so it is read first and answered as what it is: two
+  // questions, in the order they were said.
+  const shops = [
+    { id: "d", name: "Domino's Pizza" },
+    { id: "k", name: "KFC" },
+    { id: "c", name: "Chicken Republic" },
+  ];
+  assert.deepEqual(botNamedIn("domino and kfc", shops).map((one) => one.id), ["d", "k"]);
+  // Order follows the sentence, because that is the order to ask in.
+  assert.deepEqual(
+    botNamedIn("chicken republic and dominos", shops).map((one) => one.id),
+    ["c", "d"]
+  );
+  // A typo in a name is still that name.
+  assert.deepEqual(botNamedIn("dominoes", shops).map((one) => one.id), ["d"]);
+  // Food is not a counter. Chicken belongs to the wings and to half the
+  // menu, so Chicken Republic is found by Republic or not at all.
+  assert.deepEqual(botNamedIn("chicken wings", shops), []);
 });
