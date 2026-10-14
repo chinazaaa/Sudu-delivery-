@@ -200,10 +200,60 @@ export async function optionGroupsFor(
         .filter((id): id is string => Boolean(id))
     ),
   ];
+  // Asked for rather than assumed. A page that looks up the groups for
+  // twenty-four products without handing over their prices would otherwise
+  // read every half as nothing, and the screen would offer a pizza at ₦0,
+  // which is exactly the shape of mistake this whole rule exists to stop.
+  const unknown = linked.filter((id) => priceOf[id] === undefined);
+  if (unknown.length > 0) {
+    try {
+      const { data } = await db()
+        .from("menu_items")
+        .select("id, name, price_food")
+        .in("id", unknown);
+      for (const row of (data ?? []) as { id: string; name: string; price_food: number }[]) {
+        priceOf = { ...priceOf, [row.id]: Number(row.price_food ?? 0) };
+        nameOf = { ...nameOf, [row.id]: row.name ?? "" };
+      }
+    } catch {
+      // Nothing to be done here, and the loop below leaves the price out
+      // rather than inventing one.
+    }
+  }
+
+  // The same for their own choices, which carry the size step: the linked
+  // pizza is only in the rows above when the page happened to ask for its
+  // whole shop, and a half priced without its size is a large sold as a
+  // medium.
+  const missing = linked.filter((id) => !groupRows.some((g) => g.menu_item_id === id));
+  const extraGroups: OptionGroup[] = [];
+  const extraOptions: ItemOption[] = [];
+  if (missing.length > 0) {
+    try {
+      const { data: gs } = await db()
+        .from("item_option_groups")
+        .select("*")
+        .in("menu_item_id", missing);
+      extraGroups.push(...((gs ?? []) as OptionGroup[]));
+      if (extraGroups.length > 0) {
+        const { data: os } = await db()
+          .from("item_options")
+          .select("*")
+          .in("group_id", extraGroups.map((g) => g.id));
+        extraOptions.push(...((os ?? []) as ItemOption[]));
+      }
+    } catch {
+      /* Left out rather than guessed at. */
+    }
+  }
+
+  const everyGroup = [...groupRows, ...extraGroups];
+  const everyOption = [...optionRows, ...extraOptions];
+
   for (const id of linked) {
     const delta: Record<string, number> = {};
-    for (const group of groupRows.filter((g) => g.menu_item_id === id)) {
-      for (const option of optionRows.filter((o) => o.group_id === group.id)) {
+    for (const group of everyGroup.filter((g) => g.menu_item_id === id)) {
+      for (const option of everyOption.filter((o) => o.group_id === group.id)) {
         delta[priceKey(group.name, option.name)] = Number(option.price_delta ?? 0);
       }
     }
