@@ -69,7 +69,14 @@ export function words(said: string): string[] {
  * the shop would ring them anyway.
  */
 export function howMany(said: string): number {
-  const digits = flatten(said).match(/\b(\d{1,2})\b/);
+  // A number with a unit after it describes the thing, not how many of it:
+  // "chicken wings 7pcs" is one portion of seven wings, and read as a
+  // quantity it is seven portions and forty-nine wings.
+  const flat = flatten(said).replace(
+    /\b(\d{1,3})\s*(pcs|pc|pieces|piece|cl|ml|litre|liter|kg|g|inch|in)\b/g,
+    " "
+  );
+  const digits = flat.match(/\b(\d{1,2})\b/);
   if (digits) {
     const asked = Number(digits[1]);
     if (asked >= 1 && asked <= 20) return asked;
@@ -79,9 +86,23 @@ export function howMany(said: string): number {
     six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
   };
   for (const [word, count] of Object.entries(spelled)) {
-    if (new RegExp(`\\b${word}\\b`).test(flatten(said))) return count;
+    if (new RegExp(`\\b${word}\\b`).test(flat)) return count;
   }
   return 1;
+}
+
+/**
+ * Whether a number is part of what the thing is called.
+ *
+ * "Chicken Wings - 4PCS" holds a four, and somebody asking for it by name
+ * is asking for one of them rather than for four. Checked against the
+ * thing that was actually matched, because only then is it known.
+ */
+export function countedInName(name: string, qty: number): boolean {
+  if (qty <= 1) return false;
+  // Not a word boundary: "4PCS" has no space in it, and a boundary looks
+  // for one. Only another digit would make this a different number.
+  return new RegExp(`(?<!\\d)${qty}(?!\\d)`).test(flatten(name));
 }
 
 /** The pairs of letters in a word, for comparing two spellings of one. */
@@ -361,4 +382,40 @@ export function nearlyNamed(
 ): { id: string; name: string }[] {
   const sure = new Set(namedIn(said, shops).map((one) => one.id));
   return namedIn(said, shops, 0.6).filter((one) => !sure.has(one.id));
+}
+
+/**
+ * The same sentence with the counter's name taken out of it.
+ *
+ * Once a counter is doing the filtering, its own name is no longer a word
+ * about food: left in, "Domino's half and half" is three words of which
+ * one can never be matched, and every dish on that menu is marked down
+ * for it equally. Taken out, what is left is what they actually want.
+ */
+export function without(
+  said: string,
+  shops: { id: string; name: string }[]
+): string {
+  const theirs = new Set(
+    shops.flatMap((shop) => words(shop.name).filter((word) => !SHOPWORDS.has(word)))
+  );
+  if (theirs.size === 0) return said;
+
+  const kept = flatten(said)
+    .split(" ")
+    // "Domino's" flattens to "domino s", and the orphaned s is not a word
+    // about food either.
+    .filter((word) => word.length > 1)
+    .filter((word) => {
+      for (const mine of theirs) {
+        const near = mine.length <= 3 ? (word === mine ? 1 : 0) : alike(word, mine);
+        if (near >= 0.8) return false;
+      }
+      return true;
+    });
+
+  const left = kept.join(" ").trim();
+  // Nothing but the counter's name: give the sentence back rather than
+  // searching a whole menu for an empty string.
+  return left === "" ? said : left;
 }

@@ -685,7 +685,16 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
  * something costs before it exists.
  */
 export type Quote = {
-  lines: { name: string; said: string; qty: number; each: number; total: number; shop: string }[];
+  lines: {
+    name: string;
+    said: string;
+    qty: number;
+    each: number;
+    total: number;
+    /** The counter it comes from, by name: a bill that does not say where
+     *  each thing is coming from is a bill nobody can check. */
+    shop: string;
+  }[];
   food: number;
   fee: number;
   total: number;
@@ -737,6 +746,21 @@ export async function quote(args: {
 
   const food = countFood(priced.lines);
 
+  // The counters by name, for the bill. An id on a receipt is a number
+  // nobody can check their own order against.
+  const named = new Map<string, string>();
+  try {
+    const { data } = await db()
+      .from("restaurants")
+      .select("id, name")
+      .in("id", placesIn(priced.lines));
+    for (const row of (data ?? []) as { id: string; name: string }[]) {
+      named.set(row.id, row.name);
+    }
+  } catch {
+    /* A bill without the counter names is still the right money. */
+  }
+
   return {
     quote: {
       lines: priced.lines.map((line) => ({
@@ -745,7 +769,7 @@ export async function quote(args: {
         qty: line.qty,
         each: line.unitPrice,
         total: line.unitPrice * line.qty,
-        shop: line.item.restaurant_id,
+        shop: named.get(line.item.restaurant_id) ?? "",
       })),
       food,
       fee,

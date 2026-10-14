@@ -2,7 +2,15 @@ import { NextResponse } from "next/server";
 
 import { menuView, menuViewFor } from "@/lib/menu";
 import type { ItemView } from "@/lib/view";
-import { find, namedIn, nearlyNamed, wantsAPerson, howMany } from "@/lib/bot-match";
+import {
+  countedInName,
+  find,
+  howMany,
+  namedIn,
+  nearlyNamed,
+  wantsAPerson,
+  without,
+} from "@/lib/bot-match";
 
 export const dynamic = "force-dynamic";
 
@@ -67,16 +75,31 @@ export async function POST(request: Request): Promise<NextResponse> {
       shops.map((shop) => ({ id: shop.restaurant.id, name: shop.restaurant.name }))
     );
 
+    /*
+     * A counter named alongside the food scopes the search to it.
+     *
+     * "Domino's half and half bbq chicken" names a counter and a dish, and
+     * searched across every menu it found a half chicken at Jay's Diner
+     * and a half and half at Dodo and not the one actually asked for. The
+     * counter is the most certain thing in that sentence, so it is used
+     * as what it is: a filter, not another word to score.
+     */
+    const only = kitchen === "" && named.length > 0 ? new Set(named.map((one) => one.id)) : null;
+    const looking = only
+      ? sellable.filter((item) => only.has(whose.get(item.id)?.id ?? ""))
+      : sellable;
+
     const found = find(
-      said,
-      sellable.map((item) => ({
+      only ? without(said, named) : said,
+      looking.map((item) => ({
         id: item.id,
         name: item.name,
         also: [
           item.description ?? "",
-          // The counter it comes from, so "kfc" finds everything at KFC and
-          // "kfc wings" finds the wings there rather than the ones next door.
-          whose.get(item.id)?.name ?? "",
+          // The counter it comes from, so "kfc" on its own finds what KFC
+          // has. Left out once the counter is already doing the filtering,
+          // where it would only flatter every dish on that menu equally.
+          only ? "" : (whose.get(item.id)?.name ?? ""),
           // The names of its own choices, so a flavour that only exists as
           // an option is still something somebody can ask for by name.
           ...item.groups.flatMap((group) =>
@@ -88,7 +111,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     // Only where nothing on any menu answers it better. "KFC wings" is a
     // dish and should stay one; "KFC and Domino's" is a pair of counters.
-    if (named.length > 0 && (found.how === "lost" || (found.hits[0]?.score ?? 0) < 0.55)) {
+    if (named.length > 0 && found.how === "lost") {
       return NextResponse.json({
         how: "kitchens",
         qty: 1,
@@ -126,13 +149,17 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     return NextResponse.json({
       how: found.how,
+      // Per hit, because a number that is part of a dish's own name is the
+      // dish rather than the quantity.
       qty: howMany(said),
       person: false,
       hits: found.hits.map((hit) => {
         const item = byId.get(hit.id);
+        const asked = howMany(said);
         return {
           id: hit.id,
           name: hit.name,
+          qty: countedInName(hit.name, asked) ? 1 : asked,
           shop: whose.get(hit.id) ?? { id: "", name: "" },
           price: item?.price ?? 0,
           score: Math.round(hit.score * 100) / 100,
@@ -156,7 +183,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       // throw somebody out of the shop.
       instead:
         found.how === "lost"
-          ? sellable.slice(0, 8).map((item) => ({
+          ? (only ? looking : sellable).slice(0, 8).map((item) => ({
               id: item.id,
               name: item.name,
               shop: whose.get(item.id)?.name ?? "",

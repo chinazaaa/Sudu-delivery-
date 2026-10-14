@@ -96,11 +96,13 @@ import type { OrderLine } from "../lib/orders";
 import { halfShown, key as priceKey, pickedPrice } from "../lib/pricing";
 import {
   find as botFind,
+  countedInName as botCountedInName,
   howMany as botHowMany,
   wantsAPerson as botWantsAPerson,
   looksLikeAName as botLooksLikeAName,
   namedIn as botNamedIn,
   nearlyNamed as botNearlyNamed,
+  without as botWithout,
   phoneIn as botPhoneIn,
   yesNo as botYesNo,
   type Candidate as BotCandidate,
@@ -3612,4 +3614,84 @@ test("a block is typed, not hunted for in a list of sixteen", () => {
   assert.ok(both.hits.length >= 2);
   // Nothing like any of them shows the list rather than guessing.
   assert.equal(botFind("my room", blocks).how, "lost");
+});
+
+test("naming a counter alongside the food narrows the search to it", () => {
+  // "Domino's half and half bbq chicken" names a counter and a dish.
+  // Searched across every menu it found a half chicken at one place and a
+  // half and half at another and not the one actually asked for, so the
+  // counter is used as what it is: a filter, and its own name comes out
+  // of the sentence rather than being scored as a word about food.
+  const shops = [
+    { id: "d", name: "Domino's Pizza" },
+    { id: "j", name: "Jay's Diner" },
+  ];
+  assert.equal(botWithout("Domino's half and half bbq chicken", shops), "half and half bbq chicken");
+  // A typo in the name still counts as the name.
+  assert.equal(botWithout("dominoes wings", shops), "wings");
+  // Nothing but the counter is given back whole, because searching a menu
+  // for an empty string finds everything and means nothing.
+  assert.equal(botWithout("dominos", shops), "dominos");
+  // A counter nobody named changes nothing.
+  assert.equal(botWithout("chicken wings", shops), "chicken wings");
+});
+
+test("the real Domino's menu, asked for the way somebody actually types it", () => {
+  // Against the shop's own list rather than a fixture, because a matcher
+  // that passes on three invented dishes and fails on "Domino's half and
+  // half bbq chicken and bbq beef" is a matcher that has not been tested.
+  const shops = [{ id: "d", name: "Domino's Pizza" }];
+  const menu = [
+    "BBQ Chicken", "BBQ Meatball", "BBQ Mega Meat", "BBQ Sauce",
+    "BBQ Sauce Calzone", "BBQ Suya Mix Grill", "Breadsticks",
+    "Cheesy Bread", "Cheesy Grilled Chicken Bread", "Chicken Supreme",
+    "Chicken Suya", "Chicken Wings - 4PCS", "Chicken Wings With BBQ - 7PCS",
+    "Extravaganza", "Half & Half", "Margherita", "Naija Fiesta",
+    "Pepperoni", "Roasted Chicken - 2PCS", "Shawarma",
+    "Southern Style BBQ Chicken", "The Lot", "Veggie Supreme",
+  ].map((name) => ({
+    id: name,
+    name,
+    // As the shop really holds it: every dish carries the names of its own
+    // choices, which is how a flavour that only exists as half of a half
+    // and half is still something somebody can ask for by name.
+    also:
+      name === "Half & Half"
+        ? ["BBQ Chicken", "BBQ Meatball", "BBQ Mega Meat", "Extravaganza",
+           "Margherita", "Pepperoni", "Chicken Suya", "The Lot",
+           "Veggie Supreme", "Naija Fiesta", "Shawarma", "Chicken Supreme"]
+        : [],
+  }));
+
+  // The counter is a filter, and its name comes out of the sentence.
+  const said = "Domino's half and half bbq chicken and bbq beef";
+  assert.deepEqual(botNamedIn(said, shops).map((one) => one.id), ["d"]);
+  const asked = botWithout(said, shops);
+
+  const found = botFind(asked, menu);
+  assert.equal(found.hits[0]?.name, "Half & Half", `asked: ${asked}`);
+
+  // And the shorter way of saying the same thing.
+  assert.equal(botFind("half and half", menu).hits[0]?.name, "Half & Half");
+  assert.equal(botFind("half n half", menu).hits[0]?.name, "Half & Half");
+
+  // The ones that are simply themselves.
+  assert.equal(botFind("extravaganza", menu).hits[0]?.name, "Extravaganza");
+  assert.equal(botFind("margarita", menu).hits[0]?.name, "Margherita");
+  assert.equal(botFind("peperoni", menu).hits[0]?.name, "Pepperoni");
+});
+
+test("how many, and when a number is not how many", () => {
+  // Two of something is two of something.
+  assert.equal(botHowMany("2 bbq chicken from dominos"), 2);
+  assert.equal(botHowMany("two bbq chicken"), 2);
+  // A size is not a quantity. Read as one, "chicken wings 7pcs" is seven
+  // portions and forty-nine wings, and somebody gets a bill for it.
+  assert.equal(botHowMany("chicken wings 7pcs"), 1);
+  assert.equal(botHowMany("coke 50cl"), 1);
+  assert.equal(botHowMany("2 chicken wings 7 pcs"), 2);
+  // And a number inside the dish's own name is the dish.
+  assert.equal(botCountedInName("Chicken Wings - 4PCS", 4), true);
+  assert.equal(botCountedInName("BBQ Chicken", 2), false);
+  assert.equal(botCountedInName("Chicken Wings - 4PCS", 1), false);
 });

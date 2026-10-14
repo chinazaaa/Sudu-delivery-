@@ -9,6 +9,7 @@ import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { headlineFee } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
 import { runDateLabel } from "@/lib/time";
+import { TZ } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -40,11 +41,26 @@ export async function GET(): Promise<NextResponse> {
       sameDayPricing().catch(() => null),
     ]);
 
+    /*
+     * The day a run goes out, as a calendar block reads it.
+     *
+     * Off the date string itself rather than off a Date, because midnight
+     * in Lagos is the evening before in UTC and a server that thinks in
+     * UTC drew "Thursday 15 October" above a block saying WED 14.
+     */
+    const block = (date: string) => {
+      const [year, month, day] = date.split("-").map(Number);
+      const at = new Date(Date.UTC(year, (month ?? 1) - 1, day ?? 1));
+      return {
+        dow: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][at.getUTCDay()],
+        dom: day ?? 1,
+      };
+    };
+
     const runs = batches
       .filter((batch) => !batch.full)
       .map((batch) => {
         const view = toBatchView(batch);
-        const day = new Date(`${batch.run_date}T00:00:00+01:00`);
         return {
           id: view.id,
           label: view.label,
@@ -55,8 +71,7 @@ export async function GET(): Promise<NextResponse> {
           window: view.deliveryWindow,
           closes: view.cutOffLabel,
           // For the little calendar block on the slot card.
-          dow: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][day.getDay()],
-          dom: day.getDate(),
+          ...block(batch.run_date),
           areas: view.areas,
           onlyPlaces: view.onlyPlaces,
         };
@@ -82,18 +97,16 @@ export async function GET(): Promise<NextResponse> {
               run_date: batch.run_date,
               window: batch.delivery_window_text,
             }))
-          ).slice(0, 4).map((slot) => {
-            const day = new Date(slot.at);
-            return {
-              at: slot.at,
-              label: slot.label,
-              phrase: slot.phrase,
-              day: slot.day,
-              date: slot.date,
-              dow: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][day.getDay()],
-              dom: day.getDate(),
-            };
-          });
+          ).slice(0, 4).map((slot) => ({
+            at: slot.at,
+            label: slot.label,
+            phrase: slot.phrase,
+            day: slot.day,
+            date: slot.date,
+            ...block(
+              new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(slot.at))
+            ),
+          }));
 
     return NextResponse.json({
       hostels,

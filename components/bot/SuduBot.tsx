@@ -29,9 +29,21 @@ type Start = {
   hostels: string[];
   runs: Run[];
   kitchens: { id: string; name: string }[];
+  cars: Car[];
+  carFrom: number;
   feeFrom: number;
   whatsapp: string;
   email: string;
+};
+
+type Car = {
+  at: string;
+  label: string;
+  phrase: string;
+  day: "today" | "tomorrow" | "later";
+  date: string;
+  dow: string;
+  dom: number;
 };
 
 type Run = {
@@ -56,6 +68,9 @@ type Group = {
 type Hit = {
   id: string;
   name: string;
+  /** How many of this one, read off the sentence and sanity-checked
+   *  against the dish's own name. */
+  qty: number;
   /** Which counter it comes from, which is the answer rather than the
    *  question: nobody arrives wanting a restaurant, they arrive wanting
    *  wings. */
@@ -71,6 +86,8 @@ type Held = {
   phone: string;
   hostel: string;
   run: Run | null;
+  /** A car of its own instead of a run, where they asked for one. */
+  car: Car | null;
   kitchen: { id: string; name: string } | null;
   /** What has been chosen, as the server will be told it. */
   lines: { itemId: string; name: string; qty: number; optionIds: string[]; chose: string[] }[];
@@ -108,6 +125,7 @@ const EMPTY: Held = {
   phone: "",
   hostel: "",
   run: null,
+  car: null,
   kitchen: null,
   lines: [],
   orderId: "",
@@ -160,6 +178,15 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   const watchRef = useRef<(() => void) | null>(null);
   /** A step that asked before the lists had landed, run again when they do. */
   const pending = useRef<(() => void) | null>(null);
+  /*
+   * How many times running it has failed to land on what somebody wants.
+   *
+   * Asking "which one did you mean" is a tap and is right the first time.
+   * Asking it four times in a row is a loop, and somebody in a loop with a
+   * bot is somebody who leaves. Three and a person takes over, with
+   * everything already said carried across.
+   */
+  const misses = useRef(0);
   const askOrderRef = useRef<((again?: boolean) => void) | null>(null);
   const byeRef = useRef<(() => void) | null>(null);
   const poll = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -514,7 +541,32 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             return;
           }
           if (got.how === "sure" && got.hits[0]) {
-            walk(got.hits[0], got.qty);
+            misses.current = 0;
+            walk(got.hits[0], got.hits[0].qty ?? got.qty);
+            return;
+          }
+
+          misses.current += 1;
+          if (misses.current >= 3) {
+            misses.current = 0;
+            bot(
+              "I am not getting this one, and I would rather not keep you going " +
+                "round. A person can take it from here with everything you have " +
+                "already told me.",
+              540
+            );
+            setAsk({
+              of: "buttons",
+              buttons: [
+                {
+                  said: "Continue on WhatsApp",
+                  look: "green",
+                  href: handOver("Could you help me finish it?"),
+                },
+                { said: "Ask us to get it", look: "alt", go: () => { me("Ask us to get it"); askUsFor(said); } },
+                { said: "Let me try once more", look: "alt", go: () => { me("Let me try once more"); askOrder(); } },
+              ],
+            });
             return;
           }
           if (got.hits.length > 0) {
@@ -529,7 +581,8 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
                   hot: which === 0,
                   go: () => {
                     me(hit.name);
-                    walk(hit, got.qty);
+                    misses.current = 0;
+                    walk(hit, hit.qty ?? got.qty);
                   },
                 })),
                 { said: "None of these", go: () => { me("None of these"); askOrder(); } },
@@ -688,7 +741,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       );
       const got = (await answer.json()) as {
         error?: string;
-        lines?: { name: string; said: string; qty: number; total: number }[];
+        lines?: { name: string; said: string; qty: number; total: number; shop: string }[];
         food?: number;
         fee?: number;
         total?: number;
@@ -720,7 +773,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             rows: [
               ...got.lines.map((line) => ({
                 said: `${line.qty > 1 ? `${line.qty} × ` : ""}${line.name}`,
-                under: line.said || undefined,
+                /* Where it comes from, beside what was chosen on it. A bill
+                   that does not say which counter each thing is from is a
+                   bill nobody can check against what they asked for. */
+                under: [line.shop, line.said].filter(Boolean).join(" · ") || undefined,
                 amount: line.total,
               })),
               {
@@ -1108,15 +1164,105 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     });
   }, [askOrder, bot, me]);
 
-  const askSlot = useCallback(() => {
+  /*
+   * When it comes, said the way the design says it.
+   *
+   * One card for the next run, and two buttons. Showing every run at once
+   * was four near-identical rows with the same price on each, which
+   * answers a question nobody asked: the next one is nearly always the
+   * answer, and the list belongs behind "I need it sooner" along with the
+   * cars, which is the only thing on this screen worth paying more for.
+   */
+  const askSooner = useCallback(() => {
     setAt(1);
-    const runs = startRef.current?.runs ?? [];
-    if (runs.length === 0) {
-      bot("Nothing is open for orders this minute. A person can still sort you out.");
-      setAsk({ of: "buttons", buttons: [{ said: "Message us on WhatsApp", look: "green", href: handOver() }] });
+    const lists = startRef.current;
+    const runs = lists?.runs ?? [];
+    const cars = lists?.cars ?? [];
+    const keep = runs[0];
+
+    if (cars.length === 0 && runs.length <= 1) {
+      bot(`The <b>${keep?.said ?? "next"}</b> run is the soonest we can reach you.`, 480);
+      setAsk({
+        of: "buttons",
+        buttons: [
+          {
+            said: `Keep the ${keep?.said ?? "next"} run`,
+            go: () => {
+              me(`Keep the ${keep?.said ?? "next"} run`);
+              held.current.run = keep ?? null;
+              askOrder();
+            },
+          },
+        ],
+      });
       return;
     }
+
+    if (cars.length > 0) {
+      bot(
+        `A car of its own costs from <b>${naira(lists?.carFrom ?? 0)}</b> instead of ` +
+          `${naira(lists?.feeFrom ?? 0)}, because it goes out just for you.`,
+        520
+      );
+    } else {
+      bot("These are the other runs I can put you on.", 460);
+    }
+
+    const rows = [
+      ...cars.map((car) => ({
+        dow: car.dow,
+        dom: car.dom,
+        title: `Car of its own, ${car.day === "later" ? "" : `${car.day}, `}`.replace(/, $/, ""),
+        when: car.label,
+        fee: lists?.carFrom ?? 0,
+        rush: true,
+      })),
+      ...runs.map((run) => ({
+        dow: run.dow,
+        dom: run.dom,
+        title: `Run ${run.said}`,
+        when: run.window,
+        fee: lists?.feeFrom ?? 0,
+        rush: false,
+      })),
+    ];
+
+    setAsk({
+      of: "slots",
+      slots: rows,
+      onPick: (which) => {
+        if (which < cars.length) {
+          const car = cars[which];
+          held.current.car = car;
+          held.current.run = null;
+          me(`A car of its own, ${car.phrase || car.label}`);
+          askOrder();
+          return;
+        }
+        const run = runs[which - cars.length];
+        held.current.car = null;
+        held.current.run = run;
+        me(`Run ${run.said}, ${run.window.charAt(0).toLowerCase()}${run.window.slice(1)}`);
+        askOrder();
+      },
+    });
+  }, [askOrder, bot, me]);
+
+  const askSlot = useCallback(() => {
+    setAt(1);
+    const lists = startRef.current;
+    const runs = lists?.runs ?? [];
+    if (runs.length === 0) {
+      bot("Nothing is open for orders this minute. A person can still sort you out.");
+      setAsk({
+        of: "buttons",
+        buttons: [{ said: "Message us on WhatsApp", look: "green", href: handOver() }],
+      });
+      return;
+    }
+
     const first = runs[0];
+    held.current.run = first;
     bot(`Our next run to <b>${held.current.hostel}</b> is <b>${first.said}</b>.`, 480);
     say(
       {
@@ -1126,51 +1272,34 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           dow: first.dow,
           dom: first.dom,
           title: `Run ${first.said}`,
-          when: `Arrives ${first.window}`,
-          note: `Orders close ${first.closes} · delivery from ${naira(startRef.current?.feeFrom ?? 0)}`,
+          // Lower case inside a sentence. "Arrives Between 5pm and 7pm" is
+          // the tell that a label has been dropped into prose unread.
+          when: `Arrives ${first.window.charAt(0).toLowerCase()}${first.window.slice(1)}`,
+          note: `Orders close ${first.closes} · delivery from ${naira(lists?.feeFrom ?? 0)}`,
         },
       },
       420
     );
-    if (runs.length === 1) {
-      setAsk({
-        of: "buttons",
-        buttons: [{ said: "That works", go: () => { me("That works"); held.current.run = first; askOrder(); } }],
-        hint: "That is the soonest we can reach you.",
-      });
-      return;
-    }
-    setAsk({
-      of: "slots",
-      slots: runs.slice(0, 4).map((run) => ({
-        dow: run.dow,
-        dom: run.dom,
-        title: `Run ${run.said}`,
-        when: run.window,
-        fee: startRef.current?.feeFrom ?? 0,
-        rush: false,
-      })),
-      onPick: (which) => {
-        const run = runs[which];
-        held.current.run = run;
-        me(`Run ${run.said}, ${run.window}`);
-        askOrder();
-      },
-    });
-  }, [askOrder, bot, me, say, waLink]);
 
-  /*
-   * Which block, typed rather than hunted for.
-   *
-   * Sixteen of them in a box that scrolls with nothing to say it scrolls
-   * is a list that looks like six, and somebody whose block is the
-   * fourteenth taps WhatsApp instead. Typing is two letters and the same
-   * forgiving matching the food gets: "quen mary" is Queen Mary, "edc"
-   * finds the Enterprise Development Centre.
-   *
-   * The list is still one tap away for anybody who would rather look, and
-   * it is what somebody sees when nothing they typed was close.
-   */
+    const sooner = (lists?.cars ?? []).length > 0 || runs.length > 1;
+    setAsk({
+      of: "buttons",
+      buttons: [
+        { said: "That works", go: () => { me("That works"); askOrder(); } },
+        ...(sooner
+          ? [
+              {
+                said: "I need it sooner",
+                look: "alt" as const,
+                go: () => { me("I need it sooner"); askSooner(); },
+              },
+            ]
+          : []),
+      ],
+      hint: sooner ? undefined : "That is already the soonest we can reach you.",
+    });
+  }, [askOrder, askSooner, bot, handOver, me, say]);
+
   const takeBlock = useCallback(
     (hostel: string) => {
       held.current.hostel = hostel;
