@@ -162,20 +162,8 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
    * arrived by the time it is asked rather than the ones that had.
    */
   const startRef = useRef<Start | null>(null);
-  /*
-   * The part of the screen the phone is actually showing.
-   *
-   * A sheet sized to the window is the right size until the keyboard
-   * opens. iOS does not shrink the window for a keyboard, it covers it, so
-   * the bottom of the panel, which is the box somebody is typing into,
-   * ends up underneath it and the page behind starts scrolling instead.
-   *
-   * The visual viewport is the only thing that knows where the keyboard
-   * is, so the sheet is sized and placed off that, and only on a phone,
-   * where the panel is a sheet rather than a card in the corner.
-   */
-  const [seen, setSeen] = useState<{ high: number; from: number } | null>(null);
-  const [sheet, setSheet] = useState(false);
+  /** The sheet itself, so the keyboard can move it without a re-render. */
+  const panel = useRef<HTMLDivElement | null>(null);
   const held = useRef<Held>({ ...EMPTY });
   /* The option walk, held in a box so the steps above it can reach it.
      They are written in the order a person meets them, which puts the
@@ -311,26 +299,46 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
 
   useEffect(() => {
     if (log.current) log.current.scrollTop = log.current.scrollHeight;
-  }, [lines, typing, ask, seen]);
+  }, [lines, typing, ask]);
 
-  useEffect(() => {
-    const narrow = window.matchMedia("(max-width: 560px)");
-    const read = () => setSheet(narrow.matches);
-    read();
-    narrow.addEventListener("change", read);
-    return () => narrow.removeEventListener("change", read);
-  }, []);
-
+  /*
+   * The sheet follows the keyboard without React in the way.
+   *
+   * iOS fires a stream of viewport events while the keyboard slides, and
+   * re-rendering on each one is always a frame behind: the panel lagged,
+   * then snapped. The height is written straight onto the element from
+   * the handler instead, so it moves with the keyboard rather than after
+   * it, and on a desk the inline sizes are cleared and the stylesheet
+   * takes the panel back.
+   */
   useEffect(() => {
     const view = window.visualViewport;
-    if (!open || !view) return undefined;
-    const read = () => setSeen({ high: view.height, from: view.offsetTop });
-    read();
-    view.addEventListener("resize", read);
-    view.addEventListener("scroll", read);
+    if (!open) return undefined;
+
+    const narrow = window.matchMedia("(max-width: 560px)");
+    const fit = () => {
+      const box = panel.current;
+      if (!box) return;
+      if (!narrow.matches || !view) {
+        box.style.removeProperty("height");
+        box.style.removeProperty("top");
+        box.style.removeProperty("bottom");
+        return;
+      }
+      box.style.height = `${Math.round(view.height)}px`;
+      box.style.top = `${Math.round(view.offsetTop)}px`;
+      box.style.bottom = "auto";
+      if (log.current) log.current.scrollTop = log.current.scrollHeight;
+    };
+
+    fit();
+    view?.addEventListener("resize", fit);
+    view?.addEventListener("scroll", fit);
+    narrow.addEventListener("change", fit);
     return () => {
-      view.removeEventListener("resize", read);
-      view.removeEventListener("scroll", read);
+      view?.removeEventListener("resize", fit);
+      view?.removeEventListener("scroll", fit);
+      narrow.removeEventListener("change", fit);
     };
   }, [open]);
 
@@ -1874,16 +1882,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       )}
 
       {open && (
-        <div
-          className="sudubot-panel"
-          role="dialog"
-          aria-label="Sudu Bot"
-          style={
-            sheet && seen
-              ? { height: `${seen.high}px`, top: `${seen.from}px`, bottom: "auto" }
-              : undefined
-          }
-        >
+        <div className="sudubot-panel" role="dialog" aria-label="Sudu Bot" ref={panel}>
           <div className="phead">
             <span className="av" aria-hidden>
               <span className="avg">
