@@ -1018,7 +1018,12 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       },
       380
     );
-    bot("That is normal. Bank alerts are sometimes minutes and sometimes longer.", 500);
+    bot(
+      mine.watching
+        ? "That is normal. Bank alerts are sometimes minutes and sometimes longer."
+        : "That is normal. Somebody has to look at the account, and that is not always this minute.",
+      500
+    );
     bot(
       "You do not have to sit here. Leave this open and I will say so the moment it lands, " +
         "or close it and we will message you.",
@@ -1055,27 +1060,27 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     setAt(5);
     const mine = held.current;
 
-    if (!mine.watching) {
-      say(
-        {
-          kind: "status",
-          tone: "",
-          html: "<span><b>Got it.</b> We check every transfer against the account by hand.</span>",
-        },
-        420
-      );
-      bot(
-        `Your order <b class="mono">${mine.ref}</b> is saved against the <b>${mine.run?.said ?? "next"}</b> run. ` +
-          `We will message you on WhatsApp at <b>${mine.phone}</b> the moment it lands.`,
-        520
-      );
-      setAsk({
-        of: "buttons",
-        buttons: [{ said: "Message us on WhatsApp", look: "green", href: handOver() }],
-        hint: `Quote <b>${mine.ref}</b> if you message us.`,
-      });
-      return;
-    }
+    /*
+     * It watches either way.
+     *
+     * The setting decides whether a bank alert can mark an order paid by
+     * itself. It has nothing to do with whether this chat should notice
+     * when one is: a person marking it from Orders is the same event as
+     * far as somebody sitting here is concerned, and a chat that went
+     * blind because of a setting in admin would be a chat that missed the
+     * one thing it was waiting for.
+     *
+     * So the setting changes the wording and nothing else. On, we are
+     * watching for the alert. Off, somebody is checking the account, and
+     * either way this turns green the moment the order does.
+     */
+    bot(
+      mine.watching
+        ? "Watching for it now."
+        : "Got it. Somebody checks every transfer against the account, so this can " +
+          "take a few minutes. Leave this open and I will say so the moment it lands.",
+      450
+    );
 
     let tries = 0;
     const look = async () => {
