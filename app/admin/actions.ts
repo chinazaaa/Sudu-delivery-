@@ -45,6 +45,8 @@ import {
   ATTACHMENT_LIMIT,
   emailList,
   sendOneEmail,
+  fromAs,
+  fromParts,
   wordsFrom,
   type Attachment,
 } from "@/lib/email";
@@ -4549,7 +4551,7 @@ async function tripAlreadyGoing(
 export type EmailState = {
   error: string | null;
   /** What was sent, and to how many people, for the line after a send. */
-  sent: { to: number; cc: number; files: number } | null;
+  sent: { to: number; cc: number; bcc: number; files: number } | null;
 };
 
 /**
@@ -4560,10 +4562,12 @@ export type EmailState = {
  * written in the box and sent as it stands, because anything cleverer would
  * mean a template language to learn and a preview that lies.
  *
- * The from address is the one Resend is set up with, on the deployment, and
- * is deliberately not editable here: an address nobody has verified bounces,
- * or lands in spam, and the sender is the one part of an email that cannot be
- * guessed at.
+ * The from address is picked from the shop's own, and checked against the
+ * domain this deployment is verified for: hello@ most days, orders@ on an
+ * invoice, privacy@ when somebody asks what we hold on them. Off that
+ * domain it is refused rather than sent, because an unverified sender
+ * bounces or lands in spam and the sender is the one part of an email that
+ * cannot be guessed at.
  */
 export async function sendEmail(
   _previous: EmailState,
@@ -4573,9 +4577,26 @@ export async function sendEmail(
 
   const to = emailList(String(form.get("to") ?? ""));
   const cc = emailList(String(form.get("cc") ?? ""));
+  // A copy nobody on the email can see. Ours, nearly always: a record of
+  // what went out, filed without telling a parent who else read it.
+  const bcc = emailList(String(form.get("bcc") ?? ""));
   const subject = String(form.get("subject") ?? "").trim();
   const html = String(form.get("html") ?? "").trim();
   const replyTo = emailList(String(form.get("reply_to") ?? ""))[0] ?? "";
+
+  // Which of the shop's own addresses it goes out as. Most days hello@,
+  // and now and then orders@ or privacy@, which is the difference between
+  // an answer that looks like it came from the right desk and one that
+  // does not. Only ever on the verified domain: anything else bounces.
+  const from = fromAs(String(form.get("from_as") ?? ""));
+  if (from === null) {
+    return {
+      error:
+        `That is not one of our addresses. It has to be on ${fromParts().domain}, ` +
+        "because that is the domain Resend has verified.",
+      sent: null,
+    };
+  }
 
   if (to.length === 0) {
     return { error: "Put at least one address in To. One per line, or separated by commas.", sent: null };
@@ -4585,9 +4606,9 @@ export async function sendEmail(
 
   // Resend takes fifty addresses in one go, and a list longer than that is a
   // mailing list rather than an email.
-  if (to.length + cc.length > 50) {
+  if (to.length + cc.length + bcc.length > 50) {
     return {
-      error: `That is ${to.length + cc.length} addresses. Fifty is the most one email can carry.`,
+      error: `That is ${to.length + cc.length + bcc.length} addresses. Fifty is the most one email can carry.`,
       sent: null,
     };
   }
@@ -4614,6 +4635,8 @@ export async function sendEmail(
   const result = await sendOneEmail({
     to,
     cc,
+    bcc,
+    from,
     subject,
     html,
     text: wordsFrom(html),
@@ -4625,7 +4648,7 @@ export async function sendEmail(
 
   return {
     error: null,
-    sent: { to: to.length, cc: cc.length, files: attachments.length },
+    sent: { to: to.length, cc: cc.length, bcc: bcc.length, files: attachments.length },
   };
 }
 

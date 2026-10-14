@@ -1,6 +1,6 @@
 import PageHeader from "@/components/admin/PageHeader";
 import EmailComposer from "@/components/admin/EmailComposer";
-import { adminEmails, ATTACHMENT_LIMIT } from "@/lib/email";
+import { adminEmails, ATTACHMENT_LIMIT, fromChoices, fromParts } from "@/lib/email";
 import { safeSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +45,15 @@ export default async function EmailPage() {
 
       <EmailComposer
         from={from || "Sudu Delivery <onboarding@resend.dev>"}
+        /* The shop's own post room, so sending as orders@ for one invoice is
+           a dropdown rather than a second deployment. All on the one domain
+           Resend has verified, because an unverified sender bounces. */
+        /* Only where this deployment has a real sender set. With EMAIL_FROM
+           unset the fallback is Resend's own test address, and offering
+           hello@resend.dev as a choice would be offering an address that
+           cannot send. */
+        choices={from === "" ? [] : fromChoices()}
+        domain={from === "" ? "" : fromParts().domain}
         defaultCc={adminEmails(settings.admin_emails).join(", ")}
         limitMb={Math.round(ATTACHMENT_LIMIT / (1024 * 1024))}
       />

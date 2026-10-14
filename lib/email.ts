@@ -11,6 +11,67 @@ import { safeSettings } from "./settings";
  */
 export type EmailKind = "order" | "group" | "abandoned" | "mail";
 
+/**
+ * The address this deployment is allowed to send as.
+ *
+ * Resend will only carry a From on a domain somebody has verified with
+ * them, so this one line is the whole permission: everything below either
+ * is this address or is another name on the same domain.
+ */
+export const FROM_LINE =
+  process.env.EMAIL_FROM || "Sudu Delivery <onboarding@resend.dev>";
+
+/** "Sudu Delivery <hello@sudu.store>" pulled apart. */
+export function fromParts(line: string = FROM_LINE): {
+  name: string;
+  address: string;
+  domain: string;
+} {
+  const said = String(line ?? "").trim();
+  const angled = said.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/);
+  const name = (angled?.[1] ?? "").trim();
+  const address = (angled?.[2] ?? said).trim().toLowerCase();
+  const at = address.lastIndexOf("@");
+  return { name, address, domain: at < 0 ? "" : address.slice(at + 1) };
+}
+
+/**
+ * The addresses the shop can honestly send from.
+ *
+ * The ones the site already prints, plus whatever this deployment sends as,
+ * so the list is the shop's own post room rather than a guess. Anything
+ * else on the same domain is still allowed; this is the shortlist, not the
+ * rule.
+ */
+export function fromChoices(line: string = FROM_LINE): string[] {
+  const { address, domain } = fromParts(line);
+  if (domain === "") return [address];
+  const named = ["hello", "orders", "support", "privacy", "terms", "payments"].map(
+    (one) => `${one}@${domain}`
+  );
+  return [...new Set([address, ...named])];
+}
+
+/**
+ * A chosen sender, turned into a From header we are allowed to use.
+ *
+ * Anything on the verified domain goes out under the shop's own name, so
+ * picking orders@ for one letter is one dropdown rather than a second
+ * deployment. Anything off it is refused rather than quietly sent: an
+ * unverified sender bounces, or lands in spam, and the sender is the one
+ * part of an email that cannot be guessed at.
+ */
+export function fromAs(chosen: string, line: string = FROM_LINE): string | null {
+  const said = String(chosen ?? "").trim().toLowerCase();
+  if (said === "") return line;
+
+  const { name, domain } = fromParts(line);
+  const full = said.includes("@") ? said : domain === "" ? "" : `${said}@${domain}`;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(full)) return null;
+  if (domain !== "" && full.slice(full.lastIndexOf("@") + 1) !== domain) return null;
+  return name === "" ? full : `${name} <${full}>`;
+}
+
 export async function emailAdmins(
   subject: string,
   body: string,
@@ -42,7 +103,7 @@ export async function emailAdmins(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM || "Sudu Delivery <onboarding@resend.dev>",
+        from: FROM_LINE,
         to,
         subject,
         text: body,
@@ -115,6 +176,13 @@ export const ATTACHMENT_LIMIT = 8 * 1024 * 1024;
 export async function sendOneEmail(args: {
   to: string[];
   cc?: string[];
+  /** A copy nobody else on the email can see. Ours, usually: a record of
+   *  what went out, filed without telling the recipient who else is
+   *  reading it. */
+  bcc?: string[];
+  /** The sender, where it is not the deployment's own. Already checked
+   *  against the verified domain by whoever passes it. */
+  from?: string;
   subject: string;
   html: string;
   /** The same thing without the markup, for a client that will not show it
@@ -148,9 +216,10 @@ export async function sendOneEmail(args: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM || "Sudu Delivery <onboarding@resend.dev>",
+        from: args.from || FROM_LINE,
         to: args.to,
         ...(args.cc && args.cc.length > 0 ? { cc: args.cc } : {}),
+        ...(args.bcc && args.bcc.length > 0 ? { bcc: args.bcc } : {}),
         ...(args.replyTo ? { reply_to: args.replyTo } : {}),
         ...(args.headers && Object.keys(args.headers).length > 0
           ? { headers: args.headers }

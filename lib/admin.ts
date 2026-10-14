@@ -1260,7 +1260,11 @@ async function toHandOverToday(): Promise<number> {
  * one is slow.
  *
  * A badge on everything is a badge on nothing, so only the things that cost
- * money if they are left get one.
+ * money if they are left get one: money owed and bags to hand over, carts
+ * walked away from, somebody applying, a letter unanswered, something asked
+ * for that we do not stock, a parcel still to carry, somebody unhappy this
+ * fortnight. Everything else on the menu is a page you go to, not a page
+ * that calls you.
  */
 export async function waitingCounts(): Promise<Record<string, number>> {
   try {
@@ -1280,11 +1284,21 @@ export async function waitingCounts(): Promise<Record<string, number>> {
 
     // Carts filled in and walked away from. The rail carries this one in the
     // quieter grey: it is work waiting rather than money already owed.
+    // Named for the table it is actually in. It read saved_carts, which is
+    // not a table in this database, so the one page on the menu that is
+    // only ever about money left on the floor has had a grey dot since the
+    // dot was drawn, however many carts were sitting there.
     const { count: left } = await db()
-      .from("saved_carts")
+      .from("carts")
       .select("id", { count: "exact", head: true })
       .is("converted_at", null)
-      .is("handled_at", null);
+      .is("handled_at", null)
+      // The same three quarters of an hour the screen waits before calling
+      // a cart abandoned: somebody still choosing is not somebody to chase.
+      // The shop can set its own on the carts page; this is the default,
+      // because a count on a menu is not worth a second query for the
+      // settings row.
+      .lt("updated_at", new Date(Date.now() - 45 * 60000).toISOString());
     if (left && left > 0) out["/admin/carts"] = left;
 
     // Somebody asking to promote the shop and waiting on an answer. An
@@ -1308,6 +1322,35 @@ export async function waitingCounts(): Promise<Record<string, number>> {
       // means nothing when it moves.
       .not("to_addr", "ilike", `%${ALERTS_AT}%`);
     if (post && post > 0) out["/admin/inbox"] = post;
+
+    // Somebody asking for something we do not stock, waiting on an answer.
+    const { count: asked } = await db()
+      .from("custom_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "new");
+    if (asked && asked > 0) out["/admin/requests"] = asked;
+
+    // Parcels agreed and not yet handed over. A parcel is never on a run
+    // sheet, so until it is delivered the only thing standing between it
+    // and being forgotten is this.
+    const { count: carrying } = await db()
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .not("parcel_route", "is", null)
+      .not("status", "in", NOT_ORDERS_SQL)
+      .neq("status", "delivered");
+    if (carrying && carrying > 0) out["/admin/parcels"] = carrying;
+
+    // Somebody unhappy, recently. Nothing marks a review as answered, so
+    // this one clears itself with the fortnight rather than with a tick:
+    // a two star from three weeks ago is not today's job, and a dot that
+    // can never go out is a dot nobody reads.
+    const { count: unhappy } = await db()
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .lte("rating", 2)
+      .gte("rated_at", new Date(Date.now() - 14 * 86400000).toISOString());
+    if (unhappy && unhappy > 0) out["/admin/reviews"] = unhappy;
 
     return out;
   } catch {

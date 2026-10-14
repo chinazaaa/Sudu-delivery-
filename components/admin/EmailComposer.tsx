@@ -17,12 +17,18 @@ import { sendEmail, type EmailState } from "@/app/admin/actions";
  */
 export default function EmailComposer({
   from,
+  choices = [],
+  domain = "",
   defaultCc = "",
   limitMb,
 }: {
-  /** The address it will go out as, which is set on the deployment rather
-   *  than here: an unverified sender bounces. */
+  /** The address it goes out as unless another is picked: whatever this
+   *  deployment is set up with. */
   from: string;
+  /** The shop's other addresses on the same verified domain. */
+  choices?: string[];
+  /** The domain Resend has verified, for the one that is typed in. */
+  domain?: string;
   /** The shop's own addresses, so a copy to ourselves is one tick. */
   defaultCc?: string;
   limitMb: number;
@@ -36,7 +42,15 @@ export default function EmailComposer({
   const [subject, setSubject] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [copyUs, setCopyUs] = useState(false);
+  const [blindUs, setBlindUs] = useState(false);
   const [showing, setShowing] = useState<"preview" | "code">("preview");
+
+  // Which of ours it goes out as. Nearly always the first, which is why it
+  // is a dropdown that starts on the right one rather than a field to fill
+  // in: the swap is for the odd letter, not for every day.
+  const [sender, setSender] = useState(choices[0] ?? "");
+  const [other, setOther] = useState("");
+  const elsewhere = sender === OTHER;
 
   const weight = files.reduce((all, one) => all + one.size, 0);
   const tooHeavy = weight > limitMb * 1024 * 1024;
@@ -56,9 +70,47 @@ export default function EmailComposer({
   return (
     <form action={action} className="space-y-4">
       <div className="card space-y-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="ticket text-muted">From</p>
-          <p className="text-sm font-semibold">{from}</p>
+        {/* Who it comes from. One tap most days, because it is already on
+            the address the shop writes from; the box underneath is for the
+            one letter a term that has to come from somewhere else. */}
+        <div>
+          <label className="label" htmlFor="from_pick">
+            From
+          </label>
+          {choices.length > 1 ? (
+            <>
+              <select
+                id="from_pick"
+                value={sender}
+                onChange={(event) => setSender(event.target.value)}
+                className="field"
+              >
+                {choices.map((one) => (
+                  <option key={one} value={one}>
+                    {one}
+                  </option>
+                ))}
+                <option value={OTHER}>Another of ours…</option>
+              </select>
+              {elsewhere && (
+                <input
+                  value={other}
+                  onChange={(event) => setOther(event.target.value)}
+                  className="field mt-2 font-mono text-sm"
+                  placeholder={domain === "" ? "name@your-domain" : `others@${domain}`}
+                  aria-label="The address it comes from"
+                />
+              )}
+              <input type="hidden" name="from_as" value={elsewhere ? other : sender} />
+              <p className="mt-1 text-xs text-muted">
+                {domain === ""
+                  ? `It goes out as ${from}.`
+                  : `Any address on ${domain}. It goes out under the shop's name either way.`}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm font-semibold">{from}</p>
+          )}
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -103,6 +155,35 @@ export default function EmailComposer({
               </label>
             )}
           </div>
+        </div>
+
+        {/* A copy nobody on the email can see. The difference matters: a Cc
+            to ourselves on a letter to a parent shows that parent every
+            address we put on it, and a quote with the shop's whole inbox
+            listed on it reads as a round robin. */}
+        <div>
+          <label className="label" htmlFor="bcc">
+            Bcc
+          </label>
+          <textarea
+            id="bcc"
+            name="bcc"
+            rows={2}
+            className="field font-mono text-sm"
+            placeholder="Optional, and nobody on the email sees it"
+            defaultValue={blindUs ? defaultCc : ""}
+            key={blindUs ? "blind-us" : "blind-nobody"}
+          />
+          {defaultCc !== "" && (
+            <label className="mt-1 flex items-center gap-2 text-xs text-muted">
+              <input
+                type="checkbox"
+                checked={blindUs}
+                onChange={(event) => setBlindUs(event.target.checked)}
+              />
+              Blind copy it to us
+            </label>
+          )}
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -243,6 +324,7 @@ export default function EmailComposer({
         <p className="rounded-[10px] border-2 border-mint bg-white px-4 py-3 text-sm font-semibold text-mint">
           Sent to {state.sent.to} {state.sent.to === 1 ? "address" : "addresses"}
           {state.sent.cc > 0 ? `, copied to ${state.sent.cc}` : ""}
+          {state.sent.bcc > 0 ? `, blind copied to ${state.sent.bcc}` : ""}
           {state.sent.files > 0
             ? `, with ${state.sent.files} ${state.sent.files === 1 ? "attachment" : "attachments"}`
             : ""}
@@ -265,6 +347,10 @@ export default function EmailComposer({
     </form>
   );
 }
+
+/** What the dropdown calls the option that is a box to type in. Not an
+ *  address, so it can never be sent as one. */
+const OTHER = "__other__";
 
 /** Something that already looks like an email, so the box is never empty and
  *  nobody has to remember how a table-based layout starts. */
