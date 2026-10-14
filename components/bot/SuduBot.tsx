@@ -198,6 +198,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
    * everything already said carried across.
    */
   const misses = useRef(0);
+  /** How many more of something somebody said they wanted and has not
+   *  picked yet, so the chat asks rather than letting them forget. */
+  const owed = useRef(0);
   const askOrderRef = useRef<((again?: boolean) => void) | null>(null);
   const byeRef = useRef<(() => void) | null>(null);
   const poll = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -536,6 +539,47 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             shelf?: string;
           };
           /*
+           * The same thing on four counters.
+           *
+           * Nearly everybody sells chicken, and where it comes from
+           * changes the price, the menu and the questions after it. So it
+           * is asked first, and then the search runs again at that one
+           * counter with the same words.
+           */
+          if (got.how === "where" && (got.shops ?? []).length > 1) {
+            misses.current = 0;
+            bot("A few places do that. Where from?", 450);
+            setAsk({
+              of: "chips",
+              chips: [
+                ...(got.shops ?? []).map((shop, which) => ({
+                  said: shop.name,
+                  hot: which === 0,
+                  go: () => {
+                    me(shop.name);
+                    queue.current = [shop];
+                    setAsk({ of: "nothing" });
+                    fetch("/api/bot/find", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ said, kitchen: shop.id }),
+                    })
+                      .then((answer) => answer.json())
+                      .then((again: { hits: Hit[] }) => {
+                        queue.current = [];
+                        if (again.hits[0]) walk(again.hits[0], again.hits[0].qty ?? got.qty);
+                        else askOrder();
+                      })
+                      .catch(() => askOrder());
+                  },
+                })),
+              ],
+              hint: "The price and the menu change with the counter.",
+            });
+            return;
+          }
+
+          /*
            * A kind of thing rather than one thing. "2 medium pizza" is not
            * a dish on any menu; it is a question, and the answer is the
            * shelf it came from.
@@ -559,8 +603,51 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
                     })
                       .then((answer) => answer.json())
                       .then((again: { hits: Hit[] }) => {
-                        if (again.hits[0]) walk(again.hits[0], got.qty);
-                        else askOrder();
+                        if (!again.hits[0]) {
+                          askOrder();
+                          return;
+                        }
+                        /*
+                         * Two pizzas is not necessarily two of one pizza.
+                         *
+                         * Somebody who said "2 medium pizza" and then
+                         * picked one has not said whether the second is
+                         * the same. Asked once, it is a tap; assumed, it
+                         * is two Margheritas when they wanted one of each.
+                         */
+                        if (got.qty > 1) {
+                          const hit = again.hits[0];
+                          bot(
+                            `All <b>${got.qty}</b> the same, or a different one for the rest?`,
+                            450
+                          );
+                          setAsk({
+                            of: "buttons",
+                            buttons: [
+                              {
+                                said: `${got.qty} × ${hit.name}`,
+                                go: () => {
+                                  me(`${got.qty} × ${hit.name}`);
+                                  walk(hit, got.qty);
+                                },
+                              },
+                              {
+                                said: `One ${hit.name}, I will pick the rest`,
+                                look: "alt",
+                                go: () => {
+                                  me(`One ${hit.name}`);
+                                  // The rest are still owed, so the chat
+                                  // asks for them rather than leaving
+                                  // somebody to remember.
+                                  owed.current = got.qty - 1;
+                                  walk(hit, 1);
+                                },
+                              },
+                            ],
+                          });
+                          return;
+                        }
+                        walk(again.hits[0], 1);
                       })
                       .catch(() => askOrder());
                   },
@@ -744,6 +831,17 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               .map((line) => `${line.qty > 1 ? `${line.qty} × ` : ""}${line.name}`)
               .join(", ")
           );
+
+          if (owed.current > 0) {
+            const left = owed.current;
+            owed.current = 0;
+            bot(
+              left === 1 ? "And the other one?" : `And the other <b>${left}</b>?`,
+              450
+            );
+            askOrder(true);
+            return;
+          }
 
           /* Done with this counter, so the next one somebody named is the
              next question rather than something they have to remember. */
@@ -1594,6 +1692,8 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
 
   const begin = useCallback(() => {
     settled.current = false;
+    owed.current = 0;
+    misses.current = 0;
     stopWatching();
     held.current = { ...EMPTY, lines: [] };
     setLines([]);

@@ -151,6 +151,32 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     /*
+     * The same thing on four counters.
+     *
+     * Nearly everybody sells chicken. Asked for one across the whole
+     * shop, the honest first question is where from, because the answer
+     * changes the price, the menu and what the choices will be. Asked at
+     * one counter, it is not a question at all.
+     */
+    if (!only && found.hits.length > 1) {
+      const where: { id: string; name: string }[] = [];
+      for (const hit of found.hits) {
+        const shop = whose.get(hit.id);
+        if (shop && !where.some((one) => one.id === shop.id)) where.push(shop);
+      }
+      if (where.length > 1 && found.how !== "sure") {
+        return NextResponse.json({
+          how: "where",
+          qty: howMany(said),
+          person: false,
+          hits: [],
+          instead: [],
+          shops: where.slice(0, 6),
+        });
+      }
+    }
+
+    /*
      * A word that is a shelf rather than a dish.
      *
      * "2 medium pizza from Domino's" is not a dish on any menu, and
