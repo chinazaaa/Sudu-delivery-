@@ -84,8 +84,12 @@ export function linePrice(base: number, chosen: ChosenOption[]): number {
   const added = adds.reduce((sum, one) => sum + one.priceDelta, 0);
   if (halves.length === 0) return base + added;
 
-  const dearest = halves.reduce((most, one) => Math.max(most, halfPrice(one, adds)), 0);
-  return base + added + dearest;
+  // The halves carry the whole price, so the item's own is left out rather
+  // than added to it: a half and half costs what the dearer of its two
+  // pizzas costs, and nothing on top. The figure on the item is then free
+  // to be what a menu card wants, which is the cheapest it can come to,
+  // and a shop with half a menu imported still cannot sell at nothing.
+  return added + halves.reduce((most, one) => Math.max(most, halfPrice(one, adds)), 0);
 }
 
 /** One option as a page holds it, which is the shape the menu view uses. */

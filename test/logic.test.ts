@@ -3409,13 +3409,16 @@ test("a half and half costs the dearer half, not the two added together", () => 
   ];
 
   // Large, Extravaganza, BBQ Chicken: the Extravaganza is dearer, so that is
-  // what the pizza costs.
+  // what the pizza costs. The figure on the item itself is left out of it,
+  // because the halves are the whole price: here it is 8,600, the cheapest
+  // this pizza can come to, which is what a menu card wants to say.
+  assert.equal(pickedPrice(8600, groups, ["l", "ex", "bbq"]), 15225);
   assert.equal(pickedPrice(0, groups, ["l", "ex", "bbq"]), 15225);
   // The same two halves at medium, where the gap between them is different,
   // which is why no flat figure could ever have been right at both sizes.
-  assert.equal(pickedPrice(0, groups, ["m", "ex", "bbq"]), 9800);
+  assert.equal(pickedPrice(8600, groups, ["m", "ex", "bbq"]), 9800);
   // Both halves the cheaper flavour is the cheaper pizza, not two of it.
-  assert.equal(pickedPrice(0, groups, ["l", "bbq"]), 13650);
+  assert.equal(pickedPrice(8600, groups, ["l", "bbq"]), 13650);
 
   // What each half would make it, for the line beside its name.
   assert.equal(halfShown(groups[1], extravaganza, groups, ["l", "ex", "bbq"]), 15225);
