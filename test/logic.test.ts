@@ -94,6 +94,13 @@ const EMPTY_SETTINGS: Settings = { ...SETTINGS_DEFAULTS };
 
 import type { OrderLine } from "../lib/orders";
 import { halfShown, key as priceKey, pickedPrice } from "../lib/pricing";
+import {
+  find as botFind,
+  howMany as botHowMany,
+  wantsAPerson as botWantsAPerson,
+  yesNo as botYesNo,
+  type Candidate as BotCandidate,
+} from "../lib/bot-match";
 
 test("phone numbers normalise to one identity however they are typed", () => {
   const expected = "08031234567";
@@ -3449,4 +3456,54 @@ test("everything that is not halves still simply adds up", () => {
   ];
   assert.equal(pickedPrice(8800, groups, ["l", "cheese", "beef"]), 13900);
   assert.equal(pickedPrice(8800, groups, []), 8800);
+});
+
+test("a typo is an ordinary thing to type, not a reason to be thrown out", () => {
+  // The chat exists to make ordering faster than tapping through a menu.
+  // That only holds if a missing letter still finds the food, so this is
+  // the test that matters most: nobody should meet WhatsApp because they
+  // dropped an E.
+  const menu: BotCandidate[] = [
+    { id: "wings", name: "Chicken wings, 7 pcs", also: ["Domino's"] },
+    { id: "bbq", name: "BBQ Chicken pizza", also: ["Domino's"] },
+    { id: "marg", name: "Margherita pizza", also: ["Domino's"] },
+    { id: "cola", name: "Coca Cola 50cl", also: ["Domino's"] },
+  ];
+
+  // Letters missed out, letters doubled, letters swapped.
+  for (const typo of ["chiken wings", "chicken wigs", "chcken wings", "chickenn wings"]) {
+    const found = botFind(typo, menu);
+    assert.equal(found.hits[0]?.id, "wings", `${typo} should still find the wings`);
+  }
+
+  // Half a word is enough, because people stop typing when they can see it.
+  assert.equal(botFind("margh", menu).hits[0]?.id, "marg");
+
+  // Said plainly and in full, the chat does not stop to ask.
+  assert.equal(botFind("bbq chicken pizza", menu).how, "sure");
+
+  // Said loosely, where two things are genuinely close, it asks rather than
+  // guesses: a wrong guess costs an order, a question costs one tap.
+  const vague = botFind("chicken", menu);
+  assert.equal(vague.how, "asking");
+  assert.ok(vague.hits.length >= 2, "should offer the ones it is choosing between");
+
+  // Nothing like anything on the menu is lost, and the chat shows the list
+  // rather than the door.
+  assert.equal(botFind("a bicycle", menu).how, "lost");
+});
+
+test("the chat reads how many, and whether somebody wants a person", () => {
+  assert.equal(botHowMany("2 medium bbq pizzas and wings"), 2);
+  assert.equal(botHowMany("three chicken wings"), 3);
+  assert.equal(botHowMany("a pizza"), 1);
+  // Nothing daft: ninety pizzas is a phone call, not a chat.
+  assert.equal(botHowMany("90 pizzas"), 1);
+
+  assert.equal(botWantsAPerson("can I talk to someone"), true);
+  assert.equal(botWantsAPerson("chicken wings"), false);
+
+  assert.equal(botYesNo("yeah that one"), "yes");
+  assert.equal(botYesNo("no I meant the other"), "no");
+  assert.equal(botYesNo("chicken"), "");
 });

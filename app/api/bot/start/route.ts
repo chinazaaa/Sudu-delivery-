@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { openBatches } from "@/lib/batches";
 import { hostelNames } from "@/lib/hostels";
 import { menuView } from "@/lib/menu";
-import { activeBands, safeSettings } from "@/lib/settings";
+import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
+import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { headlineFee } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
 import { runDateLabel } from "@/lib/time";
@@ -25,12 +26,14 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(): Promise<NextResponse> {
   try {
-    const [hostels, batches, menu, settings, bands] = await Promise.all([
+    const [hostels, batches, menu, settings, bands, hours, sameDay] = await Promise.all([
       hostelNames(),
       openBatches().catch(() => []),
       menuView().catch(() => []),
       safeSettings(),
       activeBands(),
+      hoursByDay().catch(() => null),
+      sameDayPricing().catch(() => null),
     ]);
 
     const runs = batches
@@ -62,9 +65,43 @@ export async function GET(): Promise<NextResponse> {
         name: place.restaurant.name,
       }));
 
+    /*
+     * A car sent out for one order, where the shop is still offering them.
+     *
+     * Worked out by the same two functions the checkout uses, which is the
+     * point: the hours the shop delivers are a setting somebody changes,
+     * and a slot already covered by a scheduled run is not a thing to sell
+     * twice. Order at six and the soonest car is tomorrow, and the chat
+     * says tomorrow because it asked rather than because it guessed.
+     */
+    const cars =
+      hours === null
+        ? []
+        : slotsWorthOffering(
+            deliverySlots(new Date(), hours),
+            batches.map((batch) => ({
+              run_date: batch.run_date,
+              window: batch.delivery_window_text,
+            }))
+          ).slice(0, 4).map((slot) => {
+            const day = new Date(slot.at);
+            return {
+              at: slot.at,
+              label: slot.label,
+              phrase: slot.phrase,
+              day: slot.day,
+              date: slot.date,
+              dow: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][day.getDay()],
+              dom: day.getDate(),
+            };
+          });
+
     return NextResponse.json({
       hostels,
       runs,
+      cars,
+      /** What a car of its own starts at, said as a floor like the rest. */
+      carFrom: sameDay === null ? 0 : headlineFee(sameDay.bands),
       kitchens,
       // What delivery starts at, said as a floor rather than as the price.
       feeFrom: headlineFee(bands),
@@ -76,6 +113,8 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({
       hostels: [],
       runs: [],
+      cars: [],
+      carFrom: 0,
       kitchens: [],
       feeFrom: 0,
       whatsapp: "",

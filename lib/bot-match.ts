@@ -1,0 +1,233 @@
+/**
+ * Finding what somebody meant, when they typed it in a hurry.
+ *
+ * The whole point of the chat is that ordering is faster than tapping
+ * through a menu. That only holds if "chiken wings" finds the chicken
+ * wings. A matcher that needs the spelling is a matcher that sends people
+ * to WhatsApp, and sending somebody to WhatsApp is the chat failing at the
+ * one thing it exists for.
+ *
+ * So nothing here is exact. Words are compared on how alike they look,
+ * a missing letter costs a little and a wrong one costs a little more, and
+ * what comes back is a ranked list with a confidence on it. The chat does
+ * the rest: one clear answer goes straight in, a near thing asks "do you
+ * mean", and only somebody who says no to everything twice is offered a
+ * person.
+ *
+ * Pure, and handed its candidates, so every bit of this can be tested
+ * without a database and without guessing what the menu holds.
+ */
+
+export type Candidate = {
+  id: string;
+  name: string;
+  /** Anything else worth matching on: the description, the kitchen, the
+   *  names of its own choices. A pizza whose flavour is an option is still
+   *  findable by that flavour. */
+  also?: string[];
+};
+
+export type Hit = {
+  id: string;
+  name: string;
+  /** 0 to 1. What the chat reads to decide between going ahead and asking. */
+  score: number;
+};
+
+/** Words that say nothing about what somebody wants. */
+const NOISE = new Set([
+  "i", "id", "we", "a", "an", "the", "and", "or", "of", "for", "to", "with",
+  "want", "wants", "like", "need", "get", "give", "send", "please", "pls",
+  "can", "could", "would", "me", "my", "us", "some", "any", "just", "also",
+  "add", "order", "buy", "have", "one", "two", "three", "four", "five",
+  "six", "seven", "eight", "nine", "ten", "pcs", "pc", "piece", "pieces",
+  "plus", "then", "thanks", "thank", "you",
+]);
+
+/** Everything lowercase, with the punctuation gone. */
+export function flatten(said: string): string {
+  return String(said ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** The words worth matching on, noise dropped. */
+export function words(said: string): string[] {
+  return flatten(said)
+    .split(" ")
+    .filter((word) => word.length > 1 && !NOISE.has(word) && !/^\d+$/.test(word));
+}
+
+/**
+ * How many of a thing somebody asked for.
+ *
+ * The first plain number in the sentence, because "2 medium pizzas" puts it
+ * at the front and "pizza x2" is not how anybody types. Anything daft is
+ * one: a chat is not the place to argue about ordering ninety pizzas, and
+ * the shop would ring them anyway.
+ */
+export function howMany(said: string): number {
+  const digits = flatten(said).match(/\b(\d{1,2})\b/);
+  if (digits) {
+    const asked = Number(digits[1]);
+    if (asked >= 1 && asked <= 20) return asked;
+  }
+  const spelled: Record<string, number> = {
+    one: 1, two: 2, three: 3, four: 4, five: 5,
+    six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  };
+  for (const [word, count] of Object.entries(spelled)) {
+    if (new RegExp(`\\b${word}\\b`).test(flatten(said))) return count;
+  }
+  return 1;
+}
+
+/** The pairs of letters in a word, for comparing two spellings of one. */
+function pairs(word: string): string[] {
+  const out: string[] = [];
+  for (let at = 0; at < word.length - 1; at += 1) out.push(word.slice(at, at + 2));
+  return out;
+}
+
+/**
+ * How alike two words look, from 0 to 1.
+ *
+ * The same word is 1. One word inside another is nearly 1, so "chick"
+ * finds "chicken" and nobody has to finish typing. Otherwise it is how
+ * many letter pairs they share, which is forgiving of a dropped letter, a
+ * doubled one and a swapped pair, and unforgiving of two different words
+ * that happen to start the same.
+ */
+export function alike(a: string, b: string): number {
+  if (a === b) return 1;
+  if (a.length < 2 || b.length < 2) return 0;
+  if (a.length >= 3 && b.startsWith(a)) return 0.93;
+  if (b.length >= 3 && a.startsWith(b)) return 0.9;
+  if (a.length >= 4 && b.includes(a)) return 0.86;
+
+  const mine = pairs(a);
+  const theirs = pairs(b);
+  const left = [...theirs];
+  let shared = 0;
+  for (const pair of mine) {
+    const at = left.indexOf(pair);
+    if (at > -1) {
+      shared += 1;
+      left.splice(at, 1);
+    }
+  }
+  return (2 * shared) / (mine.length + theirs.length);
+}
+
+/** Near enough to be the same word, allowing for a slip of the thumb. */
+const CLOSE = 0.62;
+
+/**
+ * How well one thing on the menu answers what was typed.
+ *
+ * Every word somebody wrote looks for its best match among the words of
+ * the candidate, and what comes back is how much of the sentence was
+ * accounted for. A candidate that answers every word scores highest, and
+ * one that answers a single word out of four is a weak suggestion rather
+ * than an answer.
+ *
+ * The name counts for more than everything else, so a pizza called
+ * Margherita beats a pizza that merely mentions one in its description.
+ */
+export function scoreOne(said: string[], one: Candidate): number {
+  if (said.length === 0) return 0;
+  const name = words(one.name);
+  const extra = (one.also ?? []).flatMap((line) => words(line));
+  if (name.length === 0 && extra.length === 0) return 0;
+
+  let total = 0;
+  for (const word of said) {
+    let best = 0;
+    for (const against of name) best = Math.max(best, alike(word, against));
+    let loose = 0;
+    for (const against of extra) loose = Math.max(loose, alike(word, against) * 0.72);
+    total += Math.max(best, loose);
+  }
+
+  // What share of what they said this answers.
+  const covered = total / said.length;
+
+  // And what share of its own name was asked for, so "pizza" does not beat
+  // "BBQ Chicken pizza" when somebody typed "bbq chicken pizza".
+  let named = 0;
+  for (const against of name) {
+    let best = 0;
+    for (const word of said) best = Math.max(best, alike(against, word));
+    if (best >= CLOSE) named += 1;
+  }
+  const fullness = name.length === 0 ? 0 : named / name.length;
+
+  return covered * 0.75 + fullness * 0.25;
+}
+
+/** How sure the chat is, which is what decides whether it asks. */
+export type Sureness = "sure" | "asking" | "lost";
+
+export type Found = {
+  hits: Hit[];
+  how: Sureness;
+};
+
+/** A clear winner goes straight in. */
+const SURE = 0.72;
+/** Worth putting up as "do you mean". */
+const WORTH = 0.34;
+/** And a winner has to be this far ahead of the next one to be a winner. */
+const AHEAD = 0.14;
+
+/**
+ * What somebody probably meant, and how sure we are.
+ *
+ * "sure" is one answer well clear of the rest, which the chat adds and
+ * shows for checking. "asking" is a handful worth putting up as buttons,
+ * which is what somebody with a typo gets, and is a tap rather than a
+ * dead end. "lost" is nothing close enough to offer, and even then the
+ * chat shows the kitchen's own list before it offers a person: being
+ * unable to read one sentence is not a reason to throw somebody out.
+ */
+export function find(said: string, among: Candidate[], most = 4): Found {
+  const asked = words(said);
+  if (asked.length === 0 || among.length === 0) return { hits: [], how: "lost" };
+
+  const ranked = among
+    .map((one) => ({ id: one.id, name: one.name, score: scoreOne(asked, one) }))
+    .filter((one) => one.score >= WORTH)
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+
+  if (ranked.length === 0) return { hits: [], how: "lost" };
+
+  const hits = ranked.slice(0, most);
+  const clear =
+    hits[0].score >= SURE && (hits.length === 1 || hits[0].score - hits[1].score >= AHEAD);
+
+  return { hits, how: clear ? "sure" : "asking" };
+}
+
+/**
+ * Whether somebody is asking for a person rather than for food.
+ *
+ * Checked before the menu is searched, because "can I speak to someone"
+ * matched against a menu finds a chicken sandwich.
+ */
+export function wantsAPerson(said: string): boolean {
+  return /\b(human|person|someone|somebody|agent|talk|speak|call|whatsapp|help me)\b/.test(
+    flatten(said)
+  );
+}
+
+/** Yes, no, or neither, for the questions the chat asks straight. */
+export function yesNo(said: string): "yes" | "no" | "" {
+  const flat = flatten(said);
+  if (/\b(yes|yeah|yep|yh|ya|sure|ok|okay|correct|right|that one|exactly|please do)\b/.test(flat)) {
+    return "yes";
+  }
+  if (/\b(no|nope|nah|wrong|not that|something else|different)\b/.test(flat)) return "no";
+  return "";
+}
