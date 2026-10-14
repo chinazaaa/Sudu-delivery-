@@ -94,6 +94,7 @@ const EMPTY_SETTINGS: Settings = { ...SETTINGS_DEFAULTS };
 
 import type { OrderLine } from "../lib/orders";
 import { halfShown, key as priceKey, pickedPrice } from "../lib/pricing";
+import { whatsappTo as botWhatsappTo } from "../lib/messages";
 import {
   find as botFind,
   countedInName as botCountedInName,
@@ -3694,4 +3695,20 @@ test("how many, and when a number is not how many", () => {
   assert.equal(botCountedInName("Chicken Wings - 4PCS", 4), true);
   assert.equal(botCountedInName("BBQ Chicken", 2), false);
   assert.equal(botCountedInName("Chicken Wings - 4PCS", 1), false);
+});
+
+test("a WhatsApp link carries the number the way wa.me reads it", () => {
+  // The shop keeps its number the way it is dialled. wa.me reads a leading
+  // zero as a username, so every way out of the chat opened WhatsApp
+  // saying "@09032175147 isn't on WhatsApp", which is the one door that
+  // has to work.
+  assert.equal(
+    botWhatsappTo("0903 217 5147", "hi"),
+    "https://wa.me/2349032175147?text=hi"
+  );
+  // Already international, left alone.
+  assert.equal(
+    botWhatsappTo("+234 903 217 5147", "hi"),
+    "https://wa.me/2349032175147?text=hi"
+  );
 });

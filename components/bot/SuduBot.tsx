@@ -195,7 +195,16 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   const push = useCallback((line: Line) => setLines((all) => [...all, line]), []);
   const { say, clear, typing } = useSaying(push, () => undefined);
 
-  const wa = (start?.whatsapp || whatsapp || "").replace(/[^\d]/g, "");
+  /*
+   * The number as wa.me wants it.
+   *
+   * The shop keeps it the way it is dialled, "0903 217 5147", and wa.me
+   * reads a leading zero as a username rather than a Nigerian number:
+   * every way out of the chat opened WhatsApp saying "@09032175147 isn't
+   * on WhatsApp", which is the one door that has to work.
+   */
+  const dialled = (start?.whatsapp || whatsapp || "").replace(/[^\d]/g, "");
+  const wa = dialled.startsWith("0") ? `234${dialled.slice(1)}` : dialled;
   const email = start?.email ?? "";
 
   /*
