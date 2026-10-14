@@ -81,6 +81,26 @@ type Held = {
   watching: boolean;
 };
 
+/*
+ * How long the chat watches for a transfer, and how often it looks.
+ *
+ * Three minutes, not one. A bank alert is forwarded through a mailbox
+ * before it ever reaches us and nothing arrives in sixty seconds, so a
+ * minute of watching was a minute of theatre: it was always going to end
+ * in "not confirmed yet" whether the money had landed or not.
+ *
+ * Twelve looks over three minutes is twelve requests from one person who
+ * is sitting there waiting, which is nothing, and it is the stretch where
+ * somebody is still holding the phone.
+ */
+const WATCH_FOR = 12;
+const LOOK_EVERY = 15000;
+/** And the first look, soon enough to catch an alert that beat them back. */
+const FIRST_LOOK = 8000;
+
+/** After that, one quiet look a minute, for this long. */
+const LISTEN_FOR = 30;
+
 const EMPTY: Held = {
   name: "",
   phone: "",
@@ -622,9 +642,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   /*
    * No alert yet, which is ordinary and is said as ordinary.
    *
-   * The fast watching stops here, because a minute is as long as anybody
-   * should be asked to sit looking at a spinner, and an alert is sometimes
-   * an hour. But the chat does not go deaf: it keeps one quiet check a
+   * The fast watching stops here, because three minutes is as long as
+   * anybody should be asked to sit looking at a spinner, and an alert is
+   * sometimes an hour. But the chat does not go deaf: it keeps one quiet
+   * check a
    * minute going in the background, so if the money lands while the panel
    * is still open it still says so, in the same conversation. One request
    * a minute for half an hour, then it stops asking for good, because a
@@ -648,7 +669,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       } catch {
         /* A check that failed is a check, not an answer. */
       }
-      if (quiet < 30) poll.current = setTimeout(listen, 60000);
+      if (quiet < LISTEN_FOR) poll.current = setTimeout(listen, 60000);
     };
     if (mine.watching && mine.orderId !== "") poll.current = setTimeout(listen, 60000);
     say(
@@ -731,15 +752,15 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       } catch {
         /* A check that failed is a check, not an answer. */
       }
-      if (tries >= 6) {
+      if (tries >= WATCH_FOR) {
         unconfirmed();
         return;
       }
-      poll.current = setTimeout(look, 10000);
+      poll.current = setTimeout(look, LOOK_EVERY);
     };
 
     say({ kind: "status", tone: "", spinning: true, html: "Watching for your transfer…" }, 420);
-    poll.current = setTimeout(look, 4000);
+    poll.current = setTimeout(look, FIRST_LOOK);
 
     setAsk({
       of: "buttons",
@@ -754,7 +775,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           },
         },
       ],
-      hint: "We watch for about a minute. After that we message you, so you do not have to sit here.",
+      hint: "We watch for about three minutes. After that we message you, so you do not have to sit here.",
     });
   }, [bot, me, paid, say, unconfirmed, waLink]);
 
