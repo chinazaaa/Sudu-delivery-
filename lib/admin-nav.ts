@@ -52,6 +52,10 @@ export const GROUPS: Group[] = [
       { href: "/admin/inbox", label: "Inbox" },
       { href: "/admin/applications", label: "Applications" },
       { href: "/admin/requests", label: "Asked for" },
+      // Beside the requests on purpose: this list grows out of that one.
+      // A question nobody could answer becomes an answer the chat gives
+      // for ever, and the two pages are one job done in two taps.
+      { href: "/admin/faq", label: "Chat answers" },
       { href: "/admin/wishes", label: "Wishes" },
       { href: "/admin/links", label: "Checkout links" },
     ],

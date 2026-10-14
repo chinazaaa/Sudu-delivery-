@@ -1,5 +1,6 @@
 import PageHeader from "@/components/admin/PageHeader";
 import { requestList, fromTheChat, isAQuestion } from "@/lib/requests";
+import { faqFromRequest } from "../faq/actions";
 import { safeSettings, whatsappLink } from "@/lib/settings";
 import { naira } from "@/lib/money";
 import { markRequest, settleRequest, shelveRequest } from "./actions";
@@ -54,14 +55,29 @@ const STATUS: Record<string, string> = {
  * wedding cake is an afternoon's work and nothing more. The point of
  * writing them down is being able to tell those apart.
  */
-export default async function RequestsPage() {
-  const [asks, settings, shelves] = await Promise.all([
+export default async function RequestsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ show?: string }>;
+}) {
+  const show = (await searchParams).show === "questions" ? "questions" : "";
+  const [all, settings, shelves] = await Promise.all([
     requestList(),
     safeSettings(),
     // Where a request can be put. Every counter the shop keeps, so a power
     // bank goes to the shop and a bag of rice to the market.
     shelfList(),
   ]);
+  /*
+   * Two different jobs on one page.
+   *
+   * Nearly everything here is something to go and buy. The chat added a
+   * second kind: somebody with a question, which is answered rather than
+   * bought, and answered once rather than every time. They are worth
+   * reading as their own list, so there is a cut for them.
+   */
+  const questions = all.filter((one) => isAQuestion(one.note));
+  const asks = show === "questions" ? questions : all;
   const waiting = asks.filter((one) => one.status === "new");
 
   // The shop first, because that is where nearly everything asked for
@@ -77,20 +93,46 @@ export default async function RequestsPage() {
   // a product can be moved and a request remembering where it used to be
   // would send somebody to the wrong page.
   const itemShelf = await shelfOfItems(
-    asks.map((one) => one.menu_item_id).filter((one): one is string => Boolean(one))
+    all.map((one) => one.menu_item_id).filter((one): one is string => Boolean(one))
   );
 
   return (
     <div>
       <PageHeader
         title="Asked for"
-        detail="Things people wanted that are not on the menu."
+        detail="Things people wanted that are not on the menu, and questions the chat could not answer."
       />
+
+      {/* The cut, and the way to the answers. A question answered here is
+          answered once; turned into a chat answer it is answered for
+          ever, and the two pages are one job. */}
+      <div className="mb-3.5 flex flex-wrap gap-2">
+        <Link
+          href="/admin/requests"
+          aria-current={show === "" ? "page" : undefined}
+          className={`pill-admin ${show === "" ? "pill-admin-on" : ""}`}
+        >
+          Everything
+          <span className="font-mono opacity-60">{all.length}</span>
+        </Link>
+        <Link
+          href="/admin/requests?show=questions"
+          aria-current={show === "questions" ? "page" : undefined}
+          className={`pill-admin ${show === "questions" ? "pill-admin-on" : ""}`}
+        >
+          Questions from the chat
+          <span className="font-mono opacity-60">{questions.length}</span>
+        </Link>
+        <Link href="/admin/faq" className="pill-admin">
+          Chat answers
+        </Link>
+      </div>
 
       {asks.length === 0 && (
         <div className="card text-sm text-muted">
-          Nobody has asked for anything yet. The page is at /custom-order, and
-          it is on the front page and wherever a search finds nothing.
+          {show === "questions"
+            ? "Nothing the chat could not answer. When somebody asks it something it has no answer for, it takes the question and it lands here with their number."
+            : "Nobody has asked for anything yet. The page is at /custom-order, and it is on the front page and wherever a search finds nothing."}
         </div>
       )}
 
@@ -217,6 +259,74 @@ export default async function RequestsPage() {
                 </form>
                 )}
               </div>
+
+              {/*
+                * A question, answered once and then answered for ever.
+                *
+                * This is how the chat's own list of answers is meant to
+                * grow. Somebody asked it something it had never heard of,
+                * it took the question and handed it to a person, and that
+                * person has just answered them on WhatsApp. Typing the
+                * answer here once means the next person asking it is
+                * answered in a second, by a chat that still cannot invent
+                * anything: it only ever says the words written here.
+                *
+                * Only on the questions. A request to go and buy a Caesar
+                * salad from Debonairs is not a thing to answer for ever.
+                */}
+              {isAQuestion(ask.note) && (
+                <details className="border-t border-black/5 pt-3">
+                  <summary className="cursor-pointer text-sm font-semibold">
+                    Make this a chat answer
+                  </summary>
+                  <form action={faqFromRequest} className="mt-3 space-y-3">
+                    <input type="hidden" name="request_id" value={ask.id} />
+                    <div>
+                      <label className="label" htmlFor={`faq-q-${ask.id}`}>
+                        The question
+                      </label>
+                      <input
+                        id={`faq-q-${ask.id}`}
+                        name="question"
+                        defaultValue={ask.wanted}
+                        required
+                        className="field"
+                      />
+                    </div>
+                    <div>
+                      <label className="label" htmlFor={`faq-a-${ask.id}`}>
+                        What the chat should say
+                      </label>
+                      <textarea
+                        id={`faq-a-${ask.id}`}
+                        name="answer"
+                        rows={3}
+                        required
+                        placeholder="The same thing you just told them."
+                        className="field"
+                      />
+                    </div>
+                    <div>
+                      <label className="label" htmlFor={`faq-k-${ask.id}`}>
+                        Other ways people ask it
+                      </label>
+                      <input
+                        id={`faq-k-${ask.id}`}
+                        name="keywords"
+                        placeholder="comma separated"
+                        className="field"
+                      />
+                      <p className="hint mt-1">
+                        This is what makes it get found. Nobody types the
+                        question twice the same way.
+                      </p>
+                    </div>
+                    <button className="btn-primary px-3 py-2 text-sm">
+                      Save it and mark this done
+                    </button>
+                  </form>
+                </details>
+              )}
 
               {/* Bought it for her and that is the end of it. Most asks are
                   a one-off for one person and will never be on a menu, so

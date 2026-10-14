@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { naira } from "@/lib/money";
+import { pickFaq } from "@/lib/faq-match";
 import {
   find,
   whyNotAName,
@@ -46,6 +47,10 @@ type Start = {
   feeFrom: number;
   /** Whether there is a code anybody could type tonight. */
   codes: boolean;
+  /** What the chat is allowed to answer on its own: the shop's own words,
+   *  edited in admin. There is no model in here, so this is the whole of
+   *  what it knows. */
+  faqs: { id: string; question: string; answer: string; keywords: string }[];
   whatsapp: string;
   email: string;
 };
@@ -226,6 +231,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   /** The bill, held in a box so a pasted list can end at it from
    *  anywhere, including from a line that was skipped. */
   const soonRef = useRef<(() => void) | null>(null);
+  /** The question step, held in a box because the answers above it offer
+   *  it as the way out when none of them fit. */
+  const askAQuestionRef = useRef<((first?: string) => void) | null>(null);
   /** Said no to a discount code already. Asked once per version of the
    *  order: asking again on the same bill is nagging, and asking again
    *  after the order changed is the only honest thing to do, because what
@@ -502,6 +510,86 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
    * WhatsApp is on the screen the whole time underneath, so anybody who
    * would rather not wait does not have to.
    */
+  /*
+   * The shop's own answer to a question it has been asked before.
+   *
+   * There is no model in this chat, which is the whole point: it cannot
+   * invent a delivery fee, a refund policy or an opening time, and it will
+   * never tell somebody something this shop did not say. The cost of that
+   * is it can only answer what it has been given, and what it has been
+   * given is a list somebody edits in admin and adds to every time a
+   * question comes up twice.
+   *
+   * Two floors. Above the higher one it answers, because being answered is
+   * the point. Between them it offers the question it thinks was asked,
+   * because an answer to a question nobody asked is worse than a question.
+   * Below both it says nothing and lets the caller carry on, which ends at
+   * a person either way.
+   */
+  const sayFaq = useCallback(
+    (said: string): boolean => {
+      const all = startRef.current?.faqs ?? [];
+      if (all.length === 0) return false;
+
+      const found = pickFaq(said, all);
+
+      const answer = (hit: { id: string; answer: string }) => {
+        bot(hit.answer, 520);
+        /* Counted so the list in admin can be ordered by what people
+           actually ask. Nothing waits on it. */
+        void fetch("/api/bot/faq", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: hit.id }),
+        }).catch(() => {});
+
+        bot("Does that answer it?", 460);
+        setAsk({
+          of: "buttons",
+          buttons: [
+            { said: "Yes, thanks", go: () => { me("Yes, thanks"); askOrderRef.current?.(true); } },
+            {
+              said: "Not quite, ask a person",
+              look: "alt",
+              go: () => { me("Not quite, ask a person"); askAQuestionRef.current?.(said); },
+            },
+          ],
+          hint: "I can take your order right here too.",
+        });
+      };
+
+      if (found.sure) {
+        answer(found.sure);
+        return true;
+      }
+
+      if (found.maybe.length > 0) {
+        bot("I think I have been asked this before. Is it one of these?", 480);
+        setAsk({
+          of: "chips",
+          chips: [
+            ...found.maybe.map((hit, which) => ({
+              said: hit.question,
+              hot: which === 0,
+              go: () => {
+                me(hit.question);
+                answer(hit);
+              },
+            })),
+            {
+              said: "None of those",
+              go: () => { me("None of those"); askAQuestionRef.current?.(said); },
+            },
+          ],
+        });
+        return true;
+      }
+
+      return false;
+    },
+    [bot, me]
+  );
+
   const askAQuestion = useCallback(
     (first = "") => {
       bot(
@@ -575,6 +663,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     },
     [bot, handOver, me, say, working]
   );
+
+  useEffect(() => {
+    askAQuestionRef.current = askAQuestion;
+  }, [askAQuestion]);
 
   const askUsFor = useCallback(
     (first: string) => {
@@ -687,10 +779,129 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
        */
       if (echo) {
         const meant = intentOf(said);
+
+        /*
+         * The shop's own words first, on anything that is not an order.
+         *
+         * Somebody asking what delivery costs would rather have the real
+         * answer than a question about it, and the real answer is whatever
+         * is written in admin. Only where there is one: with nothing
+         * written, each of these still has a sensible next question.
+         */
+        if (meant !== "" && meant !== "vague-order" && sayFaq(said)) return;
+
         if (meant === "question") {
           askAQuestion();
           return;
         }
+
+        /*
+         * What delivery costs, from the same numbers the bill charges.
+         *
+         * Nothing here is typed out: the floor and the car's floor come
+         * back from the server with everything else, so a change in admin
+         * changes this sentence. And it says what it cannot say, because
+         * the fee goes up with how much is in the car and any single
+         * figure before anybody has ordered would be a guess dressed as a
+         * price.
+         */
+        if (meant === "fees") {
+          const start = startRef.current;
+          const floor = start?.feeFrom ?? 0;
+          const car = start?.carFrom ?? 0;
+          bot(
+            floor > 0
+              ? `Delivery starts at <b>${naira(floor)}</b> on a shared run and goes ` +
+                  "up with how much is in the car, so a bigger order pays a little more."
+              : "Delivery depends on how much is in the car.",
+            520
+          );
+          if (car > 0) {
+            bot(
+              `A car to yourself, at a time you pick, starts at <b>${naira(car)}</b>.`,
+              460
+            );
+          }
+          bot(
+            "Either way you see the exact figure on the bill before you pay " +
+              "anything. Shall we build your order and look?",
+            500
+          );
+          setAsk({
+            of: "buttons",
+            buttons: [
+              { said: "Yes, let's order", go: () => { me("Yes, let's order"); askOrderRef.current?.(true); } },
+              {
+                said: "I have another question",
+                look: "alt",
+                go: () => { me("I have another question"); askAQuestion(); },
+              },
+            ],
+          });
+          return;
+        }
+
+        /*
+         * What there is.
+         *
+         * The honest answer is "a lot", and reading it out is a wall of
+         * three hundred dishes in a chat window. The counters open today
+         * are the useful answer, and the full menu is a page that already
+         * exists and does this better.
+         */
+        if (meant === "menu") {
+          const kitchens = startRef.current?.kitchens ?? [];
+          bot(
+            kitchens.length > 0
+              ? `Open today: <b>${kitchens.map((one) => one.name).join("</b>, <b>")}</b>.`
+              : "I can look across every counter we have open.",
+            520
+          );
+          bot("Say what you fancy and I will find it, or pick a counter.", 460);
+          setAsk({
+            of: "chips",
+            chips: [
+              ...kitchens.slice(0, 8).map((one) => ({
+                said: one.name,
+                go: () => {
+                  me(one.name);
+                  queue.current = [one];
+                  askOrderRef.current?.();
+                },
+              })),
+              { said: "Just let me type it", go: () => { me("Just let me type it"); askOrderRef.current?.(true); } },
+            ],
+            hint: "The whole menu is on the site too, if you would rather browse.",
+          });
+          return;
+        }
+
+        /*
+         * Help, which is two jobs until you ask which.
+         *
+         * Half the people who type it want a hand ordering, which is the
+         * one thing this chat is for and can do in a minute. The other
+         * half want something only a person can do. Guessing is wrong half
+         * the time, so it asks, and the way to a person is on the screen
+         * either way.
+         */
+        if (meant === "help") {
+          bot("Of course. Is it the order, or something else?", 480);
+          setAsk({
+            of: "buttons",
+            buttons: [
+              { said: "Help me order", go: () => { me("Help me order"); askOrderRef.current?.(true); } },
+              {
+                said: "Something else",
+                look: "alt",
+                go: () => { me("Something else"); askAQuestion(); },
+              },
+              { said: "Talk to a person now", look: "green", href: handOver("I could use a hand.") },
+            ],
+          });
+          return;
+        }
+
         if (meant === "vague-order") {
           bot(
             "Of course. What would you like? Say the dish, or the kitchen, or " +
@@ -1025,6 +1236,17 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
          * route the site already has a list for.
          */
         /*
+         * Nothing on any menu is that, so perhaps it was never a dish.
+         *
+         * "Do you deliver on Sundays", "is there a minimum order", "where
+         * are you based": every one of those gets to here, and "I cannot
+         * find that anywhere on the shop" is the chat calling a reasonable
+         * question wrong. So the shop's own answers are read before the
+         * apology.
+         */
+        if (echo && sayFaq(said)) return;
+
+        /*
          * Not on the counter they named, but somewhere else in the shop.
          *
          * "5 jollof, 2 zinger burger, 1 coke from Burger King" is three
@@ -1190,7 +1412,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         askOrder();
       }
     },
-    [askAQuestion, bot, handOver, me, waLink, working]
+    [askAQuestion, bot, handOver, me, sayFaq, waLink, working]
   );
 
   useEffect(() => {
@@ -2730,6 +2952,20 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               </button>
             </div>
           )}
+          {/*
+            * The disc hops; the button does not.
+            *
+            * It used to be the button itself that hopped, and a button that
+            * moves twenty pixels for a second out of every two and a half
+            * is a button you have to tap three times. The browser hit-tests
+            * where the box actually is at the moment of the touch, so a
+            * finger aimed at the disc mid-hop lands on the page behind it.
+            *
+            * So the animation moved to the artwork inside, the button sits
+            * still, and its hit area is padded upwards to cover the whole
+            * height the disc travels through. Same hop, and the first tap
+            * opens it.
+            */}
           <button
             type="button"
             className="fab"
@@ -2739,14 +2975,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               setOpen(true);
             }}
           >
-            <span className="ring" aria-hidden />
-            <span className="glyph" aria-hidden>
-              <i style={{ width: 26 }} />
-              <i style={{ width: 18 }} />
-              <i style={{ width: 10 }} />
-            </span>
-            <span className="badge" aria-hidden>
-              1
+            <span className="hop" aria-hidden>
+              <span className="ring" />
+              <span className="glyph">
+                <i style={{ width: 26 }} />
+                <i style={{ width: 18 }} />
+                <i style={{ width: 10 }} />
+              </span>
+              <span className="badge">1</span>
             </span>
           </button>
         </div>

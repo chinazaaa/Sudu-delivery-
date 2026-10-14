@@ -5,6 +5,7 @@ import { hostelNames } from "@/lib/hostels";
 import { shopEmails } from "@/lib/settings";
 import { openRestaurants } from "@/lib/menu";
 import { anyCodeToType } from "@/lib/coupons";
+import { faqsForChat } from "@/lib/faq";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
 import { deliverySlots, slotsWorthOffering, windowHours } from "@/lib/same-day";
 import { headlineFee } from "@/lib/fees";
@@ -29,7 +30,8 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(): Promise<NextResponse> {
   try {
-    const [hostels, batches, menu, settings, bands, hours, sameDay, codes] = await Promise.all([
+    const [hostels, batches, menu, settings, bands, hours, sameDay, codes, faqs] =
+      await Promise.all([
       hostelNames(),
       openBatches().catch(() => []),
       // The counters only, not every dish on every one of them. Reading
@@ -44,6 +46,10 @@ export async function GET(): Promise<NextResponse> {
       // discount code when the shop has none is a box that can only say
       // no, which reads as something being withheld.
       anyCodeToType().catch(() => false),
+      // What the chat is allowed to answer on its own. There is no model in
+      // it, so this is the whole of what it knows: the shop's own words,
+      // edited in admin, and nothing it made up.
+      faqsForChat().catch(() => []),
     ]);
 
     /*
@@ -130,6 +136,7 @@ export async function GET(): Promise<NextResponse> {
       // What delivery starts at, said as a floor rather than as the price.
       feeFrom: headlineFee(bands),
       codes,
+      faqs,
       whatsapp: String(settings.whatsapp_number ?? ""),
       // So the way out is never only one door: somebody who will not open
       // WhatsApp still has somewhere to write to.
@@ -143,6 +150,7 @@ export async function GET(): Promise<NextResponse> {
       runs: [],
       cars: [],
       codes: false,
+      faqs: [],
       carFrom: 0,
       kitchens: [],
       feeFrom: 0,

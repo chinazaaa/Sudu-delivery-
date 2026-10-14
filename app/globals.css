@@ -484,10 +484,36 @@ body {
   }
 }
 
+/*
+ * The button stands still and the disc inside it hops.
+ *
+ * The hop used to be on the button, which moves its box up to twenty
+ * pixels for a second out of every two and a half. A browser hit-tests
+ * where the box is at the moment of the touch, so a finger aimed at the
+ * disc mid-hop lands on whatever is behind it, and the chat took three
+ * taps to open.
+ */
 .sudubot .fab {
   position: relative;
   width: 68px;
   height: 68px;
+  display: grid;
+  place-items: center;
+  -webkit-tap-highlight-color: transparent;
+}
+/* The hit area, padded upwards through the whole height the disc travels,
+   so every tap that looks like it is on the disc is on the button. */
+.sudubot .fab::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  top: -26px;
+}
+.sudubot .fab .hop {
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
   background: var(--bot-tomato);
   border: 3px solid var(--bot-ink);
@@ -495,13 +521,28 @@ body {
   display: grid;
   place-items: center;
   animation: sudubot-hop 2.6s cubic-bezier(0.3, 0.7, 0.4, 1) infinite;
+  /* Never a target of its own: the button and its padded area take every
+     tap, whatever the disc is doing at the time. */
+  pointer-events: none;
 }
-.sudubot .fab:hover {
+.sudubot .fab:hover .hop {
+  background: var(--bot-deep);
+}
+.sudubot .fab:active .hop {
   background: var(--bot-deep);
 }
 .sudubot .fab:focus-visible {
   outline: 4px solid var(--bot-volt);
   outline-offset: 3px;
+  border-radius: 50%;
+}
+/* Somebody who has asked for less movement gets a disc that sits still,
+   which is also the most reliable thing to tap. */
+@media (prefers-reduced-motion: reduce) {
+  .sudubot .fab .hop,
+  .sudubot .ring {
+    animation: none;
+  }
 }
 .sudubot .fab .glyph {
   display: flex;

@@ -749,8 +749,25 @@ export function splitOrder(said: string): string[] {
   return parts.length >= 2 ? parts : [];
 }
 
-/** What somebody wants, where they said it instead of saying a dish. */
-export type Intent = "" | "vague-order" | "question";
+/**
+ * What somebody wants, where they said it instead of saying a dish.
+ *
+ * Every one of these is a sentence that matched nothing on any menu and so
+ * got "I cannot find that anywhere on the shop", which is the chat calling
+ * a reasonable person wrong. Each has a right next question instead, and
+ * the shop's own written answers are tried before any of them.
+ */
+export type Intent =
+  | ""
+  | "vague-order"
+  /** A question, a complaint, or a refund: somebody with something to say. */
+  | "question"
+  /** What delivery costs, which is the single most asked thing. */
+  | "fees"
+  /** What there is, rather than which one of it. */
+  | "menu"
+  /** Help or support, which is two different jobs until you ask which. */
+  | "help";
 
 /** Words that mean "I want to order" and nothing more specific. */
 const VAGUE = new Set([
@@ -799,11 +816,43 @@ export function intentOf(said: string): Intent {
   if (flat === "") return "";
 
   if (
-    /\b(enquiry|enquiries|enquire|inquiry|inquiries|inquire|complaint|complaints|complain|question|questions)\b/.test(
+    /\b(enquiry|enquiries|enquire|inquiry|inquiries|inquire|complaint|complaints|complain|question|questions|refund|refunds|refunded|my money back)\b/.test(
       flat
     )
   ) {
     return "question";
+  }
+
+  /*
+   * What delivery costs.
+   *
+   * Narrow on purpose: it has to carry the word delivery, or a fee, or
+   * shipping. "How much is the pizza" is a question about a pizza and
+   * belongs in the search, where the menu can answer it exactly.
+   */
+  if (
+    /\b(delivery|deliveries|shipping)\b/.test(flat) ||
+    /\b(fee|fees|charge|charges)\b/.test(flat)
+  ) {
+    if (!/\b(hostel|address|where|when|time|late|track|driver|rider)\b/.test(flat)) {
+      return "fees";
+    }
+  }
+
+  /* What there is, as against which one of it. */
+  if (/\b(menu|menus|catalogue|available|availability|what do you (?:have|sell|offer))\b/.test(flat)) {
+    return "menu";
+  }
+
+  /*
+   * Help, which is two jobs until you ask which.
+   *
+   * Half the people who type it want a hand ordering, which is the one
+   * thing the chat is for. The other half want something only a person can
+   * do. Guessing either way is wrong half the time, so it asks.
+   */
+  if (/\b(help|support|assist|assistance|stuck|issue|problem)\b/.test(flat)) {
+    return "help";
   }
 
   const mine = words(said).filter((word) => !FILLER.has(word));

@@ -95,6 +95,7 @@ const EMPTY_SETTINGS: Settings = { ...SETTINGS_DEFAULTS };
 import type { OrderLine } from "../lib/orders";
 import { halfShown, key as priceKey, pickedPrice } from "../lib/pricing";
 import { whatsappTo as botWhatsappTo } from "../lib/messages";
+import { pickFaq as botPickFaq } from "../lib/faq-match";
 import {
   find as botFind,
   countedInName as botCountedInName,
@@ -3902,4 +3903,42 @@ test("words that cannot be a name are caught, and names are not", () => {
   ]) {
     assert.equal(botWhyNotAName(real), "", `${real} is somebody's name`);
   }
+});
+
+test("a question reaches the answer however it was worded", () => {
+  /*
+   * The chat has no model in it, so what it knows is a list somebody
+   * edits. The thing that makes the list worth having is that nobody asks
+   * a question twice the same way: the keywords ride along with the
+   * question so one entry answers every wording of it.
+   */
+  const written = [
+    {
+      id: "fee",
+      question: "How much is delivery?",
+      answer: "It starts at ₦4,000.",
+      keywords: "delivery fee, how much is delivery, shipping, fees, cost of delivery",
+    },
+    {
+      id: "pay",
+      question: "How do I pay?",
+      answer: "Bank transfer.",
+      keywords: "payment, transfer, card, pay",
+    },
+  ];
+
+  assert.equal(botPickFaq("how much is delivery", written).sure?.id, "fee");
+  assert.equal(botPickFaq("delivery fee", written).sure?.id, "fee");
+  assert.equal(botPickFaq("what are your fees", written).sure?.id, "fee");
+  assert.equal(botPickFaq("how do i pay", written).sure?.id, "pay");
+
+  // Nothing like either of them answers with neither, rather than with
+  // whichever scored least badly. A wrong answer in the shop's own voice
+  // is worse than no answer at all.
+  const miss = botPickFaq("do you sell shawarma", written);
+  assert.equal(miss.sure, null);
+  assert.equal(miss.maybe.length, 0);
+
+  // And an empty list is not an error.
+  assert.equal(botPickFaq("anything", []).sure, null);
 });
