@@ -179,24 +179,17 @@ export async function POST(request: Request): Promise<NextResponse> {
     /*
      * A counter that is a shelf.
      *
-     * Uncle Stan's whole business is small chops: they have a shelf
-     * called exactly that and fifteen things on it. Burger King has four
-     * dishes with the words in their names, filed under Sides. Asking
-     * "where from" there is asking somebody to choose between the shop
-     * that does the thing and a shop that also does it, which is a
-     * question with an obvious answer and no reason to have been put.
-     *
-     * So a shelf named exactly what was asked for wins outright. Nothing
-     * here knows what small chops are: it knows that one counter has
-     * filed a shelf under those words, and that is the strongest thing
-     * anybody has said on the subject.
+     * Uncle Stan's whole business is small chops: a shelf called exactly
+     * that, fifteen things on it. Burger King has four dishes with the
+     * words in their names, filed under Sides. Both are real answers, so
+     * both are offered, but the one whose whole shelf is called this goes
+     * first, because that is the strongest thing anybody in the shop has
+     * said on the subject.
      */
     const exactShelf =
-      shelfHit && shelfHit.score >= 0.97 && onShelf.length > 1
-        ? shops.find((one) => one.restaurant.id === shelfShop)?.restaurant ?? null
-        : null;
+      shelfHit && shelfHit.score >= 0.97 && onShelf.length > 1 ? shelfShop : "";
 
-    if (!only && !exactShelf && found.how !== "sure") {
+    if (!only && found.how !== "sure") {
       const where: { id: string; name: string }[] = [];
       const add = (shop: { id: string; name: string } | undefined) => {
         if (shop && !where.some((one) => one.id === shop.id)) where.push(shop);
@@ -208,13 +201,15 @@ export async function POST(request: Request): Promise<NextResponse> {
         add(shops.find((one) => one.restaurant.id === shelfShop)?.restaurant);
       }
       if (where.length > 1) {
+        // The counter that files a whole shelf under these words leads.
+        where.sort((a, b) => Number(b.id === exactShelf) - Number(a.id === exactShelf));
         return NextResponse.json({
           how: "where",
           qty: howMany(said),
           person: false,
           hits: [],
           instead: [],
-          shops: where.slice(0, 6),
+          shops: where.slice(0, 8),
         });
       }
     }

@@ -556,32 +556,61 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
            */
           if (got.how === "where" && (got.shops ?? []).length > 1) {
             misses.current = 0;
+            const places = got.shops ?? [];
+            const pick = (shop: { id: string; name: string }) => {
+              me(shop.name);
+              queue.current = [shop];
+              setAsk({ of: "nothing" });
+              fetch("/api/bot/find", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ said, kitchen: shop.id }),
+              })
+                .then((answer) => answer.json())
+                .then((again: { hits: Hit[] }) => {
+                  queue.current = [];
+                  if (again.hits[0]) walk(again.hits[0], again.hits[0].qty ?? got.qty);
+                  else askOrder();
+                })
+                .catch(() => askOrder());
+            };
+
+            /*
+             * Two or three places is a question with an answer on it.
+             * Six is a list.
+             *
+             * "Small chops" is Uncle Stan's or Burger King, and naming
+             * them both in the sentence and putting them on two buttons
+             * is the whole exchange. "Chicken" is five counters, and five
+             * buttons stacked down the screen is a wall; those go as
+             * chips, which read as a row of names rather than as a
+             * decision somebody has to work through.
+             */
+            if (places.length <= 3) {
+              bot(
+                `${places.map((one) => `<b>${one.name}</b>`).join(" or ")}?`,
+                450
+              );
+              setAsk({
+                of: "buttons",
+                buttons: places.map((shop, which) => ({
+                  said: shop.name,
+                  look: which === 0 ? undefined : ("alt" as const),
+                  go: () => pick(shop),
+                })),
+                hint: "The price and the menu change with the counter.",
+              });
+              return;
+            }
+
             bot("A few places do that. Where from?", 450);
             setAsk({
               of: "chips",
-              chips: [
-                ...(got.shops ?? []).map((shop, which) => ({
-                  said: shop.name,
-                  hot: which === 0,
-                  go: () => {
-                    me(shop.name);
-                    queue.current = [shop];
-                    setAsk({ of: "nothing" });
-                    fetch("/api/bot/find", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ said, kitchen: shop.id }),
-                    })
-                      .then((answer) => answer.json())
-                      .then((again: { hits: Hit[] }) => {
-                        queue.current = [];
-                        if (again.hits[0]) walk(again.hits[0], again.hits[0].qty ?? got.qty);
-                        else askOrder();
-                      })
-                      .catch(() => askOrder());
-                  },
-                })),
-              ],
+              chips: places.map((shop, which) => ({
+                said: shop.name,
+                hot: which === 0,
+                go: () => pick(shop),
+              })),
               hint: "The price and the menu change with the counter.",
             });
             return;

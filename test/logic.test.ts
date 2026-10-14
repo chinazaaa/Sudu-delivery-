@@ -3733,12 +3733,13 @@ test("a kind of thing is a question, not a dish", () => {
   assert.equal(botFind("pepperoni", shelves, 1).how, "lost");
 });
 
-test("a shelf named exactly what was asked for beats dishes that merely say it", () => {
+test("a shelf named exactly what was asked for leads the answer", () => {
   // Uncle Stan's whole business is small chops: a shelf called exactly
   // that, fifteen things on it. Burger King has four dishes with the words
-  // in their names, filed under Sides. Asking which of the two is asking
-  // somebody to choose between the shop that does the thing and a shop
-  // that also does it.
+  // in their names, filed under Sides. Both are real answers and both are
+  // offered, but the counter that files a whole shelf under the words goes
+  // first, because that is the strongest thing anybody in the shop has
+  // said on the subject.
   const shelves = [
     { id: "stan-chops", name: "Small Chops" },
     { id: "bk-sides", name: "Sides" },
