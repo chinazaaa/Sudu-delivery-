@@ -330,18 +330,99 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     walkRef.current = walk;
   }, [walk]);
 
-  /* As far as this is built. Said plainly rather than pretending. */
-  const soon = useCallback(() => {
+  /*
+   * The bill, asked for rather than worked out.
+   *
+   * Every figure on it comes back from the till: the same ladder with its
+   * steps, the same floors, the same extra for a far kitchen. The chat
+   * adds nothing up, which is the only way it cannot be cheated and the
+   * only way it cannot disagree with what is taken at the door.
+   */
+  const soon = useCallback(async () => {
     setAt(4);
-    const held_ = held.current;
+    setAsk({ of: "nothing" });
+    const mine = held.current;
+    try {
+      const answer = await fetch("/api/bot/price", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lines: mine.lines.map((line) => ({
+            menu_item_id: line.itemId,
+            qty: line.qty,
+            option_ids: line.optionIds,
+          })),
+          batchId: mine.run?.id ?? "",
+        }),
+      });
+      const got = (await answer.json()) as {
+        error?: string;
+        lines?: { name: string; said: string; qty: number; total: number }[];
+        food?: number;
+        fee?: number;
+        total?: number;
+      };
+
+      if (got.error || !got.lines) {
+        bot(got.error || "I could not work that out just now.", 450);
+        setAsk({
+          of: "buttons",
+          buttons: [
+            { said: "Change something", look: "alt", go: () => { me("Change something"); askOrder(true); } },
+            { said: "Continue on WhatsApp", look: "green", href: waLink },
+          ],
+        });
+        return;
+      }
+
+      bot("Here is your total.", 420);
+      say(
+        {
+          kind: "card",
+          card: {
+            of: "bill",
+            title: "Your bill",
+            rows: [
+              ...got.lines.map((line) => ({
+                said: `${line.qty > 1 ? `${line.qty} × ` : ""}${line.name}`,
+                under: line.said || undefined,
+                amount: line.total,
+              })),
+              {
+                said: "Delivery",
+                under: `${mine.hostel} · run ${mine.run?.said ?? ""}`,
+                amount: got.fee ?? 0,
+              },
+            ],
+            total: { said: "Total", amount: got.total ?? 0 },
+          },
+        },
+        600
+      );
+      setAsk({
+        of: "buttons",
+        buttons: [
+          { said: "Confirm order", go: () => { me("Confirm order"); payNext(); } },
+          { said: "Change something", look: "alt", go: () => { me("Change something"); askOrder(true); } },
+        ],
+        hint: "Nothing is charged until you transfer.",
+      });
+    } catch {
+      bot("I could not reach the till just then. Try again?", 420);
+      setAsk({
+        of: "buttons",
+        buttons: [{ said: "Try again", go: () => { me("Try again"); soon(); } }],
+      });
+    }
+  }, [askOrder, bot, me, say, waLink]);
+
+  /* The next piece, said plainly rather than pretended at. */
+  const payNext = useCallback(() => {
+    setAt(5);
     bot(
-      `That is <b>${held_.lines.length}</b> thing${held_.lines.length === 1 ? "" : "s"} on your order for the ` +
-        `<b>${held_.run?.said ?? "next"}</b> run to <b>${held_.hostel}</b>.`,
-      480
-    );
-    bot(
-      "The bill, the transfer and the receipt are the next piece being built. " +
-        "For now, carry on with a person and they will have everything you just told me.",
+      "The transfer details, the watching for your payment and the receipt are " +
+        "the next piece being built. For now a person will take it from here, " +
+        "with everything you have told me already.",
       520
     );
     setAsk({
@@ -350,15 +431,6 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     });
   }, [bot, waLink]);
 
-  /*
-   * The list, for somebody who would rather look than type.
-   *
-   * Not the first question any more. Fourteen counters is a wall of
-   * buttons today and twenty next year, and it is the wrong question
-   * besides: nobody arrives wanting a restaurant, they arrive wanting
-   * wings, and which counter that is belongs on the answer rather than in
-   * front of it. So this is a chip under the box, not a step.
-   */
   const askKitchen = useCallback(() => {
     setAt(2);
     bot("Here is who is open. Tap one and I will show you what they have.");

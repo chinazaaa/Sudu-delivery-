@@ -670,6 +670,90 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
  * Nothing about price comes from the browser: a large pepperoni costs what the
  * menu says a large pepperoni costs.
  */
+/**
+ * What a cart would come to, without placing anything.
+ *
+ * The chat needs a bill before anybody commits, and a bill it worked out
+ * itself is a bill that can disagree with the till. So this is the till,
+ * asked a question instead of told to do something: the same priced lines,
+ * the same container count, the same ladder, the same floors, the same
+ * extra for a far kitchen and the same same-day pricing for a car of its
+ * own.
+ *
+ * Nothing here writes anything down. It is the one honest way to say what
+ * something costs before it exists.
+ */
+export type Quote = {
+  lines: { name: string; said: string; qty: number; each: number; total: number; shop: string }[];
+  food: number;
+  fee: number;
+  total: number;
+  /** How much of the car it fills, which is what the ladder reads. */
+  containers: number;
+};
+
+export async function quote(args: {
+  lines: CartLine[];
+  /** The run it would go on, where it is going on one. */
+  batchId?: string;
+  /** A car of its own instead, at this moment, and whether that is urgent. */
+  sameDay?: { urgent: boolean } | null;
+}): Promise<{ quote: Quote } | { error: string }> {
+  const priced = await priceLines(args.lines);
+  if ("error" in priced) return { error: priced.error };
+
+  const where = await areaOfCart(placesIn(priced.lines));
+  const batch = args.batchId ? await getBatch(args.batchId) : null;
+  const carrying = countItems(priced.lines);
+
+  let fee: number;
+  if (args.sameDay) {
+    if (!where.sameDay) {
+      const far = where.all.find((one) => !one.sameDay);
+      return {
+        error:
+          `${far?.name ?? "That kitchen"} is too far for a car of its own. ` +
+          "It goes on a run, so pick one and everything travels together.",
+      };
+    }
+    fee = sameDayFee(carrying, args.sameDay.urgent, where.sameDayBands, where.urgentExtra);
+  } else if (where.valueBands.length > 0) {
+    // A market trip is one trip and two bags, and the container ladder
+    // would call it eleven containers. Two errands, two fees, added.
+    fee =
+      feeAcross({
+        marketFood: countFood(onlyFrom(priced.lines, where.byValueKitchens, true)),
+        restaurantFee: feeOfHalf(
+          onlyFrom(priced.lines, where.byValueKitchens, false),
+          batch?.flash_fee ?? null,
+          where.bands
+        ),
+        bands: where.valueBands,
+      }) + where.dearest.runExtra;
+  } else {
+    fee = feeFor(carrying, batch?.flash_fee ?? null, await bandsFor(batch));
+  }
+
+  const food = countFood(priced.lines);
+
+  return {
+    quote: {
+      lines: priced.lines.map((line) => ({
+        name: line.item.name,
+        said: line.options.map((one) => one.name).join(", "),
+        qty: line.qty,
+        each: line.unitPrice,
+        total: line.unitPrice * line.qty,
+        shop: line.item.restaurant_id,
+      })),
+      food,
+      fee,
+      total: food + fee,
+      containers: carrying,
+    },
+  };
+}
+
 export async function priceLines(
   lines: CartLine[]
 ): Promise<{ lines: PricedLine[] } | { error: string }> {
