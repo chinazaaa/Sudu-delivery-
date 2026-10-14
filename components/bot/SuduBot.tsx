@@ -2897,6 +2897,13 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     bot("Hey, I’m <b>Sudu Bot</b>. I can take your order right here, no app needed.", 450);
     bot("What should I call you?");
     let tries = 0;
+    /* Asked again after something else was dealt with. The greeting is not
+       repeated: somebody who has just been answered does not need to be
+       told who they are talking to a second time. */
+    const nameAgain = () => {
+      bot("So, what should I call you?", 420);
+      askTheName();
+    };
     const takeIt = (said: string) => {
       /* "My name is Chinaza" was being stored as "My", because the first
          word of the answer is the name right up until somebody is polite
@@ -2905,12 +2912,24 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       held.current.name = given.split(" ")[0];
       askPhone();
     };
-    setAsk({
+    const askTheName = () =>
+      setAsk({
       of: "text",
       placeholder: "Your name",
       onSay: (said) => {
         me(said);
         tries += 1;
+
+        /*
+         * A question asked before they have even said who they are.
+         *
+         * "Can I change my order" typed at "what should I call you?" is
+         * somebody with a question, not somebody whose name is a sentence,
+         * and "which bit of that is your name?" is the chat refusing to
+         * hear it. The shop's own answer comes first, and then the name is
+         * asked for again, because it is still needed.
+         */
+        if (looksLikeAQuestion(said) && sayFaq(said, nameAgain)) return;
         /*
          * Asked their name, a fair few people answer with something else:
          * what they want to eat, because that is what they came for, or
@@ -2957,7 +2976,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         takeIt(said);
       },
     });
-  }, [askPhone, bot, me, stopWatching]);
+
+    askTheName();
+  }, [askPhone, bot, me, sayFaq, stopWatching]);
 
   /*
    * Said once.
