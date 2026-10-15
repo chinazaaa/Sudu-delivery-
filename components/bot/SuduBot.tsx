@@ -67,6 +67,17 @@ type Start = {
   /** How many days ahead a customer may book. The shop's own rule, read
    *  rather than assumed, so changing it in Settings changes the chat. */
   horizonDays: number;
+  /** The made-up boxes the shop is selling, which live on their own shelf
+   *  and are on no food menu. */
+  boxes: {
+    slug: string;
+    name: string;
+    kind: string;
+    /** The day it is for, where the shop has set one. A matriculation box
+     *  is for matriculation day, not for tonight's run. */
+    happensAt: string | null;
+    closesAt: string | null;
+  }[];
   whatsapp: string;
   email: string;
 };
@@ -274,6 +285,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   /** The budget step, held in a box because it offers itself again when a
    *  figure does not come through. */
   const askBudgetRef = useRef<(() => void) | null>(null);
+  /** The custom-order step, held in a box because the box question offers
+   *  it as one of its two answers. */
+  const askUsForRef = useRef<((first: string) => void) | null>(null);
   /** Said no to a discount code already. Asked once per version of the
    *  order: asking again on the same bill is nagging, and asking again
    *  after the order changed is the only honest thing to do, because what
@@ -571,6 +585,52 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
    * Below both it says nothing and lets the caller carry on, which ends at
    * a person either way.
    */
+  /*
+   * One of the shop's own box shelves, named in a sentence.
+   *
+   * Matched against the live list rather than against words written here,
+   * so a shelf added in admin is understood without a deploy. A box word
+   * has to be there as well, unless the shelf's own name carries one:
+   * "Birthday" is a shelf and also the commonest word in this whole chat,
+   * and sending somebody to a hamper because they mentioned a birthday
+   * would be worse than not matching at all.
+   */
+  const namedShelf = useCallback(
+    (said: string): { slug: string; name: string; happensAt: string | null } | null => {
+      const shelves = startRef.current?.boxes ?? [];
+      if (shelves.length === 0) return null;
+
+      const boxy = /\b(box|boxes|pack|packs|package|packages|hamper|hampers|bundle|set)\b/i;
+
+      /*
+       * A shelf is matched on what is distinctive about it.
+       *
+       * "Food boxes" carries the word box, so matching the whole name sent
+       * "box of chicken" to the gift shelf: the one word they had in
+       * common was the one word that means nothing. Stripped, the shelf is
+       * "food", which a box of chicken does not name, and a care package
+       * still finds "care".
+       */
+      const bare = (name: string) => name.replace(boxy, " ").replace(/\s+/g, " ").trim();
+      const hit = namedIn(
+        said,
+        shelves.map((one) => ({ id: one.slug, name: bare(one.name) || one.name }))
+      )[0];
+      if (!hit) return null;
+
+      const shelf = shelves.find((one) => one.slug === hit.id);
+      if (!shelf) return null;
+      /* A box word has to be somewhere: in the shelf's own name, which
+         makes it a box shelf whatever they typed, or in the sentence.
+         "Birthday" is a shelf and also the commonest word in this chat. */
+      if (boxy.test(shelf.name) || boxy.test(said)) {
+        return { slug: shelf.slug, name: shelf.name, happensAt: shelf.happensAt };
+      }
+      return null;
+    },
+    []
+  );
+
   const sayFaq = useCallback(
     /**
      * @param after where to go once the answer has been given. The order
@@ -796,6 +856,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     [bot, handOver, me, say, working]
   );
 
+  useEffect(() => {
+    askUsForRef.current = askUsFor;
+  }, [askUsFor]);
+
   /*
    * Looking for what somebody just said, and doing whatever that turns out
    * to need.
@@ -875,6 +939,168 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
 
         if (meant === "question") {
           askAQuestion();
+          return;
+        }
+
+        /*
+         * A box, which is two different requests wearing one word.
+         *
+         * "Curate a gift box" is said by somebody who already knows what
+         * goes in it, and by somebody who wants help deciding, and those
+         * are opposite answers. The shop can hand the second one a shelf
+         * of made-up boxes in a second; the first needs a person, because
+         * a box somebody invented cannot be priced automatically and the
+         * shop has always said so before taking any money for one.
+         *
+         * So it asks. One question, and both answers are real.
+         */
+        if (meant === "box" || namedShelf(said) !== null) {
+          const shelves = startRef.current?.boxes ?? [];
+
+          /*
+           * They named one of ours.
+           *
+           * "Matriculation box" is a shelf this shop is selling, and the
+           * word matriculation is in no pattern anybody could write by
+           * hand. So the shelves themselves are matched against what was
+           * typed, which means a shelf added in admin tomorrow is found
+           * tomorrow without anybody touching this file.
+           */
+          const asked = namedShelf(said);
+          if (asked) {
+            /*
+             * The day it is for, where the shop has set one.
+             *
+             * A matriculation box is for matriculation day. Said against
+             * tonight's run it is the chat selling the wrong thing, and
+             * said with its own date it is the chat being useful about
+             * something nobody has to ask twice.
+             */
+            const dayOf = asked.happensAt
+              ? new Intl.DateTimeFormat("en-GB", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  timeZone: "Africa/Lagos",
+                }).format(new Date(asked.happensAt))
+              : "";
+            bot(
+              dayOf === ""
+                ? `<b>${asked.name}</b> — yes, that is one of ours.`
+                : `<b>${asked.name}</b> — yes. That one goes out on <b>${dayOf}</b>, ` +
+                    "so it is ordered ahead rather than on tonight's run.",
+              460
+            );
+            say(
+              {
+                kind: "status",
+                tone: "",
+                html:
+                  `<span>Open <a href="/collections/${asked.slug}" target="_blank" ` +
+                  `rel="noopener"><b>${asked.name}</b></a> to see what is in it. ` +
+                  "You can swap bits of it about on the page.</span>",
+              },
+              460
+            );
+            bot("Want me to take a food order too while you are here?", 460);
+            setAsk({
+              of: "buttons",
+              buttons: [
+                { said: "Yes, let's order", go: () => { me("Yes, let's order"); askOrderRef.current?.(true); } },
+                {
+                  said: "I want it put together differently",
+                  look: "alt",
+                  go: () => {
+                    me("Put together differently");
+                    bot(
+                      "Tell me what goes in it and we will find the items and come " +
+                        "back with the price before any money moves.",
+                      520
+                    );
+                    askUsForRef.current?.("");
+                  },
+                },
+                { said: "That's all for now", look: "alt", go: () => { me("That's all for now"); byeRef.current?.(); } },
+              ],
+            });
+            return;
+          }
+
+          bot("We do boxes two ways.", 440);
+          setAsk({
+            of: "buttons",
+            buttons: [
+              ...(shelves.length > 0
+                ? [
+                    {
+                      said: "Show me the ready-made ones",
+                      go: () => {
+                        me("Show me the ready-made ones");
+                        bot(
+                          "These are made up and priced already — open one and you " +
+                            "can swap bits of it about.",
+                          500
+                        );
+                        setAsk({
+                          of: "chips",
+                          chips: [
+                            ...shelves.map((shelf, which) => ({
+                              said: shelf.name,
+                              hot: which === 0,
+                              go: () => {
+                                me(shelf.name);
+                                say(
+                                  {
+                                    kind: "status",
+                                    tone: "",
+                                    html:
+                                      `<span>Open <a href="/collections/${shelf.slug}" ` +
+                                      `target="_blank" rel="noopener"><b>${shelf.name}</b></a> ` +
+                                      "in a new tab, and come back here if you would rather " +
+                                      "I took the order.</span>",
+                                  },
+                                  460
+                                );
+                                bot("Anything else while you are here?", 440);
+                                setAsk({
+                                  of: "buttons",
+                                  buttons: [
+                                    {
+                                      said: "Order some food too",
+                                      go: () => { me("Order some food too"); askOrderRef.current?.(true); },
+                                    },
+                                    {
+                                      said: "That's all for now",
+                                      look: "alt",
+                                      go: () => { me("That's all for now"); byeRef.current?.(); },
+                                    },
+                                  ],
+                                });
+                              },
+                            })),
+                          ],
+                          hint: "Each one opens on its own page, with photographs.",
+                        });
+                      },
+                    } as const,
+                  ]
+                : []),
+              {
+                said: "I know what I want in it",
+                look: shelves.length > 0 ? ("alt" as const) : undefined,
+                go: () => {
+                  me("I know what I want in it");
+                  bot(
+                    "Perfect. List what goes in it and we will go and find the " +
+                      "items, then come back to you with the price before any money " +
+                      "moves.",
+                    540
+                  );
+                  askUsForRef.current?.("");
+                },
+              },
+            ],
+          });
           return;
         }
 

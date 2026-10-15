@@ -7,6 +7,7 @@ import { openRestaurants } from "@/lib/menu";
 import { anyCodeToType } from "@/lib/coupons";
 import { faqsForChat } from "@/lib/faq";
 import { cardOnOffer } from "@/lib/cards";
+import { liveOccasions } from "@/lib/boxes";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
 import { deliverySlots, slotsWorthOffering, windowHours } from "@/lib/same-day";
 import { headlineFee } from "@/lib/fees";
@@ -31,7 +32,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(): Promise<NextResponse> {
   try {
-    const [hostels, batches, menu, settings, bands, hours, sameDay, codes, faqs, card] =
+    const [hostels, batches, menu, settings, bands, hours, sameDay, codes, faqs, card, shelves] =
       await Promise.all([
       hostelNames(),
       openBatches().catch(() => []),
@@ -55,6 +56,10 @@ export async function GET(): Promise<NextResponse> {
       // where none is set or it is off the menu, and then it is simply
       // never offered.
       cardOnOffer().catch(() => null),
+      // The made-up boxes, which are a shelf of their own and on no food
+      // menu. Without them the chat says "I cannot find that anywhere on
+      // the shop" to somebody asking for a thing the shop is selling.
+      liveOccasions().catch(() => []),
     ]);
 
     /*
@@ -179,6 +184,7 @@ export async function GET(): Promise<NextResponse> {
       codes: false,
       faqs: [],
       card: null,
+      boxes: [],
       horizonDays: 7,
       carFrom: 0,
       kitchens: [],

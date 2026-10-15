@@ -833,6 +833,16 @@ export type Intent =
   /** Help or support, which is two different jobs until you ask which. */
   | "help"
   /**
+   * A box rather than a dish.
+   *
+   * The shop sells made-up boxes -- gifts, care packages, a birthday, a
+   * movie night -- and none of them is on the food menu, because a box is
+   * a shelf of its own with its own pages. Searched for as a dish it finds
+   * nothing, and "I cannot find that anywhere on the shop" is the chat
+   * saying no to a thing the shop is actively selling.
+   */
+  | "box"
+  /**
    * They genuinely do not know what they want.
    *
    * The commonest thing anybody says to a person behind a counter, and
@@ -929,6 +939,23 @@ export function intentOf(said: string): Intent {
     if (!/\b(hostel|address|where|when|time|late|track|driver|rider)\b/.test(flat)) {
       return "fees";
     }
+  }
+
+  /*
+   * A box, a hamper, a care package.
+   *
+   * Only where the sentence is about the box itself. "Box of chicken" and
+   * "bucket" are food and belong in the menu search, so the word has to
+   * be doing the work: a gift box, a care package, something curated or
+   * put together.
+   */
+  if (
+    /\b(gift box|giftbox|gift basket|hamper|care package|care pack|goodie bag|goody bag|curate|curated|custom box|build a box|make a box|put together a box|surprise box|treat box)\b/.test(
+      flat
+    ) ||
+    (/\bbox\b/.test(flat) && /\b(gift|birthday|curate|make|build|create|custom|send)\b/.test(flat))
+  ) {
+    return "box";
   }
 
   /*
