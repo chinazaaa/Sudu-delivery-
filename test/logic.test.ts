@@ -3991,3 +3991,57 @@ test("a question is recognised before a menu is searched for it", () => {
     assert.equal(botLooksLikeAQuestion(asked), false, asked);
   }
 });
+
+test("the profit card's three figures subtract to the profit", () => {
+  /*
+   * The card showed money in, the delivery margin and the costs, which
+   * invites the obvious subtraction: 107,000 less 49,450 is 57,550. It
+   * reported 98,108, and both were right. Two things were missing from
+   * the middle figure: the counter reconciliation, which is a saving as
+   * often as it is an overspend, and the errands that have no run behind
+   * them.
+   *
+   * The arithmetic is written out here rather than imported, because the
+   * thing being protected is that the figures on a card reconcile, and a
+   * test that calls the same function cannot catch them drifting apart.
+   */
+  const made = (one: {
+    margin: number;
+    overMenu: number;
+    otherIn: number;
+    otherOut: number;
+    commission: number;
+    runCosts: number;
+  }) => {
+    const earned = one.margin - one.overMenu + one.otherIn;
+    const costs = one.runCosts + one.commission + one.otherOut;
+    return { earned, costs, profit: earned - costs };
+  };
+
+  // The window that found this: August to October 2026.
+  const real = made({
+    margin: 107000,
+    overMenu: -20558,
+    otherIn: 20000,
+    otherOut: 4950,
+    commission: 6500,
+    runCosts: 38000,
+  });
+  assert.equal(real.costs, 49450, "costs is what the card already showed");
+  assert.equal(real.profit, 98108, "and the profit is the figure it reported");
+  assert.equal(real.earned - real.costs, real.profit, "the card subtracts");
+
+  // A counter that charged over the menu takes the earnings down, not up.
+  const over = made({
+    margin: 100000, overMenu: 15000, otherIn: 0, otherOut: 0,
+    commission: 0, runCosts: 20000,
+  });
+  assert.equal(over.earned, 85000);
+  assert.equal(over.profit, 65000);
+
+  // And a window with nothing in it says nothing rather than something.
+  const none = made({
+    margin: 0, overMenu: 0, otherIn: 0, otherOut: 0, commission: 0, runCosts: 0,
+  });
+  assert.equal(none.profit, 0);
+});

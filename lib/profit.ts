@@ -33,6 +33,22 @@ export type Profit = {
   overMenu: number;
   /** Money in, less the food: the delivery margin. */
   margin: number;
+  /**
+   * Everything the shop earned in the window, as one figure.
+   *
+   * The card used to show money in, the delivery margin and the costs, and
+   * invite the obvious subtraction, which came out wrong by tens of
+   * thousands. Two things were missing from it: the counter reconciliation,
+   * which is a saving as often as it is an overspend, and the errands and
+   * sales that have no run behind them.
+   *
+   * So this is the figure the costs actually come off: the delivery margin,
+   * less whatever the counters charged above the menu (or plus whatever they
+   * charged below it), plus what came in from work that was not an order.
+   * Earned less costs is the profit, exactly, which is the one thing the
+   * card has to be able to say.
+   */
+  earned: number;
   /** Earned by promoters on those orders. Owed whether or not it is paid. */
   commission: number;
   /** Fuel, driver, transport and anything else on those runs. */
@@ -94,6 +110,7 @@ export async function profitBetween(from: string, to: string): Promise<Profit> {
     foodAtMenu: 0,
     overMenu: 0,
     margin: 0,
+    earned: 0,
     commission: 0,
     runCosts: 0,
     otherIn: 0,
@@ -153,7 +170,12 @@ export async function profitBetween(from: string, to: string): Promise<Profit> {
 
   const totals = otherMoneyTotals(aside);
   const margin = gross - foodAtMenu;
-  const profit = margin - over - commission - runCosts + totals.made;
+  // What came in, and what went out, kept as two figures that subtract.
+  // `made` nets the other money off against itself, so it is taken apart
+  // again here: the takings join what was earned and the spending joins
+  // what was paid, and the profit is identical either way.
+  const earned = margin - over + totals.took;
+  const profit = earned - (commission + runCosts + totals.spent);
 
   // Newest first: the run somebody is asking about is nearly always the
   // last one, and a window can be a year long.
@@ -194,6 +216,7 @@ export async function profitBetween(from: string, to: string): Promise<Profit> {
     foodAtMenu,
     overMenu: over,
     margin,
+    earned,
     commission,
     runCosts,
     otherIn: totals.took,
@@ -213,6 +236,10 @@ async function asideOnly(from: string, to: string): Promise<Partial<Profit>> {
     aside,
     otherIn: totals.took,
     otherOut: totals.spent,
+    // The same two halves as a window with runs in it, so the card's
+    // subtraction holds here too: an errand's takings are earned and its
+    // spending is a cost.
+    earned: totals.took,
     profit: totals.made,
   };
 }

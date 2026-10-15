@@ -296,8 +296,14 @@ export default async function ProfitPage({
             <p className="font-mono text-sm font-semibold">{naira(sums.gross)}</p>
           </div>
           <div>
-            <p className="ticket text-shell/60">Margin</p>
-            <p className="font-mono text-sm font-semibold">{naira(sums.margin)}</p>
+            {/* Not the delivery margin any more. That figure left two
+                things out -- what the counters really charged, and the
+                errands with no run behind them -- so the three numbers on
+                this card invited a subtraction that came out wrong by tens
+                of thousands. This one is everything earned, and costs come
+                straight off it. */}
+            <p className="ticket text-shell/60">Earned</p>
+            <p className="font-mono text-sm font-semibold">{naira(sums.earned)}</p>
           </div>
           <div>
             <p className="ticket text-shell/60">Costs</p>
@@ -348,9 +354,15 @@ export default async function ProfitPage({
           detail={`${sums.orders} paid order${sums.orders === 1 ? "" : "s"}`}
         />
         <Figure
-          label="Delivery margin"
-          value={naira(sums.margin)}
-          detail="Money in, less the food"
+          label="Earned"
+          value={naira(sums.earned)}
+          detail={
+            sums.overMenu < 0
+              ? `Delivery margin ${naira(sums.margin)}, ${naira(-sums.overMenu)} the counters came in under menu, and ${naira(sums.otherIn)} off the runs`
+              : sums.overMenu > 0
+                ? `Delivery margin ${naira(sums.margin)}, less ${naira(sums.overMenu)} the counters charged over menu, plus ${naira(sums.otherIn)} off the runs`
+                : `Delivery margin ${naira(sums.margin)}, and ${naira(sums.otherIn)} off the runs`
+          }
         />
         <Figure
           label="Costs"
