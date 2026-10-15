@@ -447,6 +447,30 @@ body {
     bottom: calc(78px + env(safe-area-inset-bottom, 0px));
   }
 }
+/*
+ * And above a page's own bar, where it has one.
+ *
+ * The cart, the checkout and both skincare pages put a total and a button
+ * on a fixed bar of their own, at the same height the launcher had just
+ * been raised to. So it covered the end of Place order: a floating disc
+ * over the one button on the one page where somebody is trying to hand
+ * money over.
+ *
+ * Done by asking the page rather than by listing the addresses it happens
+ * on. A list of routes is a list somebody has to remember to add the
+ * fifth page to, and the fifth page is always the one that gets
+ * forgotten. Each bar says what it is and the launcher steps over
+ * whichever one is there, including on a laptop, where those bars sit on
+ * the floor and the tab bar does not exist.
+ */
+body:has([data-actionbar]) .sudubot-launcher {
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 639.98px) {
+  body:has([data-actionbar]) .sudubot-launcher {
+    bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+  }
+}
 
 .sudubot .teaser {
   position: relative;

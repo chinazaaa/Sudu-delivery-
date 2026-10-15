@@ -55,7 +55,7 @@ export default async function HomeAdmin() {
       </form>
 
       {/* It used to fall back to a slide per restaurant, and then to the
-          ways into the shop — which were the cards directly under it, said
+          ways into the shop, which were the cards directly under it, said
           again, over a placeholder tint. A slider with nothing of its own to
           say is not a slider, so there is no fallback any more. */}
       <p className="card mb-4 text-sm text-muted">

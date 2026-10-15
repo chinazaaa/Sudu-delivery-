@@ -24,7 +24,7 @@ export default function ShelfBar({ bands, when }: { bands: Band[]; when: string 
   const fee = feeFor(count, null, bands);
 
   return (
-    <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 px-3 sm:bottom-3">
+    <div data-actionbar className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 px-3 sm:bottom-3">
       <Link
         href="/skincare/checkout"
         className="mx-auto flex max-w-2xl items-center justify-between gap-3 rounded-2xl bg-brand px-4 py-3 text-white shadow-bar"

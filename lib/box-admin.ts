@@ -138,7 +138,7 @@ export type BoxPrice = {
  * What every box costs, for the page that edits them.
  *
  * The editor showed the delivery figure and nothing else, so the one number
- * anybody actually wants — what the customer pays — was not on the screen,
+ * anybody actually wants, which is what the customer pays, was not on the screen,
  * and the food it is made of was not either. Working it out meant reading
  * the database by hand, which is not a thing admin should ever require.
  *

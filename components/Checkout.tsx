@@ -1821,7 +1821,7 @@ export default function Checkout({
       </aside>
       </div>
 
-      <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t-2 border-ink bg-shell px-4 pb-4 pt-3 sm:bottom-0">
+      <div data-actionbar className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t-2 border-ink bg-shell px-4 pb-4 pt-3 sm:bottom-0">
         <div className="mx-auto max-w-2xl space-y-2">
           {unresolved.length > 0 && (
             <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">

@@ -146,10 +146,10 @@ async function tell(row: {
       // whole message. A letter needs its first line as well as its
       // heading before it means anything.
       body: marked
-        ? `${subject} — marked paid automatically`
+        ? `${subject}, marked paid automatically`
         : alert
           ? subject
-          : snippet(`${subject} — ${row.text_body}`, 110),
+          : snippet(`${subject}: ${row.text_body}`, 110),
       url: marked ? "/admin/orders" : "/admin/inbox",
     }).catch(() => undefined);
 

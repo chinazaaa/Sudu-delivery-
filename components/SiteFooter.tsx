@@ -11,8 +11,8 @@ import Wordmark from "./Wordmark";
  * so the eye had to read all fifteen to find one.
  *
  * Grouped under headings instead. Same links, and every one of them still
- * matters — several pages are reachable from nowhere else, and a page
- * nothing links to is a page nothing finds — but a reader can now skip two
+ * matters, since several pages are reachable from nowhere else, and a page
+ * nothing links to is a page nothing finds. A reader can now skip two
  * of the three columns.
  */
 type Group = { heading: string; links: { href: string; said: string; away?: boolean }[] };

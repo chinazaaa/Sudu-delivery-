@@ -11,7 +11,7 @@ import { placedLabel } from "@/lib/time";
  *
  * The board's New in cut is not a shorter orders list: it is a list of jobs.
  * Everything that has been dealt with is gone from it, and what is left
- * carries its state in a word — waiting on transfer, needs a card link — and
+ * carries its state in a word, waiting on transfer or needs a card link, and
  * the action that ends that state, at a size a thumb hits first time in a
  * moving car.
  *

@@ -13,7 +13,7 @@ import { useFormStatus } from "react-dom";
  * on looking like work.
  *
  * What can be checked is checked before the button will do anything. What
- * cannot — whether every price on the sheet is right — is what the
+ * cannot, whether every price on the sheet is right, is what the
  * confirmation is for: somebody saying they have been through it.
  */
 export default function SettleRun({

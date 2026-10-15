@@ -8,7 +8,7 @@ import { useState } from "react";
  * Chasing somebody is sending them a message, so that is what the bar does:
  * one tap hands over the messages, one per person, and WhatsApp opens them
  * one at a time. Nothing in the orders table records that anybody was
- * chased — there is no column for it — so the bar writes nothing down, and
+ * chased, since there is no column for it, so the bar writes nothing down, and
  * the panel says so rather than letting the word "mark" imply it.
  *
  * The list is hidden until the bar is tapped, because nine WhatsApp links

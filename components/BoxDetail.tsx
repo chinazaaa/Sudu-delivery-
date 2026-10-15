@@ -199,7 +199,7 @@ export default async function BoxDetail({
         <aside className="flex shrink-0 flex-col gap-4 lg:w-[320px]">
           {/* On every shelf, not only the collections. It was held back from
               the occasions on the grounds that nobody asks their mother to
-              pay for the girls' night — which is true of some of them and
+              pay for the girls' night, which is true of some of them and
               not of others, and the ones it is not true of were the ones
               being denied the message. Somebody who does not want to send
               it does not send it. */}

@@ -1,5 +1,5 @@
 /**
- * "Ask your parents" — a student's own message to their mother, written for
+ * "Ask your parents": a student's own message to their mother, written for
  * them.
  *
  * The student is the one on this page and the parent is the one with the
@@ -16,7 +16,7 @@
  *
  * Beside the boxes rather than under them. It used to sit at the foot of
  * the shelf, which is after somebody has read a dozen prices and decided
- * they cannot afford any of them — and by then they have gone. The moment
+ * they cannot afford any of them, and by then they have gone. The moment
  * this has to be on screen is the moment they see the first price, so it
  * stands in the column alongside, where the decision is still open.
  *

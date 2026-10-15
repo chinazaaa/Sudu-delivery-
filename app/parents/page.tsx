@@ -98,8 +98,8 @@ export default async function ParentsPage() {
   //
   // A collection stands there all term: the care package, the monthly
   // foodstuff, the hostel pack, matriculation. Those are the things a
-  // parent sends. An occasion is a timed student thing — girls night, the
-  // all-nighter, Liverpool v Man City — and listing one here would put "buy
+  // parent sends. An occasion is a timed student thing: girls night, the
+  // all-nighter, Liverpool v Man City. Listing one here would put "buy
   // your daughter an all-nighter" in front of her mother.
   //
   // So nothing here is named in code. To put a shelf in front of parents,

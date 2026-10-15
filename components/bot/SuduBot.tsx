@@ -986,8 +986,8 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               : "";
             bot(
               dayOf === ""
-                ? `<b>${asked.name}</b> — yes, that is one of ours.`
-                : `<b>${asked.name}</b> — yes. That one goes out on <b>${dayOf}</b>, ` +
+                ? `<b>${asked.name}</b>, yes, that is one of ours.`
+                : `<b>${asked.name}</b>, yes. That one goes out on <b>${dayOf}</b>, ` +
                     "so it is ordered ahead rather than on tonight's run.",
               460
             );
@@ -1037,7 +1037,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
                       go: () => {
                         me("Show me the ready-made ones");
                         bot(
-                          "These are made up and priced already — open one and you " +
+                          "These are made up and priced already. Open one and you " +
                             "can swap bits of it about.",
                           500
                         );
@@ -1871,7 +1871,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         me(said);
         const budget = readBudget(said, true);
         if (!budget) {
-          bot("I did not catch a figure in that. A number is plenty — 10k, say.", 440);
+          bot("I did not catch a figure in that. A number is plenty: 10k, say.", 440);
           askBudgetRef.current?.();
           return;
         }
@@ -2373,7 +2373,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         const called = cardCalled(mine.occasion);
         bot(
           `Want a <b>${called}</b> with it? We write it by hand on the day and ` +
-            `put it in the box — <b>${naira(card.price)}</b>.`,
+            `put it in the box, <b>${naira(card.price)}</b>.`,
           520
         );
         setAsk({
@@ -3337,7 +3337,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         );
       } else {
         bot(
-          `No run goes out that day, so it would be a car of its own — ` +
+          `No run goes out that day, so it would be a car of its own, ` +
             `one trip, just for this.`,
           520
         );
@@ -3367,7 +3367,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     held.current.run = first;
     bot(
       wanted !== "" && first.runDate === wanted
-        ? `There is a run to <b>${held.current.hostel}</b> that very day — <b>${first.said}</b>.`
+        ? `There is a run to <b>${held.current.hostel}</b> that very day, <b>${first.said}</b>.`
         : `Our next run to <b>${held.current.hostel}</b> is <b>${first.said}</b>.`,
       480
     );

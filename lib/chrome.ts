@@ -18,3 +18,4 @@ export function ownsThePage(path: string | null | undefined): boolean {
     said.startsWith("/receipt")
   );
 }
+

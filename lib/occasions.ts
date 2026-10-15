@@ -38,7 +38,7 @@ export const OCCASIONS: Occasion[] = [
     key: "birthday",
     said: "It's someone's birthday",
     gift: true,
-    greet: "Lovely. Let me take the basics first — what should I call you?",
+    greet: "Lovely. Let me take the basics first. What should I call you?",
     asks: "Whose birthday is it?",
   },
   {

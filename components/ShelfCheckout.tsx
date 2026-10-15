@@ -342,7 +342,7 @@ export default function ShelfCheckout({
         </p>
       </section>
 
-      <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t border-black/5 bg-paper p-3 shadow-bar sm:bottom-0">
+      <div data-actionbar className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t border-black/5 bg-paper p-3 shadow-bar sm:bottom-0">
         <div className="mx-auto max-w-2xl space-y-2">
           {problem !== "" && (
             <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
