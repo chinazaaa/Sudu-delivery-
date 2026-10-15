@@ -6,8 +6,13 @@ import { naira } from "@/lib/money";
 import { runDateLabel } from "@/lib/time";
 import { jobs, rooms } from "@/lib/santa-admin";
 import { hasPaid, LEAST_MEMBERS, santaDelivery } from "@/lib/santa";
+import SaveButton from "@/components/SaveButton";
+import CopyText from "@/components/CopyText";
+import { lagosToday } from "@/lib/time";
+import { siteUrl } from "@/lib/admin-templates";
 import {
   addMember,
+  startRoom,
   markMemberPaid,
   markMemberUnpaid,
   removeMember,
@@ -34,7 +39,12 @@ export const dynamic = "force-dynamic";
  * buyer is handing it over themselves is wanted on their day, not on the
  * exchange day. Grouping by room is how that gift ends up in the wrong car.
  */
-export default async function SantaAdminPage() {
+export default async function SantaAdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ made?: string; problem?: string }>;
+}) {
+  const said = await searchParams;
   const [list, open, fee] = await Promise.all([jobs(), rooms(), santaDelivery()]);
 
   const held = open.reduce((sum, one) => sum + one.held, 0);
@@ -253,6 +263,132 @@ export default async function SantaAdminPage() {
           Every wishlist, with prices
         </Link>
       </div>
+
+      {/* The link, the moment it exists. A room is made in order to be
+          pasted into a group chat, so the one thing to do next is right
+          here rather than down the list. */}
+      {said.made ? (
+        <div className="card mb-3 border-l-[6px] border-l-mint">
+          <p className="font-bold">Room made. Here is the link to send them.</p>
+          <CopyText label="Share link" value={`${siteUrl()}/santa/${said.made}`} />
+          <p className="hint mt-2">
+            Whoever organises it can open that link, and they are the one who
+            closes the room when everybody has paid.
+          </p>
+        </div>
+      ) : null}
+
+      {said.problem ? (
+        <p className="card mb-3 border-l-[6px] border-l-brand font-semibold text-brand-dark">
+          {said.problem}
+        </p>
+      ) : null}
+
+      {/*
+        * Starting one from this side of the counter.
+        *
+        * The public page is where a room normally begins, and that is the
+        * right door. But the shop gets asked to set one up often enough,
+        * over WhatsApp or in a DM by somebody who would rather we did it,
+        * and the answer until now was to talk them through the form.
+        *
+        * Folded away, because the ordinary visit to this page is to work
+        * the rooms that already exist rather than to make another.
+        */}
+      <details className="card mb-3">
+        <summary className="cursor-pointer font-semibold">Start a room</summary>
+        <form action={startRoom} className="mt-3 space-y-3">
+          <div>
+            <label className="label" htmlFor="room_name">
+              What the room is called
+            </label>
+            <input
+              id="room_name"
+              name="name"
+              required
+              placeholder="Accounting 200 level"
+              className="field"
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="room_phone">
+                Organiser&apos;s number
+              </label>
+              <input
+                id="room_phone"
+                name="phone"
+                inputMode="tel"
+                required
+                placeholder="0803 123 4567"
+                className="field"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="room_organiser">
+                Organiser&apos;s name
+              </label>
+              <input id="room_organiser" name="organiser" className="field" />
+            </div>
+          </div>
+          <p className="hint">
+            The room is made in their name, not ours. They get the PIN, they
+            close it when everybody has paid, and they are the one the group
+            is relying on. A room owned by us is a room nobody in the group
+            can do anything with.
+          </p>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <label className="label" htmlFor="room_budget">
+                Each pays
+              </label>
+              <input
+                id="room_budget"
+                name="budget"
+                inputMode="numeric"
+                required
+                placeholder="20000"
+                className="field"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="room_close">
+                Joining closes
+              </label>
+              <input
+                id="room_close"
+                name="closeDate"
+                type="date"
+                required
+                defaultValue={lagosToday()}
+                className="field"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="room_exchange">
+                Gifts exchanged
+              </label>
+              <input
+                id="room_exchange"
+                name="exchangeDate"
+                type="date"
+                required
+                className="field"
+              />
+            </div>
+          </div>
+          <p className="hint">
+            Joining has to close before the exchange day, so there is time to
+            draw the names and go and buy {LEAST_MEMBERS} or more gifts. The
+            budget is the whole of what each person hands over; carrying
+            comes out of it.
+          </p>
+
+          <SaveButton>Make the room</SaveButton>
+        </form>
+      </details>
       {open.length === 0 ? (
         <p className="card text-muted">No rooms yet.</p>
       ) : (

@@ -6,6 +6,7 @@ import { normalisePhone } from "@/lib/phone";
 import { ensureCustomer } from "@/lib/orders";
 import {
   closeRoom,
+  createRoom,
   deleteRoom,
   joinRoom,
   markPaid,
@@ -13,6 +14,7 @@ import {
   removeMember as takeOut,
   roomById,
 } from "@/lib/santa";
+import { redirect } from "next/navigation";
 
 /**
  * Running the rooms.
@@ -26,6 +28,52 @@ const back = () => {
   revalidatePath("/admin/santa");
   revalidatePath("/admin/santa/wishlists");
 };
+
+/**
+ * Starting a room from this side of the counter.
+ *
+ * The public page is where a room normally begins, and that is the right
+ * door: somebody shares the link into their class group and it runs
+ * itself. But the shop gets asked to set one up often enough -- over
+ * WhatsApp, in a DM, by somebody who would rather we did it -- and until
+ * now the answer was to walk them through the form themselves.
+ *
+ * The room still belongs to a person rather than to the shop. The
+ * organiser's number is asked for and the room is made in their name, so
+ * they get the PIN, they can close it, and they are the one everybody else
+ * is relying on. A room owned by admin is a room nobody in the group can
+ * do anything with.
+ */
+export async function startRoom(form: FormData): Promise<void> {
+  const phone = normalisePhone(said(form, "phone"));
+  const name = said(form, "name");
+  if (!phone) return oops("That organiser number does not look right.");
+  if (name === "") return oops("Give the room a name.");
+
+  // Their PIN comes from here, the same as it would on the public page.
+  // Without a customer record they could not prove the room was theirs.
+  await ensureCustomer({ phone, name: said(form, "organiser") || name });
+
+  const made = await createRoom({
+    creatorPhone: phone,
+    name,
+    budget: Number(said(form, "budget")),
+    exchangeDate: said(form, "exchangeDate"),
+    closeDate: said(form, "closeDate"),
+  });
+
+  if (!made.ok) return oops(made.error);
+
+  back();
+  // Straight to the share link, because that is the only reason anybody
+  // makes a room: something to paste into a group chat.
+  redirect(`/admin/santa?made=${encodeURIComponent(made.room.shareToken)}`);
+}
+
+/** What went wrong, said on the page rather than thrown at somebody. */
+function oops(why: string): never {
+  redirect(`/admin/santa?problem=${encodeURIComponent(why)}`);
+}
 
 /**
  * Add somebody by hand.
