@@ -2523,14 +2523,17 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         bot(lead, 440);
         setAsk({
           of: "chips",
+          /*
+           * The order's own options first, then its lines.
+           *
+           * The chip box is a hundred and fifty pixels and scrolls, which
+           * is fine for four lines and not for ten: with a full order the
+           * day, the block and the way out were all below the fold, and
+           * the only things anybody could see were the dishes. Whatever
+           * is true of the whole order goes at the top, where the length
+           * of the order cannot bury it, and the lines scroll underneath.
+           */
           chips: [
-            ...lines.map((line, which) => ({
-              said: line.shop ? `${said(line)} · ${line.shop}` : said(line),
-              go: () => {
-                me(said(line));
-                one(which);
-              },
-            })),
             { said: "Add something else", go: () => { me("Add something else"); askOrder(true); } },
             /*
              * The order is more than its lines.
@@ -2559,8 +2562,18 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               },
             },
             { said: "Nothing, carry on", go: () => { me("Nothing, carry on"); soon(); } },
+            ...lines.map((line, which) => ({
+              said: line.shop ? `${said(line)} · ${line.shop}` : said(line),
+              go: () => {
+                me(said(line));
+                one(which);
+              },
+            })),
           ],
-          hint: "Tap a line to change it, or say what you want changed.",
+          hint:
+            lines.length > 3
+              ? `Your ${lines.length} lines are under those. Tap one to change it, or say what you want changed.`
+              : "Tap a line to change it, or say what you want changed.",
           placeholder: "e.g. take the chicken off",
           onSay: (typed: string) => huntRef.current?.(typed),
         });
