@@ -114,8 +114,26 @@ export default async function ProfitPage({
   // the car, what the promoters earned on these orders, and anything the shop
   // paid out that was not a run.
   const allCosts = sums.runCosts + sums.commission + sums.otherOut;
+  /*
+   * What share of the shop's own money it keeps.
+   *
+   * Not a share of money in, which is what this used to say. Money in is
+   * mostly the customer's food money on its way to a kitchen: of the
+   * ₦444,339 that came through in the window this was written, ₦337,339
+   * was never Sudu's. A profit measured against that reads as a thin
+   * margin on a big business, and it is neither.
+   *
+   * What the shop actually earns is the delivery, whatever the counters
+   * came in under menu, and the errands. Measured against that, the same
+   * profit is two thirds kept, which is the figure that moves when a
+   * driver costs more or a run goes out half empty -- the things that can
+   * actually be done something about.
+   */
   const share =
-    sums.gross === 0 ? 0 : Math.round((sums.profit / sums.gross) * 100);
+    sums.earned <= 0 ? 0 : Math.round((sums.profit / sums.earned) * 100);
+  /** The customer's food money, which passes straight through to a kitchen
+   *  and is nobody's profit on the way. */
+  const passedOn = sums.foodAtMenu - Math.max(0, -sums.overMenu);
 
   // The runs nobody has typed a cost into. The one thing on this page that
   // makes every figure above it a guess, so it is both the red button at the
@@ -174,7 +192,7 @@ export default async function ProfitPage({
           ignores the window somebody set is one they redo by hand. */}
       <PageHeader
         title="Profit"
-        detail="Money in, everything taken off it, and what is left."
+        detail="What the shop earned, everything taken off it, and what is left. Money in is mostly the customer's food money on its way to a kitchen."
         backHref="/admin"
         backLabel="Dashboard"
         actions={
@@ -287,7 +305,7 @@ export default async function ProfitPage({
           {sums.profit < 0 ? `−${naira(Math.abs(sums.profit))}` : naira(sums.profit)}
         </p>
         <p className="text-[13px] text-shell/80">
-          {sums.gross === 0 ? "nothing came in" : `${share}% of money in`} ·{" "}
+          {sums.earned <= 0 ? "nothing earned" : `${share}% of what we earned`} ·{" "}
           {sums.orders} paid order{sums.orders === 1 ? "" : "s"}
         </p>
         <div className="mt-3 flex gap-3.5 border-t border-shell/25 pt-3">
@@ -351,7 +369,14 @@ export default async function ProfitPage({
         <Figure
           label="Money in"
           value={naira(sums.gross)}
-          detail={`${sums.orders} paid order${sums.orders === 1 ? "" : "s"}`}
+          /* Said out loud, because most of this was never the shop's. A
+             customer's food money comes in here and goes out to a kitchen,
+             and a figure that does not say so reads as revenue. */
+          detail={
+            passedOn > 0
+              ? `${sums.orders} paid order${sums.orders === 1 ? "" : "s"} · ${naira(passedOn)} of it went to the kitchens`
+              : `${sums.orders} paid order${sums.orders === 1 ? "" : "s"}`
+          }
         />
         <Figure
           label="Earned"
@@ -378,7 +403,7 @@ export default async function ProfitPage({
           detail={
             sums.gross === 0
               ? `${windowLabel(from, to)} · nothing came in`
-              : `${windowLabel(from, to)} · ${share}% of money in`
+              : `${windowLabel(from, to)} · ${share}% of what we earned`
           }
         />
       </div>

@@ -4044,4 +4044,23 @@ test("the profit card's three figures subtract to the profit", () => {
     margin: 0, overMenu: 0, otherIn: 0, otherOut: 0, commission: 0, runCosts: 0,
   });
   assert.equal(none.profit, 0);
+
+  /*
+   * And the share is of what the shop earned, not of money in.
+   *
+   * Money in is mostly the customer's food money on its way to a kitchen:
+   * ₦316,781 of that ₦444,339 was never Sudu's. Measured against it the
+   * profit read as 22%, which sounds like a thin margin on a big business
+   * and is neither. Against what the shop actually earns it is two thirds
+   * kept, and that figure moves when a driver costs more or a run goes out
+   * half empty, which are the things anybody can do something about.
+   */
+  const gross = 444339, foodAtMenu = 337339;
+  const passedOn = foodAtMenu - Math.max(0, 20558);
+  assert.equal(passedOn, 316781, "what went to the kitchens");
+  assert.equal(Math.round((real.profit / real.earned) * 100), 66);
+  assert.equal(Math.round((real.profit / gross) * 100), 22, "the old, flattering one");
+  // Money in is the food that passed through plus the shop's own cut of an
+  // order. The errand is not in it, which is why it is not the denominator.
+  assert.equal(passedOn + (real.earned - 20000), gross);
 });
