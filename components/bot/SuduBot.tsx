@@ -278,10 +278,13 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   const askAQuestionRef = useRef<((first?: string) => void) | null>(null);
   /** The block question, held in a box so an answer given at it can hand
    *  the conversation back to it. */
-  const askHostelRef = useRef<(() => void) | null>(null);
+  const askHostelRef = useRef<((then?: () => void) => void) | null>(null);
   /** The slot step, held in a box because the day question comes before
    *  it and is written above it. */
-  const askSlotRef = useRef<(() => void) | null>(null);
+  const askSlotRef = useRef<((then?: () => void) => void) | null>(null);
+  /** The day question, held in a box so the basket can send somebody back
+   *  to it without the two steps having to know about each other. */
+  const askDayRef = useRef<((then?: () => void) => void) | null>(null);
   /** The budget step, held in a box because it offers itself again when a
    *  figure does not come through. */
   const askBudgetRef = useRef<(() => void) | null>(null);
@@ -2529,6 +2532,32 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               },
             })),
             { said: "Add something else", go: () => { me("Add something else"); askOrder(true); } },
+            /*
+             * The order is more than its lines.
+             *
+             * "Change something" opened the basket and nothing else, so
+             * somebody who wanted it on Friday instead, or at a different
+             * block, had no way to say so: the only things on the screen
+             * were the dishes. Both go back to the step that asked them
+             * and come straight back here afterwards, with the bill worked
+             * out again, because changing the day changes the fee.
+             */
+            {
+              said: "Change the day or run",
+              go: () => {
+                me("Change the day or run");
+                const back = () => soon();
+                if (isGift(held.current.occasion)) askDayRef.current?.(back);
+                else askSlotRef.current?.(back);
+              },
+            },
+            {
+              said: "Change the block",
+              go: () => {
+                me("Change the block");
+                askHostelRef.current?.(() => soon());
+              },
+            },
             { said: "Nothing, carry on", go: () => { me("Nothing, carry on"); soon(); } },
           ],
           hint: "Tap a line to change it, or say what you want changed.",
@@ -3223,8 +3252,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
    * there is no run that day the car is the only answer, which is exactly
    * what it is. Nothing here works out a price.
    */
-  const askDay = useCallback(() => {
+  const askDay = useCallback((then?: () => void) => {
     setAt(1);
+    const onward = then;
     const lists = startRef.current;
     const mine = held.current;
 
@@ -3270,7 +3300,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           go: () => {
             me(one.said);
             held.current.wantDay = one.date;
-            askSlotRef.current?.();
+            askSlotRef.current?.(onward);
           },
         })),
         {
@@ -3278,7 +3308,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           go: () => {
             me("Any day is fine");
             held.current.wantDay = "";
-            askSlotRef.current?.();
+            askSlotRef.current?.(onward);
           },
         },
         {
@@ -3324,7 +3354,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
                   go: () => {
                     me("The soonest is fine");
                     held.current.wantDay = "";
-                    askSlotRef.current?.();
+                    askSlotRef.current?.(onward);
                   },
                 },
               ],
@@ -3336,8 +3366,12 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     });
   }, [bot, handOver, me]);
 
-  const askSlot = useCallback(() => {
+  const askSlot = useCallback((then?: () => void) => {
     setAt(1);
+    /* Where to go once a slot is settled. Ordering, the first time
+       through; back to the bill when somebody has come from it to change
+       the day, because they have already said what they want. */
+    const onward = then ?? (() => askOrder());
     const lists = startRef.current;
     const runs = lists?.runs ?? [];
     if (runs.length === 0) {
@@ -3393,7 +3427,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             me(`A car of its own, ${car.phrase}`);
             held.current.car = car;
             held.current.run = null;
-            askOrder();
+            onward();
           },
         });
         return;
@@ -3436,7 +3470,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     setAsk({
       of: "buttons",
       buttons: [
-        { said: "That works", go: () => { me("That works"); askOrder(); } },
+        { said: "That works", go: () => { me("That works"); onward(); } },
         ...(sooner
           ? [
               {
@@ -3455,9 +3489,27 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     askSlotRef.current = askSlot;
   }, [askSlot]);
 
+  useEffect(() => {
+    askDayRef.current = askDay;
+  }, [askDay]);
+
   const takeBlock = useCallback(
-    (hostel: string) => {
+    (hostel: string, then?: () => void) => {
       held.current.hostel = hostel;
+      /*
+       * Where to go next.
+       *
+       * The first time through, on to the day and the slot. Changing the
+       * block part way through an order, straight back to where they came
+       * from: they have already picked a run, and asking them to pick it
+       * again because they corrected their block is the chat punishing a
+       * correction. The fee can move with the block, so the bill is
+       * worked out again at the other end either way.
+       */
+      if (then) {
+        then();
+        return;
+      }
       remember("gave their details, nothing chosen yet");
       /* A gift has a day; an ordinary order has only a soonest. So the
          day is asked for first where there is one to ask about, and the
@@ -3469,7 +3521,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   );
 
   const showBlocks = useCallback(
-    (blocks: string[], said = "Here they all are.") => {
+    (blocks: string[], said = "Here they all are.", then?: () => void) => {
       bot(said, 420);
       setAsk({
         of: "chips",
@@ -3478,7 +3530,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             said: hostel,
             go: () => {
               me(hostel);
-              takeBlock(hostel);
+              takeBlock(hostel, then);
             },
           })),
           /*
@@ -3513,7 +3565,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
                   {
                     said: "Actually, let me look again",
                     look: "alt",
-                    go: () => { me("Let me look again"); showBlocks(blocks); },
+                    go: () => { me("Let me look again"); showBlocks(blocks, undefined, then); },
                   },
                 ],
               });
@@ -3526,7 +3578,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     [bot, handOver, me, takeBlock]
   );
 
-  const askHostel = useCallback(() => {
+  const askHostel = useCallback((then?: () => void) => {
     setAt(0);
     const blocks = startRef.current?.hostels ?? [];
     if (blocks.length === 0) {
@@ -3534,7 +3586,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       setAsk({ of: "nothing" });
       pending.current = () => {
         setBusy("");
-        askHostel();
+        askHostel(then);
       };
       return;
     }
@@ -3579,7 +3631,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         if (found.how === "sure" && found.hits[0]) {
           const hostel = found.hits[0].name;
           bot(`<b>${hostel}</b>, got it.`, 400);
-          takeBlock(hostel);
+          takeBlock(hostel, then);
           return;
         }
 
@@ -3598,16 +3650,19 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
                 hot: which === 0,
                 go: () => {
                   me(hit.name);
-                  takeBlock(hit.name);
+                  takeBlock(hit.name, then);
                 },
               })),
-              { said: "None of those", go: () => { me("None of those"); showBlocks(blocks); } },
+              {
+                said: "None of those",
+                go: () => { me("None of those"); showBlocks(blocks, undefined, then); },
+              },
             ],
           });
           return;
         }
 
-        showBlocks(blocks, "I do not know that one. Here are all of them.");
+        showBlocks(blocks, "I do not know that one. Here are all of them.", then);
       },
     });
   }, [bot, me, showBlocks, takeBlock]);
