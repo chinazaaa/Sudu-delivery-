@@ -11,6 +11,7 @@ import {
   nameIn,
   phoneIn,
   asksToSwap,
+  asksForQty,
   lineLike,
   splitOrder,
   intentOf,
@@ -18,6 +19,7 @@ import {
   namedIn,
   without,
   type Swap,
+  type Amount,
 } from "@/lib/bot-match";
 import { Asking, Rail, Said, Typing, useSaying, type Ask, type Line } from "./Chat";
 import Rider from "./Rider";
@@ -269,7 +271,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   const huntRef = useRef<((said: string, echo?: boolean) => void) | null>(null);
   /** The basket editor, held the same way: the step that adds a line
    *  offers it, and it offers the step that adds a line. */
-  const changeRef = useRef<((asked?: Swap | null) => void) | null>(null);
+  const changeRef = useRef<((asked?: Swap | null, count?: Amount | null) => void) | null>(null);
   /** The bill, held in a box so a pasted list can end at it from
    *  anywhere, including from a line that was skipped. */
   const soonRef = useRef<(() => void) | null>(null);
@@ -886,6 +888,20 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
        * basket is somebody ordering, not editing.
        */
       if (echo && held.current.lines.length > 0) {
+        /*
+         * How many, before what.
+         *
+         * "Change the BBQ chicken to 1" reads exactly like a swap: the
+         * thing wanted instead is "1". Taken that way it would have taken
+         * the pizza off the order and gone looking through the menu for a
+         * dish called one. A number on its own is never a dish, so a
+         * count is looked for first.
+         */
+        const count = asksForQty(said);
+        if (count) {
+          changeRef.current?.(null, count);
+          return;
+        }
         const swap = asksToSwap(said);
         if (swap) {
           changeRef.current?.(swap);
@@ -2499,7 +2515,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
    * guessing here removes somebody's food.
    */
   const change = useCallback(
-    (asked: Swap | null = null) => {
+    (asked: Swap | null = null, count: Amount | null = null) => {
       setAt(2);
       const lines = held.current.lines;
 
@@ -2652,6 +2668,45 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           ],
         });
       };
+
+      /*
+       * How many of something, said in words.
+       *
+       * "Make the BBQ chicken one" is the commonest edit anybody makes,
+       * and tapping One fewer twice is the long way round it. Changed
+       * straight away rather than confirmed: unlike taking a line off,
+       * nothing is lost if the chat has misread it, and the new figure is
+       * said back so a wrong one is obvious.
+       */
+      if (count) {
+        const which =
+          count.which !== ""
+            ? lineLike(count.which, lines)
+            : lines.length === 1
+              ? 0
+              : -1;
+
+        if (which >= 0) {
+          const line = lines[which];
+          if (count.qty === line.qty) {
+            bot(`You already have <b>${said(line)}</b>.`, 420);
+            basket("Anything else to change?");
+            return;
+          }
+          line.qty = count.qty;
+          kept();
+          bot(`Done, <b>${said(line)}</b>.`, 420);
+          basket("Anything else to change?");
+          return;
+        }
+
+        basket(
+          count.which !== ""
+            ? `I am not sure which one you mean by <b>${count.which}</b>. Which of these?`
+            : "Which one should that be?"
+        );
+        return;
+      }
 
       /* A sentence that already said what to change. */
       if (asked) {

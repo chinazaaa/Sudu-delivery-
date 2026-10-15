@@ -120,6 +120,7 @@ import {
   phoneIn as botPhoneIn,
   yesNo as botYesNo,
   asksToSwap as botAsksToSwap,
+  asksForQty as botAsksForQty,
   splitOrder as botSplitOrder,
   intentOf as botIntentOf,
   looksLikeAQuestion as botLooksLikeAQuestion,
@@ -4208,4 +4209,47 @@ test("\"I don't know\" leads somewhere rather than being searched for", () => {
   for (const said of ["surprise serum", "choose your own shake", "tiam surprise serum"]) {
     assert.equal(botIntentOf(said), "", said);
   }
+});
+
+test("changing how many is not changing what", () => {
+  /*
+   * "Change the BBQ chicken to 1" reads exactly like a swap: the thing
+   * wanted instead is "1". Taken that way it would have taken the pizza
+   * off the order and gone looking through the menu for a dish called
+   * one. A number on its own is never a dish.
+   */
+  const dangerous = botAsksToSwap("change the bbq chicken to 1");
+  assert.equal(dangerous?.want, "1", "the swap matcher really does read it that way");
+  // Which is why the count is looked for first, and finds it.
+  assert.deepEqual(botAsksForQty("change the bbq chicken to 1"), {
+    which: "bbq chicken",
+    qty: 1,
+  });
+
+  // Every way anybody says it.
+  assert.deepEqual(botAsksForQty("make the bbq chicken one"), { which: "bbq chicken", qty: 1 });
+  assert.deepEqual(botAsksForQty("set the pizza to 3"), { which: "pizza", qty: 3 });
+  assert.deepEqual(botAsksForQty("I only want one bbq chicken"), {
+    which: "bbq chicken",
+    qty: 1,
+  });
+  assert.deepEqual(botAsksForQty("just 2 of the kfc chicken"), {
+    which: "kfc chicken",
+    qty: 2,
+  });
+  assert.deepEqual(botAsksForQty("1 bbq chicken instead of 2"), {
+    which: "bbq chicken",
+    qty: 1,
+  });
+  // "Make it two" names no line, so the chat has to ask which.
+  assert.deepEqual(botAsksForQty("make it 2"), { which: "", qty: 2 });
+
+  /*
+   * And the things that are not counts. A swap to a real dish, a removal,
+   * and an ordinary order typed at the ordering question, which must stay
+   * two pizzas rather than becoming a count of something.
+   */
+  assert.equal(botAsksForQty("change the bbq chicken to chicken republic"), null);
+  assert.equal(botAsksForQty("remove the kfc chicken"), null);
+  assert.equal(botAsksForQty("2 medium pizza"), null);
 });

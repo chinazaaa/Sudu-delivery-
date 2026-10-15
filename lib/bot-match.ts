@@ -1017,3 +1017,79 @@ export function intentOf(said: string): Intent {
   }
   return "";
 }
+
+/** A line of an order, and how many of it they now want. */
+export type Amount = {
+  /** Which line, in their words. Empty where they said "make it two" and
+   *  the chat has to know which one is being talked about. */
+  which: string;
+  qty: number;
+};
+
+/** Numbers as people write them when they are not using digits. */
+const COUNTS: Record<string, number> = {
+  one: 1, two: 2, three: 3, four: 4, five: 5,
+  six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+};
+
+const countOf = (word: string): number => {
+  const digits = Number(word);
+  if (Number.isFinite(digits) && digits > 0) return Math.round(digits);
+  return COUNTS[word] ?? 0;
+};
+
+const NUMBER = "\\d+|one|two|three|four|five|six|seven|eight|nine|ten";
+
+/**
+ * Changing how many of something, rather than what it is.
+ *
+ * "Make the BBQ chicken one" is the commonest edit anybody makes to an
+ * order and the swap matcher could not see it at all. Worse, "change the
+ * BBQ chicken to 1" looked exactly like a swap: it read "1" as the thing
+ * they wanted instead, so it would have taken the pizza off and gone
+ * looking through the menu for a dish called one.
+ *
+ * A number on its own is never a dish. That is the whole rule here: where
+ * the thing being asked for is only a figure, the figure is a count of
+ * what is already there.
+ *
+ * Checked before the swap matcher, and only ever against an order that
+ * already has something in it, so "2 medium pizza" typed at the ordering
+ * question is still two pizzas.
+ */
+export function asksForQty(said: string): Amount | null {
+  const flat = knit(flatten(said));
+  if (flat === "") return null;
+
+  const tidy = (part: string): string =>
+    half(part).replace(/^(?:just|only|about)\s+/, "").trim();
+
+  // "Make the BBQ chicken one", "set the pizza to 2", "change it to 3".
+  const made = flat.match(
+    new RegExp(`\\b(?:make|set|change)\\s+(.*?)\\s+(?:to\\s+)?(?:just\\s+|only\\s+)?(${NUMBER})\\b`)
+  );
+  if (made) {
+    const qty = countOf(made[2]);
+    if (qty > 0) return { which: tidy(made[1]), qty };
+  }
+
+  // "I only want one BBQ chicken", "just 2 of the pizza".
+  const only = flat.match(
+    new RegExp(`\\b(?:just|only)\\s+(?:want\\s+|need\\s+|have\\s+)?(${NUMBER})\\s+(?:of\\s+)?(.+)$`)
+  );
+  if (only) {
+    const qty = countOf(only[1]);
+    if (qty > 0) return { which: tidy(only[2]), qty };
+  }
+
+  // "1 BBQ chicken instead of 2", where the second figure is the old one.
+  const swapped = flat.match(
+    new RegExp(`\\b(${NUMBER})\\s+(.+?)\\s+instead of\\s+(?:${NUMBER})\\b`)
+  );
+  if (swapped) {
+    const qty = countOf(swapped[1]);
+    if (qty > 0) return { which: tidy(swapped[2]), qty };
+  }
+
+  return null;
+}
