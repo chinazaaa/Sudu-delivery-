@@ -3075,6 +3075,11 @@ export async function updateRestaurant(form: FormData): Promise<void> {
       // All seven, or none ticked, both mean "every day": a restaurant
       // nobody has thought about must behave exactly as it always has.
       open_days: openDaysText(form.getAll("open_days").map((one) => Number(one))),
+      /* Whether the chat may put this counter forward when somebody says
+         they do not know what to order. A shelf of cooking oil and a shelf
+         of serums are both on the shop and neither is dinner, and the shop
+         is the only thing that knows which of its counters is a kitchen. */
+      suggest_in_chat: String(form.get("suggest_in_chat") ?? "") === "on",
       logo_url:
         (await uploadImage(fileFrom(form, "logo"), "logos")) ??
         String(form.get("logo_url") ?? "").trim(),

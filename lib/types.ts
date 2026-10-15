@@ -10,6 +10,10 @@ export type Restaurant = {
   address: string;
   closes_at: string;
   active: boolean;
+  /** Whether the chat may put this counter forward when somebody says they
+   *  do not know what to order. Naming it still shops there: this governs
+   *  what is offered unasked, not what anybody may buy. */
+  suggest_in_chat?: boolean;
   sort_order: number;
   logo_url: string;
   banner_url: string;

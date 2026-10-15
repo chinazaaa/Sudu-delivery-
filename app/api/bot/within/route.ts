@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/supabase";
-import { openRestaurants } from "@/lib/menu";
 
 export const dynamic = "force-dynamic";
 
@@ -12,19 +11,22 @@ const MOST = 8;
  * What somebody can actually afford, off the real menu.
  *
  * The honest version of "I do not know what to order". It does not
- * recommend: it reads the menu the shop is selling from today, keeps what
- * fits the money, and puts the dearest of those first, because somebody
- * with ten thousand to spend wants the best ten thousand will buy rather
- * than the cheapest thing on the shelf.
+ * recommend: it reads the menu the shop is selling today and shows what
+ * the money will buy.
  *
- * Every price here is the menu's own, which is the same price the till
- * charges. Nothing is made up, nothing is a sample, and a dish that goes
- * off the menu this afternoon stops being suggested this afternoon.
+ * Two things it learned the hard way.
  *
- * A floor as well as a ceiling, because a budget of ten thousand offered a
- * four hundred naira sachet of water is a chat that has not understood the
- * question. Half the budget is a reasonable thing to be shown; a fortieth
- * of it is not.
+ * A budget is not one dish. Forty-five thousand offered the dearest
+ * forty-five thousand on the menu, which was a single platter, and that is
+ * not what anybody means: they mean enough for the room. So the list is
+ * spread across the whole affordable range rather than taken off the top
+ * of it, and whatever is picked leaves a figure to keep going with.
+ *
+ * And not every counter is a restaurant. A fan and a bottle of cooking oil
+ * are both on the shop and both cost about what a party platter does, and
+ * neither is dinner. Which counters may be suggested is a switch on each
+ * one rather than a rule in here, because the shop knows which of its
+ * shelves is a kitchen and this file never will.
  */
 export async function POST(request: Request): Promise<NextResponse> {
   try {
@@ -36,14 +38,36 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
     const kitchen = String(body.kitchen ?? "").trim();
 
-    // Only counters that are open today, so nothing is offered from a
-    // kitchen the car is not going to.
-    const open = await openRestaurants().catch(() => []);
-    const ids = open.map((one) => one.id);
-    if (ids.length === 0) return NextResponse.json({ items: [] });
+    /*
+     * Every open counter, and which of them may be suggested unasked.
+     *
+     * The two are not the same question. Nobody wants to be offered
+     * cooking oil when they said they did not know what to eat, but
+     * somebody who has asked for the market is shopping at the market and
+     * should be shown what is on it. So the switch decides what is put
+     * forward on its own, never what anybody is allowed to buy.
+     */
+    const { data: shops } = await db()
+      .from("restaurants")
+      .select("id, name, suggest_in_chat")
+      .eq("active", true);
+    const open = (shops ?? []) as {
+      id: string;
+      name: string;
+      suggest_in_chat: boolean | null;
+    }[];
+    if (open.length === 0) return NextResponse.json({ items: [] });
 
     const named = new Map(open.map((one) => [one.id, one.name]));
-    const floor = Math.round(spend * 0.35);
+    const ids = open
+      .filter((one) => one.suggest_in_chat !== false)
+      .map((one) => one.id);
+    if (kitchen === "" && ids.length === 0) return NextResponse.json({ items: [] });
+
+    /* A floor, because a four hundred naira sachet of water against a ten
+       thousand naira budget is a chat that has not understood the
+       question. */
+    const floor = Math.round(spend * 0.06);
 
     let query = db()
       .from("menu_items")
@@ -53,7 +77,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       .lte("price_food", spend)
       .gte("price_food", floor)
       .order("price_food", { ascending: false })
-      .limit(MOST * 3);
+      .limit(160);
 
     query = kitchen === "" ? query.in("restaurant_id", ids) : query.eq("restaurant_id", kitchen);
 
@@ -66,28 +90,40 @@ export async function POST(request: Request): Promise<NextResponse> {
       price_food: number;
       restaurant_id: string;
     }[];
+    if (rows.length === 0) return NextResponse.json({ items: [] });
 
-    // Spread across counters rather than eight things from whichever
-    // kitchen happens to price highest. A list that is all Domino's is a
-    // list that has answered a different question.
-    const seen = new Map<string, number>();
-    const items = rows
-      .filter((row) => {
-        if (kitchen !== "") return true;
-        const many = seen.get(row.restaurant_id) ?? 0;
-        if (many >= 2) return false;
-        seen.set(row.restaurant_id, many + 1);
-        return true;
-      })
-      .slice(0, MOST)
-      .map((row) => ({
+    /*
+     * Spread, not the top of the list.
+     *
+     * Taken dearest first, a big budget sees eight of the biggest things
+     * on the menu and nothing it can put together. Walked at an even
+     * stride down the affordable range instead, the same budget sees a
+     * platter, a couple of meals and something to drink, which is an
+     * order somebody can actually build.
+     */
+    const stride = Math.max(1, Math.floor(rows.length / MOST));
+    const spread: typeof rows = [];
+    const perShop = new Map<string, number>();
+    for (let at = 0; at < rows.length && spread.length < MOST; at += stride) {
+      const row = rows[at];
+      if (kitchen === "") {
+        // A list that is all one kitchen has answered a different
+        // question, and the car has to stop at each one anyway.
+        const many = perShop.get(row.restaurant_id) ?? 0;
+        if (many >= 2) continue;
+        perShop.set(row.restaurant_id, many + 1);
+      }
+      spread.push(row);
+    }
+
+    return NextResponse.json({
+      items: spread.map((row) => ({
         id: row.id,
         name: row.name,
         price: Number(row.price_food),
         shop: named.get(row.restaurant_id) ?? "",
-      }));
-
-    return NextResponse.json({ items });
+      })),
+    });
   } catch {
     return NextResponse.json({ items: [] });
   }

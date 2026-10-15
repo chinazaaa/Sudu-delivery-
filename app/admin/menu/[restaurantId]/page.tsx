@@ -146,6 +146,18 @@ export default async function RestaurantAdmin({
             />
           </div>
           <label className="flex items-center gap-2 pb-2 text-sm">
+            <input
+              type="checkbox"
+              name="suggest_in_chat"
+              defaultChecked={restaurant.suggest_in_chat !== false}
+            />
+            {/* Whether Sudu Bot may put this counter forward when somebody
+                says they do not know what to order. A shelf of cooking oil
+                and a shelf of serums both cost about what a party platter
+                does, and neither is dinner. */}
+            A kitchen the chat can suggest
+          </label>
+          <label className="flex items-center gap-2 pb-2 text-sm">
             <input type="checkbox" name="active" defaultChecked={restaurant.active} />
             On the site
           </label>

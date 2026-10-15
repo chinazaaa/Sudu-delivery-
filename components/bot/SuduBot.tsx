@@ -1313,9 +1313,24 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             })
               .then((answer) => answer.json())
               .then((again: { hits: Hit[] }) => {
-                queue.current = [];
-                if (again.hits[0]) walk(again.hits[0], again.hits[0].qty ?? got.qty);
-                else askOrder();
+                if (again.hits[0]) {
+                  /* Found it there, so the counter has done its job and
+                     the next question is not about it. */
+                  queue.current = [];
+                  walk(again.hits[0], again.hits[0].qty ?? got.qty);
+                  return;
+                }
+                /*
+                 * Not found there, so the counter is kept.
+                 *
+                 * Somebody who has just tapped Domino's has told us where
+                 * they are shopping, and clearing that because one search
+                 * came back empty threw the answer away: the next question
+                 * said "what do you fancy?" instead of "what from
+                 * Domino's?", and the suggestions after it came from every
+                 * kitchen in the shop.
+                 */
+                askOrder();
               })
               .catch(() => askOrder());
           };
@@ -1790,12 +1805,21 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           return;
         }
 
+        /*
+         * Said as a budget to build up to, not as one thing to buy.
+         *
+         * Forty-five thousand is not one dish, it is enough for the room,
+         * and a list that reads as "pick one of these" has misunderstood
+         * the question. So the sentence invites more than one, and every
+         * pick afterwards says what is left.
+         */
         bot(
           budget.kind === "all"
             ? `With <b>${naira(budget.amount)}</b> all in, that is about ` +
-                `<b>${naira(spend)}</b> of food once delivery is paid. Here is what it buys.`
-            : `Here is what <b>${naira(spend)}</b> of food buys. Delivery is on top, ` +
-                `from ${naira(fee)}.`,
+                `<b>${naira(spend)}</b> of food once delivery is paid. Pick as many ` +
+                "as you like and I will keep count."
+            : `Here is what <b>${naira(spend)}</b> of food buys. Pick as many as you ` +
+                `like and I will keep count. Delivery is on top, from ${naira(fee)}.`,
           540
         );
         setAsk({
@@ -1933,6 +1957,19 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
        * have not been asked about yet.
        */
       const after = () => {
+        /*
+         * No running total here, deliberately.
+         *
+         * It is the obvious thing to add after a budget: say what is left
+         * as each thing goes on. But the chat does not know what anything
+         * costs. A line's price depends on the size and the halves chosen
+         * on it, and the only thing allowed to add this order up is the
+         * till. Working it out here would mean either inventing prices or
+         * asking the server between every tap, and a figure the chat made
+         * up is exactly the kind of figure this whole thing refuses to
+         * quote. The bill says the total, and says once if it went over.
+         */
+
         /* A code is worth what it is worth against one particular cart,
            so a cart that just changed has no code on it until it is
            checked again. Quietly, because the question comes round again
