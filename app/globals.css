@@ -428,6 +428,25 @@ body {
   align-items: flex-end;
   gap: 10px;
 }
+/*
+ * Above the tab bar, not on top of it.
+ *
+ * The launcher sat twenty pixels off the bottom, which on a phone is
+ * exactly where the Cart tab is, so the chat was covering the one button
+ * the whole shop exists to get somebody to press. Nobody who cannot find
+ * the cart orders anything, which makes this the most expensive twenty
+ * pixels on the site.
+ *
+ * The bar is roughly sixty-two pixels of button and border, and it carries
+ * the safe area itself, so the launcher clears both and keeps its own gap
+ * above. It only exists under `sm`, which is the same breakpoint the bar
+ * hides at.
+ */
+@media (max-width: 639.98px) {
+  .sudubot-launcher {
+    bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  }
+}
 
 .sudubot .teaser {
   position: relative;
@@ -515,7 +534,10 @@ body {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: var(--bot-tomato);
+  /* Ink rather than tomato, because the rider's own helmet is tomato and a
+     tomato character on a tomato disc is a silhouette. On Ink he reads at
+     arm's length, which is the only distance this button is ever seen at. */
+  background: var(--bot-ink);
   border: 3px solid var(--bot-ink);
   box-shadow: 5px 5px 0 var(--bot-shadow);
   display: grid;
@@ -525,11 +547,10 @@ body {
      tap, whatever the disc is doing at the time. */
   pointer-events: none;
 }
-.sudubot .fab:hover .hop {
-  background: var(--bot-deep);
-}
+.sudubot .fab:hover .hop,
 .sudubot .fab:active .hop {
-  background: var(--bot-deep);
+  background: #241e19;
+  border-color: #241e19;
 }
 .sudubot .fab:focus-visible {
   outline: 4px solid var(--bot-volt);
@@ -543,18 +564,6 @@ body {
   .sudubot .ring {
     animation: none;
   }
-}
-.sudubot .fab .glyph {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 5px;
-}
-.sudubot .fab .glyph i {
-  display: block;
-  height: 6px;
-  border-radius: 1px;
-  background: #fff8ec;
 }
 @keyframes sudubot-hop {
   0%,
@@ -689,23 +698,14 @@ body {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--bot-tomato);
+  /* Cream, not tomato: his helmet is tomato and the two together are a
+     silhouette. The header is Ink, so a pale disc is what separates him
+     from it. */
+  background: var(--bot-cream);
   display: grid;
   place-items: center;
   flex: 0 0 auto;
   border: 2px solid var(--bot-cream);
-}
-.sudubot .phead .avg {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 3px;
-}
-.sudubot .phead .avg i {
-  display: block;
-  height: 4px;
-  border-radius: 1px;
-  background: var(--bot-cream);
 }
 .sudubot .phead .who {
   flex: 1 1 auto;
@@ -1298,5 +1298,96 @@ body {
   }
   .sudubot .log {
     scroll-behavior: auto;
+  }
+}
+
+
+/* ---------------------------------------------------------- the rider */
+/*
+ * One character, two sizes: the launcher and the head of the panel. The
+ * fills are set per part with higher specificity than the shared stroke
+ * rule, which would otherwise win and blank them out.
+ *
+ * His colours are pinned rather than themed. He is a brand mark, and a
+ * mark whose helmet changes colour at night is two marks.
+ */
+.sudubot .rider {
+  display: block;
+  overflow: visible;
+}
+.sudubot .fab .rider {
+  width: 50px;
+  height: 50px;
+  position: relative;
+  z-index: 1;
+}
+.sudubot .phead .av .rider {
+  width: 33px;
+  height: 33px;
+}
+.sudubot .rider .ro path {
+  stroke: #15110e;
+  stroke-width: 5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  fill: none;
+}
+.sudubot .rider .rj {
+  fill: #fff8ec;
+}
+.sudubot .rider .rh {
+  fill: #e5321d;
+}
+.sudubot .rider .rv {
+  fill: #15110e;
+  stroke-width: 4;
+}
+.sudubot .rider .rm {
+  stroke: #15110e;
+  stroke-width: 4;
+  stroke-linecap: round;
+  fill: none;
+}
+.sudubot .rider .rs {
+  stroke: #e5321d;
+  stroke-width: 5.5;
+  stroke-linecap: round;
+  fill: none;
+}
+.sudubot .rider .re circle {
+  fill: #ffd23f;
+}
+/* On the ink disc the visor and his outline disappear into the button, so
+   both lift a shade. Only there: on the cream avatar they are right. */
+.sudubot .fab .rider .ro path {
+  stroke: #2c2521;
+}
+.sudubot .fab .rider .rv {
+  fill: #2c2521;
+}
+/* A blink every few seconds keeps him alive without being busy. The name is
+   its own, because the typing dots already own `blink` and two animations
+   of one name is one animation. */
+.sudubot .rider .re {
+  animation: sudubot-eyes 6.2s infinite;
+  transform-origin: 50% 56px;
+  transform-box: view-box;
+}
+@keyframes sudubot-eyes {
+  0%,
+  95.5%,
+  100% {
+    transform: scaleY(1);
+  }
+  96.6% {
+    transform: scaleY(0.08);
+  }
+  97.8% {
+    transform: scaleY(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sudubot .rider .re {
+    animation: none;
   }
 }

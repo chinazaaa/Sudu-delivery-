@@ -46,6 +46,9 @@ export type Settings = {
   /** Whether the ordering chat appears on the shop at all. Off until
    *  somebody turns it on, so it can be built in the open. */
   bot_on: string;
+  /** The product the chat offers as a handwritten card. One product, called
+   *  whatever the occasion makes it. Empty means no card is offered. */
+  card_item_id: string;
   /** The App Store id, digits only. Empty means the site never mentions an
    *  iPhone app: no bar in Safari, no link in the footer. */
   ios_app_id: string;
@@ -216,6 +219,7 @@ export const EMPTY: Settings = {
   contact_email: "hello@sudu.store",
   auto_paid: "",
   bot_on: "",
+  card_item_id: "",
   ios_app_id: "",
   android_package: "",
   abroad_on: "",

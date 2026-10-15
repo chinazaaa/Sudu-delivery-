@@ -19,6 +19,7 @@ import {
   type Swap,
 } from "@/lib/bot-match";
 import { Asking, Rail, Said, Typing, useSaying, type Ask, type Line } from "./Chat";
+import Rider from "./Rider";
 
 /**
  * Sudu Bot.
@@ -3058,11 +3059,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           >
             <span className="hop" aria-hidden>
               <span className="ring" />
-              <span className="glyph">
-                <i style={{ width: 26 }} />
-                <i style={{ width: 18 }} />
-                <i style={{ width: 10 }} />
-              </span>
+              <Rider />
               <span className="badge">1</span>
             </span>
           </button>
@@ -3073,11 +3070,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         <div className="sudubot-panel" role="dialog" aria-label="Sudu Bot" ref={panel}>
           <div className="phead">
             <span className="av" aria-hidden>
-              <span className="avg">
-                <i style={{ width: 16 }} />
-                <i style={{ width: 11 }} />
-                <i style={{ width: 6 }} />
-              </span>
+              <Rider />
             </span>
             <span className="who">
               <b>Sudu Bot</b>

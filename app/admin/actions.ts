@@ -2668,6 +2668,7 @@ const SETTING_FIELDS = [
   "msg_review",
   "msg_google",
   "paid_note",
+  "card_item_id",
   "fee_bands",
   "same_day_bands",
   "same_day_urgent_extra",
