@@ -97,6 +97,11 @@ import { halfShown, key as priceKey, pickedPrice } from "../lib/pricing";
 import { whatsappTo as botWhatsappTo } from "../lib/messages";
 import { pickFaq as botPickFaq } from "../lib/faq-match";
 import {
+  readBudget as botReadBudget,
+  toSpend as botToSpend,
+  allIn as botAllIn,
+} from "../lib/budget";
+import {
   OCCASIONS as botOccasions,
   occasionBy as botOccasionBy,
   isGift as botIsGift,
@@ -4103,5 +4108,104 @@ test("an order for somebody else names the right person throughout", () => {
     assert.ok(one.said.length > 0, one.key);
     assert.ok(one.greet.length > 0, one.key);
     assert.equal(one.asks === "", one.key === "me");
+  }
+});
+
+test("a budget is read with delivery in it or out of it, and never guessed", () => {
+  /*
+   * "Fifteen k plus delivery" and "thirty thousand all in" look like the
+   * same sentence and are not. Reading one as the other quotes somebody a
+   * figure they never agreed to, which is the one mistake about money
+   * this chat must not make.
+   */
+  assert.deepEqual(botReadBudget("15k plus delivery"), { amount: 15000, kind: "food" });
+  assert.deepEqual(botReadBudget("₦30,000 all in"), { amount: 30000, kind: "all" });
+  assert.deepEqual(botReadBudget("20000 including delivery"), { amount: 20000, kind: "all" });
+  assert.deepEqual(botReadBudget("I have about 12k for the food"), {
+    amount: 12000,
+    kind: "food",
+  });
+
+  // Said without saying which, so the chat has to ask rather than pick.
+  assert.deepEqual(botReadBudget("around 10k"), { amount: 10000, kind: "" });
+  assert.deepEqual(botReadBudget("25,000"), { amount: 25000, kind: "" });
+
+  // Every way anybody writes the same money.
+  for (const said of ["15k", "15,000", "15000", "₦15k", "15 k"]) {
+    assert.equal(botReadBudget(said)?.amount, 15000, said);
+  }
+  /*
+   * A bare small number only counts where the chat asked for a budget.
+   * Answering "what are you thinking of spending?" with "15" is fifteen
+   * thousand and nothing else. The same digits loose in a sentence are
+   * two medium pizzas, and reading those as a budget would be the chat
+   * inventing a constraint nobody set.
+   */
+  assert.equal(botReadBudget("I have 15", true)?.amount, 15000);
+  assert.equal(botReadBudget("15", true)?.amount, 15000);
+  assert.equal(botReadBudget("2 medium pizza"), null);
+
+  // Not a budget at all.
+  assert.equal(botReadBudget("jollof rice"), null);
+  assert.equal(botReadBudget(""), null);
+
+  /*
+   * What is left for food, and what the whole thing comes to. A budget
+   * that includes delivery has it taken off before anything is suggested;
+   * one that does not is already the food figure.
+   */
+  const allIn = { amount: 30000, kind: "all" as const };
+  const foodOnly = { amount: 30000, kind: "food" as const };
+  assert.equal(botToSpend(allIn, 4000), 26000);
+  assert.equal(botToSpend(foodOnly, 4000), 30000);
+  assert.equal(botAllIn(allIn, 4000), 30000);
+  assert.equal(botAllIn(foodOnly, 4000), 34000);
+  // A fee bigger than the budget leaves nothing, not a negative.
+  assert.equal(botToSpend({ amount: 3000, kind: "all" }, 4000), 0);
+});
+
+test("\"I don't know\" leads somewhere rather than being searched for", () => {
+  /*
+   * The commonest thing anybody says to a person behind a counter, and
+   * the one answer a menu search can do nothing with. Asking "what would
+   * you like?" again is the chat repeating the question they have just
+   * said they cannot answer.
+   */
+  for (const said of [
+    "I don't know",
+    "dont know",
+    "dunno",
+    "no idea",
+    "not sure",
+    "I can't decide",
+    "you choose",
+    "surprise me",
+    "anything",
+    "whatever",
+    "up to you",
+    "pick for me",
+    "choose for me",
+    "pick",
+    "surprise",
+    "surprise me",
+    "random",
+    "suggest something",
+    "what do you recommend",
+  ]) {
+    assert.equal(botIntentOf(said), "unsure", said);
+  }
+
+  // And something they do know is still an order.
+  for (const said of ["2 medium pizza", "jollof rice", "zinger burger"]) {
+    assert.equal(botIntentOf(said), "", said);
+  }
+
+  /*
+   * The two the shop really sells, which is why "pick" and "surprise"
+   * only count as a whole sentence. A rule that caught them anywhere
+   * would put both of these out of reach.
+   */
+  for (const said of ["surprise serum", "choose your own shake", "tiam surprise serum"]) {
+    assert.equal(botIntentOf(said), "", said);
   }
 });

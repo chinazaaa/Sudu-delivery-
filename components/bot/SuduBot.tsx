@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { naira } from "@/lib/money";
 import { pickFaq } from "@/lib/faq-match";
+import { readBudget, toSpend, allIn, type Budget } from "@/lib/budget";
 import {
   find,
   whyNotAName,
@@ -129,6 +130,9 @@ type Held = {
   /** The day it has to land on, where the occasion has one. Empty means
    *  the soonest is fine, which is every ordinary order. */
   wantDay: string;
+  /** What they said they had to spend, where they said anything. Never a
+   *  cap the chat enforces: it is a thing to be told about going over. */
+  budget: Budget | null;
   run: Run | null;
   /** A car of its own instead of a run, where they asked for one. */
   car: Car | null;
@@ -194,6 +198,7 @@ const EMPTY: Held = {
   occasion: "me",
   forName: "",
   wantDay: "",
+  budget: null,
   run: null,
   car: null,
   kitchen: null,
@@ -266,6 +271,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   /** The slot step, held in a box because the day question comes before
    *  it and is written above it. */
   const askSlotRef = useRef<(() => void) | null>(null);
+  /** The budget step, held in a box because it offers itself again when a
+   *  figure does not come through. */
+  const askBudgetRef = useRef<(() => void) | null>(null);
   /** Said no to a discount code already. Asked once per version of the
    *  order: asking again on the same bill is nagging, and asking again
    *  after the order changed is the only honest thing to do, because what
@@ -867,6 +875,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
 
         if (meant === "question") {
           askAQuestion();
+          return;
+        }
+
+        /* They have said they cannot answer the question, so the chat
+           stops asking it and asks the one that can be answered. */
+        if (meant === "unsure") {
+          bot("No bother. Easiest way in is the money.", 430);
+          askBudgetRef.current?.();
           return;
         }
 
@@ -1494,6 +1510,154 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     huntRef.current = hunt;
   }, [hunt]);
 
+  /*
+   * "I do not know what to order."
+   *
+   * The commonest thing anybody says to a person behind a counter, and
+   * until now the chat had no answer to it but a blank box. What it can
+   * honestly do is read the menu the shop is selling today and show what
+   * the money will buy, dearest first: somebody with ten thousand wants
+   * the best ten thousand will buy, not the cheapest thing on the shelf.
+   *
+   * Every price shown is the menu's own, which is the price the till
+   * charges. Nothing here is a sample list and nothing is invented.
+   */
+  const askBudget = useCallback(() => {
+    setAt(2);
+    const lists = startRef.current;
+    const fee = lists?.feeFrom ?? 0;
+
+    /* What the money buys, once the question of delivery is settled. */
+    const show = async (budget: Budget) => {
+      held.current.budget = budget;
+      const spend = toSpend(budget, fee);
+      if (spend <= 0) {
+        bot(
+          `Delivery alone starts at <b>${naira(fee)}</b>, so there would be nothing ` +
+            "left for food out of that. Shall we look at a bigger figure?",
+          520
+        );
+        askBudgetRef.current?.();
+        return;
+      }
+
+      try {
+        const answer = await working(
+          "Seeing what that will buy…",
+          fetch("/api/bot/within", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ spend, kitchen: queue.current[0]?.id ?? "" }),
+          })
+        );
+        const got = (await answer.json()) as {
+          items: { id: string; name: string; price: number; shop: string }[];
+        };
+
+        if (got.items.length === 0) {
+          bot(
+            `I cannot find much at <b>${naira(spend)}</b> on what is open today. ` +
+              "Say what you fancy and I will look properly.",
+            500
+          );
+          askOrderRef.current?.(true);
+          return;
+        }
+
+        bot(
+          budget.kind === "all"
+            ? `With <b>${naira(budget.amount)}</b> all in, that is about ` +
+                `<b>${naira(spend)}</b> of food once delivery is paid. Here is what it buys.`
+            : `Here is what <b>${naira(spend)}</b> of food buys. Delivery is on top, ` +
+                `from ${naira(fee)}.`,
+          540
+        );
+        setAsk({
+          of: "chips",
+          chips: [
+            ...got.items.map((one, which) => ({
+              said: `${one.name} · ${naira(one.price)}`,
+              hot: which === 0,
+              go: () => {
+                me(one.name);
+                /* Looked up properly rather than added from this list, so
+                   it arrives with its own questions: a pizza still asks
+                   which size, and the price still comes off the till. */
+                huntRef.current?.(one.name, false);
+              },
+            })),
+            {
+              said: "None of these, let me say it",
+              go: () => {
+                me("Let me say it");
+                askOrderRef.current?.(true);
+              },
+            },
+          ],
+          hint: "Prices are the menu's own. The bill is worked out at the end.",
+        });
+      } catch {
+        bot("I could not look that up just then. Say what you fancy instead?", 440);
+        askOrderRef.current?.(true);
+      }
+    };
+
+    /* Which kind of figure it is. Asked, never assumed: "fifteen k" with
+       delivery inside it and outside it are two different orders, and
+       picking one for somebody is quoting them a price they never gave. */
+    const settle = (budget: Budget) => {
+      if (budget.kind !== "") {
+        void show(budget);
+        return;
+      }
+      bot(
+        `Is <b>${naira(budget.amount)}</b> for the food, or everything including ` +
+          "delivery?",
+        480
+      );
+      setAsk({
+        of: "buttons",
+        buttons: [
+          {
+            said: "That is for the food",
+            go: () => {
+              me("For the food");
+              void show({ ...budget, kind: "food" });
+            },
+          },
+          {
+            said: "Everything, delivery included",
+            look: "alt",
+            go: () => {
+              me("Everything in");
+              void show({ ...budget, kind: "all" });
+            },
+          },
+        ],
+      });
+    };
+
+    bot("What were you thinking of spending?", 440);
+    setAsk({
+      of: "text",
+      placeholder: "e.g. 15k, or 20,000 all in",
+      onSay: (said) => {
+        me(said);
+        const budget = readBudget(said, true);
+        if (!budget) {
+          bot("I did not catch a figure in that. A number is plenty — 10k, say.", 440);
+          askBudgetRef.current?.();
+          return;
+        }
+        settle(budget);
+      },
+    });
+  }, [bot, me, working]);
+
+  useEffect(() => {
+    askBudgetRef.current = askBudget;
+  }, [askBudget]);
+
   const askOrder = useCallback((again = false) => {
     setAt(2);
     /* Where somebody named counters, the question names the next one and
@@ -1510,6 +1674,19 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       of: "text",
       placeholder: only ? `Something from ${only.name}` : "e.g. 2 medium bbq pizza",
       onSay: (said) => huntRef.current?.(said),
+      /* The commonest thing anybody says to a person behind a counter,
+         and until now the chat had no answer to it but a blank box. */
+      ...(again
+        ? {}
+        : {
+            lead: {
+              said: "I do not know what to order",
+              go: () => {
+                me("I do not know what to order");
+                askBudgetRef.current?.();
+              },
+            },
+          }),
     });
   }, [bot, me, waLink]);
 
@@ -1777,6 +1954,32 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         },
         600
       );
+      /*
+       * Over what they said they had, said once.
+       *
+       * Never enforced. A budget is a thing somebody mentioned, not a cap
+       * the shop gets to impose, and plenty of people go over on purpose.
+       * But going over without being told is how somebody ends up paying
+       * eight thousand more than they planned and blaming the chat for
+       * it, so it is said plainly with the amount, and then left alone.
+       */
+      if (mine.budget) {
+        const meant = allIn(mine.budget, got.fee ?? 0);
+        const over = (got.total ?? 0) - meant;
+        if (over > 0) {
+          say(
+            {
+              kind: "status",
+              tone: "warn",
+              html:
+                `<span>That is <b>${naira(over)}</b> over the ` +
+                `${naira(mine.budget.amount)} you mentioned. Still yours to decide.</span>`,
+            },
+            460
+          );
+        }
+      }
+
       const confirm = (hint = "Nothing is charged until you transfer.") => {
         setAsk({
           of: "buttons",

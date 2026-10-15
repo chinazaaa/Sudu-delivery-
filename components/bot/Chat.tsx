@@ -28,7 +28,16 @@ export type Row = { said: string; under?: string; amount: number };
 
 export type Ask =
   | { of: "nothing" }
-  | { of: "text"; placeholder: string; type?: "text" | "tel"; onSay: (said: string) => void }
+  | {
+      of: "text";
+      placeholder: string;
+      type?: "text" | "tel";
+      onSay: (said: string) => void;
+      /** A button above the box, for the answer that is not typing at all.
+       *  "I do not know what to order" is the commonest thing anybody says
+       *  to a person behind a counter, and a blank box is no answer to it. */
+      lead?: { said: string; go: () => void };
+    }
   /*
    * Chips, and sometimes a box under them.
    *
@@ -242,6 +251,16 @@ export function Asking({
     };
     return (
       <div className="foot">
+        {ask.lead && (
+          <button
+            type="button"
+            className="big alt"
+            style={{ marginBottom: 9 }}
+            onClick={ask.lead.go}
+          >
+            {ask.lead.said}
+          </button>
+        )}
         <div className="ask">
           <input
             ref={box}

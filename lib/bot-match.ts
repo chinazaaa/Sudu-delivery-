@@ -831,7 +831,32 @@ export type Intent =
   /** What there is, rather than which one of it. */
   | "menu"
   /** Help or support, which is two different jobs until you ask which. */
-  | "help";
+  | "help"
+  /**
+   * They genuinely do not know what they want.
+   *
+   * The commonest thing anybody says to a person behind a counter, and
+   * the one answer a menu search can do nothing with. Asking "what would
+   * you like?" again is the chat repeating the question they have just
+   * said they cannot answer.
+   */
+  | "unsure";
+
+/**
+ * Words that on their own mean "you decide".
+ *
+ * A sentence of nothing but these is somebody asking to be helped rather
+ * than naming a dish. Kept apart from the phrase patterns because they are
+ * only safe as a whole sentence: the shop sells a Choose Your Own Shake
+ * and a Surprise Serum, and catching these words anywhere would put both
+ * out of reach.
+ */
+const UNSURE = new Set([
+  "pick", "picks", "choose", "chose", "decide", "surprise", "random",
+  "anything", "any", "whatever", "something", "suggest", "suggestion",
+  "suggestions", "recommend", "recommendation", "recommendations", "idea",
+  "ideas", "options", "unsure", "best", "nice", "good",
+]);
 
 /** Words that mean "I want to order" and nothing more specific. */
 const VAGUE = new Set([
@@ -876,7 +901,10 @@ const FILLER = new Set([
  * the menu is called it.
  */
 export function intentOf(said: string): Intent {
-  const flat = flatten(said);
+  /* The apostrophes put back, so "I don't know" is the same sentence as
+     "I dont know". Flattening alone leaves an orphaned t, and every
+     pattern about not knowing something then has to carry it. */
+  const flat = knit(flatten(said));
   if (flat === "") return "";
 
   if (
@@ -902,6 +930,36 @@ export function intentOf(said: string): Intent {
       return "fees";
     }
   }
+
+  /*
+   * "I don't know."
+   *
+   * Checked before the vague-order case, because "anything" belongs here
+   * rather than there: somebody who says anything is not asking to be
+   * asked again, they are asking to be helped.
+   */
+  if (
+    /\b(dont know|do not know|dunno|no idea|not sure|unsure|cant decide|cannot decide|you choose|you pick|you decide|up to you|your choice|something nice|im not sure|pick for me|choose for me|decide for me|pick something|choose something|pick one|choose one|what do you recommend|you know best)\b/.test(
+      flat
+    )
+  ) {
+    return "unsure";
+  }
+
+  /*
+   * "Pick." "Surprise me." "Anything."
+   *
+   * A whole sentence made of nothing but asking-to-be-helped. Done this
+   * way round rather than as bare words in the pattern above, because the
+   * shop really sells a Choose Your Own Shake and a Surprise Serum, and a
+   * rule that caught "surprise" anywhere would stop anybody buying the
+   * serum. Every word has to be one of these: "surprise serum" keeps a
+   * word that is not, so it goes to the menu where it belongs.
+   */
+  const left = flat
+    .split(" ")
+    .filter((word) => word !== "" && !FILLER.has(word) && !NOISE.has(word));
+  if (left.length > 0 && left.every((word) => UNSURE.has(word))) return "unsure";
 
   /* What there is, as against which one of it. */
   if (/\b(menu|menus|catalogue|available|availability|what do you (?:have|sell|offer))\b/.test(flat)) {
