@@ -97,6 +97,13 @@ import { halfShown, key as priceKey, pickedPrice } from "../lib/pricing";
 import { whatsappTo as botWhatsappTo } from "../lib/messages";
 import { pickFaq as botPickFaq } from "../lib/faq-match";
 import {
+  OCCASIONS as botOccasions,
+  occasionBy as botOccasionBy,
+  isGift as botIsGift,
+  them as botThem,
+  theirs as botTheirs,
+} from "../lib/occasions";
+import {
   find as botFind,
   countedInName as botCountedInName,
   howMany as botHowMany,
@@ -4063,4 +4070,38 @@ test("the profit card's three figures subtract to the profit", () => {
   // Money in is the food that passed through plus the shop's own cut of an
   // order. The errand is not in it, which is why it is not the denominator.
   assert.equal(passedOn + (real.earned - 20000), gross);
+});
+
+test("an order for somebody else names the right person throughout", () => {
+  /*
+   * The chat had no way to hear "this is not for me". It asked a
+   * gift-buyer which block they were in, and would have sent a rider to
+   * ring the person being surprised, which is the whole gift spent.
+   */
+  assert.equal(botIsGift("me"), false);
+  for (const key of ["birthday", "gift", "parent"]) {
+    assert.equal(botIsGift(key), true, key);
+  }
+
+  // Whose block, whose name, in a sentence.
+  assert.equal(botThem("me", ""), "you");
+  assert.equal(botThem("birthday", "Ada"), "Ada");
+  assert.equal(botTheirs("birthday", "Ada"), "Ada's");
+  // And a gift nobody has named yet is still not the buyer.
+  assert.equal(botThem("gift", ""), "them");
+  assert.equal(botTheirs("gift", ""), "their");
+  assert.equal(botTheirs("me", ""), "your");
+
+  // Four occasions, one of them not a gift, and an unknown key is the
+  // ordinary one rather than an error.
+  assert.equal(botOccasions.length, 4);
+  assert.equal(botOccasions.filter((one) => one.gift).length, 3);
+  assert.equal(botOccasionBy("nonsense").key, "me");
+  // Every chip has to say something and ask something, or the step after
+  // it is a blank question.
+  for (const one of botOccasions) {
+    assert.ok(one.said.length > 0, one.key);
+    assert.ok(one.greet.length > 0, one.key);
+    assert.equal(one.asks === "", one.key === "me");
+  }
 });

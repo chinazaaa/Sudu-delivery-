@@ -6,6 +6,7 @@ import { shopEmails } from "@/lib/settings";
 import { openRestaurants } from "@/lib/menu";
 import { anyCodeToType } from "@/lib/coupons";
 import { faqsForChat } from "@/lib/faq";
+import { cardOnOffer } from "@/lib/cards";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
 import { deliverySlots, slotsWorthOffering, windowHours } from "@/lib/same-day";
 import { headlineFee } from "@/lib/fees";
@@ -30,7 +31,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(): Promise<NextResponse> {
   try {
-    const [hostels, batches, menu, settings, bands, hours, sameDay, codes, faqs] =
+    const [hostels, batches, menu, settings, bands, hours, sameDay, codes, faqs, card] =
       await Promise.all([
       hostelNames(),
       openBatches().catch(() => []),
@@ -50,6 +51,10 @@ export async function GET(): Promise<NextResponse> {
       // it, so this is the whole of what it knows: the shop's own words,
       // edited in admin, and nothing it made up.
       faqsForChat().catch(() => []),
+      // The handwritten card, as a real product with a real price. Null
+      // where none is set or it is off the menu, and then it is simply
+      // never offered.
+      cardOnOffer().catch(() => null),
     ]);
 
     /*
@@ -137,6 +142,7 @@ export async function GET(): Promise<NextResponse> {
       feeFrom: headlineFee(bands),
       codes,
       faqs,
+      card,
       whatsapp: String(settings.whatsapp_number ?? ""),
       // So the way out is never only one door: somebody who will not open
       // WhatsApp still has somewhere to write to.
@@ -151,6 +157,7 @@ export async function GET(): Promise<NextResponse> {
       cars: [],
       codes: false,
       faqs: [],
+      card: null,
       carFrom: 0,
       kitchens: [],
       feeFrom: 0,

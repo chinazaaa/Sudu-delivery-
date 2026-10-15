@@ -20,6 +20,13 @@ import {
 } from "@/lib/bot-match";
 import { Asking, Rail, Said, Typing, useSaying, type Ask, type Line } from "./Chat";
 import Rider from "./Rider";
+import {
+  OCCASIONS,
+  occasionBy,
+  isGift,
+  cardCalled,
+  them,
+} from "@/lib/occasions";
 
 /**
  * Sudu Bot.
@@ -53,6 +60,9 @@ type Start = {
    *  edited in admin. There is no model in here, so this is the whole of
    *  what it knows. */
   faqs: { id: string; question: string; answer: string; keywords: string }[];
+  /** The handwritten card, as a real product. Null where the shop has none
+   *  set or it is off the menu, and then it is never offered. */
+  card: { id: string; name: string; price: number } | null;
   whatsapp: string;
   email: string;
 };
@@ -108,6 +118,11 @@ type Held = {
   name: string;
   phone: string;
   hostel: string;
+  /** What the order is for. Everything the chat does differently for a
+   *  gift follows from this one tap. */
+  occasion: string;
+  /** Who it is going to, where that is not the person ordering. */
+  forName: string;
   run: Run | null;
   /** A car of its own instead of a run, where they asked for one. */
   car: Car | null;
@@ -170,6 +185,8 @@ const EMPTY: Held = {
   name: "",
   phone: "",
   hostel: "",
+  occasion: "me",
+  forName: "",
   run: null,
   car: null,
   kitchen: null,
@@ -244,6 +261,11 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
    *  after the order changed is the only honest thing to do, because what
    *  a code is worth changed with it. */
   const noCode = useRef(false);
+  /** The card has been offered once on this order. Asked again only when
+   *  the order changes, like the discount code. */
+  const cardAsked = useRef(false);
+  /** What goes on it, in their words. */
+  const cardMsg = useRef("");
   /* An order pasted in whole, waiting its turn. "5 jollof, 2 zinger, 1
      coke" is three searches, taken one at a time so the questions each
      one asks land in the right place. */
@@ -1898,6 +1920,75 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         });
       };
 
+      /*
+       * The card, offered against a total rather than before one.
+       *
+       * It is an upsell, and an upsell reads very differently once
+       * somebody can see what they are already spending. Only on a gift:
+       * a handwritten card with your own lunch is a strange thing to be
+       * asked about.
+       */
+      const card = startRef.current?.card ?? null;
+      if (card && isGift(mine.occasion) && !cardAsked.current) {
+        cardAsked.current = true;
+        const called = cardCalled(mine.occasion);
+        bot(
+          `Want a <b>${called}</b> with it? We write it by hand on the day and ` +
+            `put it in the box — <b>${naira(card.price)}</b>.`,
+          520
+        );
+        setAsk({
+          of: "buttons",
+          buttons: [
+            {
+              said: `Yes, add a ${called}`,
+              go: () => {
+                me(`Add a ${called}`);
+                bot("What should it say?", 430);
+                setAsk({
+                  of: "text",
+                  placeholder:
+                    mine.occasion === "birthday"
+                      ? `e.g. Happy birthday ${them(mine.occasion, mine.forName)}, enjoy!`
+                      : "e.g. Thinking of you",
+                  onSay: (wrote) => {
+                    me(wrote);
+                    cardMsg.current = wrote;
+                    held.current.lines.push({
+                      itemId: card.id,
+                      name: card.name,
+                      qty: 1,
+                      optionIds: [],
+                      chose: [],
+                      shop: undefined,
+                    });
+                    bot("Lovely. That goes on the card, in the box.", 440);
+                    /* The bill is worked out again rather than adjusted
+                       here, because the till is the only thing allowed to
+                       add up this order. */
+                    soonRef.current?.();
+                  },
+                });
+              },
+            },
+            {
+              said: "No card, thanks",
+              look: "alt",
+              go: () => {
+                me("No card");
+                if ((startRef.current?.codes ?? false) && !held.current.code && !noCode.current) {
+                  askCode();
+                  return;
+                }
+                confirm();
+              },
+            },
+          ],
+          hint: "Handwritten on the day, not printed.",
+        });
+        return;
+      }
+
       if ((startRef.current?.codes ?? false) && !held.current.code && !noCode.current) {
         askCode();
         return;
@@ -2151,6 +2242,19 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
                here to be checked again and counted as used. The
                checkout's figure is the one on the receipt. */
             code: mine.code?.code ?? "",
+            /*
+             * What the person packing the box needs to know, in the
+             * buyer's own words. A gift is two people, and an order that
+             * does not say so is a rider ringing the wrong one.
+             */
+            note: [
+              isGift(mine.occasion)
+                ? `Gift for ${them(mine.occasion, mine.forName)}. Ring ${mine.name || "the buyer"} on ${mine.phone}, not them.`
+                : "",
+              cardMsg.current ? `Card: "${cardMsg.current}"` : "",
+            ]
+              .filter(Boolean)
+              .join(" "),
           }),
         })
       );
@@ -2769,7 +2873,19 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       return;
     }
 
-    bot("Which block are you in? Type it and I will find it.");
+    /*
+     * Whose block, not just which block.
+     *
+     * For a gift this is the single question that was wrong before: the
+     * food goes where the person receiving it sleeps, and the person
+     * typing has no reason to be there at all.
+     */
+    const mine = held.current;
+    bot(
+      isGift(mine.occasion)
+        ? `Which block is <b>${them(mine.occasion, mine.forName)}</b> in? That is where it goes.`
+        : "Which block are you in? Type it and I will find it."
+    );
     setAsk({
       of: "text",
       placeholder: "e.g. Queen Mary",
@@ -2832,7 +2948,24 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
 
   const askPhone = useCallback(() => {
     setAt(0);
-    bot(`Nice to meet you, <b>${held.current.name || "friend"}</b>. What number should we call on the day?`);
+    bot(
+      `Nice to meet you, <b>${held.current.name || "friend"}</b>. What number should we call on the day?`
+    );
+    /*
+     * The rider rings the buyer, never the recipient.
+     *
+     * Said out loud rather than merely done, because it is the thing
+     * somebody buying a surprise is worried about, and a shop that does
+     * not say it is a shop they have to guess about. A rider phoning the
+     * person being surprised is the whole gift spent.
+     */
+    if (isGift(held.current.occasion)) {
+      bot(
+        `Yours, not <b>${them(held.current.occasion, held.current.forName)}</b>’s. ` +
+          "We ring you when the car is at the block, so the surprise holds.",
+        480
+      );
+    }
     let tries = 0;
     setAsk({
       of: "text",
@@ -2893,10 +3026,37 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     list.current = [];
     listing.current = 0;
     noCode.current = false;
+    cardAsked.current = false;
+    cardMsg.current = "";
     setLines([]);
     setAt(0);
     bot("Hey, I’m <b>Sudu Bot</b>. I can take your order right here, no app needed.", 450);
-    bot("What should I call you?");
+
+    /*
+     * One tap that changes everything after it.
+     *
+     * The chat had no way to hear "this is not for me", so it asked a
+     * gift-buyer which block *they* were in, and would have sent a rider
+     * to ring the person being surprised. Four chips settle it before
+     * anything else is asked, and somebody ordering their own lunch taps
+     * the first one and notices nothing else has changed.
+     */
+    bot("What is this one for?");
+    setAsk({
+      of: "chips",
+      chips: OCCASIONS.map((one, which) => ({
+        said: one.said,
+        hot: which === 0,
+        go: () => {
+          me(one.said);
+          held.current.occasion = one.key;
+          bot(one.greet, 450);
+          askTheName();
+        },
+      })),
+      hint: "Pick the closest one. It only changes what I ask next.",
+    });
+
     let tries = 0;
     /* Asked again after something else was dealt with. The greeting is not
        repeated: somebody who has just been answered does not need to be
@@ -2911,6 +3071,24 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
          about it. */
       const given = nameIn(said) || said;
       held.current.name = given.split(" ")[0];
+
+      /* Whose it is, where it is not theirs. Asked straight after their
+         own name, because every sentence from here on has to name one of
+         the two people and the chat cannot guess which. */
+      const one = occasionBy(held.current.occasion);
+      if (one.gift) {
+        bot(one.asks, 440);
+        setAsk({
+          of: "text",
+          placeholder: "Their first name",
+          onSay: (who) => {
+            me(who);
+            held.current.forName = (nameIn(who) || who).split(" ")[0];
+            askPhone();
+          },
+        });
+        return;
+      }
       askPhone();
     };
     const askTheName = () =>
