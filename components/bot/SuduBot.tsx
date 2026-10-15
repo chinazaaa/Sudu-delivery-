@@ -63,6 +63,9 @@ type Start = {
   /** The handwritten card, as a real product. Null where the shop has none
    *  set or it is off the menu, and then it is never offered. */
   card: { id: string; name: string; price: number } | null;
+  /** How many days ahead a customer may book. The shop's own rule, read
+   *  rather than assumed, so changing it in Settings changes the chat. */
+  horizonDays: number;
   whatsapp: string;
   email: string;
 };
@@ -2759,24 +2762,31 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     const lists = startRef.current;
     const mine = held.current;
 
-    // A week of chips. Any further out and the shop cannot see the runs
-    // anyway, and a birthday more than a week off is not an order yet.
+    /*
+     * As many days as the shop actually takes orders for, with the date
+     * on each one.
+     *
+     * The number is the shop's own rule rather than a guess at it, so a
+     * horizon widened in Settings widens this list on the next load. And
+     * every chip carries its date: "Tuesday" is two Tuesdays as soon as
+     * the list is longer than a week, and a birthday booked on the wrong
+     * one is not a mistake anybody notices until the day.
+     */
+    const reach = Math.max(1, lists?.horizonDays ?? 7);
     const days: { said: string; date: string }[] = [];
     const start = new Date();
-    for (let i = 0; i < 7; i += 1) {
+    for (let i = 0; i <= reach; i += 1) {
       const at = new Date(start);
       at.setDate(at.getDate() + i);
       const date = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(at);
+      const dayAndDate = new Intl.DateTimeFormat("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        timeZone: "Africa/Lagos",
+      }).format(at);
       days.push({
-        said:
-          i === 0
-            ? "Today"
-            : i === 1
-              ? "Tomorrow"
-              : new Intl.DateTimeFormat("en-GB", {
-                  weekday: "long",
-                  timeZone: "Africa/Lagos",
-                }).format(at),
+        said: i === 0 ? `Today · ${dayAndDate}` : i === 1 ? `Tomorrow · ${dayAndDate}` : dayAndDate,
         date,
       });
     }
@@ -2822,9 +2832,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           go: () => {
             me("It is further off");
             bot(
-              "Runs are planned about a week ahead, so I cannot promise a car " +
-                "further out than that yet.",
-              500
+              `We take orders up to <b>${reach} days</b> ahead, so I cannot promise ` +
+                "a car further out than that yet. Food is not bought that far in " +
+                "advance, and a price I quote today would have moved by then.",
+              540
             );
             bot(
               "Somebody can pencil it in for you though, with everything you have " +

@@ -153,6 +153,17 @@ export async function GET(): Promise<NextResponse> {
       codes,
       faqs,
       card,
+      /*
+       * How far ahead a customer may book, which is not how far ahead the
+       * runs are planned.
+       *
+       * Runs exist three weeks out so the shop can plan them; a customer
+       * is offered the near ones, because food is not planned a fortnight
+       * ahead and an order sitting unpaid that long is priced off a menu
+       * that has since moved. The chat says the real number rather than a
+       * guess at it, so raising it in Settings widens the chat too.
+       */
+      horizonDays: Math.max(1, Number(settings.order_horizon_days) || 7),
       whatsapp: String(settings.whatsapp_number ?? ""),
       // So the way out is never only one door: somebody who will not open
       // WhatsApp still has somewhere to write to.
@@ -168,6 +179,7 @@ export async function GET(): Promise<NextResponse> {
       codes: false,
       faqs: [],
       card: null,
+      horizonDays: 7,
       carFrom: 0,
       kitchens: [],
       feeFrom: 0,
