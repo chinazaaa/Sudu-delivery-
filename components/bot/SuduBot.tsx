@@ -3785,7 +3785,18 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       },
     });
 
-    askTheName();
+    /*
+     * The name question is not asked here.
+     *
+     * It used to open the conversation, and the call that started it was
+     * left behind when the occasion chips were put in front of it. So the
+     * chips were set and then overwritten by the name box half a frame
+     * later: "What is this one for?" with nowhere to answer it but a text
+     * field, which somebody then answered with their name.
+     *
+     * Whichever chip is tapped asks for the name itself, because the chip
+     * decides how that question is worded.
+     */
   }, [askPhone, bot, me, sayFaq, stopWatching]);
 
   /*
