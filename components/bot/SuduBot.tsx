@@ -123,6 +123,9 @@ type Held = {
   occasion: string;
   /** Who it is going to, where that is not the person ordering. */
   forName: string;
+  /** The day it has to land on, where the occasion has one. Empty means
+   *  the soonest is fine, which is every ordinary order. */
+  wantDay: string;
   run: Run | null;
   /** A car of its own instead of a run, where they asked for one. */
   car: Car | null;
@@ -187,6 +190,7 @@ const EMPTY: Held = {
   hostel: "",
   occasion: "me",
   forName: "",
+  wantDay: "",
   run: null,
   car: null,
   kitchen: null,
@@ -256,6 +260,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   /** The block question, held in a box so an answer given at it can hand
    *  the conversation back to it. */
   const askHostelRef = useRef<(() => void) | null>(null);
+  /** The slot step, held in a box because the day question comes before
+   *  it and is written above it. */
+  const askSlotRef = useRef<(() => void) | null>(null);
   /** Said no to a discount code already. Asked once per version of the
    *  order: asking again on the same bill is nagging, and asking again
    *  after the order changed is the only honest thing to do, because what
@@ -2734,6 +2741,124 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     });
   }, [askOrder, bot, me]);
 
+  /*
+   * The day it has to land on.
+   *
+   * Only for a gift, and only because a gift has a day. A birthday is on
+   * the day it is on, and "our next run is Thursday" is no use to somebody
+   * whose sister turns twenty on Tuesday.
+   *
+   * It is no more than picking a day. Once a day is picked the shop's own
+   * machinery answers it: a scheduled run that lands that day is offered at
+   * the run's fee, a car on that day is offered at the car's, and where
+   * there is no run that day the car is the only answer, which is exactly
+   * what it is. Nothing here works out a price.
+   */
+  const askDay = useCallback(() => {
+    setAt(1);
+    const lists = startRef.current;
+    const mine = held.current;
+
+    // A week of chips. Any further out and the shop cannot see the runs
+    // anyway, and a birthday more than a week off is not an order yet.
+    const days: { said: string; date: string }[] = [];
+    const start = new Date();
+    for (let i = 0; i < 7; i += 1) {
+      const at = new Date(start);
+      at.setDate(at.getDate() + i);
+      const date = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(at);
+      days.push({
+        said:
+          i === 0
+            ? "Today"
+            : i === 1
+              ? "Tomorrow"
+              : new Intl.DateTimeFormat("en-GB", {
+                  weekday: "long",
+                  timeZone: "Africa/Lagos",
+                }).format(at),
+        date,
+      });
+    }
+
+    bot(
+      `When is it? I will try to land it on the day for <b>${them(mine.occasion, mine.forName)}</b>.`,
+      480
+    );
+    setAsk({
+      of: "chips",
+      chips: [
+        ...days.map((one, which) => ({
+          said: one.said,
+          hot: which === 0,
+          go: () => {
+            me(one.said);
+            held.current.wantDay = one.date;
+            askSlotRef.current?.();
+          },
+        })),
+        {
+          said: "Any day is fine",
+          go: () => {
+            me("Any day is fine");
+            held.current.wantDay = "";
+            askSlotRef.current?.();
+          },
+        },
+        {
+          /*
+           * Further off than the shop can see.
+           *
+           * Runs are planned about a week ahead, so a birthday three weeks
+           * away is not a day this chat can offer: it could take the order
+           * but it could not promise the car, and a promise the shop has
+           * not made yet is the one thing it must not sell.
+           *
+           * A person can take that booking, so a person does. Said with
+           * the reason, because "talk to us" with no reason reads as the
+           * chat giving up.
+           */
+          said: "It is further off",
+          go: () => {
+            me("It is further off");
+            bot(
+              "Runs are planned about a week ahead, so I cannot promise a car " +
+                "further out than that yet.",
+              500
+            );
+            bot(
+              "Somebody can pencil it in for you though, with everything you have " +
+                "already told me.",
+              460
+            );
+            setAsk({
+              of: "buttons",
+              buttons: [
+                {
+                  said: "Book it with a person",
+                  look: "green",
+                  href: handOver(
+                    `It is for ${them(mine.occasion, mine.forName)}, further off than a week.`
+                  ),
+                },
+                {
+                  said: "Order for the soonest instead",
+                  look: "alt",
+                  go: () => {
+                    me("The soonest is fine");
+                    held.current.wantDay = "";
+                    askSlotRef.current?.();
+                  },
+                },
+              ],
+            });
+          },
+        },
+      ],
+      hint: "If there is no run that day, a car can go out just for it.",
+    });
+  }, [bot, handOver, me]);
+
   const askSlot = useCallback(() => {
     setAt(1);
     const lists = startRef.current;
@@ -2747,9 +2872,65 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       return;
     }
 
-    const first = runs[0];
+    /*
+     * The day they asked for, where they asked for one.
+     *
+     * A run that lands on the day is the cheap answer and goes first. No
+     * run that day and a car is the only answer, which the chat says
+     * plainly rather than quietly showing a run three days late.
+     */
+    const wanted = held.current.wantDay;
+    const onTheDay = wanted === "" ? [] : runs.filter((run) => run.runDate === wanted);
+    const carsThatDay =
+      wanted === ""
+        ? []
+        : (lists?.cars ?? []).filter((car) => car.date === wanted);
+
+    if (wanted !== "" && onTheDay.length === 0) {
+      if (carsThatDay.length === 0) {
+        /* Nothing can reach them on the day. Said straight, with the
+           nearest run offered rather than nothing at all. */
+        bot(
+          "There is no run that day, and no car I can send either. " +
+            "The nearest I can do is below.",
+          520
+        );
+      } else {
+        bot(
+          `No run goes out that day, so it would be a car of its own — ` +
+            `one trip, just for this.`,
+          520
+        );
+        setAsk({
+          of: "slots",
+          slots: carsThatDay.slice(0, 3).map((car) => ({
+            title: "A car of its own",
+            when: car.phrase,
+            dow: car.dow,
+            dom: car.dom,
+            fee: lists?.carFrom ?? 0,
+            rush: true,
+          })),
+          onPick: (which: number) => {
+            const car = carsThatDay[which];
+            me(`A car of its own, ${car.phrase}`);
+            held.current.car = car;
+            held.current.run = null;
+            askOrder();
+          },
+        });
+        return;
+      }
+    }
+
+    const first = onTheDay[0] ?? runs[0];
     held.current.run = first;
-    bot(`Our next run to <b>${held.current.hostel}</b> is <b>${first.said}</b>.`, 480);
+    bot(
+      wanted !== "" && first.runDate === wanted
+        ? `There is a run to <b>${held.current.hostel}</b> that very day — <b>${first.said}</b>.`
+        : `Our next run to <b>${held.current.hostel}</b> is <b>${first.said}</b>.`,
+      480
+    );
     say(
       {
         kind: "card",
@@ -2793,13 +2974,21 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     });
   }, [askOrder, askSooner, bot, handOver, me, say]);
 
+  useEffect(() => {
+    askSlotRef.current = askSlot;
+  }, [askSlot]);
+
   const takeBlock = useCallback(
     (hostel: string) => {
       held.current.hostel = hostel;
       remember("gave their details, nothing chosen yet");
-      askSlot();
+      /* A gift has a day; an ordinary order has only a soonest. So the
+         day is asked for first where there is one to ask about, and the
+         slot step then answers it. */
+      if (isGift(held.current.occasion)) askDay();
+      else askSlot();
     },
-    [askSlot, remember]
+    [askDay, askSlot, remember]
   );
 
   const showBlocks = useCallback(

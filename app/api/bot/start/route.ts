@@ -115,12 +115,22 @@ export async function GET(): Promise<NextResponse> {
       hours === null
         ? []
         : slotsWorthOffering(
-            deliverySlots(new Date(), hours),
+            /*
+             * A week, not two days.
+             *
+             * Two days is the right reach for "when can I eat", which is
+             * what this used to be for. A gift is a different question: a
+             * birthday is on the day it is on, and a chat that can only
+             * see as far as tomorrow has to tell somebody to come back on
+             * Thursday. The soonest four are still the soonest four, so
+             * the ordinary flow is untouched.
+             */
+            deliverySlots(new Date(), hours, 8),
             batches.map((batch) => ({
               run_date: batch.run_date,
               window: batch.delivery_window_text,
             }))
-          ).slice(0, 4).map((slot) => ({
+          ).slice(0, 24).map((slot) => ({
             at: slot.at,
             label: slot.label,
             phrase: slot.phrase,
