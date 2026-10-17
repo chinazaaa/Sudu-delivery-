@@ -61,14 +61,52 @@ self.addEventListener("notificationclick", (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (tabs) {
-      // A tab already open on the site is focused and sent there, rather than
-      // opening a second copy of admin beside the one being worked in.
+      // A window already open on the site is focused and sent there, rather
+      // than opening a second copy of admin beside the one being worked in.
       for (var i = 0; i < tabs.length; i += 1) {
         var tab = tabs[i];
-        if (new URL(tab.url).origin !== self.location.origin) continue;
-        return tab.focus().then(function (focused) {
-          return focused && focused.navigate ? focused.navigate(url) : focused;
-        });
+        try {
+          if (new URL(tab.url).origin !== self.location.origin) continue;
+        } catch (e) {
+          continue;
+        }
+
+        /*
+         * Two ways of getting there, because one of them does not work
+         * where this is mostly read.
+         *
+         * WindowClient.navigate is the obvious one and it is refused in an
+         * installed app on iOS: tapping a notification brought the app to
+         * the front on whatever page it was last left on, which looks
+         * exactly like the notification having done nothing. So the page
+         * itself is also told where to go, and the app routes to it the
+         * way it routes to anything else.
+         *
+         * Harmless together: whichever lands first, the other asks for a
+         * page already open.
+         */
+        var client = tab;
+        try {
+          client.postMessage({ type: "sudu:go", url: url });
+        } catch (e) {
+          /* An older window with no listener. The navigate below is then
+             the only way, and the openWindow after it is the last. */
+        }
+
+        return client
+          .focus()
+          .then(function (focused) {
+            var window_ = focused || client;
+            if (window_ && window_.navigate) {
+              return window_.navigate(url).catch(function () {
+                return window_;
+              });
+            }
+            return window_;
+          })
+          .catch(function () {
+            return self.clients.openWindow(url);
+          });
       }
       return self.clients.openWindow(url);
     })

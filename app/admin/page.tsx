@@ -11,6 +11,7 @@ import { abandonedCarts } from "@/lib/carts";
 import { safeSettings } from "@/lib/settings";
 import { diagnoseEmpty, keyKind } from "@/lib/health";
 import { newRequests } from "@/lib/requests";
+import { plansWaiting } from "@/lib/plans";
 import { parcelJobs } from "@/lib/parcel-jobs";
 import { tendBatches } from "@/lib/batches";
 import { SLOT_LABEL } from "@/lib/config";
@@ -133,6 +134,11 @@ export default async function AdminHome() {
   // Somebody asking for something we do not stock, waiting on an answer.
   // It arrives by email too, and an inbox is where things go to be missed.
   const asked = await newRequests().catch(() => 0);
+  // Standing orders to raise, and parents who asked for one and have not
+  // heard back. The only things on this list worth money every month
+  // rather than once, and the easiest to miss: a box that should have
+  // landed on the 3rd and did not is a parent who assumes we forgot.
+  const standing = await plansWaiting().catch(() => ({ due: 0, asked: 0 }));
   // Commission earned and not handed over. Not the shop's money, and
   // somebody did the work weeks ago and is still waiting for it.
   const owing = (await promoterRows().catch(() => []))
@@ -181,6 +187,7 @@ export default async function AdminHome() {
     promoters: owing,
     parcels: parcelsToday.length,
     asked,
+    plans: standing,
   });
 
   // The last few runs that actually went, for the bars. Newest on the right,

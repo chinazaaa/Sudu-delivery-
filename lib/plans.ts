@@ -39,6 +39,9 @@ export type Plan = {
   /** A box off the shelf, or last month's order copied forward. */
   boxId: string | null;
   fromOrderId: string | null;
+  /** The order number of that order, as anybody says it out loud. Filled in
+   *  for the page that shows it back; the id is what the raising reads. */
+  fromOrderRef?: string;
   every: "monthly" | "fortnightly" | "weekly";
   /** The day of the month it lands, for a monthly plan. A fixed day is the
    *  whole point: a parent who knows the food arrives on the 3rd stops
@@ -187,9 +190,52 @@ export async function allPlans(): Promise<Plan[]> {
       .order("active", { ascending: false })
       .order("on_day", { ascending: true });
     if (error) throw new Error(error.message);
-    return ((data ?? []) as Record<string, unknown>[]).map(toPlan);
+
+    const plans = ((data ?? []) as Record<string, unknown>[]).map(toPlan);
+
+    // The order number for any plan built from one, so the form shows back
+    // the thing somebody typed rather than a uuid they have never seen.
+    const ids = plans.map((one) => one.fromOrderId).filter(Boolean) as string[];
+    if (ids.length > 0) {
+      const { data: orders } = await db()
+        .from("orders")
+        .select("id, order_no")
+        .in("id", ids);
+      const said = new Map(
+        ((orders ?? []) as { id: string; order_no: number | null }[]).map((one) => [
+          one.id,
+          one.order_no ? String(one.order_no) : "",
+        ])
+      );
+      for (const plan of plans) {
+        if (plan.fromOrderId) plan.fromOrderRef = said.get(plan.fromOrderId) ?? "";
+      }
+    }
+
+    return plans;
   } catch {
     return [];
+  }
+}
+
+/**
+ * An order by the number anybody says out loud.
+ *
+ * Admin types "1045", which is what is printed on everything the shop
+ * sends; the id it is really filed under is a uuid nobody has ever read.
+ */
+export async function orderByRef(said: string): Promise<string | null> {
+  const number = Number(String(said).replace(/[^\d]/g, ""));
+  if (!Number.isFinite(number) || number <= 0) return null;
+  try {
+    const { data } = await db()
+      .from("orders")
+      .select("id")
+      .eq("order_no", number)
+      .maybeSingle();
+    return data ? String((data as { id: string }).id) : null;
+  } catch {
+    return null;
   }
 }
 
@@ -446,5 +492,43 @@ export async function monthlyValue(): Promise<{ plans: number; worth: number }> 
     return { plans: latest.size, worth };
   } catch {
     return { plans: 0, worth: 0 };
+  }
+}
+
+/**
+ * What the dashboard needs to know, in one question.
+ *
+ * Two numbers, because they are two different jobs. A plan that is due is
+ * money a parent is expecting to be asked for; a plan nobody has agreed
+ * yet is a parent waiting to hear what it costs. Both are easy to miss and
+ * both are worth money every month rather than once.
+ */
+export async function plansWaiting(today = lagosToday()): Promise<{
+  due: number;
+  asked: number;
+}> {
+  try {
+    const settings = await safeSettings();
+    const lead = Math.max(0, numberOr(settings.plan_lead_days, LEAD_DAYS));
+    const shopPause = String(settings.plans_paused_until ?? "").trim();
+
+    const plans = await allPlans();
+    const due = plans.filter(
+      (plan) =>
+        plan.active &&
+        (plan.boxId !== null || plan.fromOrderId !== null) &&
+        owed(plan, today, lead, shopPause).raise.length > 0
+    ).length;
+
+    // Switched off and never raised: somebody asked and nobody has been
+    // back to them. A plan switched off after it ran is a plan somebody
+    // decided about, which is not the same thing.
+    const asked = plans.filter(
+      (plan) => !plan.active && plan.madeThrough === null
+    ).length;
+
+    return { due, asked };
+  } catch {
+    return { due: 0, asked: 0 };
   }
 }

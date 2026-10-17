@@ -13,7 +13,7 @@ import { type BatchSlot } from "@/lib/config";
 import { hoursByDay, deliveryWindows, externalUrl, sayWindow } from "@/lib/settings";
 import { runSchedule } from "@/lib/schedule";
 import { guessAisle } from "@/lib/aisles";
-import { nextLanding, planById, raiseCycle } from "@/lib/plans";
+import { nextLanding, orderByRef, planById, raiseCycle } from "@/lib/plans";
 import { tidyName } from "@/lib/case";
 import { deliverySlots, windowPhrase } from "@/lib/same-day";
 import { lagosInstant, lagosToday } from "@/lib/time";
@@ -2257,7 +2257,15 @@ export async function savePlan(form: FormData): Promise<void> {
     auto: form.get("auto") === "on",
     paused_until: String(form.get("paused_until") ?? "").trim() || null,
     note: String(form.get("note") ?? "").trim().slice(0, 300),
+    from_order_id: null as string | null,
   };
+
+  /* The order somebody built by hand, named by its number. Most plans
+     start as "we will discuss it", and what comes of that discussion is an
+     order put together on the orders screen: naming it here makes it the
+     template, and every month copies its lines at that month's prices. */
+  const said = String(form.get("from_order") ?? "").trim();
+  const fromOrder = said === "" ? null : await orderByRef(said);
 
   if (row.customer_phone === "" || row.hostel === "") return;
 
@@ -2268,6 +2276,8 @@ export async function savePlan(form: FormData): Promise<void> {
      Dropped rather than refused here, because an admin typing one number
      for both is saying there is only one. */
   if (row.for_phone === row.customer_phone) row.for_phone = "";
+
+  row.from_order_id = fromOrder;
 
   if (id === "") await db().from("plans").insert(row);
   else await db().from("plans").update(row).eq("id", id);

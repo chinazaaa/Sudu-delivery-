@@ -16,7 +16,15 @@
  */
 export type Job = {
   /** Which it is, so the page can key and test them. */
-  kind: "left" | "unpaid" | "closing" | "reviews" | "parcels" | "asked" | "promoters";
+  kind:
+    | "left"
+    | "unpaid"
+    | "closing"
+    | "reviews"
+    | "parcels"
+    | "asked"
+    | "plans"
+    | "promoters";
   /** How loud the dot is: red costs money today, amber soon, ink is timing,
    *  volt is worth doing but nobody is out of pocket. */
   tone: "red" | "amber" | "ink" | "volt";
@@ -50,6 +58,16 @@ export function needsDoing(now: {
   /** Somebody asking for something we do not stock, waiting on an answer.
    *  It arrives by email too, and an inbox is where things go to be missed. */
   asked?: number;
+  /**
+   * Standing orders to raise, and standing orders nobody has agreed yet.
+   *
+   * These are the only things on this list that are worth money every
+   * month rather than once, and they are the easiest to miss: a plan that
+   * should have landed on the 3rd and did not is a parent who assumes the
+   * shop forgot, which is the end of a standing order rather than a late
+   * one.
+   */
+  plans?: { due: number; asked: number };
 }): Job[] {
   const jobs: Job[] = [];
 
@@ -143,6 +161,30 @@ export function needsDoing(now: {
       title: `${said(now.parcels as number, "parcel")} promised for today`,
       detail: "Somebody has paid for these and is waiting on a day that is already here.",
       action: { label: "Open parcels", href: "/admin/parcels" },
+    });
+  }
+
+  const plans = now.plans ?? { due: 0, asked: 0 };
+
+  if (plans.due > 0) {
+    jobs.push({
+      kind: "plans",
+      tone: "red",
+      title: `${said(plans.due, "standing order")} to raise`,
+      detail:
+        "A parent is expecting this to land on its day, and it will not until " +
+        "the order exists and they have paid for it.",
+      action: { label: "Raise them", href: "/admin/plans" },
+    });
+  } else if (plans.asked > 0) {
+    jobs.push({
+      kind: "plans",
+      tone: "amber",
+      title: `${said(plans.asked, "parent")} asked for a monthly box`,
+      detail:
+        "Nothing is agreed and nothing is running until somebody goes through " +
+        "what is in it and what it comes to.",
+      action: { label: "Open standing orders", href: "/admin/plans" },
     });
   }
 

@@ -3,6 +3,7 @@
 import { db } from "@/lib/supabase";
 import { normalisePhone } from "@/lib/phone";
 import { tellAdmin } from "@/lib/admin-alerts";
+import { emailAdmins } from "@/lib/email";
 
 /**
  * A parent asking for a standing order.
@@ -79,13 +80,45 @@ export async function askForAPlan(
     };
   }
 
-  // Worth a buzz: this is the customer with money who comes back, and one
-  // sitting unanswered for a day is the whole thing wasted.
+  /*
+   * Buzzed and written down.
+   *
+   * This is the customer with money who comes back, and one sitting
+   * unanswered for a day is the whole thing wasted. A phone that was in a
+   * pocket, or had notifications turned off that afternoon, is the one way
+   * to lose it silently, so it goes to the inbox as well: between them
+   * something gets in front of somebody.
+   */
+  const who = String(form.get("for_name") ?? "").trim();
+  const box = String(form.get("box_id") ?? "").trim();
+  const note = String(form.get("note") ?? "").trim();
+
   void tellAdmin({
     title: "A parent wants a standing order",
     body: `${name} · ${hostel} · the ${day}${nth(day)} of the month.`,
     url: "/admin/plans",
   });
+
+  void emailAdmins(
+    `A parent wants a monthly box: ${name}`,
+    [
+      `${name} has asked for a standing order.`,
+      "",
+      `Pays: ${name} on ${phone}`,
+      who === "" ? "" : `For: ${who}`,
+      `Block: ${hostel}`,
+      `Lands: the ${day}${nth(day)} of each month`,
+      box === "" ? "Box: to be agreed" : "Box: picked on the form",
+      note === "" ? "" : `They said: ${note}`,
+      "",
+      "Nothing is running until somebody agrees what goes in it and what it",
+      "comes to, and switches it on. It is on the standing orders page.",
+    ]
+      .filter((line) => line !== "")
+      .join("\n"),
+    undefined,
+    "order"
+  );
 
   return { error: null, done: true };
 }
