@@ -18,6 +18,8 @@ export type Step = {
   /** When it happened, or empty where it has not or was never recorded. */
   when: string;
   done: boolean;
+  /** Said under the time, where the time on its own would read as wrong. */
+  note?: string;
 };
 
 export function orderStory(order: {
@@ -52,12 +54,30 @@ export function orderStory(order: {
         ? (order.counters as string[])[0]
         : `${(order.counters as string[]).length} counters`;
 
+  /*
+   * Money that arrived before the order was written up.
+   *
+   * It happens, and it is not a mistake in the record: somebody sends the
+   * transfer off a WhatsApp message and the order goes into the shop
+   * afterwards. But the steps are listed in the order they logically
+   * happen, so the paid time then sits under an ordered time later than
+   * itself and the whole panel reads as broken.
+   *
+   * Said rather than hidden, and rather than shuffling the steps: the
+   * sequence is right, the clock is right, and the only thing missing was
+   * somebody saying so.
+   */
+  const paidFirst =
+    order.paid_at !== null &&
+    new Date(order.paid_at).getTime() < new Date(order.created_at).getTime();
+
   return [
     { label: "Ordered", when: say(order.created_at), done: true },
     {
       label: "Paid",
       when: order.paid_at ? say(order.paid_at) : "",
       done: order.paid_at !== null,
+      note: paidFirst ? "Paid before the order was written up" : undefined,
     },
     {
       label: `Bought at ${where}`,

@@ -5465,3 +5465,63 @@ export async function setOrderPayment(form: FormData): Promise<void> {
   revalidatePath("/o", "layout");
   revalidatePath("/orders");
 }
+
+/**
+ * When it actually happened, as against when it was typed in.
+ *
+ * Both times are stamped at the moment somebody presses something, which
+ * is right nearly always and wrong exactly when it matters. An order taken
+ * at the gate at twenty past, paid for by transfer two minutes later and
+ * written up on the website at six, arrives in the books as a six o'clock
+ * order paid at six: the receipt is wrong, the day's takings are an hour
+ * out, and the one honest record of the evening is somebody's memory.
+ *
+ * A payment before the order is allowed on purpose, since that is an
+ * ordinary evening here rather than a mistake, and the story panel says so
+ * rather than hiding it.
+ *
+ * Neither box can change whether an order is paid. That is what marking it
+ * paid and refunding it are for, and a time field must not be able to turn
+ * an unpaid order into a paid one by accident.
+ */
+export async function setOrderTimes(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const id = String(form.get("order_id"));
+  if (id === "") return;
+
+  // "2026-10-17T17:22" off a datetime-local box. Nigeria is a fixed UTC+1
+  // with no daylight saving, so the offset is written straight on.
+  const read = (field: string): Date | null => {
+    const said = String(form.get(field) ?? "").trim();
+    if (said === "") return null;
+    const when = new Date(`${said}:00+01:00`);
+    if (Number.isNaN(when.getTime())) return null;
+    // Something that happens tomorrow is a typo.
+    return when.getTime() > Date.now() + 60_000 ? null : when;
+  };
+
+  const ordered = read("ordered_at");
+  const paid = read("paid_at");
+
+  const { data: row } = await db()
+    .from("orders")
+    .select("paid_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (!row) return;
+
+  const patch: Record<string, unknown> = {};
+  if (ordered !== null) patch.created_at = ordered.toISOString();
+  // Only ever a time on an order that is already paid.
+  if (paid !== null && (row as { paid_at?: string | null }).paid_at) {
+    patch.paid_at = paid.toISOString();
+  }
+  if (Object.keys(patch).length === 0) return;
+
+  await db().from("orders").update(patch).eq("id", id);
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/o", "layout");
+  revalidatePath("/orders");
+}

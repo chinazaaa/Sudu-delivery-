@@ -41,6 +41,7 @@ import {
   refundOrder,
   savePaymentLink,
   setOrderPayment,
+  setOrderTimes,
   removeParcelPhoto,
   saveOrderNote,
   setBoxDay,
@@ -1117,10 +1118,58 @@ async function orderPage(id: string, said: string) {
                         ? `${step.when} · ${howPaid(order)}`
                         : step.when || (step.done ? "Done" : "Not yet")}
                     </span>
+                    {step.note ? (
+                      <span className="hint block italic">{step.note}</span>
+                    ) : null}
                   </span>
                 </li>
               ))}
             </ol>
+
+            {/* Both times are stamped when somebody presses something, and
+                an order taken at the gate and written up an hour later
+                arrives in the books an hour late. The evening is the
+                record, not the typing. */}
+            <details className="mt-3 border-t-[1.5px] border-rule pt-3">
+              <summary className="cursor-pointer text-sm font-semibold">
+                Put the times right
+              </summary>
+              <form action={setOrderTimes} className="mt-3 space-y-2.5">
+                <input type="hidden" name="order_id" value={order.id} />
+                <div>
+                  <label className="label" htmlFor="ordered_at">
+                    When they ordered
+                  </label>
+                  <input
+                    id="ordered_at"
+                    type="datetime-local"
+                    name="ordered_at"
+                    defaultValue={localBox(order.created_at)}
+                    className="field w-full py-2 text-sm"
+                  />
+                </div>
+                {order.paid_at ? (
+                  <div>
+                    <label className="label" htmlFor="paid_at">
+                      When the money came
+                    </label>
+                    <input
+                      id="paid_at"
+                      type="datetime-local"
+                      name="paid_at"
+                      defaultValue={localBox(order.paid_at)}
+                      className="field w-full py-2 text-sm"
+                    />
+                  </div>
+                ) : null}
+                <p className="hint">
+                  Paying before the order is fine: somebody sends the money
+                  and it is written up afterwards. Neither of these changes
+                  whether it is paid.
+                </p>
+                <SaveButton look="btn-admin btn-admin-sm">Save the times</SaveButton>
+              </form>
+            </details>
           </Panel>
 
           {/* Who this is, and one way through to everything else they have
@@ -1251,4 +1300,30 @@ function Detail({ label, value }: { label: string; value: string }) {
       <dd className="min-w-0 text-right font-semibold">{value}</dd>
     </div>
   );
+}
+
+/**
+ * An instant as a datetime-local box wants it, on the shop's clock.
+ *
+ * Built out of parts rather than by slicing an ISO string, because that
+ * string is UTC and this box is read in Lagos: slicing it puts an evening
+ * order an hour earlier and the fix would read as the bug.
+ */
+function localBox(iso: string | null): string {
+  if (!iso) return "";
+  const when = new Date(iso);
+  if (Number.isNaN(when.getTime())) return "";
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(when);
+
+  const of = (type: string) => parts.find((one) => one.type === type)?.value ?? "";
+  return `${of("year")}-${of("month")}-${of("day")}T${of("hour")}:${of("minute")}`;
 }
