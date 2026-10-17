@@ -16,6 +16,7 @@ export const FAQ_PAGES: { page: string; label: string; href: string }[] = [
   { page: "send-a-gift-to-pau", label: "Send a gift", href: "/send-a-gift-to-pau" },
   { page: "pau-student-store", label: "Student store", href: "/pau-student-store" },
   { page: "pau-snacks", label: "Snacks", href: "/pau-snacks" },
+  { page: "pau-pharmacy", label: "Pharmacy", href: "/pau-pharmacy" },
 ];
 
 /**

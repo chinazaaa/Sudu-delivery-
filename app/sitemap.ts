@@ -69,6 +69,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Each answers a different one: what is there to snack on, how do I send
     // something from far away, what does a room need.
     { url: `${site}/pau-snacks`, changeFrequency: "monthly" as const, priority: 0.8 },
+    { url: `${site}/pau-pharmacy`, changeFrequency: "monthly" as const, priority: 0.8 },
     {
       url: `${site}/send-a-gift-to-pau`,
       changeFrequency: "monthly" as const,

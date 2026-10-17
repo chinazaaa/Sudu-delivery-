@@ -111,6 +111,7 @@ const PAGES: { href: string; said: string }[] = [
   // reads as an edge of the site rather than part of it.
   { href: "/custom-order", said: "Ask us for something we do not stock" },
   { href: "/parcel", said: "Send a parcel to or from PAU" },
+  { href: "/pau-pharmacy", said: "Pharmacy delivery to PAU" },
 ];
 
 export function AlsoSee({ not }: { not: string }) {
