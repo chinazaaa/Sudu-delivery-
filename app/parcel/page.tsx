@@ -101,7 +101,8 @@ export default async function ParcelPage() {
     {
       q: "How do I send a parcel to my child at Pan-Atlantic University?",
       a:
-        `Tell us where it is and we collect it, from ${placesSaid(routes)}. ` +
+        `Tell us where it is and we collect it, from anywhere in ` +
+        `${placesSaid(routes)}. ` +
         "It is sealed when we take it, photographed at both ends, and handed " +
         "to your child at their own block on campus rather than left at a " +
         `gate. From ${naira(cheapest)}, by weight, up to ${heaviest}kg.`,
@@ -109,9 +110,26 @@ export default async function ParcelPage() {
     {
       q: "Can you collect it from my house or office?",
       a:
-        "Yes. Give us the address and a time and we come to it. You do not " +
-        "have to find a courier office, queue at a counter or know anybody's " +
-        "opening hours.",
+        `Yes, anywhere in ${placesSaid(routes)}. Give us the address and a ` +
+        "time and we come to it, so you do not have to find a courier " +
+        "office, queue at a counter or know anybody's opening hours.",
+    },
+    {
+      /*
+       * The limit, said plainly and first rather than discovered.
+       *
+       * One end is always PAU, and that is not a gap in the service, it
+       * is the service: a courier can carry a box anywhere in Lagos and
+       * then has nobody on that campus to give it to. Saying it also
+       * keeps the wrong enquiry away, which costs a reply every time.
+       */
+      q: "Do you carry parcels anywhere else in Lagos?",
+      a:
+        "No. One end is always Pan-Atlantic University, and that is the " +
+        "point of it. We are not a courier covering Lagos: we are the people " +
+        "who go to that campus, know the blocks and can put a parcel in a " +
+        "named student's hands. For anything that does not touch PAU, an " +
+        "ordinary courier is the right answer and will be cheaper.",
     },
     {
       q: "How much does it cost to send a parcel to PAU?",

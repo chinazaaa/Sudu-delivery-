@@ -122,9 +122,11 @@ export async function GET(): Promise<Response> {
      */
     ...(routes.length > 0
       ? [
-          "- Parcels, collected from the address you give and handed to a named",
-          "  student at their own hostel block, photographed at both ends.",
-          "  Priced by weight, from:",
+          "- Parcels. One end is always PAU: this is not a courier covering",
+          "  Lagos, it is the people who go to that campus and can put a parcel",
+          "  in a named student's hands at their own block. Collected from the",
+          "  address you give, photographed at both ends. Priced by weight,",
+          "  from:",
           ...routes.map((route) => {
             const cheapest = Math.min(...route.bands.map((band) => band.fee));
             const upTo = Math.max(...route.bands.map((band) => band.upTo));
