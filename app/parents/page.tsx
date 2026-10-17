@@ -282,7 +282,12 @@ export default async function ParentsPage() {
             found the one they wanted. The same card the collection pages
             carry: things we have is the menu, things we do not is a job
             for a person. */}
-        <CurateBox shelf="the parents page" hint="" hostels={blocks} />
+        <CurateBox
+          shelf="the parents page"
+          hint=""
+          hostels={blocks}
+          whatsapp={settings.whatsapp_number}
+        />
       </section>
 
       <section className="bleed bg-ink text-shell">

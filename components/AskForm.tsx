@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 
 import { sendRequest, type AskState } from "@/app/custom-order/actions";
+import { waLink } from "@/lib/whatsapp";
 
 /**
  * Asking for something the shop does not carry.
@@ -41,14 +42,7 @@ export default function AskForm({
     (wanted.trim() ? `\n\nWhat: ${wanted.trim()}` : "") +
     (budget.trim() ? `\nBudget: ${budget.trim()}` : "") +
     (hostel.trim() ? `\nBlock: ${hostel.trim()}` : "");
-  const link =
-    whatsapp && whatsapp.replace(/\D/g, "").length >= 10
-      ? `https://wa.me/${
-          whatsapp.replace(/\D/g, "").startsWith("0")
-            ? "234" + whatsapp.replace(/\D/g, "").slice(1)
-            : whatsapp.replace(/\D/g, "")
-        }?text=${encodeURIComponent(message)}`
-      : null;
+  const link = waLink(whatsapp, message);
 
   return (
     <div className="space-y-4">

@@ -196,7 +196,12 @@ export default async function BoxDetail({
       {/* Under the boxes, where somebody has just read all of them and not
           found the one they wanted. A shelf holds what the shop decided to
           pack, which is most of what anybody wants and never all of it. */}
-      <CurateBox shelf={occasion.name} hint={occasion.custom_hint} hostels={hostels} />
+      <CurateBox
+        shelf={occasion.name}
+        hint={occasion.custom_hint}
+        hostels={hostels}
+        whatsapp={settings.whatsapp_number}
+      />
 
         </div>
 

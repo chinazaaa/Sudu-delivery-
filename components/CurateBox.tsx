@@ -5,6 +5,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { curateABox, type CurateState } from "@/app/collections/actions";
+import { waLink } from "@/lib/whatsapp";
 
 /**
  * A box nobody has packed, asked for.
@@ -26,6 +27,7 @@ export default function CurateBox({
   shelf,
   hint,
   hostels,
+  whatsapp,
 }: {
   /** Which shelf they were looking at, so whoever answers knows what they
    *  were looking at when they asked. */
@@ -34,13 +36,34 @@ export default function CurateBox({
    *  anything written here: one example cannot serve a cake and a bucket. */
   hint: string;
   hostels: string[];
+  /** The shop's number, so somebody who will not fill in a form can say it
+   *  out loud instead. Most of this shop's conversations start there. */
+  whatsapp?: string | null;
 }) {
   const [open, setOpen] = useState(false);
+  /*
+   * What they have typed so far, carried into the message.
+   *
+   * Held rather than read off the form on the way out, because somebody
+   * who starts typing and changes their mind should not have to type it
+   * again, and because the message is theirs to send: nothing here
+   * messages anybody on anybody's behalf.
+   */
+  const [wanted, setWanted] = useState("");
+  const [budget, setBudget] = useState("");
   const [kind, setKind] = useState<"" | "have" | "find">("");
   const [state, run] = useActionState<CurateState, FormData>(curateABox, {
     error: "",
     done: false,
   });
+
+  const talk = waLink(
+    whatsapp,
+    "Hi Sudu, I would like to put my own box together." +
+      (shelf === "" ? "" : `\n\nI was looking at ${shelf}.`) +
+      (wanted.trim() === "" ? "" : `\n\nWhat I want: ${wanted.trim()}`) +
+      (budget.trim() === "" ? "" : `\nBudget: ${budget.trim()}`)
+  );
 
   // The dialog takes the keyboard, and Escape closes it, because a panel
   // over a page with no way out but a small × is a trap on a phone.
@@ -179,6 +202,31 @@ export default function CurateBox({
                     Tell us what you want
                   </span>
                 </button>
+
+                {/*
+                 * Not a third card, on purpose.
+                 *
+                 * The two above are the question: is the thing on our menu
+                 * or is it not. WhatsApp is not a third answer to that, it
+                 * is a different way of telling us the same answer, and
+                 * three equal cards would be two questions wearing one
+                 * coat. So it sits under both, where it reads as "or just
+                 * say it", which is how most of this shop's conversations
+                 * start anyway.
+                 */}
+                {talk && (
+                  <a
+                    href={talk}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between gap-3 rounded-xl bg-wash px-4 py-3 text-sm font-semibold"
+                  >
+                    Or just message us about it
+                    <span aria-hidden className="text-brand">
+                      →
+                    </span>
+                  </a>
+                )}
               </div>
             ) : (
               <form action={run} className="mt-4 space-y-2.5">
@@ -190,6 +238,8 @@ export default function CurateBox({
                     name="wanted"
                     required
                     rows={3}
+                    value={wanted}
+                    onChange={(event) => setWanted(event.target.value)}
                     placeholder={
                       hint.trim() ||
                       "A tin of milo, two packs of noodles, and a cake for Friday"
@@ -203,6 +253,8 @@ export default function CurateBox({
                     <span className="text-sm font-bold">Roughly what budget</span>
                     <input
                       name="budget"
+                      value={budget}
+                      onChange={(event) => setBudget(event.target.value)}
                       placeholder="₦20,000"
                       className="field"
                     />
@@ -256,10 +308,23 @@ export default function CurateBox({
 
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   <Send />
+                  {/* For whoever started typing and would rather say it.
+                      It carries what is in the boxes, so changing your mind
+                      halfway costs nothing. */}
+                  {talk && (
+                    <a
+                      href={talk}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-quiet"
+                    >
+                      Send it on WhatsApp
+                    </a>
+                  )}
                   <button
                     type="button"
                     onClick={() => setKind("")}
-                    className="text-sm font-semibold text-muted underline"
+                    className="ml-auto text-sm font-semibold text-muted underline"
                   >
                     Back
                   </button>

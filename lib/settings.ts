@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { waLink } from "./whatsapp";
 import {
   parseBands,
   FIRST_DELIVERY_HOUR,
@@ -409,12 +410,9 @@ export function googleQuotes(json: string | null | undefined): GoogleQuote[] {
   }
 }
 
-export function whatsappLink(number: string, message: string): string | null {
-  const digits = number.replace(/\D/g, "");
-  if (digits.length < 10) return null;
-  const international = digits.startsWith("0") ? "234" + digits.slice(1) : digits;
-  return `https://wa.me/${international}?text=${encodeURIComponent(message)}`;
-}
+/** The same link a form builds in the browser, for the pages that build
+ *  one on the server. One implementation, in lib/whatsapp. */
+export const whatsappLink = waLink;
 
 /**
  * "@sudu.ng", "sudu.ng" or the whole address, all three.

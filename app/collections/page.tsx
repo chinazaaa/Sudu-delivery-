@@ -43,7 +43,12 @@ export default async function CollectionsPage() {
       />
       {/* For somebody who has read every shelf and not found it. The shelf
           pages carry the same card under their own boxes. */}
-      <CurateBox shelf="" hint="" hostels={await hostelNames()} />
+      <CurateBox
+        shelf=""
+        hint=""
+        hostels={await hostelNames()}
+        whatsapp={settings.whatsapp_number}
+      />
       <HelpLine number={settings.whatsapp_number} about="a box" />
     </div>
   );
