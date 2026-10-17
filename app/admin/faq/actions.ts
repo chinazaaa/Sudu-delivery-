@@ -206,3 +206,42 @@ export async function deletePageFaq(form: FormData): Promise<void> {
   revalidatePath("/admin/faq");
   revalidatePath(`/${page}`);
 }
+
+/**
+ * One question, added from the top of the page, into whichever section
+ * you picked.
+ *
+ * The add forms used to sit at the bottom of each section, so adding a
+ * question to the parents page meant choosing that tab and then scrolling
+ * past its eight questions to reach the box. Six sections, six scrolls.
+ * This is the same two fields with the section as a third, which is the
+ * one thing the position of the form used to say.
+ */
+export async function addAnywhere(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const section = String(form.get("section") ?? "").trim();
+  const question = String(form.get("question") ?? "").trim();
+  const answer = String(form.get("answer") ?? "").trim();
+  if (question === "" || answer === "") return;
+
+  // The chat's own answers, which are matched on keywords and said one at
+  // a time rather than printed down a page.
+  if (section === "chat") {
+    await db().from("faqs").insert({
+      question: question.slice(0, 300),
+      answer: answer.slice(0, 2000),
+      keywords: String(form.get("keywords") ?? "").trim().slice(0, 500),
+      active: true,
+      sort_order: 100,
+    });
+    done();
+    return;
+  }
+
+  const added = new FormData();
+  added.set("page", section);
+  added.set("question", question);
+  added.set("answer", answer);
+  await addPageFaq(added);
+}

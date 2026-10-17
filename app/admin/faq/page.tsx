@@ -6,14 +6,15 @@ import ConfirmButton from "@/components/admin/ConfirmButton";
 import Empty from "@/components/Empty";
 import { faqList } from "@/lib/faq";
 import { FAQ_PAGES, pageFaqRows } from "@/lib/page-faq";
+import AddQuestion from "@/components/admin/AddQuestion";
 import {
   saveFaq,
   toggleFaq,
   deleteFaq,
   savePageFaq,
   togglePageFaq,
-  addPageFaq,
   deletePageFaq,
+  addAnywhere,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -75,6 +76,18 @@ export default async function FaqPage({
         backLabel="Asked for"
       />
 
+      {/* One tap from the top, whichever section it is going into. */}
+      <div className="flex justify-end">
+        <AddQuestion
+          current={tab}
+          action={addAnywhere}
+          sections={[
+            { value: "chat", label: "Chat answers" },
+            ...FAQ_PAGES.map((one) => ({ value: one.page, label: one.label })),
+          ]}
+        />
+      </div>
+
       {/* Which set you are looking at. */}
       <nav className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
         <Link
@@ -130,54 +143,6 @@ export default async function FaqPage({
         </p>
       </div>
 
-      {/* New first, because the common visit to this page is arriving with
-          a question somebody just asked and wanting it answered for ever. */}
-      <section className="card space-y-3 p-3.5 sm:p-4">
-        <h2 className="font-bold">Add an answer</h2>
-        <form action={saveFaq} className="space-y-3">
-          <div>
-            <label className="label" htmlFor="new_question">
-              The question
-            </label>
-            <input
-              id="new_question"
-              name="question"
-              required
-              className="field"
-              placeholder="How much is delivery?"
-            />
-          </div>
-          <div>
-            <label className="label" htmlFor="new_answer">
-              The answer, in your words
-            </label>
-            <textarea
-              id="new_answer"
-              name="answer"
-              required
-              rows={3}
-              className="field"
-              placeholder="Delivery starts at ₦4,000 and goes up with how much is in the car. The bill always shows the exact figure before you pay."
-            />
-          </div>
-          <div>
-            <label className="label" htmlFor="new_keywords">
-              Other ways people ask it
-            </label>
-            <input
-              id="new_keywords"
-              name="keywords"
-              className="field"
-              placeholder="delivery fee, how much is delivery, shipping, fees"
-            />
-            <p className="hint mt-1">
-              Comma separated. This is what makes it get found: nobody types
-              the question the way it is written above.
-            </p>
-          </div>
-          <SaveButton>Add it</SaveButton>
-        </form>
-      </section>
 
       {all.length === 0 ? (
         <Empty icon="cart" title="No answers yet" href="/admin/requests" action="See what people asked">
@@ -390,37 +355,6 @@ function PageQuestions({
         </ul>
       )}
 
-      <section className="card space-y-3 p-3.5 sm:p-4">
-        <h2 className="font-bold">Add a question to {page.label}</h2>
-        <form action={addPageFaq} className="space-y-3">
-          <input type="hidden" name="page" value={page.page} />
-          <div>
-            <label className="label" htmlFor={`add_q_${page.page}`}>
-              The question
-            </label>
-            <input
-              id={`add_q_${page.page}`}
-              name="question"
-              required
-              className="field"
-              placeholder="Can I send something every month?"
-            />
-          </div>
-          <div>
-            <label className="label" htmlFor={`add_a_${page.page}`}>
-              The answer
-            </label>
-            <textarea
-              id={`add_a_${page.page}`}
-              name="answer"
-              required
-              rows={3}
-              className="field"
-            />
-          </div>
-          <SaveButton>Add it</SaveButton>
-        </form>
-      </section>
     </div>
   );
 }
