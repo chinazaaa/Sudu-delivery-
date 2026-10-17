@@ -358,7 +358,15 @@ export default async function BatchPage({
         title={batchLabel}
         detail={
           <>
-            Closes {clockLabel(batch.cut_off_at)} · {batch.delivery_window_text} ·{" "}
+            {/* Closes, or closed. The same four words sat over a run that
+                had shut twenty minutes earlier, which reads as a run still
+                taking orders and sent somebody looking for the bug that
+                was not there. */}
+            {batch.status === "open" &&
+            new Date(batch.cut_off_at).getTime() > Date.now()
+              ? "Closes"
+              : "Closed"}{" "}
+            {clockLabel(batch.cut_off_at)} · {batch.delivery_window_text} ·{" "}
             {adminStageLabel(batch.stage, batch.settled_at)}
           </>
         }

@@ -621,7 +621,12 @@ export default async function RunsPage({
                         ? batch.deliver_at
                           ? `Carrying it ${runDateLabel(batch.run_date)}`
                           : "Waiting on a date from you"
-                        : `Closes ${clockLabel(batch.cut_off_at)} · ${batch.delivery_window_text}`}
+                        : `${
+                            batch.status === "open" &&
+                            new Date(batch.cut_off_at).getTime() > Date.now()
+                              ? "Closes"
+                              : "Closed"
+                          } ${clockLabel(batch.cut_off_at)} · ${batch.delivery_window_text}`}
                   </p>
                   <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     {batch.status === "cancelled" && (
