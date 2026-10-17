@@ -41,7 +41,9 @@ export function keyOf(one: Says): string {
 export async function saidOnOrders(): Promise<Says[] | null> {
   const { data, error } = await db()
     .from("orders")
-    .select("id, customer_name, for_name, rating, feedback, rated_at, review_rank")
+    .select(
+      "id, customer_name, for_name, deliver_to_name, rating, feedback, rated_at, review_rank"
+    )
     .eq("show_review", true)
     .not("rating", "is", null)
     .order("review_rank", { ascending: false })
@@ -58,7 +60,18 @@ export async function saidOnOrders(): Promise<Says[] | null> {
       from: "order" as const,
       id: String(row.id),
       said: String(row.feedback ?? "").trim(),
-      who: firstName(String(row.for_name || row.customer_name || "")),
+      /*
+       * Whoever ate it, which is not always whoever paid.
+       *
+       * The stars are tapped on the order page by the person the food
+       * went to, and a father ordering for his son was being credited
+       * with his son's words: the site printed "Austin" over a review
+       * that says we can call you if there is trouble with your order,
+       * which is the person who was standing at the hostel.
+       */
+      who: firstName(
+        String(row.deliver_to_name || row.for_name || row.customer_name || "")
+      ),
       stars: Math.min(5, Math.max(1, Math.round(Number(row.rating) || 5))),
       rank: Math.max(0, Math.round(Number(row.review_rank) || 0)),
     }))

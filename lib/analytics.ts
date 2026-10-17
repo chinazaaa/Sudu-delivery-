@@ -292,7 +292,7 @@ export async function feedback(days = 28): Promise<Feedback> {
   const { data } = await db()
     .from("orders")
     .select(
-      "id, order_no, customer_name, for_name, rating, feedback, rated_at, batch_id, show_review"
+      "id, order_no, customer_name, for_name, deliver_to_name, rating, feedback, rated_at, batch_id, show_review"
     )
     .not("rating", "is", null)
     .gte("rated_at", since)
@@ -304,6 +304,7 @@ export async function feedback(days = 28): Promise<Feedback> {
     order_no: number | null;
     customer_name: string;
     for_name: string | null;
+    deliver_to_name: string | null;
     rating: number;
     feedback: string;
     rated_at: string;
@@ -325,7 +326,7 @@ export async function feedback(days = 28): Promise<Feedback> {
     all: rows.map((row) => ({
       id: row.id,
       ref: row.order_no ? `#${row.order_no}` : "",
-      name: row.for_name ?? row.customer_name,
+      name: row.deliver_to_name || row.for_name || row.customer_name,
       rating: row.rating,
       feedback: row.feedback,
       when: row.rated_at,
@@ -338,7 +339,7 @@ export async function feedback(days = 28): Promise<Feedback> {
       .map((row) => ({
         id: row.id,
         ref: row.order_no ? `#${row.order_no}` : "",
-        name: row.for_name ?? row.customer_name,
+        name: row.deliver_to_name || row.for_name || row.customer_name,
         rating: row.rating,
         feedback: row.feedback,
         when: row.rated_at,
