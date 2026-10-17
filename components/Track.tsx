@@ -94,7 +94,23 @@ function Counter() {
       cameFrom = whereFrom(
         query?.get("utm_source") ?? query?.get("ref") ?? query?.get("from") ?? ""
       );
-      if (cameFrom !== "") {
+      /*
+       * Only where we actually learned something.
+       *
+       * "Direct" is not a channel, it is the absence of one: no tag on the
+       * link and no referring site, which is what an assistant, a WhatsApp
+       * message and somebody typing the address all look like. Writing it
+       * into a cookie that is never overwritten turned "we do not know"
+       * into a ninety day answer, and locked out every better one that
+       * came after it.
+       *
+       * Somebody read about the shop in ChatGPT in September, when the
+       * utm it carries meant nothing to this, and was stamped direct.
+       * Coming back through a tagged link today changed nothing, because
+       * the cookie had already decided. So it is left unset until a real
+       * source turns up, and this visit is still counted as direct.
+       */
+      if (cameFrom !== "" && cameFrom !== "direct") {
         try {
           document.cookie =
             `${FROM_COOKIE}=${encodeURIComponent(cameFrom)}; path=/; ` +
