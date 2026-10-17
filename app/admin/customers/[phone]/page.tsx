@@ -15,6 +15,7 @@ import { siteUrl } from "@/lib/admin-templates";
 import { firstName, templateFor, whatsappTo } from "@/lib/messages";
 import { naira, shareRef } from "@/lib/money";
 import { formatPhone, showNumber } from "@/lib/phone";
+import { channelLabel, everyChannel } from "@/lib/came-from";
 import { SLOT_LABEL } from "@/lib/config";
 import { runDateLabel } from "@/lib/time";
 import { namedPromoters } from "@/lib/promoters";
@@ -972,31 +973,52 @@ export default async function CustomerPage({
           </Panel>
 
 
-          {promoters.length > 0 && (
-            <Panel
-              title="Who brought them"
-              detail="Changing this moves every order they have ever placed."
-              size="sm"
-            >
-              <form action={setCustomerPromoter} className="mt-1 flex gap-2">
-                <input type="hidden" name="phone" value={person.phone} />
-                <select
-                  name="promoter_code"
-                  defaultValue={person.promoterCode ?? ""}
-                  className="field grow py-2 text-sm"
-                  aria-label="Who brought them"
-                >
-                  <option value="">Came in on their own</option>
-                  {promoters.map((one) => (
-                    <option key={one.code} value={one.code}>
-                      Brought by {one.name}
+          <Panel
+            title="Who brought them"
+            detail="Changing a promoter moves every order they have ever placed."
+            size="sm"
+          >
+            <form action={setCustomerPromoter} className="mt-1 flex gap-2">
+              <input type="hidden" name="phone" value={person.phone} />
+              <select
+                name="promoter_code"
+                defaultValue={
+                  person.promoterCode ??
+                  (person.cameFrom === "" ? "" : `c:${person.cameFrom}`)
+                }
+                className="field grow py-2 text-sm"
+                aria-label="Who brought them"
+              >
+                <option value="">Came in on their own</option>
+                {promoters.length > 0 && (
+                  <optgroup label="A person, who gets paid">
+                    {promoters.map((one) => (
+                      <option key={one.code} value={one.code}>
+                        Brought by {one.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {/* Where they were standing when they saw us, which is a
+                    different question from who gets paid. Picking one of
+                    these takes any promoter's code off them, because a
+                    code is a claim on money and ChatGPT cannot hold one. */}
+                <optgroup label="A place, which pays nobody">
+                  {everyChannel().map((one) => (
+                    <option key={one} value={`c:${one}`}>
+                      Found us through {channelLabel(one)}
                     </option>
                   ))}
-                </select>
-                <SaveButton look="btn-admin btn-admin-sm" className="shrink-0">Save</SaveButton>
-              </form>
-            </Panel>
-          )}
+                </optgroup>
+              </select>
+              <SaveButton look="btn-admin btn-admin-sm" className="shrink-0">Save</SaveButton>
+            </form>
+            <p className="hint mt-2">
+              A promoter earns on everything they ever order. A place earns
+              nobody anything, so nothing is owed and no discount comes with
+              it.
+            </p>
+          </Panel>
 
           {/* Testing a checkout makes a customer, so a shop that has been
               tested has a book mostly of itself. Anybody who has ordered

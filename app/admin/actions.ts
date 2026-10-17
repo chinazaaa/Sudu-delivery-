@@ -2,6 +2,7 @@
 
 import { tidyHandle } from "@/lib/came-from";
 import { messagingNumber, normalisePhone } from "@/lib/phone";
+import { everyChannel, channelLabel, tidyChannel } from "@/lib/came-from";
 import { openDaysText } from "@/lib/open-days";
 import { redirect } from "next/navigation";
 import { revalidatePath, updateTag } from "next/cache";
@@ -4859,6 +4860,28 @@ export async function setCustomerPromoter(form: FormData): Promise<void> {
   if (!phone) return;
 
   const code = String(form.get("promoter_code") ?? "").trim();
+
+  /*
+   * A person, or a channel, which are two different answers.
+   *
+   * A promoter is somebody who gets paid and the code is the key to that:
+   * the customer carries it for life and a payout is filed under it. A
+   * channel is where they were standing when they saw us, and ChatGPT is
+   * one of those. Saying somebody came through ChatGPT must never put a
+   * code on them, because a code is a claim on money.
+   *
+   * Channels carry a prefix a promoter's code cannot have, since codes are
+   * letters and numbers and this one has a colon in it.
+   */
+  if (code.startsWith("c:")) {
+    await db()
+      .from("customers")
+      .update({ came_from: tidyChannel(code.slice(2)), promoter_code: null })
+      .eq("phone", phone);
+    revalidatePath("/admin", "layout");
+    return;
+  }
+
   // Nobody is a real answer, and a code that is not a promoter is not.
   const belongs = code !== "" && (await realPromoter(code)) ? code : null;
 

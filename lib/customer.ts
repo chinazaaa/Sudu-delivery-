@@ -53,6 +53,9 @@ export type OneCustomer = {
   whatsappWhose: string;
   /** Whether this one is the parent of the pair. Only the parent is marked. */
   isParent: boolean;
+  /** The channel they came through: Instagram, ChatGPT, a poster. A
+   *  channel is not a person and pays nobody. */
+  cameFrom: string;
   /** How many boxes somebody else paid for and had sent to them. */
   sent: number;
   /** Where to message them, when that is not the number they order on.
@@ -115,7 +118,7 @@ export async function oneCustomer(phone: string): Promise<OneCustomer | null> {
       // never asked for here, so the household panel rendered empty however
       // many times it was saved and the button to message them could never
       // appear.
-      "phone, name, hostel, pin, admin_note, payment_method, promoter_code, calls_them, whatsapp, whatsapp_whose, parent_name, parent_phone, is_parent, reviewed_at, first_order_at"
+      "phone, name, hostel, pin, admin_note, payment_method, promoter_code, calls_them, came_from, whatsapp, whatsapp_whose, parent_name, parent_phone, is_parent, reviewed_at, first_order_at"
     )
     .eq("phone", wanted)
     .maybeSingle();
@@ -195,6 +198,7 @@ export async function oneCustomer(phone: string): Promise<OneCustomer | null> {
     whatsapp: (said.whatsapp as string) ?? "",
     whatsappWhose: (said.whatsapp_whose as string) ?? "",
     isParent: Boolean(said.is_parent),
+    cameFrom: (said.came_from as string) ?? "",
     sent: sentCount ?? 0,
     pays: said.payment_method === "card" ? "card" : "transfer",
     promoterCode: code === "" ? null : code,
