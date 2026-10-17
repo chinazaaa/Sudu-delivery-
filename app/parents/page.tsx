@@ -180,16 +180,21 @@ export default async function ParentsPage() {
               >
                 Choose a box <span aria-hidden>→</span>
               </a>
-              {ask ? (
-                <a
-                  href={ask}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn border-2 border-white text-white"
-                >
-                  Set up monthly on WhatsApp
-                </a>
-              ) : null}
+              {/* The monthly form is the most valuable thing on this page
+                  and it sits at the bottom of it, which on a phone is four
+                  screens down: most people never knew it was there. It is
+                  not moved, because the order of this page is right, but it
+                  is now reachable from the first screen and from the one
+                  place a parent is already deciding.
+
+                  This also used to point at WhatsApp, which is the very
+                  thing the form replaced. */}
+              <a
+                href="#monthly"
+                className="btn border-2 border-white text-white"
+              >
+                Send it every month <span aria-hidden>↓</span>
+              </a>
             </div>
           </div>
         </div>
@@ -232,6 +237,27 @@ export default async function ParentsPage() {
           </p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Among the shelves rather than after them. This is where a
+                parent is already comparing things to send, and "the same
+                thing every month" is one of the things to compare. */}
+            <a
+              href="#monthly"
+              className="flex items-center justify-between gap-4 rounded-2xl border-2 border-ink bg-volt p-5 transition active:translate-x-0.5 active:translate-y-0.5"
+            >
+              <span className="flex min-w-0 flex-col gap-1">
+                <span className="ticket text-brand-dark">Every month</span>
+                <span className="break-words font-display text-[30px] font-extrabold uppercase leading-none">
+                  The same thing, monthly
+                </span>
+                <span className="text-sm text-ink/70">
+                  Pick the box and the day. One transfer a month, nothing to
+                  remember.
+                </span>
+              </span>
+              <span aria-hidden className="shrink-0 font-bold text-brand">
+                →
+              </span>
+            </a>
             {shelves.map((one) => (
               <Link
                 key={one.href}
@@ -300,7 +326,10 @@ export default async function ParentsPage() {
         quotes={google.quotes}
       />
 
-      <section className="grid gap-4 py-12 sm:py-14 lg:grid-cols-2">
+      <section
+        id="monthly"
+        className="grid scroll-mt-20 gap-4 py-12 sm:py-14 lg:grid-cols-2"
+      >
         {/* The thing a parent came here to do, done here.
             What stood in this corner was a button that opened a chat, which
             is a promise to remember rather than a standing order: the one
