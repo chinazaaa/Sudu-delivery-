@@ -7,6 +7,7 @@ import { addRequest, markRequest, settleRequest, shelveRequest } from "./actions
 import SaveButton from "@/components/SaveButton";
 import Link from "next/link";
 import { db } from "@/lib/supabase";
+import { hostelNames } from "@/lib/hostels";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,10 @@ async function shelfOfItems(ids: string[]): Promise<Map<string, string>> {
   }
 }
 
+/** Finished with no money through this page: nothing left to settle. */
+const isClosed = (status: string): boolean =>
+  status === "converted" || status === "dropped";
+
 const STATUS: Record<string, string> = {
   new: "Waiting on you",
   quoted: "Priced, waiting on them",
@@ -66,12 +71,13 @@ export default async function RequestsPage({
   searchParams: Promise<{ show?: string }>;
 }) {
   const show = (await searchParams).show === "questions" ? "questions" : "";
-  const [all, settings, shelves] = await Promise.all([
+  const [all, settings, shelves, blocks] = await Promise.all([
     requestList(),
     safeSettings(),
     // Where a request can be put. Every counter the shop keeps, so a power
     // bank goes to the shop and a bag of rice to the market.
     shelfList(),
+    hostelNames(),
   ]);
   /*
    * Two different jobs on one page.
@@ -182,7 +188,17 @@ export default async function RequestsPage({
               className="field py-2 text-sm"
               placeholder="Their number"
             />
-            <input name="hostel" className="field py-2 text-sm" placeholder="Their block" />
+            {/* The blocks as the shop has them, not as somebody spells
+                them at half past six. A typed block is a block the run
+                sheet will not group. */}
+            <select name="hostel" defaultValue="" className="field py-2 text-sm">
+              <option value="">Their block</option>
+              {blocks.map((one) => (
+                <option key={one} value={one}>
+                  {one}
+                </option>
+              ))}
+            </select>
           </div>
           <input
             name="budget"
@@ -298,7 +314,7 @@ export default async function RequestsPage({
                     money is counted the ask is done, and four buttons that
                     set it to what it already is read as broken: you press
                     Done and the page comes back exactly as it was. */}
-                {!ask.money_id && (
+                {!ask.money_id && !isClosed(ask.status) && (
                 <form action={markRequest} className="flex items-end gap-2">
                   <input type="hidden" name="id" value={ask.id} />
                   <div className="w-28">
@@ -422,7 +438,35 @@ export default async function RequestsPage({
                   a one-off for one person and will never be on a menu, so
                   making a product and an order to hold the money is two
                   records that are not true kept for one number that is. */}
-              {ask.money_id ? (
+              {/*
+                Closed, with nothing to count.
+                
+                "They ordered it" and "Drop" both finish an ask without any
+                money passing through here, and the boxes for counting it
+                stayed on screen underneath regardless, so pressing either
+                changed a badge and left the card still asking to be
+                settled. There was no way to tell a finished one from one
+                waiting on you.
+              */}
+              {!ask.money_id && isClosed(ask.status) ? (
+                <div className="flex flex-wrap items-center gap-2.5 rounded-xl bg-black/[0.04] px-3 py-2">
+                  <p className="min-w-0 flex-1 text-sm font-semibold">
+                    {ask.status === "converted"
+                      ? "Finished. They placed it as an ordinary order, so the money is on that order and none is counted here."
+                      : "Not going ahead. Nothing to count."}
+                  </p>
+                  <form action={markRequest} className="shrink-0">
+                    <input type="hidden" name="id" value={ask.id} />
+                    <button
+                      name="status"
+                      value="new"
+                      className="btn-quiet px-3 py-2 text-sm"
+                    >
+                      Put it back
+                    </button>
+                  </form>
+                </div>
+              ) : ask.money_id ? (
                 <div className="rounded-xl bg-mint/10 px-3 py-2">
                   <p className="text-sm font-semibold text-mint">
                     Counted{ask.quoted ? ` · ${naira(ask.quoted)} in` : ""}. It
