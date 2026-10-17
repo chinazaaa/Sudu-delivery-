@@ -2877,6 +2877,7 @@ const SETTING_FIELDS = [
   "msg_late",
   "msg_review",
   "msg_google",
+  "msg_parents",
   "paid_note",
   "card_item_id",
   "fee_bands",

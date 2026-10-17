@@ -39,7 +39,8 @@ export type TemplateKind =
   | "ready"
   | "late"
   | "review"
-  | "google";
+  | "google"
+  | "parents";
 
 export const TEMPLATE_LABEL: Record<TemplateKind, string> = {
   confirmed: "Payment confirmed",
@@ -50,6 +51,7 @@ export const TEMPLATE_LABEL: Record<TemplateKind, string> = {
   late: "Running late",
   review: "Ask for a review",
   google: "Ask for a Google review",
+  parents: "Tell them about Sudu for parents",
 };
 
 /** What was ordered, in one word. The shop sells three things now. */
@@ -80,6 +82,7 @@ export const TEMPLATE_FIELD: Record<TemplateKind, keyof Settings> = {
   late: "msg_late",
   review: "msg_review",
   google: "msg_google",
+  parents: "msg_parents",
 };
 
 /** The wording used until the admin writes their own. */
@@ -113,6 +116,27 @@ export const TEMPLATE_DEFAULT: Record<TemplateKind, string> = {
     "Hi {name}, hope the last one was good.\n\n" +
     "If you have a minute, a review on Google helps us more than anything " +
     "else: {google}\n\nThank you.",
+  /*
+   * News, not a favour.
+   *
+   * This one is sent down the customer list to students, and what it is
+   * really asking for is a forward to somebody at home. That only happens
+   * if it reads as something worth passing on rather than as a shop asking
+   * for an introduction, so it announces a thing and leaves the forwarding
+   * to them.
+   *
+   * It says nothing about who pays. A student at this university may well
+   * be paying for their own food, and a message that assumes otherwise is
+   * a message that lands badly with exactly the people worth keeping.
+   */
+  parents:
+    "Hi {name}, Sudu here. Hope the last one was good.\n\n" +
+    "Quick one: we have just started Sudu for parents. A monthly box, where " +
+    "they pick what goes in it and the day it lands and we send them the " +
+    "account a few days before. And parcels, so if anyone at home already " +
+    "has something they want to send, we collect it and bring it to your " +
+    "block.\n\n{site}/parents?utm_source=whatsapp\n\n" +
+    "If your folks would want it, feel free to send it on.",
 };
 
 /** Everything a template can say, so the admin can rearrange the wording. */

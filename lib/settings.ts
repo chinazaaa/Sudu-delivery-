@@ -77,6 +77,7 @@ export type Settings = {
   msg_late: string;
   msg_review: string;
   msg_google: string;
+  msg_parents: string;
   /** What a paid customer reads on their order page. */
   paid_note: string;
   /** The delivery price list as JSON. Blank means the shipped bands. */
@@ -247,6 +248,7 @@ export const EMPTY: Settings = {
   msg_late: "",
   msg_review: "",
   msg_google: "",
+  msg_parents: "",
   paid_note: "",
   fee_bands: "",
   admin_emails: "",

@@ -277,6 +277,23 @@ export default async function CustomersPage({
             >
               Send a message
             </a>
+            {/* The one message worth a button of its own, because it is the
+                one thing the shop is trying to do rather than a thing it
+                does every day: tell people there is a Sudu for parents,
+                and let them pass it on to somebody at home. It opens the
+                composer on that wording, over whoever is on screen. */}
+            <a
+              href={broadcastHref({
+                phones: shown.map((row) => row.phone),
+                view,
+                by,
+                q: query.q ?? "",
+                start: "parents",
+              })}
+              className="btn-admin"
+            >
+              Tell them about parents
+            </a>
             {/* The book as it is filtered on the screen. The bar above the
                 table exports the ticked rows instead, which is the other
                 question people ask of a list. */}

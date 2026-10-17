@@ -4351,6 +4351,7 @@ const aPlan = (over: Partial<Plan> = {}): Plan => ({
   startedOn: "2026-10-01",
   madeThrough: null,
   note: "",
+  cameFrom: "",
   createdAt: "",
   ...over,
 });

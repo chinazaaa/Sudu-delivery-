@@ -146,6 +146,10 @@ export default async function BroadcastPage({
     pattern("pin"),
     pattern("review"),
     ...(google.review !== "" ? [pattern("google")] : []),
+    // Sent down the list rather than against an order, like the Google
+    // one: it names no order and no run, because it goes to somebody who
+    // ordered a month ago as readily as to somebody who ate last night.
+    pattern("parents"),
   ];
 
   // Where the button that opened this screen named a template, the owner

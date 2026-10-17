@@ -3,6 +3,7 @@
 import { db } from "@/lib/supabase";
 import { normalisePhone } from "@/lib/phone";
 import { tellAdmin } from "@/lib/admin-alerts";
+import { cameFromNow } from "@/lib/where-from";
 import { emailAdmins } from "@/lib/email";
 
 /**
@@ -71,6 +72,11 @@ export async function askForAPlan(
       active: false,
       auto: false,
       note: String(form.get("note") ?? "").trim().slice(0, 300),
+      /* Which channel brought them. Orders have carried this for a long
+         time and plans did not, so a month of pushing four things at once
+         would have shown the orders attributed and the standing orders,
+         which are the valuable half, coming from nowhere. */
+      came_from: await cameFromNow(),
     });
     if (error) throw new Error(error.message);
   } catch {

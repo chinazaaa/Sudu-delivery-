@@ -18,6 +18,7 @@ import { hostelNames } from "@/lib/hostels";
 import { safeSettings, numberOr } from "@/lib/settings";
 import { naira } from "@/lib/money";
 import { waLink } from "@/lib/whatsapp";
+import { channelLabel } from "@/lib/came-from";
 import { formatPhone } from "@/lib/phone";
 import { runDateLabel, lagosToday } from "@/lib/time";
 import { savePlan, deletePlan, raisePlanNow } from "../actions";
@@ -188,6 +189,7 @@ export default async function PlansPage() {
                           : " · nothing in it yet"}
                       {plan.auto ? " · raises itself" : " · you raise it"}
                       {held !== "" && held >= today ? ` · held until ${held}` : ""}
+                      {plan.cameFrom === "" ? "" : ` · from ${channelLabel(plan.cameFrom)}`}
                     </p>
                   </summary>
 

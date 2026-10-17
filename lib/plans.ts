@@ -57,6 +57,9 @@ export type Plan = {
    *  quietly put back after somebody deleted it on purpose. */
   madeThrough: string | null;
   note: string;
+  /** Which channel brought them: a WhatsApp forward, Google, a promoter's
+   *  link. Empty on anything set up by hand in admin. */
+  cameFrom: string;
   createdAt: string;
 };
 
@@ -85,6 +88,7 @@ function toPlan(row: Record<string, unknown>): Plan {
     startedOn: String(row.started_on ?? ""),
     madeThrough: (row.made_through as string | null) ?? null,
     note: String(row.note ?? ""),
+    cameFrom: String(row.came_from ?? ""),
     createdAt: String(row.created_at ?? ""),
   };
 }
@@ -559,5 +563,33 @@ export async function planForOrder(orderId: string): Promise<{
     return plan ? { plan, cycle: String((data as { cycle: string }).cycle) } : null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * The standing order belonging to whoever is signed in, for their own page.
+ *
+ * A parent who sets one of these up is an ordinary customer: their orders
+ * are under their number with their own PIN, and each one has the same
+ * page with the same timeline as anything else the shop carries. What was
+ * missing was the plan itself, which is the one thing about their account
+ * that is not an order: when the next one lands, and what is in it.
+ *
+ * Only what is running. A request nobody has agreed yet is not a promise
+ * to show somebody as though it were.
+ */
+export async function myPlans(phone: string): Promise<Plan[]> {
+  const number = String(phone ?? "").trim();
+  if (number === "") return [];
+
+  try {
+    const { data } = await db()
+      .from("plans")
+      .select("*")
+      .eq("customer_phone", number)
+      .eq("active", true);
+    return ((data ?? []) as Record<string, unknown>[]).map(toPlan);
+  } catch {
+    return [];
   }
 }

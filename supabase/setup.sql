@@ -1045,3 +1045,5 @@ alter table settings add column if not exists plans_paused_until text not null d
 -- How many days before it lands the order is raised, so the parent has
 -- time to pay and the shopping has time to be bought.
 alter table settings add column if not exists plan_lead_days text not null default '';
+
+alter table settings add column if not exists msg_parents text not null default '';

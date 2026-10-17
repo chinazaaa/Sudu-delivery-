@@ -9,6 +9,8 @@ import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
 import RepeatOrder from "@/components/RepeatOrder";
 import { ordersForPhone, repeatLines } from "@/lib/orders";
+import { myPlans, nextLanding } from "@/lib/plans";
+import { lagosToday, runDateLabel } from "@/lib/time";
 import { STAGE_LABEL } from "@/lib/stages";
 import { takesMoney } from "@/lib/batches";
 import { dayWord } from "@/lib/time";
@@ -118,6 +120,13 @@ export default async function OrdersPage({
   const live = orders.filter((order) => !done(order));
   const past = orders.filter(done);
 
+  /* A standing order is the one thing about an account that is not an
+     order. The orders it has raised are already in the lists above, with
+     the same page and the same timeline as everything else; what nobody
+     could see was the arrangement behind them. */
+  const standing = await myPlans(phone).catch(() => []);
+  const today = lagosToday();
+
   return (
     <div className="space-y-4">
       <div className="flex items-baseline justify-between gap-3">
@@ -128,6 +137,31 @@ export default async function OrdersPage({
           <button className="text-sm text-muted hover:underline">Not you?</button>
         </form>
       </div>
+
+      {standing.map((plan) => (
+        <section
+          key={plan.id}
+          className="card flex flex-col gap-1.5 border-l-[6px] border-l-brand p-4 sm:p-5"
+        >
+          <span className="ticket text-brand-dark">Your monthly box</span>
+          <p className="text-[17px] font-bold">
+            Next one lands {runDateLabel(nextLanding(plan, plan.madeThrough ?? today))}
+          </p>
+          <p className="text-sm leading-relaxed text-ink/70">
+            {plan.forName === ""
+              ? `To ${plan.hostel}.`
+              : `For ${plan.forName} at ${plan.hostel}.`}{" "}
+            We raise the order a few days before and send you what it comes to.
+            Nothing is charged automatically and we do not hold a card.
+            {plan.pausedUntil && plan.pausedUntil >= today
+              ? ` It is paused until ${plan.pausedUntil}.`
+              : ""}
+          </p>
+          <p className="text-sm text-muted">
+            To change what is in it, the day, or to stop it, message us.
+          </p>
+        </section>
+      ))}
 
       {/* The tab bar carries the group now, and the header's own link to this
           is hidden on a phone, so ordering the same thing again lives here

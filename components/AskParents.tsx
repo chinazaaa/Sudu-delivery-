@@ -38,22 +38,37 @@ export default function AskParents({
   // of a sentence: "the care packages" reads, "the study and exam" does not,
   // and the wording cannot be written once for every shelf a shop will ever
   // add.
+  /*
+   * News, and not a begging letter.
+   *
+   * It opened "Mum" and asked "please can you get me one of these", which
+   * is wrong twice. Half the people this is forwarded to are fathers. And
+   * at this university a student may well be paying for their own food,
+   * so a message that assumes somebody else is paying is a message that
+   * embarrasses the person sending it.
+   *
+   * What travels instead is a thing worth passing on: there is a service
+   * here, it does this, here is the one I would want. Whoever reads it can
+   * decide what to do about it, which is what they were going to do
+   * anyway.
+   */
   const message = encodeURIComponent(
-    `Mum, there is a service that delivers food and foodstuff to the hostels ` +
-      `here at school.\n\nPlease can you get me one of these?\n${what}\n\n` +
-      `They bring it to my hostel and send you a photo when it is handed ` +
-      `over. They have been on the PAU campus since 2018.\n\n${href}`
+    `There is a service here at PAU that delivers food and foodstuff to the ` +
+      `hostels, and they do monthly boxes and parcels for parents now.\n\n` +
+      `This is the one I would want:\n${what}\n\n` +
+      `They bring it to the hostel and send a photo when it is handed over. ` +
+      `They have been on the PAU campus since 2018.\n\n${href}`
   );
 
   return (
     <section className="flex flex-col gap-3 rounded-2xl bg-ink p-6 text-shell shadow-[8px_8px_0_#e5321d]">
-      <span className="ticket text-volt">Someone else paying?</span>
+      <span className="ticket text-volt">Ask someone at home</span>
       <h2 className="font-display text-[30px] font-black uppercase leading-none">
         Send it to a parent
       </h2>
       <p className="leading-relaxed text-rail-text">
-        Get a ready-made WhatsApp message with the link, so they can pay from
-        anywhere.
+        A ready-made WhatsApp message with the link in it. They can pay from
+        anywhere, and we do monthly boxes and parcels for parents too.
       </p>
       <a
         href={`https://wa.me/?text=${message}`}

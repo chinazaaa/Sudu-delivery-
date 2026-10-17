@@ -1392,3 +1392,11 @@ alter table settings add column if not exists plans_paused_until text not null d
 -- How many days before it lands the order is raised, so the parent has
 -- time to pay and the shopping has time to be bought.
 alter table settings add column if not exists plan_lead_days text not null default '';
+
+-- The message that tells a customer about Sudu for parents.
+--
+-- Sent down the customer list rather than against an order, like the
+-- Google one: what it is really asking for is a forward to somebody at
+-- home, which only happens if it reads as news rather than as a shop
+-- asking for an introduction.
+alter table settings add column if not exists msg_parents text not null default '';
