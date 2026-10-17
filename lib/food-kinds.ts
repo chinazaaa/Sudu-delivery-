@@ -23,15 +23,18 @@ export type FoodKind = {
   q?: string;
   /** Or a menu category to filter by, for a kind whose items never say it. */
   category?: string;
+  /** Or one of the shop's own aisles, which is better again where there is
+   *  one: an aisle is every kitchen's word for the thing at once, so Pizza
+   *  catches Pizzas, Square pizzas and Dodsters & pockets together. */
+  aisle?: string;
 };
 
 export const FOOD_KINDS: FoodKind[] = [
   { label: "Chicken", emoji: "🍗", q: "chicken" },
   { label: "Rice", emoji: "🍚", q: "rice" },
-  { label: "Pizza", emoji: "🍕", category: "Pizzas" },
+  { label: "Pizza", emoji: "🍕", aisle: "Pizza" },
   { label: "Burgers", emoji: "🍔", q: "burger" },
   { label: "Shawarma", emoji: "🌯", q: "shawarma" },
-  { label: "Wings", emoji: "🔥", q: "wings" },
   // By category rather than by word, for the same reason pizza is: the
   // things in a small chops platter are called spring rolls and samosas
   // and puff puff, and not one of them says "small chops" in its name.
@@ -39,8 +42,7 @@ export const FOOD_KINDS: FoodKind[] = [
   { label: "Pasta", emoji: "🍝", q: "pasta" },
   { label: "Cake", emoji: "🍰", q: "cake" },
   { label: "Doughnuts", emoji: "🍩", q: "doughnut" },
-  { label: "Fish", emoji: "🐟", q: "fish" },
-  { label: "Drinks", emoji: "🥤", category: "Drinks" },
+  { label: "Drinks", emoji: "🥤", aisle: "Drinks" },
 ];
 
 /** Where a chip goes: the everything list, already narrowed. */
@@ -48,5 +50,6 @@ export function kindHref(one: FoodKind): string {
   const now = new URLSearchParams();
   if (one.q) now.set("q", one.q);
   if (one.category) now.set("category", one.category);
+  if (one.aisle) now.set("aisle", one.aisle);
   return `/products?${now.toString()}`;
 }
