@@ -37,6 +37,7 @@ export type TemplateKind =
   | "card"
   | "pin"
   | "ready"
+  | "landed"
   | "late"
   | "review"
   | "google"
@@ -48,6 +49,7 @@ export const TEMPLATE_LABEL: Record<TemplateKind, string> = {
   card: "Send card link",
   pin: "Send their PIN",
   ready: "Food is here",
+  landed: "Tell the payer it landed",
   late: "Running late",
   review: "Ask for a review",
   google: "Ask for a Google review",
@@ -79,6 +81,7 @@ export const TEMPLATE_FIELD: Record<TemplateKind, keyof Settings> = {
   card: "msg_card",
   pin: "msg_pin",
   ready: "msg_ready",
+  landed: "msg_landed",
   late: "msg_late",
   review: "msg_review",
   google: "msg_google",
@@ -103,6 +106,18 @@ export const TEMPLATE_DEFAULT: Record<TemplateKind, string> = {
     "have placed is there.",
   ready:
     "Hi {name}, your {thing} is here. Bringing it to {hostel} now.",
+  /*
+   * For whoever paid, when that is not whoever ate.
+   *
+   * A father orders from Lagos for a son in a hostel. The son is told the
+   * food is here, because he is the one who has to come down for it, and
+   * the man who paid for it hears nothing at all and is left wondering
+   * whether any of it arrived. This is the one message that exists only
+   * because a household has two people in it, which is why it is offered
+   * only when it does.
+   */
+  landed:
+    "Hi {name}, {for}'s {thing} has been delivered.\n\nThe order: {link}",
   late:
     "Hi {name}, the {batch} run is running a little behind.\n\n" +
     "Your {thing} is coming. I will message again when it is with you.",
@@ -145,6 +160,10 @@ export const TEMPLATE_TOKENS: { token: string; means: string }[] = [
   { token: "{total}", means: "what they owe" },
   { token: "{hostel}", means: "their hostel or block" },
   { token: "{thing}", means: "food, order or parcel, whichever it is" },
+  {
+    token: "{for}",
+    means: "who the order is for, where that is somebody else, like a son",
+  },
   { token: "{window}", means: "when the run lands" },
   { token: "{link}", means: "their order page" },
   { token: "{site}", means: "the site address" },
@@ -255,6 +274,18 @@ export function template(args: {
   what?: Ordered;
   /** The account to quote. Without one, the single account in settings. */
   bank?: { bank_name: string; account_name: string; account_number: string } | null;
+  /*
+   * Who this message is being opened to, where that is not the person the
+   * order is filed under.
+   *
+   * A household has two phones. "Your food is here" goes to the son and
+   * opened "Hi Austin", because the name came off the order and the order
+   * is the father's. The caller knows which of the two it is about to
+   * message, so it says, and the greeting follows the phone.
+   */
+  toName?: string;
+  /** Who the order is for, for a message to the other one about them. */
+  aboutName?: string;
 }): string {
   const { order, settings, pin, siteUrl, batchLabel } = args;
   const custom = String(settings[TEMPLATE_FIELD[args.kind]] ?? "").trim();
@@ -281,7 +312,15 @@ export function template(args: {
     // First name, and the shop's own answer for this person where it has
     // one. A message that opens with somebody's full name reads like a
     // letter from a bank.
-    "{name}": firstName(order.for_name ?? order.customer_name, order.callsThem),
+    "{name}":
+      String(args.toName ?? "").trim() ||
+      firstName(order.for_name ?? order.customer_name, order.callsThem),
+    // Them, not whoever is reading it. Empty on an ordinary order, where
+    // there is only one person and the sentence would say their own name
+    // back to them.
+    "{for}":
+      String(args.aboutName ?? "").trim() ||
+      firstName(order.for_name ?? order.customer_name, order.callsThem),
     "{ref}": shareRef(order, order.groupOrders ?? []),
     "{narration}": narration(order, order.groupOrders),
     "{batch}": batchLabel,

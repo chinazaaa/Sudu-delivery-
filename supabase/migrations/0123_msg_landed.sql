@@ -1,0 +1,12 @@
+-- Telling whoever paid that it landed.
+--
+-- A father orders from Lagos for a son in a hostel. "Your food is here"
+-- goes to the son, because he is the one who has to come down for it, and
+-- the man who paid for it hears nothing and is left wondering whether any
+-- of it arrived at all.
+--
+-- Its own wording rather than a reuse of msg_ready: that one tells
+-- somebody to come and collect, which is not what you say to a man four
+-- hundred kilometres away. Offered only on an order where the two are
+-- different people, so an ordinary order gains no button.
+alter table settings add column if not exists msg_landed text not null default '';

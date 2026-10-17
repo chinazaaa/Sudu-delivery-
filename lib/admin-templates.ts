@@ -25,7 +25,11 @@ export async function siteUrl(): Promise<string> {
 }
 
 /** Which templates are worth offering depends on where the order has got to. */
-function kindsFor(order: FeedOrder, settings: Settings): TemplateKind[] {
+function kindsFor(
+  order: FeedOrder,
+  settings: Settings,
+  split: boolean
+): TemplateKind[] {
   // Card is offered on any unpaid order, not only one that chose card at
   // checkout. People change their mind about how they want to pay, and the
   // answer should not be to go and edit the order first.
@@ -57,10 +61,15 @@ function kindsFor(order: FeedOrder, settings: Settings): TemplateKind[] {
     // review" on their card and ticking it changed nothing anybody could
     // see. Decided here instead, once, so every card and the bulk bar
     // agree.
-    if (order.reviewed) return ["pin"];
+    if (order.reviewed) return split ? ["landed", "pin"] : ["pin"];
 
     const asGoogle = googleLinks(settings).review.trim() !== "";
-    return [asGoogle ? "google" : "review", "pin"];
+    // Whoever paid is told it landed, and only ever on an order where that
+    // is somebody other than whoever ate. On an ordinary order it would be
+    // a button telling a person what they already know.
+    return split
+      ? ["landed", asGoogle ? "google" : "review", "pin"]
+      : [asGoogle ? "google" : "review", "pin"];
   }
   return ["confirmed", "ready", "late", "pin"];
 }
@@ -175,7 +184,7 @@ export function toCard(
       ? "order"
       : "food";
 
-  const write = (kind: TemplateKind) =>
+  const write = (kind: TemplateKind, toName: string, aboutName: string) =>
     template({
       kind,
       order: { ...order, groupOrders: order.groupOrders },
@@ -186,7 +195,22 @@ export function toCard(
       deliveryWindow: order.deliveryWindow,
       what,
       bank,
+      toName,
+      aboutName,
     });
+
+  /*
+   * The two phones behind this order, and whether there really are two.
+   *
+   * Money and the PIN go to whoever paid, where the food got to and how it
+   * was go to whoever ate it. On nearly every order those are one number
+   * and this decides nothing, which is what split says: a household worth
+   * treating as two people is one where the order itself names somebody
+   * else to hand it to.
+   */
+  const payer = reach?.payer || order.customer_phone;
+  const eater = reach?.eater || payer;
+  const split = eater !== payer;
 
   return {
     id: order.id,
@@ -261,11 +285,14 @@ export function toCard(
      * button that quietly messages the wrong half of a household is worse
      * than one that asks.
      */
-    templates: kindsFor(order, settings).map((kind) => {
-      const payer = reach?.payer || order.customer_phone;
-      const eater = reach?.eater || payer;
+    templates: kindsFor(order, settings, split).map((kind) => {
       const theirs =
-        kind === "payment" || kind === "card" || kind === "pin" || kind === "confirmed";
+        kind === "payment" ||
+        kind === "card" ||
+        kind === "pin" ||
+        kind === "confirmed" ||
+        // The one message that exists for the payer about the other one.
+        kind === "landed";
 
       const to = theirs ? payer : eater;
       const who = theirs ? reach?.payerName ?? "" : reach?.eaterName ?? "";
@@ -273,7 +300,10 @@ export function toCard(
       return {
         kind,
         label: templateLabel(kind, what),
-        href: whatsappTo(to, write(kind)),
+        // Addressed to the phone it opens, and about the other one. The
+        // greeting used to come off the order however it was routed, so
+        // the son was told "Hi Austin, your food is here".
+        href: whatsappTo(to, write(kind, who, reach?.eaterName ?? "")),
         // Only where there are two of them. Naming the one person on an
         // ordinary order is a word on every button that answers nothing.
         to: reach && reach.eater !== reach.payer ? who : "",

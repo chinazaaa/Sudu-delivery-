@@ -1571,6 +1571,7 @@ export default async function SettingsAdmin() {
                   "card",
                   "pin",
                   "ready",
+                  "landed",
                   "late",
                   "review",
                   "google",

@@ -351,6 +351,10 @@ export default async function CustomerPage({
       />
 
       <div className="mb-[18px] flex flex-wrap gap-2">
+        {/* First, because it changes who you are talking to before anything
+            else on the page does. Only the parent is tagged: a student is
+            the ordinary case here and does not need labelling. */}
+        {person.isParent && <Tag tone="volt">Parent</Tag>}
         {promoter && (
           <Tag tone="volt">
             <span className="flex h-[13px] w-[13px] items-center justify-center rounded-full bg-ink text-[8.5px] font-bold text-volt">
@@ -843,6 +847,20 @@ export default async function CustomerPage({
 
             <form action={saveCustomerParent} className="mt-1 space-y-2.5">
               <input type="hidden" name="phone" value={person.phone} />
+              {/* Ticked by hand and never guessed. The two columns below
+                  say a pair belong together and cannot say which way
+                  round, and at this university plenty of students pay for
+                  their own food. */}
+              <label className="flex items-center gap-2 text-sm font-semibold">
+                <input
+                  type="checkbox"
+                  name="is_parent"
+                  value="1"
+                  defaultChecked={person.isParent}
+                  className="size-4"
+                />
+                This one is the parent
+              </label>
               <input
                 name="parent_name"
                 defaultValue={person.parentName}
@@ -906,7 +924,7 @@ export default async function CustomerPage({
               leaving it lying there doing nothing. */}
           <Panel
             title="Not on WhatsApp on that number?"
-            detail="Message them somewhere else. Their orders and sign-in stay on the number they ordered with."
+            detail="Message them somewhere else, on anybody's number. Their orders and sign-in stay on the number they ordered with."
             size="sm"
           >
             <form action={saveCustomerWhatsapp} className="mt-1 space-y-2.5">
@@ -928,6 +946,16 @@ export default async function CustomerPage({
                 placeholder="0803 000 0000, or +44 7440 419145"
                 className="field w-full py-2 text-sm"
               />
+              {/* Whose it is, because it is not always theirs. A father
+                  whose own line is not on WhatsApp is reached on his son's
+                  number, and a card that opens that chat without saying so
+                  is how a man's bank details end up with his son. */}
+              <input
+                name="whatsapp_whose"
+                defaultValue={person.whatsappWhose}
+                placeholder="Whose number is it? Leave empty if it is theirs"
+                className="field w-full py-2 text-sm"
+              />
               <div className="flex items-center gap-2.5">
                 <SaveButton look="btn-admin btn-admin-sm" className="shrink-0">
                   Save
@@ -935,7 +963,11 @@ export default async function CustomerPage({
                 <span className="hint">
                   {person.whatsapp === ""
                     ? `Messages go to ${formatPhone(person.phone)}.`
-                    : `Messages go to ${showNumber(person.whatsapp)}.`}
+                    : `Messages go to ${showNumber(person.whatsapp)}${
+                        person.whatsappWhose === ""
+                          ? ""
+                          : `, which is ${person.whatsappWhose}`
+                      }.`}
                 </span>
               </div>
               {/* Said on the form rather than only in the code, because it

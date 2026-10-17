@@ -1407,3 +1407,29 @@ alter table customers add column if not exists parent_name text not null default
 alter table customers add column if not exists parent_phone text not null default '';
 
 alter table customers add column if not exists whatsapp_whose text not null default '';
+-- Telling whoever paid that it landed.
+--
+-- A father orders from Lagos for a son in a hostel. "Your food is here"
+-- goes to the son, because he is the one who has to come down for it, and
+-- the man who paid for it hears nothing and is left wondering whether any
+-- of it arrived at all.
+--
+-- Its own wording rather than a reuse of msg_ready: that one tells
+-- somebody to come and collect, which is not what you say to a man four
+-- hundred kilometres away. Offered only on an order where the two are
+-- different people, so an ordinary order gains no button.
+alter table settings add column if not exists msg_landed text not null default '';
+
+-- Which half of a household this one is.
+--
+-- parent_name and parent_phone say that two people belong together. They
+-- cannot say which way round: the same pair of columns holds a parent on a
+-- student and a child on a parent, so nothing reading them could tell a
+-- father from his son.
+--
+-- Only the parent is marked. A student is the ordinary case and needs no
+-- tag, and a shop that labels its students "child" is a shop talking down
+-- to the people it feeds. Ticked by hand, never guessed: at this
+-- university plenty of students pay for their own food.
+alter table customers add column if not exists is_parent boolean not null default false;
+

@@ -86,3 +86,29 @@ export function showNumber(stored: string): string {
   if (/^0[789]\d{9}$/.test(digits)) return formatPhone(digits);
   return "+" + digits;
 }
+
+/**
+ * The form a customer row is keyed on, for somebody signing in.
+ *
+ * Ordering is Nigerian-only and normalisePhone is right to keep it that
+ * way: a number here is the shop's identity for a person and a rider has
+ * to be able to ring it. Reading your own history is a different question.
+ * A father in Lagos orders for a son who came back from the UK and has
+ * kept his UK number, and that son is a customer of this shop with food
+ * delivered to his hostel: telling him his own number "doesn't look
+ * right" when he tries to look at it is the shop calling him a stranger.
+ *
+ * Nigerian numbers keep the local 0803 form, because that is how the rows
+ * were written. Anything else is international digits. Nothing is trusted
+ * by this on its own: it only decides which row to look for, and the PIN
+ * on that row still has to match.
+ */
+export function accountNumber(raw: string): string | null {
+  const nigerian = normalisePhone(raw);
+  if (nigerian !== null) return nigerian;
+
+  const digits = String(raw ?? "").replace(/[^\d+]/g, "").replace(/^\+/, "");
+  // A country code and a number. Shorter than this is a typo rather than a
+  // number anywhere in the world.
+  return /^\d{10,15}$/.test(digits) ? digits : null;
+}

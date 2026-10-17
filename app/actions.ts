@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getOrder, moveOrder, orderLinkId, placeOrder, previewCoupon, saveRating } from "@/lib/orders";
 import { lastOrderForPhone, perkFor, type LinkPerk } from "@/lib/orders";
-import { normalisePhone } from "@/lib/phone";
+import { accountNumber, normalisePhone } from "@/lib/phone";
 import { cameFromNow, linkCouponNow } from "@/lib/where-from";
 import { rememberCart } from "@/lib/carts";
 import { countCheckoutLinkUse, getCheckoutLink } from "@/lib/checkout-links";
@@ -280,7 +280,11 @@ export async function signInWithPin(
   _prev: PinState,
   form: FormData
 ): Promise<PinState> {
-  const phone = normalisePhone(String(form.get("phone") ?? ""));
+  // accountNumber, not normalisePhone: ordering is Nigerian-only, reading
+  // your own history is not. A son whose father paid is a customer of this
+  // shop whatever country his number is from, and the PIN on the row is
+  // still what lets him in.
+  const phone = accountNumber(String(form.get("phone") ?? ""));
   if (!phone) return { error: "That phone number doesn't look right." };
 
   const result = await checkPin(phone, String(form.get("pin") ?? ""));

@@ -111,6 +111,15 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
   const batches = await batchMap(orders.map((o) => o.batch_id));
   const pins = await pinMap(orders.map((o) => o.customer_phone));
   const called = await callsThemMap(orders.map((o) => o.customer_phone));
+  /*
+   * Asked of each of them, not of the household.
+   *
+   * A father pays and his son eats, and they are two people who each ate
+   * nothing of each other's opinion: two reviews is the point, not one.
+   * So the tick stays on the person it belongs to, and the shop can ask
+   * both. Moving a tick to the half who actually wrote it is a job for
+   * the customer page, which has a button for each of them.
+   */
   const reviewed = await reviewedMap(orders.map((o) => o.customer_phone));
 
  return orders.map((order) => {
@@ -266,7 +275,7 @@ async function pinMap(phones: string[]): Promise<Map<string, string>> {
  * other lookup here is: an order feed must not fall over for a tick.
  */
 async function reviewedMap(phones: string[]): Promise<Set<string>> {
-  const unique = [...new Set(phones)];
+  const unique = [...new Set(phones.filter((one) => one !== ""))];
   if (unique.length === 0) return new Set();
   try {
     const { data, error } = await db()
@@ -358,6 +367,10 @@ export type CustomerRow = {
    */
   parentName: string;
   parentPhone: string;
+  /** Whether this one is the parent of the pair, ticked by hand. Only the
+   *  parent is marked: a student is the ordinary case, and labelling them
+   *  "child" is talking down to the people the shop feeds. */
+  isParent: boolean;
   /** Which front door they use, over all their orders: "app", "web",
    *  "bot", "mixed", or empty where none of their orders recorded it.
    *  Worth knowing before pushing an app at somebody who already has it,
@@ -395,7 +408,9 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
   const full = await db()
     .from("customers")
     .select(
-      "phone, name, hostel, pin, admin_note, payment_method, promoter_code, calls_them, reviewed_at"
+      // parent_name and parent_phone were read below and never asked for
+      // here, so every row in the book came back with an empty household.
+      "phone, name, hostel, pin, admin_note, payment_method, promoter_code, calls_them, parent_name, parent_phone, is_parent, reviewed_at"
     )
     .order("name");
 
@@ -434,6 +449,7 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
       callsThem: ((row as { calls_them?: string }).calls_them ?? ""),
       parentName: ((row as { parent_name?: string }).parent_name ?? ""),
       parentPhone: ((row as { parent_phone?: string }).parent_phone ?? ""),
+      isParent: Boolean((row as { is_parent?: boolean }).is_parent),
       reviewed: Boolean((row as { reviewed_at?: string | null }).reviewed_at),
       orders: mine.length,
       uses: doorFor(mine.map((order) => String((order as { source?: string }).source ?? ""))),

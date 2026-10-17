@@ -2086,7 +2086,10 @@ export async function saveCustomerWhatsapp(form: FormData): Promise<void> {
   const typed = String(form.get("whatsapp") ?? "").trim();
 
   if (!elsewhere) {
-    await db().from("customers").update({ whatsapp: "" }).eq("phone", phone);
+    await db()
+      .from("customers")
+      .update({ whatsapp: "", whatsapp_whose: "" })
+      .eq("phone", phone);
     revalidatePath("/admin/customers", "layout");
     return;
   }
@@ -2106,7 +2109,23 @@ export async function saveCustomerWhatsapp(form: FormData): Promise<void> {
     );
   }
 
-  await db().from("customers").update({ whatsapp: to }).eq("phone", phone);
+  /*
+   * And whose it is, because it is not always theirs.
+   *
+   * This field was written for one person with two numbers and is being
+   * used for two people: a father whose own line is not on WhatsApp at
+   * all, and a son's number that every message actually went to. Left
+   * empty it means what it always meant, the same person on another line.
+   * Filled in, the cards say whose chat they are about to open, so nobody
+   * sends a man's bank details to his son by accident.
+   */
+  await db()
+    .from("customers")
+    .update({
+      whatsapp: to,
+      whatsapp_whose: String(form.get("whatsapp_whose") ?? "").trim().slice(0, 60),
+    })
+    .eq("phone", phone);
   revalidatePath("/admin/customers", "layout");
   redirect(`/admin/customers/${encodeURIComponent(phone)}?saved=whatsapp`);
 }
@@ -2161,6 +2180,10 @@ export async function saveCustomerParent(form: FormData): Promise<void> {
     .from("customers")
     .update({
       parent_name: String(form.get("parent_name") ?? "").trim().slice(0, 80),
+      // Which of the two this one is. The columns above say the pair
+      // belong together and cannot say which way round, so this is the
+      // only thing that tells a father from his son.
+      is_parent: String(form.get("is_parent") ?? "") !== "",
       // Their own number is not a parent's number, and saving one would
       // put a rider through to the wrong person later.
       parent_phone: theirs === phone ? "" : theirs,
@@ -2938,6 +2961,7 @@ const SETTING_FIELDS = [
   "msg_card",
   "msg_pin",
   "msg_ready",
+  "msg_landed",
   "msg_late",
   "msg_review",
   "msg_google",

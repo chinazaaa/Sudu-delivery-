@@ -184,6 +184,7 @@ export default async function CustomersPage({
     spend: row.spend,
     orders: row.orders,
     reviewed: row.reviewed,
+    isParent: row.isParent,
   }));
 
   /*
@@ -501,6 +502,7 @@ export default async function CustomersPage({
                           ) : (
                             <Tag>Ordered once</Tag>
                           )}
+                          {row.isParent && <Tag tone="volt">Parent</Tag>}
                           {row.reviewed && <Tag tone="volt">Reviewed</Tag>}
                           {rooms && <Tag tone="mint">Secret Santa</Tag>}
                           {promoter ? (
@@ -605,6 +607,7 @@ export default async function CustomersPage({
                               ) : (
                                 <Tag>Ordered once</Tag>
                               )}
+                              {row.isParent && <Tag tone="volt">Parent</Tag>}
                               {row.reviewed && <Tag tone="volt">Reviewed</Tag>}
                               {/* A Secret Santa room is a door into the shop,
                                   and somebody who came through it has no orders

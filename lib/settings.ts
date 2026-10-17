@@ -74,6 +74,7 @@ export type Settings = {
   msg_card: string;
   msg_pin: string;
   msg_ready: string;
+  msg_landed: string;
   msg_late: string;
   msg_review: string;
   msg_google: string;
@@ -245,6 +246,7 @@ export const EMPTY: Settings = {
   msg_card: "",
   msg_pin: "",
   msg_ready: "",
+  msg_landed: "",
   msg_late: "",
   msg_review: "",
   msg_google: "",

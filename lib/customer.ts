@@ -49,6 +49,10 @@ export type OneCustomer = {
    *  this university a student may well be paying for their own food. */
   parentName: string;
   parentPhone: string;
+  /** Whose that other number is, when it is not theirs. */
+  whatsappWhose: string;
+  /** Whether this one is the parent of the pair. Only the parent is marked. */
+  isParent: boolean;
   /** Where to message them, when that is not the number they order on.
    *  Empty for almost everybody, and then the ordering number is used. */
   whatsapp: string;
@@ -105,7 +109,11 @@ export async function oneCustomer(phone: string): Promise<OneCustomer | null> {
   const full = await db()
     .from("customers")
     .select(
-      "phone, name, hostel, pin, admin_note, payment_method, promoter_code, calls_them, whatsapp, reviewed_at, first_order_at"
+      // parent_name, parent_phone and whatsapp_whose were read below and
+      // never asked for here, so the household panel rendered empty however
+      // many times it was saved and the button to message them could never
+      // appear.
+      "phone, name, hostel, pin, admin_note, payment_method, promoter_code, calls_them, whatsapp, whatsapp_whose, parent_name, parent_phone, is_parent, reviewed_at, first_order_at"
     )
     .eq("phone", wanted)
     .maybeSingle();
@@ -174,6 +182,8 @@ export async function oneCustomer(phone: string): Promise<OneCustomer | null> {
     parentName: (said.parent_name as string) ?? "",
     parentPhone: (said.parent_phone as string) ?? "",
     whatsapp: (said.whatsapp as string) ?? "",
+    whatsappWhose: (said.whatsapp_whose as string) ?? "",
+    isParent: Boolean(said.is_parent),
     pays: said.payment_method === "card" ? "card" : "transfer",
     promoterCode: code === "" ? null : code,
     reviewed: Boolean(said.reviewed_at),

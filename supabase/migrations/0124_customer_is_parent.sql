@@ -1,0 +1,12 @@
+-- Which half of a household this one is.
+--
+-- parent_name and parent_phone say that two people belong together. They
+-- cannot say which way round: the same pair of columns holds a parent on a
+-- student and a child on a parent, so nothing reading them could tell a
+-- father from his son.
+--
+-- Only the parent is marked. A student is the ordinary case and needs no
+-- tag, and a shop that labels its students "child" is a shop talking down
+-- to the people it feeds. Ticked by hand, never guessed: at this
+-- university plenty of students pay for their own food.
+alter table customers add column if not exists is_parent boolean not null default false;
