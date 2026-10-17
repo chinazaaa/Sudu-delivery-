@@ -441,7 +441,21 @@ export default async function AnalyticsPage({
           )}
           <p className="text-xs text-muted">
             A link opened from inside WhatsApp usually arrives with nothing
-            attached, so it counts as typed or a link.
+            attached, so it counts as typed or a link. The same is true of
+            an assistant: ChatGPT opens its links without saying where they
+            came from, and its app has a browser of its own that says
+            nothing either. Somebody sent here by one will nearly always
+            land under typed or a link, however they found us.
+          </p>
+          {/* So the honest answer to "did ChatGPT bring anybody" is not on
+              this card and cannot be. It is what the customer said. */}
+          <p className="text-xs text-muted">
+            Who actually sent somebody is the answer they gave at checkout,
+            and it is counted on{" "}
+            <Link href="/admin/sources" className="font-semibold underline">
+              Sources
+            </Link>
+            .
           </p>
         </section>
 
