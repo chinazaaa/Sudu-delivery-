@@ -61,14 +61,35 @@ function kindsFor(
     // review" on their card and ticking it changed nothing anybody could
     // see. Decided here instead, once, so every card and the bulk bar
     // agree.
-    if (order.reviewed) return split ? ["landed", "pin"] : ["pin"];
-
     const asGoogle = googleLinks(settings).review.trim() !== "";
+
+    /*
+     * Both of them, where there are two of them.
+     *
+     * A father paid and a son ate, and they are two people with two
+     * opinions: his, of food he actually had, and the father's, of a shop
+     * that took his money from another city and got a box to his son.
+     * Two reviews is the point rather than one, so the card asks each of
+     * them rather than making somebody go and find the other's page.
+     *
+     * The payer's ask needs the Google link to be worth anything, because
+     * unlike the son he has no order page of his own to rate. Without one
+     * it is left off rather than sent half-written.
+     */
+    const bothAsked: TemplateKind[] = split && asGoogle ? ["google_payer"] : [];
+
+    // Already reviewed. Whoever paid is still told it landed, and still
+    // asked, because the tick belongs to one of the two and not to the
+    // household.
+    if (order.reviewed) {
+      return split ? ["landed", ...bothAsked, "pin"] : ["pin"];
+    }
+
     // Whoever paid is told it landed, and only ever on an order where that
     // is somebody other than whoever ate. On an ordinary order it would be
     // a button telling a person what they already know.
     return split
-      ? ["landed", asGoogle ? "google" : "review", "pin"]
+      ? ["landed", asGoogle ? "google" : "review", ...bothAsked, "pin"]
       : [asGoogle ? "google" : "review", "pin"];
   }
   return ["confirmed", "ready", "late", "pin"];
@@ -291,8 +312,9 @@ export function toCard(
         kind === "card" ||
         kind === "pin" ||
         kind === "confirmed" ||
-        // The one message that exists for the payer about the other one.
-        kind === "landed";
+        // The two that exist for the payer about the other one.
+        kind === "landed" ||
+        kind === "google_payer";
 
       const to = theirs ? payer : eater;
       const who = theirs ? reach?.payerName ?? "" : reach?.eaterName ?? "";

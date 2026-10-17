@@ -1575,6 +1575,7 @@ export default async function SettingsAdmin() {
                   "late",
                   "review",
                   "google",
+                  "google_payer",
                 ] as TemplateKind[]
               ).map(
                 (kind) => (

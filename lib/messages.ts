@@ -41,6 +41,7 @@ export type TemplateKind =
   | "late"
   | "review"
   | "google"
+  | "google_payer"
   | "parents";
 
 export const TEMPLATE_LABEL: Record<TemplateKind, string> = {
@@ -53,6 +54,7 @@ export const TEMPLATE_LABEL: Record<TemplateKind, string> = {
   late: "Running late",
   review: "Ask for a review",
   google: "Ask for a Google review",
+  google_payer: "Ask the parent for a review",
   parents: "Tell them about Sudu for parents",
 };
 
@@ -85,6 +87,7 @@ export const TEMPLATE_FIELD: Record<TemplateKind, keyof Settings> = {
   late: "msg_late",
   review: "msg_review",
   google: "msg_google",
+  google_payer: "msg_google_payer",
   parents: "msg_parents",
 };
 
@@ -131,6 +134,21 @@ export const TEMPLATE_DEFAULT: Record<TemplateKind, string> = {
     "Hi {name}, hope the last one was good.\n\n" +
     "If you have a minute, a review on Google helps us more than anything " +
     "else: {google}\n\nThank you.",
+  /*
+   * The same ask, of the one who paid for it.
+   *
+   * A father in Lagos and a son in a hostel are two people with two
+   * opinions, and two reviews is the point rather than one. His is not a
+   * review of how the food tasted, because he did not eat it: it is a
+   * review of a shop that took his money four hundred kilometres away and
+   * got a box to his son, which is the thing another parent reading
+   * Google wants to know about.
+   */
+  google_payer:
+    "Hi {name}, hope {for} enjoyed the {thing}.\n\n" +
+    "If you have a minute, a word on Google about how ordering for " +
+    "{for} went helps us more than anything else: {google}\n\n" +
+    "Thank you.",
   /*
    * News, not a favour.
    *

@@ -78,6 +78,7 @@ export type Settings = {
   msg_late: string;
   msg_review: string;
   msg_google: string;
+  msg_google_payer: string;
   msg_parents: string;
   /** What a paid customer reads on their order page. */
   paid_note: string;
@@ -250,6 +251,7 @@ export const EMPTY: Settings = {
   msg_late: "",
   msg_review: "",
   msg_google: "",
+  msg_google_payer: "",
   msg_parents: "",
   paid_note: "",
   fee_bands: "",

@@ -1433,3 +1433,17 @@ alter table settings add column if not exists msg_landed text not null default '
 -- university plenty of students pay for their own food.
 alter table customers add column if not exists is_parent boolean not null default false;
 
+-- Asking whoever paid for a review as well.
+--
+-- A father in Lagos and a son in a hostel are two people with two
+-- opinions, and two reviews is the point rather than one. His is not a
+-- review of how the food tasted, because he did not eat it: it is a review
+-- of a shop that took his money four hundred kilometres away and got a box
+-- to his son, which is the thing another parent reading Google wants to
+-- know about.
+--
+-- Its own wording, because the ordinary one asks somebody how their food
+-- was. Offered only on an order where the payer and the eater really are
+-- different people, so an ordinary order gains no button.
+alter table settings add column if not exists msg_google_payer text not null default '';
+
