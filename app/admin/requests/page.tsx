@@ -3,7 +3,8 @@ import { requestList, fromTheChat, isAQuestion } from "@/lib/requests";
 import { faqFromRequest } from "../faq/actions";
 import { safeSettings, whatsappLink } from "@/lib/settings";
 import { naira } from "@/lib/money";
-import { markRequest, settleRequest, shelveRequest } from "./actions";
+import { addRequest, markRequest, settleRequest, shelveRequest } from "./actions";
+import SaveButton from "@/components/SaveButton";
 import Link from "next/link";
 import { db } from "@/lib/supabase";
 
@@ -44,6 +45,10 @@ const STATUS: Record<string, string> = {
   new: "Waiting on you",
   quoted: "Priced, waiting on them",
   done: "Bought and delivered",
+  // They went and placed it as an ordinary order, so it is finished and
+  // its money is counted on that order. Counting it here as well would be
+  // the same naira twice.
+  converted: "Ordered on the website",
   dropped: "Not going ahead",
 };
 
@@ -77,7 +82,15 @@ export default async function RequestsPage({
    * reading as their own list, so there is a cut for them.
    */
   const questions = all.filter((one) => isAQuestion(one.note));
-  const asks = show === "questions" ? questions : all;
+  /*
+   * Custom orders, and only those, unless the chat's cut is asked for.
+   *
+   * "Everything" used to mean both, so a page about things to go and buy
+   * opened on a list with questions mixed into it and the count at the top
+   * answered neither.
+   */
+  const ordersAsked = all.filter((one) => !isAQuestion(one.note));
+  const asks = show === "questions" ? questions : ordersAsked;
   const waiting = asks.filter((one) => one.status === "new");
 
   // The shop first, because that is where nearly everything asked for
@@ -99,8 +112,8 @@ export default async function RequestsPage({
   return (
     <div>
       <PageHeader
-        title="Asked for"
-        detail="Things people wanted that are not on the menu, and questions the chat could not answer."
+        title="Custom orders"
+        detail="Everything people have asked us to find for them, however it came in: the website, the chat, or a phone call you write down yourself."
       />
 
       {/* The cut, and the way to the answers. A question answered here is
@@ -112,27 +125,93 @@ export default async function RequestsPage({
           aria-current={show === "" ? "page" : undefined}
           className={`pill-admin ${show === "" ? "pill-admin-on" : ""}`}
         >
-          Everything
-          <span className="font-mono opacity-60">{all.length}</span>
+          Custom orders
+          <span className="font-mono opacity-60">{ordersAsked.length}</span>
         </Link>
-        <Link
-          href="/admin/requests?show=questions"
-          aria-current={show === "questions" ? "page" : undefined}
-          className={`pill-admin ${show === "questions" ? "pill-admin-on" : ""}`}
-        >
-          Questions from the chat
-          <span className="font-mono opacity-60">{questions.length}</span>
-        </Link>
-        <Link href="/admin/faq" className="pill-admin">
-          Chat answers
-        </Link>
+        {/* The chat's own cut, and only when it has caught something.
+            A question is answered rather than bought, so it is a different
+            job and does not belong in the count above. */}
+        {questions.length > 0 && (
+          <Link
+            href="/admin/requests?show=questions"
+            aria-current={show === "questions" ? "page" : undefined}
+            className={`pill-admin ${show === "questions" ? "pill-admin-on" : ""}`}
+          >
+            Questions from the chat
+            <span className="font-mono opacity-60">{questions.length}</span>
+          </Link>
+        )}
       </div>
+
+      {/*
+        Taken on the phone, written down here.
+
+        The form on the website catches what people type. The order that
+        proved this was worth building came in on a call: somebody asked an
+        assistant where to get an ice cream, rang up, and had it typed in
+        as an ordinary order afterwards. Nothing recorded that she had
+        asked for anything at all, so the one list meant to say what people
+        want never knew it happened.
+      */}
+      <details className="card mb-3.5 p-3.5 sm:p-4">
+        <summary className="cursor-pointer text-sm font-bold">
+          Write one down
+        </summary>
+        <form action={addRequest} className="mt-3 space-y-2.5">
+          <div>
+            <label className="label" htmlFor="add_wanted">
+              What they asked for
+            </label>
+            <input
+              id="add_wanted"
+              name="wanted"
+              required
+              className="field w-full py-2 text-sm"
+              placeholder="A tub of Fantasy ice cream"
+            />
+          </div>
+          <div className="grid gap-2.5 sm:grid-cols-3">
+            <input
+              name="name"
+              className="field py-2 text-sm"
+              placeholder="Their name"
+            />
+            <input
+              name="phone"
+              inputMode="tel"
+              className="field py-2 text-sm"
+              placeholder="Their number"
+            />
+            <input name="hostel" className="field py-2 text-sm" placeholder="Their block" />
+          </div>
+          <input
+            name="budget"
+            className="field w-full py-2 text-sm"
+            placeholder="What they would pay, if they said"
+          />
+          <input
+            name="note"
+            className="field w-full py-2 text-sm"
+            placeholder="Anything else worth keeping"
+          />
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            <input type="checkbox" name="converted" value="1" className="size-4" />
+            They have already ordered it
+          </label>
+          <p className="hint">
+            Tick that where it became an ordinary order. It closes straight
+            away and no money is counted here, because the money is on that
+            order and counting it twice is how the books go wrong.
+          </p>
+          <SaveButton look="btn-admin btn-admin-sm">Write it down</SaveButton>
+        </form>
+      </details>
 
       {asks.length === 0 && (
         <div className="card text-sm text-muted">
           {show === "questions"
             ? "Nothing the chat could not answer. When somebody asks it something it has no answer for, it takes the question and it lands here with their number."
-            : "Nobody has asked for anything yet. The page is at /custom-order, and it is on the front page and wherever a search finds nothing."}
+            : "Nothing asked for yet. The form is at /custom-order, it is on the front page and wherever a search finds nothing, and anything taken on the phone can be written down above."}
         </div>
       )}
 
@@ -193,7 +272,7 @@ export default async function RequestsPage({
                   className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${
                     ask.status === "new"
                       ? "bg-brand-tint text-brand-dark"
-                      : ask.status === "done"
+                      : ask.status === "done" || ask.status === "converted"
                         ? "bg-mint/10 text-mint"
                         : "bg-black/5 text-muted"
                   }`}
@@ -248,6 +327,17 @@ export default async function RequestsPage({
                     className="btn-primary px-3 py-2 text-sm"
                   >
                     Done
+                  </button>
+                  {/* They went and placed it themselves. Finished, with
+                      nothing to count here: the money is on that order,
+                      and counting it twice is the one mistake this page
+                      could make that the books would carry. */}
+                  <button
+                    name="status"
+                    value="converted"
+                    className="btn-quiet px-3 py-2 text-sm"
+                  >
+                    They ordered it
                   </button>
                   <button
                     name="status"

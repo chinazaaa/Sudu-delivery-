@@ -20,7 +20,7 @@ export async function markRequest(form: FormData): Promise<void> {
 
   const id = String(form.get("id") ?? "");
   const status = String(form.get("status") ?? "");
-  if (!["new", "quoted", "done", "dropped"].includes(status)) return;
+  if (!["new", "quoted", "done", "converted", "dropped"].includes(status)) return;
 
   const quoted = Number(String(form.get("quoted") ?? "").replace(/[^\d]/g, ""));
 
@@ -213,5 +213,45 @@ export async function settleRequest(form: FormData): Promise<void> {
   revalidatePath("/admin/requests");
   revalidatePath("/admin/money");
   revalidatePath("/admin/customers");
+  revalidatePath("/admin");
+}
+
+/**
+ * A custom order taken by hand, because the best ones arrive by phone.
+ *
+ * The form at /custom-order catches the ones typed on the website. The
+ * order that proved this whole thing was worth building came in on a call:
+ * somebody asked an assistant where to get an ice cream, rang the shop,
+ * and had the order typed in afterwards. Nothing recorded that she had
+ * asked for anything, so the one list that is supposed to say what people
+ * want had no idea it had happened.
+ *
+ * Anything taken over the counter can be written down here, and counted
+ * with the rest.
+ */
+export async function addRequest(form: FormData): Promise<void> {
+  if (!(await isSignedIn())) throw new Error("Not signed in.");
+
+  const wanted = String(form.get("wanted") ?? "").trim();
+  if (wanted === "") return;
+
+  // Already bought it on the website, so it is closed on arrival and the
+  // money is counted on that order rather than here.
+  const already = String(form.get("converted") ?? "") !== "";
+
+  await db()
+    .from("custom_requests")
+    .insert({
+      wanted: wanted.slice(0, 300),
+      name: String(form.get("name") ?? "").trim().slice(0, 80),
+      phone: String(form.get("phone") ?? "").trim().slice(0, 20),
+      hostel: String(form.get("hostel") ?? "").trim().slice(0, 80),
+      budget: String(form.get("budget") ?? "").trim().slice(0, 60),
+      note: String(form.get("note") ?? "").trim().slice(0, 500),
+      status: already ? "converted" : "new",
+      ...(already ? { answered_at: new Date().toISOString() } : {}),
+    });
+
+  revalidatePath("/admin/requests");
   revalidatePath("/admin");
 }

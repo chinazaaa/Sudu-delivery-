@@ -70,7 +70,7 @@ export const GROUPS: Group[] = [
       // this heading is, rather than a thing the shop sends.
       { href: "/admin/inbox", label: "Inbox" },
       { href: "/admin/applications", label: "Applications" },
-      { href: "/admin/requests", label: "Asked for" },
+      { href: "/admin/requests", label: "Custom orders" },
       // Beside the requests on purpose: this list grows out of that one.
       // A question nobody could answer becomes an answer the chat gives
       // for ever, and the two pages are one job done in two taps.

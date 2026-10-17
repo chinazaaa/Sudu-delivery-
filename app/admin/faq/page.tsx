@@ -73,7 +73,7 @@ export default async function FaqPage({
             : "The questions printed at the bottom of that page, and marked up for Google underneath."
         }
         backHref="/admin/requests"
-        backLabel="Asked for"
+        backLabel="Custom orders"
       />
 
       {/* One tap from the top, whichever section it is going into. */}
@@ -130,7 +130,7 @@ export default async function FaqPage({
           The chat only ever says what is written here. Anything it cannot
           answer goes to{" "}
           <Link href="/admin/requests?show=questions" className="font-semibold underline">
-            Asked for
+            Custom orders
           </Link>{" "}
           with the person&apos;s number, and from there it can be turned into
           an answer for next time.
