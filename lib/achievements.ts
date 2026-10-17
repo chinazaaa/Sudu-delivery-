@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { alreadyTold, markTold, tellAdminOnce, toldKey } from "./admin-alerts";
 import { isGone, isPaid } from "./orders";
 import { profitBetween } from "./profit";
 import { madeOn } from "./other-money";
@@ -677,4 +678,61 @@ function tier(
     const { got, when, exact } = crossing(happenings, goal, total);
     return { id: `${id}-${goal}`, group, name, what, goal, got, unit, when, exact };
   });
+}
+
+/**
+ * A badge that has just fallen, said to whoever is carrying the phone.
+ *
+ * Nothing on this board is stored, which is what makes it honest and also
+ * what makes it silent: a badge is earned by the order that took the total
+ * over the line, and nothing anywhere notices. The shop crossed its first
+ * million and found out a fortnight later, scrolling.
+ *
+ * So the board is read on the same quarter hour as everything else, and
+ * anything earned that has not been said is said once. The key is the
+ * badge's own id, so a hundred reads a day say it once and never again:
+ * there is nothing new to write down, because `admin_alerts_told` is the
+ * same table that already stops a cart being mentioned twice.
+ *
+ * Only what is already won. A badge halfway there is the board's business
+ * and not a phone's.
+ */
+export async function tellNewBadges(): Promise<string[]> {
+  const said: string[] = [];
+
+  try {
+    const { badges } = await board();
+    const won = badges.filter((badge) => badge.when !== "");
+
+    /*
+     * The first sweep says nothing.
+     *
+     * Everything the shop has ever done is already won on the day this is
+     * switched on, and a phone that buzzes eleven times in one minute is a
+     * phone with notifications turned off by the evening. So the backlog is
+     * written down as said, in silence, and the next one to fall is the
+     * first anybody hears about.
+     */
+    const seed = toldKey("badge", "already-won");
+    if (!(await alreadyTold(seed))) {
+      for (const badge of won) await markTold(toldKey("badge", badge.id));
+      await markTold(seed);
+      return [];
+    }
+
+    for (const badge of won) {
+      const key = toldKey("badge", badge.id);
+      const told = await tellAdminOnce(key, {
+        title: `${badge.name} 🎉`,
+        body: `${badge.what}. That is ${badge.group.toLowerCase()} done.`,
+        url: "/admin/achievements",
+      });
+      if (told) said.push(badge.id);
+    }
+  } catch {
+    /* A badge nobody was told about is not a reason to fail the run that
+       was also going to tell somebody about an unpaid run. */
+  }
+
+  return said;
 }

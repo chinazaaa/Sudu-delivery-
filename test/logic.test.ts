@@ -9,6 +9,8 @@ import { likelyOrders, mentions, nameOverlap, readAlert, settledBy } from "../li
 import { svixSigned } from "../lib/svix";
 import { addressOf, isAlert, replySubject, senderName, snippet, vouchedFor } from "../lib/mail";
 import { tidyCode, whyNotACode } from "../lib/promoter-applications";
+import { tidyName } from "../lib/case";
+import { AISLES, aislesFrom, guessAisle } from "../lib/aisles";
 import { adminStageLabel, adminStatusWord, STAGE_LABEL } from "../lib/stages";
 import { channelOfSite, tidyChannel, tidyHandle } from "../lib/came-from";
 import { weekAround } from "../lib/time";
@@ -4280,4 +4282,48 @@ test("changing how many is not changing what", () => {
   assert.equal(botAsksForQty("change the bbq chicken to chicken republic"), null);
   assert.equal(botAsksForQty("remove the kfc chicken"), null);
   assert.equal(botAsksForQty("2 medium pizza"), null);
+});
+
+test("a name kept all in one case is said normally, and nothing else is touched", () => {
+  // The whole of it shouting, which no kitchen chose on purpose.
+  assert.equal(tidyName("ALFREDO"), "Alfredo");
+  assert.equal(tidyName("STIR FRY"), "Stir Fry");
+  assert.equal(tidyName("JAY'S FIESTA"), "Jay's Fiesta");
+  // Small words stay down in the middle and stand up at the front.
+  assert.equal(tidyName("V FOR VELVET"), "V for Velvet");
+  assert.equal(tidyName("THE PIE WHO LOVED ME"), "The Pie Who Loved Me");
+  // A symbol before the first letter is not the first letter.
+  assert.equal(tidyName("OREO\u00ae OVERLOAD"), "Oreo\u00ae Overload");
+  // All lower case was not a decision either.
+  assert.equal(tidyName("classic asun pasta"), "Classic Asun Pasta");
+  // Anything with both cases in it was typed by somebody who meant it.
+  assert.equal(tidyName("iPhone"), "iPhone");
+  assert.equal(tidyName("BBQ Chicken"), "BBQ Chicken");
+  // Short and shouting is a word, not a shout: nothing to go on, so nothing
+  // is done. Anything with a digit keeps its shape.
+  assert.equal(tidyName("BBQ"), "BBQ");
+  assert.equal(tidyName("2PCS"), "2PCS");
+  assert.equal(tidyName("NUTTY SPREAD 510G"), "Nutty Spread 510G");
+});
+
+test("a kitchen's own section is guessed into one of the shop's aisles", () => {
+  assert.equal(guessAisle("Pizzas"), "Pizza");
+  assert.equal(guessAisle("Square pizzas"), "Pizza");
+  assert.equal(guessAisle("Burgers & sandwiches"), "Burgers & wraps");
+  assert.equal(guessAisle("Burgers"), "Burgers & wraps");
+  // The narrow rule beats the broad one: an add-on is not a side.
+  assert.equal(guessAisle("Dips & sides"), "Extras & add-ons");
+  assert.equal(guessAisle("Tasty sides"), "Sides & snacks");
+  // A bowl is a bowl and a wrap is a wrap, whatever is in it.
+  assert.equal(guessAisle("Burrito Bowls"), "Rice, pasta & bowls");
+  assert.equal(guessAisle("Burrito Wraps"), "Burgers & wraps");
+  // Nothing rather than a wrong guess.
+  assert.equal(guessAisle("You should try"), "");
+  assert.equal(guessAisle(""), "");
+});
+
+test("the aisles are a setting, and an empty one falls back to the shop's own", () => {
+  assert.deepEqual(aislesFrom(""), AISLES);
+  assert.deepEqual(aislesFrom("  \n \n"), AISLES);
+  assert.deepEqual(aislesFrom("Pizza\nChicken\n"), ["Pizza", "Chicken"]);
 });

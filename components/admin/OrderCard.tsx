@@ -8,6 +8,7 @@ import { naira } from "@/lib/money";
 import { STAGE_LABEL, type BatchStage } from "@/lib/stages";
 import { formatPhone } from "@/lib/phone";
 import { placedLabel } from "@/lib/time";
+import { doorTag } from "@/lib/doors";
 
 export type OrderCardLine = {
   id: string;
@@ -250,9 +251,10 @@ export default function OrderCard({
                           : STAGE_LABEL[order.runStage]}
                 </Tag>
               )}
-              {order.source !== "" && (
-                <Tag>{order.source === "app" ? "App" : "Website"}</Tag>
-              )}
+              {/* Which door it came through. It knew two and said "Website"
+                  for everything that was not the app, so every order the
+                  chat has ever taken was filed as the website's. */}
+              {doorTag(order.source) !== "" && <Tag>{doorTag(order.source)}</Tag>}
               {order.promoter && (
                 <Link
                   href={`/admin/orders?status=all&promoter=${encodeURIComponent(

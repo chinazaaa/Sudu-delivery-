@@ -1265,3 +1265,31 @@ alter table settings add column if not exists auto_paid text not null default ''
 --
 -- Empty means the default in the code, and 0 takes the floor off entirely.
 alter table settings add column if not exists group_fee_floor text not null default '';
+
+-- How the whole shop is browsed: twelve aisles over every kitchen's own
+-- filing. The kitchens' own section names are untouched and still what
+-- their own menus say.
+alter table menu_categories add column if not exists aisle text not null default '';
+alter table settings add column if not exists menu_aisles text not null default '';
+
+-- What actually sells, so the everything list can open with it rather than
+-- with 5 Alive, 7UP and Aquafina. A trigger keeps it, so nothing in the app
+-- has to remember to.
+alter table menu_items add column if not exists ordered_count integer not null default 0;
+
+create or replace function note_item_ordered() returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update menu_items
+     set ordered_count = ordered_count + greatest(1, coalesce(new.qty, 1))
+   where id = new.menu_item_id;
+  return new;
+end;
+$$;
+
+create or replace trigger order_items_counted
+  after insert on order_items
+  for each row execute function note_item_ordered();

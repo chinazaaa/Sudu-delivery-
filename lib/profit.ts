@@ -58,6 +58,30 @@ export type Profit = {
   otherOut: number;
   /** Everything taken off. */
   profit: number;
+  /**
+   * The same, counting only the runs whose costs are actually in.
+   *
+   * A run that is still open, or one that went out last night and has had
+   * nothing typed into it, has takings and no car to pay for, so it lands
+   * on the profit at full value and then falls by twenty thousand the
+   * afternoon somebody enters the fuel. Watching a figure you have been
+   * told is the profit drop every time you do the bookkeeping teaches you
+   * not to trust it.
+   *
+   * So the headline is the settled part, and what is waiting is said
+   * beside it rather than folded into it. Nothing is hidden: the working
+   * underneath still adds up to `profit`, and a run joins this the moment
+   * its costs are entered.
+   *
+   * Money that was never on a run, the errands and the sales, is settled
+   * the moment it is written down: there is no car coming for it.
+   */
+  settled: number;
+  /** Runs still waiting for somebody to type what the car cost. */
+  waitingRuns: number;
+  /** What those runs have taken, before any of it pays for a car. Not
+   *  profit, and never called it: it is the figure that will fall. */
+  waitingBeforeCosts: number;
   /** The runs the window covers, for the line that says so. */
   runs: number;
   /** Every line of other money in the window, newest first. */
@@ -111,6 +135,9 @@ export async function profitBetween(from: string, to: string): Promise<Profit> {
     overMenu: 0,
     margin: 0,
     earned: 0,
+    settled: 0,
+    waitingRuns: 0,
+    waitingBeforeCosts: 0,
     commission: 0,
     runCosts: 0,
     otherIn: 0,
@@ -208,6 +235,22 @@ export async function profitBetween(from: string, to: string): Promise<Profit> {
     })
     .sort((a, b) => b.runDate.localeCompare(a.runDate));
 
+  /*
+   * Settled, and waiting.
+   *
+   * Taken off `byRun`, which has already done the per run arithmetic, so
+   * the two figures cannot drift from the table underneath them. The
+   * errands sit in the settled half because nothing is still to come off
+   * them.
+   */
+  const waiting = byRun.filter((run) => run.estimated);
+  const settled =
+    byRun
+      .filter((run) => !run.estimated)
+      .reduce((sum, run) => sum + run.profit, 0) +
+    totals.took -
+    totals.spent;
+
   return {
     from,
     to,
@@ -222,6 +265,9 @@ export async function profitBetween(from: string, to: string): Promise<Profit> {
     otherIn: totals.took,
     otherOut: totals.spent,
     profit,
+    settled,
+    waitingRuns: waiting.length,
+    waitingBeforeCosts: waiting.reduce((sum, run) => sum + run.profit, 0),
     runs: batches.length,
     aside,
     byRun,
@@ -241,6 +287,8 @@ async function asideOnly(from: string, to: string): Promise<Partial<Profit>> {
     // spending is a cost.
     earned: totals.took,
     profit: totals.made,
+    // Nothing here is waiting on a car, so all of it is settled.
+    settled: totals.made,
   };
 }
 

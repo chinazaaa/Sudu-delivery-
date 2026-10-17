@@ -119,6 +119,8 @@ export type Settings = {
   same_day_urgent_extra: string;
   /** The least one person in a group pays towards the car. */
   group_fee_floor: string;
+  /** The aisles the whole shop is browsed by, one per line, in order. */
+  menu_aisles: string;
   /** The first and last hour of the day a delivery can be asked for, in Lagos
    *  time, as 24 hour numbers. Empty means noon and six. */
   same_day_first_hour: string;
@@ -260,6 +262,7 @@ export const EMPTY: Settings = {
   same_day_bands: "",
   same_day_urgent_extra: "",
   group_fee_floor: "",
+  menu_aisles: "",
   same_day_first_hour: "",
   same_day_day_hours: "",
   same_day_last_hour: "",

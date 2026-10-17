@@ -1,4 +1,6 @@
 import { db } from "./supabase";
+import { aislesFrom } from "./aisles";
+import { safeSettings } from "./settings";
 import { onTheMenu } from "./shelf";
 import { pctOf } from "./containers";
 import type { MenuItem } from "./types";
@@ -43,8 +45,14 @@ export type Browse = {
    *  different row at every restaurant: "Drinks" at Domino's and "Drinks"
    *  at KFC are two ids and one idea. */
   category?: string;
-  sort?: "" | "cheap" | "dear";
+  /** One of the shop's own aisles, which is how the whole list is browsed:
+   *  the kitchens' own words are their filing, not a way in. */
+  aisle?: string;
+  sort?: "" | "az" | "cheap" | "dear";
   page?: number;
+  /** Everything up to and including this page, rather than this page on its
+   *  own. What "show more" means. */
+  upTo?: boolean;
   /** Include the shelves that are not food. */
   all?: boolean;
 };
@@ -52,6 +60,10 @@ export type Browse = {
 export type Facets = {
   places: { id: string; name: string }[];
   categories: string[];
+  /** The aisles that actually have something in them, in the shop's own
+   *  order. Only for the whole list: with one kitchen chosen its own
+   *  sections are better, because they are what its menu says. */
+  aisles: string[];
 };
 
 /**
@@ -85,7 +97,7 @@ async function foodPlaces(all = false): Promise<{ id: string; name: string; slug
  */
 export async function productFacets(place?: string, all = false): Promise<Facets> {
   const places = await foodPlaces(all);
-  if (places.length === 0) return { places: [], categories: [] };
+  if (places.length === 0) return { places: [], categories: [], aisles: [] };
 
   // With a restaurant chosen, its own categories, in its own order. Without
   // one, the words more than one restaurant uses, because across the whole
@@ -94,7 +106,7 @@ export async function productFacets(place?: string, all = false): Promise<Facets
 
   const { data } = await db()
     .from("menu_categories")
-    .select("name, restaurant_id, sort_order")
+    .select("name, aisle, restaurant_id, sort_order")
     .in("restaurant_id", scope.map((one) => one.id))
     .order("sort_order", { ascending: true });
 
@@ -106,22 +118,35 @@ export async function productFacets(place?: string, all = false): Promise<Facets
       const name = String(row.name ?? "").trim();
       if (name !== "" && !kept.includes(name)) kept.push(name);
     }
-    return { places: places.map(({ id, name }) => ({ id, name })), categories: kept };
+    return {
+      places: places.map(({ id, name }) => ({ id, name })),
+      categories: kept,
+      aisles: [],
+    };
   }
 
-  const seen = new Map<string, number>();
+  /*
+   * The aisles, in the shop's own order, and only the ones with something
+   * in them.
+   *
+   * Not the kitchens' own words counted and cut off at twenty-four, which
+   * is what this used to be: a row where Burgers sat beside Burgers &
+   * sandwiches, where Deal and Add-ons and BK Jollof Rice were offered to
+   * students as ways of finding dinner, and where which twenty-four you
+   * got depended on how many kitchens happened to use the same word.
+   */
+  const filed = new Set<string>();
   for (const row of rows) {
-    const name = String(row.name ?? "").trim();
-    if (name === "") continue;
-    seen.set(name, (seen.get(name) ?? 0) + 1);
+    const aisle = String(row.aisle ?? "").trim();
+    if (aisle !== "") filed.add(aisle);
   }
 
   return {
     places: places.map(({ id, name }) => ({ id, name })),
-    categories: [...seen.entries()]
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([name]) => name)
-      .slice(0, 24),
+    categories: [],
+    aisles: aislesFrom((await safeSettings()).menu_aisles).filter((one) =>
+      filed.has(one)
+    ),
   };
 }
 
@@ -145,7 +170,7 @@ export async function browseProducts(
 
   const { data: categories } = await db()
     .from("menu_categories")
-    .select("id, name, restaurant_id")
+    .select("id, name, aisle, restaurant_id")
     .in("restaurant_id", wanted.map((one) => one.id));
 
   for (const row of (categories ?? []) as any[]) {
@@ -157,10 +182,21 @@ export async function browseProducts(
       .filter((one) => String(one.name ?? "").trim() === options.category)
       .map((one) => one.id as string);
     if (categoryIds.length === 0) return { products: [], total: 0 };
+  } else if (options.aisle) {
+    // An aisle is one word over every kitchen's own filing, so it comes
+    // back as every section anybody filed under it.
+    categoryIds = ((categories ?? []) as any[])
+      .filter((one) => String(one.aisle ?? "").trim() === options.aisle)
+      .map((one) => one.id as string);
+    if (categoryIds.length === 0) return { products: [], total: 0 };
   }
 
   const page = Math.max(1, Math.floor(options.page ?? 1));
-  const from = (page - 1) * PER_PAGE;
+  // Everything so far, or just this page. "Show more" grows one list rather
+  // than turning forty-two pages, and on a phone that is the difference
+  // between browsing and filing.
+  const from = options.upTo ? 0 : (page - 1) * PER_PAGE;
+  const to = page * PER_PAGE - 1;
 
   let query = db()
     .from("menu_items")
@@ -177,14 +213,32 @@ export async function browseProducts(
     if (words !== "") query = query.ilike("name", `%${words}%`);
   }
 
+  /*
+   * What sells, first.
+   *
+   * A to Z opened the shop with 5 Alive, 7UP and Aquafina: three bottles of
+   * drink, on the page where somebody is deciding what to eat. Alphabetical
+   * is the one order that carries no information at all.
+   *
+   * Two tie-breaks under it, because most of a thousand items have never
+   * been ordered and would otherwise fall back to the alphabet again. The
+   * kitchen's own order comes next, which is the order its menu is printed
+   * in and so roughly what it would like you to see; the name is only there
+   * to stop the list shuffling between page loads.
+   */
   query =
     options.sort === "cheap"
       ? query.order("price_food", { ascending: true })
       : options.sort === "dear"
         ? query.order("price_food", { ascending: false })
-        : query.order("name", { ascending: true });
+        : options.sort === "az"
+          ? query.order("name", { ascending: true })
+          : query
+              .order("ordered_count", { ascending: false })
+              .order("sort_order", { ascending: true })
+              .order("name", { ascending: true });
 
-  const { data, count, error } = await query.range(from, from + PER_PAGE - 1);
+  const { data, count, error } = await query.range(from, to);
   if (error) return { products: [], total: 0 };
 
   return {

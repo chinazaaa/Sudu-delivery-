@@ -33,6 +33,8 @@ import ValueBandEditor from "@/components/admin/ValueBandEditor";
 import { parseValueBands } from "@/lib/value-bands";
 import PhotoField from "@/components/admin/PhotoField";
 import { Picking, Tick, Bar, Done } from "@/components/admin/BulkStock";
+import { aislesFrom } from "@/lib/aisles";
+import { safeSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +74,7 @@ export default async function RestaurantAdmin({
   ]);
 
   const categoryList = (categories ?? []) as MenuCategory[];
+  const aisles = aislesFrom((await safeSettings()).menu_aisles);
   const itemList = (items ?? []) as MenuItem[];
   const groupsByItem = await optionGroupsFor(
     itemList.map((i) => i.id),
@@ -265,6 +268,8 @@ export default async function RestaurantAdmin({
           <p className="text-sm text-muted">
             How the menu is grouped on the site: Pizzas, Chicken, Sides, Drinks.
             Type over a name to rename it, which keeps every item where it is.
+            The aisle beside it is where this section shows up on the
+            everything list, where one word has to work across every kitchen.
           </p>
         </div>
         <ul className="flex flex-wrap gap-2">
@@ -289,6 +294,23 @@ export default async function RestaurantAdmin({
                     size={Math.max(category.name.length, 6)}
                     className="min-w-0 rounded bg-transparent px-1 py-0.5 font-semibold outline-none focus:bg-black/[0.04] focus:ring-2 focus:ring-brand/30"
                   />
+                  {/* Where this section lands on the everything list.
+                      "Dodsters & pockets" stays what Dodo Pizza calls them
+                      on its own menu, and is found under Pizza by somebody
+                      who has never heard the word. */}
+                  <select
+                    name="aisle"
+                    defaultValue={category.aisle ?? ""}
+                    aria-label={`Aisle for ${category.name}`}
+                    className="min-w-0 rounded bg-transparent py-0.5 text-xs font-semibold text-muted outline-none focus:bg-black/[0.04]"
+                  >
+                    <option value="">Unfiled</option>
+                    {aisles.map((one) => (
+                      <option key={one} value={one}>
+                        {one}
+                      </option>
+                    ))}
+                  </select>
                   <SaveButton className="px-1.5 py-0.5 text-xs">
                     ✓
                   </SaveButton>

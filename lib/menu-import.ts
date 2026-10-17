@@ -1,3 +1,5 @@
+import { tidyName } from "./case";
+
 export type ParsedItem = {
   category: string;
   name: string;
@@ -231,23 +233,15 @@ function toPrice(text: string | undefined): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
-const ACRONYMS = /^(bbq|pcs|g|ml|cl|kg|sms|vip)$/i;
-
-/** "BBQ MEGA MEAT" reads better as "BBQ Mega Meat" on a card. */
-function titleCase(text: string): string {
-  return text
-    .split(/\s+/)
-    .map((word) => {
-      if (!word) return word;
-      // Anything with a number keeps its shape: 2PCS, 250G, 7UP.
-      if (/\d/.test(word)) return word.toUpperCase();
-      if (ACRONYMS.test(word)) return word.toUpperCase();
-      if (word === "-") return word;
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-    })
-    .join(" ")
-    .trim();
-}
+/**
+ * "BBQ MEGA MEAT" reads better as "BBQ Mega Meat" on a card.
+ *
+ * It had a caser of its own, which lower cased the tail of every word it
+ * touched whether the word was shouting or not. The shop now has one, and
+ * one is the number there should be: a name typed with deliberate casing
+ * survives it, which this one did not.
+ */
+const titleCase = tidyName;
 
 /** Descriptions copied off a menu are often shouted. */
 function sentence(text: string): string {

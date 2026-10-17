@@ -13,6 +13,8 @@ import { oneCustomer, shareOfProfit , reachNumbers } from "@/lib/customer";
 import { getOrder } from "@/lib/orders";
 import { getBatch } from "@/lib/batches";
 import { SLOT_LABEL, TZ } from "@/lib/config";
+import { STAGE_LABEL } from "@/lib/stages";
+import { doorTag } from "@/lib/doors";
 import { getSettings } from "@/lib/settings";
 import { payableAccounts } from "@/lib/banks";
 import { siteUrl, toCard } from "@/lib/admin-templates";
@@ -481,6 +483,14 @@ async function orderPage(id: string, said: string) {
                 itself. The header sends the PIN in a message; somebody at
                 the gate reads it off the screen. */}
             <dl className="mt-1 text-[14.5px]">
+              {/* Which door it came through, on the order itself.
+                  It was on the card in the list and nowhere here, so
+                  opening one on a phone, which is how anybody reads "new
+                  in", lost the one thing that says whether the chat is
+                  earning its keep. */}
+              {doorTag((order as { source?: string }).source ?? "") !== "" && (
+                <Detail label="Came in through" value={doorTag((order as { source?: string }).source ?? "")} />
+              )}
               <Detail
                 label="Pays by"
                 value={order.payment_method === "card" ? "Card link" : "Transfer"}
@@ -498,6 +508,36 @@ async function orderPage(id: string, said: string) {
                 />
               )}
             </dl>
+
+            {/*
+                The run, on the card rather than only in the header.
+
+                It was up in the header actions all along, which on a phone
+                is above the fold and then gone: the one page you reach for
+                while a run is in the air is an order on it, and the way
+                across to the run was a scroll back up to a bar you had
+                already left behind. A run that has not finished says where
+                it has got to, because that is the reason for going.
+            */}
+            {run && run.stage !== "handed_out" && (
+              <Link
+                href={`/admin/batch/${order.batch_id}`}
+                className="flex items-center justify-between gap-2.5 border-t-[1.5px] border-rule pt-3.5"
+              >
+                <span className="min-w-0">
+                  <span className="label block">Its run</span>
+                  <span className="block truncate text-[14.5px] font-semibold">
+                    {runLabel || "Open its run"}
+                  </span>
+                  <span className="hint block">
+                    {STAGE_LABEL[run.stage] ?? "On its way"}
+                  </span>
+                </span>
+                <span className="btn-admin btn-admin-sm shrink-0">
+                  Open the run
+                </span>
+              </Link>
+            )}
 
             {order.status === "pending" && (
               /* The reference goes above the button, not beside it, because
@@ -573,7 +613,16 @@ async function orderPage(id: string, said: string) {
                     defaultValue={lagosBoxTime(order.done_at)}
                     className="field field-admin w-auto flex-1 border-[1.5px] border-line bg-paper px-3"
                   />
-                  <SaveButton className="btn-admin btn-admin-sm shrink-0">Save</SaveButton>
+                  {/* The button underneath, not a second one on top of it. Handed
+                      btn-admin as a class while the default base was still
+                      btn-primary, this ended up wearing both: the board's
+                      white fill from one and disabled:opacity-40 from the
+                      other, so the moment it was pressed "Saving…" went to
+                      forty per cent grey on white and read as nothing at
+                      all. */}
+                  <SaveButton look="btn-admin" className="btn-admin-sm shrink-0">
+                    Save
+                  </SaveButton>
                 </div>
                 <p className="hint">
                   What their own page shows. Put it right where this was ticked

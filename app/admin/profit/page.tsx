@@ -129,8 +129,16 @@ export default async function ProfitPage({
    * driver costs more or a run goes out half empty -- the things that can
    * actually be done something about.
    */
+  /*
+   * Measured on the settled half, because that is the figure above it.
+   *
+   * A share worked out from a profit that still has three uncosted runs in
+   * it is a share that falls the afternoon somebody types the fuel in, and
+   * the number nobody can act on.
+   */
+  const settledEarned = sums.earned - sums.waitingBeforeCosts;
   const share =
-    sums.earned <= 0 ? 0 : Math.round((sums.profit / sums.earned) * 100);
+    settledEarned <= 0 ? 0 : Math.round((sums.settled / settledEarned) * 100);
   /** The customer's food money, which passes straight through to a kitchen
    *  and is nobody's profit on the way. */
   const passedOn = sums.foodAtMenu - Math.max(0, -sums.overMenu);
@@ -394,16 +402,30 @@ export default async function ProfitPage({
           value={naira(allCosts)}
           detail="Runs, commission and anything paid out"
         />
+        {/*
+            The settled half, not the lot.
+
+            A run that is still open, or one that went out last night with
+            nothing typed into it, has takings and no car to pay for yet, so
+            it landed here at full value and then fell by twenty thousand
+            the afternoon the fuel went in. A profit that drops every time
+            you do the bookkeeping is a profit nobody can use.
+
+            What is waiting is said underneath rather than hidden: it is one
+            screen away, in the panel that asks for those costs, and it
+            joins this figure the moment they are in. */}
         <Figure
           label="Profit"
           value={
-            sums.profit < 0 ? `−${naira(Math.abs(sums.profit))}` : naira(sums.profit)
+            sums.settled < 0 ? `−${naira(Math.abs(sums.settled))}` : naira(sums.settled)
           }
-          tone={sums.profit >= 0 ? "mint" : "brand"}
+          tone={sums.settled >= 0 ? "mint" : "brand"}
           detail={
             sums.gross === 0
               ? `${windowLabel(from, to)} · nothing came in`
-              : `${windowLabel(from, to)} · ${share}% of what we earned`
+              : sums.waitingRuns > 0
+                ? `${windowLabel(from, to)} · ${share}% of what we earned · ${naira(sums.waitingBeforeCosts)} more on ${sums.waitingRuns} run${sums.waitingRuns === 1 ? "" : "s"} not costed yet`
+                : `${windowLabel(from, to)} · ${share}% of what we earned`
           }
         />
       </div>

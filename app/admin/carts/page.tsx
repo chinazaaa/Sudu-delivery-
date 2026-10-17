@@ -25,6 +25,8 @@ import {
   reopenCart,
 } from "../actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
+import BulkCarts from "@/components/admin/BulkCarts";
+import { Picking, Tick } from "@/components/admin/Picking";
 import ActionButton from "@/components/admin/ActionButton";
 
 export const dynamic = "force-dynamic";
@@ -310,12 +312,16 @@ export default async function CartsPage({
               : "Nothing left behind. Every cart with a number on it became an order."}
         </p>
       ) : (
-        <ul className="space-y-2.5">
+        <Picking>
+          <BulkCarts reasons={REASONS.map((one) => one.label)} />
+          <ul className="space-y-2.5">
           {carts.map((cart) => {
             const going = cut === "done" ? false : stillGoing(cart);
             return (
               <li
                 key={cart.id}
+                data-item
+                data-id={cart.id}
                 className={`card p-3.5 sm:p-4 ${
                   cut === "open" ? "" : "opacity-[0.72]"
                 }`}
@@ -324,6 +330,7 @@ export default async function CartsPage({
                     whole card in one glance: who, and how much of it is
                     walking away. */}
                 <div className="flex items-baseline justify-between gap-2.5">
+                  <Tick id={cart.id} name={cart.name || "this cart"} />
                   <h3 className="min-w-0 flex-1 truncate text-[16px] font-bold">
                     {cart.name || "No name given"}
                   </h3>
@@ -428,7 +435,8 @@ export default async function CartsPage({
               </li>
             );
           })}
-        </ul>
+          </ul>
+        </Picking>
       )}
 
       {/*

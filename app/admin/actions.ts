@@ -12,6 +12,8 @@ import { STAGES, type BatchStage } from "@/lib/stages";
 import { type BatchSlot } from "@/lib/config";
 import { hoursByDay, deliveryWindows, externalUrl, sayWindow } from "@/lib/settings";
 import { runSchedule } from "@/lib/schedule";
+import { guessAisle } from "@/lib/aisles";
+import { tidyName } from "@/lib/case";
 import { deliverySlots, windowPhrase } from "@/lib/same-day";
 import { lagosInstant, lagosToday } from "@/lib/time";
 import {
@@ -1535,7 +1537,10 @@ export async function updateMenuItem(form: FormData): Promise<void> {
     // a save that would have been refused saves, with the item switched off,
     // rather than throwing an error at somebody mid-edit.
     available: form.get("available") === "on" && Math.round(price) > 0,
-    name: String(form.get("name") ?? "").trim() || undefined,
+    /* A kitchen that keeps its menu in capitals is not a kitchen that
+       decided its dishes should shout on our cards. Only a name kept all
+       in one case is touched, so anything typed deliberately survives. */
+    name: tidyName(String(form.get("name") ?? "")) || undefined,
     description: String(form.get("description") ?? "").trim(),
     // A new photo wins; otherwise whatever link is in the box stays.
     image_url:
@@ -1566,7 +1571,7 @@ export async function updateMenuItem(form: FormData): Promise<void> {
 
 export async function addMenuItem(form: FormData): Promise<void> {
   await assertAdmin();
-  const name = String(form.get("name") ?? "").trim();
+  const name = tidyName(String(form.get("name") ?? ""));
   const price = Number(form.get("price_food"));
   if (!name || !Number.isFinite(price) || price < 0) return;
 
@@ -1593,7 +1598,7 @@ export async function addMenuItem(form: FormData): Promise<void> {
  */
 export async function createFullItem(form: FormData): Promise<void> {
   await assertAdmin();
-  const name = String(form.get("name") ?? "").trim();
+  const name = tidyName(String(form.get("name") ?? ""));
   const price = Number(form.get("price_food"));
   const restaurantId = String(form.get("restaurant_id"));
   if (!name || !Number.isFinite(price) || price < 0) return;
@@ -2173,6 +2178,59 @@ export async function deleteCart(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
 }
 
+/**
+ * Several at once, closed with one reason between them.
+ *
+ * A morning of testing leaves six carts of your own in among the real ones,
+ * and closing them is six taps each. The reason is the same five words it
+ * would be one at a time, and the two that promise something keep the same
+ * promise: "Not interested" stops the nudging for a fortnight, "Wrong
+ * number" marks the number for good.
+ */
+export async function closeManyCarts(form: FormData): Promise<void> {
+  await assertAdmin();
+  const ids = form.getAll("id").map(String).filter(Boolean);
+  if (ids.length === 0) return;
+
+  const reason = String(form.get("reason") ?? "").trim().slice(0, 120);
+  const consequence =
+    reason === "Not interested"
+      ? { quiet_until: quietUntil() }
+      : reason === "Wrong number"
+        ? { bad_number: true }
+        : {};
+
+  const { error } = await db()
+    .from("carts")
+    .update({
+      handled_at: new Date().toISOString(),
+      handled_reason: reason,
+      ...consequence,
+    })
+    .in("id", ids);
+  if (error) throw new Error(`Could not close those: ${error.message}`);
+
+  revalidatePath("/admin", "layout");
+}
+
+/**
+ * Several at once, gone for good.
+ *
+ * The same thing deleting one is for, and for the same reason: a test or a
+ * tap on your own phone is not a customer who did not pay, so there is
+ * nothing to keep and keeping it only makes the list harder to read.
+ */
+export async function deleteManyCarts(form: FormData): Promise<void> {
+  await assertAdmin();
+  const ids = form.getAll("id").map(String).filter(Boolean);
+  if (ids.length === 0) return;
+
+  const { error } = await db().from("carts").delete().in("id", ids);
+  if (error) throw new Error(`Could not delete those: ${error.message}`);
+
+  revalidatePath("/admin", "layout");
+}
+
 /** Every cart already closed, cleared out in one go. */
 export async function deleteClosedCarts(): Promise<void> {
   await assertAdmin();
@@ -2673,6 +2731,7 @@ const SETTING_FIELDS = [
   "same_day_bands",
   "same_day_urgent_extra",
   "group_fee_floor",
+  "menu_aisles",
   "same_day_on",
   "same_day_first_hour",
   "same_day_last_hour",
@@ -3253,11 +3312,20 @@ export async function addCategory(form: FormData): Promise<void> {
   const name = String(form.get("name") ?? "").trim();
   if (!name) return;
 
-  await db().from("menu_categories").insert({
+  /* Guessed rather than asked for. A menu arrives with forty sections and
+     nobody files forty dropdowns before they can browse; the guess is a
+     starting point and every one of them is a dropdown afterwards. */
+  const row = {
     restaurant_id: String(form.get("restaurant_id")),
     name,
     sort_order: Number(form.get("sort_order") ?? 100),
-  });
+    aisle: guessAisle(name),
+  };
+  const { error } = await db().from("menu_categories").insert(row);
+  if (error) {
+    const { aisle: _dropped, ...rest } = row;
+    await db().from("menu_categories").insert(rest);
+  }
   revalidatePath("/admin", "layout");
   updateTag("menu");
   revalidatePath("/", "layout");
@@ -3276,7 +3344,14 @@ export async function renameCategory(form: FormData): Promise<void> {
   const id = String(form.get("category_id") ?? "");
   if (!name || !id) return;
 
-  await db().from("menu_categories").update({ name }).eq("id", id);
+  /* And which aisle it is browsed under over on the everything list. The
+     same form, because they are one decision about one section, and because
+     a second save button beside the first is a second thing to forget. */
+  const aisle = String(form.get("aisle") ?? "").trim();
+
+  let { error } = await db().from("menu_categories").update({ name, aisle }).eq("id", id);
+  // A shop that has not run the migration yet still gets the rename.
+  if (error) await db().from("menu_categories").update({ name }).eq("id", id);
   revalidatePath("/admin", "layout");
   updateTag("menu");
   revalidatePath("/", "layout");

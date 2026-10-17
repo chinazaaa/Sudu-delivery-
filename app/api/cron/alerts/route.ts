@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { abandonedCarts } from "@/lib/carts";
+import { tellNewBadges } from "@/lib/achievements";
 import { safeSettings } from "@/lib/settings";
 import { clockLabel } from "@/lib/time";
 import { SLOT_LABEL } from "@/lib/config";
@@ -132,6 +133,20 @@ export async function GET(request: Request): Promise<NextResponse> {
     }
   } catch {
     /* Same again: read-only work, and silence is the safe failure. */
+  }
+
+  /*
+   * Anything the shop has just achieved.
+   *
+   * The board is counted off the orders themselves and stored nowhere, so
+   * a badge falls at the moment an order takes the total over the line and
+   * nothing anywhere notices. Read here on the same quarter hour as
+   * everything else, and said once.
+   */
+  try {
+    for (const id of await tellNewBadges()) told.push(toldKey("badge", id));
+  } catch {
+    /* Read-only, like the rest. Silence is the safe failure. */
   }
 
   return NextResponse.json({ told: told.length });

@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { doorLabel } from "./doors";
 import { isGone, isPaid, NOT_ORDERS_SQL } from "./orders";
 import { SLOT_LABEL } from "./config";
 import { runDateLabel } from "./time";
@@ -705,14 +706,6 @@ export type Door = {
   /** Share of the orders counted here, as a whole number of per cent. */
   share: number;
 };
-
-/** What each way in is called, in the words the shop uses for it. */
-function doorLabel(source: string): string {
-  if (source === "app") return "The app";
-  if (source === "web") return "The website";
-  if (source === "bot") return "Sudu Bot";
-  return "Not known";
-}
 
 /**
  * Which door the orders came through: the website, the app, or the chat.

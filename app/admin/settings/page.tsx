@@ -9,6 +9,7 @@ import { parseAreas } from "@/lib/areas";
 import DayHours from "@/components/admin/DayHours";
 import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
+import { AISLES } from "@/lib/aisles";
 import { GROUP_FLOOR, parseBands, SAME_DAY_BANDS, URGENT_EXTRA } from "@/lib/fees";
 import { missingSettings } from "@/lib/health";
 import { muted } from "@/lib/email";
@@ -90,6 +91,7 @@ export default async function SettingsAdmin() {
           ["#strip", "The site"],
           ["#messages", "Messages"],
           ["#fees", "Delivery fees"],
+          ["#aisles", "Aisles"],
           ["#told", "Team"],
           /* The board draws six. Notifications is a card the board does not
              have, and it has to be reachable, so it goes after the six rather
@@ -1212,6 +1214,39 @@ export default async function SettingsAdmin() {
               </div>
 
               <SaveButton look="btn-admin-go">Save prices</SaveButton>
+            </div>
+          </Panel>
+        </form>
+
+        <form id="aisles" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
+          <Panel
+            title="How the whole shop is browsed"
+            detail={
+              <>
+                Every kitchen files its menu its own way, which is right on its
+                own menu and useless across eleven of them: Burgers beside
+                Burgers &amp; sandwiches, and Deal and Add-ons offered to
+                students as ways of finding dinner. These are the words the
+                everything list is browsed by. One per line, in the order they
+                are shown. Each kitchen&apos;s own sections are filed under one
+                of them on that kitchen&apos;s menu page.
+              </>
+            }
+          >
+            <div className="space-y-3">
+              <textarea
+                name="menu_aisles"
+                rows={12}
+                defaultValue={settings.menu_aisles || AISLES.join("\n")}
+                className="field font-mono text-sm"
+              />
+              <p className="hint">
+                Renaming one here does not refile anything: a section filed
+                under the old word keeps it until somebody picks the new one on
+                that kitchen&apos;s menu page. Delete a line and whatever was
+                under it stops having a chip, which is the only thing it costs.
+              </p>
+              <SaveButton look="btn-admin-go">Save aisles</SaveButton>
             </div>
           </Panel>
         </form>

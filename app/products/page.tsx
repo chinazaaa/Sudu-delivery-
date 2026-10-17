@@ -26,6 +26,7 @@ export async function generateMetadata({
   const here = new URLSearchParams();
   if (asked.place) here.set("place", asked.place);
   if (asked.category) here.set("category", asked.category);
+  if (asked.aisle) here.set("aisle", asked.aisle);
   const query = here.toString();
 
   return {
@@ -66,6 +67,7 @@ function withoutQuery(asked: Asked): string {
   const rest = new URLSearchParams();
   if (asked.place) rest.set("place", asked.place);
   if (asked.category) rest.set("category", asked.category);
+  if (asked.aisle) rest.set("aisle", asked.aisle);
   if (asked.sort) rest.set("sort", asked.sort);
   const query = rest.toString();
   return query === "" ? "/products" : `/products?${query}`;
@@ -74,7 +76,11 @@ function withoutQuery(asked: Asked): string {
 type Asked = {
   q?: string;
   place?: string;
+  /** A kitchen's own section, which only means anything with that kitchen
+   *  chosen: the same word is a different row at every restaurant. */
   category?: string;
+  /** One of the shop's twelve aisles: how the whole list is browsed. */
+  aisle?: string;
   sort?: string;
   page?: string;
 };
@@ -102,8 +108,14 @@ export default async function ProductsPage({
       query: asked.q,
       place: asked.place,
       category: asked.category,
-      sort: asked.sort === "cheap" || asked.sort === "dear" ? asked.sort : "",
+      aisle: asked.aisle,
+      sort:
+        asked.sort === "cheap" || asked.sort === "dear" || asked.sort === "az"
+          ? asked.sort
+          : "",
       page,
+      /* One list that grows, rather than forty-two pages. */
+      upTo: true,
     }),
     productFacets(asked.place),
   ]);
@@ -137,6 +149,17 @@ export default async function ProductsPage({
       areaId: "",
     },
   }));
+
+  /*
+   * What the chips are, which depends on whether a kitchen is chosen.
+   *
+   * With one chosen, its own sections: "Dodsters & pockets" is what Dodo
+   * Pizza calls them and its menu should say so. Without one, the shop's
+   * aisles, because across eleven kitchens the kitchens' own words are
+   * their filing rather than a way in.
+   */
+  const chips = asked.place ? facets.categories : facets.aisles;
+  const picked = (asked.place ? asked.category : asked.aisle) ?? "";
 
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
   const link = (change: Partial<Asked>) => {
@@ -184,9 +207,6 @@ export default async function ProductsPage({
             here can go in the same order.
           </p>
 
-          <Suspense fallback={<div className="field min-h-[58px] max-w-[640px] rounded-full border-2 border-ink" />}>
-            <ProductSearch start={asked.q ?? ""} big />
-          </Suspense>
         </div>
       </header>
 
@@ -203,74 +223,108 @@ export default async function ProductsPage({
           position:sticky element that is not an offset from where it sits,
           it is the edge it sticks to. The bar went half a screen sideways
           and took the width of the page with it. */}
+      {/*
+          The search, and the twelve ways in.
+
+          Search is the whole interface on a phone. A thousand items is
+          forty-two pages, and nobody has ever found dinner on page nine: the
+          box is how you find a thing you can name, and the aisles are how
+          you find a thing you cannot. Both follow you down the page, because
+          a filter you have scrolled past is a filter you no longer have.
+
+          The kitchens and the sort are underneath and scroll away. Neither
+          is something anybody reaches for twice in one visit. */}
+      {/* Sticky on the outside, full width on the inside.
+
+          Both on one element does not work: .bleed sets left:50%, and on a
+          position:sticky element that is not an offset from where it sits,
+          it is the edge it sticks to. The bar went half a screen sideways
+          and took the width of the page with it. */}
       <div className="sticky top-[57px] z-20 md:top-[65px]">
         <div className="bleed border-b-2 border-ink bg-shell">
           <div className="shell flex flex-col gap-2.5 py-3">
-          {facets.categories.length > 0 && (
-            <div
-              aria-label="What kind"
-              className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+            <Suspense
+              fallback={
+                <div className="field min-h-[50px] rounded-full border-2 border-ink md:max-w-[640px]" />
+              }
             >
-              <Chip href={link({ category: "" })} on={!asked.category}>
-                Anything
-              </Chip>
-              {facets.categories.map((one) => (
-                <Chip key={one} href={link({ category: one })} on={asked.category === one}>
-                  {one}
+              <ProductSearch start={asked.q ?? ""} big />
+            </Suspense>
+
+            {chips.length > 0 && (
+              <div
+                aria-label={asked.place ? "Sections" : "What kind"}
+                className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+              >
+                <Chip href={link({ aisle: "", category: "" })} on={!picked}>
+                  Anything
                 </Chip>
-              ))}
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center justify-between gap-2.5">
-            <div
-              aria-label="Kitchen"
-              className="-mx-4 flex min-w-0 flex-[1_1_320px] gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
-            >
-              <Kitchen href={link({ place: "", category: "" })} on={!asked.place}>
-                All kitchens
-              </Kitchen>
-              {facets.places.map((one) => (
-                <Kitchen
-                  key={one.id}
-                  href={link({ place: one.id, category: "" })}
-                  on={asked.place === one.id}
-                >
-                  {one.name}
-                </Kitchen>
-              ))}
-            </div>
-
-            <div
-              aria-label="Sort"
-              className="flex shrink-0 items-center gap-1 rounded-full border-2 border-ink bg-paper p-[3px]"
-            >
-              {(
-                [
-                  ["", "A–Z"],
-                  ["cheap", "Cheapest"],
-                  ["dear", "Dearest"],
-                ] as const
-              ).map(([value, label]) => (
-                <Link
-                  key={label}
-                  replace
-                  // The same dishes in a different order. Every place and
-                  // category was being crawled three times over for it, on
-                  // a site with nine hundred dish pages still waiting for a
-                  // first crawl.
-                  rel="nofollow"
-                  href={link({ sort: value })}
-                  className={`flex min-h-9 items-center rounded-full px-3 text-sm font-semibold transition ${
-                    (asked.sort ?? "") === value ? "bg-ink text-white" : "text-ink"
-                  }`}
-                >
-                  {label}
-                </Link>
-              ))}
-            </div>
+                {chips.map((one) => (
+                  <Chip
+                    key={one}
+                    href={
+                      asked.place
+                        ? link({ category: one, aisle: "" })
+                        : link({ aisle: one, category: "" })
+                    }
+                    on={picked === one}
+                  >
+                    {one}
+                  </Chip>
+                ))}
+              </div>
+            )}
           </div>
-          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        <div
+          aria-label="Kitchen"
+          className="-mx-4 flex min-w-0 flex-[1_1_320px] gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+        >
+          <Kitchen href={link({ place: "", category: "", aisle: "" })} on={!asked.place}>
+            All kitchens
+          </Kitchen>
+          {facets.places.map((one) => (
+            <Kitchen
+              key={one.id}
+              href={link({ place: one.id, category: "", aisle: "" })}
+              on={asked.place === one.id}
+            >
+              {one.name}
+            </Kitchen>
+          ))}
+        </div>
+
+        <div
+          aria-label="Sort"
+          className="flex shrink-0 items-center gap-1 rounded-full border-2 border-ink bg-paper p-[3px]"
+        >
+          {(
+            [
+              ["", "Most ordered"],
+              ["az", "A\u2013Z"],
+              ["cheap", "Cheapest"],
+              ["dear", "Dearest"],
+            ] as const
+          ).map(([value, label]) => (
+            <Link
+              key={label}
+              replace
+              // The same dishes in a different order. Every place and
+              // category was being crawled three times over for it, on
+              // a site with nine hundred dish pages still waiting for a
+              // first crawl.
+              rel="nofollow"
+              href={link({ sort: value })}
+              className={`flex min-h-9 items-center rounded-full px-3 text-sm font-semibold transition ${
+                (asked.sort ?? "") === value ? "bg-ink text-white" : "text-ink"
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
         </div>
       </div>
 
@@ -292,7 +346,9 @@ export default async function ProductsPage({
       <p className="ticket text-muted">
         {total === 0
           ? "Nothing matches that"
-          : `${products.length} ${products.length === 1 ? "thing" : "things"} on this page`}
+          : products.length >= total
+            ? `${total} ${total === 1 ? "thing" : "things"}`
+            : `${products.length} of ${total}`}
       </p>
 
       {total === 0 ? (
@@ -307,39 +363,33 @@ export default async function ProductsPage({
         <ProductGrid items={cards} />
       )}
 
-      {pages > 1 && (
-        <div className="flex items-center justify-between gap-3 pt-2">
-          {page > 1 ? (
-            <Link
-              replace
-              // Nothing is discovered only by paging: every dish has a page
-              // of its own, and all of them are in the sitemap.
-              rel="nofollow"
-              href={link({ page: String(page - 1) })}
-              className="btn-quiet px-4 py-2 text-sm"
-            >
-              Back
-            </Link>
-          ) : (
-            <span />
-          )}
-          <span className="text-sm text-muted">
-            Page {page} of {pages}
-          </span>
-          {page < pages ? (
-            <Link
-              replace
-              rel="nofollow"
-              href={link({ page: String(page + 1) })}
-              className="btn-quiet px-4 py-2 text-sm"
-            >
-              More
-            </Link>
-          ) : (
-            <span />
-          )}
+      {/*
+          One list that grows, rather than forty-two pages.
+
+          Back and More turned a thousand items into forty-two addresses,
+          and nobody has ever found dinner on page nine: you either search
+          for the thing you can name or you give up. "Show more" keeps
+          everything already on the screen on the screen, which is the only
+          thing paging never does.
+
+          Scroll is left alone, so the next twenty-four appear under your
+          thumb instead of throwing you back to the top of the list. */}
+      {page < pages && (
+        <div className="pt-2">
+          <Link
+            replace
+            scroll={false}
+            // Nothing is discovered only by paging: every dish has a page
+            // of its own, and all of them are in the sitemap.
+            rel="nofollow"
+            href={link({ page: String(page + 1) })}
+            className="btn-quiet flex w-full items-center justify-center px-4 py-3 font-semibold"
+          >
+            Show {Math.min(PER_PAGE, total - products.length)} more
+          </Link>
         </div>
       )}
+
     </div>
   );
 }

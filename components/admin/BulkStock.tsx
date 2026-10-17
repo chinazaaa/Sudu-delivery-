@@ -1,88 +1,9 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
 import { setManyStock } from "@/app/admin/actions";
+import { Picking, showingNow, Tick, usePicked } from "./Picking";
 
-type Picked = {
-  on: Set<string>;
-  toggle: (id: string) => void;
-  set: (ids: string[]) => void;
-};
-
-const Held = createContext<Picked | null>(null);
-
-/**
- * Ticking several dishes and switching the lot.
- *
- * Stock is the one thing in admin that changes every single day, and it
- * changes in groups: the desserts go off together when there is no cold
- * bag, the grill comes back on together when the gas is refilled. Doing
- * that a row at a time is a tap and a page load each, standing at a
- * counter, and the honest answer until now was to go and write SQL.
- *
- * The state lives in here rather than on the page so the list stays a
- * server component: every row is still rendered on the server with its real
- * price and photograph, and only the tick beside it knows about React.
- */
-export function Picking({ children }: { children: React.ReactNode }) {
-  const [on, setOn] = useState<Set<string>>(new Set());
-
-  const value = useMemo<Picked>(
-    () => ({
-      on,
-      toggle: (id) =>
-        setOn((was) => {
-          const next = new Set(was);
-          if (next.has(id)) next.delete(id);
-          else next.add(id);
-          return next;
-        }),
-      set: (ids) => setOn(new Set(ids)),
-    }),
-    [on]
-  );
-
-  return <Held.Provider value={value}>{children}</Held.Provider>;
-}
-
-/** The tick beside one item. */
-export function Tick({ id, name }: { id: string; name: string }) {
-  const held = useContext(Held);
-  if (!held) return null;
-
-  return (
-    <label className="flex shrink-0 cursor-pointer items-center">
-      <input
-        type="checkbox"
-        checked={held.on.has(id)}
-        onChange={() => held.toggle(id)}
-        aria-label={`Pick ${name}`}
-        className="size-[18px] accent-[#e5321d]"
-      />
-    </label>
-  );
-}
-
-/**
- * Everything showing, ticked at once.
- *
- * Both pages this sits on filter before they bulk: the stock board by
- * restaurant and category, the restaurant's own menu by category and by
- * what is switched off. Once the list on screen *is* the group, ticking
- * each row individually is the same twenty taps again.
- *
- * It reads the rows off the page rather than being handed a list, because
- * on the restaurant page the filtering is done in the browser with CSS: the
- * server has no idea which rows are showing, and `offsetParent` is the one
- * thing that does.
- */
-function showingNow(): string[] {
-  if (typeof document === "undefined") return [];
-  return [...document.querySelectorAll<HTMLElement>("[data-item][data-id]")]
-    .filter((row) => row.offsetParent !== null)
-    .map((row) => row.dataset.id ?? "")
-    .filter(Boolean);
-}
+export { Picking, Tick };
 
 /**
  * The bar above the list.
@@ -104,7 +25,7 @@ export function Bar({
   back: string;
   sticky?: boolean;
 }) {
-  const held = useContext(Held);
+  const held = usePicked();
   if (!held) return null;
 
   const ids = [...held.on];

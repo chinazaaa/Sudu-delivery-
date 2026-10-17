@@ -37,6 +37,10 @@ export type MenuCategory = {
   restaurant_id: string;
   name: string;
   sort_order: number;
+  /** Which of the shop's aisles this section is browsed under, over on the
+   *  everything list. Empty is unfiled, which costs it a chip there and
+   *  nothing else. */
+  aisle?: string;
 };
 
 export type OptionGroup = {

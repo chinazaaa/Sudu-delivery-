@@ -149,8 +149,11 @@ body {
    * under forty-four, so the row action keeps a full-size tap area on a
    * touch screen and only looks small.
    */
+  /* Sixty per cent, not forty. A button mid-save still has to be readable:
+     the shop's button fades to forty on white and the word inside it goes
+     with it, which is how "Saving…" came to be invisible on the board. */
   .btn-admin {
-    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full border-2 border-ink bg-paper px-[18px] text-[15px] font-bold transition hover:bg-shell;
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full border-2 border-ink bg-paper px-[18px] text-[15px] font-bold transition hover:bg-shell disabled:opacity-60;
   }
   /* One per screen: the single thing to do next. */
   .btn-admin-go {
