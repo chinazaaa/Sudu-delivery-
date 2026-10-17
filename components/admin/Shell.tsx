@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DAILY, EVERY, GROUPS, TABS, whatIsIn, YOU, type Item } from "@/lib/admin-nav";
+import Tapped from "./Tapped";
+import { useWaiting } from "./Waiting";
 
 /**
  * The frame every admin page sits in: an Ink rail on a desktop, a drawer on
@@ -16,14 +18,21 @@ import { DAILY, EVERY, GROUPS, TABS, whatIsIn, YOU, type Item } from "@/lib/admi
 export default function AdminShell({
   children,
   signOut,
-  /** What is waiting, by section. Only what is worth a number: a badge on
-   *  everything is a badge on nothing. */
-  waiting = {},
 }: {
   children: React.ReactNode;
   signOut: () => Promise<void>;
-  waiting?: Record<string, number>;
 }) {
+  /*
+   * What is waiting, by section. Only what is worth a number: a badge on
+   * everything is a badge on nothing.
+   *
+   * Asked for after the board is on the screen rather than handed down
+   * from the layout. Read up there it was eight questions to a database in
+   * Lagos standing between every tap and anything changing, and the
+   * loading screens could not cover it: they sit inside the layout, so
+   * none of them could be drawn until the layout had finished asking.
+   */
+  const waiting = useWaiting();
   const path = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -78,10 +87,7 @@ export default function AdminShell({
           on ? "bg-brand text-white" : "text-rail-text hover:bg-white/[0.06] hover:text-white"
         }`}
       >
-        <span
-          aria-hidden
-          className={`size-[7px] shrink-0 rounded-[2px] ${on ? "bg-white" : "bg-rail-dot"}`}
-        />
+        <Tapped on={on} />
         {item.label}
         {count > 0 && (
           <span
@@ -296,12 +302,7 @@ export default function AdminShell({
               }`}
             >
               <span className="relative">
-                <span
-                  aria-hidden
-                  className={`block size-[19px] rounded-md border-2 ${
-                    on ? "border-brand bg-brand" : "border-muted"
-                  }`}
-                />
+                <Tapped on={on} tab />
                 {count > 0 && (
                   <span className="absolute -right-2 -top-1.5 min-w-[15px] rounded-full bg-brand px-1 text-center font-mono text-[9.5px] font-semibold leading-[15px] text-white">
                     {count}

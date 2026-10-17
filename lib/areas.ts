@@ -171,15 +171,28 @@ export function collectedFrom(
   areas: Area[],
   most = 2
 ): string {
-  const home = areas.find((one) => one.id === "")?.name ?? "Sangotedo";
-  const named = new Map(areas.map((one) => [one.id, one.name]));
+  /*
+   * The first town in an area's name, where its name is already a list.
+   *
+   * An area is one driving decision and one surcharge, so a shop quite
+   * reasonably calls it "Lekki/Ikoyi": one trip, two places. The ticket
+   * wants one word for it, and capping the number of areas does nothing
+   * when a single area's own name carries two towns in it. Only the
+   * ticket shortens; the fees section still names the area in full,
+   * because that is where somebody is working out what it costs.
+   */
+  const firstTown = (name: string): string =>
+    name.split(/\s*[/,]\s*|\s+and\s+/i)[0].trim() || name.trim();
+
+  const home = firstTown(areas.find((one) => one.id === "")?.name ?? "Sangotedo");
+  const named = new Map(areas.map((one) => [one.id, firstTown(one.name)]));
 
   const rest = areasOfRun(runAreas)
     .filter((id) => id !== "")
     .map((id) => named.get(id) ?? "")
     .filter((name) => name !== "" && name !== home);
 
-  return [home, ...rest].slice(0, Math.max(1, most)).join("/");
+  return [home, ...new Set(rest)].slice(0, Math.max(1, most)).join("/");
 }
 
 /**

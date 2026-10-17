@@ -1268,89 +1268,106 @@ async function toHandOverToday(): Promise<number> {
  */
 export async function waitingCounts(): Promise<Record<string, number>> {
   try {
-    const { count } = await db()
-      .from("orders")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pending");
+    /*
+     * Eight questions, asked at once.
+     *
+     * They were asked one after another, each waiting on the last, in the
+     * admin layout, on every single navigation. On a laptop beside the
+     * database that is nothing; on a phone on mobile data it is eight
+     * round trips to Lagos before the screen is allowed to change, which
+     * is why the board felt dead and why somebody tapping Runs tapped it
+     * three times.
+     *
+     * Nothing here depends on anything else here, so none of them had any
+     * business queuing.
+     */
+    const since = (days: number) =>
+      new Date(Date.now() - days * 86400000).toISOString();
+
+    const [
+      unpaid,
+      handing,
+      left,
+      asking,
+      post,
+      asked,
+      carrying,
+      unhappy,
+    ] = await Promise.all([
+      // Money owed.
+      db().from("orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      // Today's bags still to go out: the same two things the New in cut
+      // counts on its own control. Counting only the unpaid ones here was
+      // right while that screen only held unpaid ones, and the day it
+      // started holding today's work as well the rail began promising a
+      // smaller number than the screen it points at.
+      toHandOverToday(),
+      // Carts filled in and walked away from. The rail carries this one in
+      // the quieter grey: it is work waiting rather than money already
+      // owed. The three quarters of an hour is the same wait the carts
+      // screen uses before calling one abandoned; the shop can set its own
+      // there, and a count on a menu is not worth a second query for the
+      // settings row.
+      db()
+        .from("carts")
+        .select("id", { count: "exact", head: true })
+        .is("converted_at", null)
+        .is("handled_at", null)
+        .lt("updated_at", new Date(Date.now() - 45 * 60000).toISOString()),
+      // Somebody asking to promote the shop. An application nobody
+      // answered is worse than one turned down.
+      db()
+        .from("promoter_applications")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "new"),
+      // Letters nobody has answered or put aside. Counted on what has been
+      // decided rather than on what has been read, because glancing at a
+      // letter on a phone is not answering it. Forwarded bank alerts are
+      // not letters: one a payment would put a number on the rail that
+      // never goes down and means nothing when it moves.
+      db()
+        .from("mail")
+        .select("id", { count: "exact", head: true })
+        .is("replied_at", null)
+        .is("done_at", null)
+        .not("to_addr", "ilike", `%${ALERTS_AT}%`),
+      // Somebody asking for something we do not stock.
+      db()
+        .from("custom_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "new"),
+      // Parcels agreed and not yet handed over. A parcel is never on a run
+      // sheet, so until it is delivered the only thing standing between it
+      // and being forgotten is this.
+      db()
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .not("parcel_route", "is", null)
+        .not("status", "in", NOT_ORDERS_SQL)
+        .neq("status", "delivered"),
+      // Somebody unhappy, recently. Nothing marks a review as answered, so
+      // this one clears itself with the fortnight rather than with a tick:
+      // a two star from three weeks ago is not today's job, and a dot that
+      // can never go out is a dot nobody reads.
+      db()
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .lte("rating", 2)
+        .gte("rated_at", since(14)),
+    ]);
 
     const out: Record<string, number> = {};
-    // Money owed, plus today's bags still to go out: the same two things the
-    // New in cut counts on its own control. Counting only the unpaid ones
-    // here was right while that screen only held unpaid ones, and the day it
-    // started holding today's work as well the rail began promising a
-    // smaller number than the screen it points at.
-    const orders = (count ?? 0) + (await toHandOverToday());
-    if (orders > 0) out["/admin/orders"] = orders;
+    const put = (href: string, n: number | null | undefined) => {
+      if (n && n > 0) out[href] = n;
+    };
 
-    // Carts filled in and walked away from. The rail carries this one in the
-    // quieter grey: it is work waiting rather than money already owed.
-    // Named for the table it is actually in. It read saved_carts, which is
-    // not a table in this database, so the one page on the menu that is
-    // only ever about money left on the floor has had a grey dot since the
-    // dot was drawn, however many carts were sitting there.
-    const { count: left } = await db()
-      .from("carts")
-      .select("id", { count: "exact", head: true })
-      .is("converted_at", null)
-      .is("handled_at", null)
-      // The same three quarters of an hour the screen waits before calling
-      // a cart abandoned: somebody still choosing is not somebody to chase.
-      // The shop can set its own on the carts page; this is the default,
-      // because a count on a menu is not worth a second query for the
-      // settings row.
-      .lt("updated_at", new Date(Date.now() - 45 * 60000).toISOString());
-    if (left && left > 0) out["/admin/carts"] = left;
-
-    // Somebody asking to promote the shop and waiting on an answer. An
-    // application nobody answered is worse than one turned down.
-    const { count: asking } = await db()
-      .from("promoter_applications")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "new");
-    if (asking && asking > 0) out["/admin/applications"] = asking;
-
-    // Letters nobody has answered or put aside. Counted on what has been
-    // decided rather than on what has been read, because glancing at a
-    // letter on a phone is not answering it.
-    const { count: post } = await db()
-      .from("mail")
-      .select("id", { count: "exact", head: true })
-      .is("replied_at", null)
-      .is("done_at", null)
-      // Forwarded bank alerts are not letters waiting on an answer. One a
-      // payment would put a number on the rail that never goes down and
-      // means nothing when it moves.
-      .not("to_addr", "ilike", `%${ALERTS_AT}%`);
-    if (post && post > 0) out["/admin/inbox"] = post;
-
-    // Somebody asking for something we do not stock, waiting on an answer.
-    const { count: asked } = await db()
-      .from("custom_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "new");
-    if (asked && asked > 0) out["/admin/requests"] = asked;
-
-    // Parcels agreed and not yet handed over. A parcel is never on a run
-    // sheet, so until it is delivered the only thing standing between it
-    // and being forgotten is this.
-    const { count: carrying } = await db()
-      .from("orders")
-      .select("id", { count: "exact", head: true })
-      .not("parcel_route", "is", null)
-      .not("status", "in", NOT_ORDERS_SQL)
-      .neq("status", "delivered");
-    if (carrying && carrying > 0) out["/admin/parcels"] = carrying;
-
-    // Somebody unhappy, recently. Nothing marks a review as answered, so
-    // this one clears itself with the fortnight rather than with a tick:
-    // a two star from three weeks ago is not today's job, and a dot that
-    // can never go out is a dot nobody reads.
-    const { count: unhappy } = await db()
-      .from("orders")
-      .select("id", { count: "exact", head: true })
-      .lte("rating", 2)
-      .gte("rated_at", new Date(Date.now() - 14 * 86400000).toISOString());
-    if (unhappy && unhappy > 0) out["/admin/reviews"] = unhappy;
+    put("/admin/orders", (unpaid.count ?? 0) + handing);
+    put("/admin/carts", left.count);
+    put("/admin/applications", asking.count);
+    put("/admin/inbox", post.count);
+    put("/admin/requests", asked.count);
+    put("/admin/parcels", carrying.count);
+    put("/admin/reviews", unhappy.count);
 
     return out;
   } catch {

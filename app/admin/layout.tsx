@@ -3,7 +3,7 @@ import AdminShell from "@/components/admin/Shell";
 import AdminLogin from "@/components/AdminLogin";
 import RegisterWorker from "@/components/admin/RegisterWorker";
 import { isSignedIn } from "@/lib/admin-auth";
-import { waitingCounts } from "@/lib/admin";
+import Waiting from "@/components/admin/Waiting";
 import { logout } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -34,11 +34,25 @@ export default async function AdminLayout({
   // to admin is not a page of the shop.
   if (!(await isSignedIn())) return <AdminLogin />;
 
+  /*
+   * Nothing is read here any more.
+   *
+   * The rail's badges were eight questions to a database in Lagos, asked
+   * in this layout, on every single navigation. A loading screen could not
+   * cover that: `loading.tsx` sits inside the layout, so none of it could
+   * be drawn until this had finished asking. The board felt dead on a
+   * phone and somebody tapping Runs tapped it three times.
+   *
+   * The counts come to the rail from beside it now, once the board is on
+   * the screen, and this is a cookie check and a frame.
+   */
   return (
-    <AdminShell signOut={logout} waiting={await waitingCounts()}>
-      {/* Only here, because only admin is notified of anything. */}
-      <RegisterWorker />
-      {children}
-    </AdminShell>
+    <Waiting>
+      <AdminShell signOut={logout}>
+        {/* Only here, because only admin is notified of anything. */}
+        <RegisterWorker />
+        {children}
+      </AdminShell>
+    </Waiting>
   );
 }
