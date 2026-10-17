@@ -38,7 +38,32 @@ function alreadyFrom(): string {
       .split(";")
       .map((one) => one.trim())
       .find((one) => one.startsWith(`${FROM_COOKIE}=`));
-    return found ? decodeURIComponent(found.slice(FROM_COOKIE.length + 1)) : "";
+    const said = found
+      ? decodeURIComponent(found.slice(FROM_COOKIE.length + 1))
+      : "";
+
+    /*
+     * A cookie already stamped "direct" is forgotten rather than obeyed.
+     *
+     * It should never have been written: direct is the absence of a
+     * source, and it was holding a three month claim on people whose
+     * source we simply had not recognised yet. Clearing it on sight turns
+     * that into something a tagged link can still put right, instead of
+     * waiting out ninety days for each of them.
+     *
+     * Only the non-answer is dropped. A cookie naming a real channel is
+     * first touch and stays exactly as it is.
+     */
+    if (said === "direct") {
+      try {
+        document.cookie = `${FROM_COOKIE}=; path=/; max-age=0; samesite=lax`;
+      } catch {
+        /* Nothing here is worth failing a page view over. */
+      }
+      return "";
+    }
+
+    return said;
   } catch {
     return "";
   }
