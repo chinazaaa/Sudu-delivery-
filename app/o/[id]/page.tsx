@@ -374,23 +374,33 @@ export default async function OrderPage({
             <dd className="font-bold">{order.customer_name}</dd>
           </div>
           <div className="flex flex-col gap-0.5">
+            {/* The label and the answer have to be about the same thing.
+                Once ordering had shut, the label turned into "Going out"
+                while the answer stayed "Closed", which was the answer to
+                the question the label had just stopped asking: a run on
+                the road told whoever ordered from it "Going out: Closed",
+                which says nothing and sounds like bad news.
+
+                It only ever goes past tense and keeps its own answer. When
+                this run stopped taking orders is a real thing to know, and
+                where the food has got to is the list underneath. */}
             <dt className="ticket text-muted">
-              {isParcel || expired || order.batch.kind === "same_day"
+              {isParcel || order.batch.kind === "same_day"
                 ? "Going out"
-                : "Orders close"}
+                : expired
+                  ? "Orders closed"
+                  : "Orders close"}
             </dt>
             <dd className="font-bold">
               {isParcel
                 ? order.batch.deliver_at
                   ? runDateLabel(order.batch.run_date)
                   : "Day not agreed yet"
-                : expired
-                  ? "Closed"
-                  : order.batch.kind === "same_day"
-                    ? order.batch.delivery_window_text
-                    : `${clockLabel(order.batch.cut_off_at)}, ${dayLabel(
-                        order.batch.cut_off_at
-                      )}`}
+                : order.batch.kind === "same_day"
+                  ? order.batch.delivery_window_text
+                  : `${clockLabel(order.batch.cut_off_at)}, ${dayLabel(
+                      order.batch.cut_off_at
+                    )}`}
             </dd>
           </div>
         </dl>
