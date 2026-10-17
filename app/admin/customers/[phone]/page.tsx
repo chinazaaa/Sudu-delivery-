@@ -9,7 +9,7 @@ import { waLink } from "@/lib/whatsapp";
 /** Where the site lives. A link going into somebody else's phone cannot
  *  be a relative one. */
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
-import { oneCustomer, type OneCustomer } from "@/lib/customer";
+import { linkedTo, oneCustomer, type OneCustomer } from "@/lib/customer";
 import { getSettings, googleLinks } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
 import { firstName, templateFor, whatsappTo } from "@/lib/messages";
@@ -223,6 +223,9 @@ export default async function CustomerPage({
    * number that takes the messages are not always the same handset.
    */
   const reachOn = person.whatsapp || person.phone;
+  /* The other half of the household, looked at from both directions: who
+     this person named, and anybody who named them. */
+  const household = await linkedTo(person.phone).catch(() => []);
 
   // Not reachOn, on purpose. A PIN is the key to an order history kept
   // against the ordering number, and the ordering number is what they type
@@ -775,6 +778,61 @@ export default async function CustomerPage({
             detail="Only if they have said so. It is a note about who to talk to, and the customer never sees it."
             size="sm"
           >
+            {/* Who is on the other end of it, where somebody has said.
+                A household is one customer with two phones, and a page
+                that makes you go and look the other one up is a page that
+                treats them as strangers. */}
+            {household.length > 0 && (
+              <ul className="mb-3 space-y-1.5 border-b-[1.5px] border-rule pb-3">
+                {household.map((one) => (
+                  <li key={one.phone} className="flex flex-wrap items-baseline gap-x-2">
+                    {one.known ? (
+                      <Link
+                        href={`/admin/customers/${encodeURIComponent(one.phone)}`}
+                        className="text-[14.5px] font-bold text-ink underline"
+                      >
+                        {one.name || showNumber(one.phone)}
+                      </Link>
+                    ) : (
+                      <span className="text-[14.5px] font-bold">
+                        {one.name || showNumber(one.phone)}
+                      </span>
+                    )}
+                    <span className="hint">
+                      {showNumber(one.phone)}
+                      {one.known
+                        ? ` · ${one.orders} order${one.orders === 1 ? "" : "s"}, ${naira(one.spend)} spent`
+                        : " · has never ordered on this number"}
+                    </span>
+                    {/* Both of them ate it, so both of them can be asked.
+                        A household is two reviews, not one, and the one
+                        who paid is not always the one with something to
+                        say about the food. */}
+                    {google.review !== "" && (
+                      <a
+                        href={whatsappTo(
+                          one.phone,
+                          templateFor({
+                            kind: "google",
+                            name: one.name || "there",
+                            callsThem: "",
+                            settings,
+                            pin: null,
+                            siteUrl: url,
+                          })
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[13px] font-semibold text-brand underline"
+                      >
+                        Ask for a review
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+
             <form action={saveCustomerParent} className="mt-1 space-y-2.5">
               <input type="hidden" name="phone" value={person.phone} />
               <input

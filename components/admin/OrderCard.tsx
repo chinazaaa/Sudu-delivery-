@@ -89,7 +89,15 @@ export type OrderCardData = {
   narration: string;
   lines: OrderCardLine[];
   /** Ready-made WhatsApp links, one per template, built on the server. */
-  templates: { kind: string; label: string; href: string }[];
+  templates: {
+    kind: string;
+    label: string;
+    href: string;
+    /** Whose phone this one opens, where an order has two people behind
+     *  it. Empty on an ordinary order, where naming the one person is a
+     *  word on every button that answers nothing. */
+    to?: string;
+  }[];
 };
 
 /** A state read off the order, not a control: the board's small tinted
@@ -395,6 +403,13 @@ export default function OrderCard({
             className="btn-admin btn-admin-sm"
           >
             {item.label}
+            {/* Who it opens, where an order has two people behind it: a
+                father who paid and a son at the block want different
+                messages, and a button that quietly opens the wrong half
+                of a household is worse than one that says. */}
+            {item.to ? (
+              <span className="font-normal opacity-60">· {item.to}</span>
+            ) : null}
           </a>
         ))}
 

@@ -355,3 +355,162 @@ export async function hasReviewedUs(phone: string): Promise<boolean> {
   if (error || !data) return false;
   return Boolean((data as { reviewed_at?: string | null }).reviewed_at);
 }
+
+/**
+ * The two people behind an order, and where each of them answers.
+ *
+ * Most orders are one person twice over. Some are two: a father pays on
+ * his own line and his son is the one at the block, and they do not want
+ * the same messages. Money and the PIN are the payer's business; where the
+ * food has got to is the business of whoever is waiting for it.
+ *
+ * Who the other person is comes from the order where it says, and from the
+ * customer's own record where it does not, because plenty of these were
+ * bought before anybody thought to write it down. One purchase for
+ * somebody is not a standing order and never becomes one, so the link has
+ * to live on the person rather than on an arrangement.
+ */
+export type Reach = {
+  payer: string;
+  payerName: string;
+  eater: string;
+  eaterName: string;
+};
+
+export async function reachFor(phones: string[]): Promise<Record<string, Reach>> {
+  const unique = [...new Set(phones.filter(Boolean))];
+  if (unique.length === 0) return {};
+
+  try {
+    const { data, error } = await db()
+      .from("customers")
+      .select("phone, name, whatsapp, parent_name, parent_phone")
+      .in("phone", unique);
+    if (error) throw new Error(error.message);
+
+    const out: Record<string, Reach> = {};
+    for (const row of (data ?? []) as Record<string, string>[]) {
+      const phone = String(row.phone ?? "");
+      // Where this person answers: the address somebody wrote down for
+      // them, or the number they ordered on.
+      const payer = String(row.whatsapp ?? "") || phone;
+      const other = String(row.parent_phone ?? "");
+
+      out[phone] = {
+        payer,
+        payerName: String(row.name ?? "").trim().split(" ")[0] ?? "",
+        eater: other || payer,
+        eaterName: String(row.parent_name ?? "").trim().split(" ")[0] ?? "",
+      };
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * The two people behind one order, with the order's own answer first.
+ *
+ * An order that says who it is for is the better authority: it was true
+ * on the day, and a household link written down later should not rewrite
+ * what somebody typed at a checkout. Where the order says nothing, the
+ * link on the person fills it in, which is what covers the ones bought
+ * before anybody thought to record it.
+ */
+export function whoFor(
+  order: { deliver_to_name?: string | null; deliver_to_phone?: string | null },
+  theirs: Reach | undefined
+): Reach | undefined {
+  if (!theirs) return undefined;
+
+  const phone = String(order.deliver_to_phone ?? "").trim();
+  if (phone === "") return theirs;
+
+  return {
+    ...theirs,
+    eater: phone,
+    eaterName: String(order.deliver_to_name ?? "").trim().split(" ")[0] ?? "",
+  };
+}
+
+/**
+ * The other half of a household, as a page can show it.
+ *
+ * A link written on one of them is true of both, so this looks both ways:
+ * whoever this person named, and anybody who named this person. A father
+ * who writes down his son's number gets the son on his page, and the son
+ * gets the father on his, without anybody filling the same thing in twice.
+ */
+export type Linked = {
+  name: string;
+  phone: string;
+  /** Whether they are a customer in their own right, which decides
+   *  whether there is a page to open. */
+  known: boolean;
+  orders: number;
+  spend: number;
+};
+
+export async function linkedTo(phone: string): Promise<Linked[]> {
+  const number = String(phone ?? "").trim();
+  if (number === "") return [];
+
+  try {
+    const [mine, theirs] = await Promise.all([
+      db()
+        .from("customers")
+        .select("parent_name, parent_phone")
+        .eq("phone", number)
+        .maybeSingle(),
+      db()
+        .from("customers")
+        .select("phone, name")
+        .eq("parent_phone", number),
+    ]);
+
+    const numbers = new Map<string, string>();
+    const said = mine.data as { parent_name?: string; parent_phone?: string } | null;
+    if (said?.parent_phone) numbers.set(said.parent_phone, said.parent_name ?? "");
+    for (const row of (theirs.data ?? []) as { phone: string; name: string }[]) {
+      if (!numbers.has(row.phone)) numbers.set(row.phone, row.name ?? "");
+    }
+    if (numbers.size === 0) return [];
+
+    // What each of them is worth, which is the question anybody opening
+    // this is really asking: is this household one customer or two.
+    const { data: orders } = await db()
+      .from("orders")
+      .select("customer_phone, total, status")
+      .in("customer_phone", [...numbers.keys()]);
+
+    const { data: people } = await db()
+      .from("customers")
+      .select("phone, name")
+      .in("phone", [...numbers.keys()]);
+
+    const named = new Map(
+      ((people ?? []) as { phone: string; name: string }[]).map((one) => [
+        one.phone,
+        one.name ?? "",
+      ])
+    );
+
+    return [...numbers.entries()].map(([theirPhone, theirName]) => {
+      const mineOnly = ((orders ?? []) as Record<string, unknown>[]).filter(
+        (row) => String(row.customer_phone) === theirPhone
+      );
+      return {
+        phone: theirPhone,
+        name: named.get(theirPhone) || theirName || "",
+        known: named.has(theirPhone),
+        orders: mineOnly.length,
+        spend: mineOnly
+          .filter((row) => isPaid(String(row.status ?? "")))
+          .reduce((all, row) => all + Number(row.total ?? 0), 0),
+      };
+    });
+  } catch {
+    return [];
+  }
+}

@@ -13,6 +13,7 @@ import {
 import { googleLinks, type Settings } from "./settings";
 import { parseRoutes, routeById } from "./parcels";
 import type { FeedOrder } from "./admin-data";
+import type { Reach } from "./customer";
 import type { OrderCardData } from "@/components/admin/OrderCard";
 
 /** Links inside a message have to be absolute, so they come from the request. */
@@ -150,7 +151,21 @@ export function toCard(
   bank?: { bank_name: string; account_name: string; account_number: string } | null,
   /** Where to message them, where that is not the number they ordered on.
    *  Empty for almost everybody, and then the ordering number is used. */
-  messageOn?: string
+  /**
+   * Who each message should actually go to.
+   *
+   * An order can be two people: whoever paid for it and whoever eats it. A
+   * father orders on his own line and his son is the one at the block, and
+   * they do not want the same messages. Money and the PIN are the payer's
+   * business; where the food has got to is the person waiting for it.
+   *
+   * Never guessed. The payer's number is the one they ordered on, or
+   * whatever address the shop has written down for them, and the other
+   * person only exists when somebody said who the order was for. With one
+   * person, which is nearly every order, both of these are the same number
+   * and nothing changes.
+   */
+  reach?: Reach
 ): OrderCardData {
   // Which of the three shops this order came from, for the one word that
   // changes between them: food, order or parcel.
@@ -234,14 +249,35 @@ export function toCard(
       for_name: line.for_name,
       unit_price_at_order: line.unit_price_at_order,
     })),
-    /* Everything goes to the number that is actually answered, including
-       the money. Splitting it by subject was a tidy idea and the wrong
-       one: the whole reason a second number exists is that the first is
-       not read, so sending the payment chase there sends it nowhere. */
-    templates: kindsFor(order, settings).map((kind) => ({
-      kind,
-      label: templateLabel(kind, what),
-      href: whatsappTo(messageOn || order.customer_phone, write(kind)),
-    })),
+    /*
+     * Each message to the person whose business it is.
+     *
+     * Money and the PIN to whoever paid, where the food has got to and how
+     * it was to whoever ate it. On an order with one person behind it,
+     * which is nearly all of them, those are the same number and this
+     * decides nothing.
+     *
+     * The name rides along so the button can say who it opens, because a
+     * button that quietly messages the wrong half of a household is worse
+     * than one that asks.
+     */
+    templates: kindsFor(order, settings).map((kind) => {
+      const payer = reach?.payer || order.customer_phone;
+      const eater = reach?.eater || payer;
+      const theirs =
+        kind === "payment" || kind === "card" || kind === "pin" || kind === "confirmed";
+
+      const to = theirs ? payer : eater;
+      const who = theirs ? reach?.payerName ?? "" : reach?.eaterName ?? "";
+
+      return {
+        kind,
+        label: templateLabel(kind, what),
+        href: whatsappTo(to, write(kind)),
+        // Only where there are two of them. Naming the one person on an
+        // ordinary order is a word on every button that answers nothing.
+        to: reach && reach.eater !== reach.payer ? who : "",
+      };
+    }),
   };
 }

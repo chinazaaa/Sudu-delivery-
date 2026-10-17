@@ -8,7 +8,7 @@ import HandOverCard from "@/components/admin/HandOverCard";
 import ChaseAll from "@/components/admin/ChaseAll";
 import { Bar, Picking, Tick } from "@/components/admin/BulkOrders";
 import { orderFeed, statusCounts } from "@/lib/admin-data";
-import { reachNumbers } from "@/lib/customer";
+import { reachFor, whoFor } from "@/lib/customer";
 import { isGone } from "@/lib/orders";
 import { batchOverview } from "@/lib/admin";
 import { getSettings, googleLinks } from "@/lib/settings";
@@ -122,7 +122,7 @@ export default async function OrdersPage({
   // Where to message each of them, which is not always the number on the
   // order: somebody can order with one number and have WhatsApp on another.
   // One query for every list on the page rather than one per row.
-  const reach = await reachNumbers(
+  const reach = await reachFor(
     [...orders, ...unpaid, ...everything].map((one) => one.customer_phone)
   );
   // The promoter's name, when the list has been narrowed to one. Read off the
@@ -361,7 +361,7 @@ export default async function OrdersPage({
                 order.status === "pending" ? (
                   <WaitingCard
                     key={order.id}
-                    order={toCard(order, settings, url, bank, reach[order.customer_phone])}
+                    order={toCard(order, settings, url, bank, whoFor(order, reach[order.customer_phone]))}
                     into={bank?.bank_name ?? ""}
                     markPaid={markPaid}
                     savePaymentLink={savePaymentLink}
@@ -370,7 +370,7 @@ export default async function OrdersPage({
                 ) : (
                   <HandOverCard
                     key={order.id}
-                    order={toCard(order, settings, url, bank, reach[order.customer_phone])}
+                    order={toCard(order, settings, url, bank, whoFor(order, reach[order.customer_phone]))}
                     markDelivered={markDelivered}
                     setReviewed={setCustomerReviewed}
                   />
@@ -393,7 +393,7 @@ export default async function OrdersPage({
               {olderUnpaid.map((order) => (
                 <WaitingCard
                   key={order.id}
-                  order={toCard(order, settings, url, bank, reach[order.customer_phone])}
+                  order={toCard(order, settings, url, bank, whoFor(order, reach[order.customer_phone]))}
                   into={bank?.bank_name ?? ""}
                   markPaid={markPaid}
                   savePaymentLink={savePaymentLink}
@@ -452,8 +452,10 @@ export default async function OrdersPage({
           people={waiting.map((order) => ({
             id: order.id,
             name: (order.for_name ?? order.customer_name).split(" ")[0],
+            // Chasing money is the payer's conversation, so it goes to
+            // wherever the payer answers rather than to whoever ate it.
             href: whatsappTo(
-              reach[order.customer_phone] || order.customer_phone,
+              reach[order.customer_phone]?.payer || order.customer_phone,
               templateFor({
                 kind: "payment",
                 name: order.customer_name,
@@ -652,8 +654,10 @@ export default async function OrdersPage({
                   // own where there is not. The same single ask the card
                   // makes, so ticking twelve and sending from the bar does
                   // not send a different message from tapping one of them.
+                  // A review is about the food, so it goes to whoever ate
+                  // it where that is somebody else.
                   review: whatsappTo(
-                    reach[order.customer_phone] || order.customer_phone,
+                    reach[order.customer_phone]?.eater || order.customer_phone,
                     templateFor({
                       kind: googleLinks(settings).review === "" ? "review" : "google",
                       name: order.customer_name,
@@ -684,7 +688,7 @@ export default async function OrdersPage({
             {orders.map((order) => (
               <OrderCard
                 key={order.id}
-                order={toCard(order, settings, url, bank, reach[order.customer_phone])}
+                order={toCard(order, settings, url, bank, whoFor(order, reach[order.customer_phone]))}
                 lead={
                   <Tick id={order.id} total={order.total} name={order.customer_name} />
                 }

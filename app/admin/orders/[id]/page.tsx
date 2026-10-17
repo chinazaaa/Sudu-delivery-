@@ -9,7 +9,7 @@ import ConfirmButton from "@/components/admin/ConfirmButton";
 import SaveButton from "@/components/SaveButton";
 import WhenHanded from "@/components/admin/WhenHanded";
 import { orderFeed } from "@/lib/admin-data";
-import { oneCustomer, shareOfProfit , reachNumbers } from "@/lib/customer";
+import { oneCustomer, reachFor, shareOfProfit, whoFor } from "@/lib/customer";
 import { getOrder } from "@/lib/orders";
 import { getBatch } from "@/lib/batches";
 import { SLOT_LABEL, TZ } from "@/lib/config";
@@ -178,9 +178,9 @@ async function orderPage(id: string, said: string) {
   // and the card below then does not offer the same two links again.
   // Where to message them, which is not always the number on the order:
   // somebody can order with one number and have WhatsApp on another.
-  const reach = await reachNumbers([order.customer_phone]);
+  const reach = await reachFor([order.customer_phone]);
   const shown = card
-    ? toCard(card, settings, url, bank, reach[order.customer_phone])
+    ? toCard(card, settings, url, bank, whoFor(order, reach[order.customer_phone]))
     : null;
   const pin = shown?.templates.find((one) => one.kind === "pin") ?? null;
   const review = shown?.templates.find((one) => one.kind === "review") ?? null;
