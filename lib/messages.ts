@@ -131,11 +131,8 @@ export const TEMPLATE_DEFAULT: Record<TemplateKind, string> = {
    */
   parents:
     "Hi {name}, Sudu here. Hope the last one was good.\n\n" +
-    "Quick one: we have just started Sudu for parents. A monthly box, where " +
-    "they pick what goes in it and the day it lands and we send them the " +
-    "account a few days before. And parcels, so if anyone at home already " +
-    "has something they want to send, we collect it and bring it to your " +
-    "block.\n\n{site}/parents?utm_source=whatsapp\n\n" +
+    "We have just started monthly boxes and parcel pickups for parents:\n" +
+    "{site}/parents?utm_source=whatsapp\n\n" +
     "If your folks would want it, feel free to send it on.",
 };
 

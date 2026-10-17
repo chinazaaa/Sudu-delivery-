@@ -5,6 +5,10 @@ import Figure from "@/components/admin/Figure";
 import Panel from "@/components/admin/Panel";
 import SaveButton from "@/components/SaveButton";
 import { waLink } from "@/lib/whatsapp";
+
+/** Where the site lives. A link going into somebody else's phone cannot
+ *  be a relative one. */
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
 import { oneCustomer, type OneCustomer } from "@/lib/customer";
 import { getSettings, googleLinks } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
@@ -791,38 +795,16 @@ export default async function CustomerPage({
                 {/* Straight through to them, with the first line written.
                     Having the number and no way to use it is the same as
                     not having it. */}
-                {person.parentPhone !== "" &&
-                  waLink(
-                    person.parentPhone,
-                    `Hello${
-                      person.parentName.trim() === ""
-                        ? ""
-                        : ` ${person.parentName.trim().split(" ")[0]}`
-                    }, this is Sudu. We deliver food and foodstuff to the ` +
-                      `hostels at Pan-Atlantic University, and we have just ` +
-                      `started doing monthly boxes and parcels for parents.`
-                  ) && (
-                    <a
-                      href={
-                        waLink(
-                          person.parentPhone,
-                          `Hello${
-                            person.parentName.trim() === ""
-                              ? ""
-                              : ` ${person.parentName.trim().split(" ")[0]}`
-                          }, this is Sudu. We deliver food and foodstuff to the ` +
-                            `hostels at Pan-Atlantic University, and we have ` +
-                            `just started doing monthly boxes and parcels for ` +
-                            `parents.`
-                        )!
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-admin btn-admin-sm"
-                    >
-                      Message them
-                    </a>
-                  )}
+                {parentLink(person) !== null && (
+                  <a
+                    href={parentLink(person)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-admin btn-admin-sm"
+                  >
+                    Message them
+                  </a>
+                )}
               </div>
             </form>
           </Panel>
@@ -1000,5 +982,37 @@ export default async function CustomerPage({
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * The first line of a message to whoever pays for somebody.
+ *
+ * Three sentences, because the link does the rest: WhatsApp unfurls it
+ * into a card with the page's own headline and picture on it, so a message
+ * that explains the whole offer is explaining it twice and nobody reads
+ * the second one. Their child's name is what stops it reading as spam,
+ * and the group line is last, because it is a favour and favours do not
+ * go first.
+ */
+function parentLink(person: {
+  name: string;
+  parentName: string;
+  parentPhone: string;
+}): string | null {
+  if (person.parentPhone === "") return null;
+
+  const sir = person.parentName.trim().split(" ")[0] ?? "";
+  const child = person.name.trim().split(" ")[0] ?? "";
+
+  return waLink(
+    person.parentPhone,
+    `Good morning${sir === "" ? "" : ` ${sir}`}, this is Sudu. We deliver ` +
+      `food to the hostels at PAU` +
+      (child === "" ? "" : `, and ${child} has ordered from us`) +
+      ".\n\nWe have just started monthly boxes and parcel pickups for " +
+      "parents, thought you might find it useful:\n" +
+      `${SITE}/parents?utm_source=whatsapp\n\n` +
+      "If you are in any of the PAU parents' groups, do feel free to share it."
   );
 }
