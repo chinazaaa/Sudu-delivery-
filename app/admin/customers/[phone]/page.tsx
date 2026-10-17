@@ -1026,7 +1026,7 @@ export default async function CustomerPage({
               them anyway. It lives here rather than in the book's table
               because a row of eight people is the wrong place to put the one
               button that cannot be undone. */}
-          {person.orders.length === 0 && (
+          {person.everOrdered === 0 && (
             <Panel
               title="Delete them"
               detail="Only while there is no order behind them."
@@ -1051,6 +1051,10 @@ export default async function CustomerPage({
                   Delete
                 </ConfirmButton>
               </form>
+              {/* Where it was refused, said here rather than as a crash. */}
+              {said.problem ? (
+                <p className="mt-2 text-sm font-semibold text-brand-dark">{said.problem}</p>
+              ) : null}
             </Panel>
           )}
         </div>

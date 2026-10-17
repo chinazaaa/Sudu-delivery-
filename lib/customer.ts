@@ -58,6 +58,10 @@ export type OneCustomer = {
   cameFrom: string;
   /** How many boxes somebody else paid for and had sent to them. */
   sent: number;
+  /** Orders on this number that are a reason to keep them: everything
+   *  except cancelled. Nought is the only state in which somebody can be
+   *  deleted. */
+  everOrdered: number;
   /** Where to message them, when that is not the number they order on.
    *  Empty for almost everybody, and then the ordering number is used. */
   whatsapp: string;
@@ -143,6 +147,24 @@ export async function oneCustomer(phone: string): Promise<OneCustomer | null> {
   // Boxes somebody else paid for and had sent to them. A son whose father
   // orders for him has placed nothing himself, and a page reading "No
   // orders yet" over two deliveries reads as a mistake.
+  /*
+   * Orders that are a reason to keep somebody.
+   *
+   * The page offered Delete whenever the visible list was empty, and the
+   * action counted every row including cancelled ones, so a test customer
+   * with one cancelled order showed a button that could not work and came
+   * back as a crash.
+   *
+   * Cancelled is not a reason: nothing was bought, nothing was paid, and
+   * it is the state a test order is left in. Refunded is, because money
+   * moved and came back and that is history worth keeping a name against.
+   */
+  const { count: everCount } = await db()
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("customer_phone", wanted)
+    .neq("status", "cancelled");
+
   const { count: sentCount } = await db()
     .from("orders")
     .select("id", { count: "exact", head: true })
@@ -200,6 +222,7 @@ export async function oneCustomer(phone: string): Promise<OneCustomer | null> {
     isParent: Boolean(said.is_parent),
     cameFrom: (said.came_from as string) ?? "",
     sent: sentCount ?? 0,
+    everOrdered: everCount ?? 0,
     pays: said.payment_method === "card" ? "card" : "transfer",
     promoterCode: code === "" ? null : code,
     reviewed: Boolean(said.reviewed_at),

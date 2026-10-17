@@ -125,13 +125,13 @@ export const TEMPLATE_DEFAULT: Record<TemplateKind, string> = {
     "Hi {name}, the {batch} run is running a little behind.\n\n" +
     "Your {thing} is coming. I will message again when it is with you.",
   review:
-    "Hi {name}, hope the {thing} was good. If you have a second, say how it was " +
+    "Hi {name}, hope {ordered} was good. If you have a second, say how it was " +
     "on your order page: {link}{google_line}\n\nIt takes one tap and it helps a lot.",
   // The public one, sent down the customer list rather than against an
   // order. It names no order and no run on purpose: it goes to somebody
   // who ordered a while ago as readily as to somebody who ate last night.
   google:
-    "Hi {name}, hope the last one was good.\n\n" +
+    "Hi {name}, hope {ordered} was good.\n\n" +
     "If you have a minute, a review on Google helps us more than anything " +
     "else: {google}\n\nThank you.",
   /*
@@ -181,6 +181,10 @@ export const TEMPLATE_TOKENS: { token: string; means: string }[] = [
   {
     token: "{for}",
     means: "who the order is for, where that is somebody else, like a son",
+  },
+  {
+    token: "{ordered}",
+    means: 'what they actually got, like "the KFC". "the last one" where it is not known',
   },
   { token: "{window}", means: "when the run lands" },
   { token: "{link}", means: "their order page" },
@@ -260,6 +264,9 @@ type TemplateOrder = {
   total: number;
   hostel: string;
   payment_link?: string | null;
+  /** Where it was fetched from, so a message can name the thing rather
+   *  than calling it "the last one". */
+  lines?: { restaurant?: string | null }[];
 };
 
 /**
@@ -278,6 +285,26 @@ export function narration(
 ): string {
   const ref = group && group.length > 1 ? shareRef(order, group) : orderRef(order);
   return ref.replace("#", "");
+}
+
+/**
+ * What to call the thing somebody ordered, in a sentence.
+ *
+ * The counters it came from, because that is what anybody remembers: not
+ * "my order of the fourteenth" but the KFC. Falls back to "the last one"
+ * rather than to nothing, so a message is never left with a hole in it.
+ */
+function orderedWas(lines: { restaurant?: string | null }[] | undefined): string {
+  const names = [
+    ...new Set(
+      (lines ?? [])
+        .map((line) => String(line.restaurant ?? "").trim())
+        .filter((name) => name !== "")
+    ),
+  ];
+  if (names.length === 0) return "the last one";
+  if (names.length === 1) return `the ${names[0]}`;
+  return `the ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
 export function template(args: {
@@ -345,6 +372,16 @@ export function template(args: {
     "{total}": naira(order.total),
     "{hostel}": order.hostel,
     "{thing}": args.what ?? "food",
+    /*
+     * What they actually got, for a message that asks how it was.
+     *
+     * "Hope the last one was good" is a sentence anybody could send about
+     * anything, and it reads as one. "Hope the KFC was good" is the shop
+     * remembering. It is not a script: naming the thing jogs somebody's
+     * memory and leaves the words to them, which is the only kind of
+     * review worth having and the only kind people will write.
+     */
+    "{ordered}": orderedWas(order.lines),
     "{window}": args.deliveryWindow,
     "{link}": `${siteUrl}/o/${shortRef(order)}`,
     // The one place a review is worth asking for is the moment somebody has
@@ -416,6 +453,9 @@ export function templateFor(args: {
     "{site}": siteUrl,
     "{link}": `${siteUrl}/orders`,
     "{thing}": args.what ?? "food",
+    // Sent down the customer list rather than against an order, so there
+    // is nothing to name.
+    "{ordered}": "the last one",
     "{pin}": args.pin ?? "----",
     "{pin_line}": args.pin
       ? `Your PIN is ${args.pin}. Every order you place: ${siteUrl}/orders`

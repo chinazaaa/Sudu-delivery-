@@ -1792,13 +1792,30 @@ export async function deleteCustomer(form: FormData): Promise<void> {
   const phone = String(form.get("phone"));
   if (!phone) return;
 
+  /*
+   * Said, not thrown.
+   *
+   * These are refusals rather than faults: there is a good reason the
+   * customer stays and somebody should read it. A server action that
+   * throws renders the error boundary instead, and the message is hidden
+   * in production, so "they have orders, so they stay" reached whoever
+   * pressed it as a crash page with a reference number on it.
+   */
+  const no = (why: string) =>
+    redirect(`/admin/customers/${encodeURIComponent(phone)}?problem=${encodeURIComponent(why)}`);
+
+  // Cancelled ones are not a reason to keep anybody: nothing was bought
+  // and nothing was paid, and it is the state a test order is left in.
+  // Refunded is, because money moved and came back.
   const { count } = await db()
     .from("orders")
     .select("id", { count: "exact", head: true })
-    .eq("customer_phone", phone);
+    .eq("customer_phone", phone)
+    .neq("status", "cancelled");
   if ((count ?? 0) > 0) {
-    throw new Error("That number has orders behind it, so it stays.");
+    no("That number has real orders behind it, so it stays.");
   }
+
 
   // A room that has been drawn is a ring, and a person in it is two gifts.
   // Deleting the customer behind one is not a tidy-up, it is a hole.
@@ -1812,7 +1829,7 @@ export async function deleteCustomer(form: FormData): Promise<void> {
     (one) => one.santa_rooms?.status !== "open"
   );
   if (drawn.length > 0) {
-    throw new Error("They are in a Secret Santa room that has been drawn, so they stay.");
+    no("They are in a Secret Santa room that has been drawn, so they stay.");
   }
 
   // Out of the open ones, though: a room counting somebody who no longer
@@ -1826,7 +1843,7 @@ export async function deleteCustomer(form: FormData): Promise<void> {
   // nobody will ever chase.
   await db().from("carts").delete().eq("phone", phone);
   const { error } = await db().from("customers").delete().eq("phone", phone);
-  if (error) throw new Error(`Could not delete that customer: ${error.message}`);
+  if (error) no(`Could not delete that customer: ${error.message}`);
 
   revalidatePath("/admin", "layout");
   // Back to the book, because the page this was pressed on was very likely
