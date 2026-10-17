@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Figure from "@/components/admin/Figure";
 import Panel from "@/components/admin/Panel";
 import SaveButton from "@/components/SaveButton";
+import { waLink } from "@/lib/whatsapp";
 import { oneCustomer, type OneCustomer } from "@/lib/customer";
 import { getSettings, googleLinks } from "@/lib/settings";
 import { siteUrl } from "@/lib/admin-templates";
@@ -17,6 +18,7 @@ import ConfirmButton from "@/components/admin/ConfirmButton";
 import {
   deleteCustomer,
   saveCustomerName,
+  saveCustomerParent,
   saveCustomerWhatsapp,
   saveCustomerNote,
   setCustomerPromoter,
@@ -753,6 +755,75 @@ export default async function CustomerPage({
                 className="field min-h-[76px] py-2.5"
               />
               <SaveButton look="btn-admin btn-admin-sm">Save note</SaveButton>
+            </form>
+          </Panel>
+
+          {/*
+              Whoever pays for this one, where they have said so.
+              Never assumed: at this university a student may well be paying
+              for their own food, and a shop that guesses otherwise insults
+              the people it most wants to keep. Written down when somebody
+              says it, because "my dad sorts the monthly one out" is the
+              sentence that turns a student into an introduction.
+           */}
+          <Panel
+            title="Whoever pays for them"
+            detail="Only if they have said so. It is a note about who to talk to, and the customer never sees it."
+            size="sm"
+          >
+            <form action={saveCustomerParent} className="mt-1 space-y-2.5">
+              <input type="hidden" name="phone" value={person.phone} />
+              <input
+                name="parent_name"
+                defaultValue={person.parentName}
+                placeholder="Their name"
+                className="field w-full py-2 text-sm"
+              />
+              <input
+                name="parent_phone"
+                inputMode="tel"
+                defaultValue={person.parentPhone}
+                placeholder="Their number"
+                className="field w-full py-2 text-sm"
+              />
+              <div className="flex flex-wrap gap-2">
+                <SaveButton look="btn-admin btn-admin-sm">Save</SaveButton>
+                {/* Straight through to them, with the first line written.
+                    Having the number and no way to use it is the same as
+                    not having it. */}
+                {person.parentPhone !== "" &&
+                  waLink(
+                    person.parentPhone,
+                    `Hello${
+                      person.parentName.trim() === ""
+                        ? ""
+                        : ` ${person.parentName.trim().split(" ")[0]}`
+                    }, this is Sudu. We deliver food and foodstuff to the ` +
+                      `hostels at Pan-Atlantic University, and we have just ` +
+                      `started doing monthly boxes and parcels for parents.`
+                  ) && (
+                    <a
+                      href={
+                        waLink(
+                          person.parentPhone,
+                          `Hello${
+                            person.parentName.trim() === ""
+                              ? ""
+                              : ` ${person.parentName.trim().split(" ")[0]}`
+                          }, this is Sudu. We deliver food and foodstuff to the ` +
+                            `hostels at Pan-Atlantic University, and we have ` +
+                            `just started doing monthly boxes and parcels for ` +
+                            `parents.`
+                        )!
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-admin btn-admin-sm"
+                    >
+                      Message them
+                    </a>
+                  )}
+              </div>
             </form>
           </Panel>
 

@@ -347,6 +347,17 @@ export type CustomerRow = {
   /** What to greet them as, where somebody has said. Empty means the first
    *  word of their name, which is only a guess. */
   callsThem: string;
+  /**
+   * Whoever pays for this one, where somebody has said so.
+   *
+   * Never assumed. At this university a student may well be paying for
+   * their own food, and a shop that guesses otherwise insults the people
+   * it most wants to keep. It is written down when they say it: "my mum
+   * will pay for the monthly one" is the sentence that turns a student
+   * into an introduction to the customer this shop is trying to reach.
+   */
+  parentName: string;
+  parentPhone: string;
   /** Which front door they use, over all their orders: "app", "web",
    *  "bot", "mixed", or empty where none of their orders recorded it.
    *  Worth knowing before pushing an app at somebody who already has it,
@@ -421,6 +432,8 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
         : "transfer") as "transfer" | "card",
       promoterCode: ((row as { promoter_code?: string | null }).promoter_code ?? null),
       callsThem: ((row as { calls_them?: string }).calls_them ?? ""),
+      parentName: ((row as { parent_name?: string }).parent_name ?? ""),
+      parentPhone: ((row as { parent_phone?: string }).parent_phone ?? ""),
       reviewed: Boolean((row as { reviewed_at?: string | null }).reviewed_at),
       orders: mine.length,
       uses: doorFor(mine.map((order) => String((order as { source?: string }).source ?? ""))),

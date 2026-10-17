@@ -45,6 +45,10 @@ export type OneCustomer = {
   pin: string;
   note: string;
   callsThem: string;
+  /** Whoever pays for them, where they have said so. Never assumed: at
+   *  this university a student may well be paying for their own food. */
+  parentName: string;
+  parentPhone: string;
   /** Where to message them, when that is not the number they order on.
    *  Empty for almost everybody, and then the ordering number is used. */
   whatsapp: string;
@@ -167,6 +171,8 @@ export async function oneCustomer(phone: string): Promise<OneCustomer | null> {
     pin: (said.pin as string) ?? "",
     note: (said.admin_note as string) ?? "",
     callsThem: (said.calls_them as string) ?? "",
+    parentName: (said.parent_name as string) ?? "",
+    parentPhone: (said.parent_phone as string) ?? "",
     whatsapp: (said.whatsapp as string) ?? "",
     pays: said.payment_method === "card" ? "card" : "transfer",
     promoterCode: code === "" ? null : code,

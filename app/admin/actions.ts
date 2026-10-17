@@ -2111,6 +2111,38 @@ export async function saveCustomerWhatsapp(form: FormData): Promise<void> {
   redirect(`/admin/customers/${encodeURIComponent(phone)}?saved=whatsapp`);
 }
 
+/**
+ * Whoever pays for this one, written down because they said so.
+ *
+ * Never assumed and never guessed: at this university a student may well
+ * be paying for their own food. This is for the sentence somebody actually
+ * says, "my dad will sort the monthly one out", which is the moment a
+ * student becomes an introduction to the customer the shop is trying to
+ * reach.
+ *
+ * It is not shown to the customer anywhere. It is a note about who to
+ * talk to, kept on the person rather than on one bag of rice.
+ */
+export async function saveCustomerParent(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const phone = String(form.get("phone") ?? "");
+  const theirs = normalisePhone(String(form.get("parent_phone") ?? ""));
+
+  await db()
+    .from("customers")
+    .update({
+      parent_name: String(form.get("parent_name") ?? "").trim().slice(0, 80),
+      // Their own number is not a parent's number, and saving one would
+      // put a rider through to the wrong person later.
+      parent_phone: theirs === phone ? "" : theirs,
+    })
+    .eq("phone", phone);
+
+  revalidatePath("/admin/customers", "layout");
+  redirect(`/admin/customers/${encodeURIComponent(phone)}?saved=parent`);
+}
+
 export async function saveCustomerName(form: FormData): Promise<void> {
   await assertAdmin();
   await db()

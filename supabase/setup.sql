@@ -1049,3 +1049,6 @@ alter table settings add column if not exists plan_lead_days text not null defau
 alter table settings add column if not exists msg_parents text not null default '';
 
 alter table plans add column if not exists kind text not null default 'box';
+
+alter table customers add column if not exists parent_name text not null default '';
+alter table customers add column if not exists parent_phone text not null default '';
