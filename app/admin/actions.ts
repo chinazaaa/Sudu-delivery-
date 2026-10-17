@@ -2285,6 +2285,71 @@ export async function savePlan(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
 }
 
+/**
+ * An order somebody keeps asking for, turned into a standing order.
+ *
+ * The two were doing one job from different ends. A repeat is a tick on an
+ * order saying "same again next month", which leaves somebody to remember
+ * it and press a button; a plan is the same intention with a day on it,
+ * a hold for the holidays and a history. This is the one press between
+ * them, and it copies the order rather than the box, so six weeks of
+ * changes agreed over WhatsApp are in it.
+ *
+ * It arrives switched off, like every other plan: what day it lands and
+ * whether it raises itself are decisions, and they are made on the plan.
+ */
+export async function planFromOrder(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const orderId = String(form.get("order_id") ?? "");
+  if (orderId === "") return;
+
+  const { data } = await db()
+    .from("orders")
+    .select(
+      "id, customer_name, customer_phone, hostel, deliver_to_name, deliver_to_phone, repeat_every, repeat_note, box_id"
+    )
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!data) return;
+
+  const was = data as Record<string, unknown>;
+
+  // Already one? Open it rather than making a second.
+  const { data: had } = await db()
+    .from("plan_orders")
+    .select("plan_id")
+    .eq("order_id", orderId)
+    .maybeSingle();
+  if (had) redirect("/admin/plans");
+
+  const every = String(was.repeat_every ?? "");
+  const { data: made } = await db()
+    .from("plans")
+    .insert({
+      customer_name: String(was.customer_name ?? ""),
+      customer_phone: String(was.customer_phone ?? ""),
+      for_name: String(was.deliver_to_name ?? ""),
+      for_phone: String(was.deliver_to_phone ?? ""),
+      hostel: String(was.hostel ?? ""),
+      // The order, not the box: what it finally became is what they want
+      // again, and a box would throw away everything agreed since.
+      from_order_id: orderId,
+      every: ["weekly", "fortnightly", "monthly"].includes(every) ? every : "monthly",
+      // The day of the month it is being set up on, which is the only day
+      // anybody has said anything about. It is a field on the plan.
+      on_day: Math.min(28, Math.max(1, Number(lagosToday().slice(8, 10)) || 1)),
+      active: false,
+      auto: false,
+      note: String(was.repeat_note ?? "").slice(0, 300),
+    })
+    .select("id")
+    .single();
+
+  revalidatePath("/admin", "layout");
+  if (made) redirect("/admin/plans");
+}
+
 /** A plan, and everything it has raised, gone. The orders stay: they were
  *  real orders and some of them were paid for. */
 export async function deletePlan(form: FormData): Promise<void> {

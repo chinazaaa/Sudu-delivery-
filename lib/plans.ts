@@ -532,3 +532,32 @@ export async function plansWaiting(today = lagosToday()): Promise<{
     return { due: 0, asked: 0 };
   }
 }
+
+/**
+ * The plan an order came out of, if it came out of one.
+ *
+ * An order raised by a plan is an ordinary order and should stay one: it
+ * is packed, staged, paid for and handed over exactly like the rest, which
+ * is the whole reason a plan raises one rather than inventing a second
+ * kind of order. But somebody opening it in admin should be able to see
+ * that it is this month's of somebody's monthly box, and get back to the
+ * plan without going looking.
+ */
+export async function planForOrder(orderId: string): Promise<{
+  plan: Plan;
+  cycle: string;
+} | null> {
+  try {
+    const { data } = await db()
+      .from("plan_orders")
+      .select("plan_id, cycle")
+      .eq("order_id", orderId)
+      .maybeSingle();
+    if (!data) return null;
+
+    const plan = await planById(String((data as { plan_id: string }).plan_id));
+    return plan ? { plan, cycle: String((data as { cycle: string }).cycle) } : null;
+  } catch {
+    return null;
+  }
+}

@@ -5,7 +5,7 @@ import { repeatingOrders } from "@/lib/order-edit";
 import { repeatSaid } from "@/lib/box-day";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
-import { orderAgain } from "../actions";
+import { orderAgain, planFromOrder } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +33,22 @@ export default async function SubscriptionsPage() {
     <div className="mx-auto max-w-3xl">
       <PageHeader
         title="Repeats"
-        detail="People who asked for it again. Nothing charges itself: raise the next one here and send them the link."
+        detail="People who asked for it again. Raise the next one here, or turn it into a standing order so it has a day of its own."
+        backHref="/admin/plans"
+        backLabel="Standing orders"
       />
+
+      <p className="card mb-3 p-3.5 text-sm text-muted sm:p-4">
+        A repeat is a tick on an order saying same again, so somebody has to
+        remember it. A{" "}
+        <Link href="/admin/plans" className="font-semibold text-ink underline">
+          standing order
+        </Link>{" "}
+        is the same intention with a day of the month on it, a hold for the
+        holidays and a list of what it has raised. Nothing charges itself
+        either way: an order is raised a few days early and you send them the
+        account.
+      </p>
 
       {all.length === 0 ? (
         <p className="card text-sm text-muted">
@@ -102,6 +116,20 @@ export default async function SubscriptionsPage() {
                       </label>
                       <button className="btn-primary px-4 py-2 text-sm">
                         Raise the next one
+                      </button>
+                    </form>
+
+                    {/* The other end of the same intention.
+                        A repeat is a tick saying "same again", which leaves
+                        somebody to remember it. A standing order is that
+                        with a day on it, a hold for the holidays and a
+                        history of what it has raised. One press between
+                        them, copying this order rather than a box, so
+                        everything agreed since the first one is in it. */}
+                    <form action={planFromOrder} className="pt-1">
+                      <input type="hidden" name="order_id" value={row.id} />
+                      <button className="btn-quiet px-4 py-2 text-sm">
+                        Make it a standing order
                       </button>
                     </form>
                   </article>

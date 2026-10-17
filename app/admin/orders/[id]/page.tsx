@@ -15,6 +15,7 @@ import { getBatch } from "@/lib/batches";
 import { SLOT_LABEL, TZ } from "@/lib/config";
 import { STAGE_LABEL } from "@/lib/stages";
 import { doorTag } from "@/lib/doors";
+import { planForOrder } from "@/lib/plans";
 import { getSettings } from "@/lib/settings";
 import { payableAccounts } from "@/lib/banks";
 import { siteUrl, toCard } from "@/lib/admin-templates";
@@ -48,6 +49,7 @@ import {
   addLineOption,
   removeLineOption,
   settleCustom,
+  planFromOrder,
 } from "../../actions";
 import OrderEditor from "@/components/admin/OrderEditor";
 import { linesToEdit } from "@/lib/order-edit";
@@ -152,6 +154,11 @@ async function orderPage(id: string, said: string) {
   // run" told you there was one and nothing about which: knowing an order is
   // on Friday night is most of what anybody opens this page to find out.
   const run = await getBatch(order.batch_id);
+  /* Whether this is this month's of somebody's monthly box. An order a
+     plan raised is an ordinary order and stays one, which is the whole
+     point of raising one, but somebody opening it should be able to see
+     where it came from and get back there. */
+  const standing = await planForOrder(order.id).catch(() => null);
   const runLabel = run
     ? run.kind === "same_day"
       ? `A car of its own · ${runDateLabel(run.run_date)}`
@@ -519,6 +526,55 @@ async function orderPage(id: string, said: string) {
                 already left behind. A run that has not finished says where
                 it has got to, because that is the reason for going.
             */}
+            {standing && (
+              <Link
+                href="/admin/plans"
+                className="flex items-center justify-between gap-2.5 border-t-[1.5px] border-rule pt-3.5"
+              >
+                <span className="min-w-0">
+                  <span className="label block">Standing order</span>
+                  <span className="block truncate text-[14.5px] font-semibold">
+                    {standing.plan.customerName || "A monthly box"}
+                    {standing.plan.forName === ""
+                      ? ""
+                      : ` · for ${standing.plan.forName}`}
+                  </span>
+                  <span className="hint block">
+                    {standing.plan.every === "monthly"
+                      ? `Every month on the ${standing.plan.onDay}`
+                      : standing.plan.every === "weekly"
+                        ? "Every week"
+                        : "Every two weeks"}
+                    {" · this one lands "}
+                    {runDateLabel(standing.cycle)}
+                  </span>
+                </span>
+                <span className="btn-admin btn-admin-sm shrink-0">The plan</span>
+              </Link>
+            )}
+
+            {/* Not one yet, and somebody keeps asking for it. The decision
+                is usually made here, looking at the order they want again. */}
+            {!standing &&
+              String((order as { repeat_every?: string }).repeat_every ?? "") !== "" && (
+                <form
+                  action={planFromOrder}
+                  className="flex flex-wrap items-center gap-2.5 border-t-[1.5px] border-rule pt-3.5"
+                >
+                  <input type="hidden" name="order_id" value={order.id} />
+                  <span className="min-w-0 flex-1">
+                    <span className="label block">Asked for it again</span>
+                    <span className="hint block">
+                      Give it a day of the month and it raises itself a few days
+                      before, instead of waiting for somebody to remember.
+                    </span>
+                  </span>
+                  <SaveButton look="btn-admin" className="btn-admin-sm shrink-0">
+                    Make it a standing order
+                  </SaveButton>
+                </form>
+              )}
+
             {run && run.stage !== "handed_out" && (
               <Link
                 href={`/admin/batch/${order.batch_id}`}
