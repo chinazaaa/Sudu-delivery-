@@ -289,15 +289,19 @@ export default async function PlansPage() {
                       }))}
                       hostels={hostels}
                     />
-                    <div className="flex flex-wrap items-center gap-2">
-                      <SaveButton look="btn-admin-go">Save it</SaveButton>
-                      <form action={deletePlan} className="ml-auto">
-                        <input type="hidden" name="plan_id" value={plan.id} />
-                        <ConfirmButton tone="bad" confirm="Yes, delete the plan">
-                          Delete
-                        </ConfirmButton>
-                      </form>
-                    </div>
+                    <SaveButton look="btn-admin-go">Save it</SaveButton>
+                  </form>
+
+                  {/* Its own form, outside the one above. It was inside it,
+                      and a form inside a form is not a thing a browser
+                      will do: the inner one is dropped on parse, so
+                      confirming the delete submitted the save instead and
+                      the plan sat there looking untouched. */}
+                  <form action={deletePlan} className="mt-3 flex justify-end">
+                    <input type="hidden" name="plan_id" value={plan.id} />
+                    <ConfirmButton tone="bad" confirm="Yes, delete the plan">
+                      Delete
+                    </ConfirmButton>
                   </form>
                 </details>
               </li>
