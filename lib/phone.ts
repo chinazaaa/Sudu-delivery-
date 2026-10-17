@@ -15,9 +15,20 @@ export function normalisePhone(raw: string): string | null {
   return /^0[789]\d{9}$/.test(local) ? local : null;
 }
 
-/** "0803 123 4567", easier to check against a transfer narration. */
+/**
+ * "0803 123 4567", easier to check against a transfer narration.
+ *
+ * Only a Nigerian mobile is spaced that way. A recipient's number can be
+ * from anywhere, and slicing a UK number into Nigerian groups produced
+ * "4474 404 19145" on the customer's own order page, so anything else is
+ * handed back as it came, with the plus a country code reads better with.
+ */
 export function formatPhone(phone: string): string {
-  return `${phone.slice(0, 4)} ${phone.slice(4, 7)} ${phone.slice(7)}`;
+  const said = String(phone ?? "").trim();
+  if (/^0[789]\d{9}$/.test(said)) {
+    return `${said.slice(0, 4)} ${said.slice(4, 7)} ${said.slice(7)}`;
+  }
+  return /^\d{7,}$/.test(said) ? `+${said}` : said;
 }
 
 /**

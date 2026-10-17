@@ -2127,7 +2127,35 @@ export async function saveCustomerParent(form: FormData): Promise<void> {
   await assertAdmin();
 
   const phone = String(form.get("phone") ?? "");
-  const theirs = normalisePhone(String(form.get("parent_phone") ?? ""));
+  const typed = String(form.get("parent_phone") ?? "").trim();
+
+  /*
+   * Nigerian if it can be, international if it cannot.
+   *
+   * This was normalisePhone alone, which is the rule for an ordering
+   * number and refuses everything that is not a Nigerian mobile. The
+   * household it was written for is a father on a Lagos line and a son
+   * who came back from the UK and has kept his UK number on WhatsApp, so
+   * the one number anybody needed to save was the one number the field
+   * threw away, silently, leaving the panel looking untouched.
+   *
+   * A Nigerian number is kept in the local 0803… form on purpose: that is
+   * how customers.phone is stored, so the household reads the same from
+   * either side and each name links to the other's page. A foreign number
+   * can never be a customer here, so it is kept as international digits,
+   * which is all a wa.me link wants, and the panel says plainly that the
+   * number has never ordered.
+   */
+  const local = normalisePhone(typed);
+  const theirs = local ?? (typed === "" ? "" : messagingNumber(typed));
+
+  if (theirs === null) {
+    redirect(
+      `/admin/customers/${encodeURIComponent(phone)}?problem=${encodeURIComponent(
+        `Could not read "${typed}". A Nigerian number as 0803… , anywhere else with its country code, like +44 7440 419145.`
+      )}`
+    );
+  }
 
   await db()
     .from("customers")

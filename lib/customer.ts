@@ -394,14 +394,15 @@ export async function reachFor(phones: string[]): Promise<Record<string, Reach>>
       // Where this person answers: the address somebody wrote down for
       // them, or the number they ordered on.
       const payer = String(row.whatsapp ?? "") || phone;
-      const other = String(row.parent_phone ?? "");
+      const name = String(row.name ?? "").trim().split(" ")[0] ?? "";
 
-      out[phone] = {
-        payer,
-        payerName: String(row.name ?? "").trim().split(" ")[0] ?? "",
-        eater: other || payer,
-        eaterName: String(row.parent_name ?? "").trim().split(" ")[0] ?? "",
-      };
+      // The other half of the household is deliberately not read here.
+      // Which of the two is eating is a fact about the order, not about
+      // the person: the link says a father and a son belong together, it
+      // does not say which way round this particular bag of rice went.
+      // Guessing from it sent delivery talk to whichever of them was not
+      // on campus. whoFor moves the eater when the order names somebody.
+      out[phone] = { payer, payerName: name, eater: payer, eaterName: name };
     }
     return out;
   } catch {
@@ -479,10 +480,23 @@ export async function linkedTo(phone: string): Promise<Linked[]> {
 
     // What each of them is worth, which is the question anybody opening
     // this is really asking: is this household one customer or two.
-    const { data: orders } = await db()
-      .from("orders")
-      .select("customer_phone, total, status")
-      .in("customer_phone", [...numbers.keys()]);
+    //
+    // Counted both ways. A student whose father pays has ordered nothing
+    // under his own number, and reading "0 orders" next to his name on
+    // the father's page says the opposite of the truth. Spend stays the
+    // money that person actually paid, so the two numbers do not each
+    // claim the same order.
+    const [paid, received] = await Promise.all([
+      db()
+        .from("orders")
+        .select("id, customer_phone, total, status")
+        .in("customer_phone", [...numbers.keys()]),
+      db()
+        .from("orders")
+        .select("id, deliver_to_phone")
+        .in("deliver_to_phone", [...numbers.keys()]),
+    ]);
+    const orders = paid.data ?? [];
 
     const { data: people } = await db()
       .from("customers")
@@ -497,14 +511,18 @@ export async function linkedTo(phone: string): Promise<Linked[]> {
     );
 
     return [...numbers.entries()].map(([theirPhone, theirName]) => {
-      const mineOnly = ((orders ?? []) as Record<string, unknown>[]).filter(
+      const mineOnly = (orders as Record<string, unknown>[]).filter(
         (row) => String(row.customer_phone) === theirPhone
       );
+      const theirs = new Set(mineOnly.map((row) => String(row.id)));
+      for (const row of (received.data ?? []) as Record<string, unknown>[]) {
+        if (String(row.deliver_to_phone) === theirPhone) theirs.add(String(row.id));
+      }
       return {
         phone: theirPhone,
         name: named.get(theirPhone) || theirName || "",
         known: named.has(theirPhone),
-        orders: mineOnly.length,
+        orders: theirs.size,
         spend: mineOnly
           .filter((row) => isPaid(String(row.status ?? "")))
           .reduce((all, row) => all + Number(row.total ?? 0), 0),
