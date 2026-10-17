@@ -47,10 +47,17 @@ export async function linkCouponNow(said?: string): Promise<string> {
      * ₦500 sit there on the total, which reads as the shop not listening.
      *
      * Undefined is a form that never asked, which is most of them, and
-     * those are left exactly as they were. An empty string is somebody
-     * answering "somewhere else", and that is an answer.
+     * those are left exactly as they were. Anything else is an answer, and
+     * an answer that is not a promoter's code is somebody saying no
+     * promoter sent them.
      */
-    if (said !== undefined && said.trim() === "") return "";
+    if (said !== undefined) {
+      const { realPromoter } = await import("./promoters");
+      // A real person, or nobody. "Somewhere else" and "ChatGPT" are both
+      // answers that credit nobody, and the link's discount is for having
+      // come in through somebody.
+      if (!(await realPromoter(said.trim()))) return "";
+    }
 
     return (await safeSettings()).promoter_perk_code.trim();
   } catch {

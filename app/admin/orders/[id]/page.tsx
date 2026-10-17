@@ -6,6 +6,7 @@ import Panel from "@/components/admin/Panel";
 import { howPaid, orderStory } from "@/lib/order-story";
 import { StatusPill } from "@/components/admin/OrderCard";
 import ConfirmButton from "@/components/admin/ConfirmButton";
+import ActionButton from "@/components/admin/ActionButton";
 import SaveButton from "@/components/SaveButton";
 import WhenHanded from "@/components/admin/WhenHanded";
 import { orderFeed } from "@/lib/admin-data";
@@ -39,6 +40,7 @@ import {
   deleteOrder,
   refundOrder,
   savePaymentLink,
+  setOrderPayment,
   removeParcelPhoto,
   saveOrderNote,
   setBoxDay,
@@ -498,10 +500,34 @@ async function orderPage(id: string, said: string) {
               {doorTag((order as { source?: string }).source ?? "") !== "" && (
                 <Detail label="Came in through" value={doorTag((order as { source?: string }).source ?? "")} />
               )}
-              <Detail
-                label="Pays by"
-                value={order.payment_method === "card" ? "Card link" : "Transfer"}
-              />
+              {/* Changeable, because what they picked at checkout and what
+                  actually happened are two different facts. Somebody taps
+                  card link by mistake, pays into the account like everybody
+                  else, and the receipt and the story both go on saying
+                  card over money that came in by transfer. */}
+              <div className="flex flex-wrap items-baseline justify-between gap-2 border-b-[1.5px] border-rule py-1.5">
+                <dt className="text-muted">Paid by</dt>
+                <dd>
+                  <form action={setOrderPayment} className="flex items-center gap-1.5">
+                    <input type="hidden" name="order_id" value={order.id} />
+                    <input
+                      type="hidden"
+                      name="payment_method"
+                      value={order.payment_method === "card" ? "transfer" : "card"}
+                    />
+                    <span className="font-semibold">
+                      {order.payment_method === "card" ? "Card link" : "Transfer"}
+                    </span>
+                    <ActionButton
+                      busy="…"
+                      done="Changed ✓"
+                      className="btn-admin btn-admin-sm"
+                    >
+                      {order.payment_method === "card" ? "It was a transfer" : "It was the card"}
+                    </ActionButton>
+                  </form>
+                </dd>
+              </div>
               {shown && shown.narration !== "" && (
                 <Detail label="Narration to look for" value={shown.narration} />
               )}

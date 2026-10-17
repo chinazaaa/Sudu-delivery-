@@ -34,6 +34,10 @@ const KNOWN = [
   "telegram",
   "linkedin",
   "bing",
+  // People arrive asking for us by name because an assistant told them to.
+  // It is a channel like any other and worth being able to count, rather
+  // than landing under "direct" with everybody who typed the address in.
+  "chatgpt",
   "email",
   "poster",
   "flyer",
@@ -61,6 +65,10 @@ const SITES: [RegExp, string][] = [
   [/(^|\.)lnkd\.in$/, "linkedin"],
   [/(^|\.)(wa\.me|whatsapp\.com)$/, "whatsapp"],
   [/(^|\.)(t\.me|telegram\.(me|org))$/, "telegram"],
+  [/(^|\.)chatgpt\.com$/, "chatgpt"],
+  [/(^|\.)chat\.openai\.com$/, "chatgpt"],
+  [/(^|\.)openai\.com$/, "chatgpt"],
+  [/(^|\.)perplexity\.ai$/, "chatgpt"],
   [/(^|\.)mail\./, "email"],
 ];
 
@@ -122,6 +130,7 @@ export function channelLabel(channel: string): string {
   if (name === "tiktok") return "TikTok";
   if (name === "youtube") return "YouTube";
   if (name === "linkedin") return "LinkedIn";
+  if (name === "chatgpt") return "ChatGPT";
   if (name === "app") return "The app";
   if (name === "promoter") return "A promoter's link";
   if (name === "direct") return "Typed it in";

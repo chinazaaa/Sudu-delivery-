@@ -3228,11 +3228,16 @@ export async function setBatchStage(form: FormData): Promise<void> {
    * open" and the website went on offering tomorrow, and nothing anywhere
    * said why.
    *
-   * An hour from now, to the next five minutes, which is a time somebody
-   * can read on the run and change with the cut-off field if they want
-   * something else. Only ever when it has already passed: a run reopened
-   * before its proper closing time keeps the closing time it had.
+   * Half an hour from now, to the next five minutes. Enough to be worth
+   * reopening for and short enough that nobody is promised a delivery the
+   * run cannot make, and it is said on the run afterwards rather than done
+   * quietly: a guessed closing time is a guess, and the one person who
+   * knows what this run can still manage is the one who just reopened it.
+   *
+   * Only ever when it has already passed, so a run reopened before its
+   * proper closing time keeps the closing time it had.
    */
+  let movedTo = "";
   if (stage === "ordering") {
     const { data: row } = await db()
       .from("batches")
@@ -3242,10 +3247,15 @@ export async function setBatchStage(form: FormData): Promise<void> {
 
     const was = new Date(String((row as { cut_off_at?: string })?.cut_off_at ?? ""));
     if (!Number.isFinite(was.getTime()) || was.getTime() <= Date.now()) {
-      const soon = new Date(Date.now() + 60 * 60 * 1000);
+      const soon = new Date(Date.now() + 30 * 60 * 1000);
       soon.setSeconds(0, 0);
       soon.setMinutes(Math.ceil(soon.getMinutes() / 5) * 5);
       patch.cut_off_at = soon.toISOString();
+      movedTo = soon.toLocaleTimeString("en-GB", {
+        timeZone: "Africa/Lagos",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     }
   }
 
@@ -3303,6 +3313,18 @@ export async function setBatchStage(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
   revalidatePath("/orders");
   revalidatePath("/o", "layout");
+  // And the shop itself. Whether a run is taking orders decides what the
+  // home page offers and what the checkout will put an order on, and this
+  // was the one stage action that moved a run without telling either of
+  // them: the run reopened and the website went on offering tomorrow.
+  revalidatePath("/", "layout");
+  updateTag("menu");
+
+  // Said rather than done quietly, and last, because a redirect stops
+  // everything after it.
+  if (movedTo !== "") {
+    redirect(`/admin/batch/${batchId}?moved=${encodeURIComponent(movedTo)}`);
+  }
 }
 
 /** Restaurants are added and edited here, not only by running the seed file. */
@@ -5376,4 +5398,47 @@ export async function decideApplication(form: FormData): Promise<void> {
     .eq("id", id);
 
   revalidatePath("/admin", "layout");
+}
+
+/**
+ * How somebody actually paid, corrected.
+ *
+ * This was read-only on the order, on the reasoning that it is what they
+ * picked at checkout and that is a fact. It is a fact about what they
+ * picked, which is not the same as what happened: somebody taps card link
+ * by mistake, pays into the account like everybody else, and the receipt
+ * goes out saying card. The money is in the bank either way and the only
+ * wrong thing is the word on the order.
+ *
+ * It moves the customer's saved answer with it. That answer exists to fill
+ * in their next checkout, so leaving it on the one they got wrong is
+ * leaving the same mistake loaded for next time.
+ */
+export async function setOrderPayment(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const orderId = String(form.get("order_id") ?? "");
+  const method = String(form.get("payment_method") ?? "") === "card" ? "card" : "transfer";
+  if (orderId === "") return;
+
+  const { data: row } = await db()
+    .from("orders")
+    .update({
+      payment_method: method,
+      // A transfer has no card link, and one left lying on the order is a
+      // link somebody could still pay a second time.
+      ...(method === "transfer" ? { payment_link: null, pay_currency: "" } : {}),
+    })
+    .eq("id", orderId)
+    .select("customer_phone")
+    .maybeSingle();
+
+  const phone = String((row as { customer_phone?: string })?.customer_phone ?? "");
+  if (phone !== "") {
+    await db().from("customers").update({ payment_method: method }).eq("phone", phone);
+  }
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/o", "layout");
+  revalidatePath("/orders");
 }

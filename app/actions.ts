@@ -7,6 +7,7 @@ import { getOrder, moveOrder, orderLinkId, placeOrder, previewCoupon, saveRating
 import { lastOrderForPhone, perkFor, type LinkPerk } from "@/lib/orders";
 import { accountNumber, normalisePhone } from "@/lib/phone";
 import { cameFromNow, linkCouponNow } from "@/lib/where-from";
+import { tidyChannel } from "@/lib/came-from";
 import { rememberCart } from "@/lib/carts";
 import { countCheckoutLinkUse, getCheckoutLink } from "@/lib/checkout-links";
 import { arrivalNow } from "@/lib/arrival-server";
@@ -74,8 +75,21 @@ export async function submitOrder(
     ? String(form.get("heard_from") ?? "").trim()
     : undefined;
 
+  /*
+   * An answer that names a channel rather than a person.
+   *
+   * The dropdown is mostly promoters, and those go to promoter_code. An
+   * answer like ChatGPT is not a person and pays nobody: it carries a
+   * prefix a promoter's code cannot have, and what it says is which
+   * channel they came through. Taken over the cookie's guess, because the
+   * cookie is worked out from a referring site and this is somebody
+   * answering the question directly.
+   */
+  const saidChannel =
+    saidHeard && saidHeard.startsWith("c:") ? tidyChannel(saidHeard.slice(2)) : "";
+
   const result = await placeOrder({
-    cameFrom: await cameFromNow(),
+    cameFrom: saidChannel || (await cameFromNow()),
     autoCoupon: await linkCouponNow(saidHeard),
     source: "web",
     batchId: String(form.get("batch_id") ?? ""),

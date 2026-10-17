@@ -71,6 +71,11 @@ export default function HeardFrom({
           : { defaultValue: sentBy })}
       >
         <option value="">Somewhere else</option>
+        {/* Not a person, so it carries a prefix a promoter's code can never
+            have: codes are letters and numbers, and this one has a colon
+            in it. It is recorded as the channel they came through and
+            credits nobody, which is the whole difference. */}
+        <option value="c:chatgpt">ChatGPT</option>
         {promoters.map((one) => (
           <option key={one.code} value={one.code}>
             {one.name}

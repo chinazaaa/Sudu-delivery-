@@ -168,7 +168,7 @@ export default async function BatchPage({
   /** Which counter is being read, one-based. The sheet is one counter at a
    *  time on a phone, and the counter is in the address so it can be sent
    *  to somebody and so the back button walks the stops. */
-  searchParams: Promise<{ stop?: string }>;
+  searchParams: Promise<{ stop?: string; moved?: string }>;
 }) {
   const sheet = await batchSheet((await params).id);
   if (!sheet) notFound();
@@ -395,6 +395,25 @@ export default async function BatchPage({
           ) : null
         }
       />
+
+      {/*
+        Said, rather than done quietly.
+
+        Putting a run back to ordering after its closing time has to move
+        the closing time with it, or the sweep that tidies runs shuts it
+        again within the minute and the website goes on offering tomorrow.
+        Half an hour is a guess though, and the one person who knows what
+        this run can still manage is the one who just reopened it, so it
+        says what it did and where to change it.
+      */}
+      {query.moved ? (
+        <p className="mb-[18px] rounded-2xl border-[1.5px] border-ink bg-volt px-3.5 py-2.5 text-[14.5px] font-semibold">
+          Ordering is open again, closing {query.moved}. Its old closing time
+          had passed, and a run open past its closing time is shut again
+          within the minute. Change it under Times below if that is not
+          right.
+        </p>
+      ) : null}
 
       {/*
         Where the run has got to, read rather than set: the picker in the
