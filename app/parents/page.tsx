@@ -12,6 +12,7 @@ import { shownSays } from "@/lib/says";
 import { googleLinks, safeSettings, whatsappLink } from "@/lib/settings";
 import { hostelNames } from "@/lib/hostels";
 import { abroadOn } from "@/lib/abroad";
+import { liveRoutes, parcelsFrom, placesSaid } from "@/lib/parcels";
 import PlanAsk from "@/components/PlanAsk";
 import CurateBox from "@/components/CurateBox";
 import { AlsoSee } from "@/components/Guide";
@@ -142,6 +143,26 @@ export default async function ParentsPage() {
   const blocks = await hostelNames();
 
   /*
+   * The parents who already have the thing.
+   *
+   * Half of sending something is not shopping at all: a mother in Lekki
+   * has the bag of rice, the duvet, the pair of shoes she bought last week,
+   * and what she wants is somebody to come and get it. The shop carries
+   * parcels and this page never said so, so the only parents who knew were
+   * the ones who happened to find another page.
+   *
+   * Read off the routes rather than written here, so a route switched off
+   * in admin takes itself off this page and a price change lands here too.
+   */
+  const carrying = parcelsFrom(settings);
+  const toCampus = liveRoutes(carrying.routes).filter((one) => one.toPau);
+  const fromPrice = toCampus
+    .flatMap((one) => one.bands.map((band) => band.fee))
+    .filter((fee) => fee > 0)
+    .sort((a, b) => a - b)[0];
+  const collectFrom = placesSaid(toCampus);
+
+  /*
    * The questions a parent actually asks, answered where they are asked.
    *
    * Every one of these is a thing somebody types into Google in those
@@ -193,6 +214,21 @@ export default async function ParentsPage() {
               "Yes. Ask us for a card link and we will send you one in pounds " +
               "or dollars, so a parent abroad does not need a Nigerian " +
               "transfer.",
+          },
+        ]
+      : []),
+    ...(carrying.on && toCampus.length > 0
+      ? [
+          {
+            q: "I already have what I want to send. Can you just collect it?",
+            a:
+              "Yes. We collect from " +
+              (collectFrom || "around Lagos") +
+              " and carry it to their block at Pan-Atlantic University" +
+              (fromPrice ? `, from ${naira(fromPrice)}` : "") +
+              ". It is sealed when we collect it, photographed at both ends, " +
+              "and handed over sealed. Clothes, a duvet, shoes, foodstuff you " +
+              "already bought: anything you would rather send than buy again.",
           },
         ]
       : []),
@@ -372,6 +408,29 @@ export default async function ParentsPage() {
                 →
               </span>
             </a>
+            {carrying.on && toCampus.length > 0 && (
+              <Link
+                href="/parcel"
+                className="flex items-center justify-between gap-4 rounded-2xl border-2 border-ink bg-paper p-5 transition active:translate-x-0.5 active:translate-y-0.5"
+              >
+                <span className="flex min-w-0 flex-col gap-1">
+                  <span className="ticket text-brand-dark">Already have it</span>
+                  <span className="break-words font-display text-[30px] font-extrabold uppercase leading-none">
+                    We collect it from you
+                  </span>
+                  <span className="text-sm text-muted">
+                    {collectFrom === ""
+                      ? "We pick it up and carry it to their block."
+                      : `From ${collectFrom}${
+                          fromPrice ? `, from ${naira(fromPrice)}` : ""
+                        }. Sealed at your door, sealed at their block.`}
+                  </span>
+                </span>
+                <span aria-hidden className="shrink-0 font-bold text-brand">
+                  →
+                </span>
+              </Link>
+            )}
             {shelves.map((one) => (
               <Link
                 key={one.href}
