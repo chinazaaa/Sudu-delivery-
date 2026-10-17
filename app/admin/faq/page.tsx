@@ -65,7 +65,7 @@ export default async function FaqPage({
   return (
     <div className="space-y-4">
       <PageHeader
-        title={section === null ? "Chat answers" : `${section.label} questions`}
+        title={section === null ? "FAQ · chat answers" : `FAQ · ${section.label}`}
         detail={
           section === null
             ? "What Sudu Bot can answer on its own. It says these words and no others."

@@ -74,7 +74,11 @@ export const GROUPS: Group[] = [
       // Beside the requests on purpose: this list grows out of that one.
       // A question nobody could answer becomes an answer the chat gives
       // for ever, and the two pages are one job done in two taps.
-      { href: "/admin/faq", label: "Chat answers" },
+      // "FAQ", not "Chat answers". It was named for what it held when it
+      // held one thing, and now it also carries the question sections at
+      // the bottom of the landing pages: somebody looking for those was
+      // looking for the word FAQ and walking straight past this.
+      { href: "/admin/faq", label: "FAQ" },
       { href: "/admin/wishes", label: "Wishes" },
       { href: "/admin/links", label: "Checkout links" },
     ],
