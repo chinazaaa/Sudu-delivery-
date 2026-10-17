@@ -1628,9 +1628,16 @@ export async function previewCoupon(args: {
   batchId: string;
   lines: CartLine[];
   phone: string;
+  /** A car of its own instead of a run: the instant it lands. There is no
+   *  batch for one until the order is placed, and insisting on a batch
+   *  answered every code on a car with "pick a run first". */
+  deliverAt?: string;
 }): Promise<{ ok: true; discount: number; label: string } | { ok: false; error: string }> {
-  const batch = await getBatch(args.batchId);
-  if (!batch) return { ok: false, error: "Pick a run first." };
+  const car = args.deliverAt ? await checkSameDay(args.deliverAt) : null;
+  if (car && "error" in car) return { ok: false, error: car.error };
+
+  const batch = car ? null : await getBatch(args.batchId);
+  if (!car && !batch) return { ok: false, error: "Pick a run first." };
 
   const priced = await priceLines(args.lines);
   if ("error" in priced) return { ok: false, error: priced.error };
@@ -1643,8 +1650,8 @@ export async function previewCoupon(args: {
     itemIds: priced.lines.map((line) => line.menu_item_id),
     lineChoices: priced.lines.map((line) => line.options.map((one) => one.name)),
     items: countItems(priced.lines),
-    batchId: batch.id,
-    deliverAt: batch.kind === "same_day" ? batch.deliver_at : null,
+    batchId: batch?.id ?? "",
+    deliverAt: car ? car.slot.at : batch?.kind === "same_day" ? batch.deliver_at : null,
     returning: phone ? await isReturningCustomer(phone) : false,
   });
   if (holding) {
@@ -1656,12 +1663,32 @@ export async function previewCoupon(args: {
     };
   }
 
+  /*
+   * The delivery the code is read against.
+   *
+   * A code off a fee has to know what the fee is, and a car of its own is
+   * priced on the same day ladder rather than the run's. The car's figure
+   * is asked of the same quote the bill comes from, so a code cannot be
+   * worth one thing in the chat and another at the door.
+   */
+  let fee: number;
+  if (car) {
+    const priceOfCar = await quote({
+      lines: args.lines,
+      sameDay: { urgent: car.slot.urgent },
+    });
+    if ("error" in priceOfCar) return { ok: false, error: priceOfCar.error };
+    fee = priceOfCar.quote.fee;
+  } else {
+    fee = feeFor(countItems(priced.lines), batch!.flash_fee, await bandsFor(batch));
+  }
+
   const result = await checkCoupon({
     code: args.code,
-    fee: feeFor(countItems(priced.lines), batch.flash_fee, await bandsFor(batch)),
+    fee,
     food: countFood(priced.lines),
     returning: phone ? await isReturningCustomer(phone) : false,
-    batchId: batch.id,
+    batchId: batch?.id ?? "",
     restaurantIds: placesIn(priced.lines),
   });
 

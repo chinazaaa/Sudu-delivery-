@@ -22,6 +22,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     const body = (await request.json()) as {
       code?: unknown;
       batchId?: unknown;
+      /** A car of its own instead of a run, so the fee the code is read
+       *  against comes off the same day ladder. */
+      deliverAt?: unknown;
       phone?: unknown;
       lines?: unknown;
     };
@@ -48,6 +51,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const got = await previewCoupon({
       code,
       batchId: String(body.batchId ?? ""),
+      deliverAt: String(body.deliverAt ?? "").trim(),
       lines,
       phone: String(body.phone ?? ""),
     });

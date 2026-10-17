@@ -141,6 +141,9 @@ export async function GET(): Promise<NextResponse> {
             phrase: slot.phrase,
             day: slot.day,
             date: slot.date,
+            /* Going out within the hour costs extra on the same day
+               ladder, and the chat cannot work that out for itself. */
+            urgent: slot.urgent,
             ...block(
               new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(slot.at))
             ),

@@ -92,6 +92,9 @@ type Car = {
   date: string;
   dow: string;
   dom: number;
+  /** Leaving within the hour, which the same day ladder charges for. The
+   *  chat never works it out: it hands it back to the till. */
+  urgent: boolean;
 };
 
 type Run = {
@@ -2182,6 +2185,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             option_ids: line.optionIds,
           })),
           batchId: mine.run?.id ?? "",
+          /*
+           * A car of its own is priced off its own ladder, not the run's.
+           *
+           * The chat knew which car somebody had chosen and told nobody:
+           * the bill was worked out as though it were going on a run, and
+           * then the order itself was refused for having no run on it.
+           */
+          sameDay: mine.car ? { urgent: mine.car.urgent } : null,
         }),
         })
       );
@@ -2316,6 +2327,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
                           body: JSON.stringify({
                             code: typed,
                             batchId: mine.run?.id ?? "",
+                            /* A code is worth what it is worth on the
+                               delivery actually being charged, and on a
+                               car of its own there is no run to read. */
+                            deliverAt: mine.car?.at ?? "",
                             phone: mine.phone,
                             lines: mine.lines.map((line) => ({
                               menu_item_id: line.itemId,
@@ -2803,6 +2818,11 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             batchId: mine.run?.id ?? "",
+            /* A car of its own instead of a run. The checkout makes the
+               car when it takes the order, so this is the moment it has
+               to be told, and an order that said nothing was turned away
+               for having no run on it. */
+            deliverAt: mine.car?.at ?? "",
             name: mine.name,
             phone: mine.phone,
             hostel: mine.hostel,
@@ -3184,8 +3204,13 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
    * answer, and a car of its own belongs behind "I need it sooner", which
    * is the only thing on this screen worth paying more for.
    */
-  const askSooner = useCallback(() => {
+  const askSooner = useCallback((then?: () => void) => {
     setAt(1);
+    /* Where to go once the car or the run is settled. Ordering, the first
+       time through; back to the bill when somebody came here from it to
+       change the day, because they have already said what they want, and
+       being asked again loses the order they had just built. */
+    const onward = then ?? (() => askOrder());
     const lists = startRef.current;
     const runs = lists?.runs ?? [];
     const cars = lists?.cars ?? [];
@@ -3215,7 +3240,8 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             go: () => {
               me(`Keep the ${keep?.said ?? "next"} run`);
               held.current.run = keep ?? null;
-              askOrder();
+              held.current.car = null;
+              onward();
             },
           },
         ],
@@ -3246,14 +3272,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       held.current.car = car;
       held.current.run = null;
       me(`A car of its own, ${car.phrase || car.label}`);
-      askOrder();
+      onward();
     };
 
     const keepTheRun = () => {
       held.current.car = null;
       held.current.run = keep ?? null;
       me(`Keep the ${keep?.said ?? "next"} run`);
-      askOrder();
+      onward();
     };
 
     setAsk({
@@ -3504,6 +3530,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
 
     const first = onTheDay[0] ?? runs[0];
     held.current.run = first;
+    held.current.car = null;
     bot(
       wanted !== "" && first.runDate === wanted
         ? `There is a run to <b>${held.current.hostel}</b> that very day, <b>${first.said}</b>.`
@@ -3544,7 +3571,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               {
                 said: "I need it sooner",
                 look: "alt" as const,
-                go: () => { me("I need it sooner"); askSooner(); },
+                go: () => { me("I need it sooner"); askSooner(onward); },
               },
             ]
           : []),

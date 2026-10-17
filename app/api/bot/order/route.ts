@@ -37,17 +37,29 @@ export async function POST(request: Request): Promise<NextResponse> {
       /** Who it is for and what goes on the card, in the buyer's words, so
        *  the run sheet carries it to the person packing the box. */
       note?: unknown;
+      /** A car of its own instead of a run: the instant it is to land. The
+       *  checkout makes the car itself, so there is no batch to name. */
+      deliverAt?: unknown;
     };
 
     const phone = normalisePhone(String(body.phone ?? ""));
     const name = String(body.name ?? "").trim();
     const hostel = String(body.hostel ?? "").trim();
     const batchId = String(body.batchId ?? "");
+    const deliverAt = String(body.deliverAt ?? "").trim();
 
     if (!phone) {
       return NextResponse.json({ error: "That number does not look right." });
     }
-    if (name === "" || hostel === "" || batchId === "") {
+    /*
+     * A run or a car, and one of the two.
+     *
+     * Insisting on a batch turned away every order going on a car of its
+     * own, which is the one kind the chat makes itself rather than picking
+     * off a list: there is no batch to name because the checkout makes the
+     * car when it takes the order.
+     */
+    if (name === "" || hostel === "" || (batchId === "" && deliverAt === "")) {
       return NextResponse.json({ error: "Something is missing from this order." });
     }
 
@@ -74,6 +86,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       // Its own door, beside the website and the app, so the books can
       // say whether the chat is earning its keep.
       source: "bot",
+      ...(deliverAt === "" ? {} : { deliverAt }),
       coupon: String(body.code ?? "").trim(),
       customerNote: String(body.note ?? "").trim().slice(0, 500),
       paymentMethod: "transfer",
