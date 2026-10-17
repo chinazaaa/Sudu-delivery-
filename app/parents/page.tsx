@@ -4,7 +4,7 @@ import PageHead from "@/components/PageHead";
 import GoogleSays from "@/components/GoogleSays";
 import Stars from "@/components/Stars";
 
-import { boxesAcross, liveOccasions, onShelf, type Occasion } from "@/lib/boxes";
+import { boxesAcross, isTimed, liveOccasions, onShelf, type Occasion } from "@/lib/boxes";
 import { cheapestBoxes } from "@/lib/box-view";
 import { shelfPhotos } from "@/lib/shelf-photo";
 import { naira } from "@/lib/money";
@@ -129,12 +129,17 @@ export default async function ParentsPage() {
      standing order form. The same collections rule as the shelf cards
      above: nothing is named in code, so a shelf put in front of parents is
      a shelf somebody made a collection. */
-  const collectionIds = new Set(
-    onShelf(packed, "collection").map((one) => one.id)
+  /* Only the shelves that stand there all term. Matriculation is a
+     Saturday in November: offering it as the thing to send every month is
+     offering somebody twelve matriculations. */
+  const standingIds = new Set(
+    onShelf(packed, "collection")
+      .filter((one) => !isTimed(one))
+      .map((one) => one.id)
   );
   const shelfName = new Map(packed.map((one) => [one.id, one.name]));
   const planBoxes = boxes
-    .filter((box) => !box.is_extra && collectionIds.has(box.occasion_id))
+    .filter((box) => !box.is_extra && standingIds.has(box.occasion_id))
     .map((box) => ({
       id: box.id,
       name: box.name,
@@ -200,8 +205,11 @@ export default async function ParentsPage() {
     {
       q: "Does the price include delivery to the hostel?",
       a:
-        "Yes. Every box on this page is one price with the delivery already " +
-        "in it, to the block rather than to the gate.",
+        "The boxes on this page are one price with the delivery already in " +
+        "it, to the block rather than to the gate. A box we put together " +
+        "from what you tell us, and a parcel we collect from you, are " +
+        "priced the other way: we tell you what the things come to and what " +
+        "the carrying costs before you pay anything.",
     },
     {
       q: "Can I send the same thing every month?",
@@ -498,12 +506,16 @@ export default async function ParentsPage() {
           <ol className="grid gap-7 sm:grid-cols-3">
             {[
               [
-                "Choose a box",
-                "Give us your child's name and hostel. They do not need to help.",
+                "Choose what to send",
+                "A box off the shelf, one we put together from what you tell " +
+                  "us, or a parcel you already have. Give us your child's " +
+                  "name and hostel. They do not need to help.",
               ],
               [
                 "Pay once",
-                "Bank transfer or card. Delivery is already in the price.",
+                "Bank transfer or card. A box off the shelf has the delivery " +
+                  "in its price; for anything else we tell you what it comes " +
+                  "to before you pay.",
               ],
               [
                 "We deliver, you see it",
@@ -544,6 +556,7 @@ export default async function ParentsPage() {
         <PlanAsk
           boxes={planBoxes}
           hostels={blocks}
+          parcels={carrying.on && toCampus.length > 0}
         />
 
         <div className="flex flex-col gap-3 rounded-2xl border-2 border-ink bg-paper p-6">

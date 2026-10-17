@@ -51,6 +51,12 @@ export default function CurateBox({
    */
   const [wanted, setWanted] = useState("");
   const [budget, setBudget] = useState("");
+  // The rest of it, for the same reason: a refusal must not empty a form
+  // somebody has just filled in.
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [hostel, setHostel] = useState("");
+  const [note, setNote] = useState("");
   const [kind, setKind] = useState<"" | "have" | "find">("");
   const [state, run] = useActionState<CurateState, FormData>(curateABox, {
     error: "",
@@ -261,13 +267,22 @@ export default function CurateBox({
                   </label>
                   <label className="flex flex-col gap-1">
                     <span className="text-sm font-bold">Your name</span>
-                    <input name="name" required autoComplete="name" className="field" />
+                    <input
+                      name="name"
+                      required
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      autoComplete="name"
+                      className="field"
+                    />
                   </label>
                   <label className="flex flex-col gap-1">
                     <span className="text-sm font-bold">Your number</span>
                     <input
                       name="phone"
                       required
+                      value={phone}
+                      onChange={(event) => setPhone(event.target.value)}
                       inputMode="tel"
                       autoComplete="tel"
                       placeholder="0801 234 5678"
@@ -279,7 +294,12 @@ export default function CurateBox({
                     {/* The shop's own list. A block nobody can match is a
                         bag in a car with nowhere to take it, and a parent
                         filling this in has never seen the place. */}
-                    <select name="hostel" defaultValue="" className="field">
+                    <select
+                      name="hostel"
+                      value={hostel}
+                      onChange={(event) => setHostel(event.target.value)}
+                      className="field"
+                    >
                       <option value="">Pick a block</option>
                       {hostels.map((one) => (
                         <option key={one} value={one}>
@@ -295,6 +315,8 @@ export default function CurateBox({
                   <span className="text-sm font-bold">Anything else</span>
                   <input
                     name="note"
+                    value={note}
+                    onChange={(event) => setNote(event.target.value)}
                     placeholder="It is for a birthday on the 20th"
                     className="field"
                   />

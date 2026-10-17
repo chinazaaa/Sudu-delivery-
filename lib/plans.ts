@@ -36,6 +36,19 @@ export type Plan = {
   forName: string;
   forPhone: string;
   hostel: string;
+  /**
+   * What it is.
+   *
+   * "box" is everything the shop shops for: one off the shelf, one it put
+   * together, or last month's order again. "parcel" is the other half of
+   * sending something every month, and a different job from the first line
+   * to the last: nothing is bought, the contents change each month, the
+   * price comes off the parcel route rather than off a box, and it starts
+   * at somebody's front door rather than at a counter. So it is never
+   * raised without a person: the board says who is due and somebody
+   * messages them to arrange the collection.
+   */
+  kind: "box" | "parcel";
   /** A box off the shelf, or last month's order copied forward. */
   boxId: string | null;
   fromOrderId: string | null;
@@ -78,6 +91,7 @@ function toPlan(row: Record<string, unknown>): Plan {
     forName: String(row.for_name ?? ""),
     forPhone: String(row.for_phone ?? ""),
     hostel: String(row.hostel ?? ""),
+    kind: String(row.kind ?? "box") === "parcel" ? "parcel" : "box",
     boxId: (row.box_id as string | null) ?? null,
     fromOrderId: (row.from_order_id as string | null) ?? null,
     every: (EVERY as string[]).includes(every) ? (every as Plan["every"]) : "monthly",
@@ -351,6 +365,15 @@ export type Raised =
  * two orders for one month.
  */
 export async function raiseCycle(plan: Plan, land: string): Promise<Raised> {
+  if (plan.kind === "parcel") {
+    return {
+      ok: false,
+      error:
+        "A monthly parcel is collected rather than bought, so it is arranged " +
+        "with them rather than raised from here.",
+    };
+  }
+
   const already = await db()
     .from("plan_orders")
     .select("order_id")
@@ -452,7 +475,9 @@ export async function sweepPlans(today = lagosToday()): Promise<{
     }
 
     for (const land of raise) {
-      if (!plan.auto) {
+      // Nothing buys itself and a parcel is not bought at all: somebody has
+      // to go and collect it, which starts with a message.
+      if (!plan.auto || plan.kind === "parcel") {
         due.push({ plan, cycle: land });
         continue;
       }
@@ -520,7 +545,11 @@ export async function plansWaiting(today = lagosToday()): Promise<{
     const due = plans.filter(
       (plan) =>
         plan.active &&
-        (plan.boxId !== null || plan.fromOrderId !== null) &&
+        // A parcel needs no contents: the contents are whatever is at their
+        // door that month.
+        (plan.kind === "parcel" ||
+          plan.boxId !== null ||
+          plan.fromOrderId !== null) &&
         owed(plan, today, lead, shopPause).raise.length > 0
     ).length;
 

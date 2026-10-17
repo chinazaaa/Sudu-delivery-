@@ -1047,3 +1047,5 @@ alter table settings add column if not exists plans_paused_until text not null d
 alter table settings add column if not exists plan_lead_days text not null default '';
 
 alter table settings add column if not exists msg_parents text not null default '';
+
+alter table plans add column if not exists kind text not null default 'box';

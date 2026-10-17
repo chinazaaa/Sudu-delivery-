@@ -1400,3 +1400,5 @@ alter table settings add column if not exists plan_lead_days text not null defau
 -- home, which only happens if it reads as news rather than as a shop
 -- asking for an introduction.
 alter table settings add column if not exists msg_parents text not null default '';
+
+alter table plans add column if not exists kind text not null default 'box';

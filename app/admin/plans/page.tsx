@@ -13,7 +13,7 @@ import {
   LEAD_DAYS,
   type Plan,
 } from "@/lib/plans";
-import { boxesAcross, liveOccasions, onShelf } from "@/lib/boxes";
+import { boxesAcross, isTimed, liveOccasions, onShelf } from "@/lib/boxes";
 import { hostelNames } from "@/lib/hostels";
 import { safeSettings, numberOr } from "@/lib/settings";
 import { naira } from "@/lib/money";
@@ -48,7 +48,10 @@ export default async function PlansPage() {
     monthlyValue(),
   ]);
 
-  const collections = onShelf(shelves, "collection");
+  /* Standing shelves only. Matriculation is a Saturday in November, and
+     offering it as the thing somebody gets every month is offering them
+     twelve matriculations. */
+  const collections = onShelf(shelves, "collection").filter((one) => !isTimed(one));
   const boxes = await boxesAcross(collections.map((one) => one.id));
   const named = new Map(boxes.map((one) => [one.id, one.name]));
   const shelfOf = new Map(collections.map((one) => [one.id, one.name]));
@@ -125,18 +128,33 @@ export default async function PlansPage() {
                 <span className="min-w-0 flex-1 text-[14.5px]">
                   <strong>{plan.customerName || formatPhone(plan.customerPhone)}</strong>
                   {" · "}
-                  {plan.boxId
-                    ? named.get(plan.boxId) ?? "a box"
-                    : plan.fromOrderRef
-                      ? `order #${plan.fromOrderRef} again`
-                      : "nothing in it yet"}
+                  {plan.kind === "parcel"
+                    ? "a parcel to collect"
+                    : plan.boxId
+                      ? named.get(plan.boxId) ?? "a box"
+                      : plan.fromOrderRef
+                        ? `order #${plan.fromOrderRef} again`
+                        : "nothing in it yet"}
                   {" · lands "}
                   {runDateLabel(cycles[0])}
                 </span>
                 {/* A plan with nothing in it cannot raise anything, and
                     saying so here is better than a button that fails. Most
                     of these start as "we will discuss it". */}
-                {plan.boxId === null && plan.fromOrderId === null ? (
+                {plan.kind === "parcel" ? (
+                  /* Nothing to raise: somebody has to go and get it, which
+                     starts with asking them when. */
+                  talkTo(plan.customerPhone, plan) && (
+                    <a
+                      href={talkTo(plan.customerPhone, plan)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-admin btn-admin-sm"
+                    >
+                      Arrange the collection
+                    </a>
+                  )
+                ) : plan.boxId === null && plan.fromOrderId === null ? (
                   <span className="text-[13px] font-semibold text-brand-dark">
                     Say what goes in it first
                   </span>
@@ -182,11 +200,13 @@ export default async function PlansPage() {
                       {formatPhone(plan.customerPhone)} ·{" "}
                       {plan.forName ? `for ${plan.forName} · ` : ""}
                       {plan.hostel}
-                      {plan.boxId
-                        ? ` · ${named.get(plan.boxId) ?? "a box"}`
-                        : plan.fromOrderRef
-                          ? ` · repeats order #${plan.fromOrderRef}`
-                          : " · nothing in it yet"}
+                      {plan.kind === "parcel"
+                        ? " · a parcel we collect"
+                        : plan.boxId
+                          ? ` · ${named.get(plan.boxId) ?? "a box"}`
+                          : plan.fromOrderRef
+                            ? ` · repeats order #${plan.fromOrderRef}`
+                            : " · nothing in it yet"}
                       {plan.auto ? " · raises itself" : " · you raise it"}
                       {held !== "" && held >= today ? ` · held until ${held}` : ""}
                       {plan.cameFrom === "" ? "" : ` · from ${channelLabel(plan.cameFrom)}`}
@@ -327,7 +347,11 @@ function PlanAgain({ plan }: { plan: Plan }) {
       <input type="hidden" name="for_name" value={plan.forName} />
       <input type="hidden" name="for_phone" value={plan.forPhone} />
       <input type="hidden" name="hostel" value={plan.hostel} />
-      <input type="hidden" name="box_id" value={plan.boxId ?? ""} />
+      <input
+        type="hidden"
+        name="box_id"
+        value={plan.kind === "parcel" ? "parcel" : plan.boxId ?? ""}
+      />
       <input type="hidden" name="from_order" value={plan.fromOrderRef ?? ""} />
       <input type="hidden" name="every" value={plan.every} />
       <input type="hidden" name="on_day" value={String(plan.onDay)} />
@@ -349,11 +373,17 @@ function PlanAgain({ plan }: { plan: Plan }) {
  */
 function talkTo(phone: string, plan: Plan): string | null {
   const first = plan.customerName.split(" ")[0] || "";
+  const who = plan.forName || "your child";
+  const where = plan.hostel === "" ? "" : ` at ${plan.hostel}`;
+
   return waLink(
     phone,
-    `Hello${first === "" ? "" : ` ${first}`}, this is Sudu. About the monthly box for ` +
-      `${plan.forName || "your child"}${plan.hostel === "" ? "" : ` at ${plan.hostel}`}: ` +
-      "shall we go through what goes in it and what it comes to?"
+    `Hello${first === "" ? "" : ` ${first}`}, this is Sudu. ` +
+      (plan.kind === "parcel"
+        ? `About the monthly parcel for ${who}${where}: when would suit for us ` +
+          "to come and collect it this month?"
+        : `About the monthly box for ${who}${where}: shall we go through what ` +
+          "goes in it and what it comes to?")
   );
 }
 
@@ -425,10 +455,13 @@ function PlanFields({
           <label className="label">What goes in it</label>
           <select
             name="box_id"
-            defaultValue={plan?.boxId ?? ""}
+            defaultValue={plan?.kind === "parcel" ? "parcel" : plan?.boxId ?? ""}
             className="field field-admin"
           >
             <option value="">An order, named below</option>
+            {/* The other kind of standing order. Nothing is bought for it:
+                we go to their door each month and carry what is there. */}
+            <option value="parcel">A parcel we collect from them</option>
             {boxes.map((one) => (
               <option key={one.id} value={one.id}>
                 {one.shelf === "" ? one.name : `${one.shelf} · ${one.name}`}

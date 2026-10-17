@@ -4341,6 +4341,7 @@ const aPlan = (over: Partial<Plan> = {}): Plan => ({
   forName: "Their child",
   forPhone: "08011111111",
   hostel: "Amethyst",
+  kind: "box",
   boxId: "box",
   fromOrderId: null,
   every: "monthly",

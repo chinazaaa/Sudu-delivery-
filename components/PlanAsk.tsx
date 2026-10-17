@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { askForAPlan, type AskedState } from "@/app/parents/actions";
@@ -21,9 +21,13 @@ import { askForAPlan, type AskedState } from "@/app/parents/actions";
 export default function PlanAsk({
   boxes,
   hostels,
+  parcels = false,
 }: {
   boxes: { id: string; name: string; shelf: string }[];
   hostels: string[];
+  /** Whether the shop is carrying parcels, so a monthly collection is a
+   *  thing it can offer rather than a thing it would have to refuse. */
+  parcels?: boolean;
 }) {
   const [state, run] = useActionState<AskedState, FormData>(askForAPlan, {
     error: null,
@@ -38,6 +42,35 @@ export default function PlanAsk({
    * was: somebody who filled this in landed in the footer and had to go
    * looking for the answer to a thing they had just done.
    */
+  /*
+   * Everything typed, held here rather than left to the browser.
+   *
+   * React empties an uncontrolled form the moment a server action comes
+   * back, so a refusal wiped the lot: somebody filled in seven fields, was
+   * told their second number was their own, and found an empty form. The
+   * custom order page learned this the same way and the fix is the same.
+   */
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [forName, setForName] = useState("");
+  const [forPhone, setForPhone] = useState("");
+  const [hostel, setHostel] = useState("");
+  const [day, setDay] = useState("3");
+  const [box, setBox] = useState("");
+  const [note, setNote] = useState("");
+
+  /*
+   * And said while they are still looking at the field.
+   *
+   * The same number in both is refused on the server, because that is
+   * where refusing belongs, but finding out after pressing the button is
+   * finding out too late. Compared on the digits, since 0801 234 5678 and
+   * 08012345678 are one number written two ways.
+   */
+  const digits = (said: string) => said.replace(/\D/g, "");
+  const sameNumber =
+    digits(forPhone).length >= 10 && digits(forPhone) === digits(phone);
+
   const said = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (state.done) said.current?.scrollIntoView({ block: "center" });
@@ -84,6 +117,8 @@ export default function PlanAsk({
           <span className="text-sm font-bold">Your name</span>
           <input
             name="customer_name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
             required
             autoComplete="name"
             className="field border-2 border-ink bg-paper"
@@ -93,6 +128,8 @@ export default function PlanAsk({
           <span className="text-sm font-bold">Your number</span>
           <input
             name="customer_phone"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
             required
             inputMode="tel"
             autoComplete="tel"
@@ -104,6 +141,8 @@ export default function PlanAsk({
           <span className="text-sm font-bold">Who it is for</span>
           <input
             name="for_name"
+            value={forName}
+            onChange={(event) => setForName(event.target.value)}
             placeholder="Your son or daughter"
             className="field border-2 border-ink bg-paper"
           />
@@ -112,10 +151,22 @@ export default function PlanAsk({
           <span className="text-sm font-bold">Their number</span>
           <input
             name="for_phone"
+            value={forPhone}
+            onChange={(event) => setForPhone(event.target.value)}
             inputMode="tel"
             placeholder="So the driver can ring them"
+            aria-invalid={sameNumber || undefined}
             className="field border-2 border-ink bg-paper"
           />
+          {/* Under the field it is about, while they are still looking at
+              it. Said at the bottom of the form it is a verdict on the
+              whole thing rather than a note about one box. */}
+          {sameNumber && (
+            <span className="text-sm font-semibold leading-snug text-brand-dark">
+              That is your own number again. Put theirs in, or leave it blank
+              and we will ring you when we are outside.
+            </span>
+          )}
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-sm font-bold">Their block</span>
@@ -128,6 +179,8 @@ export default function PlanAsk({
               guess, because somebody rings them about this anyway. */}
           <select
             name="hostel"
+            value={hostel}
+            onChange={(event) => setHostel(event.target.value)}
             required
             defaultValue=""
             className="field border-2 border-ink bg-paper"
@@ -147,7 +200,8 @@ export default function PlanAsk({
           <span className="text-sm font-bold">Day of the month</span>
           <select
             name="on_day"
-            defaultValue="3"
+            value={day}
+            onChange={(event) => setDay(event.target.value)}
             className="field border-2 border-ink bg-paper"
           >
             {Array.from({ length: 28 }, (_, at) => at + 1).map((day) => (
@@ -161,25 +215,41 @@ export default function PlanAsk({
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-bold">Which box</span>
+        <span className="text-sm font-bold">What goes in it</span>
+        {/* The two that are not a shelf come first, because they are the
+            two most parents mean. Plenty already have the foodstuff and
+            want somebody to come and get it; plenty more know what they
+            want and will not find it by reading box names. */}
         <select
           name="box_id"
-          defaultValue=""
+          value={box}
+          onChange={(event) => setBox(event.target.value)}
           className="field border-2 border-ink bg-paper"
         >
-          <option value="">We will talk it through</option>
+          <option value="">A box we put together, we will talk it through</option>
+          {parcels && (
+            <option value="parcel">
+              A parcel you collect from me each month
+            </option>
+          )}
           {boxes.map((one) => (
             <option key={one.id} value={one.id}>
               {one.shelf === "" ? one.name : `${one.shelf} · ${one.name}`}
             </option>
           ))}
         </select>
+        <span className="text-sm leading-relaxed text-ink/70">
+          A box off the shelf is one price with delivery in it. Anything else
+          is priced when we have gone through it with you.
+        </span>
       </label>
 
       <label className="flex flex-col gap-1">
         <span className="text-sm font-bold">Anything we should know</span>
         <input
           name="note"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
           placeholder="No pepper. Leave it with the porter."
           className="field border-2 border-ink bg-paper"
         />

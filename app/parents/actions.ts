@@ -65,7 +65,13 @@ export async function askForAPlan(
       for_name: String(form.get("for_name") ?? "").trim(),
       for_phone: forPhone,
       hostel,
-      box_id: String(form.get("box_id") ?? "").trim() || null,
+      /* "parcel" is not a box, it is the other kind of standing order:
+         we come to their door each month and carry what is there. */
+      kind: String(form.get("box_id") ?? "") === "parcel" ? "parcel" : "box",
+      box_id:
+        String(form.get("box_id") ?? "").trim() === "parcel"
+          ? null
+          : String(form.get("box_id") ?? "").trim() || null,
       every: "monthly",
       on_day: day,
       // Off until the shop has agreed what goes in it and what it costs.
@@ -101,7 +107,9 @@ export async function askForAPlan(
 
   void tellAdmin({
     title: "A parent wants a standing order",
-    body: `${name} · ${hostel} · the ${day}${nth(day)} of the month.`,
+    body:
+      `${name} · ${hostel} · the ${day}${nth(day)} of the month` +
+      (box === "parcel" ? ", a parcel to collect." : "."),
     url: "/admin/plans",
   });
 
@@ -114,7 +122,11 @@ export async function askForAPlan(
       who === "" ? "" : `For: ${who}`,
       `Block: ${hostel}`,
       `Lands: the ${day}${nth(day)} of each month`,
-      box === "" ? "Box: to be agreed" : "Box: picked on the form",
+      box === "parcel"
+      ? "A monthly parcel: we collect it from them."
+      : box === ""
+        ? "Box: to be agreed"
+        : "Box: picked on the form",
       note === "" ? "" : `They said: ${note}`,
       "",
       "Nothing is running until somebody agrees what goes in it and what it",

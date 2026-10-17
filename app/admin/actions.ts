@@ -2250,7 +2250,11 @@ export async function savePlan(form: FormData): Promise<void> {
     for_name: String(form.get("for_name") ?? "").trim(),
     for_phone: normalisePhone(String(form.get("for_phone") ?? "")),
     hostel: String(form.get("hostel") ?? "").trim(),
-    box_id: String(form.get("box_id") ?? "").trim() || null,
+    kind: String(form.get("box_id") ?? "") === "parcel" ? "parcel" : "box",
+    box_id:
+      String(form.get("box_id") ?? "").trim() === "parcel"
+        ? null
+        : String(form.get("box_id") ?? "").trim() || null,
     every: String(form.get("every") ?? "monthly"),
     on_day: Math.min(28, Math.max(1, Math.round(Number(form.get("on_day") ?? 1)) || 1)),
     active: form.get("active") === "on",

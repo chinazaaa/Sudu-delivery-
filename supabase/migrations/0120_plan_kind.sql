@@ -1,0 +1,12 @@
+-- What a standing order actually is.
+--
+-- Some parents send foodstuff every month and already have it: what they
+-- want is not a box we shop for, it is somebody coming to their door on
+-- the same day each month and carrying it to campus. That is a parcel, and
+-- it is a different job from the first line to the last: nothing is bought,
+-- the contents change every month, and the price comes off the parcel route
+-- rather than off a box.
+--
+-- "box" for everything that already exists, because that is what every
+-- plan written before this is.
+alter table plans add column if not exists kind text not null default 'box';
