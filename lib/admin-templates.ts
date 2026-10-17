@@ -64,33 +64,42 @@ function kindsFor(
     const asGoogle = googleLinks(settings).review.trim() !== "";
 
     /*
-     * Both of them, where there are two of them.
+     * Each of them asked once, and never again.
      *
      * A father paid and a son ate, and they are two people with two
-     * opinions: his, of food he actually had, and the father's, of a shop
-     * that took his money from another city and got a box to his son.
-     * Two reviews is the point rather than one, so the card asks each of
-     * them rather than making somebody go and find the other's page.
+     * opinions: the son's, of food he actually had, and the father's, of
+     * a shop that took his money from another city and got a box to his
+     * son. So both are asked. But asking anybody twice is the one thing
+     * this is all meant to prevent, and a single tick could not say which
+     * of the two had left one: the son reviewed, the tick sat on his
+     * father's row, and the card went on asking the son forever while
+     * never once asking the father.
      *
-     * The payer's ask needs the Google link to be worth anything, because
-     * unlike the son he has no order page of his own to rate. Without one
-     * it is left off rather than sent half-written.
+     * So the question is asked of each person separately. A father who
+     * has reviewed does not answer for his son, and nor his son for him.
      */
-    const bothAsked: TemplateKind[] = split && asGoogle ? ["google_payer"] : [];
-
-    // Already reviewed. Whoever paid is still told it landed, and still
-    // asked, because the tick belongs to one of the two and not to the
-    // household.
-    if (order.reviewed) {
-      return split ? ["landed", ...bothAsked, "pin"] : ["pin"];
-    }
+    const out: TemplateKind[] = [];
 
     // Whoever paid is told it landed, and only ever on an order where that
     // is somebody other than whoever ate. On an ordinary order it would be
-    // a button telling a person what they already know.
-    return split
-      ? ["landed", asGoogle ? "google" : "review", ...bothAsked, "pin"]
-      : [asGoogle ? "google" : "review", "pin"];
+    // a button telling a person what they already know. Not an ask, so a
+    // review already left does not silence it.
+    if (split) out.push("landed");
+
+    // The one who ate it. On an ordinary order that is the same person the
+    // order is filed under.
+    if (!(split ? order.reviewedFor : order.reviewed)) {
+      out.push(asGoogle ? "google" : "review");
+    }
+
+    // And the one who paid for it, where that is somebody else. It needs
+    // the Google link to be worth anything, because unlike the son he has
+    // no order page of his own to rate: without one it is left off rather
+    // than sent half-written.
+    if (split && asGoogle && !order.reviewed) out.push("google_payer");
+
+    out.push("pin");
+    return out;
   }
   return ["confirmed", "ready", "late", "pin"];
 }
@@ -262,6 +271,20 @@ export function toCard(
     paymentMethod: order.payment_method,
     pin: order.pin,
     reviewed: order.reviewed,
+    /*
+     * Whose review the hand-over card is asking for, and whether they have
+     * already left one.
+     *
+     * The card is handing a box to somebody, and the person it is handing
+     * it to is who it should be asking, and whose row the tick belongs on.
+     * It was using the order's own number, so a box ordered by a father
+     * and collected by his son asked the son and then put his answer on
+     * his father's row.
+     */
+    askPhone: split
+      ? String(order.deliver_to_phone ?? "") || order.customer_phone
+      : order.customer_phone,
+    askReviewed: split ? order.reviewedFor : order.reviewed,
     paymentLink: order.payment_link,
     otherItems: order.otherItems,
     otherFee: order.otherFee,

@@ -482,8 +482,10 @@ export default async function CustomersPage({
                           </span>
                         </span>
                         <span className="hint block">
-                          {row.hostel || "No block saved"} · {row.orders}{" "}
-                          {row.orders === 1 ? "order" : "orders"}
+                          {row.hostel || "No block saved"} ·{" "}
+                          {row.orders === 0 && row.sent > 0
+                            ? `${row.sent} sent to them`
+                            : `${row.orders} ${row.orders === 1 ? "order" : "orders"}`}
                           {row.pin !== "" && ` · PIN ${row.pin}`}
                         </span>
                         {(errand?.count ?? 0) > 0 && (
@@ -493,7 +495,17 @@ export default async function CustomersPage({
                           </span>
                         )}
                         <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                          {row.orders === 0 ? (
+                          {/* Somebody who has ordered nothing himself but
+                              has had boxes sent to him is not a stranger,
+                              and "No orders yet" next to two deliveries
+                              reads as a mistake. */}
+                          {row.orders === 0 && row.sent > 0 ? (
+                            <Tag tone="mint">
+                              {row.parentPhone !== "" && !row.isParent
+                                ? "Ordered by parent"
+                                : "Sent to them"}
+                            </Tag>
+                          ) : row.orders === 0 ? (
                             <Tag>No orders yet</Tag>
                           ) : since !== null && since > 30 ? (
                             <Tag tone="quiet">{since} days quiet</Tag>
@@ -598,7 +610,13 @@ export default async function CustomersPage({
                               {/* How they are, in the words the board uses. One
                                   state, the loudest one, rather than a row of
                                   tags saying the same thing three ways. */}
-                              {row.orders === 0 ? (
+                              {row.orders === 0 && row.sent > 0 ? (
+                                <Tag tone="mint">
+                                  {row.parentPhone !== "" && !row.isParent
+                                    ? "Ordered by parent"
+                                    : "Sent to them"}
+                                </Tag>
+                              ) : row.orders === 0 ? (
                                 <Tag>No orders yet</Tag>
                               ) : since !== null && since > 30 ? (
                                 <Tag tone="quiet">{since} days quiet</Tag>

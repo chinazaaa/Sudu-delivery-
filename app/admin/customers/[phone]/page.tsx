@@ -19,6 +19,7 @@ import { SLOT_LABEL } from "@/lib/config";
 import { runDateLabel } from "@/lib/time";
 import { namedPromoters } from "@/lib/promoters";
 import ConfirmButton from "@/components/admin/ConfirmButton";
+import Household from "@/components/admin/Household";
 import {
   deleteCustomer,
   saveCustomerName,
@@ -363,7 +364,13 @@ export default async function CustomerPage({
             {promoter.name}
           </Tag>
         )}
-        {person.orders.length === 0 ? (
+        {person.orders.length === 0 && person.sent > 0 ? (
+          <Tag tone="mint">
+            {person.parentPhone !== "" && !person.isParent
+              ? "Ordered by parent"
+              : "Sent to them"}
+          </Tag>
+        ) : person.orders.length === 0 ? (
           <Tag>No orders yet</Tag>
         ) : quiet !== null && quiet > 30 ? (
           <Tag tone="quiet">{quiet} days quiet</Tag>
@@ -436,6 +443,25 @@ export default async function CustomerPage({
           </Tag>
         )}
       </div>
+
+      {/*
+        Said at the top, because the figures underneath say nothing and
+        nought.
+
+        A son whose father orders for him has spent nothing on his own
+        number, and the whole page agrees: no spend, no orders, no runs.
+        The reason for all of it was three screens down in the household
+        panel, so anybody opening this on a phone mid-run had to scroll
+        past every empty figure to find out the page was not broken. One
+        sentence, above the lot of them.
+      */}
+      {person.orders.length === 0 && person.sent > 0 && (
+        <p className="mb-[18px] rounded-2xl border-[1.5px] border-rule bg-wash px-3.5 py-2.5 text-[14.5px] font-semibold">
+          {person.parentName === ""
+            ? `Somebody else orders for them: ${person.sent} sent to this number, nothing bought on it.`
+            : `${person.parentName} orders for them: ${person.sent} sent to this number, nothing bought on it.`}
+        </p>
+      )}
 
       {/* The two things this page is opened for in a hurry, where a thumb
           lands. Outlines both: the one red button on a phone is in the bar
@@ -820,7 +846,8 @@ export default async function CustomerPage({
                         A household is two reviews, not one, and the one
                         who paid is not always the one with something to
                         say about the food. */}
-                    {google.review !== "" && (
+                    {/* Asked once, and never again. */}
+                    {google.review !== "" && !one.reviewed && (
                       <a
                         href={whatsappTo(
                           one.phone,
@@ -845,56 +872,14 @@ export default async function CustomerPage({
               </ul>
             )}
 
-            <form action={saveCustomerParent} className="mt-1 space-y-2.5">
-              <input type="hidden" name="phone" value={person.phone} />
-              {/* Ticked by hand and never guessed. The two columns below
-                  say a pair belong together and cannot say which way
-                  round, and at this university plenty of students pay for
-                  their own food. */}
-              <label className="flex items-center gap-2 text-sm font-semibold">
-                <input
-                  type="checkbox"
-                  name="is_parent"
-                  value="1"
-                  defaultChecked={person.isParent}
-                  className="size-4"
-                />
-                This one is the parent
-              </label>
-              <input
-                name="parent_name"
-                defaultValue={person.parentName}
-                placeholder="Their name"
-                className="field w-full py-2 text-sm"
-              />
-              <p className="hint">
-                On a student, their parent. On a parent, their child. Only if
-                they have said so: the customer never sees this.
-              </p>
-              <input
-                name="parent_phone"
-                inputMode="tel"
-                defaultValue={person.parentPhone}
-                placeholder="Their number"
-                className="field w-full py-2 text-sm"
-              />
-              <div className="flex flex-wrap gap-2">
-                <SaveButton look="btn-admin btn-admin-sm">Save</SaveButton>
-                {/* Straight through to them, with the first line written.
-                    Having the number and no way to use it is the same as
-                    not having it. */}
-                {parentLink(person) !== null && (
-                  <a
-                    href={parentLink(person)!}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-admin btn-admin-sm"
-                  >
-                    Message them
-                  </a>
-                )}
-              </div>
-            </form>
+            <Household
+              phone={person.phone}
+              isParent={person.isParent}
+              name={person.parentName}
+              number={person.parentPhone}
+              action={saveCustomerParent}
+              messageHref={parentLink(person)}
+            />
           </Panel>
 
           <Panel

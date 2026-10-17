@@ -49,6 +49,10 @@ export type OrderCardData = {
   /** Whether this customer has been ticked as having left a Google
    *  review. Not a fact Google ever tells anybody: ticked by hand. */
   reviewed?: boolean;
+  /** Whose review to ask for and tick, which on a household order is
+   *  whoever is collecting the box rather than whoever paid for it. */
+  askPhone?: string;
+  askReviewed?: boolean;
   paymentLink: string | null;
   /** That person's other orders in the same run, which this one tops up. */
   otherItems: number;

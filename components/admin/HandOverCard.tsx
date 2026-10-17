@@ -34,9 +34,18 @@ export default function HandOverCard({
   const google = done
     ? order.templates.find((one) => one.kind === "google") ?? null
     : null;
-  // Asking somebody who has already left one is the one thing this is all
-  // meant to prevent, so the button goes once the tick is on.
-  const ask = order.reviewed ? null : google;
+  /*
+   * Whoever is collecting it, who is not always whoever paid.
+   *
+   * Asking somebody who has already left one is the one thing this is all
+   * meant to prevent, so the button goes once their own tick is on. Their
+   * own, not the order's: a box a father paid for and his son collects
+   * asked the son and wrote the answer onto the father's row, which left
+   * the son asked forever and the father never asked at all.
+   */
+  const askPhone = order.askPhone ?? order.phone;
+  const askReviewed = order.askReviewed ?? order.reviewed;
+  const ask = askReviewed ? null : google;
 
   return (
     <article
@@ -94,24 +103,24 @@ export default function HandOverCard({
         */}
         {google && setReviewed && (
           <form action={setReviewed} className="ml-auto">
-            <input type="hidden" name="phone" value={order.phone} />
+            <input type="hidden" name="phone" value={askPhone} />
             <input
               type="hidden"
               name="reviewed"
-              value={String(!order.reviewed)}
+              value={String(!askReviewed)}
             />
             <button
               type="submit"
-              aria-pressed={Boolean(order.reviewed)}
+              aria-pressed={Boolean(askReviewed)}
               className="flex min-h-[44px] items-center gap-1.5 text-[13px] font-semibold text-muted"
             >
               <span
                 aria-hidden
-                className={`tick size-6 text-[13px] ${order.reviewed ? "tick-done" : ""}`}
+                className={`tick size-6 text-[13px] ${askReviewed ? "tick-done" : ""}`}
               >
-                {order.reviewed ? "✓" : ""}
+                {askReviewed ? "✓" : ""}
               </span>
-              {order.reviewed ? "Reviewed" : "Mark reviewed"}
+              {askReviewed ? "Reviewed" : "Mark reviewed"}
             </button>
           </form>
         )}

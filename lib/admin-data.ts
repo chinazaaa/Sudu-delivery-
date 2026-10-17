@@ -31,8 +31,14 @@ export type FeedOrder = Order & {
    *  word of their name. */
   callsThem: string;
   /** Whether this customer has been ticked as having left a Google review,
-   *  so the order that has just gone out can carry the tick. */
+   *  so the order that has just gone out can carry the tick. Whoever paid,
+   *  which on a household order is not whoever ate. */
   reviewed: boolean;
+  /** The same, for the person the order is being handed to, where the
+   *  order names one. A review is asked of a person once and never again,
+   *  and the two halves of a household are two people: a father who has
+   *  reviewed does not answer for his son, and nor his son for him. */
+  reviewedFor: boolean;
   /** In a shared delivery that has not closed, so it has no fee yet and
    *  marking it paid would take the food money alone. */
   awaitingGroup: boolean;
@@ -120,7 +126,14 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
    * both. Moving a tick to the half who actually wrote it is a job for
    * the customer page, which has a button for each of them.
    */
-  const reviewed = await reviewedMap(orders.map((o) => o.customer_phone));
+  // Both halves, because each of them is asked once and the tick belongs
+  // to whichever of them actually left one.
+  const reviewed = await reviewedMap(
+    orders.flatMap((o) => [
+      o.customer_phone,
+      String((o as { deliver_to_phone?: string | null }).deliver_to_phone ?? ""),
+    ])
+  );
 
  return orders.map((order) => {
     const batch = batches.get(order.batch_id);
@@ -160,6 +173,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
       pin: pins.get(order.customer_phone) ?? null,
       callsThem: called.get(order.customer_phone) ?? "",
       reviewed: reviewed.has(order.customer_phone),
+      reviewedFor: reviewed.has(String(order.deliver_to_phone ?? "")),
       awaitingGroup: order.group_id ? stillOpen.has(order.group_id) : false,
       promoter: promoters.get(order.customer_phone) ?? null,
       // Older orders have no column and no answer, which reads as empty and
@@ -371,6 +385,10 @@ export type CustomerRow = {
    *  parent is marked: a student is the ordinary case, and labelling them
    *  "child" is talking down to the people the shop feeds. */
   isParent: boolean;
+  /** How many boxes somebody else paid for and had sent to them. Counted
+   *  apart from their own: a son whose father orders for him has placed
+   *  nothing himself, and what he has spent is still nothing. */
+  sent: number;
   /** Which front door they use, over all their orders: "app", "web",
    *  "bot", "mixed", or empty where none of their orders recorded it.
    *  Worth knowing before pushing an app at somebody who already has it,
@@ -426,9 +444,11 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
   // not had the migration still shows the book.
   const asked = await db()
     .from("orders")
-    .select("customer_phone, total, status, created_at, source");
+    .select("customer_phone, deliver_to_phone, total, status, created_at, source");
   const { data: orders } = asked.error
-    ? await db().from("orders").select("customer_phone, total, status, created_at")
+    ? await db()
+        .from("orders")
+        .select("customer_phone, deliver_to_phone, total, status, created_at")
     : asked;
 
   const rows = (data ?? []).map((row) => {
@@ -436,8 +456,25 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
       (order) => order.customer_phone === row.phone && !isGone(order.status)
     );
     const paid = mine.filter((order) => isPaid(order.status));
+    /*
+     * Boxes somebody else paid for and had sent to them.
+     *
+     * A son whose father orders for him has placed nothing himself, and
+     * the book said "No orders yet" next to a name with two deliveries
+     * against it. Counted apart from his own rather than added to them,
+     * because what he has spent is still nothing and the two numbers
+     * must not each claim the same order.
+     */
+    const sent = (orders ?? []).filter(
+      (order) =>
+        String((order as { deliver_to_phone?: string | null }).deliver_to_phone ?? "") ===
+          row.phone &&
+        order.customer_phone !== row.phone &&
+        !isGone(order.status)
+    );
     return {
       phone: row.phone as string,
+      sent: sent.length,
       name: row.name as string,
       hostel: (row.hostel as string) ?? "",
       pin: (row.pin as string) ?? "",

@@ -53,6 +53,8 @@ export type OneCustomer = {
   whatsappWhose: string;
   /** Whether this one is the parent of the pair. Only the parent is marked. */
   isParent: boolean;
+  /** How many boxes somebody else paid for and had sent to them. */
+  sent: number;
   /** Where to message them, when that is not the number they order on.
    *  Empty for almost everybody, and then the ordering number is used. */
   whatsapp: string;
@@ -135,6 +137,15 @@ export async function oneCustomer(phone: string): Promise<OneCustomer | null> {
     (order) => order.customer_phone === wanted && !isGone(order.status)
   );
 
+  // Boxes somebody else paid for and had sent to them. A son whose father
+  // orders for him has placed nothing himself, and a page reading "No
+  // orders yet" over two deliveries reads as a mistake.
+  const { count: sentCount } = await db()
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("deliver_to_phone", wanted)
+    .neq("customer_phone", wanted);
+
   const paid = theirs.filter((order) => isPaid(order.status));
   const spend = paid.reduce((total, order) => total + order.total, 0);
   const foodAtMenu = paid.reduce((total, order) => total + (order.subtotal_food ?? 0), 0);
@@ -184,6 +195,7 @@ export async function oneCustomer(phone: string): Promise<OneCustomer | null> {
     whatsapp: (said.whatsapp as string) ?? "",
     whatsappWhose: (said.whatsapp_whose as string) ?? "",
     isParent: Boolean(said.is_parent),
+    sent: sentCount ?? 0,
     pays: said.payment_method === "card" ? "card" : "transfer",
     promoterCode: code === "" ? null : code,
     reviewed: Boolean(said.reviewed_at),
@@ -454,6 +466,8 @@ export function whoFor(
  * gets the father on his, without anybody filling the same thing in twice.
  */
 export type Linked = {
+  /** Whether they have already left a review, so nobody is asked twice. */
+  reviewed: boolean;
   name: string;
   phone: string;
   /** Whether they are a customer in their own right, which decides
@@ -510,14 +524,19 @@ export async function linkedTo(phone: string): Promise<Linked[]> {
 
     const { data: people } = await db()
       .from("customers")
-      .select("phone, name")
+      .select("phone, name, reviewed_at")
       .in("phone", [...numbers.keys()]);
 
-    const named = new Map(
-      ((people ?? []) as { phone: string; name: string }[]).map((one) => [
-        one.phone,
-        one.name ?? "",
-      ])
+    const rows = (people ?? []) as {
+      phone: string;
+      name: string;
+      reviewed_at: string | null;
+    }[];
+    const named = new Map(rows.map((one) => [one.phone, one.name ?? ""]));
+    // Asked once and never again. Each of them is their own person with
+    // their own opinion, so the tick is theirs rather than the household's.
+    const already = new Set(
+      rows.filter((one) => Boolean(one.reviewed_at)).map((one) => one.phone)
     );
 
     return [...numbers.entries()].map(([theirPhone, theirName]) => {
@@ -532,6 +551,7 @@ export async function linkedTo(phone: string): Promise<Linked[]> {
         phone: theirPhone,
         name: named.get(theirPhone) || theirName || "",
         known: named.has(theirPhone),
+        reviewed: already.has(theirPhone),
         orders: theirs.size,
         spend: mineOnly
           .filter((row) => isPaid(String(row.status ?? "")))
