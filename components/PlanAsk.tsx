@@ -101,17 +101,29 @@ export default function PlanAsk({
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-sm font-bold">Their block</span>
-          <input
+          {/* The shop's own list, not a box to type into.
+              A parent is the one person filling this in who has never seen
+              the place: they know their child is "in the new hostel" and
+              would write that. The list is what the run sheet is sorted by,
+              and a block nobody can match is a bag in a car with nowhere to
+              take it. "Not sure" is a real answer, and a better one than a
+              guess, because somebody rings them about this anyway. */}
+          <select
             name="hostel"
             required
-            list="parent-hostels"
+            defaultValue=""
             className="field border-2 border-ink bg-paper"
-          />
-          <datalist id="parent-hostels">
+          >
+            <option value="" disabled>
+              Pick their block
+            </option>
             {hostels.map((one) => (
-              <option key={one} value={one} />
+              <option key={one} value={one}>
+                {one}
+              </option>
             ))}
-          </datalist>
+            <option value="Not sure">I am not sure</option>
+          </select>
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-sm font-bold">Day of the month</span>

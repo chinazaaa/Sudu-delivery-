@@ -51,11 +51,14 @@ export default function CurateBox({
       if (event.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", shut);
-    const was = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", shut);
-      document.body.style.overflow = was;
+      // Back to whatever the stylesheet says rather than to whatever was
+      // on the element when this opened: remembering the old value means a
+      // hold let go early, on the way to another page, is put back on by
+      // the cleanup a moment later.
+      document.body.style.overflow = "";
     };
   }, [open]);
 
@@ -132,8 +135,22 @@ export default function CurateBox({
                * order we cannot price.
                */
               <div className="mt-4 space-y-2.5">
+                {/*
+                   * Let go of the page before leaving it.
+                   *
+                   * While the dialog is up the body is held still, which is
+                   * what stops a flick behind it scrolling the page away.
+                   * Tapping through to the menu started the navigation with
+                   * that hold still on, so the new page was drawn at the old
+                   * offset: you landed in the footer and were thrown to the
+                   * top a moment later. The hold comes off first.
+                   */}
                 <Link
                   href="/products"
+                  onClick={() => {
+                    document.body.style.overflow = "";
+                    setOpen(false);
+                  }}
                   className="block rounded-xl border-2 border-ink p-4 transition active:translate-x-0.5 active:translate-y-0.5"
                 >
                   <span className="block font-bold">Things you already have</span>
@@ -207,12 +224,18 @@ export default function CurateBox({
                   </label>
                   <label className="flex flex-col gap-1">
                     <span className="text-sm font-bold">Which block</span>
-                    <input name="hostel" list="curate-blocks" className="field" />
-                    <datalist id="curate-blocks">
+                    {/* The shop's own list. A block nobody can match is a
+                        bag in a car with nowhere to take it, and a parent
+                        filling this in has never seen the place. */}
+                    <select name="hostel" defaultValue="" className="field">
+                      <option value="">Pick a block</option>
                       {hostels.map((one) => (
-                        <option key={one} value={one} />
+                        <option key={one} value={one}>
+                          {one}
+                        </option>
                       ))}
-                    </datalist>
+                      <option value="Not sure">I am not sure</option>
+                    </select>
                   </label>
                 </div>
 
