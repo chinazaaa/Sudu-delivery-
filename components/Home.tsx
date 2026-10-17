@@ -305,7 +305,11 @@ export default function Home({
                   // Our colours and our drawings, never the restaurant's
                   // own. A tile in KFC's red with KFC's name on it is a
                   // shop claiming a relationship it does not have.
-                  const tile = kitchenTile(place.restaurant.name, at);
+                  const tile = kitchenTile(
+                    place.restaurant.name,
+                    at,
+                    place.restaurant.drawing
+                  );
                   return (
                   <li key={place.restaurant.id}>
                     <Link

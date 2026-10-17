@@ -1,6 +1,7 @@
 "use client";
 
 import { closeManyCarts, deleteManyCarts } from "@/app/admin/actions";
+import ConfirmButton from "./ConfirmButton";
 import { showingNow, usePicked } from "./Picking";
 
 /**
@@ -83,24 +84,22 @@ export default function BulkCarts({ reasons }: { reasons: string[] }) {
         </form>
 
         {/* Deleting is forever, and it is the one anybody clearing their own
-            tests actually wants, so it says so rather than hiding. */}
-        <form
-          action={deleteManyCarts}
-          className="ml-auto"
-          onSubmit={(event) => {
-            if (
-              !window.confirm(
-                `Delete ${ids.length} cart${ids.length === 1 ? "" : "s"}? This cannot be undone.`
-              )
-            ) {
-              event.preventDefault();
-            }
-          }}
-        >
+            tests actually wants, so it says so rather than hiding.
+
+            The board's own asking, not the browser's. window.confirm puts
+            up a grey box headed "sudu.store says" with a blue iOS button
+            in it, which is the one piece of furniture on the page that
+            belongs to somebody else. Every other destructive button here
+            turns into its own question and this one should too. */}
+        <form action={deleteManyCarts} className="ml-auto">
           {fields}
-          <button className="btn-admin btn-admin-sm btn-admin-dark font-bold">
+          <ConfirmButton
+            tone="bare"
+            className="btn-admin btn-admin-sm btn-admin-dark font-bold"
+            confirm={`Yes, delete ${ids.length}`}
+          >
             Delete {ids.length}
-          </button>
+          </ConfirmButton>
         </form>
       </div>
     </div>

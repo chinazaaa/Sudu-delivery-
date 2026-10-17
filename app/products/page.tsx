@@ -145,6 +145,7 @@ export default async function ProductsPage({
       logoUrl: "",
       bannerUrl: "",
       brandHex: "",
+      drawing: "",
       closedDays: "",
       areaId: "",
     },

@@ -152,6 +152,37 @@ export function areasOfRun(text: string | null | undefined): string[] {
 }
 
 /**
+ * Where a particular run collects from, said short.
+ *
+ * The front page said "From: Sangotedo" whatever the run was, which is
+ * true of every run and the whole story of none of them: a car that is
+ * going to Lekki on Thursday is a different offer, and the one place it
+ * was said was inside the checkout, after somebody had already decided we
+ * do not sell what they want.
+ *
+ * Two names at most, joined by a slash. This is the ticket at the top of
+ * the front page, not the route sheet: "Sangotedo/Lekki/Ikoyi" is a line
+ * that wraps on a phone and buys nothing, and anybody who needs the whole
+ * route is reading the fees section where every area is named with what it
+ * adds.
+ */
+export function collectedFrom(
+  runAreas: string | null | undefined,
+  areas: Area[],
+  most = 2
+): string {
+  const home = areas.find((one) => one.id === "")?.name ?? "Sangotedo";
+  const named = new Map(areas.map((one) => [one.id, one.name]));
+
+  const rest = areasOfRun(runAreas)
+    .filter((id) => id !== "")
+    .map((id) => named.get(id) ?? "")
+    .filter((name) => name !== "" && name !== home);
+
+  return [home, ...rest].slice(0, Math.max(1, most)).join("/");
+}
+
+/**
  * Whether this run can carry this cart.
  *
  * A run is a car with a route. It always passes Sangotedo, and it goes

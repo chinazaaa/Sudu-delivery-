@@ -18,6 +18,10 @@ export type Restaurant = {
   logo_url: string;
   banner_url: string;
   brand_hex: string;
+  /** One of the shop's own drawings, picked for this counter. Empty means
+   *  the one guessed off its name, which is right where a kitchen's name
+   *  says what it sells and useless where it does not. */
+  drawing?: string;
   /** "food" or "skincare". Skincare is the same shop on a different day, and
    *  this is what keeps its two thousand products out of a food menu. */
   kind?: string;

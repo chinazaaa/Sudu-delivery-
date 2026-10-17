@@ -34,6 +34,8 @@ import { parseValueBands } from "@/lib/value-bands";
 import PhotoField from "@/components/admin/PhotoField";
 import { Picking, Tick, Bar, Done } from "@/components/admin/BulkStock";
 import { aislesFrom } from "@/lib/aisles";
+import Drawing, { DRAWINGS } from "@/components/Drawing";
+import { drawingFor } from "@/lib/drawing";
 import { safeSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -215,6 +217,39 @@ export default async function RestaurantAdmin({
               {areas.length === 0
                 ? "Add areas under Settings to put a restaurant further out."
                 : "Decides what delivery costs from here, and whether a car of its own can go at all."}
+            </p>
+          </div>
+          <div>
+            {/* The drawing on the tile, where there is no photograph. The
+                shop guesses one off the name, which works for Dodo Pizza
+                and not for Uncle Stan's: a name says what a kitchen sells
+                only when the name is about food. */}
+            <label className="label" htmlFor="drawing">
+              Drawing on the tile
+            </label>
+            <select
+              id="drawing"
+              name="drawing"
+              defaultValue={restaurant.drawing ?? ""}
+              className="field"
+            >
+              <option value="">Guess it from the name</option>
+              {DRAWINGS.map((one) => (
+                <option key={one} value={one}>
+                  {one.charAt(0).toUpperCase() + one.slice(1)}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 flex items-center gap-2 text-xs text-muted">
+              <Drawing
+                name={
+                  (DRAWINGS as string[]).includes(restaurant.drawing ?? "")
+                    ? (restaurant.drawing as (typeof DRAWINGS)[number])
+                    : drawingFor(restaurant.name)
+                }
+                size={26}
+              />
+              Only on the front page tile, and only until there is a logo.
             </p>
           </div>
         </div>

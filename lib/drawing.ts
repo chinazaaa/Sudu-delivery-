@@ -1,4 +1,4 @@
-import type { DrawingName } from "@/components/Drawing";
+import { DRAWINGS, type DrawingName } from "@/components/Drawing";
 
 /**
  * Which drawing stands in for a thing that has no photograph.
@@ -21,6 +21,7 @@ const BY_WORD: [RegExp, DrawingName][] = [
   [/doughnut|donut|krispy|pastry|croissant|scone|puff/i, "doughnut"],
   [/cold ?stone|scoop|creamery/i, "cake"],
   [/cake|cupcake|brownie|cheesecake|pie\b|dessert|ice ?cream|sundae|waffle|pancake/i, "cake"],
+  [/small ?chops|puff ?puff|samosa|spring ?roll|suya|skewer|asun|peppered meat/i, "chops"],
   [/fish|titus|croaker|tilapia|prawn|shrimp|seafood|calamari/i, "fish"],
   [
     /rice|jollof|fried rice|pasta|spaghetti|noodle|indomie|swallow|amala|eba|semo|pounded|soup|stew|bowl|salad|beans|moi ?moi|yam|plantain|dodo/i,
@@ -84,9 +85,18 @@ export const TILES = [
  */
 export function kitchenTile(
   name: string,
-  at: number
+  at: number,
+  /** What the shop chose for this counter in admin. A name says what a
+   *  kitchen sells only when the name is about food, and plenty are not:
+   *  "Uncle Stan's" is small chops to everybody at PAU and nothing at all
+   *  to a regular expression, so it wore a slice of cake off the spare
+   *  rotation. Empty means guess, which is still right for most of them. */
+  chosen = ""
 ): { bg: string; text: string; drawing: DrawingName } {
   const tile = TILES[at % TILES.length];
+  if (chosen !== "" && (DRAWINGS as string[]).includes(chosen)) {
+    return { ...tile, drawing: chosen as DrawingName };
+  }
   const known = drawingFor(name);
   // A kitchen whose name says nothing about food gets one off the rotation
   // rather than the box every time, so a row of them is a row of different

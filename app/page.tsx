@@ -19,7 +19,7 @@ import {
 } from "@/lib/settings";
 import { toBatchView } from "@/lib/view";
 import { bandTable } from "@/lib/fees";
-import { parseAreas } from "@/lib/areas";
+import { collectedFrom, parseAreas } from "@/lib/areas";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { nextArrival, runArrival } from "@/lib/arrival";
 import { dropLabel, nextDrop, skincareOn, skincareShop } from "@/lib/skincare";
@@ -294,7 +294,17 @@ export default async function HomePage() {
       // from the shop rather than written into the headline, so an area
       // the shop stops serving stops being promised.
       award="PAU Entrepreneurship Award 2021"
-      runFrom={parseAreas(settings.delivery_areas).find((one) => one.id === "")?.name ?? "Sangotedo"}
+      /* Where the run in the headline actually collects from, not where
+         every run collects from. A car going to Lekki on Thursday is a
+         different offer, and the only place that was said was inside the
+         checkout, after somebody had decided we do not sell what they
+         want. Two names at most: this is a ticket, not a route sheet. */
+      runFrom={collectedFrom(
+        decided?.onARun
+          ? batches.find((one) => one.id === decided.runId)?.areas ?? ""
+          : "",
+        parseAreas(settings.delivery_areas)
+      )}
       where={(() => {
         const names = parseAreas(settings.delivery_areas).map((one) => one.name);
         if (names.length === 0) return "Sangotedo";

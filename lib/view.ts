@@ -18,6 +18,11 @@ export type MenuView = {
     brandHex: string;
     /** "Closed Saturdays and Sundays", or empty where it opens every day. */
     closedDays: string;
+    /** The drawing the shop picked for this counter, where it picked one.
+     *  Empty means the one guessed off its name, which is right for a
+     *  kitchen whose name says what it sells and useless for one that
+     *  does not. */
+    drawing: string;
     /** Which area it sits in, as a row holds it. Empty is the home area.
      *  The name is looked up where the page is drawn, because the names
      *  are the shop's to change in admin. */

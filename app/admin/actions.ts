@@ -3125,9 +3125,14 @@ export async function updateRestaurant(form: FormData): Promise<void> {
       ? await freeSlug(name)
       : "";
 
-  await db()
-    .from("restaurants")
-    .update({
+  /* The drawing this counter wears where it has no photograph. A name
+     says what a kitchen sells only when the name is about food: "Uncle
+     Stan's" is small chops to everybody at PAU and nothing at all to a
+     regular expression, so it wore whatever the spare rotation handed it.
+     Empty goes back to the guess. */
+  const drawing = String(form.get("drawing") ?? "").trim();
+
+  const fields: Record<string, unknown> = {
       name: name || undefined,
       ...(slug !== "" ? { slug } : {}),
       address: String(form.get("address") ?? "").trim(),
@@ -3155,8 +3160,16 @@ export async function updateRestaurant(form: FormData): Promise<void> {
       // Priced by what the shopping comes to rather than by how many things
       // it is. Empty puts it back on the ordinary ladder.
       value_bands: String(form.get("value_bands") ?? "").trim(),
-    })
-    .eq("id", id);
+      drawing,
+  };
+
+  // Naming a column the database has not got refuses the whole statement,
+  // so a shop that has not run the migration yet saves everything but it.
+  const { error } = await db().from("restaurants").update(fields).eq("id", id);
+  if (error) {
+    const { drawing: _dropped, ...rest } = fields;
+    await db().from("restaurants").update(rest).eq("id", id);
+  }
   revalidatePath("/admin", "layout");
   updateTag("menu");
   revalidatePath("/", "layout");

@@ -25,6 +25,7 @@ export type DrawingName =
   | "shawarma"
   | "fish"
   | "cake"
+  | "chops"
   | "box"
   | "parcel"
   | "car"
@@ -41,6 +42,7 @@ export const DRAWINGS: DrawingName[] = [
   "shawarma",
   "fish",
   "cake",
+  "chops",
   "box",
   "parcel",
   "car",
@@ -125,6 +127,15 @@ const BODY: Record<DrawingName, React.ReactNode> = {
   cake: (
     <>
 <g stroke="#15110E" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round"><rect x="22" y="50" width="76" height="50" rx="4" fill="#F4E3C3"/><rect x="22" y="70" width="76" height="9" fill="#E5321D"/><path d="M20 52c0-9 6-14 12-14h56c6 0 12 5 12 14z" fill="#FFF8EC"/><path d="M36 52v8M60 52v10M84 52v6" stroke="#FFF8EC" strokeWidth="6"/><circle cx="60" cy="30" r="8" fill="#E5321D"/><path d="M60 22c2-6 6-8 10-8" fill="none"/></g>
+    </>
+  ),
+  /* Suya on a stick, with a puff puff beside it.
+     Small chops is what half a hostel orders on a Friday and there was no
+     drawing for it, so the counter that sells nothing else wore a slice of
+     cake off the spare rotation. */
+  chops: (
+    <>
+<g stroke="#15110E" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round"><path d="M30 104 96 24" stroke="#B5652A" strokeWidth="7"/><circle cx="34" cy="76" r="15" fill="#E9A23B"/><path d="M28 72c3 3 8 2 11-2" fill="none" strokeWidth="2.5"/><rect x="48" y="66" width="27" height="21" rx="6" fill="#B5652A" transform="rotate(-39 61.5 76.5)"/><rect x="62" y="48" width="27" height="21" rx="6" fill="#8A4B22" transform="rotate(-39 75.5 58.5)"/><rect x="76" y="30" width="27" height="21" rx="6" fill="#B5652A" transform="rotate(-39 89.5 40.5)"/><path d="M57 72l4 2M70 55l4 2M84 37l4 2" fill="none" stroke="#E5321D" strokeWidth="3"/></g>
     </>
   ),
   box: (
