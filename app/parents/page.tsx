@@ -180,10 +180,15 @@ export default async function ParentsPage() {
     {
       q: "How do I send food to my child at Pan-Atlantic University?",
       a:
-        "Pick a box on this page, pay once, and tell us their name and hostel. " +
-        "We buy it in Sangotedo, carry it onto the PAU campus in Ibeju-Lekki " +
-        "and hand it to them at their block. Your child does not have to do " +
-        "anything.",
+        "Pick one of the boxes on this page, or tell us what you want in it " +
+        "and we will put one together. Pay once and give us their name and " +
+        "hostel: we buy it in Sangotedo, carry it onto the PAU campus in " +
+        "Ibeju-Lekki and hand it to them at their block." +
+        (carrying.on && toCampus.length > 0
+          ? " If you already have what you want to send, we can collect that " +
+            "from you instead."
+          : "") +
+        " Your child does not have to do anything.",
     },
     {
       q: "How do I know it was delivered?",

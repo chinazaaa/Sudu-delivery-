@@ -562,15 +562,21 @@ export default function Home({
                   Send a taste of home to their hostel
                 </h2>
                 <p className="text-lg leading-relaxed">
-                  Care packages and monthly foodstuff, paid for from anywhere
-                  and handed to your child at their block.
+                  Care packages and monthly foodstuff, or a parcel you already
+                  have collected from your door. Paid for from anywhere and
+                  handed to your child at their block.
                 </p>
               </div>
+              {/* Said as the page it opens, not as one of the things on it.
+                  "Send a care package" promises a shelf and lands on a page
+                  with four ways to send something, and a button that does
+                  not do what it says costs more than a vague one. This is
+                  the heading of the page behind it. */}
               <Link
                 href="/parents"
                 className="btn bg-ink text-white shadow-[4px_4px_0_#ffd23f] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_#ffd23f]"
               >
-                Send a care package
+                Send food to your child
               </Link>
             </div>
           </section>
