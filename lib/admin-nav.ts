@@ -10,12 +10,30 @@ export type Item = { href: string; label: string; badge?: number };
 export type Group = { name: string; items: Item[] };
 
 /**
+ * What is under a heading, said on the heading.
+ *
+ * A closed group is a word and an arrow, and a word nobody chose carefully
+ * is a group you have to open to rule out. Reading the four page names
+ * under it costs one dim line and answers the question the arrow was
+ * asking you to tap for.
+ */
+export const whatIsIn = (group: Group): string =>
+  group.items.map((item) => item.label).join(" · ");
+
+/**
  * The four things open every day, then everything else behind a heading.
  *
  * Twenty-eight links in one list meant the ones that matter sat in the same
  * typography as Secret Santa, and reaching Settings was a scroll. The board
  * puts the daily four at the top and files the rest under six headings that
  * open one at a time.
+ *
+ * The headings themselves were the next problem. Fulfilment, Catalogue,
+ * Requests and Site are the words a filing system uses about itself, and
+ * none of them says what is underneath: finding the left behind carts meant
+ * opening four headings to see which one had them. So each one is named
+ * after the thing it holds, and each one lists what is under it while it is
+ * shut, which is the part that stops the hunting.
  */
 export const DAILY: Item[] = [
   { href: "/admin", label: "Dashboard" },
@@ -26,7 +44,7 @@ export const DAILY: Item[] = [
 
 export const GROUPS: Group[] = [
   {
-    name: "Fulfilment",
+    name: "Carts & parcels",
     items: [
       { href: "/admin/carts", label: "Left behind" },
       { href: "/admin/groups", label: "Groups" },
@@ -35,7 +53,7 @@ export const GROUPS: Group[] = [
     ],
   },
   {
-    name: "Catalogue",
+    name: "What we sell",
     items: [
       { href: "/admin/menu", label: "Restaurants" },
       { href: "/admin/stock", label: "Stock" },
@@ -45,7 +63,7 @@ export const GROUPS: Group[] = [
     ],
   },
   {
-    name: "Requests",
+    name: "Asks & messages",
     items: [
       // Mail to the shop is somebody asking for something, which is what
       // this heading is, rather than a thing the shop sends.
@@ -61,7 +79,7 @@ export const GROUPS: Group[] = [
     ],
   },
   {
-    name: "People",
+    name: "Customers & reviews",
     items: [
       { href: "/admin/customers", label: "Customers" },
       { href: "/admin/promoters", label: "Promoter" },
@@ -80,7 +98,7 @@ export const GROUPS: Group[] = [
     ],
   },
   {
-    name: "Site",
+    name: "The website",
     items: [
       { href: "/admin/home", label: "Home page" },
       { href: "/admin/santa", label: "Secret Santa" },

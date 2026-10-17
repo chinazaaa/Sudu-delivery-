@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { DAILY, EVERY, GROUPS, TABS, YOU, type Item } from "@/lib/admin-nav";
+import { DAILY, EVERY, GROUPS, TABS, whatIsIn, YOU, type Item } from "@/lib/admin-nav";
 
 /**
  * The frame every admin page sits in: an Ink rail on a desktop, a drawer on
@@ -140,6 +140,15 @@ export default function AdminShell({
                 </span>
               )}
             </button>
+            {/* Shut, it says what is under it. A heading is a word
+                somebody chose and the pages underneath are the things you
+                are actually looking for, so the only way to rule a group
+                out used to be to open it. */}
+            {!open && (
+              <p className="px-3 pb-0.5 text-[11px] leading-snug text-rail-dim">
+                {whatIsIn(group)}
+              </p>
+            )}
             {open && (
               <div className="flex flex-col gap-0.5">
                 {group.items.map((item) => (
