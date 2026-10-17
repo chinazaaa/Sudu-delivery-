@@ -459,3 +459,141 @@ export async function profitByKitchen(from: string, to: string): Promise<ByKitch
 
   return { from, to, runs: reconciled.length, kitchens: kitchenTotals(rows) };
 }
+
+/** One run's profit, and what it took, for splitting across its orders. */
+export type RunShare = { profit: number; took: number; estimated: boolean };
+
+/**
+ * Each run's profit, by run, for anything that needs a share of it.
+ *
+ * Profit is a fact about a run rather than about an order: one car, one
+ * tank of fuel, one driver, shared by everything on it. Anybody asking
+ * what a customer or a channel was worth is really asking for a slice of
+ * these, so the arithmetic lives once, here, and is the same arithmetic
+ * the profit page shows for that run. Two copies of it would be two
+ * answers to the same question.
+ *
+ * The whole of every run is read, including orders outside whatever window
+ * the caller cares about, because a share of a run means nothing without
+ * the rest of it.
+ */
+export async function runProfitShares(ids: string[]): Promise<Map<string, RunShare>> {
+  const runs = new Map<string, RunShare>();
+  if (ids.length === 0) return runs;
+
+  const [{ data: batchRows }, { data: mateRows }] = await Promise.all([
+    db().from("batches").select("*").in("id", ids),
+    db()
+      .from("orders")
+      .select("id, batch_id, status, total, subtotal_food, customer_phone, box_id")
+      .in("batch_id", ids)
+      .not("status", "in", NOT_ORDERS_SQL),
+  ]);
+
+  const batches = (batchRows ?? []) as Record<string, unknown>[];
+  const everyone = (mateRows ?? []) as unknown as Order[];
+  const paidOnThem = everyone.filter((one) => isPaid(one.status));
+
+  const [overByRun, owedByRun] = await Promise.all([
+    overMenu(batches as unknown as Batch[], everyone),
+    commissionByRun(paidOnThem),
+  ]);
+
+  for (const one of batches) {
+    const id = String(one.id);
+    const onIt = paidOnThem.filter((order) => String(order.batch_id) === id);
+    const took = money(onIt as unknown as Record<string, unknown>[], "total");
+    const menu = money(onIt as unknown as Record<string, unknown>[], "subtotal_food");
+    const carried =
+      Number(one.fuel_cost ?? 0) +
+      Number(one.driver_cost ?? 0) +
+      Number(one.transport_cost ?? 0) +
+      Number(one.other_cost ?? 0);
+    runs.set(id, {
+      profit: took - menu - (overByRun.get(id) ?? 0) - (owedByRun.get(id) ?? 0) - carried,
+      took,
+      estimated: carried === 0,
+    });
+  }
+  return runs;
+}
+
+/** What a channel's orders were worth after everything came off them. */
+export type ChannelProfit = { profit: number; estimated: boolean };
+
+/**
+ * Profit, split by where the customer came from.
+ *
+ * The analytics table could say ChatGPT brought two orders and what they
+ * came to, and stopped there. Money in is the easy half: a channel that
+ * brings big orders onto half-empty cars is worth less than one that fills
+ * a run somebody was driving anyway, and revenue cannot tell those apart.
+ *
+ * It is an apportionment, not a measurement, and worth knowing which.
+ * Profit is a fact about a run: one car, one tank of fuel, one driver,
+ * shared by everything on it. So each run's profit is split across the
+ * orders on it in proportion to what each was worth, and each order's
+ * share is counted to whatever channel brought it. The same method the
+ * customer page already uses for one person's share, for the same reason:
+ * the alternative is pretending a fifth of a car can be traced to a bag.
+ *
+ * The whole run is read even where only one of its orders is in the
+ * window, because a share of a run means nothing without the rest of it.
+ * A run whose costs nobody has typed in yet is flagged rather than
+ * guessed at, exactly as the profit page flags it.
+ */
+export async function profitByChannel(
+  days: number
+): Promise<Record<string, ChannelProfit>> {
+  const since = new Date(Date.now() - days * 86400_000).toISOString();
+
+  // The same orders the table beside this one is counting.
+  const { data: mineRows } = await db()
+    .from("orders")
+    .select("id, batch_id, status, total, came_from")
+    .gte("created_at", since)
+    .not("status", "in", NOT_ORDERS_SQL)
+    .limit(20000);
+
+  const mine = ((mineRows ?? []) as Record<string, unknown>[]).filter((one) =>
+    isPaid(String(one.status ?? ""))
+  );
+  if (mine.length === 0) return {};
+
+  const ids = [
+    ...new Set(
+      mine.map((one) => String(one.batch_id ?? "")).filter((id) => id !== "" && id !== "null")
+    ),
+  ];
+  if (ids.length === 0) return {};
+
+  const [{ data: batchRows }, { data: mateRows }] = await Promise.all([
+    db().from("batches").select("*").in("id", ids),
+    db()
+      .from("orders")
+      .select("id, batch_id, status, total, subtotal_food, customer_phone, box_id")
+      .in("batch_id", ids)
+      .not("status", "in", NOT_ORDERS_SQL),
+  ]);
+
+  const runs = await runProfitShares(ids);
+
+  const out: Record<string, ChannelProfit> = {};
+  for (const order of mine) {
+    const run = runs.get(String(order.batch_id ?? ""));
+    // An order on no run, or on one that took nothing, has no share of
+    // anything to be given.
+    if (!run || run.took <= 0) continue;
+
+    const channel = String(order.came_from ?? "");
+    const bag = out[channel] ?? { profit: 0, estimated: false };
+    bag.profit += run.profit * (Number(order.total ?? 0) / run.took);
+    if (run.estimated) bag.estimated = true;
+    out[channel] = bag;
+  }
+
+  for (const channel of Object.keys(out)) {
+    out[channel].profit = Math.round(out[channel].profit);
+  }
+  return out;
+}

@@ -87,6 +87,12 @@ export const GROUPS: Group[] = [
     name: "Customers & reviews",
     items: [
       { href: "/admin/customers", label: "Customers" },
+      // Beside the customers rather than under the money, because it is a
+      // fact about people: who introduced them, and what that was worth.
+      // Analytics counts visits, which is a different question with a
+      // different answer, and conflating the two is what sent somebody
+      // looking for ChatGPT on a page that could never know about it.
+      { href: "/admin/sources", label: "Who brought them" },
       { href: "/admin/promoters", label: "Promoter" },
       { href: "/admin/reviews", label: "Reviews" },
       { href: "/admin/google", label: "Google reviews" },

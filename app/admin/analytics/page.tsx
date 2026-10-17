@@ -1,6 +1,7 @@
 import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
+import { profitByChannel } from "@/lib/profit";
 import { naira } from "@/lib/money";
 import {
   boxNumbers,
@@ -28,7 +29,7 @@ export default async function AnalyticsPage({
   const days = RANGES.includes(asked as (typeof RANGES)[number]) ? asked : 7;
 
   // Null means nothing is counting yet. The rest of the page still works.
-  const [views, steps, said, shelf, boxes, parcels, settings, came, ways] =
+  const [views, steps, said, shelf, boxes, parcels, settings, came, ways, earned] =
     await Promise.all([
     traffic(days),
     funnel(days),
@@ -39,6 +40,7 @@ export default async function AnalyticsPage({
     safeSettings(),
     channels(days),
     doors(days),
+    profitByChannel(days),
   ]);
   const busiest = views ? Math.max(...views.perDay.map((day) => day.views), 1) : 1;
   // A route is stored by its id, and the id is not what anybody calls it.
@@ -509,7 +511,8 @@ export default async function AnalyticsPage({
                     <th className="py-2 pr-3 text-right font-semibold">People</th>
                     <th className="py-2 pr-3 text-right font-semibold">Orders</th>
                     <th className="py-2 pr-3 text-right font-semibold">Paid</th>
-                    <th className="py-2 text-right font-semibold">Money</th>
+                    <th className="py-2 pr-3 text-right font-semibold">Money</th>
+                    <th className="py-2 text-right font-semibold">Profit</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/5">
@@ -519,8 +522,20 @@ export default async function AnalyticsPage({
                       <td className="py-2 pr-3 text-right">{one.visitors || "-"}</td>
                       <td className="py-2 pr-3 text-right">{one.orders || "-"}</td>
                       <td className="py-2 pr-3 text-right">{one.paid || "-"}</td>
-                      <td className="py-2 text-right font-semibold">
+                      <td className="py-2 pr-3 text-right">
                         {one.money > 0 ? naira(one.money) : "-"}
+                      </td>
+                      {/* What is left of it after the car. Money in is the
+                          easy half: a channel bringing big orders onto
+                          half-empty cars is worth less than one filling a
+                          run somebody was driving anyway, and revenue
+                          cannot tell those apart. */}
+                      <td className="py-2 text-right font-semibold">
+                        {earned[one.channel || ""]
+                          ? `${naira(earned[one.channel || ""].profit)}${
+                              earned[one.channel || ""].estimated ? "*" : ""
+                            }`
+                          : "-"}
                       </td>
                     </tr>
                   ))}
@@ -532,10 +547,20 @@ export default async function AnalyticsPage({
           )}
           <p className="text-xs text-muted">
             Only counts orders placed since this started recording, so
-            anything older sits under "Not known" and will thin out on its
-            own. Add ?utm_source=instagram to a link in a bio and it lands
-            under Instagram; Google needs nothing, since a search result
-            cannot carry one.
+            anything older sits under &quot;Not known&quot; and will thin out
+            on its own. Add ?utm_source=instagram to a link in a bio and it
+            lands under Instagram; Google needs nothing, since a search
+            result cannot carry one.
+          </p>
+          {/* Said plainly, because a figure somebody is going to spend money
+              on the strength of should say how it was arrived at. */}
+          <p className="text-xs text-muted">
+            Profit is a share, not a measurement. One car carries one tank of
+            fuel and one driver for everything on it, so each run&apos;s
+            profit is split across its orders by what each was worth, and
+            each order&apos;s share counts to whatever brought it. A star
+            means a run in there has no costs typed in yet, so that figure is
+            the best case rather than the figure.
           </p>
         </section>
       </div>
