@@ -104,6 +104,13 @@ const PAGES: { href: string; said: string }[] = [
   { href: "/send-a-gift-to-pau", said: "Send a gift to a student at PAU" },
   { href: "/pau-student-store", said: "What to buy at PAU" },
   { href: "/parents", said: "Send food to your child at PAU" },
+  // These two were reachable from the nav and from nowhere else, so the
+  // one page carrying the thing nobody else here does, and the one
+  // carrying parcels, sat outside the ring the other five make. A page
+  // nothing links to is a page a crawler finds last and an assistant
+  // reads as an edge of the site rather than part of it.
+  { href: "/custom-order", said: "Ask us for something we do not stock" },
+  { href: "/parcel", said: "Send a parcel to or from PAU" },
 ];
 
 export function AlsoSee({ not }: { not: string }) {

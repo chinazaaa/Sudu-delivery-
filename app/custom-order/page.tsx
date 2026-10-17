@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AlsoSee } from "@/components/Guide";
 import HelpLine from "@/components/HelpLine";
 import PageHead from "@/components/PageHead";
 
@@ -37,8 +38,84 @@ export default async function CustomOrderPage({
   const sent = (await searchParams).sent === "1";
   const [hostels, settings] = await Promise.all([hostelNames(), safeSettings()]);
 
+  /*
+   * The questions somebody asks before asking for something odd.
+   *
+   * This page carries the one thing nobody else at this campus offers,
+   * and it was answering nothing. A parent asked an assistant where to
+   * buy a particular ice cream near PAU and was sent here, and the
+   * assistant had to work out from a form and a headline that we would
+   * go and find it. The boxes won a different parent in a different
+   * conversation because they said what they were and what they cost in
+   * the words somebody asks in. This is the same page saying the same
+   * kind of thing about the harder half of the shop.
+   *
+   * Nothing promised here that the shop does not already do: it is
+   * answered by hand on WhatsApp, which is why the answers say so.
+   */
+  const asked: { q: string; a: string }[] = [
+    {
+      q: "Can you get me something that is not on the menu?",
+      a:
+        "Nearly always, yes. Tell us what it is and roughly what you would " +
+        "pay, and we go and find it, price it and bring it to your hostel " +
+        "with the next run. If we cannot get it we say so rather than leave " +
+        "you waiting, and that is rare.",
+    },
+    {
+      q: "What sort of things do people ask for?",
+      a:
+        "Anything a shop in Lagos sells. A particular ice cream, a brand of " +
+        "noodles nobody stocks, a charger, a birthday cake, medicine from a " +
+        "pharmacy, something from a market stall. It does not have to be " +
+        "food and it does not have to be from a restaurant we already use.",
+    },
+    {
+      q: "How much does it cost?",
+      a:
+        "What the thing itself costs, plus the ordinary delivery fee for " +
+        "the run it travels on. We tell you the price before you pay " +
+        "anything, so nobody is committed to a figure they have not seen.",
+    },
+    {
+      q: "How long does it take?",
+      a:
+        "Usually the next run. Something that has to be hunted for takes " +
+        "longer, and we tell you that when we quote it rather than after.",
+    },
+    {
+      q: "Do I have to pay before you look for it?",
+      a:
+        "No. You ask, we find it and tell you what it comes to, and you " +
+        "decide then. There is nothing to pay for asking.",
+    },
+    {
+      q: "Can my parents order it for me?",
+      a:
+        "Yes. Anybody can ask for something and have it delivered to a " +
+        "student at their own block: they pay, we hand it over, and we " +
+        "photograph it when we do.",
+    },
+  ];
+
+  const structured = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: asked.map((one) => ({
+      "@type": "Question",
+      name: one.q,
+      acceptedAnswer: { "@type": "Answer", text: one.a },
+    })),
+  };
+
   return (
     <div className="-mt-4 pb-10">
+      {/* Answered on the page, which is the only honest way to mark them
+          up underneath. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
+      />
       <PageHead
         ticket="Anything else"
         title={
@@ -101,6 +178,27 @@ export default async function CustomOrderPage({
           />
         </aside>
       </div>
+
+      <section className="flex flex-col gap-6 py-12 sm:py-14">
+        <h2 className="font-display text-[32px] font-black uppercase leading-none sm:text-[40px]">
+          Questions about asking for things
+        </h2>
+        <dl className="grid gap-4 sm:grid-cols-2">
+          {asked.map((one) => (
+            <div
+              key={one.q}
+              className="flex flex-col gap-2 rounded-2xl border-2 border-ink bg-paper p-5"
+            >
+              <dt className="font-bold leading-snug">{one.q}</dt>
+              <dd className="text-[15px] leading-relaxed text-ink/75">{one.a}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      {/* Into the ring the other landing pages make, rather than hanging
+          off the nav alone. */}
+      <AlsoSee not="/custom-order" />
     </div>
   );
 }

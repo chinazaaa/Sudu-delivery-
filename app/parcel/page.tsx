@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AlsoSee } from "@/components/Guide";
 import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
 import { safeSettings } from "@/lib/settings";
 import HelpLine from "@/components/HelpLine";
@@ -327,6 +328,10 @@ export default async function ParcelPage() {
           ))}
         </dl>
       </section>
+
+      {/* Into the ring the other landing pages make, rather than hanging
+          off the nav alone. */}
+      <AlsoSee not="/parcel" />
     </div>
   );
 }
