@@ -28,8 +28,14 @@ export const OWN = "own";
  * It has its own basket, its own car and its own day.
  */
 export function onTheMenu(kind: string | null | undefined): boolean {
-  return (kind ?? "food") !== "skincare";
+  // Shops of their own, kept out of the food menu. Eight hundred packets
+  // of paracetamol and vitamin C among the pizzas would bury the pizzas,
+  // which is the same argument that put skincare on its own counter.
+  return !OFF_THE_MENU.has(kind ?? "food");
 }
+
+/** Counters with a shop of their own rather than a place on the menu. */
+export const OFF_THE_MENU = new Set(["skincare", "pharmacy"]);
 
 /**
  * A thing you add to an order rather than a thing you order.

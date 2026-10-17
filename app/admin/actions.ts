@@ -4346,13 +4346,25 @@ export async function importSkincare(
     };
   }
 
-  // The shop itself. One row, marked skincare, which is what keeps two
-  // thousand products out of a food menu.
-  const shopName = String(form.get("shop_name") ?? "").trim() || "Skincare";
+  /*
+   * The shop itself. One row, marked with its own kind, which is what
+   * keeps a thousand products out of a food menu.
+   *
+   * Pharmacy came along and this was written for skincare alone, so a
+   * drugs catalogue had nowhere to land: onto the food menu, where eight
+   * hundred packets would bury every pizza, or onto the skincare counter,
+   * where paracetamol is not skincare. It takes the kind now.
+   */
+  const kind = String(form.get("kind") ?? "").trim() === "pharmacy"
+    ? "pharmacy"
+    : "skincare";
+  const shopName =
+    String(form.get("shop_name") ?? "").trim() ||
+    (kind === "pharmacy" ? "Pharmacy" : "Skincare");
   const { data: existing } = await db()
     .from("restaurants")
     .select("id")
-    .eq("kind", "skincare")
+    .eq("kind", kind)
     .limit(1);
 
   let shopId = ((existing ?? [])[0]?.id as string) ?? "";
@@ -4361,7 +4373,7 @@ export async function importSkincare(
       .from("restaurants")
       .insert({
         name: shopName,
-        slug: "skincare",
+        slug: kind,
         address: "",
         closes_at: "23:59",
         active: true,
@@ -4369,7 +4381,7 @@ export async function importSkincare(
         logo_url: "",
         banner_url: "",
         brand_hex: "",
-        kind: "skincare",
+        kind,
       })
       .select("id")
       .single();

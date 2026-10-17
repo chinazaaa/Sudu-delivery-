@@ -65,6 +65,23 @@ export default function ImportProducts({
         </p>
       </div>
 
+      {/* Which shop it is going into. Both are counters of their own,
+          kept off the food menu for the same reason: a thousand products
+          among the pizzas is a menu nobody can read. */}
+      <div>
+        <label className="label" htmlFor="kind">
+          Which shop
+        </label>
+        <select id="kind" name="kind" defaultValue="skincare" className="field">
+          <option value="skincare">Skincare</option>
+          <option value="pharmacy">Pharmacy</option>
+        </select>
+        <p className="mt-1 text-xs text-muted">
+          Each has its own counter and its own shelf. Nothing from either
+          appears on the food menu.
+        </p>
+      </div>
+
       <div>
         <label className="label" htmlFor="csv">
           The file
