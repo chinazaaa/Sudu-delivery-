@@ -366,6 +366,26 @@ export default function Checkout({
   // rather than assumed, because whether it applies at all depends on whose
   // first order this is and on what else is already on the order.
   const [perk, setPerk] = useState<LinkPerk>({ kind: "none" });
+
+  /*
+   * Their answer to "where did you hear about us?", which starts as the
+   * link's and is theirs to change.
+   *
+   * It used to be a field on the form and nothing else, so correcting it
+   * moved the commission and left the discount sitting on the total:
+   * somebody who picked "Somewhere else" was still being shown ₦500 off
+   * from a person they had just said did not send them. The offer belongs
+   * to coming in through somebody, so it follows the answer.
+   */
+  const [heardFrom, setHeardFrom] = useState(sentBy);
+
+  // Whose name goes on the line. The link's, until they name somebody else.
+  const creditName =
+    heardFrom === ""
+      ? ""
+      : heardFrom === sentBy
+        ? sentByName
+        : (promoters.find((one) => one.code === heardFrom)?.name ?? "");
   const [state, action, pending] = useActionState<SubmitState, FormData>(submitOrder, {
     error: null,
   });
@@ -776,7 +796,7 @@ export default function Checkout({
   // the three move, so the line above the button is never a number from a
   // cart somebody has since changed.
   useEffect(() => {
-    if (sentBy === "" || batchId === "" || cart.length === 0) {
+    if (heardFrom === "" || batchId === "" || cart.length === 0) {
       setPerk({ kind: "none" });
       return;
     }
@@ -803,7 +823,7 @@ export default function Checkout({
       clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sentBy, batchId, itemCount, phone]);
+  }, [heardFrom, batchId, itemCount, phone]);
 
   // A group already has its car, picked when the link was made, so nobody in
   // one is asked again. Everybody else picks here.
@@ -1424,7 +1444,12 @@ export default function Checkout({
             Whoever they name is theirs for life, so it is worth a line on a
             form people are already filling in, and "somewhere else" is a
             real answer: most people are nobody's referral. */}
-        <HeardFrom promoters={promoters} sentBy={sentBy} />
+        <HeardFrom
+          promoters={promoters}
+          sentBy={sentBy}
+          value={heardFrom}
+          onChange={setHeardFrom}
+        />
 
         {/* Buying it for somebody else. Folded away, because nearly every
             order is for whoever is typing, and two more boxes on every
@@ -1754,7 +1779,7 @@ export default function Checkout({
         )}
         {!applied && perk.kind === "applied" && (
           <div className="flex justify-between font-semibold text-mint">
-            <span>{sentByName ? `${sentByName}'s link` : perk.label}</span>
+            <span>{creditName ? `${creditName}'s link` : perk.label}</span>
             <span>−{naira(perk.discount)}</span>
           </div>
         )}
@@ -1809,8 +1834,8 @@ export default function Checkout({
           perk={
             !applied && perk.kind === "applied"
               ? {
-                  label: sentByName
-                    ? `${perk.label}, from ${sentByName}`
+                  label: creditName
+                    ? `${perk.label}, from ${creditName}`
                     : perk.label,
                   discount: perk.discount,
                 }

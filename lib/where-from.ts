@@ -30,10 +30,28 @@ export async function cameFromNow(): Promise<string> {
  * the field worth being strict about: nobody gets to name their own code by
  * editing a hidden input.
  */
-export async function linkCouponNow(): Promise<string> {
+export async function linkCouponNow(said?: string): Promise<string> {
   try {
     const sentBy = (await cookies()).get(WHO_COOKIE)?.value ?? "";
     if (sentBy.trim() === "") return "";
+
+    /*
+     * Unless they have just said they did not come through anybody.
+     *
+     * The checkout asks "where did you hear about us?" and answers it from
+     * the link, and the whole point of showing that answer is that it can
+     * be corrected: a link shared into a group of forty would otherwise
+     * quietly make all forty of them hers. But correcting it only changed
+     * who got the commission. The link's discount came off this cookie and
+     * nothing else, so somebody who picked "Somewhere else" watched the
+     * ₦500 sit there on the total, which reads as the shop not listening.
+     *
+     * Undefined is a form that never asked, which is most of them, and
+     * those are left exactly as they were. An empty string is somebody
+     * answering "somewhere else", and that is an answer.
+     */
+    if (said !== undefined && said.trim() === "") return "";
+
     return (await safeSettings()).promoter_perk_code.trim();
   } catch {
     return "";

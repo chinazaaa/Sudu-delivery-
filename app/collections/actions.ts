@@ -125,7 +125,9 @@ async function order(form: FormData): Promise<BoxOrderState> {
 
   const result = await placeOrder({
     cameFrom: await cameFromNow(),
-    autoCoupon: await linkCouponNow(),
+    autoCoupon: await linkCouponNow(
+      form.has("heard_from") ? String(form.get("heard_from") ?? "").trim() : undefined
+    ),
     batchId: going.runId,
     deliverAt: going.at || undefined,
     name: String(form.get("name") ?? ""),

@@ -68,9 +68,15 @@ export async function submitOrder(
   const inGroup = (await cookies()).get("sudu_group")?.value ?? "";
   if (inGroup) redirect(`/g/${inGroup}`);
 
+  // Asked, or not asked at all: a form with no such field is not somebody
+  // saying they came in on their own.
+  const saidHeard = form.has("heard_from")
+    ? String(form.get("heard_from") ?? "").trim()
+    : undefined;
+
   const result = await placeOrder({
     cameFrom: await cameFromNow(),
-    autoCoupon: await linkCouponNow(),
+    autoCoupon: await linkCouponNow(saidHeard),
     source: "web",
     batchId: String(form.get("batch_id") ?? ""),
     name: String(form.get("name") ?? ""),
@@ -406,6 +412,8 @@ export async function orderFromLink(input: {
 
   const result = await placeOrder({
     cameFrom: await cameFromNow(),
+    // No "where did you hear about us?" on this one, so there is no answer
+    // to honour and the link stands as it always did.
     autoCoupon: await linkCouponNow(),
     source: "web",
     batchId: going.runId,
@@ -541,7 +549,9 @@ export async function placeSkincareOrder(input: {
 
   const result = await placeOrder({
     cameFrom: await cameFromNow(),
-    autoCoupon: await linkCouponNow(),
+    // Undefined where the skincare checkout never asked, empty where they
+    // answered that nobody sent them.
+    autoCoupon: await linkCouponNow(input.heardFrom),
     source: "web",
     batchId: car.id,
     name: input.name,
