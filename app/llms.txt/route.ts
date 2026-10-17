@@ -107,10 +107,29 @@ export async function GET(): Promise<Response> {
     ...(skincare
       ? [`- Skincare, on its own run. Next drop: ${dropLabel(nextDrop(settings).date)}.`]
       : []),
+    /*
+     * With what each one costs.
+     *
+     * The routes were listed by name and nothing else, so an assistant
+     * asked where somebody could send a parcel to PAU had a label and no
+     * number, and answered with courier firms it could quote prices and
+     * opening hours for. The boxes won the same parent in the same
+     * conversation, and the only difference was that they said what they
+     * cost.
+     *
+     * Read off the live bands, like every other figure in this file, so
+     * it cannot become a confident wrong price.
+     */
     ...(routes.length > 0
       ? [
-          "- Parcels, collected and brought to campus or taken from it:",
-          ...routes.map((route) => `  - ${route.label}`),
+          "- Parcels, collected from the address you give and handed to a named",
+          "  student at their own hostel block, photographed at both ends.",
+          "  Priced by weight, from:",
+          ...routes.map((route) => {
+            const cheapest = Math.min(...route.bands.map((band) => band.fee));
+            const upTo = Math.max(...route.bands.map((band) => band.upTo));
+            return `  - ${route.label}: from ${naira(cheapest)}, up to ${upTo}kg`;
+          }),
         ]
       : []),
     ""

@@ -5,7 +5,7 @@ import HelpLine from "@/components/HelpLine";
 import { naira } from "@/lib/money";
 import Link from "next/link";
 import ParcelForm from "@/components/ParcelForm";
-import { liveRoutes, parcels } from "@/lib/parcels";
+import { liveRoutes, parcels, placesSaid } from "@/lib/parcels";
 import { hostelNames } from "@/lib/hostels";
 import { lagosToday } from "@/lib/time";
 import { namedPromoters } from "@/lib/promoters";
@@ -79,8 +79,104 @@ export default async function ParcelPage() {
     return true;
   });
 
+  /*
+   * The questions a parent actually types, answered on the page.
+   *
+   * This was the one landing page in the shop with none, and it showed.
+   * A parent asking an assistant how to send a parcel from Lekki to her
+   * son at PAU was handed three courier companies and their opening
+   * hours, because "which courier" is a question those companies have
+   * spent years being the answer to and this page was not answering any
+   * question at all. The boxes on /parents won the same parent in the
+   * same conversation, and the only difference was that they said what
+   * they were and what they cost in the words somebody asks in.
+   *
+   * Every figure is read off the live routes, so nothing here can promise
+   * a price nobody charges any more.
+   */
+  const cheapest = Math.min(...from.map((one) => one.price));
+  const bothWays = routes.some((one) => one.toPau) && routes.some((one) => !one.toPau);
+
+  const asked: { q: string; a: string }[] = [
+    {
+      q: "How do I send a parcel to my child at Pan-Atlantic University?",
+      a:
+        `Tell us where it is and we collect it, from ${placesSaid(routes)}. ` +
+        "It is sealed when we take it, photographed at both ends, and handed " +
+        "to your child at their own block on campus rather than left at a " +
+        `gate. From ${naira(cheapest)}, by weight, up to ${heaviest}kg.`,
+    },
+    {
+      q: "Can you collect it from my house or office?",
+      a:
+        "Yes. Give us the address and a time and we come to it. You do not " +
+        "have to find a courier office, queue at a counter or know anybody's " +
+        "opening hours.",
+    },
+    {
+      q: "How much does it cost to send a parcel to PAU?",
+      a:
+        `From ${naira(cheapest)}, and it goes by weight rather than by what ` +
+        "is in it. " +
+        tiles.map((one) => `${one.label}, from ${naira(one.price)}`).join(". ") +
+        `. The exact figure is on the form before you pay, once you have said ` +
+        "how heavy it is.",
+    },
+    {
+      q: "Will I know it arrived?",
+      a:
+        "Yes. We photograph it when we collect it and again when it is handed " +
+        "over, and you get both. Your child does not have to remember to tell " +
+        "you.",
+    },
+    {
+      q: "Do you deliver to the hostel, or only to the gate?",
+      a:
+        "To the block. We name the hostel on the parcel and hand it to them " +
+        "there, which is the whole reason this exists: a courier can reach " +
+        "the campus and then has nobody to give it to.",
+    },
+    ...(bothWays
+      ? [
+          {
+            q: "Can my child send something back to me?",
+            a:
+              "Yes, the same way and at the same prices. They tell us what it " +
+              "is and where it is going, we collect it from their block and " +
+              "take it to the address you give us.",
+          },
+        ]
+      : []),
+    {
+      q: "What can I not send?",
+      a:
+        setup.terms.length > 0
+          ? setup.terms.join(" ")
+          : `Nothing worth more than ${naira(setup.maxValue)}, and nothing ` +
+            "we are not allowed to carry. If you are not sure, ask us first.",
+    },
+  ];
+
+  const structured = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: asked.map((one) => ({
+      "@type": "Question",
+      name: one.q,
+      acceptedAnswer: { "@type": "Answer", text: one.a },
+    })),
+  };
+
   return (
     <div className="-mt-4">
+      {/* The questions on the page, answered in the words they are asked
+          in. The other landing pages have carried this for months and
+          this one carried nothing, which is most of why an assistant
+          answering a parent about parcels reached for courier firms. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
+      />
       <section className="bleed relative overflow-hidden bg-ink text-shell">
         <span
           aria-hidden
@@ -193,6 +289,26 @@ export default async function ParcelPage() {
           <HelpLine number={settings.whatsapp_number} about="a parcel" page="Parcel" />
         </aside>
       </div>
+
+      {/* Answered on the page, which is the only honest way to mark them
+          up underneath: an answer in the markup that is not on the page
+          is the kind of thing a site loses its rich results over. */}
+      <section className="flex flex-col gap-6 py-12 sm:py-14">
+        <h2 className="font-display text-[32px] font-black uppercase leading-none sm:text-[40px]">
+          Questions about parcels
+        </h2>
+        <dl className="grid gap-4 sm:grid-cols-2">
+          {asked.map((one) => (
+            <div
+              key={one.q}
+              className="flex flex-col gap-2 rounded-2xl border-2 border-ink bg-paper p-5"
+            >
+              <dt className="font-bold leading-snug">{one.q}</dt>
+              <dd className="text-[15px] leading-relaxed text-ink/75">{one.a}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
     </div>
   );
 }
