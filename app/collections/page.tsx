@@ -1,4 +1,6 @@
 import BoxShelf from "@/components/BoxShelf";
+import CurateBox from "@/components/CurateBox";
+import { hostelNames } from "@/lib/hostels";
 import { safeSettings } from "@/lib/settings";
 import HelpLine from "@/components/HelpLine";
 
@@ -39,6 +41,9 @@ export default async function CollectionsPage() {
         ticket="Packed and ready · delivery in every box"
         other={{ href: "/products", said: "Put your own together" }}
       />
+      {/* For somebody who has read every shelf and not found it. The shelf
+          pages carry the same card under their own boxes. */}
+      <CurateBox shelf="" hint="" hostels={await hostelNames()} />
       <HelpLine number={settings.whatsapp_number} about="a box" />
     </div>
   );

@@ -16,6 +16,7 @@ import { ESTIMATE_NOTE } from "@/lib/arrival";
 import OccasionBoxes from "@/components/OccasionBoxes";
 import HelpLine from "@/components/HelpLine";
 import AskParents from "@/components/AskParents";
+import CurateBox from "@/components/CurateBox";
 
 /**
  * One collection or occasion, and the boxes packed for it.
@@ -191,6 +192,11 @@ export default async function BoxDetail({
           shut={isTimed(occasion) && when.length === 0}
         />
       )}
+
+      {/* Under the boxes, where somebody has just read all of them and not
+          found the one they wanted. A shelf holds what the shop decided to
+          pack, which is most of what anybody wants and never all of it. */}
+      <CurateBox shelf={occasion.name} hint={occasion.custom_hint} hostels={hostels} />
 
         </div>
 

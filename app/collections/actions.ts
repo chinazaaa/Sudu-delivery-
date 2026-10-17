@@ -12,6 +12,8 @@ import { cameFromNow, linkCouponNow } from "@/lib/where-from";
 import { placeOrder } from "@/lib/orders";
 import { orderLinkId } from "@/lib/orders";
 import { OPENED, sprung, tooFast, TRAP } from "@/lib/guard";
+import { askFor } from "@/lib/requests";
+import { tellAdmin } from "@/lib/admin-alerts";
 
 export type BoxOrderState = { error: string; orderId?: string };
 
@@ -234,4 +236,53 @@ function giftFrom(form: FormData): { name: string; phone: string } | undefined {
   const name = String(form.get("gift_name") ?? "").trim();
   const phone = String(form.get("gift_phone") ?? "").trim();
   return name === "" && phone === "" ? undefined : { name, phone };
+}
+
+export type CurateState = { error: string; done: boolean };
+
+/**
+ * A box somebody wants that nobody has packed.
+ *
+ * The shelves hold what the shop decided to pack, which is most of what
+ * anybody wants and never all of it. Until now the only answer to "could
+ * you do one with X in it" was the changes box on a box that was already
+ * nearly right, and somebody who wanted something else entirely had to
+ * find the custom order page by themselves.
+ *
+ * It goes into the same list as every other thing we do not stock, because
+ * it is the same job: find it, price it, ring them back. The shelf it was
+ * asked from rides along so whoever answers knows what they were looking
+ * at, which is half of knowing what they meant.
+ */
+export async function curateABox(
+  _prev: CurateState,
+  form: FormData
+): Promise<CurateState> {
+  const said = (name: string) => String(form.get(name) ?? "");
+  const shelf = said("shelf").trim();
+
+  const result = await askFor({
+    wanted: said("wanted"),
+    budget: said("budget"),
+    name: said("name"),
+    phone: said("phone"),
+    hostel: said("hostel"),
+    note: [shelf === "" ? "" : `Curating their own ${shelf} box.`, said("note").trim()]
+      .filter(Boolean)
+      .join(" "),
+  });
+
+  if (!result.ok) return { error: result.error, done: false };
+
+  try {
+    await tellAdmin({
+      title: `A box to curate · ${said("budget").trim() || "no budget said"}`,
+      body: `${said("name").trim() || "Someone"} wants ${said("wanted").trim()}.`,
+      url: "/admin/requests",
+    });
+  } catch {
+    /* The request is saved either way. */
+  }
+
+  return { error: "", done: true };
 }
