@@ -401,6 +401,27 @@ export default async function OrderPage({
             own times on the line below. */}
       </section>
 
+      {/*
+        The receipt, where the person who paid for it is standing.
+        
+        It has existed all along and was linked from admin and nowhere
+        else, so the one page a customer actually opens could not reach
+        it: somebody who needed one had to ask for it on WhatsApp and wait
+        for a person to send the link. It is built to be forwarded, which
+        is the other half of this: a student sends it to whoever paid.
+
+        Only once it is paid, because a receipt for money nobody has sent
+        is not a receipt and the page behind this would turn it away.
+      */}
+      {paid && (
+        <Link
+          href={`/receipt/${order.id}`}
+          className="btn-quiet w-full justify-center"
+        >
+          Your receipt
+        </Link>
+      )}
+
       {!paid && !waitingOnGroup && !over && expired && (
         <section className="card space-y-3 border-brand/30 bg-brand-tint">
           <div>
