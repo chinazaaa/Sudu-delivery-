@@ -17,6 +17,12 @@ const RANGE_WORD: Record<number, string> = {
 /**
  * One source, in the numbers that source would be judged on.
  *
+ * "Source" rather than "who brought them", because most of these did not
+ * bring anybody. A promoter brings somebody and is owed for it; ChatGPT
+ * recommended a shop to somebody who then rang it, which is where she
+ * found us rather than something it did for us. One word has to cover a
+ * person and a place, and that word is where they came from.
+ *
  * The analytics page answers a different question and was being asked this
  * one. It counts visits off the web, and somebody recommended by ChatGPT
  * who then rang the shop and had her order typed in leaves no web trail at
@@ -58,8 +64,8 @@ export default async function SourcesPage({
   return (
     <div className="space-y-[18px]">
       <PageHeader
-        title="Who brought them"
-        detail="Every customer under whoever or whatever introduced them, and what that has been worth."
+        title="Sources"
+        detail="Where the customers came from, and what each of those has been worth."
         backHref="/admin/customers"
         backLabel="Customers"
         actions={
@@ -83,8 +89,8 @@ export default async function SourcesPage({
 
       {sources.length === 0 ? (
         <p className="card text-sm text-muted">
-          Nobody has been filed under anything yet. Open a customer and set it
-          under &quot;Who brought them&quot;, and they will gather here.
+          Nobody has a source on them yet. Open a customer and set one under
+          &quot;Who brought them&quot;, and they will gather here.
         </p>
       ) : (
         <>
@@ -95,7 +101,7 @@ export default async function SourcesPage({
             <input type="hidden" name="days" value={String(days)} />
             <div className="min-w-[220px] flex-1">
               <label className="label" htmlFor="from">
-                Who brought them
+                Source
               </label>
               <select id="from" name="from" defaultValue={chosen?.key ?? ""} className="field">
                 {sources.map((one) => (
@@ -123,7 +129,7 @@ export default async function SourcesPage({
                     something, and it is not this: saying "10" on its own
                     would be the page flattering it. */}
                 <Stat
-                  label="People it brought"
+                  label="People from it"
                   value={numbers.customers}
                   hint="Filed under it, ordered or not"
                 />
@@ -145,16 +151,15 @@ export default async function SourcesPage({
               <div className="card">
                 <p className="ticket text-muted">What it has done</p>
                 <p className="mt-1 text-[15px] leading-[1.5]">
-                  {chosen?.label} has brought{" "}
                   <strong>
                     {numbers.customers} {numbers.customers === 1 ? "person" : "people"}
-                  </strong>
-                  .{" "}
+                  </strong>{" "}
+                  {numbers.customers === 1 ? "came" : "came"} to us through {chosen?.label}.{" "}
                   {numbers.ordered === 0 ? (
                     <>
                       None of them has ordered{days > 0 ? ` in the last ${days} days` : " yet"},
-                      which is worth knowing on its own: it has introduced somebody and not
-                      yet sold anything.
+                      which is worth knowing on its own: it has sent somebody and not yet
+                      sold anything.
                     </>
                   ) : (
                     <>

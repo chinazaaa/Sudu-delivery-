@@ -92,7 +92,7 @@ export const GROUPS: Group[] = [
       // Analytics counts visits, which is a different question with a
       // different answer, and conflating the two is what sent somebody
       // looking for ChatGPT on a page that could never know about it.
-      { href: "/admin/sources", label: "Who brought them" },
+      { href: "/admin/sources", label: "Sources" },
       { href: "/admin/promoters", label: "Promoter" },
       { href: "/admin/reviews", label: "Reviews" },
       { href: "/admin/google", label: "Google reviews" },
