@@ -256,12 +256,22 @@ export default function Home({
                     Start an order
                     <span aria-hidden>→</span>
                   </Link>
-                  {/* On a phone the fee table is two swipes down and the
-                      ticket under this already links to it. One button
-                      here is what gets pressed. */}
-                  <a href="#fees" className="btn-quiet hidden text-lg sm:inline-flex">
-                    See delivery fees
-                  </a>
+                  {/* The second button is for the second kind of person
+                      who opens this page.
+
+                      It said "see delivery fees", which sends somebody to
+                      a table two swipes down that the ticket beside this
+                      already summarises: the next run says what delivery
+                      starts at, so the button was a second route to a
+                      number already on the screen.
+
+                      A parent is the other reader of a food shop's front
+                      page, and the one with no way in: everything above is
+                      written to somebody who lives here. On a phone too,
+                      because that is where a forwarded link is opened. */}
+                  <Link href="/parents" className="btn-quiet w-full text-lg sm:w-auto">
+                    Order as a parent
+                  </Link>
                 </div>
               </div>
 

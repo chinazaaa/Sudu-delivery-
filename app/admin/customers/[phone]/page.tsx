@@ -773,9 +773,17 @@ export default async function CustomerPage({
               says it, because "my dad sorts the monthly one out" is the
               sentence that turns a student into an introduction.
            */}
+          {/* "Parent", because that is the word the whole shop uses: the
+              page is /parents, the shelves say parents, the message says
+              parents. Inventing a second word for it in one corner of
+              admin is a second thing to learn.
+
+              Both ways round, though, so the title says both: on a
+              student this is their parent, and on a parent it is their
+              child. */}
           <Panel
-            title="Whoever pays for them"
-            detail="Only if they have said so. It is a note about who to talk to, and the customer never sees it."
+            title="Parent or child"
+            detail="The other half of the household, where somebody has said. They see each other's orders, and each message goes to whichever of them it is about."
             size="sm"
           >
             {/* Who is on the other end of it, where somebody has said.
@@ -842,8 +850,8 @@ export default async function CustomerPage({
                 className="field w-full py-2 text-sm"
               />
               <p className="hint">
-                Works the other way round too: where the person who orders is
-                the parent, this is where their child goes.
+                On a student, their parent. On a parent, their child. Only if
+                they have said so: the customer never sees this.
               </p>
               <input
                 name="parent_phone"
