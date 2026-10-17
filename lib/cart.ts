@@ -300,6 +300,18 @@ export function useCart(): CartLine[] {
  */
 export const countItems = (cart: CartLine[]) =>
   containersIn(cart.map((l) => ({ qty: l.qty, container_pct: l.containerPct })));
+
+/**
+ * How many things are in the bag, which is a different question.
+ *
+ * countItems answers how much of the car this fills, and the answer is
+ * never less than one container because a trip cannot be made of nothing.
+ * That floor is right for a price and wrong for a badge: an empty cart
+ * came out as one, so the bag on the tab bar sat there saying 1 over a
+ * page that said the cart was empty.
+ */
+export const cartCount = (cart: CartLine[]) =>
+  cart.reduce((sum, line) => sum + line.qty, 0);
 export const cartSubtotal = (cart: CartLine[]) =>
   cart.reduce((sum, l) => sum + l.unitPrice * l.qty, 0);
 

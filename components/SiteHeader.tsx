@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ownsThePage } from "@/lib/chrome";
 import { useEffect, useRef, useState } from "react";
 import Wordmark from "./Wordmark";
-import { countItems, useCart } from "@/lib/cart";
+import { cartCount, countItems, useCart } from "@/lib/cart";
 
 /**
  * A quiet top bar. Restaurants are not links up here: they are the content of
@@ -14,7 +14,7 @@ import { countItems, useCart } from "@/lib/cart";
  */
 export default function SiteHeader({ tagline }: { tagline: string }) {
   const cart = useCart();
-  const count = countItems(cart);
+  const count = cartCount(cart);
   const path = usePathname();
   const router = useRouter();
   const [menu, setMenu] = useState(false);

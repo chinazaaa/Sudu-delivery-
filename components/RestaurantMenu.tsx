@@ -5,7 +5,7 @@ import { useState } from "react";
 import ItemRow from "./ItemRow";
 import ItemSheet from "./ItemSheet";
 import CartBar from "./CartBar";
-import { cartSubtotal, countItems, useCart } from "@/lib/cart";
+import { cartSubtotal, cartCount, countItems, useCart } from "@/lib/cart";
 import { CATEGORY_SEPARATOR } from "@/lib/menu-import";
 import { bandFor, feeFor, type Band } from "@/lib/fees";
 import { naira } from "@/lib/money";
@@ -103,7 +103,7 @@ export default function RestaurantMenu({
 
   // The run, as it stands. Everything in the cart, not only this kitchen's:
   // the whole point is that they share one car.
-  const count = countItems(cart);
+  const count = cartCount(cart);
   const subtotal = cartSubtotal(cart);
   const fee = count > 0 ? feeFor(count, null, bands) : 0;
   const band = bandFor(Math.max(count, 1), bands);

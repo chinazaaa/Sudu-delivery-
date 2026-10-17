@@ -11,6 +11,7 @@ import { feeAcross, type ValueBand } from "@/lib/value-bands";
 
 import Link from "next/link";
 import Empty from "@/components/Empty";
+import { shelfCount, useShelf } from "@/lib/skincare-cart";
 import { useEffect, useState } from "react";
 import Thumb from "./Thumb";
 import {
@@ -97,6 +98,8 @@ export default function CartView({
   }, []);
 
   const cart = useCart();
+  // Theirs too, and waiting, even though it checks out on its own run.
+  const waitingSkincare = shelfCount(useShelf());
   const { people } = usePeople();
   const [newPerson, setNewPerson] = useState("");
   const router = useRouter();
@@ -393,6 +396,30 @@ export default function CartView({
               the group. */}
           {theCar}
         </div>
+      );
+    }
+
+    /*
+     * Empty of food is not empty.
+     *
+     * Skincare is its own order on its own run, so it is kept out of this
+     * cart on purpose. But the bag counts both, and a page flatly saying
+     * "your cart is empty" over a badge reading 1 reads as the shop having
+     * lost something somebody picked. It is still their stuff and it is
+     * still waiting; it just checks out somewhere else.
+     */
+    if (waitingSkincare > 0) {
+      return (
+        <Empty
+          icon="cart"
+          title="Nothing from the kitchens yet"
+          href="/skincare/checkout"
+          action="Check out the skincare"
+        >
+          {waitingSkincare === 1
+            ? "You have one skincare item waiting. It is its own order on its own run, so it does not travel with food, and it is still here when you come back for some."
+            : `You have ${waitingSkincare} skincare items waiting. They are their own order on their own run, so they do not travel with food, and they are still here when you come back for some.`}
+        </Empty>
       );
     }
 

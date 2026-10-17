@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { cartSubtotal, countItems, useCart } from "@/lib/cart";
+import { cartSubtotal, cartCount, countItems, useCart } from "@/lib/cart";
 import { naira } from "@/lib/money";
 
 /** The bar that follows you around once there is food in the cart. */
 export default function CartBar() {
   const cart = useCart();
-  const count = countItems(cart);
+  const count = cartCount(cart);
   if (count === 0) return null;
 
   // A basket keeps the price a thing had when it went in, so one saved while
