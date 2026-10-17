@@ -1,4 +1,10 @@
-import { STAGES, STAGE_LABEL, stageIndex, type BatchStage } from "@/lib/stages";
+import {
+  PARCEL_LABEL,
+  STAGES,
+  STAGE_LABEL,
+  stageIndex,
+  type BatchStage,
+} from "@/lib/stages";
 import { clockLabel } from "@/lib/time";
 
 /**
@@ -23,8 +29,13 @@ export default function StageTimeline({
   placedAt,
   paidAt,
   deliveredAt,
+  parcel = false,
 }: {
   stage: BatchStage;
+  /** A parcel is not cooked and does not arrive by the boot-load. "At the
+   *  counter, food being cooked" on somebody's dress is the shop
+   *  describing a trip that is not happening. */
+  parcel?: boolean;
   /** When they ordered, which is the one time nobody has to record. */
   placedAt?: string | null;
   paidAt?: string | null;
@@ -55,7 +66,7 @@ export default function StageTimeline({
           return (
             <Step
               key={step}
-              said={STAGE_LABEL[step]}
+              said={(parcel ? PARCEL_LABEL : STAGE_LABEL)[step]}
               at={index === current ? when(step) : index < current ? when(step) : ""}
               done={index < current}
               now={index === current}

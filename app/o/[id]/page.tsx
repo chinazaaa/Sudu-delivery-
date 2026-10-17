@@ -528,10 +528,36 @@ export default async function OrderPage({
                 : "Where your food is"}
           </h2>
           {order.status === "delivered" ? (
-            <p className="text-sm text-ink/75">
-              Delivered. Thank you
-              {isParcel ? "." : ", and see you on the next run."}
-            </p>
+            /*
+             * The whole story, not the last line of it.
+             *
+             * A delivered order replaced the timeline with "Delivered.
+             * Thank you", which is the one thing the customer already
+             * knows. Somebody opening an old order is nearly always about
+             * to order again and is checking how the last one went: when
+             * they paid, when it left, what time the bag actually reached
+             * their block. That is the shop's case for itself and it was
+             * being thrown away the moment it was made.
+             *
+             * Said as finished whatever the run's own stage says. The run
+             * is a car carrying twenty bags and this is one of them: an
+             * order handed over at the gate before the car reached the
+             * last hostel is delivered, and showing it halfway down a
+             * timeline would be arguing with the word above it.
+             */
+            <>
+              <p className="text-sm text-ink/75">
+                Delivered. Thank you
+                {isParcel ? "." : ", and see you on the next run."}
+              </p>
+              <StageTimeline
+                stage="handed_out"
+                parcel={isParcel}
+                placedAt={order.created_at}
+                paidAt={order.paid_at}
+                deliveredAt={order.done_at}
+              />
+            </>
           ) : isParcel ? (
             <p className="text-sm text-ink/75">
               {order.batch.deliver_at
