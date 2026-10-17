@@ -4304,6 +4304,11 @@ test("a name kept all in one case is said normally, and nothing else is touched"
   assert.equal(tidyName("BBQ"), "BBQ");
   assert.equal(tidyName("2PCS"), "2PCS");
   assert.equal(tidyName("NUTTY SPREAD 510G"), "Nutty Spread 510G");
+  // A hyphen joins two words and both of them are words. "Rx-advanced" is
+  // neither how it was written nor how anybody would write it.
+  assert.equal(tidyName("RX-ADVANCED SNAIL KIT"), "Rx-Advanced Snail Kit");
+  // An apostrophe is not a hyphen: "Doughn'T" is the other way to be wrong.
+  assert.equal(tidyName("DOUGHN'T"), "Doughn't");
 });
 
 test("a kitchen's own section is guessed into one of the shop's aisles", () => {

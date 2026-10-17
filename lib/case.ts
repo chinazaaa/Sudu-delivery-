@@ -65,11 +65,25 @@ function word(said: string, first: boolean): string {
   const low = said.toLowerCase();
   if (!first && SMALL.has(low)) return low;
 
-  // The first letter there is, which is not always the first character:
-  // ®OREO would otherwise come back untouched.
-  const at = low.search(/[a-z]/);
-  if (at < 0) return said;
-  return low.slice(0, at) + low.charAt(at).toUpperCase() + low.slice(at + 1);
+  /*
+   * Both halves of a hyphen, not just the first.
+   *
+   * A hyphen joins two words and each of them is a word: RX-ADVANCED came
+   * back as "Rx-advanced", which is neither how it was written nor how
+   * anybody would write it. A slash is the same thing with a different
+   * mark. Everything else inside the word, apostrophes included, is left
+   * alone, because "Doughn'T" is the other way to get this wrong.
+   */
+  return low
+    .split(/([-/])/)
+    .map((part) => {
+      // The first letter there is, which is not always the first
+      // character: ®oreo would otherwise come back untouched.
+      const at = part.search(/[a-z]/);
+      if (at < 0) return part;
+      return part.slice(0, at) + part.charAt(at).toUpperCase() + part.slice(at + 1);
+    })
+    .join("");
 }
 
 /**
