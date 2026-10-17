@@ -32,6 +32,28 @@ export async function askForAPlan(
     return { error: "Which block does it go to?", done: false };
   }
 
+  /*
+   * Their number is theirs, not yours again.
+   *
+   * The two numbers do different jobs: yours is the one chased for the
+   * money and the one a PIN belongs to, theirs is the one the driver rings
+   * from outside the block. The same number in both means a rider at a
+   * hostel in Ibeju-Lekki ringing a phone in Ikoyi, and the checkout
+   * refuses the same thing for the same reason, so a plan that carried it
+   * would fail quietly on the first month it tried to raise anything.
+   *
+   * Leaving it blank is a real answer, so refusing this one is fair.
+   */
+  const forPhone = normalisePhone(String(form.get("for_phone") ?? ""));
+  if (forPhone !== "" && forPhone === phone) {
+    return {
+      error:
+        "That is your own number again. Put their number in, or leave it " +
+        "blank and we will ring you when we are outside.",
+      done: false,
+    };
+  }
+
   const day = Math.min(28, Math.max(1, Math.round(Number(form.get("on_day") ?? 3)) || 3));
 
   try {
@@ -39,7 +61,7 @@ export async function askForAPlan(
       customer_name: name,
       customer_phone: phone,
       for_name: String(form.get("for_name") ?? "").trim(),
-      for_phone: normalisePhone(String(form.get("for_phone") ?? "")),
+      for_phone: forPhone,
       hostel,
       box_id: String(form.get("box_id") ?? "").trim() || null,
       every: "monthly",

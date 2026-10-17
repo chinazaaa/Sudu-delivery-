@@ -2261,6 +2261,14 @@ export async function savePlan(form: FormData): Promise<void> {
 
   if (row.customer_phone === "" || row.hostel === "") return;
 
+  /* The same number twice is one number. Theirs is who the driver rings
+     from outside the block and the payer's is who is chased for the money;
+     the checkout refuses a gift to the payer's own number, so a plan
+     holding one would fail on the first month it tried to raise anything.
+     Dropped rather than refused here, because an admin typing one number
+     for both is saying there is only one. */
+  if (row.for_phone === row.customer_phone) row.for_phone = "";
+
   if (id === "") await db().from("plans").insert(row);
   else await db().from("plans").update(row).eq("id", id);
 

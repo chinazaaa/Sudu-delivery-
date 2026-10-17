@@ -11,6 +11,7 @@ import { naira } from "@/lib/money";
 import { shownSays } from "@/lib/says";
 import { googleLinks, safeSettings, whatsappLink } from "@/lib/settings";
 import { hostelNames } from "@/lib/hostels";
+import { abroadOn } from "@/lib/abroad";
 import PlanAsk from "@/components/PlanAsk";
 import CurateBox from "@/components/CurateBox";
 
@@ -36,6 +37,10 @@ import CurateBox from "@/components/CurateBox";
  * pizza earns the fee on one car and is eaten by nine o'clock.
  */
 export const revalidate = 600;
+
+/** Where the site lives. A link in somebody else's phone, and a picture
+ *  named in structured data, cannot carry a relative address. */
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
 
 const TITLE = "Send food to your child at Pan-Atlantic University";
 const BLURB =
@@ -135,6 +140,107 @@ export default async function ParentsPage() {
     }));
   const blocks = await hostelNames();
 
+  /*
+   * The questions a parent actually asks, answered where they are asked.
+   *
+   * Every one of these is a thing somebody types into Google in those
+   * words: "how do I send food to my child at Pan-Atlantic University".
+   * Answering them on the page is worth doing for the person reading it,
+   * and it is the only honest way to mark them up underneath, because
+   * answers in the markup that are not on the page are the kind of thing
+   * Google takes a site's rich results away for.
+   *
+   * Nothing here promises anything the shop does not already do elsewhere
+   * on this site. A page written to rank that says something untrue is a
+   * page that earns a phone call nobody can answer.
+   */
+  const asked: { q: string; a: string }[] = [
+    {
+      q: "How do I send food to my child at Pan-Atlantic University?",
+      a:
+        "Pick a box on this page, pay once, and tell us their name and hostel. " +
+        "We buy it in Sangotedo, carry it onto the PAU campus in Ibeju-Lekki " +
+        "and hand it to them at their block. Your child does not have to do " +
+        "anything.",
+    },
+    {
+      q: "How do I know it was delivered?",
+      a:
+        "We send you a photograph when it is handed over. Every order has a " +
+        "page of its own that shows where it has got to, from paid to in " +
+        "their hands.",
+    },
+    {
+      q: "Does the price include delivery to the hostel?",
+      a:
+        "Yes. Every box on this page is one price with the delivery already " +
+        "in it, to the block rather than to the gate.",
+    },
+    {
+      q: "Can I send the same thing every month?",
+      a:
+        "Yes. Tell us the box and the day of the month, and a few days before " +
+        "each one we raise the order and send you the account. One transfer a " +
+        "month and nothing to remember. Nothing is ever charged automatically " +
+        "and we do not hold a card.",
+    },
+    ...(abroadOn(settings)
+      ? [
+          {
+            q: "Can I pay from outside Nigeria?",
+            a:
+              "Yes. Ask us for a card link and we will send you one in pounds " +
+              "or dollars, so a parent abroad does not need a Nigerian " +
+              "transfer.",
+          },
+        ]
+      : []),
+    {
+      q: "What if what I want is not on the list?",
+      a:
+        "Tell us what it is. We find it, price it and come back to you, and " +
+        "nothing is ordered until you have said yes to the price.",
+    },
+    {
+      q: "Where do you deliver?",
+      a:
+        "To the hostels at Pan-Atlantic University, Ibeju-Lekki, Lagos. We " +
+        "have been delivering on that campus since 2018.",
+    },
+  ];
+
+  const structured = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Service",
+        name: "Send food to a student at Pan-Atlantic University",
+        serviceType: "Food and foodstuff delivery to university hostels",
+        image: `${SITE}/covers/sudu.png`,
+        provider: {
+          "@type": "Organization",
+          name: "Sudu",
+          url: SITE,
+          logo: `${SITE}/logo.png`,
+        },
+        areaServed: [
+          { "@type": "Place", name: "Pan-Atlantic University, Ibeju-Lekki, Lagos" },
+          { "@type": "Place", name: "Sangotedo, Lagos" },
+        ],
+        audience: { "@type": "Audience", audienceType: "Parents of university students" },
+        description: BLURB,
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: asked.map((one) => ({
+          "@type": "Question",
+          name: one.q,
+          acceptedAnswer: { "@type": "Answer", text: one.a },
+        })),
+      },
+    ],
+  };
+
   const ask = whatsappLink(
     settings.whatsapp_number,
     "Hello, I am a parent at PAU and I would like to send something to my child."
@@ -142,6 +248,13 @@ export default async function ParentsPage() {
 
   return (
     <article className="-mt-4">
+      {/* What the page is, for a search engine. The same two things the
+          other landing pages carry: the service, and the questions on the
+          page answered in the words they are asked in. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
+      />
       {/* The board's head for this page is Tomato, not Ink. It is the one
           page written to somebody who is not a student, and the whole of
           what it has to do in the first screen is look like a shop that
@@ -288,6 +401,22 @@ export default async function ParentsPage() {
           hostels={blocks}
           whatsapp={settings.whatsapp_number}
         />
+      </section>
+
+      {/* Asked and answered, in the words a parent would use. */}
+      <section id="questions" className="flex scroll-mt-20 flex-col gap-6 py-12 sm:py-14">
+        <h2 className="section-title">Questions parents ask</h2>
+        <dl className="grid gap-4 sm:grid-cols-2">
+          {asked.map((one) => (
+            <div
+              key={one.q}
+              className="flex flex-col gap-2 rounded-2xl border-2 border-ink bg-paper p-5"
+            >
+              <dt className="font-bold leading-snug">{one.q}</dt>
+              <dd className="text-[15px] leading-relaxed text-ink/75">{one.a}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
 
       <section className="bleed bg-ink text-shell">

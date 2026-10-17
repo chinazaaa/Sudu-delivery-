@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 
 import { askForAPlan, type AskedState } from "@/app/parents/actions";
@@ -30,12 +30,30 @@ export default function PlanAsk({
     done: false,
   });
 
+  /*
+   * Stay where the answer is.
+   *
+   * The form is most of a screen tall and what replaces it is four lines,
+   * so sending it left the page a lot shorter with the scroll where it
+   * was: somebody who filled this in landed in the footer and had to go
+   * looking for the answer to a thing they had just done.
+   */
+  const said = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (state.done) said.current?.scrollIntoView({ block: "center" });
+  }, [state.done]);
+
   if (state.done) {
     return (
-      <div className="flex flex-col gap-3 rounded-2xl border-2 border-ink bg-volt p-6">
+      <div
+        ref={said}
+        className="flex scroll-mt-20 flex-col gap-3 rounded-2xl border-2 border-ink bg-volt p-6"
+      >
         <span className="ticket">That is in</span>
+        {/* Message, not call. This shop talks on WhatsApp, and a page that
+            promises a phone call promises a thing nobody here does. */}
         <h3 className="font-display text-[32px] font-black uppercase leading-[0.9]">
-          We will call you
+          We will message you
         </h3>
         <p className="leading-relaxed">
           Somebody will go through what goes in it and what it comes to, and

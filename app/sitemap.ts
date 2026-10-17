@@ -57,6 +57,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Two shelves of boxes, each its own page since a care package and a
     // birthday are not the same search.
     { url: `${site}/collections`, changeFrequency: "weekly" as const, priority: 0.7 },
+    /* The page written for somebody who is not a student, and the only one
+       of these with a customer behind it who searches for this at all. It
+       was not on this list, so the one page worth finding on Google was the
+       one page Google was never told about. */
+    { url: `${site}/parents`, changeFrequency: "weekly" as const, priority: 0.9 },
     // Written for the search rather than for the shop, so it has to be
     // findable: nothing in the header or the tab bar points at it.
     { url: `${site}/delivery-to-pau`, changeFrequency: "monthly" as const, priority: 0.8 },

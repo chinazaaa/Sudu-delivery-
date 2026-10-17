@@ -336,7 +336,13 @@ export async function raiseCycle(plan: Plan, land: string): Promise<Raised> {
     ...(box ? { fixedFee: box.run_fee } : {}),
     // The parent pays and keeps every message about money; the student is
     // who the driver rings and whose block it goes to.
-    ...(plan.forName.trim() !== "" && plan.forPhone.trim() !== ""
+    /* Only where it is genuinely somebody else. The same number in both
+       is one person, and the checkout refuses a gift to the payer's own
+       number, so passing it would fail the whole month's order over
+       something nobody meant. */
+    ...(plan.forName.trim() !== "" &&
+    plan.forPhone.trim() !== "" &&
+    plan.forPhone !== plan.customerPhone
       ? { giftTo: { name: plan.forName, phone: plan.forPhone } }
       : {}),
     customerNote: [
