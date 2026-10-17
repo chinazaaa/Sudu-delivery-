@@ -47,6 +47,7 @@ export default function StageTimeline({
 }) {
   const current = stageIndex(stage);
   const visible = STAGES.filter((step) => step !== "ordering");
+  const last = stageIndex(visible[visible.length - 1]);
 
   const when = (step: BatchStage): string =>
     step === "handed_out" && deliveredAt ? clockLabel(deliveredAt) : "";
@@ -63,13 +64,26 @@ export default function StageTimeline({
 
         {visible.map((step) => {
           const index = stageIndex(step);
+          /*
+           * The last step is an arrival, not a thing in progress.
+           *
+           * The step a run is on is marked in the shop's red, which is
+           * right the whole way along: it means watch this space, the food
+           * is moving. At the end it was still red, so a bag that had been
+           * handed over an hour ago sat under a red dot reading
+           * "Delivered", and red on a finished order looks like something
+           * went wrong with it. It is green like every other thing that
+           * has already happened, and stays bold because it is the answer.
+           */
+          const arrived = index === current && index === last;
           return (
             <Step
               key={step}
               said={(parcel ? PARCEL_LABEL : STAGE_LABEL)[step]}
               at={index === current ? when(step) : index < current ? when(step) : ""}
-              done={index < current}
-              now={index === current}
+              done={index < current || arrived}
+              now={index === current && !arrived}
+              lead={arrived}
             />
           );
         })}
@@ -83,16 +97,19 @@ function Step({
   at,
   done = false,
   now = false,
+  lead = false,
 }: {
   said: string;
   at: string;
   done?: boolean;
   now?: boolean;
+  /** Done, and the end of it. Reads as finished rather than as in hand. */
+  lead?: boolean;
 }) {
   return (
     <li
       className={`flex items-center gap-2 text-sm ${
-        now ? "font-semibold" : done ? "text-muted" : "text-ink/35"
+        now || lead ? "font-semibold" : done ? "text-muted" : "text-ink/35"
       }`}
     >
       <span
