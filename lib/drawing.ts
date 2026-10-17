@@ -34,7 +34,7 @@ const BY_WORD: [RegExp, DrawingName][] = [
   ],
   [/cream|lotion|serum|cleanser|toner|soap|skin|body|hair|shampoo|sunscreen|spf/i, "skincare"],
   [/parcel|package|courier|envelope/i, "parcel"],
-  [/market|grocer|shop\b|store\b/i, "box"],
+  [/market|grocer|shop\b|store\b|pantry|provisions?/i, "market"],
   [/gift|hamper|flowers|balloon|card\b/i, "box"],
 ];
 

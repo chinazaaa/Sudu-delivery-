@@ -26,6 +26,7 @@ export type DrawingName =
   | "fish"
   | "cake"
   | "chops"
+  | "market"
   | "box"
   | "parcel"
   | "car"
@@ -43,6 +44,7 @@ export const DRAWINGS: DrawingName[] = [
   "fish",
   "cake",
   "chops",
+  "market",
   "box",
   "parcel",
   "car",
@@ -136,6 +138,16 @@ const BODY: Record<DrawingName, React.ReactNode> = {
   chops: (
     <>
 <g stroke="#15110E" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round"><path d="M30 104 96 24" stroke="#B5652A" strokeWidth="7"/><circle cx="34" cy="76" r="15" fill="#E9A23B"/><path d="M28 72c3 3 8 2 11-2" fill="none" strokeWidth="2.5"/><rect x="48" y="66" width="27" height="21" rx="6" fill="#B5652A" transform="rotate(-39 61.5 76.5)"/><rect x="62" y="48" width="27" height="21" rx="6" fill="#8A4B22" transform="rotate(-39 75.5 58.5)"/><rect x="76" y="30" width="27" height="21" rx="6" fill="#B5652A" transform="rotate(-39 89.5 40.5)"/><path d="M57 72l4 2M70 55l4 2M84 37l4 2" fill="none" stroke="#E5321D" strokeWidth="3"/></g>
+    </>
+  ),
+  /* A basket with the shopping in it.
+     The market counters wore a burger, a drumstick and a slice of cake off
+     the spare rotation, because none of their names is a food and the box
+     was held back for being a crate three times over. A basket is the one
+     drawing that says "we went and got it" rather than naming a dish. */
+  market: (
+    <>
+<g stroke="#15110E" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round"><path d="M40 58a20 20 0 0 1 40 0" fill="none" stroke="#B5652A" strokeWidth="6"/><circle cx="47" cy="52" r="12" fill="#E5321D"/><circle cx="72" cy="50" r="13" fill="#3FA34D"/><path d="M72 37c0-5 4-8 8-8-1 5-4 8-8 8z" fill="#3FA34D"/><circle cx="60" cy="44" r="9" fill="#FFD23F"/><path d="M22 60h76l-9 42H31z" fill="#E9A23B"/><path d="M26 74h68" fill="none" strokeWidth="2.5"/><path d="M38 62l-3 38M60 62v38M82 62l3 38" fill="none" strokeWidth="2.5"/></g>
     </>
   ),
   box: (

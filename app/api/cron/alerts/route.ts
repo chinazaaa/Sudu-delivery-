@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { abandonedCarts } from "@/lib/carts";
 import { tellNewBadges } from "@/lib/achievements";
+import { sweepPlans } from "@/lib/plans";
 import { safeSettings } from "@/lib/settings";
 import { clockLabel } from "@/lib/time";
 import { SLOT_LABEL } from "@/lib/config";
 import {
   alreadyTold,
+  tellAdminOnce,
   cartsLeftAlert,
   markTold,
   tellAdmin,
@@ -133,6 +135,53 @@ export async function GET(request: Request): Promise<NextResponse> {
     }
   } catch {
     /* Same again: read-only work, and silence is the safe failure. */
+  }
+
+  /*
+   * Standing orders, caught up.
+   *
+   * The ones marked to raise themselves are raised, a few days before they
+   * land so the parent has time to pay and the shopping has time to be
+   * bought. The rest are only counted: a box is sourced by hand and an
+   * order nobody asked for is a bag at a block with nobody to pay for it,
+   * so which parents are regular enough to trust with that is the shop's
+   * decision and is made on the plan itself.
+   */
+  try {
+    const swept = await sweepPlans();
+
+    for (const one of swept.raised) {
+      const key = toldKey("plan-raised", `${one.plan.id}:${one.cycle}`);
+      if (
+        await tellAdminOnce(key, {
+          title: `${one.plan.customerName || "A standing order"} is raised`,
+          body: `Lands ${one.cycle}. Send them the account so it gets paid before it goes out.`,
+          url: `/admin/orders/${one.orderId}`,
+        })
+      ) {
+        told.push(key);
+      }
+    }
+
+    if (swept.due.length > 0) {
+      // One message for the lot, once a day rather than once a quarter
+      // hour: these are waiting on a person, and a phone that buzzes about
+      // the same two every fifteen minutes is a phone with notifications
+      // switched off by the morning.
+      const key = toldKey("plans-due", new Date().toISOString().slice(0, 10));
+      if (
+        await tellAdminOnce(key, {
+          title: `${swept.due.length} standing order${swept.due.length === 1 ? "" : "s"} to raise`,
+          body: "They land within the week. Raising one makes the order and takes you to it.",
+          url: "/admin/plans",
+        })
+      ) {
+        told.push(key);
+      }
+    }
+  } catch {
+    /* Read mostly, and a plan not raised this quarter hour is raised the
+       next one. Silence is the safe failure. */
   }
 
   /*

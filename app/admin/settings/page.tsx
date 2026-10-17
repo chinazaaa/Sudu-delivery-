@@ -10,6 +10,7 @@ import DayHours from "@/components/admin/DayHours";
 import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { AISLES } from "@/lib/aisles";
+import { LEAD_DAYS } from "@/lib/plans";
 import { GROUP_FLOOR, parseBands, SAME_DAY_BANDS, URGENT_EXTRA } from "@/lib/fees";
 import { missingSettings } from "@/lib/health";
 import { muted } from "@/lib/email";
@@ -92,6 +93,7 @@ export default async function SettingsAdmin() {
           ["#messages", "Messages"],
           ["#fees", "Delivery fees"],
           ["#aisles", "Aisles"],
+          ["#plans", "Standing orders"],
           ["#told", "Team"],
           /* The board draws six. Notifications is a card the board does not
              have, and it has to be reachable, so it goes after the six rather
@@ -1248,6 +1250,63 @@ export default async function SettingsAdmin() {
               </p>
               <SaveButton look="btn-admin-go">Save aisles</SaveButton>
             </div>
+          </Panel>
+        </form>
+
+        <form id="plans" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
+          <Panel
+            title="Standing orders"
+            detail={
+              <>
+                Parents who send the same thing every month. Nothing charges
+                itself: each plan raises an ordinary order a few days before it
+                lands, and you send them the account.{" "}
+                <Link href="/admin/plans" className="font-semibold underline">
+                  The plans themselves
+                </Link>{" "}
+                are their own page.
+              </>
+            }
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="label" htmlFor="plan_lead_days">
+                  Days before it lands
+                </label>
+                <input
+                  id="plan_lead_days"
+                  name="plan_lead_days"
+                  inputMode="numeric"
+                  defaultValue={settings.plan_lead_days || String(LEAD_DAYS)}
+                  className="field"
+                />
+                <p className="hint mt-1">
+                  How early the order is raised. It has to be long enough for the
+                  money to arrive and for somebody to do the shopping, and short
+                  enough that an order sitting unpaid is not priced off a menu
+                  that has since moved.
+                </p>
+              </div>
+              <div>
+                <label className="label" htmlFor="plans_paused_until">
+                  Hold everything until
+                </label>
+                <input
+                  id="plans_paused_until"
+                  name="plans_paused_until"
+                  type="date"
+                  defaultValue={settings.plans_paused_until}
+                  className="field"
+                />
+                <p className="hint mt-1">
+                  Campus empties out three times a year, and a care package
+                  landing at an empty block is a bag on a step. A month inside
+                  the hold does not happen and is not stored up: nothing comes
+                  back owing four months in January. Empty means nothing is held.
+                </p>
+              </div>
+            </div>
+            <SaveButton look="btn-admin-go">Save standing orders</SaveButton>
           </Panel>
         </form>
 

@@ -303,7 +303,28 @@ export async function whenOptions(
   const closes = new Date(occasion.closes_at ?? "").getTime();
 
   if (Number.isFinite(closes) && now.getTime() < closes) {
+    /*
+     * Nothing pinned is not the same as nothing going.
+     *
+     * Pinning a run to an occasion is what a match needs: there is one car
+     * that gets there before the whistle and the rest are no use. A date
+     * three weeks out is a different shape. Matriculation is on the 7th,
+     * ordering was open until the evening of the 6th, every run between
+     * now and then could carry it, and the page said "Nothing can get
+     * there in time any more. Everything on the menu is still going out
+     * though" with its own shelf full of boxes underneath.
+     *
+     * So an unpinned occasion offers every run that lands by the day
+     * itself. The shop's own cut-off is the fence, and it is already set
+     * to the evening before.
+     */
     const pinned = onRuns.find((one) => one.runId === occasion.batch_id);
+    if (!pinned && occasion.batch_id === null) {
+      const day = (occasion.happens_at ?? "").slice(0, 10);
+      const inTime =
+        day === "" ? onRuns : onRuns.filter((one) => one.date <= day);
+      return inTime.sort(byWhen);
+    }
     if (pinned) {
       // Said against the whistle rather than as a window.
       //

@@ -10,6 +10,8 @@ import { shelfPhotos } from "@/lib/shelf-photo";
 import { naira } from "@/lib/money";
 import { shownSays } from "@/lib/says";
 import { googleLinks, safeSettings, whatsappLink } from "@/lib/settings";
+import { hostelNames } from "@/lib/hostels";
+import PlanAsk from "@/components/PlanAsk";
 
 /**
  * The page a parent is sent.
@@ -114,6 +116,23 @@ export default async function ParentsPage() {
     count: Number(settings.google_reviews) || 0,
     quotes: await shownSays(settings.google_quotes),
   };
+
+  /* The shelves a parent actually sends from, as a flat list for the
+     standing order form. The same collections rule as the shelf cards
+     above: nothing is named in code, so a shelf put in front of parents is
+     a shelf somebody made a collection. */
+  const collectionIds = new Set(
+    onShelf(packed, "collection").map((one) => one.id)
+  );
+  const shelfName = new Map(packed.map((one) => [one.id, one.name]));
+  const planBoxes = boxes
+    .filter((box) => !box.is_extra && collectionIds.has(box.occasion_id))
+    .map((box) => ({
+      id: box.id,
+      name: box.name,
+      shelf: shelfName.get(box.occasion_id) ?? "",
+    }));
+  const blocks = await hostelNames();
 
   const ask = whatsappLink(
     settings.whatsapp_number,
@@ -275,27 +294,14 @@ export default async function ParentsPage() {
       />
 
       <section className="grid gap-4 py-12 sm:py-14 lg:grid-cols-2">
-        <div className="flex flex-col gap-3 rounded-2xl border-2 border-ink bg-volt p-6">
-          <span className="ticket">Every month</span>
-          <h2 className="font-display text-[40px] font-black uppercase leading-[0.9]">
-            Send it monthly
-          </h2>
-          <p className="leading-relaxed">
-            Most parents send the same thing at the same point each month. Set
-            up a recurring order on WhatsApp and we remind you before each
-            delivery.
-          </p>
-          {ask ? (
-            <a
-              href={ask}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn self-start bg-ink text-white"
-            >
-              Set it up on WhatsApp
-            </a>
-          ) : null}
-        </div>
+        {/* The thing a parent came here to do, done here.
+            What stood in this corner was a button that opened a chat, which
+            is a promise to remember rather than a standing order: the one
+            thing this page is for was the one thing the site could not do. */}
+        <PlanAsk
+          boxes={planBoxes}
+          hostels={blocks}
+        />
 
         <div className="flex flex-col gap-3 rounded-2xl border-2 border-ink bg-paper p-6">
           <span className="ticket text-brand-dark">Anything else</span>

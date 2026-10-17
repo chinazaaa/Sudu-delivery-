@@ -48,6 +48,7 @@ export const GROUPS: Group[] = [
     items: [
       { href: "/admin/carts", label: "Left behind" },
       { href: "/admin/groups", label: "Groups" },
+      { href: "/admin/plans", label: "Standing orders" },
       { href: "/admin/subscriptions", label: "Repeats" },
       { href: "/admin/parcels", label: "Parcels" },
     ],

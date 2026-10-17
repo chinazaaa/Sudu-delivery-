@@ -11,6 +11,7 @@ import { addressOf, isAlert, replySubject, senderName, snippet, vouchedFor } fro
 import { tidyCode, whyNotACode } from "../lib/promoter-applications";
 import { tidyName } from "../lib/case";
 import { AISLES, aislesFrom, guessAisle } from "../lib/aisles";
+import { nextLanding, owed, type Plan } from "../lib/plans";
 import { adminStageLabel, adminStatusWord, STAGE_LABEL } from "../lib/stages";
 import { channelOfSite, tidyChannel, tidyHandle } from "../lib/came-from";
 import { weekAround } from "../lib/time";
@@ -4331,4 +4332,63 @@ test("the aisles are a setting, and an empty one falls back to the shop's own", 
   assert.deepEqual(aislesFrom(""), AISLES);
   assert.deepEqual(aislesFrom("  \n \n"), AISLES);
   assert.deepEqual(aislesFrom("Pizza\nChicken\n"), ["Pizza", "Chicken"]);
+});
+
+const aPlan = (over: Partial<Plan> = {}): Plan => ({
+  id: "p",
+  customerName: "A parent",
+  customerPhone: "08000000000",
+  forName: "Their child",
+  forPhone: "08011111111",
+  hostel: "Amethyst",
+  boxId: "box",
+  fromOrderId: null,
+  every: "monthly",
+  onDay: 3,
+  active: true,
+  auto: true,
+  pausedUntil: null,
+  startedOn: "2026-10-01",
+  madeThrough: null,
+  note: "",
+  createdAt: "",
+  ...over,
+});
+
+test("a monthly plan lands on the same day every month", () => {
+  const plan = aPlan();
+  assert.equal(nextLanding(plan, "2026-10-17"), "2026-11-03");
+  assert.equal(nextLanding(plan, "2026-11-03"), "2026-12-03");
+  // December rolls into January rather than into month thirteen.
+  assert.equal(nextLanding(plan, "2026-12-03"), "2027-01-03");
+  // A day past the 28th is capped rather than clamped per month: the 31st
+  // landing on the 31st, then the 28th, then the 30th is not a fixed day,
+  // which is the whole thing being sold.
+  assert.equal(nextLanding(aPlan({ onDay: 31 }), "2026-01-05"), "2026-01-28");
+});
+
+test("a plan owes only what is close enough to raise, and never the past", () => {
+  const plan = aPlan();
+  // Five days of lead. On the 30th the third of next month is owed.
+  assert.deepEqual(owed(plan, "2026-10-30", 5, "").raise, ["2026-11-03"]);
+  // On the 17th nothing is: the next landing is a fortnight off.
+  assert.deepEqual(owed(plan, "2026-10-17", 5, "").raise, []);
+  // A plan switched on today does not back-fill the months before it. They
+  // are stepped over, so they are never asked about again.
+  assert.deepEqual(owed(plan, "2026-10-17", 5, "").skip, ["2026-10-03"]);
+  // A plan nobody has switched on owes nothing at all.
+  assert.deepEqual(owed(aPlan({ active: false }), "2026-10-30", 5, "").raise, []);
+});
+
+test("a holiday skips the months inside it rather than storing them up", () => {
+  const plan = aPlan({ madeThrough: "2026-11-03" });
+  // Campus is empty until the new year. December does not happen, and it
+  // does not come back in January as though it were still due.
+  const over = owed(plan, "2026-12-30", 5, "2027-01-06");
+  assert.deepEqual(over.raise, []);
+  assert.deepEqual(over.skip, ["2026-12-03", "2027-01-03"]);
+  // One parent's own pause does the same for that one parent.
+  const mine = owed(aPlan({ madeThrough: "2026-11-03", pausedUntil: "2026-12-20" }), "2026-12-01", 5, "");
+  assert.deepEqual(mine.raise, []);
+  assert.deepEqual(mine.skip, ["2026-12-03"]);
 });

@@ -13,6 +13,7 @@ import { type BatchSlot } from "@/lib/config";
 import { hoursByDay, deliveryWindows, externalUrl, sayWindow } from "@/lib/settings";
 import { runSchedule } from "@/lib/schedule";
 import { guessAisle } from "@/lib/aisles";
+import { nextLanding, planById, raiseCycle } from "@/lib/plans";
 import { tidyName } from "@/lib/case";
 import { deliverySlots, windowPhrase } from "@/lib/same-day";
 import { lagosInstant, lagosToday } from "@/lib/time";
@@ -2231,6 +2232,74 @@ export async function deleteManyCarts(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
 }
 
+/* ------------------------------------------------------------- plans */
+
+/**
+ * A standing order, saved.
+ *
+ * One action for making and for changing, because a plan is six fields and
+ * two forms holding the same six is one form that quietly falls behind.
+ */
+export async function savePlan(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const id = String(form.get("plan_id") ?? "").trim();
+  const row = {
+    customer_name: String(form.get("customer_name") ?? "").trim(),
+    customer_phone: normalisePhone(String(form.get("customer_phone") ?? "")),
+    for_name: String(form.get("for_name") ?? "").trim(),
+    for_phone: normalisePhone(String(form.get("for_phone") ?? "")),
+    hostel: String(form.get("hostel") ?? "").trim(),
+    box_id: String(form.get("box_id") ?? "").trim() || null,
+    every: String(form.get("every") ?? "monthly"),
+    on_day: Math.min(28, Math.max(1, Math.round(Number(form.get("on_day") ?? 1)) || 1)),
+    active: form.get("active") === "on",
+    auto: form.get("auto") === "on",
+    paused_until: String(form.get("paused_until") ?? "").trim() || null,
+    note: String(form.get("note") ?? "").trim().slice(0, 300),
+  };
+
+  if (row.customer_phone === "" || row.hostel === "") return;
+
+  if (id === "") await db().from("plans").insert(row);
+  else await db().from("plans").update(row).eq("id", id);
+
+  revalidatePath("/admin", "layout");
+}
+
+/** A plan, and everything it has raised, gone. The orders stay: they were
+ *  real orders and some of them were paid for. */
+export async function deletePlan(form: FormData): Promise<void> {
+  await assertAdmin();
+  await db().from("plans").delete().eq("id", String(form.get("plan_id") ?? ""));
+  revalidatePath("/admin", "layout");
+}
+
+/**
+ * This month's order, raised by hand.
+ *
+ * The one press the whole page exists for. It lands on the order itself,
+ * because the next thing anybody does is send the parent the account and
+ * the amount.
+ */
+export async function raisePlanNow(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const plan = await planById(String(form.get("plan_id") ?? ""));
+  if (!plan) return;
+
+  const land = String(form.get("cycle") ?? "").trim();
+  const made = await raiseCycle(
+    plan,
+    /^\d{4}-\d{2}-\d{2}$/.test(land)
+      ? land
+      : nextLanding(plan, plan.madeThrough ?? lagosToday())
+  );
+
+  revalidatePath("/admin", "layout");
+  if (made.ok) redirect(`/admin/orders/${made.orderId}`);
+}
+
 /** Every cart already closed, cleared out in one go. */
 export async function deleteClosedCarts(): Promise<void> {
   await assertAdmin();
@@ -2732,6 +2801,8 @@ const SETTING_FIELDS = [
   "same_day_urgent_extra",
   "group_fee_floor",
   "menu_aisles",
+  "plans_paused_until",
+  "plan_lead_days",
   "same_day_on",
   "same_day_first_hour",
   "same_day_last_hour",
