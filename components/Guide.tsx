@@ -89,12 +89,21 @@ export function faqGraph(asked: Ask[]) {
  * reached at all, and it is also what tells a crawler they are one group of
  * pages about one campus rather than four strays.
  */
+/*
+ * Said as the thing the other page is for, not as its filing name.
+ *
+ * "For parents" is a label on a drawer: it tells a reader nothing they did
+ * not know and tells a crawler nothing at all about what is behind it. The
+ * words in a link are most of what the page it points at is taken to be
+ * about, so each one says the thing somebody would have typed to look for
+ * it.
+ */
 const PAGES: { href: string; said: string }[] = [
-  { href: "/delivery-to-pau", said: "Delivery to PAU" },
-  { href: "/pau-snacks", said: "Snacks at PAU" },
-  { href: "/send-a-gift-to-pau", said: "Send a gift to PAU" },
+  { href: "/delivery-to-pau", said: "Food delivery to PAU" },
+  { href: "/pau-snacks", said: "Snacks delivered to PAU" },
+  { href: "/send-a-gift-to-pau", said: "Send a gift to a student at PAU" },
   { href: "/pau-student-store", said: "What to buy at PAU" },
-  { href: "/parents", said: "For parents" },
+  { href: "/parents", said: "Send food to your child at PAU" },
 ];
 
 export function AlsoSee({ not }: { not: string }) {

@@ -21,9 +21,10 @@ export const revalidate = 3600;
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
 const TITLE = "Send a gift to a student at PAU";
 const BLURB =
-  "Send food, a cake, small chops or a care package to somebody at " +
-  "Pan-Atlantic University. You pay from wherever you are, we hand it to " +
-  "them at their hostel, and you get told when it has been handed over.";
+  "Send food, a cake, small chops or flowers to somebody at Pan-Atlantic " +
+  "University for a birthday, a matriculation or no reason at all. You pay " +
+  "from wherever you are, we hand it to them at their hostel, and you get " +
+  "told when it has been handed over.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -146,12 +147,26 @@ export default async function SendAGiftPage() {
         <Section title="What people send">
           <dl className="space-y-3">
             <Reason title="A box already put together">
-              Birthdays, matriculation, a care package of foodstuff and
-              toiletries, flowers and a cake. One price with delivery already
-              in it, and you can swap anything in the box you would rather not
-              send.{" "}
+              Birthdays, matriculation, flowers and a cake, small chops for a
+              room full of people. One price with delivery already in it, and
+              you can swap anything in the box you would rather not send.{" "}
               <Link href="/collections" className="font-bold text-brand">
                 See the boxes
+              </Link>
+              .
+            </Reason>
+            {/* The one kind of sending this page does not try to answer.
+                Foodstuff every month is a different decision from a cake on
+                a birthday: it has a day of its own, it runs until somebody
+                stops it, and it is written about on its own page. Two pages
+                using the same words for it would mean neither of them is
+                the answer to it. */}
+            <Reason title="Every month, not once">
+              A parent sending foodstuff and toiletries on the same day each
+              month wants a care package rather than a gift, and that is its
+              own thing: one day, one transfer a month, nothing to remember.{" "}
+              <Link href="/parents" className="font-bold text-brand">
+                Send food to your child at PAU
               </Link>
               .
             </Reason>

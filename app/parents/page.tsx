@@ -14,6 +14,7 @@ import { hostelNames } from "@/lib/hostels";
 import { abroadOn } from "@/lib/abroad";
 import PlanAsk from "@/components/PlanAsk";
 import CurateBox from "@/components/CurateBox";
+import { AlsoSee } from "@/components/Guide";
 
 /**
  * The page a parent is sent.
@@ -401,6 +402,14 @@ export default async function ParentsPage() {
           hostels={blocks}
           whatsapp={settings.whatsapp_number}
         />
+      </section>
+
+      {/* The other pages written for a search.
+          This page was the one that received those links and gave none
+          back: it sat at the end of the cluster rather than in it, which
+          wastes the thing a cluster is for. */}
+      <section className="py-4">
+        <AlsoSee not="/parents" />
       </section>
 
       {/* Asked and answered, in the words a parent would use. */}
