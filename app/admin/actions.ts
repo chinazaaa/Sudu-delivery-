@@ -3210,10 +3210,46 @@ export async function setBatchStage(form: FormData): Promise<void> {
 
   const batchId = String(form.get("batch_id"));
 
-  await db()
-    .from("batches")
-    .update({ stage, status, stage_updated_at: new Date().toISOString() })
-    .eq("id", batchId);
+  const patch: Record<string, unknown> = {
+    stage,
+    status,
+    stage_updated_at: new Date().toISOString(),
+  };
+
+  /*
+   * Putting a run back to ordering has to move its cut-off with it.
+   *
+   * Whether the shop is taking orders is one column, cut_off_at, and a
+   * dozen things read it: the home page, the checkout, the arrival line.
+   * The sweep that closes runs takes every open one whose cut-off has
+   * passed and shuts it again. So reopening a run after its closing time
+   * set status back to open, and the next sweep, which runs on the home
+   * page, closed it within the minute. The admin page said "Ordering is
+   * open" and the website went on offering tomorrow, and nothing anywhere
+   * said why.
+   *
+   * An hour from now, to the next five minutes, which is a time somebody
+   * can read on the run and change with the cut-off field if they want
+   * something else. Only ever when it has already passed: a run reopened
+   * before its proper closing time keeps the closing time it had.
+   */
+  if (stage === "ordering") {
+    const { data: row } = await db()
+      .from("batches")
+      .select("cut_off_at")
+      .eq("id", batchId)
+      .maybeSingle();
+
+    const was = new Date(String((row as { cut_off_at?: string })?.cut_off_at ?? ""));
+    if (!Number.isFinite(was.getTime()) || was.getTime() <= Date.now()) {
+      const soon = new Date(Date.now() + 60 * 60 * 1000);
+      soon.setSeconds(0, 0);
+      soon.setMinutes(Math.ceil(soon.getMinutes() / 5) * 5);
+      patch.cut_off_at = soon.toISOString();
+    }
+  }
+
+  await db().from("batches").update(patch).eq("id", batchId);
 
   // The two stages a customer is actually waiting for. Told once, to the
   // people on that run who have paid and have the app, and never awaited: a
