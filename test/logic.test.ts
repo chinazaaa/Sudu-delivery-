@@ -938,6 +938,34 @@ test("an even share is never so rounded up that it gouges anybody", () => {
   }
 });
 
+test("a per head floor stops a big group pricing the car at nothing", () => {
+  // Twelve people on a 4,000 band is 334 each before rounding. With a floor
+  // of 1,200 nobody in that car pays less than 1,200.
+  assert.equal(evenShare(2, 12, null, undefined, 1200), 1200);
+  // The floor only ever raises. A share already above it is left alone.
+  assert.equal(evenShare(4, 3, null, undefined, 1200), evenShare(4, 3));
+  // Never more than the whole trip: one person in the car pays the band,
+  // and a floor above the band does not make them pay more than the car.
+  assert.equal(
+    evenShare(2, 1, null, undefined, 999_999),
+    evenShare(2, 1)
+  );
+  // No floor is the old arithmetic exactly.
+  assert.equal(evenShare(2, 3, null, undefined, 0), evenShare(2, 3));
+});
+
+test("a per head floor never collects less than the band", () => {
+  for (let items = 1; items <= 40; items++) {
+    for (let people = 1; people <= 20; people++) {
+      const collected = evenShare(items, people, null, undefined, 1200) * people;
+      assert.ok(
+        collected >= feeFor(items),
+        `${people} people, ${items} items: collected ${collected}`
+      );
+    }
+  }
+});
+
 test("nobody in a shared delivery pays more than they would alone", () => {
   for (let items = 2; items <= 40; items++) {
     for (let people = 2; people <= 12; people++) {

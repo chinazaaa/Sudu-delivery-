@@ -2672,6 +2672,7 @@ const SETTING_FIELDS = [
   "fee_bands",
   "same_day_bands",
   "same_day_urgent_extra",
+  "group_fee_floor",
   "same_day_on",
   "same_day_first_hour",
   "same_day_last_hour",

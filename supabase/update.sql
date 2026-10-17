@@ -1253,3 +1253,15 @@ alter table settings
 -- settings row, like every other setting: this table is not key and value.
 alter table settings add column if not exists bot_on text not null default '';
 alter table settings add column if not exists auto_paid text not null default '';
+
+-- The least one person in a group pays towards the car.
+--
+-- A shared delivery divides one band between however many got into the car,
+-- so the per head figure falls as the car fills: twelve people on a ten
+-- thousand naira band is eight hundred each. The band still covers the trip,
+-- so the shop is never out of pocket on it, but it is also the thinnest
+-- margin the shop sells, and a large enough group made the per head price an
+-- argument for never ordering any other way.
+--
+-- Empty means the default in the code, and 0 takes the floor off entirely.
+alter table settings add column if not exists group_fee_floor text not null default '';

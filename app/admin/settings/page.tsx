@@ -9,7 +9,7 @@ import { parseAreas } from "@/lib/areas";
 import DayHours from "@/components/admin/DayHours";
 import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
-import { parseBands, SAME_DAY_BANDS, URGENT_EXTRA } from "@/lib/fees";
+import { GROUP_FLOOR, parseBands, SAME_DAY_BANDS, URGENT_EXTRA } from "@/lib/fees";
 import { missingSettings } from "@/lib/health";
 import { muted } from "@/lib/email";
 import { getSettings } from "@/lib/settings";
@@ -1190,6 +1190,27 @@ export default async function SettingsAdmin() {
           >
             <div className="space-y-3">
               <BandEditor initial={parseBands(settings.fee_bands)} />
+
+              <div>
+                <label className="label" htmlFor="group_fee_floor">
+                  The least one person in a group pays
+                </label>
+                <input
+                  id="group_fee_floor"
+                  name="group_fee_floor"
+                  inputMode="numeric"
+                  defaultValue={settings.group_fee_floor || String(GROUP_FLOOR)}
+                  className="field"
+                />
+                <p className="hint mt-1">
+                  A shared delivery divides one band between everybody in the car, so
+                  the per head price falls as the car fills. The band still covers the
+                  trip either way, but twelve people on a ₦10,000 band is ₦800 each,
+                  which is the thinnest thing you sell. This is the floor under it.
+                  Never more than the whole fee. Nothing, or 0, takes the floor off.
+                </p>
+              </div>
+
               <SaveButton look="btn-admin-go">Save prices</SaveButton>
             </div>
           </Panel>

@@ -1,7 +1,7 @@
 import { db } from "./supabase";
 import { isGone, isPaid, NOT_ORDERS_SQL } from "./orders";
-import { evenShare, feeFor, isUrgent, sameDayFee, splitFee } from "./fees";
-import { activeBands, sameDayPricing } from "./settings";
+import { evenShare, feeFor, isUrgent, perHead, sameDayFee, splitFee } from "./fees";
+import { activeBands, groupFloor, sameDayPricing } from "./settings";
 import {
   canTravel,
   countCartItems,
@@ -61,8 +61,11 @@ async function settleGroup(group: OrderGroup, batch: Batch): Promise<void> {
   // somebody drops out for not paying. Settling it by the proportional rule
   // would quietly turn the deal everybody agreed to into a different one,
   // after they had paid.
+  const floor = await groupFloor();
   const shares = group.closes_at
-    ? travelling.map(() => evenShare(carried, travelling.length, batch.flash_fee, bands))
+    ? travelling.map(() =>
+        evenShare(carried, travelling.length, batch.flash_fee, bands, floor)
+      )
     : splitFee(feeFor(carried, batch.flash_fee, bands), counts);
 
   for (const [index, order] of travelling.entries()) {
@@ -262,7 +265,7 @@ async function evenSameDayShare(
   const { bands, urgentExtra } = await sameDayPricing();
   const urgent = deliverAt ? isUrgent(new Date(deliverAt)) : false;
   const whole = sameDayFee(items, urgent, bands, urgentExtra);
-  return people < 1 ? whole : Math.ceil(whole / people / 100) * 100;
+  return perHead(whole, people, await groupFloor());
 }
 
 /**
@@ -328,14 +331,14 @@ export async function shareNow(
       ? isUrgent(new Date(batch.deliver_at as string))
       : false;
     const whole = sameDayFee(carried, urgent, bands, urgentExtra);
-    return { whole, each: Math.ceil(whole / people / 100) * 100, people };
+    return { whole, each: perHead(whole, people, await groupFloor()), people };
   }
 
   const bands = await activeBands();
   const flash = (batch?.flash_fee as number | null) ?? null;
   return {
     whole: feeFor(carried, flash, bands),
-    each: evenShare(carried, people, flash, bands),
+    each: evenShare(carried, people, flash, bands, await groupFloor()),
     people,
   };
 }
@@ -478,7 +481,8 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
         carried,
         waiting.length,
         (batch?.flash_fee as number | null) ?? null,
-        await activeBands()
+        await activeBands(),
+        await groupFloor()
       );
 
   // Claim the close first. Two callers arriving together, the leader and the

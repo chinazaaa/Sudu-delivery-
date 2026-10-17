@@ -490,14 +490,22 @@ export default function Home({
             <section id="fees" className="shell grid gap-12 py-16 lg:grid-cols-2 lg:items-start">
               <div className="flex flex-col gap-5">
                 <span className="ticket text-brand-dark">Delivery fees</span>
+                {/* The front page is read by one person at a time, and most
+                    of them are ordering for themselves. Splitting a fee with
+                    your roommates is the thinnest thing the shop sells, and
+                    this said it in the headline to every solo visitor before
+                    they had seen what delivery actually costs. What is worth
+                    saying here is the part that is true however many of you
+                    there are: four kitchens, one trip, one fee. */}
                 <h2 className="section-title">
-                  One fee per car.
+                  Four kitchens.
                   <br />
-                  Not per person.
+                  One fee.
                 </h2>
                 <p className="max-w-[460px] text-lg leading-relaxed text-ink/80">
-                  Order with your roommates on the same run and you split one
-                  fee. The more of you, the cheaper it gets.
+                  Delivery is priced by how much of the car your order fills,
+                  never by what the food costs. Order from as many counters as
+                  you like and it is still one trip, at one of these prices.
                 </p>
               </div>
               <div className="overflow-hidden rounded-2xl border-2 border-ink bg-paper">

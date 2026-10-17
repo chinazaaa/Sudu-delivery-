@@ -14,6 +14,23 @@ export type Band = {
   perItem?: number;
 };
 
+/**
+ * The least one person in a group pays towards the car.
+ *
+ * A shared delivery divides one band between however many got into the
+ * car, so the per head figure falls as the car fills: twelve people on a
+ * ten thousand naira band is eight hundred each. The band still covers the
+ * trip, so the shop is not out of pocket, but it is also the thinnest
+ * margin the shop sells, and twenty people were enough to make the per
+ * head price an advert for ordering no other way.
+ *
+ * So there is a floor under it. Never above the whole fee, because nobody
+ * in a car should pay more than the car costs.
+ *
+ * A default, not a rule: Settings has the number.
+ */
+export const GROUP_FLOOR = 1200;
+
 /** The bands until the admin sets their own in settings. */
 export const FEE_BANDS: Band[] = [
   { maxItems: 3, fee: 4000 },
@@ -190,11 +207,30 @@ export function evenShare(
   items: number,
   people: number,
   flashFee: number | null = null,
-  bands?: Band[]
+  bands?: Band[],
+  /** The least anybody pays towards the car. Nothing by default, so a
+   *  caller that has not read the setting prices it the old way rather
+   *  than inventing a floor of its own. */
+  floor = 0
 ): number {
   if (people < 1) return 0;
   const band = feeFor(items, flashFee, bands);
-  return Math.ceil(band / people / 100) * 100;
+  return perHead(band, people, floor);
+}
+
+/**
+ * One car's fee, divided and then floored.
+ *
+ * Rounding is up, to the nearest hundred naira, because a share of ₦3,333
+ * is a number nobody wants to type into a banking app, and because
+ * rounding down would leave the shop short of the band it has to pay to
+ * run the car. The floor goes on after that, and the whole fee caps it:
+ * a share worth more than the entire trip is not a share.
+ */
+export function perHead(whole: number, people: number, floor = 0): number {
+  if (people < 1) return whole;
+  const even = Math.ceil(whole / people / 100) * 100;
+  return Math.min(whole, Math.max(even, Math.max(0, floor)));
 }
 
 /**

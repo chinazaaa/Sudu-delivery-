@@ -2,6 +2,7 @@ import { db } from "./supabase";
 import {
   parseBands,
   FIRST_DELIVERY_HOUR,
+  GROUP_FLOOR,
   LAST_DELIVERY_HOUR,
   RUN_LAST_HOUR,
   SAME_DAY_BANDS,
@@ -116,6 +117,8 @@ export type Settings = {
   same_day_bands: string;
   /** What being inside the five hours adds, on every step. */
   same_day_urgent_extra: string;
+  /** The least one person in a group pays towards the car. */
+  group_fee_floor: string;
   /** The first and last hour of the day a delivery can be asked for, in Lagos
    *  time, as 24 hour numbers. Empty means noon and six. */
   same_day_first_hour: string;
@@ -256,6 +259,7 @@ export const EMPTY: Settings = {
   same_day_on: "",
   same_day_bands: "",
   same_day_urgent_extra: "",
+  group_fee_floor: "",
   same_day_first_hour: "",
   same_day_day_hours: "",
   same_day_last_hour: "",
@@ -499,6 +503,18 @@ export async function sameDayPricing(): Promise<{ bands: Band[]; urgentExtra: nu
     bands: settings.same_day_bands ? parseBands(settings.same_day_bands) : SAME_DAY_BANDS,
     urgentExtra: numberOr(settings.same_day_urgent_extra, URGENT_EXTRA),
   };
+}
+
+/**
+ * The least one person in a group pays towards the car.
+ *
+ * Read here rather than reached for in the fee maths, which knows nothing
+ * about settings and should not: the floor is a decision about margin, and
+ * decisions about margin belong where somebody can change them without a
+ * deploy.
+ */
+export async function groupFloor(): Promise<number> {
+  return numberOr((await safeSettings()).group_fee_floor, GROUP_FLOOR);
 }
 
 /**
