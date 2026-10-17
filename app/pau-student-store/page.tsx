@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { askedFor } from "@/lib/page-faq";
 
 import PageHead from "@/components/PageHead";
 import { AlsoSee, Asked, Reason, Section, faqGraph, type Ask } from "@/components/Guide";
@@ -38,7 +39,7 @@ export default async function PauStudentStorePage() {
   const cheapest = bands.length > 0 ? bands[0] : null;
   const skincare = skincareOn(settings);
 
-  const asked: Ask[] = [
+  const written: Ask[] = [
     {
       q: "Is there a shop at Pan-Atlantic University?",
       a:
@@ -85,6 +86,14 @@ export default async function PauStudentStorePage() {
         "it costs, and you are told the real price before any money is spent.",
     },
   ];
+
+  /*
+   * The page's own wording, with anything rewritten in admin over the
+   * top. Written here rather than read from there: half these answers
+   * carry a live number, and a page that simply printed stored text would
+   * freeze a fee into a paragraph the day somebody edited a sentence.
+   */
+  const asked = await askedFor("pau-student-store", written);
 
   const structured = {
     "@context": "https://schema.org",

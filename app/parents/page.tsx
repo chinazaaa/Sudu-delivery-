@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { askedFor } from "@/lib/page-faq";
 import PageHead from "@/components/PageHead";
 import GoogleSays from "@/components/GoogleSays";
 import Stars from "@/components/Stars";
@@ -181,14 +182,19 @@ export default async function ParentsPage() {
    * on this site. A page written to rank that says something untrue is a
    * page that earns a phone call nobody can answer.
    */
-  const asked: { q: string; a: string }[] = [
+  const written: { q: string; a: string }[] = [
     {
       q: "How do I send food to my child at Pan-Atlantic University?",
       a:
         "Pick one of the boxes on this page, or tell us what you want in it " +
         "and we will put one together. Pay once and give us their name and " +
-        "hostel: we buy it in Sangotedo, carry it onto the PAU campus in " +
-        "Ibeju-Lekki and hand it to them at their block." +
+        // Not "we buy it in Sangotedo". Most runs go there and not all of
+        // them do, and naming the one town reads as the only town: a
+        // parent whose child wants something from Lekki or Ikoyi is being
+        // told, in the answer to the first question on the page, that we
+        // do not go there. Where we buy it is our problem, not theirs.
+        "hostel: we buy it, carry it onto the PAU campus in Ibeju-Lekki " +
+        "and hand it to them at their block." +
         (carrying.on && toCampus.length > 0
           ? " If you already have what you want to send, we can collect that " +
             "from you instead."
@@ -258,6 +264,14 @@ export default async function ParentsPage() {
         "have been delivering on that campus since 2018.",
     },
   ];
+
+  /*
+   * The page's own wording, with anything rewritten in admin over the
+   * top. Written here rather than read from there: half these answers
+   * carry a live number, and a page that simply printed stored text would
+   * freeze a fee into a paragraph the day somebody edited a sentence.
+   */
+  const asked = await askedFor("parents", written);
 
   const structured = {
     "@context": "https://schema.org",

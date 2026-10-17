@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { askedFor } from "@/lib/page-faq";
 
 import PageHead from "@/components/PageHead";
 import { AlsoSee, Asked, Reason, Section, faqGraph, type Ask } from "@/components/Guide";
@@ -41,7 +42,7 @@ export default async function SendAGiftPage() {
   ]);
   const cheapest = bands.length > 0 ? bands[0] : null;
 
-  const asked: Ask[] = [
+  const written: Ask[] = [
     {
       q: "Can I send a gift to a student at Pan-Atlantic University?",
       a:
@@ -103,6 +104,14 @@ export default async function SendAGiftPage() {
         "their number.",
     },
   ];
+
+  /*
+   * The page's own wording, with anything rewritten in admin over the
+   * top. Written here rather than read from there: half these answers
+   * carry a live number, and a page that simply printed stored text would
+   * freeze a fee into a paragraph the day somebody edited a sentence.
+   */
+  const asked = await askedFor("send-a-gift-to-pau", written);
 
   const structured = {
     "@context": "https://schema.org",

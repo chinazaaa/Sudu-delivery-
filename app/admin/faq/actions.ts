@@ -106,3 +106,103 @@ export async function faqFromRequest(form: FormData): Promise<void> {
 
   done();
 }
+
+/*
+ * The question sections on the landing pages, which are a different thing
+ * from the chat's answers above: printed down the bottom of a page and
+ * marked up for Google underneath, rather than said one at a time in a
+ * chat.
+ *
+ * Saved as an override. The page goes on working out its own wording,
+ * numbers and all, and these say only where somebody wanted different
+ * words. Clearing a box is therefore not deleting an answer, it is asking
+ * for the automatic one back, which matters because half of them carry a
+ * live fee that would otherwise be frozen into a paragraph.
+ */
+export async function savePageFaq(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const page = String(form.get("page") ?? "").trim();
+  const key = String(form.get("key") ?? "").trim();
+  if (page === "" || key === "") return;
+
+  await db()
+    .from("page_faqs")
+    .update({
+      question: String(form.get("question") ?? "").trim().slice(0, 300),
+      answer: String(form.get("answer") ?? "").trim().slice(0, 2000),
+    })
+    .eq("page", page)
+    .eq("key", key);
+
+  revalidatePath("/admin/faq");
+  revalidatePath(`/${page}`);
+}
+
+/** Off the page, without losing the wording. */
+export async function togglePageFaq(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const page = String(form.get("page") ?? "").trim();
+  const key = String(form.get("key") ?? "").trim();
+  if (page === "" || key === "") return;
+
+  await db()
+    .from("page_faqs")
+    .update({ hidden: String(form.get("hidden") ?? "") === "true" })
+    .eq("page", page)
+    .eq("key", key);
+
+  revalidatePath("/admin/faq");
+  revalidatePath(`/${page}`);
+}
+
+/**
+ * One of your own, under the ones the page writes itself.
+ *
+ * It has no automatic wording to fall back on, so unlike the others it is
+ * gone for good when it is deleted rather than reverting to anything.
+ */
+export async function addPageFaq(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const page = String(form.get("page") ?? "").trim();
+  const question = String(form.get("question") ?? "").trim();
+  const answer = String(form.get("answer") ?? "").trim();
+  if (page === "" || question === "" || answer === "") return;
+
+  await db()
+    .from("page_faqs")
+    .upsert(
+      {
+        page,
+        // Its own name, so adding the same question twice edits it rather
+        // than making a second copy of it.
+        key: `own-${question.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 70)}`,
+        question: question.slice(0, 300),
+        answer: answer.slice(0, 2000),
+        custom: true,
+        // After everything the page writes itself.
+        sort: 900,
+      },
+      { onConflict: "page,key" }
+    );
+
+  revalidatePath("/admin/faq");
+  revalidatePath(`/${page}`);
+}
+
+/** Only ever one of your own. The page's own questions are hidden, never
+ *  deleted, because the page would simply write them back. */
+export async function deletePageFaq(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const page = String(form.get("page") ?? "").trim();
+  const key = String(form.get("key") ?? "").trim();
+  if (page === "" || key === "") return;
+
+  await db().from("page_faqs").delete().eq("page", page).eq("key", key).eq("custom", true);
+
+  revalidatePath("/admin/faq");
+  revalidatePath(`/${page}`);
+}

@@ -5,7 +5,16 @@ import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import Empty from "@/components/Empty";
 import { faqList } from "@/lib/faq";
-import { saveFaq, toggleFaq, deleteFaq } from "./actions";
+import { FAQ_PAGES, pageFaqRows } from "@/lib/page-faq";
+import {
+  saveFaq,
+  toggleFaq,
+  deleteFaq,
+  savePageFaq,
+  togglePageFaq,
+  addPageFaq,
+  deletePageFaq,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -30,19 +39,71 @@ export const dynamic = "force-dynamic";
  * wordings, matched as part of the question, and one entry answers all of
  * them.
  */
-export default async function FaqPage() {
-  const all = await faqList();
+export default async function FaqPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ show?: string }>;
+}) {
+  /*
+   * Two different jobs under one roof.
+   *
+   * The chat's answers and the question sections at the bottom of the
+   * landing pages are both "the FAQ" to anybody who has to maintain them,
+   * and keeping them on separate pages meant knowing which was which
+   * before you could go and fix a sentence. So: tabs, with the chat first
+   * because it is the one that grows weekly.
+   */
+  const said = await searchParams;
+  const tab = FAQ_PAGES.some((one) => one.page === said.show) ? said.show! : "chat";
+  const section = FAQ_PAGES.find((one) => one.page === tab) ?? null;
+
+  const all = tab === "chat" ? await faqList() : [];
+  const rows = section === null ? [] : await pageFaqRows(section.page);
   const on = all.filter((one) => one.active).length;
   const asked = all.reduce((total, one) => total + one.askedCount, 0);
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Chat answers"
-        detail="What Sudu Bot can answer on its own. It says these words and no others."
+        title={section === null ? "Chat answers" : `${section.label} questions`}
+        detail={
+          section === null
+            ? "What Sudu Bot can answer on its own. It says these words and no others."
+            : "The questions printed at the bottom of that page, and marked up for Google underneath."
+        }
         backHref="/admin/requests"
         backLabel="Asked for"
       />
+
+      {/* Which set you are looking at. */}
+      <nav className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+        <Link
+          href="/admin/faq"
+          className={`shrink-0 rounded-full border-[1.5px] px-3 py-1.5 text-[13px] font-bold ${
+            tab === "chat" ? "border-ink bg-ink text-shell" : "border-rule bg-shell"
+          }`}
+        >
+          Chat answers
+        </Link>
+        {FAQ_PAGES.map((one) => (
+          <Link
+            key={one.page}
+            href={`/admin/faq?show=${one.page}`}
+            className={`shrink-0 rounded-full border-[1.5px] px-3 py-1.5 text-[13px] font-bold ${
+              tab === one.page ? "border-ink bg-ink text-shell" : "border-rule bg-shell"
+            }`}
+          >
+            {one.label}
+          </Link>
+        ))}
+      </nav>
+
+      {section !== null && (
+        <PageQuestions page={section} rows={rows} />
+      )}
+
+      {section !== null ? null : (
+      <>
 
       <div className="card space-y-1 p-3.5 sm:p-4">
         <p className="text-sm font-bold">
@@ -198,6 +259,168 @@ export default async function FaqPage() {
           ))}
         </ul>
       )}
+      </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * One landing page's questions.
+ *
+ * Each is the page's own wording with a box over the top, and an empty box
+ * means the page's wording. That is worth saying on the page itself rather
+ * than only in the code, because "clear it to put it back" is the opposite
+ * of what a cleared box usually means, and half these answers carry a live
+ * fee that an override would freeze.
+ */
+function PageQuestions({
+  page,
+  rows,
+}: {
+  page: { page: string; label: string; href: string };
+  rows: Awaited<ReturnType<typeof pageFaqRows>>;
+}) {
+  const mine = rows.filter((row) => !row.custom);
+  const own = rows.filter((row) => row.custom);
+
+  return (
+    <div className="space-y-2.5">
+      <div className="card space-y-1 p-3.5 sm:p-4">
+        <p className="text-sm font-bold">
+          {rows.length === 0
+            ? "Nothing recorded yet"
+            : `${mine.filter((row) => !row.hidden).length + own.filter((row) => !row.hidden).length} on the page`}
+        </p>
+        <p className="hint">
+          These are written by the page itself, numbers and all. Rewrite one
+          here and your words are used instead; empty the boxes and the
+          page goes back to writing it. Worth leaving alone where an answer
+          quotes a fee, because your words will not follow the price.
+        </p>
+        <p className="hint">
+          <Link href={page.href} className="font-semibold underline" target="_blank">
+            Look at {page.label}
+          </Link>
+        </p>
+      </div>
+
+      {rows.length === 0 ? (
+        <Empty icon="cart" title="Not read yet" href={page.href} action={`Open ${page.label}`}>
+          The page records its questions the first time somebody opens it.
+          Open it once and they will all be here to edit.
+        </Empty>
+      ) : (
+        <ul className="space-y-2.5">
+          {[...mine, ...own].map((row) => (
+            <li key={row.key} className="card space-y-3 p-3.5 sm:p-4">
+              <div className="flex flex-wrap items-start gap-2">
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold">
+                    {row.question || row.default_q}
+                  </span>
+                  <span className="hint block">
+                    {row.hidden ? "Off the page" : "On the page"}
+                    {row.custom
+                      ? " · yours"
+                      : row.question !== "" || row.answer !== ""
+                        ? " · rewritten"
+                        : " · the page's own words"}
+                  </span>
+                </span>
+
+                <form action={togglePageFaq} className="shrink-0">
+                  <input type="hidden" name="page" value={page.page} />
+                  <input type="hidden" name="key" value={row.key} />
+                  <input type="hidden" name="hidden" value={row.hidden ? "false" : "true"} />
+                  <ActionButton busy="…" done="Done ✓" className="btn-admin btn-admin-sm">
+                    {row.hidden ? "Put it back" : "Take it off"}
+                  </ActionButton>
+                </form>
+              </div>
+
+              <details>
+                <summary className="cursor-pointer text-sm font-semibold">Edit</summary>
+                <form action={savePageFaq} className="mt-3 space-y-3">
+                  <input type="hidden" name="page" value={page.page} />
+                  <input type="hidden" name="key" value={row.key} />
+                  <div>
+                    <label className="label">The question</label>
+                    <input
+                      name="question"
+                      defaultValue={row.question}
+                      placeholder={row.default_q}
+                      className="field"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">The answer</label>
+                    <textarea
+                      name="answer"
+                      defaultValue={row.answer}
+                      placeholder={row.default_a}
+                      rows={5}
+                      className="field"
+                    />
+                  </div>
+                  {!row.custom && (
+                    <p className="hint">
+                      Empty is not blank: empty means the page writes it, which
+                      is what the faint wording above shows.
+                    </p>
+                  )}
+                  <SaveButton>Save</SaveButton>
+                </form>
+                {/* Its own form, outside the one above: a form inside a
+                    form is not a thing a browser will do. */}
+                {row.custom && (
+                  <form action={deletePageFaq} className="mt-2.5">
+                    <input type="hidden" name="page" value={page.page} />
+                    <input type="hidden" name="key" value={row.key} />
+                    <ConfirmButton tone="admin" confirm="Yes, delete it">
+                      Delete
+                    </ConfirmButton>
+                  </form>
+                )}
+              </details>
+
+              <p className="text-sm text-muted">{row.answer || row.default_a}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <section className="card space-y-3 p-3.5 sm:p-4">
+        <h2 className="font-bold">Add a question to {page.label}</h2>
+        <form action={addPageFaq} className="space-y-3">
+          <input type="hidden" name="page" value={page.page} />
+          <div>
+            <label className="label" htmlFor={`add_q_${page.page}`}>
+              The question
+            </label>
+            <input
+              id={`add_q_${page.page}`}
+              name="question"
+              required
+              className="field"
+              placeholder="Can I send something every month?"
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor={`add_a_${page.page}`}>
+              The answer
+            </label>
+            <textarea
+              id={`add_a_${page.page}`}
+              name="answer"
+              required
+              rows={3}
+              className="field"
+            />
+          </div>
+          <SaveButton>Add it</SaveButton>
+        </form>
+      </section>
     </div>
   );
 }

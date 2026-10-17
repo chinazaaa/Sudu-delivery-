@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { askedFor } from "@/lib/page-faq";
 import PageHead from "@/components/PageHead";
 import { AlsoSee } from "@/components/Guide";
 
@@ -64,7 +65,7 @@ export default async function DeliveryToPauPage() {
   // the form it reads. Everything here is also on the page in plain words:
   // markup that says something the page does not is the thing that gets a
   // site ignored.
-  const asked: { q: string; a: string }[] = [
+  const written: { q: string; a: string }[] = [
     {
       q: "Do you deliver to Pan-Atlantic University?",
       a:
@@ -168,6 +169,14 @@ export default async function DeliveryToPauPage() {
           : "Parcels are not running at the moment. Food delivery to campus is.",
     },
   ];
+
+  /*
+   * The page's own wording, with anything rewritten in admin over the
+   * top. Written here rather than read from there: half these answers
+   * carry a live number, and a page that simply printed stored text would
+   * freeze a fee into a paragraph the day somebody edited a sentence.
+   */
+  const asked = await askedFor("delivery-to-pau", written);
 
   const structured = {
     "@context": "https://schema.org",
