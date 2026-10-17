@@ -1052,3 +1052,5 @@ alter table plans add column if not exists kind text not null default 'box';
 
 alter table customers add column if not exists parent_name text not null default '';
 alter table customers add column if not exists parent_phone text not null default '';
+
+alter table customers add column if not exists whatsapp_whose text not null default '';

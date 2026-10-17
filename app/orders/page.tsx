@@ -206,6 +206,16 @@ export default async function OrdersPage({
                         <span className="ticket text-[#b9b0a5]">
                           #{shortRef(order)}
                         </span>
+                        {/* The same order, said from whichever side is
+                            reading it. A father and his child are not two
+                            customers who happen to share a block: they
+                            both see this, and each of them is told which
+                            of the two they are. */}
+                        {between(order, phone) !== "" && (
+                          <span className="ticket text-volt">
+                            {between(order, phone)}
+                          </span>
+                        )}
                       </span>
                       <span className="font-display text-[clamp(2rem,8vw,3.25rem)] font-black uppercase leading-[0.9]">
                         {dayWord(order.batch.run_date)} run
@@ -260,6 +270,11 @@ export default async function OrdersPage({
                           {SLOT_LABEL[order.batch.slot]}
                           {order.for_name ? ` · ${order.for_name}'s share` : ""}
                         </span>
+                        {between(order, phone) !== "" && (
+                          <span className="ticket text-brand-dark">
+                            {between(order, phone)}
+                          </span>
+                        )}
                       </div>
                       <Link
                         href={`/o/${shortRef(order)}`}
@@ -367,4 +382,36 @@ function RepeatCard() {
       <span className="shrink-0 text-sm font-extrabold text-brand">Open</span>
     </Link>
   );
+}
+
+/**
+ * Which side of an order the person reading it is on.
+ *
+ * A parent pays and a child eats, and both of them open this page with
+ * their own number and their own PIN. Until now one of them saw it and the
+ * other saw nothing, which made two customers out of one household and
+ * left the son's own page saying he had never ordered anything.
+ *
+ * Now they both see it, and the only difference is the three words at the
+ * top: ordered by whoever paid, or sent to whoever ate it. Empty for the
+ * overwhelming majority, where one person bought their own dinner.
+ */
+function between(
+  order: {
+    customer_phone: string;
+    customer_name: string;
+    deliver_to_name?: string | null;
+  },
+  reading: string
+): string {
+  const first = (said: string | null | undefined) =>
+    String(said ?? "").trim().split(" ")[0] ?? "";
+
+  if (order.customer_phone !== reading) {
+    const who = first(order.customer_name);
+    return who === "" ? "Sent to you" : `Ordered by ${who}`;
+  }
+
+  const to = first(order.deliver_to_name);
+  return to === "" ? "" : `Sent to ${to}`;
 }

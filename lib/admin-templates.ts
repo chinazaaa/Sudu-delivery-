@@ -234,6 +234,10 @@ export function toCard(
       for_name: line.for_name,
       unit_price_at_order: line.unit_price_at_order,
     })),
+    /* Everything goes to the number that is actually answered, including
+       the money. Splitting it by subject was a tidy idea and the wrong
+       one: the whole reason a second number exists is that the first is
+       not read, so sending the payment chase there sends it nowhere. */
     templates: kindsFor(order, settings).map((kind) => ({
       kind,
       label: templateLabel(kind, what),

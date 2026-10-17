@@ -1,0 +1,14 @@
+-- Whose that other number is.
+--
+-- "They are on WhatsApp on a different number" was written for one person
+-- with two numbers, and it is being used for two people: a father orders
+-- and pays on his own line, and the number we actually message is his
+-- son's, because the son is the one on campus.
+--
+-- Every message went to it, the PIN included, and a PIN is the key to the
+-- payer's whole order history. Money is one conversation and delivery is
+-- another, and when they belong to different people they have to go to
+-- different phones.
+--
+-- Empty means what it has always meant: the same person on another line.
+alter table customers add column if not exists whatsapp_whose text not null default '';

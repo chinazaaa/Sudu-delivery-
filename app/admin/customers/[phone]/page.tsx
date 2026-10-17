@@ -783,6 +783,10 @@ export default async function CustomerPage({
                 placeholder="Their name"
                 className="field w-full py-2 text-sm"
               />
+              <p className="hint">
+                Works the other way round too: where the person who orders is
+                the parent, this is where their child goes.
+              </p>
               <input
                 name="parent_phone"
                 inputMode="tel"

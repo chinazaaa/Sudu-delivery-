@@ -2340,16 +2340,42 @@ export async function openOrderForPhone(
 
 /** Every order this phone has placed, newest first, for the history page. */
 export async function ordersForPhone(phone: string): Promise<FullOrder[]> {
-  const { data } = await db()
-    .from("orders")
-    .select("id")
-    .eq("customer_phone", phone)
-    .order("created_at", { ascending: false })
-    .limit(50);
+  /*
+   * Theirs, and the ones somebody sent them.
+   *
+   * A parent and their child are not two customers who happen to share a
+   * block. The father orders and pays on his own line, the food is for the
+   * son, and the son could see nothing at all: his own page said he had
+   * never ordered, while the thing he ate last week sat under somebody
+   * else's number.
+   *
+   * Signing in still takes that person's own number and their own PIN, so
+   * this shows somebody what was sent to them and nothing else. Whose
+   * order it was is on the order, and the page says so.
+   */
+  const [mine, sent] = await Promise.all([
+    db()
+      .from("orders")
+      .select("id, created_at")
+      .eq("customer_phone", phone)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    db()
+      .from("orders")
+      .select("id, created_at")
+      .eq("deliver_to_phone", phone)
+      .neq("customer_phone", phone)
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
 
-  const orders = await Promise.all(
-    (data ?? []).map((row) => getOrder(row.id as string))
-  );
+  const rows = [...(mine.data ?? []), ...(sent.data ?? [])]
+    .sort((a, b) =>
+      String(b.created_at ?? "").localeCompare(String(a.created_at ?? ""))
+    )
+    .slice(0, 50);
+
+  const orders = await Promise.all(rows.map((row) => getOrder(row.id as string)));
   return orders.filter((order): order is FullOrder => order !== null);
 }
 
