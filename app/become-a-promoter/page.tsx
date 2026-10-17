@@ -6,13 +6,17 @@ import { publicOffer } from "@/lib/coupons";
 import { safeSettings, whatsappLink } from "@/lib/settings";
 import { typicalBoxRate, typicalRate } from "@/lib/promoters";
 import { naira } from "@/lib/money";
+import { askedFor } from "@/lib/page-faq";
+import { AlsoSee, Asked, Section, faqGraph, type Ask } from "@/components/Guide";
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Get paid for every order",
+  title: "A side hustle at PAU: get paid for every order",
   description:
-    "Share your link with your block, your class, your group chat. Every order anybody places through it pays you, for as long as they keep ordering.",
+    "A way for a Pan-Atlantic University student to earn money without a shift, a quota or anything to buy. Share your link with your block, your class, your group chat. Every order anybody places through it pays you, for as long as they keep ordering.",
   // The board is annotated sudu.store/become, but the page has always been
   // at this address and every link to it points here. The canonical stays
   // where the page is.
@@ -47,8 +51,77 @@ export default async function BecomeAPromoter() {
   const boxRate = await typicalBoxRate();
   const ask = whatsappLink(settings.whatsapp_number, ASK);
 
+  /*
+   * The questions somebody types before they have heard of us.
+   *
+   * Nobody searches "promoter programme". They ask whether there is a side
+   * hustle at PAU, or how a student here makes money without a job, and the
+   * answer is this page. So the page has to contain the question, in the
+   * words it gets asked in, with the answer sitting under it.
+   */
+  const written: Ask[] = [
+    {
+      q: "Is there a side hustle for students at Pan-Atlantic University?",
+      a: `This is one. Sudu delivers to PAU, and anybody with a link from us earns ${naira(rate)} on every order placed through it and ${naira(boxRate)} on every packed box. There is no shift, no quota and nothing to carry: the earning is on the ordering, not on you doing the delivery.`,
+    },
+    {
+      q: "How much can a PAU student actually earn doing this?",
+      a: `${naira(rate)} per order and ${naira(boxRate)} per packed box, on every order those people ever place, not only their first. One block that orders regularly is worth more than a hundred people who order once, so what it comes to depends on who you share it with rather than on how often you post.`,
+    },
+    {
+      q: "Does it cost anything to start?",
+      a: "No. Nothing to buy, nothing to pay in, no kit and no stock. If anybody asks you for money to join, they are not us.",
+    },
+    {
+      q: "Do I have to deliver anything myself?",
+      a: "No. You share a link. We do the shopping, the carrying and the money. You are not a rider and you are not holding anybody's food.",
+    },
+    {
+      q: "Is there a target or a minimum?",
+      a: "No. A quiet month earns nothing and costs nothing, and nobody is removed for it. There is no minimum to withdraw either: what you have earned is paid out whatever it adds up to.",
+    },
+    {
+      q: "How do I get paid?",
+      a: "You get a page of your own showing every order and what it earned, as it happens. You put your account details on it and we transfer what is owed. What you have earned stays yours whether or not you are still sharing the link.",
+    },
+    {
+      q: "Do I have to be a PAU student to do it?",
+      a: "No, but it suits one. Everything we deliver goes to Pan-Atlantic University, so a link is worth most to somebody who can hand it to people already ordering food to that campus.",
+    },
+    {
+      q: "How do I join?",
+      a: `Message ${settings.whatsapp_number || "us on WhatsApp"} with your name, your hostel and the code you want, or fill the form on this page. We set it up the same day.`,
+    },
+  ];
+
+  const asked = await askedFor("become-a-promoter", written);
+
+  const structured = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Service",
+        name: "Sudu promoter scheme at Pan-Atlantic University",
+        serviceType: "Referral scheme",
+        url: `${SITE}/become-a-promoter`,
+        provider: { "@type": "Organization", name: "Sudu", url: SITE },
+        areaServed: [
+          { "@type": "Place", name: "Pan-Atlantic University, Ibeju-Lekki, Lagos" },
+        ],
+        description:
+          "A way for a student at Pan-Atlantic University to earn on every Sudu order placed through their own link. No shift, no quota, nothing to buy.",
+      },
+      faqGraph(asked),
+    ],
+  };
+
   return (
     <div className="-mt-4 pb-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
+      />
+
       <PageHead
         ticket="Earn with Sudu"
         title="Get paid for every order"
@@ -87,7 +160,7 @@ export default async function BecomeAPromoter() {
           {
             k: "Every order",
             v: naira(rate),
-            d: "Food, skincare, parcels",
+            d: "Food, skincare, pharmacy, parcels",
             loud: false,
           },
           {
@@ -281,6 +354,13 @@ export default async function BecomeAPromoter() {
             </Link>
           </section>
         </div>
+      </div>
+
+      <div className="space-y-8 pt-10 sm:pt-14">
+        <Section title="Questions people ask">
+          <Asked asked={asked} />
+        </Section>
+        <AlsoSee not="/become-a-promoter" />
       </div>
     </div>
   );

@@ -61,6 +61,7 @@ export default function SiteFooter({
         { href: "/pau-snacks", said: "Snacks at PAU" },
         { href: "/send-a-gift-to-pau", said: "Send a gift to PAU" },
         { href: "/pau-student-store", said: "What to buy at PAU" },
+        { href: "/pau-pharmacy", said: "Pharmacy run to PAU" },
         // The page written to a parent. Down here rather than in the header
         // because a student on the front page is not one and should not have
         // to read past a card asking whether they are.

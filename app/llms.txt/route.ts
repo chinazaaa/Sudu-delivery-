@@ -164,6 +164,7 @@ export async function GET(): Promise<Response> {
     `- For parents sending food to a student: ${SITE}/parents`,
     `- Something we do not stock: ${SITE}/custom-order`,
     `- From a pharmacy, fetched rather than prescribed: ${SITE}/pau-pharmacy`,
+    `- Earning money as a PAU student, a side hustle with no shift and nothing to buy: ${SITE}/become-a-promoter`,
     `- Help: ${SITE}/support`,
     `- Terms: ${SITE}/terms`,
     `- Privacy: ${SITE}/privacy`,

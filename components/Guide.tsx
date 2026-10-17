@@ -112,6 +112,7 @@ const PAGES: { href: string; said: string }[] = [
   { href: "/custom-order", said: "Ask us for something we do not stock" },
   { href: "/parcel", said: "Send a parcel to or from PAU" },
   { href: "/pau-pharmacy", said: "Pharmacy delivery to PAU" },
+  { href: "/become-a-promoter", said: "Earn money as a student at PAU" },
 ];
 
 export function AlsoSee({ not }: { not: string }) {

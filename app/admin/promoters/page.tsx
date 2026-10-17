@@ -1330,7 +1330,7 @@ async function OnePromoter({
             </form>
             <p className="hint mt-2">
               A box is a packed sale: a care package, a hostel pack, a gift, a food box.
-              Ordinary food, skincare, parcels and ordering together all pay the rate on
+              Ordinary food, skincare, pharmacy, parcels and ordering together all pay the rate on
               the left.
             </p>
           </Panel>
@@ -1552,7 +1552,7 @@ function PromoterForm({
           />
           <p className="hint mt-1">
             What they earn when the order is a packed box: a care package, a hostel pack,
-            a gift, a food box. Ordinary food, skincare, parcels and ordering together all
+            a gift, a food box. Ordinary food, skincare, pharmacy, parcels and ordering together all
             pay the rate on the left.
           </p>
         </div>

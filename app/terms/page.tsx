@@ -70,7 +70,8 @@ export default async function TermsPage() {
           "What we are responsible for",
           "What the kitchen is responsible for",
           "When something is wrong",
-          "Allergies and what is in the food",
+          "Allergies, and if the food makes you ill",
+          "Medicine and anything from a pharmacy",
           "Changing or cancelling",
           "Your number and your PIN",
           "Offers, codes and promoter links",
@@ -231,7 +232,7 @@ export default async function TermsPage() {
         )}
       </Clause>
 
-      <Clause n={8} title="Allergies and what is in the food">
+      <Clause n={8} title="Allergies, and if the food makes you ill">
         <p>
           Tell us in the note on your order and we will tell the kitchen, but
           we are carrying a sealed bag and we did not cook what is in it. We
@@ -239,9 +240,71 @@ export default async function TermsPage() {
           shellfish or anything else. If a reaction would be serious, ask the
           restaurant yourself before you order.
         </p>
+        <p>
+          If food from a run makes you ill, see a doctor first and tell us
+          after. We are a delivery service and we cannot tell you whether you
+          need one. Then tell us the same day, on the WhatsApp number on your
+          order, and tell us which item it was: every order keeps the kitchen
+          it came from and what was bought, so we can take it to them by name
+          rather than guessing.
+        </p>
+        <p>
+          How food is cooked and stored before it is sealed is the
+          kitchen&apos;s, as clause 6 says, and so is a refund that comes out
+          of it. What is ours is the carrying and the chasing. We stop buying
+          from a kitchen that makes somebody ill, and if an order was mishandled
+          between their counter and your block, that one is ours and we refund
+          it ourselves.
+        </p>
       </Clause>
 
-      <Clause n={9} title="Changing or cancelling">
+      <Clause n={9} title="Medicine and anything from a pharmacy">
+        <p className="font-semibold text-ink">
+          We are not a pharmacy and nobody here is a pharmacist. We fetch from
+          licensed retailers in Lagos, sealed exactly as they sold it, the same
+          way we fetch food.
+        </p>
+        <ul className="list-disc space-y-1 pl-5">
+          <li>
+            We do not advise. Not on what to take, not on how much, not on
+            whether it sits badly with something you are already taking. Ask a
+            pharmacist or a doctor. A listing on this site is there so you can
+            find a product, not so you can decide to take it.
+          </li>
+          <li>
+            We do not carry prescription only medicine. If it needs a
+            prescription we will not buy it for you, however the request is
+            put to us, and we will not hold a prescription for you either.
+          </li>
+          <li>
+            What is printed on the packet by the people who made it is the
+            instruction. Nothing written on this website replaces it, and
+            where the two differ, the packet is right.
+          </li>
+          <li>
+            Check it before the rider leaves: the product, the seal and the
+            expiry date. Anything wrong at that moment goes straight back with
+            them and you get all of it back, delivery included.
+          </li>
+          <li>
+            After that it cannot come back. No shop can resell a medicine that
+            has been out of its sight, so medicine is not returnable once it is
+            in your hands, unless it was already wrong when it reached you or
+            the mistake was ours. That is the one place our returns page bends,
+            and it bends for safety.
+          </li>
+          <li>Keep it where children cannot reach it.</li>
+        </ul>
+        <p>
+          Where something we fetched was the wrong product, damaged, out of
+          date on the day it was handed over, or never arrived, that is ours
+          and clause 7 applies to it unchanged. What the medicine itself does
+          once it is correctly supplied is between you and whoever told you to
+          take it.
+        </p>
+      </Clause>
+
+      <Clause n={10} title="Changing or cancelling">
         <p>
           Before we have shopped, cancel and get everything back, the delivery
           fee included. Message us and we will do it.
@@ -261,7 +324,7 @@ export default async function TermsPage() {
         </p>
       </Clause>
 
-      <Clause n={10} title="Your number and your PIN">
+      <Clause n={11} title="Your number and your PIN">
         <p>
           Your phone number is your account here and the four digit PIN we sent
           you is what opens it. Keep it to yourself. Anybody with both can see
@@ -270,7 +333,7 @@ export default async function TermsPage() {
         </p>
       </Clause>
 
-      <Clause n={11} title="Offers, codes and promoter links">
+      <Clause n={12} title="Offers, codes and promoter links">
         <p>
           One offer applies to an order. A code you type and an offer already
           on your cart do not stack, and the checkout says which one is on.
@@ -288,7 +351,7 @@ export default async function TermsPage() {
         </p>
       </Clause>
 
-      <Clause n={12} title="Parcels">
+      <Clause n={13} title="Parcels">
         <p>
           A parcel is somebody handing us something to carry, not something we
           bought, so we cannot say what is in it or what it is worth.
@@ -304,7 +367,7 @@ export default async function TermsPage() {
         </p>
       </Clause>
 
-      <Clause n={13} title="Things outside our hands">
+      <Clause n={14} title="Things outside our hands">
         <p>
           A restaurant closing unexpectedly, a campus lock down, a fuel queue,
           a flood, a strike, a network outage that stops payments: where one of
@@ -313,7 +376,7 @@ export default async function TermsPage() {
         </p>
       </Clause>
 
-      <Clause n={14} title="Using the site and the app">
+      <Clause n={15} title="Using the site and the app">
         <p>
           Order for yourself or for somebody you actually know. Do not place
           orders in other people&apos;s names, do not try to get into anybody
@@ -322,7 +385,7 @@ export default async function TermsPage() {
         </p>
       </Clause>
 
-      <Clause n={15} title="Changes to these terms">
+      <Clause n={16} title="Changes to these terms">
         <p>
           If this changes we change this page. It is the only copy, so it is
           always the current one, and the version that counts for your order is
@@ -330,7 +393,7 @@ export default async function TermsPage() {
         </p>
       </Clause>
 
-      <Clause n={16} title="The law and talking to us">
+      <Clause n={17} title="The law and talking to us">
         <p>
           These terms are under the law of the Federal Republic of Nigeria, and
           anything neither of us can settle between ourselves goes to the

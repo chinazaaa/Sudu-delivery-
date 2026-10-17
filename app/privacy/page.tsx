@@ -39,6 +39,7 @@ export default async function PrivacyPage() {
           "There are no accounts",
           "What we keep",
           "What we never keep",
+          "Anything about your health",
           "Who else sees it",
           "Messages you get",
           "Having it deleted",
@@ -105,7 +106,24 @@ export default async function PrivacyPage() {
         </p>
       </Clause>
 
-      <Clause n={4} title="Who else sees it">
+      <Clause n={4} title="Anything about your health">
+        <p>
+          Asking us to fetch something from a pharmacy tells us something about
+          you that an order of pizza does not, so it is held the same way and
+          no further. It sits in the order it was bought for, it is seen by the
+          person doing the shopping and the person driving, and it is not used
+          to decide what to show you, not used in anything we advertise, and
+          never sold.
+        </p>
+        <p>
+          We do not ask what it is for and you should not tell us. We cannot
+          advise, so a symptom written in an order note helps nobody and only
+          leaves something behind on a receipt. Delete the whole order history
+          the same way as any other, below.
+        </p>
+      </Clause>
+
+      <Clause n={5} title="Who else sees it">
         <ul className="list-disc space-y-1 pl-5">
           <li>
             The restaurant sees only the food. It does not get your number or
@@ -130,7 +148,7 @@ export default async function PrivacyPage() {
         </ul>
       </Clause>
 
-      <Clause n={5} title="Messages you get">
+      <Clause n={6} title="Messages you get">
         <p>
           We message you about your own order: that it was received, that the
           payment landed, that the food is on the road, that it has arrived. If
@@ -140,7 +158,7 @@ export default async function PrivacyPage() {
         </p>
       </Clause>
 
-      <Clause n={6} title="Having it deleted">
+      <Clause n={7} title="Having it deleted">
         <p>
           Message us on WhatsApp from the number you order with and ask, and we
           delete your name, number, block and PIN. We keep the bare record of
@@ -166,14 +184,14 @@ export default async function PrivacyPage() {
         )}
       </Clause>
 
-      <Clause n={7} title="Children">
+      <Clause n={8} title="Children">
         <p>
           Sudu delivers to a university campus and is not meant for children
           under 13. We do not knowingly keep anything about them.
         </p>
       </Clause>
 
-      <Clause n={8} title="Changes">
+      <Clause n={9} title="Changes">
         <p>
           If this changes we will change this page. It is the only copy, so it
           is always the current one.

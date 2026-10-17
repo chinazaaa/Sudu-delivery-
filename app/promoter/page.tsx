@@ -233,7 +233,7 @@ export default async function PromoterPage() {
           <h2 className={PANEL}>What you earn</h2>
           <div className="mt-2 flex items-baseline gap-3 border-t-[1.5px] border-rule py-2.5">
             <span className="flex-1">
-              <strong className="text-[14.5px]">Food, skincare, parcels</strong>
+              <strong className="text-[14.5px]">Food, skincare, pharmacy, parcels</strong>
               <span className="hint block">Including when they order together</span>
             </span>
             <span className="shrink-0 font-mono font-semibold">
