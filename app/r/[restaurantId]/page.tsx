@@ -13,7 +13,8 @@ import { toBatchView } from "@/lib/view";
 import { nextArrival, runArrival } from "@/lib/arrival";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { hoursByDay, safeSettings } from "@/lib/settings";
-import { deliveryIn } from "@/lib/offer-shipping";
+import { deliveryIn, returnsPolicy } from "@/lib/offer-shipping";
+import { saidAbout } from "@/lib/product-said";
 import { parseBands } from "@/lib/fees";
 import { parseAreas } from "@/lib/areas";
 import { activeBands } from "@/lib/settings";
@@ -105,6 +106,8 @@ export default async function RestaurantPage({
       .map((band) => band.fee)
       .filter((fee) => fee > 0)
   );
+  // One policy, on every offer. Google asks each of them for one.
+  const returns = returnsPolicy();
   const area =
     place.restaurant.areaId === ""
       ? ""
@@ -193,7 +196,12 @@ export default async function RestaurantPage({
           item: {
             "@type": "Product",
             name: item.name,
-            description: item.description || undefined,
+            /* Never nothing. A dish whose kitchen wrote no description had
+               none here either, and a Product with no description is one
+               Google will not give a rich result to. The fallback is the
+               same sentence the dish's own page falls back to, so the two
+               do not disagree about the same dish. */
+            description: saidAbout(item, place.restaurant.name),
             image: photoOf(item, place.restaurant),
             url: `${site}/p/${item.id}`,
             brand: { "@type": "Brand", name: place.restaurant.name },
@@ -206,6 +214,7 @@ export default async function RestaurantPage({
                 : "https://schema.org/OutOfStock",
               seller: { "@type": "Organization", name: "Sudu" },
               shippingDetails: shipping,
+              hasMerchantReturnPolicy: returns,
             },
           },
         })),

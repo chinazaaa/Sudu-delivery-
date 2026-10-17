@@ -63,3 +63,38 @@ export function deliveryIn(fees: number[]): OfferShipping {
     },
   };
 }
+
+/**
+ * What happens when something is wrong with it.
+ *
+ * Google asks every Offer for a return policy and marks five hundred and
+ * ninety of ours as missing one, which costs the rich result rather than
+ * the indexing. It is worth answering properly rather than with whatever
+ * silences the warning: the shop has a written policy, and this is that
+ * policy in the shape a search engine reads.
+ *
+ * Same day, free, and the money goes back to the account it came from.
+ * That is clause five and clause six of /return-policy, not a guess.
+ *
+ * The method is the one honest compromise. Schema.org offers three ways to
+ * send something back, by post, to a shop and to a kiosk, and this shop
+ * does none of them: a rider takes it back from the block it was handed
+ * over at. "In store" is the nearest of the three, because the block is
+ * where the counter was, and the link underneath goes to the policy in
+ * words for anybody who wants to know what actually happens.
+ */
+export function returnsPolicy(): Record<string, unknown> {
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
+
+  return {
+    "@type": "MerchantReturnPolicy",
+    applicableCountry: "NG",
+    returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+    // Tell us the same day. Food is eaten and a day-old complaint about a
+    // cold bag is a complaint nobody can check.
+    merchantReturnDays: 1,
+    returnMethod: "https://schema.org/ReturnInStore",
+    returnFees: "https://schema.org/FreeReturn",
+    merchantReturnLink: `${site}/return-policy`,
+  };
+}

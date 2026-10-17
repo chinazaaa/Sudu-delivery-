@@ -11,7 +11,8 @@ import { productNotes, safeSettings } from "@/lib/settings";
 import { naira } from "@/lib/money";
 import { photoOf } from "@/lib/product-photo";
 import { isExtra } from "@/lib/shelf";
-import { deliveryIn } from "@/lib/offer-shipping";
+import { saidAbout } from "@/lib/product-said";
+import { deliveryIn, returnsPolicy } from "@/lib/offer-shipping";
 
 export const dynamic = "force-dynamic";
 
@@ -23,18 +24,6 @@ export const dynamic = "force-dynamic";
  * description, and the honest fix is not to invent one but to say the true
  * things we already know, in the order a person would say them.
  */
-function saidAbout(
-  item: { name: string; description: string; price: number },
-  restaurant: string
-): string {
-  const said = item.description.trim();
-  return (
-    (said ? `${said} ` : "") +
-    `${item.name} from ${restaurant}, ${naira(item.price)}, ` +
-    `delivered to Pan-Atlantic University.`
-  );
-}
-
 /** The dish, the kitchen it comes from, and a canonical of its own. */
 export async function generateMetadata({
   params,
@@ -116,6 +105,7 @@ export default async function ProductPage({
         : "https://schema.org/OutOfStock",
       seller: { "@type": "Organization", name: "Sudu" },
       shippingDetails: deliveryIn(fees),
+      hasMerchantReturnPolicy: returnsPolicy(),
     },
   };
 
