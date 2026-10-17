@@ -15,6 +15,7 @@ import {
 } from "@/lib/messages";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
+import { channelLabel } from "@/lib/came-from";
 import SaveButton from "@/components/SaveButton";
 import { addCustomer, markManyReviewed } from "../actions";
 import { Bar, Composer, Picking, Room, Tick, TickAll } from "@/components/admin/CustomerBulk";
@@ -524,6 +525,13 @@ export default async function CustomersPage({
                               </span>
                               {promoter.name}
                             </Tag>
+                          ) : row.cameFrom !== "" ? (
+                            /* The place they came through. It was being
+                               flattened to "found us" with everybody who
+                               arrived from nowhere, so tagging somebody as
+                               having come from ChatGPT changed nothing
+                               anybody could see. */
+                            <Tag tone="mint">{channelLabel(row.cameFrom)}</Tag>
                           ) : (
                             <Tag>found us</Tag>
                           )}
@@ -642,6 +650,8 @@ export default async function CustomersPage({
                                 </span>
                                 {promoter.name}
                               </Tag>
+                            ) : row.cameFrom !== "" ? (
+                              <Tag tone="mint">{channelLabel(row.cameFrom)}</Tag>
                             ) : (
                               <Tag>found us</Tag>
                             )}

@@ -385,6 +385,9 @@ export type CustomerRow = {
    *  parent is marked: a student is the ordinary case, and labelling them
    *  "child" is talking down to the people the shop feeds. */
   isParent: boolean;
+  /** The place they came through, where somebody has said: ChatGPT,
+   *  Instagram, a poster. Not a person and pays nobody. */
+  cameFrom: string;
   /** How many boxes somebody else paid for and had sent to them. Counted
    *  apart from their own: a son whose father orders for him has placed
    *  nothing himself, and what he has spent is still nothing. */
@@ -428,7 +431,7 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
     .select(
       // parent_name and parent_phone were read below and never asked for
       // here, so every row in the book came back with an empty household.
-      "phone, name, hostel, pin, admin_note, payment_method, promoter_code, calls_them, parent_name, parent_phone, is_parent, reviewed_at"
+      "phone, name, hostel, pin, admin_note, payment_method, promoter_code, calls_them, came_from, parent_name, parent_phone, is_parent, reviewed_at"
     )
     .order("name");
 
@@ -487,6 +490,7 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
       parentName: ((row as { parent_name?: string }).parent_name ?? ""),
       parentPhone: ((row as { parent_phone?: string }).parent_phone ?? ""),
       isParent: Boolean((row as { is_parent?: boolean }).is_parent),
+      cameFrom: ((row as { came_from?: string }).came_from ?? ""),
       reviewed: Boolean((row as { reviewed_at?: string | null }).reviewed_at),
       orders: mine.length,
       uses: doorFor(mine.map((order) => String((order as { source?: string }).source ?? ""))),
@@ -496,9 +500,29 @@ export async function customerRows(search?: string): Promise<CustomerRow[]> {
     };
   });
 
+  /*
+   * A promoter who has never ordered is not a customer.
+   *
+   * Signing somebody up as a promoter leaves a row with their number on
+   * it, so the book carried people who have sold for the shop and never
+   * bought from it, sitting among the customers with nought against their
+   * name and nothing to do about it.
+   *
+   * Only while they have not ordered. A promoter who buys her own lunch
+   * is a customer like anybody else that same afternoon, and the row
+   * comes back on its own.
+   */
+  const { data: sellers } = await db().from("promoters").select("phone");
+  const selling = new Set(
+    ((sellers ?? []) as { phone: string | null }[])
+      .map((one) => String(one.phone ?? "").trim())
+      .filter((one) => one !== "")
+  );
+  const book = rows.filter((row) => !(row.orders === 0 && selling.has(row.phone)));
+
   const term = search?.trim().toLowerCase();
-  if (!term) return rows;
-  return rows.filter(
+  if (!term) return book;
+  return book.filter(
     (row) =>
       row.name.toLowerCase().includes(term) ||
       row.phone.includes(term) ||
