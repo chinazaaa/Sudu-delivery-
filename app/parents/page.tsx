@@ -12,6 +12,7 @@ import { shownSays } from "@/lib/says";
 import { googleLinks, safeSettings, whatsappLink } from "@/lib/settings";
 import { hostelNames } from "@/lib/hostels";
 import PlanAsk from "@/components/PlanAsk";
+import CurateBox from "@/components/CurateBox";
 
 /**
  * The page a parent is sent.
@@ -250,6 +251,12 @@ export default async function ParentsPage() {
             ))}
           </div>
         )}
+
+        {/* Under the shelves, where a parent has read all of them and not
+            found the one they wanted. The same card the collection pages
+            carry: things we have is the menu, things we do not is a job
+            for a person. */}
+        <CurateBox shelf="the parents page" hint="" hostels={blocks} />
       </section>
 
       <section className="bleed bg-ink text-shell">

@@ -267,7 +267,7 @@ export async function curateABox(
     name: said("name"),
     phone: said("phone"),
     hostel: said("hostel"),
-    note: [shelf === "" ? "" : `Curating their own ${shelf} box.`, said("note").trim()]
+    note: [shelf === "" ? "" : `Curating their own box, from ${shelf}.`, said("note").trim()]
       .filter(Boolean)
       .join(" "),
   });
