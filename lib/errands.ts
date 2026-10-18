@@ -22,6 +22,10 @@ export type Errand = {
   title: string;
   ticket: string;
   lead: string;
+  /** The two or three facts worth reading before anything else, as pills
+   *  under the heading. Somebody who reads nothing else on the page should
+   *  still know what this is and what it costs them to ask. */
+  pills: string[];
   /** The first line of the message they send themselves. */
   opening: string;
   /** What the form's big box asks, and what it starts with. */
@@ -47,6 +51,7 @@ export const ERRANDS: Errand[] = [
     title: "Project printing and binding",
     ticket: "Final year · Pan-Atlantic University",
     lead: "Send us the file. We print it, bind it, and bring it to your block.",
+    pills: ["Spiral or hard cover", "Priced from your page count", "Brought to your block"],
     opening: "Hi Sudu, I need my project printed and bound.",
     label: "Tell us about the project",
     preset: "Project printing: ",
@@ -126,6 +131,7 @@ export const ERRANDS: Errand[] = [
     title: "Tailoring and repairs",
     ticket: "Hostel · Pan-Atlantic University",
     lead: "A hem, a zip, a dress for an event. We collect it, the tailor does it, we bring it back.",
+    pills: ["Collected and returned", "Price agreed before anything is cut"],
     opening: "Hi Sudu, I have something that needs a tailor.",
     label: "Tell us what needs doing",
     preset: "Tailoring: ",
@@ -188,6 +194,7 @@ export const ERRANDS: Errand[] = [
     title: "Hair, braids and barbing",
     ticket: "Hostel · Pan-Atlantic University",
     lead: "Tell us what you want done and when. We find somebody good and arrange it.",
+    pills: ["On campus, or we arrange the trip", "Priced before anything is booked"],
     opening: "Hi Sudu, I would like to book hair or barbing.",
     label: "Tell us what you want done",
     preset: "Hair: ",
@@ -251,6 +258,7 @@ export const ERRANDS: Errand[] = [
     title: "Phone and laptop repair",
     ticket: "Hostel · Pan-Atlantic University",
     lead: "A cracked screen, a port that will not charge, a battery that lasts an hour. We take it, they fix it, we bring it back.",
+    pills: ["Collected from your block", "Quoted before any work starts"],
     opening: "Hi Sudu, I have a phone or laptop that needs fixing.",
     label: "Tell us what is wrong",
     preset: "Repair: ",
@@ -314,6 +322,7 @@ export const ERRANDS: Errand[] = [
     title: "Buying a laptop or a phone",
     ticket: "Hostel · Pan-Atlantic University",
     lead: "Tell us what you need it for and what you can spend. We find it, check it, and bring it to your block.",
+    pills: ["Photos and a price before you pay", "You check it at your door"],
     opening: "Hi Sudu, I want to buy a laptop or a phone.",
     label: "Tell us what you are looking for",
     preset: "Looking to buy: ",
@@ -394,7 +403,8 @@ export const ERRANDS: Errand[] = [
     priceList: true,
     title: "Laundry, collected from your block",
     ticket: "Hostel · Pan-Atlantic University",
-    lead: "We collect it from your block, get it washed, and bring it back folded.",
+    lead: "We collect from your block on Mondays and Thursdays, get it washed, and bring it back folded within 48 hours.",
+    pills: ["Mondays and Thursdays", "Back within 48 hours", "Collection included"],
     opening: "Hi Sudu, I would like my laundry collected.",
     label: "Tell us about the load",
     preset: "Laundry: ",
@@ -419,22 +429,22 @@ export const ERRANDS: Errand[] = [
         why: "A white shirt, something that runs, anything you would not put in with the rest. Tell us and it is kept apart.",
       },
       {
-        what: "When you need it back",
-        why: "So we can tell you honestly whether that is a day we can do, rather than finding out on the day.",
+        what: "Which collection you want",
+        why: "Mondays and Thursdays. Say which one and we have your block on the list for it.",
       },
     ],
     steps: [
       [
         "Tell us the night before",
-        "Message us with roughly how much and when you need it back, and we agree a time to come for it.",
+        "Message us or fill the form, with roughly what is in the bag. We collect on Mondays and Thursdays, so say which of the two and we put your block on the list.",
       ],
       [
         "We collect from your block",
-        "Same as a delivery, in reverse. Bag it up and hand it over at your block.",
+        "Same as a delivery, in reverse. Bag it up and hand it over. We count it through with you there, so both of us know what went.",
       ],
       [
-        "It comes back folded",
-        "To your block, on the day we agreed. You pay when you have it back and not before.",
+        "It comes back folded, within 48 hours",
+        "To your block, counted again in front of you. You pay when you have it back and not before.",
       ],
     ],
     careful: {
@@ -445,15 +455,23 @@ export const ERRANDS: Errand[] = [
     asked: [
       {
         q: "Do you do laundry for students at PAU?",
-        a: "Yes. We collect from your block, get it washed, and bring it back folded on a day we agree. Tell us roughly how much there is and whether you want it ironed, and we price it before anything is collected.",
+        a: "Yes. We collect from your block on Mondays and Thursdays, get it washed, and bring it back folded within 48 hours. Everything is priced per item and the whole list is on this page, so you can work out what a bag costs before you message anybody.",
       },
       {
         q: "How much is it?",
-        a: "It depends on how much there is and whether it needs ironing, so we give you a price before we come for it rather than after. Message us with roughly how much and you will have a number back the same day.",
+        a: "Per item, and the full list is on this page. A shirt, a pair of trousers, a duvet and a blazer all cost different things, which is how the trade works here. Collection and the trip back are included, and there is a minimum on a collection because it is two journeys: gather a few things, or go in with somebody on your floor.",
       },
       {
         q: "How long does it take?",
-        a: "Tell us when you need it back and we will tell you honestly whether that day works. Ironing adds time, and so does a week when everybody has the same idea, so the night before is better than the morning of.",
+        a: "Within 48 hours of collection, back at your block. We collect on Mondays and Thursdays, so something handed over on Monday is back by Wednesday. We would rather say two days and be early than say one and be late.",
+      },
+      {
+        q: "How does collection and return work?",
+        a: "There is nothing to drop off anywhere. Tell us the night before, on WhatsApp or through the form on this page, and say which collection you want: we come on Mondays and Thursdays. We meet you at your block, count the bag through with you standing there, and bring it back folded within 48 hours, counted again in front of you. You pay when you have it back.",
+      },
+      {
+        q: "Can I get it back the same day?",
+        a: "Not as a promise. Our deliveries run in the late afternoon and the cleaning itself takes the day, so same day would mean telling you a time we cannot reliably keep. If something is genuinely urgent, message us and we will tell you honestly whether it can be done that week rather than guessing.",
       },
       {
         q: "What if something gets damaged or goes missing?",

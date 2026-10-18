@@ -25,6 +25,7 @@ export default function AskForm({
   opening = "Hi Sudu, I am looking for something that is not on the menu.",
   lead = "Say what you are looking for, however you would say it out loud. We find it, price it, and send you what it comes to. Nothing is ordered until you say yes.",
   label = "What are you looking for?",
+  send = "Ask Sudu to get it",
 }: {
   hostels: string[];
   whatsapp: string | null;
@@ -38,6 +39,9 @@ export default function AskForm({
   opening?: string;
   lead?: string;
   label?: string;
+  /** What the button says. Finding is the smaller half of this and the
+   *  wrong half to name: nobody wants a thing located, they want it got. */
+  send?: string;
 }) {
   const [state, action, busy] = useActionState<AskState, FormData>(sendRequest, {
     error: "",
@@ -231,7 +235,7 @@ export default function AskForm({
         )}
 
         <button type="submit" disabled={busy} className="btn-primary w-full py-3.5">
-          {busy ? "Sending…" : "Ask Sudu to find it"}
+          {busy ? "Sending…" : send}
         </button>
       </form>
 
