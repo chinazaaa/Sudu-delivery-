@@ -259,6 +259,16 @@ export default async function BatchPage({
    * so this is the only thing the page can honestly call done: the money has
    * been handed over and said.
    */
+  /*
+   * The one rule, used by the count at the top and by every tick under it.
+   *
+   * The stops used to tick themselves the moment the run reached the road,
+   * while the count went on saying "0 of 3 done", because the count asked
+   * this question and the ticks asked whether the car had set off. So three
+   * stops read "paid for" in green over a line that said none of them were,
+   * and the green was the wrong one: a run being on the road says the food
+   * was bought, not what it cost.
+   */
   const paidFor = (group: (typeof counter)[number]) =>
     group.lines.length > 0 && group.lines.every((line) => line.paid !== null);
   const doneStops = counter.filter(paidFor).length;
@@ -763,7 +773,7 @@ export default async function BatchPage({
                 {counter.length > 1 && stopShown === null && (
                   <ul className="space-y-2.5 lg:hidden">
                     {counter.map((group, index) => {
-                      const done = shopped || paidFor(group);
+                      const done = paidFor(group);
                       const here = ordersAt.get(group.restaurant) ?? [];
                       return (
                         <li key={`stop-${group.restaurant}`}>
@@ -854,7 +864,7 @@ export default async function BatchPage({
                           {group.restaurant}
                         </span>
                         <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                          {(shopped || paidFor(group)) && (
+                          {paidFor(group) && (
                             <span className="tag bg-mint-tint text-mint">paid for</span>
                           )}
                           <span className="hint">
@@ -976,7 +986,7 @@ export default async function BatchPage({
                             .map((one, at) => ({ one, at }))
                             .filter(({ at }) => at !== index)
                             .map(({ one, at }) => {
-                              const done = shopped || paidFor(one);
+                              const done = paidFor(one);
                               return (
                                 <li key={`togo-${one.restaurant}`}>
                                   <Link
