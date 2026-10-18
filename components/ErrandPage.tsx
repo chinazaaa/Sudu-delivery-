@@ -6,6 +6,7 @@ import { errandBySlug } from "@/lib/errands";
 import { askedFor } from "@/lib/page-faq";
 import { hostelNames } from "@/lib/hostels";
 import { safeSettings } from "@/lib/settings";
+import { laundryList } from "@/lib/laundry";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
 
@@ -40,6 +41,9 @@ export default async function ErrandPage({ slug }: { slug: string }) {
 
   const settings = await safeSettings();
   const asked = await askedFor(spec.slug, spec.asked);
+  // Only the one errand that has a price per item. The rest are quoted,
+  // and a page that invented a list for them would be inventing prices.
+  const prices = spec.priceList ? await laundryList() : null;
 
   /*
    * Said as a service rather than as a product, because it is one.
@@ -77,6 +81,7 @@ export default async function ErrandPage({ slug }: { slug: string }) {
         asked={asked}
         hostels={await hostelNames()}
         whatsapp={settings.whatsapp_number}
+        prices={prices}
       />
     </>
   );

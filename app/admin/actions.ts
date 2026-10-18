@@ -3040,6 +3040,10 @@ const SETTING_FIELDS = [
   "pharmacy_blurb",
   "pharmacy_bands",
   "pharmacy_promise",
+  "laundry_on",
+  "laundry_markup",
+  "laundry_minimum",
+  "laundry_note",
   "santa_delivery",
   "santa_delivery_included",
   "santa_delivery_extra",
@@ -4792,20 +4796,43 @@ export async function saveSkincare(
    * next time a column is added, so the form says which counter it is and
    * the rest of this is unchanged.
    */
-  const kind = COUNTERS[String(form.get("kind") ?? "").trim()]
-    ? String(form.get("kind")).trim()
-    : "skincare";
+  /*
+   * Which settings are being saved, and which fields they are.
+   *
+   * A counter has eight of them and the laundry has four, which are not
+   * the same four. Falling back to skincare on anything unrecognised was
+   * about to mean that saving the laundry form turned the skincare shelf
+   * off, so the shape is looked up rather than assumed and an unknown one
+   * saves nothing at all.
+   */
+  const asked = String(form.get("kind") ?? "").trim();
+  const SHAPES: Record<string, { fields: string[]; path: string }> = {
+    laundry: {
+      fields: ["laundry_on", "laundry_markup", "laundry_minimum", "laundry_note"],
+      path: "/pau-laundry",
+    },
+    ...Object.fromEntries(
+      Object.values(COUNTERS).map((counter) => [
+        counter.kind,
+        {
+          fields: [
+            `${counter.kind}_on`,
+            `${counter.kind}_fee`,
+            `${counter.kind}_day`,
+            `${counter.kind}_cut_off`,
+            `${counter.kind}_window`,
+            `${counter.kind}_blurb`,
+            `${counter.kind}_bands`,
+            `${counter.kind}_promise`,
+          ],
+          path: counter.href,
+        },
+      ])
+    ),
+  };
 
-  const fields = [
-    `${kind}_on`,
-    `${kind}_fee`,
-    `${kind}_day`,
-    `${kind}_cut_off`,
-    `${kind}_window`,
-    `${kind}_blurb`,
-    `${kind}_bands`,
-    `${kind}_promise`,
-  ];
+  const shape = SHAPES[asked] ?? SHAPES.skincare;
+  const fields = shape.fields;
 
   const patch: Record<string, string> = {};
   for (const field of fields) {
@@ -4837,7 +4864,7 @@ export async function saveSkincare(
   }
 
   revalidatePath("/admin", "layout");
-  revalidatePath(COUNTERS[kind].href);
+  revalidatePath(shape.path);
   revalidatePath("/", "layout");
 
   if (error) {

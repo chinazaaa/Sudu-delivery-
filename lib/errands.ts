@@ -36,6 +36,9 @@ export type Errand = {
   careful: { title: string; said: string };
   /** The questions, as the page ships them. Admin can edit every one. */
   asked: Ask[];
+  /** Whether the page prints the laundry price list under it. Only one
+   *  errand has a per item price; the rest are quoted. */
+  priceList?: boolean;
 };
 
 export const ERRANDS: Errand[] = [
@@ -388,6 +391,7 @@ export const ERRANDS: Errand[] = [
   },
   {
     slug: "pau-laundry",
+    priceList: true,
     title: "Laundry, collected from your block",
     ticket: "Hostel · Pan-Atlantic University",
     lead: "We collect it from your block, get it washed, and bring it back folded.",
@@ -403,8 +407,8 @@ export const ERRANDS: Errand[] = [
     ],
     needs: [
       {
-        what: "Roughly how much",
-        why: "A bag, half a bag, or six shirts. Nobody counts socks: a rough answer is enough to price it.",
+        what: "What is in it",
+        why: "Everything is priced per item on the list below, so a rough count of each kind is all it takes: four shirts, two trousers, a duvet.",
       },
       {
         what: "Washed, or washed and ironed",

@@ -187,6 +187,13 @@ export type Settings = {
   pharmacy_blurb: string;
   pharmacy_bands: string;
   pharmacy_promise: string;
+  /** The laundry service: whether it is on, what we add to the cleaner's
+   *  price, the basket worth sending a car for, and a line of our own. The
+   *  cost list itself is in the code; only the margin lives here. */
+  laundry_on: string;
+  laundry_markup: number;
+  laundry_minimum: number;
+  laundry_note: string;
   /** When each page of small print last said something different, as the
    *  shop typed it. Empty means the page says what it is instead. */
   /** The shop's Google Business Profile, and the link that opens straight
@@ -312,6 +319,10 @@ export const EMPTY: Settings = {
   pharmacy_blurb: "",
   pharmacy_bands: "",
   pharmacy_promise: "",
+  laundry_on: "",
+  laundry_markup: 0,
+  laundry_minimum: 0,
+  laundry_note: "",
   google_profile: "",
   google_review: "",
   google_rating: 0,

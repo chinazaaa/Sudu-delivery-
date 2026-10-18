@@ -60,6 +60,7 @@ export const GROUPS: Group[] = [
       { href: "/admin/stock", label: "Stock" },
       { href: "/admin/skincare", label: "Skincare" },
       { href: "/admin/pharmacy", label: "Pharmacy" },
+      { href: "/admin/laundry", label: "Laundry" },
       { href: "/admin/occasions", label: "Collections" },
       { href: "/admin/coupons", label: "Offers" },
     ],

@@ -2,6 +2,8 @@ import Link from "next/link";
 import PageHead from "@/components/PageHead";
 import AskForm from "@/components/AskForm";
 import { AlsoSee, Asked, Reason, Section, type Ask } from "@/components/Guide";
+import LaundryPrices from "@/components/LaundryPrices";
+import type { PricedGroup } from "@/lib/laundry";
 import type { Errand as Spec } from "@/lib/errands";
 import { waLink } from "@/lib/whatsapp";
 
@@ -24,8 +26,11 @@ export default function Errand({
   asked,
   hostels,
   whatsapp,
+  prices,
 }: {
   spec: Spec;
+  /** The priced list, where this errand has one. */
+  prices?: { groups: PricedGroup[]; minimum: number; note: string } | null;
   /** The questions as admin has them, which may differ from the shipped
    *  ones. Passed in rather than read here so the page stays a page. */
   asked: Ask[];
@@ -89,6 +94,14 @@ export default function Errand({
             ))}
           </dl>
         </Section>
+
+        {prices && prices.groups.length > 0 && (
+          <LaundryPrices
+            groups={prices.groups}
+            minimum={prices.minimum}
+            note={prices.note}
+          />
+        )}
 
         <Reason title={spec.careful.title}>{spec.careful.said}</Reason>
 
