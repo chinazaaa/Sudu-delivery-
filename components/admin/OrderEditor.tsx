@@ -68,16 +68,7 @@ export default function OrderEditor({
   const [showing, setShowing] = useState("");
 
   const needle = query.trim().toLowerCase();
-  const found =
-    needle.length < 2
-      ? []
-      : catalogue
-          .filter(
-            (one) =>
-              one.name.toLowerCase().includes(needle) ||
-              one.shop.toLowerCase().includes(needle)
-          )
-          .slice(0, 8);
+  const found = needle.length < 2 ? [] : search(catalogue, needle, 8);
 
   // An order that has been delivered, cancelled or given back is history.
   // Editing it edits something that already happened, and the buttons being
@@ -420,6 +411,41 @@ function ChoiceForm({
 }
 
 /**
+ * Search the catalogue by words rather than by one run of characters.
+ *
+ * It used to ask whether the name contained the whole box of text, or the
+ * shop did. So "hot wings" found them and "kfc hot wings" found nothing: no
+ * dish is called that and no shop is, and the one thing anybody actually
+ * types, the counter and the thing, was the one that failed. Every word has
+ * to be somewhere in the line instead, and the line is the name and the
+ * shop together.
+ *
+ * Name matches come first, so typing a counter's name does not bury the
+ * dish under whatever happens to sit at the top of that counter's list.
+ */
+function search<T extends { name: string; shop: string }>(
+  catalogue: T[],
+  query: string,
+  limit: number
+): T[] {
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
+
+  const hits: { one: T; named: number }[] = [];
+  for (const one of catalogue) {
+    const name = one.name.toLowerCase();
+    const line = `${name} ${one.shop.toLowerCase()}`;
+    if (!words.every((word) => line.includes(word))) continue;
+    hits.push({ one, named: words.filter((word) => name.includes(word)).length });
+  }
+
+  return hits
+    .sort((a, b) => b.named - a.named)
+    .slice(0, limit)
+    .map((hit) => hit.one);
+}
+
+/**
  * Making one line a different product.
  *
  * Kept next to the quantity because that is where somebody is already
@@ -438,16 +464,7 @@ function SwapForm({
   const [query, setQuery] = useState("");
 
   const needle = query.trim().toLowerCase();
-  const found =
-    needle.length < 2
-      ? []
-      : catalogue
-          .filter(
-            (one) =>
-              one.name.toLowerCase().includes(needle) ||
-              one.shop.toLowerCase().includes(needle)
-          )
-          .slice(0, 6);
+  const found = needle.length < 2 ? [] : search(catalogue, needle, 8);
 
   return (
     <div className="border-t border-black/5 pt-3">
