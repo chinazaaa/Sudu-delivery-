@@ -1419,11 +1419,26 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             );
             setAsk({
               of: "buttons",
-              buttons: places.map((shop, which) => ({
-                said: shop.name,
-                look: which === 0 ? undefined : ("alt" as const),
-                go: () => pick(shop),
-              })),
+              buttons: [
+                ...places.map((shop, which) => ({
+                  said: shop.name,
+                  look: which === 0 ? undefined : ("alt" as const),
+                  go: () => pick(shop),
+                })),
+                /* A way out, which this question never had. Asked which
+                   restaurant does their printing, somebody could only
+                   choose a restaurant: every other question in the chat
+                   can be refused and this one could not. */
+                {
+                  said: "None of these",
+                  look: "alt" as const,
+                  go: () => {
+                    me("None of these");
+                    queue.current = [];
+                    askOrder();
+                  },
+                },
+              ],
               hint: "The price and the menu change with the counter.",
             });
             return;
@@ -1432,11 +1447,21 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           bot("A few places do that. Where from?", 450);
           setAsk({
             of: "chips",
-            chips: places.map((shop, which) => ({
-              said: shop.name,
-              hot: which === 0,
-              go: () => pick(shop),
-            })),
+            chips: [
+              ...places.map((shop, which) => ({
+                said: shop.name,
+                hot: which === 0,
+                go: () => pick(shop),
+              })),
+              {
+                said: "None of these",
+                go: () => {
+                  me("None of these");
+                  queue.current = [];
+                  askOrder();
+                },
+              },
+            ],
             hint: "The price and the menu change with the counter.",
           });
           return;

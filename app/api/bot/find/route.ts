@@ -116,6 +116,37 @@ export async function POST(request: Request): Promise<NextResponse> {
       }))
     );
 
+    /*
+     * An errand, which the menu was never going to answer.
+     *
+     * Asked here, before the menu's own branches, because they fire on
+     * far less than certainty: "Need printing services" scattered weak
+     * hits across three kitchens and was answered "Yin Yang Express or
+     * Local Market or Uncle Stan's?", which is the shop asking which
+     * restaurant does the photocopying.
+     *
+     * A confident dish still wins, because somebody asking for something
+     * that really is on a menu means the dish. Everything below this is
+     * a question rather than an answer, and a plain word like laundry or
+     * binding beats a question every time.
+     */
+    if (found.how !== "sure" && kitchen === "" && named.length === 0) {
+      const errand = errandMeant(said);
+      if (errand) {
+        return NextResponse.json({
+          how: "errand",
+          counter: errand.title,
+          href: `/${errand.slug}`,
+          lead: errand.lead,
+          qty: 1,
+          person: false,
+          hits: [],
+          instead: [],
+          shops: [],
+        });
+      }
+    }
+
     // Only where nothing on any menu answers it better. "KFC wings" is a
     // dish and should stay one; "KFC and Domino's" is a pair of counters.
     if (named.length > 0 && found.how === "lost") {
@@ -246,36 +277,6 @@ export async function POST(request: Request): Promise<NextResponse> {
             shops: [],
           });
         }
-      }
-    }
-
-    /*
-     * Nothing on any menu, and it was never going to be: it is an errand.
-     *
-     * Laundry is not a dish, and a thesis binding is not one either. The
-     * chat searched the menu, found nothing and offered to go and source
-     * a thing we run a whole page about, which is the shop forgetting
-     * half of what it does in front of a customer.
-     *
-     * Asked before the counters, because the counters are a shelf of
-     * products and these are jobs: "print" is not a product we stock and
-     * never matches one, so letting it fall through would only waste the
-     * look.
-     */
-    if (found.how === "lost" && kitchen === "" && named.length === 0) {
-      const errand = errandMeant(said);
-      if (errand) {
-        return NextResponse.json({
-          how: "errand",
-          counter: errand.title,
-          href: `/${errand.slug}`,
-          lead: errand.lead,
-          qty: 1,
-          person: false,
-          hits: [],
-          instead: [],
-          shops: [],
-        });
       }
     }
 
