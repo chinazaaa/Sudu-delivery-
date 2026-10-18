@@ -1309,9 +1309,11 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           how: string;
           qty: number;
           hits: Hit[];
-          instead: { id: string; name: string; shop: string }[];
+          instead: { id: string; name: string; shop: string; price?: number }[];
           shops?: { id: string; name: string }[];
           shelf?: string;
+          counter?: string;
+          href?: string;
         };
         /*
          * The same thing on four counters.
@@ -1515,6 +1517,59 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             450
           );
           askOrder();
+          return;
+        }
+        /*
+         * Not food, but we do sell it: it lives on a counter.
+         *
+         * The shelves are kept off the food menu on purpose, and the chat
+         * searched the menu and said "I cannot find that anywhere on the
+         * shop today" over two thousand cleansers. Now it says where the
+         * thing actually is and opens the shelf.
+         *
+         * A link rather than a line in the basket. A counter is its own
+         * order on its own car, so adding it here would be quietly
+         * starting a second order inside the first; and on the pharmacy
+         * shelf it is also where the plain words about what we are and are
+         * not get read, which is not something to tap past.
+         */
+        if (got.how === "counter" && (got.instead ?? []).length > 0) {
+          misses.current = 0;
+          const shelf = got.counter ?? "another";
+          const first = got.instead[0];
+          bot(
+            `That is not on the food menu, but we do carry it: it is on our ` +
+              `<b>${shelf.toLowerCase()}</b> shelf.`,
+            500
+          );
+          bot(
+            got.instead.length === 1
+              ? `<b>${first.name}</b>${first.price ? `, ${naira(first.price)}` : ""}.`
+              : `We have <b>${first.name}</b>${first.price ? `, ${naira(first.price)}` : ""}` +
+                ` and ${got.instead.length - 1} other${got.instead.length > 2 ? "s" : ""}` +
+                " like it.",
+            460
+          );
+          bot(
+            `It is its own order on its own car, so it does not travel with ` +
+              `food. Have a look and it is a few taps.`,
+            440
+          );
+          setAsk({
+            of: "buttons",
+            buttons: [
+              {
+                said: `Open the ${shelf.toLowerCase()} shelf`,
+                look: "green",
+                href: got.href ?? "/",
+              },
+              {
+                said: "Carry on with food",
+                look: "alt",
+                go: () => { me("Carry on with food"); askOrder(true); },
+              },
+            ],
+          });
           return;
         }
         if (got.how === "person") {

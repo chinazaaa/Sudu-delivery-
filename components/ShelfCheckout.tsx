@@ -242,7 +242,9 @@ export default function ShelfCheckout({
                   }`}
                 >
                   <span>
-                    <span className="block font-extrabold">Today, {one.label}</span>
+                    <span className="block font-extrabold">
+                      {one.day === "today" ? "Today" : "Tomorrow"}, {one.label}
+                    </span>
                     <span className="block text-xs text-muted">
                       A car of its own, straight there
                     </span>

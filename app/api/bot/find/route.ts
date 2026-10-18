@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { menuView, menuViewFor } from "@/lib/menu";
+import { COUNTERS, counterIndex } from "@/lib/counter";
 import type { ItemView } from "@/lib/view";
 import {
   countedInName,
@@ -244,6 +245,70 @@ export async function POST(request: Request): Promise<NextResponse> {
             shops: [],
           });
         }
+      }
+    }
+
+    /*
+     * Nothing on any menu, so look on the counters before giving up.
+     *
+     * The shelves are kept out of the food menu on purpose, and the price
+     * of that is a chat which answers "CeraVe cleanser" with "I cannot
+     * find that anywhere on the shop today" while two thousand of them sit
+     * on a shelf. So the last thing before the apology is to search there.
+     *
+     * It finds and points. It does not add: a counter is a basket of its
+     * own on a car of its own, and for medicine the shelf is also where
+     * the plain words about what we are and are not get read. Both of
+     * those are worth the extra tap.
+     *
+     * Skipped once a kitchen has been named, because "a cleanser from
+     * KFC" is a question about KFC.
+     */
+    if (found.how === "lost" && kitchen === "" && named.length === 0) {
+      /*
+       * Every counter asked, and the best answer wins.
+       *
+       * Taking the first counter that matched at all would hand
+       * "paracetamol" to skincare on the strength of some cream with the
+       * word in its description, because skincare is simply first in the
+       * list. The strongest match is the honest answer, so both are scored
+       * before either is used.
+       */
+      let best: {
+        counter: (typeof COUNTERS)[string];
+        hits: { id: string; name: string; score: number }[];
+        priced: Map<string, number>;
+      } | null = null;
+
+      for (const counter of Object.values(COUNTERS)) {
+        const stock = await counterIndex(counter);
+        if (stock.length === 0) continue;
+        const onCounter = find(said, stock.map((one) => ({ id: one.id, name: one.name })));
+        if (onCounter.how === "lost" || onCounter.hits.length === 0) continue;
+        if (best && (best.hits[0]?.score ?? 0) >= onCounter.hits[0].score) continue;
+        best = {
+          counter,
+          hits: onCounter.hits,
+          priced: new Map(stock.map((one) => [one.id, one.price])),
+        };
+      }
+
+      if (best) {
+        return NextResponse.json({
+          how: "counter",
+          counter: best.counter.fallbackName,
+          href: best.counter.href,
+          qty: 1,
+          person: false,
+          hits: [],
+          instead: best.hits.slice(0, 4).map((hit) => ({
+            id: hit.id,
+            name: hit.name,
+            shop: best.counter.fallbackName,
+            price: best.priced.get(hit.id) ?? 0,
+          })),
+          shops: [],
+        });
       }
     }
 

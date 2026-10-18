@@ -352,6 +352,47 @@ export function counterFacets(counter: Counter): Promise<Facets> {
   return read();
 }
 
+/**
+ * Every product on a counter, as little as a search needs.
+ *
+ * The chat searches the food menu and, finding nothing, used to say "I
+ * cannot find that anywhere on the shop today" over a shelf holding two
+ * thousand cleansers and eight hundred drugs. To answer that honestly it
+ * has to be able to look here too.
+ *
+ * Cached per counter, because it is read on a path that is already a miss
+ * and three thousand rows fetched on every unmatched word is a tax on the
+ * one case that was already going badly. Name and price only: the chat is
+ * deciding what somebody meant, not what to charge them.
+ */
+const indexBy = new Map<string, () => Promise<{ id: string; name: string; price: number }[]>>();
+
+export function counterIndex(
+  counter: Counter
+): Promise<{ id: string; name: string; price: number }[]> {
+  let read = indexBy.get(counter.kind);
+  if (!read) {
+    read = unstable_cache(
+      async () => {
+        const shop = await counterShop(counter);
+        if (!shop) return [];
+        const { data } = await db()
+          .from("menu_items")
+          .select("id, name, price_food")
+          .eq("restaurant_id", shop.id)
+          .eq("available", true);
+        return ((data ?? []) as { id: string; name: string; price_food: number }[]).map(
+          (one) => ({ id: one.id, name: one.name, price: one.price_food })
+        );
+      },
+      [`counter-index-${counter.kind}`],
+      { revalidate: 300, tags: [counter.kind, "menu"] }
+    );
+    indexBy.set(counter.kind, read);
+  }
+  return read();
+}
+
 export type Browse = {
   /** A shelf the shop files things under, by name. */
   shelf?: string;

@@ -42,13 +42,20 @@ export default async function PharmacyCheckoutPage() {
   /*
    * The other way, where there is one.
    *
-   * Only today's slots: the weekly drop already answers "some day soon",
-   * and a list offering Saturday twice over helps nobody. Only while same
-   * day is running at all, so switching it off switches this off with it.
+   * Today and tomorrow, not today alone. Deliveries finish in the evening,
+   * so somebody with a fever at nine at night has nothing left today, and
+   * offering them only the weekly car is answering "I need this now" with
+   * "Saturday". Tomorrow afternoon is a far better answer and it is a trip
+   * we were going to be able to make anyway.
+   *
+   * Nothing further out than that: past tomorrow the weekly car is close
+   * enough that a dearer trip of its own stops being worth offering.
    */
   const soon =
     settings.same_day_on === "on"
-      ? deliverySlots(new Date(), await hoursByDay()).filter((one) => one.day === "today")
+      ? deliverySlots(new Date(), await hoursByDay()).filter(
+          (one) => one.day === "today" || one.day === "tomorrow"
+        )
       : [];
   const sameDay = await sameDayPricing();
 

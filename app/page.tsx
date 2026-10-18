@@ -172,11 +172,15 @@ export default async function HomePage() {
   // What a trip today would start at, where one can still be made. Medicine
   // is the counter somebody opens because they are ill now, so the card has
   // to answer "can I have it today" rather than only "which Saturday".
+  const counterSlots =
+    settings.same_day_on === "on"
+      ? deliverySlots(new Date(), await hoursByDay()).filter(
+          (one) => one.day === "today" || one.day === "tomorrow"
+        )
+      : [];
   const sameDayFrom =
-    settings.same_day_on === "on" &&
-    deliverySlots(new Date(), await hoursByDay()).some((one) => one.day === "today")
-      ? (await sameDayPricing()).bands[0]?.fee ?? 0
-      : 0;
+    counterSlots.length > 0 ? (await sameDayPricing()).bands[0]?.fee ?? 0 : 0;
+  const soonest = counterSlots.some((one) => one.day === "today") ? "today" : "tomorrow";
 
   // The other counter, on the same terms: a line only while it is on and
   // there is a shop with something on it.
@@ -184,7 +188,7 @@ export default async function HomePage() {
     pharmacyOn(settings) && (await pharmacyShop())
       ? `Saturday's car, ${dropLabel(nextPharmacyDrop(settings).date)}.` +
         (sameDayFrom > 0
-          ? ` Or today, a car of its own, from ${naira(sameDayFrom)}.`
+          ? ` Or ${soonest}, a car of its own, from ${naira(sameDayFrom)}.`
           : "")
       : "";
 

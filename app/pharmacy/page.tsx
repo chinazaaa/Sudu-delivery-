@@ -83,9 +83,15 @@ export default async function PharmacyPage({
    */
   const soon =
     settings.same_day_on === "on"
-      ? deliverySlots(new Date(), await hoursByDay()).filter((one) => one.day === "today")
+      ? deliverySlots(new Date(), await hoursByDay()).filter(
+          (one) => one.day === "today" || one.day === "tomorrow"
+        )
       : [];
   const sameDayFrom = soon.length > 0 ? (await sameDayPricing()).bands[0]?.fee ?? 0 : 0;
+  // Said as the soonest it could actually be, because deliveries finish in
+  // the evening and "today" printed at ten at night is a promise the clock
+  // has already broken.
+  const soonest = soon.some((one) => one.day === "today") ? "today" : "tomorrow";
 
   return (
     <div className="-mt-4 space-y-4 pb-36">
@@ -131,7 +137,7 @@ export default async function PharmacyPage({
             )}
             {sameDayFrom > 0 && (
               <span className="flex items-center rounded-full border-2 border-ink bg-paper px-4 py-2 text-sm font-semibold text-ink">
-                Or today, a car of its own · from {naira(sameDayFrom)}
+                Or {soonest}, a car of its own · from {naira(sameDayFrom)}
               </span>
             )}
           </div>
@@ -143,7 +149,7 @@ export default async function PharmacyPage({
               <>
                 {" "}
                 If it cannot wait, choose a time at the checkout and we make
-                the trip today instead, at what a trip costs.
+                the trip {soonest} instead, at what a trip costs.
               </>
             )}
           </p>
