@@ -128,8 +128,43 @@ export default async function AdminHome() {
   // leaves out a fortnight's errands is not the profit.
   const aside = await otherMoneySince(windowStart()).catch(() => []);
   const asideTotals = otherMoneyTotals(aside);
+  /*
+   * Settled, and waiting.
+   *
+   * This tile used to sum every run in the window, open ones included. A run
+   * that went out last night and has had nothing typed into it has takings
+   * and no car to pay for yet, so it landed here at full value and then fell
+   * by twenty thousand the afternoon somebody entered the fuel. Watching a
+   * number you have been told is the profit drop every time you do the
+   * bookkeeping teaches you not to trust it.
+   *
+   * So the headline is the part that is done, and what is waiting is said
+   * beside it rather than folded into it. Nothing is hidden and nothing is
+   * lost: a run joins the headline the moment its costs are in, which is the
+   * same test and the same split the profit page makes.
+   *
+   * Errands and sales are settled the moment they are written down, because
+   * there is no car coming for them.
+   */
+  const costsIn = (batch: (typeof batches)[number]) =>
+    batch.fuel_cost +
+      batch.driver_cost +
+      (batch.transport_cost ?? 0) +
+      batch.other_cost >
+    0;
+  const waiting = batches.filter((batch) => batch.paidCount > 0 && !costsIn(batch));
   const profit =
-    batches.reduce((total, batch) => total + batch.profit, 0) + asideTotals.made;
+    batches
+      .filter((batch) => batch.paidCount === 0 || costsIn(batch))
+      .reduce((total, batch) => total + batch.profit, 0) + asideTotals.made;
+  // Never called profit: it is the figure that will fall.
+  const waitingBefore = waiting.reduce((total, batch) => total + batch.profit, 0);
+  const waitingSaid =
+    waiting.length === 0
+      ? ""
+      : `${naira(waitingBefore)} on ${waiting.length} run${
+          waiting.length === 1 ? "" : "s"
+        } waiting on costs`;
   const unpaidValue = unpaid.reduce((total, order) => total + order.total, 0);
   // Somebody asking for something we do not stock, waiting on an answer.
   // It arrives by email too, and an inbox is where things go to be missed.
@@ -414,7 +449,11 @@ export default async function AdminHome() {
             label="Profit"
             value={naira(profit)}
             tone="mint"
-            detail="After food, commission and run costs"
+            detail={
+              waitingSaid !== ""
+                ? `Runs settled. Plus ${waitingSaid}`
+                : "After food, commission and run costs"
+            }
           />
         </div>
       )}
@@ -459,7 +498,12 @@ export default async function AdminHome() {
         {stats && (
           <div className="grid grid-cols-2 gap-[9px] sm:hidden">
             <Figure label="Money in" value={naira(stats.gross)} detail="28 days" />
-            <Figure label="Profit" value={naira(profit)} tone="mint" detail="28 days" />
+            <Figure
+              label="Profit"
+              value={naira(profit)}
+              tone="mint"
+              detail={waitingSaid !== "" ? `Settled. ${waitingSaid}` : "28 days"}
+            />
           </div>
         )}
 
@@ -506,10 +550,16 @@ export default async function AdminHome() {
                 <span className="block font-mono text-sm font-semibold">
                   {batch.status === "open" ? `${batch.paidCount} paid` : naira(batch.profit)}
                 </span>
+                {/* "settled" was every status that was not open, so a run
+                    that went out last night with nothing typed into it read
+                    as settled and showed a profit that was going to fall.
+                    The costs being in is what settles a run. */}
                 {batch.status === "open" ? (
                   <span className="tag bg-mint-tint text-mint">open</span>
-                ) : (
+                ) : costsIn(batch) ? (
                   <span className="tag bg-wash text-ink">settled</span>
+                ) : (
+                  <span className="tag bg-brand-wash text-brand-dark">costs due</span>
                 )}
               </span>
             </Link>
