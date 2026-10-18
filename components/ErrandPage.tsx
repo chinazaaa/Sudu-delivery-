@@ -88,6 +88,7 @@ export default async function ErrandPage({ slug }: { slug: string }) {
         whatsapp={settings.whatsapp_number}
         prices={prices}
         catalogue={catalogue}
+        site={SITE}
       />
     </>
   );

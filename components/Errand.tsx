@@ -32,6 +32,7 @@ export default function Errand({
   whatsapp,
   prices,
   catalogue,
+  site,
 }: {
   spec: Spec;
   /** The priced list, where this errand has one. */
@@ -43,6 +44,8 @@ export default function Errand({
   asked: Ask[];
   hostels: string[];
   whatsapp: string;
+  /** Where this site lives, for links that leave it and come back. */
+  site: string;
 }) {
   const link = waLink(whatsapp || null, spec.opening);
   const shopping = Boolean(prices && prices.groups.length > 0);
@@ -112,6 +115,7 @@ export default function Errand({
               label={spec.label}
               chips={spec.chips}
               preset={spec.preset}
+              here={`${site}/${spec.slug}`}
             />
           ) : shopping && prices ? (
             <LaundryPicker

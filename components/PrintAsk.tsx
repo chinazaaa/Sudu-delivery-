@@ -22,6 +22,7 @@ export default function PrintAsk({
   label,
   chips,
   preset,
+  here,
 }: {
   groups: PrintGroup[];
   photos: Record<string, string>;
@@ -31,6 +32,8 @@ export default function PrintAsk({
   label: string;
   chips: string[];
   preset: string;
+  /** This page's own address, so a quote links back to the exact item. */
+  here: string;
 }) {
   const [picked, setPicked] = useState(preset);
   const form = useRef<HTMLDivElement | null>(null);
@@ -56,6 +59,8 @@ export default function PrintAsk({
       <PrintCatalogue
         groups={groups}
         photos={photos}
+        whatsapp={whatsapp}
+        here={here}
         onPick={(name) => {
           setPicked(`${name}: `);
           form.current?.scrollIntoView({ behavior: "smooth", block: "start" });

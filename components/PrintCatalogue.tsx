@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Thumb from "@/components/Thumb";
+import { waLink } from "@/lib/whatsapp";
 import type { PrintGroup } from "@/lib/printing";
 
 /**
@@ -21,16 +22,45 @@ export default function PrintCatalogue({
   groups,
   photos,
   onPick,
+  whatsapp,
+  here,
 }: {
   groups: PrintGroup[];
   /** Our own photographs, by slug. Mostly empty until they are taken. */
   photos: Record<string, string>;
-  /** Hands the chosen thing to the form above, which is the whole point:
-   *  a quote request that already says what it is about. */
+  /** Hands the chosen thing to the form above, for whoever has no
+   *  WhatsApp or would rather type. */
   onPick: (name: string) => void;
+  whatsapp: string;
+  /** This page's own address, so a quote carries a link back to the exact
+   *  thing it is about rather than to the shop in general. */
+  here: string;
 }) {
   const [typed, setTyped] = useState("");
   const [open, setOpen] = useState(groups[0]?.name ?? "");
+
+  /*
+   * A link to one item has to open the drawer it lives in.
+   *
+   * Every quote we send carries one of these, so they go out on WhatsApp
+   * and come back weeks later from somebody else's phone. Landing them on
+   * a closed drawer would make the link a lie: the thing it names is not
+   * on the page until something opens the section holding it.
+   */
+  useEffect(() => {
+    const slug = window.location.hash.replace("#", "");
+    if (slug === "") return;
+    const holding = groups.find((group) =>
+      group.items.some((one) => one.slug === slug)
+    );
+    if (!holding) return;
+    setOpen(holding.name);
+    // After the drawer has rendered, or there is nothing to scroll to.
+    window.setTimeout(
+      () => document.getElementById(slug)?.scrollIntoView({ block: "center" }),
+      60
+    );
+  }, [groups]);
 
   const words = typed.trim().toLowerCase();
   const found =
@@ -64,8 +94,16 @@ export default function PrintCatalogue({
     name: string;
     said: string;
     group: string;
-  }) => (
-    <li className="flex gap-3 py-3">
+  }) => {
+    /* The same shape the trade already uses, because somebody reading it
+       on WhatsApp should see the name of the thing and be able to get
+       back to it. */
+    const ask = waLink(
+      whatsapp || null,
+      `Hello, I'm interested in: ${name}\n${here}#${slug}`
+    );
+    return (
+    <li id={slug} className="flex scroll-mt-24 gap-3 py-3">
       <span className="size-16 shrink-0 overflow-hidden rounded-xl">
         <Thumb src={photos[slug] ?? ""} name={name} drawing="print" />
       </span>
@@ -74,16 +112,28 @@ export default function PrintCatalogue({
         {said !== "" && said.trim().toLowerCase() !== group.trim().toLowerCase() && (
           <span className="mt-0.5 line-clamp-2 block text-sm text-muted">{said}</span>
         )}
-        <button
-          type="button"
-          onClick={() => onPick(name)}
-          className="mt-1.5 rounded-full border-2 border-ink bg-volt px-3 py-1 text-sm font-bold text-ink"
-        >
-          Request a quote
-        </button>
+        {ask ? (
+          <a
+            href={ask}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1.5 inline-block rounded-full border-2 border-ink bg-volt px-3 py-1 text-sm font-bold text-ink"
+          >
+            Request a quote
+          </a>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onPick(name)}
+            className="mt-1.5 rounded-full border-2 border-ink bg-volt px-3 py-1 text-sm font-bold text-ink"
+          >
+            Request a quote
+          </button>
+        )}
       </span>
     </li>
-  );
+    );
+  };
 
   return (
     <section id="catalogue" className="scroll-mt-24 space-y-3">
