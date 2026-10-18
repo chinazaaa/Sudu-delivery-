@@ -5,6 +5,7 @@ import { askedFor } from "@/lib/page-faq";
 import PageHead from "@/components/PageHead";
 import { AlsoSee, Asked, Reason, Section, faqGraph, type Ask } from "@/components/Guide";
 import { safeSettings, whatsappLink } from "@/lib/settings";
+import { pharmacyOn, pharmacyShop } from "@/lib/pharmacy";
 
 /**
  * The page for somebody who needs medicine and cannot leave campus.
@@ -97,6 +98,11 @@ export default async function PauPharmacyPage() {
 
   const asked = await askedFor("pau-pharmacy", written);
 
+  // Whether there is a shelf to send anybody to. This page was written
+  // before the counter existed, so every way out of it was an errand. With
+  // stock on the shelf the errand is the fallback, not the offer.
+  const shelf = pharmacyOn(settings) && (await pharmacyShop()) !== null;
+
   const structured = {
     "@context": "https://schema.org",
     "@graph": [
@@ -128,12 +134,27 @@ export default async function PauPharmacyPage() {
         lead="Tell us what you need. We go to a pharmacy and bring it to your hostel."
         tone="ink"
       >
-        <Link
-          href="/custom-order"
-          className="btn-primary mt-1 self-start border-2 border-ink text-[17px]"
-        >
-          Tell us what you need <span aria-hidden>→</span>
-        </Link>
+        <div className="mt-1 flex flex-col items-start gap-2.5 sm:flex-row sm:items-center">
+          {shelf && (
+            <Link
+              href="/pharmacy"
+              className="btn-primary self-start border-2 border-ink text-[17px]"
+            >
+              Browse the shelf <span aria-hidden>→</span>
+            </Link>
+          )}
+          <Link
+            href="/custom-order"
+            className={
+              shelf
+                ? "btn-quiet self-start border-2 border-ink text-[17px]"
+                : "btn-primary self-start border-2 border-ink text-[17px]"
+            }
+          >
+            {shelf ? "Or ask for something else" : "Tell us what you need"}{" "}
+            <span aria-hidden>→</span>
+          </Link>
+        </div>
       </PageHead>
 
       <div className="space-y-8 py-8">
@@ -144,9 +165,24 @@ export default async function PauPharmacyPage() {
             anything, and hand it to you at your own block.
           </p>
           <p>
-            Paracetamol is on the shelf already, so it can go in a basket with
-            everything else. Anything beyond that is an errand: we go and look,
-            and if we cannot get it we tell you rather than leave you waiting.
+            {shelf ? (
+              <>
+                Most of it is on the{" "}
+                <Link href="/pharmacy" className="font-semibold text-brand underline">
+                  pharmacy shelf
+                </Link>{" "}
+                already, priced, so it goes in a basket like anything else.
+                Anything not on it is an errand: we go and look, and if we
+                cannot get it we tell you rather than leave you waiting.
+              </>
+            ) : (
+              <>
+                Paracetamol is on the shelf already, so it can go in a basket
+                with everything else. Anything beyond that is an errand: we go
+                and look, and if we cannot get it we tell you rather than leave
+                you waiting.
+              </>
+            )}
           </p>
           {ask && (
             <p>

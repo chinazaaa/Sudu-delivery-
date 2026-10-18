@@ -187,7 +187,7 @@ export default async function AdminSkincarePage() {
           for it close at {clockOf(hour, minute)} that morning, and delivery is{" "}
           {skincareBands(settings)[0].fee > 0
             ? `from ${naira(skincareBands(settings)[0].fee)}`
-            : "free"}.
+            : "not priced yet"}.
         </p>
       </SkincareForm>
 

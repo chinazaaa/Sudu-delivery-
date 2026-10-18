@@ -212,7 +212,7 @@ export default async function AdminPharmacyPage() {
           As it stands: the next one is{" "}
           <span className="font-semibold text-ink">{dropLabel(drop.date)}</span>, orders
           for it close at {clockOf(hour, minute)} that morning, and delivery is{" "}
-          {bands[0].fee > 0 ? `from ${naira(bands[0].fee)}` : "free"}.
+          {bands[0].fee > 0 ? `from ${naira(bands[0].fee)}` : "not priced yet"}.
         </p>
       </SkincareForm>
 

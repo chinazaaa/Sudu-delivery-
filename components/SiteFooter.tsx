@@ -45,6 +45,7 @@ export default function SiteFooter({
         { href: "/products", said: "Food" },
         { href: "/collections", said: "Collections" },
         { href: "/skincare", said: "Skincare" },
+        { href: "/pharmacy", said: "Pharmacy" },
         { href: "/parcel", said: "Parcels" },
         { href: "/custom-order", said: "Anything else" },
         { href: "/wish", said: "Wish we carried it?" },
