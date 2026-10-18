@@ -2089,23 +2089,119 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           ? "Go on, what else?"
           : "So, what do you fancy? Say it however you like, and a typo is fine."
     );
+    /*
+     * The other shops, said out loud, beside a box that still takes
+     * anything.
+     *
+     * The chat was a blank box, which is right when the shop is a food
+     * shop and wrong now it is four. A box cannot advertise: somebody
+     * ill at nine at night does not type "do you have a pharmacy" into a
+     * thing that said "what do you fancy", they close it. And every time
+     * the chat has to guess which shop a sentence meant it has had a
+     * chance to guess wrong, which it has, twice.
+     *
+     * Chips rather than a question with buttons on it, because chips
+     * keep the box underneath them: nobody ordering food has to answer
+     * "which department" first, which is the tax a menu would put on the
+     * nine orders in ten that are dinner.
+     *
+     * They hand over rather than take the order. A counter is its own
+     * basket on its own car and an errand has no basket at all, so the
+     * honest end of each of these is the page that does it.
+     */
+    const elsewhere = (
+      title: string,
+      href: string,
+      said: string
+    ): { said: string; go: () => void } => ({
+      said: title,
+      go: () => {
+        me(title);
+        bot(said, 460);
+        setAsk({
+          of: "buttons",
+          buttons: [
+            { said: `Open ${title.toLowerCase()}`, look: "green", href },
+            {
+              said: "Actually, food",
+              look: "alt",
+              go: () => { me("Actually, food"); askOrderRef.current?.(true); },
+            },
+          ],
+        });
+      },
+    });
+
     setAsk({
-      of: "text",
+      of: "chips",
       placeholder: only ? `Something from ${only.name}` : "e.g. 2 medium bbq pizza",
       onSay: (said) => huntRef.current?.(said),
-      /* The commonest thing anybody says to a person behind a counter,
-         and until now the chat had no answer to it but a blank box. */
-      ...(again
-        ? {}
-        : {
-            lead: {
-              said: "I do not know what to order",
+      chips: only
+        ? [
+            {
+              said: "Something else",
+              go: () => { me("Something else"); queue.current = []; askOrderRef.current?.(true); },
+            },
+          ]
+        : [
+            /* The commonest thing anybody says to a person behind a
+               counter, and until now the chat had no answer to it but a
+               blank box. It stays first. */
+            ...(again
+              ? []
+              : [
+                  {
+                    said: "I do not know what to order",
+                    hot: true,
+                    go: () => {
+                      me("I do not know what to order");
+                      askBudgetRef.current?.();
+                    },
+                  },
+                ]),
+            elsewhere(
+              "Pharmacy",
+              "/pharmacy",
+              "Medicine and the rest of it is on its own shelf: its own order on its own car, so it does not travel with food. We fetch and carry, and we are not a pharmacy, so we cannot tell you what to take."
+            ),
+            elsewhere(
+              "Skincare",
+              "/skincare",
+              "The skincare shelf is its own order on its own car, bought from authorised Lagos retailers."
+            ),
+            elsewhere(
+              "Laundry",
+              "/pau-laundry",
+              "We collect from your block on Mondays and Thursdays and bring it back folded within 48 hours, priced per item."
+            ),
+            elsewhere(
+              "Printing",
+              "/pau-project-printing",
+              "Assignments, projects and theses printed and bound, and a good deal besides. Every one of them is quoted rather than priced."
+            ),
+            {
+              said: "Something else we do",
               go: () => {
-                me("I do not know what to order");
-                askBudgetRef.current?.();
+                me("Something else we do");
+                bot("We also do these. Which one?", 440);
+                setAsk({
+                  of: "chips",
+                  chips: [
+                    elsewhere("Tailoring", "/pau-tailoring", "Made to measure, or something you own made to fit. We find the tailor and handle the back and forth."),
+                    elsewhere("Hair and barbing", "/pau-hair-and-barbing", "Tell us the style and the day and we find somebody good and arrange it."),
+                    elsewhere("Phone or laptop repair", "/pau-phone-and-laptop-repair", "Collected from your block, quoted before any work starts, brought back."),
+                    elsewhere("Buying a laptop", "/pau-buy-a-laptop", "Tell us what it is for and what you can spend. We find it, photograph it and price it before you pay."),
+                    elsewhere("Anything else", "/custom-order", "If it is not on the menu, tell us what you want and we go and find it."),
+                    {
+                      said: "Back",
+                      go: () => { me("Back"); askOrderRef.current?.(true); },
+                    },
+                  ],
+                  hint: "None of these have a price until we know the job.",
+                });
               },
             },
-          }),
+          ],
     });
   }, [bot, me, waLink]);
 
