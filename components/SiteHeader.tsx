@@ -12,7 +12,17 @@ import { cartCount, countItems, useCart } from "@/lib/cart";
  * A quiet top bar. Restaurants are not links up here: they are the content of
  * the home page, and a row of scrolling text links never looks finished.
  */
-export default function SiteHeader({ tagline }: { tagline: string }) {
+export default function SiteHeader({
+  tagline,
+  counters = [],
+}: {
+  tagline: string;
+  /** The counters that are open, in the order they go in the nav. Passed
+   *  in rather than listed here, because a link to a counter that is
+   *  switched off is a link to a not-found, and this is a client component
+   *  with no way to ask. */
+  counters?: [string, string][];
+}) {
   const cart = useCart();
   const count = cartCount(cart);
   const path = usePathname();
@@ -102,7 +112,7 @@ export default function SiteHeader({ tagline }: { tagline: string }) {
     ["/products", "Menu"],
     ["/collections", "Collections"],
     ["/parcel", "Parcels"],
-    ["/skincare", "Skincare"],
+    ...counters,
     ["/parents", "For parents"],
   ];
 

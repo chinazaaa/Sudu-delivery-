@@ -21,6 +21,8 @@ import {
   shopEmails,
   xLink,
 } from "@/lib/settings";
+import { skincareOn } from "@/lib/skincare";
+import { pharmacyOn } from "@/lib/pharmacy";
 import { liveRibbon } from "@/lib/ribbon";
 import { closureNotice, closureSaid } from "@/lib/closures";
 import { qrSvg } from "@/lib/qr";
@@ -110,6 +112,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const tag = googleTagId(settings);
   const showPromoterLink = settings.hide_promoter_link !== "on";
   const showFooter = settings.hide_footer !== "on";
+
+  /*
+   * The counters that are open, as the two bars should list them.
+   *
+   * One list for the header and the footer, so they cannot come to disagree
+   * about what the shop sells, and built here because both bars are client
+   * components with no way to ask settings. A counter that is switched off
+   * is left out rather than linked: the page it points at is a not-found
+   * while it is off.
+   */
+  const counters: [string, string][] = [
+    ...(skincareOn(settings) ? ([["/skincare", "Skincare"]] as [string, string][]) : []),
+    ...(pharmacyOn(settings) ? ([["/pharmacy", "Pharmacy"]] as [string, string][]) : []),
+  ];
   // Read from the code itself, so the strip cannot outlive the offer.
   const offer = await publicOffer(settings.offer_code);
   // Read from the offer itself too: an automatic promotion has no code to
@@ -242,7 +258,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Above the header, because it is about why they are here at all
             rather than about anything on the page under it. */}
         {perk && perkFrom && <LinkPerk who={perkFrom} line={perk.line} />}
-        <SiteHeader tagline={settings.tagline || "Your Fav Foods to PAU"} />
+        <SiteHeader tagline={settings.tagline || "Your Fav Foods to PAU"} counters={counters} />
         {/* Directly under the header, so being in a group is the first thing
             read on every page rather than something found at checkout. */}
         <GroupBar />
@@ -258,6 +274,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ShopOnly>
           {showFooter && (
             <SiteFooter
+              counters={counters}
               line={settings.footer_line}
               instagram={instagram}
               x={x}

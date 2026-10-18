@@ -25,7 +25,11 @@ export default function SiteFooter({
   groupLink,
   google = "",
   showPromoterLink,
+  counters = [],
 }: {
+  /** The counters that are open, as [href, label]. A link to one that is
+   *  switched off is a link to a not-found, and only the server knows. */
+  counters?: [string, string][];
   /** Written in admin. Empty means the shop says nothing here. */
   line: string;
   instagram: string | null;
@@ -44,8 +48,7 @@ export default function SiteFooter({
       links: [
         { href: "/products", said: "Food" },
         { href: "/collections", said: "Collections" },
-        { href: "/skincare", said: "Skincare" },
-        { href: "/pharmacy", said: "Pharmacy" },
+        ...counters.map(([href, said]) => ({ href, said })),
         { href: "/parcel", said: "Parcels" },
         { href: "/custom-order", said: "Anything else" },
         { href: "/wish", said: "Wish we carried it?" },
