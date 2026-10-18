@@ -16,6 +16,7 @@ import {
   googleLinks,
   safeSettings,
   hoursByDay,
+  sameDayPricing,
 } from "@/lib/settings";
 import { toBatchView } from "@/lib/view";
 import { bandTable } from "@/lib/fees";
@@ -168,11 +169,23 @@ export default async function HomePage() {
       ? `Order any day. It comes ${dropLabel(nextDrop(settings).date)}.`
       : "";
 
+  // What a trip today would start at, where one can still be made. Medicine
+  // is the counter somebody opens because they are ill now, so the card has
+  // to answer "can I have it today" rather than only "which Saturday".
+  const sameDayFrom =
+    settings.same_day_on === "on" &&
+    deliverySlots(new Date(), await hoursByDay()).some((one) => one.day === "today")
+      ? (await sameDayPricing()).bands[0]?.fee ?? 0
+      : 0;
+
   // The other counter, on the same terms: a line only while it is on and
   // there is a shop with something on it.
   const pharmacyLine =
     pharmacyOn(settings) && (await pharmacyShop())
-      ? `Order any day. It comes ${dropLabel(nextPharmacyDrop(settings).date)}.`
+      ? `Saturday's car, ${dropLabel(nextPharmacyDrop(settings).date)}.` +
+        (sameDayFrom > 0
+          ? ` Or today, a car of its own, from ${naira(sameDayFrom)}.`
+          : "")
       : "";
 
   // Every door there is, keyed, so the order can be a setting rather than the

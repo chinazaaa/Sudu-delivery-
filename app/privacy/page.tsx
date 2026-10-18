@@ -126,8 +126,9 @@ export default async function PrivacyPage() {
       <Clause n={5} title="Who else sees it">
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            The restaurant sees only the food. It does not get your number or
-            your block.
+            The restaurant sees only the food, and a shop or pharmacy we buy
+            from sees only what is being bought. Neither gets your name, your
+            number or your block: we walk in and buy it like anybody else.
           </li>
           <li>
             Whoever is doing the run sees the name and block on the bag, because
@@ -151,7 +152,7 @@ export default async function PrivacyPage() {
       <Clause n={6} title="Messages you get">
         <p>
           We message you about your own order: that it was received, that the
-          payment landed, that the food is on the road, that it has arrived. If
+          payment landed, that it is on the road, that it has arrived. If
           you turned on notifications in the app, the same few messages come as
           notifications instead. Turn them off in your phone settings at any
           time and the app keeps working.

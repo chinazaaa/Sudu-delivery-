@@ -52,7 +52,8 @@ export default async function ReturnPolicyPage() {
           "Cancelling before we have shopped",
           "What we refund ourselves",
           "What we take up with the restaurant",
-          "Things that are not food",
+          "Skincare, and anything that is not food",
+          "Medicine and anything from a pharmacy",
           "How the money comes back",
           "If a run does not happen",
           "Telling us",
@@ -81,6 +82,12 @@ export default async function ReturnPolicyPage() {
           money and it cannot go back on the shelf, so it cannot be cancelled.
           Tell us anyway and we will do what we can: if a restaurant will take
           something back, we pass that on.
+        </p>
+        <p>
+          A skincare or pharmacy order sits on a weekly car, so its moment is
+          that morning&apos;s cut off rather than a run going out. Before the
+          cut off, cancel and everything comes back. After it the shopping for
+          that car has been done.
         </p>
       </Clause>
 
@@ -124,11 +131,12 @@ export default async function ReturnPolicyPage() {
         </p>
       </Clause>
 
-      <Clause n={5} title="Things that are not food">
+      <Clause n={5} title="Skincare, and anything that is not food">
         <p>
-          Skincare, market shopping, a thing we went out and found for you: if
-          it arrives damaged, or it is not what you asked for, tell us the same
-          day and we will take it back and refund it.
+          The skincare counter, market shopping, a thing we went out and found
+          for you: if it arrives damaged, or it is not what you asked for, tell
+          us the same day and we will take it back and refund it, the delivery
+          with it where the whole order was wrong.
         </p>
         <p>
           Once something has been opened or used, it cannot go back, for the
@@ -136,9 +144,48 @@ export default async function ReturnPolicyPage() {
           order for one person is bought with your money at your ask, so it
           cannot be returned simply because it was no longer wanted.
         </p>
+        <p>
+          A counter order is its own order on its own car, so a refund on one
+          never touches a food order you have waiting, and the other way
+          about.
+        </p>
       </Clause>
 
-      <Clause n={6} title="How the money comes back">
+      <Clause n={6} title="Medicine and anything from a pharmacy">
+        <p className="font-semibold text-ink">
+          Check it before the rider leaves. Medicine is the one thing on this
+          page that cannot come back afterwards, and that is for safety rather
+          than for our convenience.
+        </p>
+        <p>
+          Look at the product, the seal and the expiry date while we are still
+          standing there. Wrong product, broken seal, out of date, damaged, or
+          simply not what you ordered: it goes straight back with the rider and
+          you get all of it back, the delivery included. That is the whole of
+          our mistake and we do not argue about it.
+        </p>
+        <p>
+          After it has left our hands it cannot be returned or exchanged. No
+          pharmacy can resell a medicine that has been out of its sight, so
+          nor can we, and a packet that was correct when it reached you is not
+          returnable because it was no longer wanted or because somebody
+          changed their mind about taking it.
+        </p>
+        <p>
+          We are not a pharmacy and nobody here is a pharmacist, so we cannot
+          advise on what to take or how much, and we do not carry prescription
+          only medicine at all. If something we fetched was wrong, that is
+          ours and this page covers it. What the medicine does once it was
+          correctly supplied is between you and whoever told you to take it.
+          The full wording is in clause 9 of the{" "}
+          <Link href="/terms" className="font-semibold text-brand">
+            terms
+          </Link>
+          .
+        </p>
+      </Clause>
+
+      <Clause n={7} title="How the money comes back">
         <p>
           To the account you paid from, by transfer, in{" "}
           <span className="font-semibold">two working days</span> of us
@@ -151,7 +198,7 @@ export default async function ReturnPolicyPage() {
         </p>
       </Clause>
 
-      <Clause n={7} title="If a run does not happen">
+      <Clause n={8} title="If a run does not happen">
         <p>
           Weather, a road, a car, or a restaurant that is shut when we get
           there. If a run cannot go, we tell you and we refund everything you
@@ -159,7 +206,7 @@ export default async function ReturnPolicyPage() {
         </p>
       </Clause>
 
-      <Clause n={8} title="Telling us">
+      <Clause n={9} title="Telling us">
         <p>
           The same day, on the WhatsApp number on your order, with a photo
           where there is something to photograph. A person answers.

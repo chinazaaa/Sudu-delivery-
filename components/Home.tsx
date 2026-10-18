@@ -679,13 +679,15 @@ function Glyph({ title }: { title: string }) {
   const said = title.toLowerCase();
   const path = said.includes("parcel")
     ? "M3 7l9-4 9 4v10l-9 4-9-4V7zM3 7l9 4 9-4M12 11v10"
-    : said.includes("skin") || said.includes("beauty")
-      ? "M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"
-      : said.includes("group") || said.includes("split")
-        ? "M9 8a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c1.8.7 3 2.5 3.5 5.2"
-        : said.includes("market") || said.includes("grocer")
-          ? "M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"
-          : "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14M20 20l-4-4";
+    : said.includes("pharmac") || said.includes("medicine")
+      ? "M4 9h16v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9zM4 9l1.5-4h13L20 9M12 12v5M9.5 14.5h5"
+      : said.includes("skin") || said.includes("beauty")
+        ? "M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"
+        : said.includes("group") || said.includes("split")
+          ? "M9 8a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c1.8.7 3 2.5 3.5 5.2"
+          : said.includes("market") || said.includes("grocer")
+            ? "M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"
+            : "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14M20 20l-4-4";
 
   return (
     <svg

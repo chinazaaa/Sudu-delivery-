@@ -109,6 +109,15 @@ export default async function TermsPage() {
           The kitchen whose name is on the menu is the one that makes the food.
           We are the ones who fetch it and bring it.
         </p>
+        <p>
+          Besides the food there are counters of our own: skincare, and a
+          pharmacy shelf. Each is a shop in its own right, with its own
+          basket, its own car and its own day, so what you put on one of them
+          is a separate order from your dinner and arrives separately. Those
+          go anywhere in Lagos, not only to campus. Everything in these terms
+          applies to them too, and where a counter needs saying differently it
+          is said so below.
+        </p>
       </Clause>
 
       <Clause n={2} title="Prices">
@@ -136,6 +145,14 @@ export default async function TermsPage() {
           A run has a cut off. Order before it and you are on that car. After
           it you are on the next one, or you can ask for a car of its own,
           which costs more because it is a trip for one person.
+        </p>
+        <p>
+          A counter works the same way on a longer clock: one car on a set day
+          of the week, with a cut off that morning. Ordering never stops, so
+          missing the cut off is not a refusal, only a wait until the next
+          one, and the shelf says which day that is before you order. Where a
+          counter offers a trip of its own instead, it is priced as a trip for
+          one person and the checkout shows both prices side by side.
         </p>
         <p>
           The arrival time we give you is an honest estimate, not a guarantee.
@@ -314,6 +331,12 @@ export default async function TermsPage() {
           money and it cannot go back on the shelf, so it cannot be cancelled.
           If you tell us in time we will do what we can, and if a restaurant
           will take something back we pass that on.
+        </p>
+        <p>
+          On a counter the same line falls at that morning&apos;s cut off:
+          before it, cancel and get everything back; after it the shopping has
+          been done for that car. Medicine has a further limit of its own,
+          in clause 9.
         </p>
         <p>
           If you do not come down and your phone is not answered, the driver
