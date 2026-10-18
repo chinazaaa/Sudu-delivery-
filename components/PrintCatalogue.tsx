@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useKeepPlace } from "@/components/useKeepPlace";
 import Thumb from "@/components/Thumb";
 import { waLink } from "@/lib/whatsapp";
 import { blanksFor } from "@/lib/printing";
@@ -39,6 +40,9 @@ export default function PrintCatalogue({
 }) {
   const [typed, setTyped] = useState("");
   const [open, setOpen] = useState(groups[0]?.name ?? "");
+  /* Opening a section closes the tall one above it, so the heading you
+     tapped has to be put back where you tapped it. */
+  const { hold, keep } = useKeepPlace(open);
 
   /*
    * A link to one item has to open the drawer it lives in.
@@ -200,7 +204,11 @@ export default function PrintCatalogue({
             <div key={group.name} className="card">
               <button
                 type="button"
-                onClick={() => setOpen(open === group.name ? "" : group.name)}
+                ref={keep(group.name)}
+                onClick={() => {
+                  hold(group.name);
+                  setOpen(open === group.name ? "" : group.name);
+                }}
                 aria-expanded={open === group.name}
                 className="flex w-full items-center justify-between gap-3 text-left font-semibold"
               >

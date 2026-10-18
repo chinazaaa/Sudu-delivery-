@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useKeepPlace } from "@/components/useKeepPlace";
 import { naira } from "@/lib/money";
 import { waLink } from "@/lib/whatsapp";
 import type { PricedGroup } from "@/lib/laundry";
@@ -55,6 +56,9 @@ export default function LaundryPicker({
   const [typed, setTyped] = useState("");
   const [open, setOpen] = useState(groups[0]?.name ?? "");
   const [day, setDay] = useState("");
+  /* Opening a section closes the tall one above it, so the heading you
+     tapped has to be put back where you tapped it. */
+  const { hold, keep } = useKeepPlace(open);
 
   const priceOf = useMemo(() => {
     const all = new Map<string, number>();
@@ -225,7 +229,11 @@ export default function LaundryPicker({
               <div key={group.name} className="card">
                 <button
                   type="button"
-                  onClick={() => setOpen(open === group.name ? "" : group.name)}
+                  ref={keep(group.name)}
+                  onClick={() => {
+                    hold(group.name);
+                    setOpen(open === group.name ? "" : group.name);
+                  }}
                   aria-expanded={open === group.name}
                   className="flex w-full items-center justify-between gap-3 text-left font-semibold"
                 >
