@@ -459,7 +459,7 @@ export const ERRANDS: Errand[] = [
       },
       {
         q: "How much is it?",
-        a: "Per item, and the full list is on this page. A shirt, a pair of trousers, a duvet and a blazer all cost different things, which is how the trade works here. Collection and the trip back are included, and there is a minimum on a collection because it is two journeys: gather a few things, or go in with somebody on your floor.",
+        a: "Per item, and the full list is on this page. A shirt, a pair of trousers, a duvet and a blazer all cost different things, which is how the trade works here. Collection and the trip back are included, and there is a minimum on a collection because it is two journeys: gather a few things, or go in with somebody in your hostel.",
       },
       {
         q: "How long does it take?",

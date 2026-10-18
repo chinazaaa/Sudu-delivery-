@@ -258,7 +258,7 @@ export default function LaundryPicker({
                 </div>
                 <p className="text-xs text-muted">
                   {short > 0
-                    ? `${naira(short)} more to reach the ${naira(minimum)} collection. Add a few things, or go in with somebody on your floor.`
+                    ? `${naira(short)} more to reach the ${naira(minimum)} collection. Add a few things, or go in with somebody in your hostel.`
                     : `Over the ${naira(minimum)} minimum. We can come for this.`}
                 </p>
               </>
