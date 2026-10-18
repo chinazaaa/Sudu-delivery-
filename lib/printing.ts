@@ -417,6 +417,40 @@ export function printInOrder(): PrintGroup[] {
   return [...PRINTING].sort((a, b) => rank(a.name) - rank(b.name));
 }
 
+/**
+ * What we will have to ask anyway, put in the message as blanks.
+ *
+ * Nearly every quote costs a round trip: they say they want a banner, we
+ * ask how many and how big, they answer the next morning. Sending the
+ * questions with the request saves that day, and a blank line is a far
+ * better prompt than a sentence asking them to remember three things.
+ *
+ * By the kind of job rather than one fixed set, because the three
+ * questions are not the same three. A flash drive has no size, a thesis
+ * has pages and copies, and asking somebody for the dimensions of a
+ * photocopy is the sort of thing that makes a shop look automated.
+ */
+export function blanksFor(group: string): string[] {
+  const paper = ["Projects and coursework", "Document Printing", "Bindery Service"];
+  const big = [
+    "Large Prints",
+    "Outdoor Large Prints",
+    "Display Items",
+    "Sign Making",
+    "Large Posters",
+    "Large Sticker",
+    "Canvas Print",
+    "Foamboard",
+    "Mounting",
+  ];
+  const branded = ["Promo Prints", "Branding Material", "General items", "Packaging"];
+
+  if (paper.includes(group)) return ["Pages", "Copies", "Binding", "Needed by"];
+  if (big.includes(group)) return ["Quantity", "Size", "Needed by"];
+  if (branded.includes(group)) return ["Quantity", "What goes on it", "Needed by"];
+  return ["Quantity", "Needed by"];
+}
+
 export function printCount(): number {
   return PRINTING.reduce((total, one) => total + one.items.length, 0);
 }

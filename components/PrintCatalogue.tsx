@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Thumb from "@/components/Thumb";
 import { waLink } from "@/lib/whatsapp";
+import { blanksFor } from "@/lib/printing";
 import type { PrintGroup } from "@/lib/printing";
 
 /**
@@ -95,12 +96,17 @@ export default function PrintCatalogue({
     said: string;
     group: string;
   }) => {
-    /* The same shape the trade already uses, because somebody reading it
-       on WhatsApp should see the name of the thing and be able to get
-       back to it. */
+    /* Opened the way every other message from this shop opens. The trade
+       writes "Hello, I'm interested in"; the shop says "Hi Sudu", and a
+       message arriving in the wrong voice reads as a form rather than as
+       somebody talking. */
     const ask = waLink(
       whatsapp || null,
-      `Hello, I'm interested in: ${name}\n${here}#${slug}`
+      `Hi Sudu, I am interested in: ${name}\n` +
+        blanksFor(group)
+          .map((one) => `${one}: `)
+          .join("\n") +
+        `\n\n${here}#${slug}`
     );
     return (
     <li id={slug} className="flex scroll-mt-24 gap-3 py-3">
