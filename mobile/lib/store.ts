@@ -337,34 +337,55 @@ export type ShelfLine = {
   qty: number;
 };
 
-export const shelf = {
-  read: () => read<ShelfLine[]>(SHELF, []),
-  async add(line: Omit<ShelfLine, "qty">, qty = 1): Promise<void> {
-    const lines = await shelf.read();
-    const found = lines.find((one) => one.id === line.id);
-    await write(
-      SHELF,
-      found
-        ? lines.map((one) => (one.id === line.id ? { ...one, qty: one.qty + qty } : one))
-        : [...lines, { ...line, qty }]
-    );
-    changed();
-  },
-  async setQty(id: string, qty: number): Promise<void> {
-    const lines = await shelf.read();
-    await write(
-      SHELF,
-      qty <= 0
-        ? lines.filter((one) => one.id !== id)
-        : lines.map((one) => (one.id === id ? { ...one, qty } : one))
-    );
-    changed();
-  },
-  async clear(): Promise<void> {
-    await write(SHELF, []);
-    changed();
-  },
-};
+/*
+ * One basket per counter, and its own key in storage.
+ *
+ * The pharmacy made it two. It is a different shop from the skincare
+ * shelf even though both go on a Saturday, so a basket holding cough
+ * syrup and a cleanser would be one order against two shops. The skincare
+ * key is spelt out rather than built from the counter's name: changing it
+ * would empty the basket of everybody who had one open the day this
+ * shipped.
+ */
+const SHELF_KEYS: Record<string, string> = { skincare: SHELF };
+const shelfKey = (counter: string) => SHELF_KEYS[counter] ?? `sudu.${counter}`;
+
+export function shelfOf(counter: string) {
+  const key = shelfKey(counter);
+  const mine = {
+    read: () => read<ShelfLine[]>(key, []),
+    async add(line: Omit<ShelfLine, "qty">, qty = 1): Promise<void> {
+      const lines = await mine.read();
+      const found = lines.find((one) => one.id === line.id);
+      await write(
+        key,
+        found
+          ? lines.map((one) => (one.id === line.id ? { ...one, qty: one.qty + qty } : one))
+          : [...lines, { ...line, qty }]
+      );
+      changed();
+    },
+    async setQty(id: string, qty: number): Promise<void> {
+      const lines = await mine.read();
+      await write(
+        key,
+        qty <= 0
+          ? lines.filter((one) => one.id !== id)
+          : lines.map((one) => (one.id === id ? { ...one, qty } : one))
+      );
+      changed();
+    },
+    async clear(): Promise<void> {
+      await write(key, []);
+      changed();
+    },
+  };
+  return mine;
+}
+
+/** The skincare basket, by its old name, because plenty of screens ask for
+ *  it that way and none of them are wrong. */
+export const shelf = shelfOf("skincare");
 
 export const shelfCount = (lines: ShelfLine[]) => lines.reduce((sum, one) => sum + one.qty, 0);
 export const shelfTotal = (lines: ShelfLine[]) =>

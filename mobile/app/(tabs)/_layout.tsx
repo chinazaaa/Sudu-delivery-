@@ -1,7 +1,7 @@
 import { Image, Pressable, Text, View } from "react-native";
 import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { cart, countItems, me, shelf, shelfCount, useStored } from "@/lib/store";
+import { cart, countItems, me, shelfOf, shelfCount, useStored } from "@/lib/store";
 import { F, T } from "@/lib/theme";
 
 /**
@@ -12,11 +12,17 @@ import { F, T } from "@/lib/theme";
  */
 export default function TabsLayout() {
   const [lines] = useStored(cart.read, []);
-  const [shelfLines] = useStored(shelf.read, []);
+  /* Every basket there is, because the bag is one bag to whoever is
+     looking at it. A pharmacy basket left out would be a badge that
+     disagrees with the shop. */
+  const skincareShelf = shelfOf("skincare");
+  const pharmacyShelf = shelfOf("pharmacy");
+  const [shelfLines] = useStored(skincareShelf.read, []);
+  const [drugLines] = useStored(pharmacyShelf.read, []);
   // Both baskets. They are two orders and two days, but one badge: a
   // skincare basket nobody can see from the menu is one nobody remembers
   // they have.
-  const items = countItems(lines) + shelfCount(shelfLines);
+  const items = countItems(lines) + shelfCount(shelfLines) + shelfCount(drugLines);
 
   return (
     <Tabs

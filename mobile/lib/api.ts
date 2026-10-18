@@ -766,19 +766,24 @@ export const api = {
    * by price, and the answer carries the facets so the filters can be drawn
    * without a second call.
    */
-  shelf: (query: {
-    shelf?: string;
-    brand?: string;
-    q?: string;
-    sort?: string;
-    page?: number;
-  } = {}) => {
+  shelf: (
+    query: {
+      shelf?: string;
+      brand?: string;
+      q?: string;
+      sort?: string;
+      page?: number;
+    } = {},
+    /** Which counter's shelf. Skincare unless it says, because every
+     *  screen that asked before the pharmacy existed meant skincare. */
+    counter = "skincare"
+  ) => {
     const asked = new URLSearchParams();
     for (const [key, value] of Object.entries(query)) {
       if (value !== undefined && value !== "" && value !== 0) asked.set(key, String(value));
     }
     const tail = asked.toString();
-    return get<Shelf>(`/skincare${tail === "" ? "" : `?${tail}`}`);
+    return get<Shelf>(`/${counter}${tail === "" ? "" : `?${tail}`}`);
   },
   /** A basket somebody was sent, worked out by the same code the website
    *  draws it with, so the two cannot quote different prices. */
@@ -809,7 +814,10 @@ export const api = {
     heardFrom?: string;
     /** Whose money the card link is made out in. Naira unless they say. */
     payCurrency?: string;
-  }) => post<{ orderId: string; token: string | null }>("/skincare/order", order),
+    /** A time means a car of its own rather than the weekly one. */
+    deliverAt?: string;
+  }, counter = "skincare") =>
+    post<{ orderId: string; token: string | null }>(`/${counter}/order`, order),
 
   /**
    * Carrying a parcel. What the shop carries and what it charges, and a post
@@ -899,6 +907,13 @@ export type Shelf = {
   page?: number;
   shelves?: { name: string; items: number }[];
   brands?: { name: string; items: number }[];
+  /** Times a car of its own could come, today or tomorrow. Empty where
+   *  same day is off or the day has run out. */
+  slots?: { at: string; label: string; day: string; urgent: boolean }[];
+  sameDayBands?: { maxItems: number | null; fee: number }[];
+  urgentExtra?: number;
+  /** Which counter this shelf is. */
+  kind?: string;
   /** Whose name to offer at the checkout, so a skincare order counts for
    *  whoever brought them in. */
   promoters?: { code: string; name: string }[];

@@ -133,6 +133,9 @@ export default function Home() {
   const [shelves, setShelves] = useState<
     { slug: string; name: string; from: number | null; kind: string; image: string }[]
   >([]);
+  // The other counter, on the same terms: a line only while it is on and
+  // there is a shop with something on it.
+  const [pharmacy, setPharmacy] = useState("");
   // Empty when parcels are off, and then the page does not mention them.
   const [parcels, setParcels] = useState("");
 
@@ -144,6 +147,15 @@ export default function Home() {
       })
       .catch(() => {
         /* The shelf is a door, not the shop. A closed one is no error. */
+      });
+
+    void api
+      .shelf({}, "pharmacy")
+      .then((next) => {
+        if (next.on) setPharmacy(`Order any day. It comes ${next.when}.`);
+      })
+      .catch(() => {
+        /* Same again: a counter that is off is not a failure. */
       });
 
     // Named by where it goes rather than called "Parcels": nobody is looking
@@ -673,6 +685,13 @@ export default function Home() {
               onPress={() => router.push("/skincare" as never)}
             />
           )}
+          {pharmacy !== "" && (
+            <Door
+              label="Pharmacy"
+              glyph="pharmacy"
+              onPress={() => router.push("/pharmacy" as never)}
+            />
+          )}
           <Door
             label="Anything else"
             glyph="ask"
@@ -745,7 +764,7 @@ function Door({
   onPress,
 }: {
   label: string;
-  glyph: "group" | "parcel" | "skincare" | "ask";
+  glyph: "group" | "parcel" | "skincare" | "pharmacy" | "ask";
   onPress: () => void;
 }) {
   return (
@@ -781,7 +800,11 @@ function Door({
  * native module cannot arrive in an over-the-air update. The shapes are the
  * same four things the board names.
  */
-function Glyph({ kind }: { kind: "group" | "parcel" | "skincare" | "ask" }) {
+function Glyph({
+  kind,
+}: {
+  kind: "group" | "parcel" | "skincare" | "pharmacy" | "ask";
+}) {
   const name =
     kind === "group"
       ? "people-outline"
@@ -789,6 +812,8 @@ function Glyph({ kind }: { kind: "group" | "parcel" | "skincare" | "ask" }) {
         ? "cube-outline"
         : kind === "skincare"
           ? "flask-outline"
-          : "help-circle-outline";
+          : kind === "pharmacy"
+            ? "medkit-outline"
+            : "help-circle-outline";
   return <Ionicons name={name} size={22} color={T.brand} />;
 }
