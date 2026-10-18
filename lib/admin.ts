@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { WINDOW_DAYS } from "./other-money";
 import { feeFor } from "./fees";
 import { activeBands } from "./settings";
 import { getBatch } from "./batches";
@@ -759,7 +760,7 @@ export async function batchOverview(
     // dashboard, whose other figures are all four weeks: a profit summed
     // over three days sitting beside money taken over four is two questions
     // answered as if they were one.
-    const back = window === "month" ? 28 : 3;
+    const back = window === "month" ? WINDOW_DAYS : 3;
     query = query
       .gte("run_date", new Date(Date.now() - back * 86400000).toISOString().slice(0, 10))
       .order("cut_off_at", { ascending: true });

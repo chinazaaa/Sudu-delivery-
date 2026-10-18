@@ -20,6 +20,7 @@ import {
   otherMoneySince,
   otherMoneyTotals,
   windowStart,
+  WINDOW_DAYS,
 } from "@/lib/other-money";
 import { clockLabel, lagosToday, runDateLabel, weekdayLabel } from "@/lib/time";
 
@@ -327,7 +328,8 @@ export default async function AdminHome() {
               {dated} · {needSaid}
             </span>
             <span className="hidden sm:inline">
-              {runDateLabel(lagosToday())} · the last 28 days, and what needs doing today.
+              {runDateLabel(lagosToday())} · the last {WINDOW_DAYS} days, and what needs doing
+              today.
             </span>
           </>
         }
@@ -433,7 +435,7 @@ export default async function AdminHome() {
           <Figure
             label="Paid orders"
             value={String(stats.paidOrders)}
-            detail="Last 28 days"
+            detail={`Last ${WINDOW_DAYS} days`}
           />
           <Figure label="Money in" value={naira(stats.gross)} detail="Across paid orders" />
           <Figure
@@ -497,12 +499,16 @@ export default async function AdminHome() {
             of four on a desk, so here they are the phone's pair. */}
         {stats && (
           <div className="grid grid-cols-2 gap-[9px] sm:hidden">
-            <Figure label="Money in" value={naira(stats.gross)} detail="28 days" />
+            <Figure
+              label="Money in"
+              value={naira(stats.gross)}
+              detail={`${WINDOW_DAYS} days`}
+            />
             <Figure
               label="Profit"
               value={naira(profit)}
               tone="mint"
-              detail={waitingSaid !== "" ? `Settled. ${waitingSaid}` : "28 days"}
+              detail={waitingSaid !== "" ? `Settled. ${waitingSaid}` : `${WINDOW_DAYS} days`}
             />
           </div>
         )}
@@ -568,7 +574,7 @@ export default async function AdminHome() {
 
         <Panel
           title="What sells"
-          detail="Last 28 days. Use it to decide which kitchens go on a run."
+          detail={`Last ${WINDOW_DAYS} days. Use it to decide which kitchens go on a run.`}
         >
           {(stats?.topItems ?? []).length === 0 && (
             <p className="pt-2 text-[14.5px] text-muted">Nothing has sold yet this month.</p>
@@ -630,7 +636,8 @@ export default async function AdminHome() {
             <span className="flex-1">
               <strong className="text-[14.5px]">Other money</strong>
               <span className="hint block">
-                {aside.length} entr{aside.length === 1 ? "y" : "ies"} in the last 28 days,{" "}
+                {aside.length} entr{aside.length === 1 ? "y" : "ies"} in the last{" "}
+                {WINDOW_DAYS} days,{" "}
                 {naira(asideTotals.made)}
               </span>
             </span>

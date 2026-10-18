@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { WINDOW_DAYS } from "./other-money";
 import { activeBands } from "./settings";
 import { feeFor } from "./fees";
 import { containersIn } from "./containers";
@@ -557,7 +558,7 @@ export type Dashboard = {
 };
 
 /** The numbers worth looking at over the last four weeks. */
-export async function dashboard(days = 28): Promise<Dashboard> {
+export async function dashboard(days = WINDOW_DAYS): Promise<Dashboard> {
   const since = new Date(Date.now() - days * 86400000).toISOString();
 
   const { data, error } = await db()

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import KeepFields from "@/components/admin/KeepFields";
 import PageHeader from "@/components/admin/PageHeader";
 import Panel from "@/components/admin/Panel";
 import { naira } from "@/lib/money";
@@ -252,6 +253,7 @@ export default async function SettingsAdmin() {
           </div>
 
           <form id="card-pay" action={saveSettings} className="scroll-mt-4">
+          <KeepFields />
             <Panel
               title="Paying by card"
               detail={
@@ -355,6 +357,7 @@ export default async function SettingsAdmin() {
 
         <div className="flex min-w-0 flex-col gap-[18px]">
           <form id="strip" action={saveSettings} className="scroll-mt-4">
+          <KeepFields />
             <Panel
               title="The strip along the top"
               detail={
@@ -455,6 +458,7 @@ export default async function SettingsAdmin() {
           </form>
 
           <form id="find-us" action={saveSettings} className="scroll-mt-4">
+          <KeepFields />
             <Panel
               title="Where to find us"
               detail={
@@ -572,6 +576,7 @@ export default async function SettingsAdmin() {
           other three fell wherever the auto-placement put them. */}
       <div className="mt-[18px] grid items-start gap-[18px] lg:grid-cols-[1.35fr_1fr]">
         <form id="promoter-perk" action={saveSettings} className="scroll-mt-4">
+          <KeepFields />
           <Panel
             title="What a promoter's link is worth"
             detail={
@@ -610,6 +615,7 @@ export default async function SettingsAdmin() {
         </form>
 
         <form id="footer" action={saveSettings} className="scroll-mt-4">
+          <KeepFields />
           <Panel
             title="Footer line"
             detail={
@@ -659,6 +665,7 @@ export default async function SettingsAdmin() {
         </form>
 
         <form id="santa" action={saveSettings} className="scroll-mt-4">
+          <KeepFields />
           <Panel
             title="Secret Santa delivery"
             detail={
@@ -738,6 +745,7 @@ export default async function SettingsAdmin() {
         </form>
 
         <form id="product-notes" action={saveSettings} className="scroll-mt-4">
+          <KeepFields />
           <Panel
             title="Product page notes"
             detail={
@@ -760,6 +768,7 @@ export default async function SettingsAdmin() {
         </form>
 
         <form id="runs-land" action={saveSettings} className="scroll-mt-4">
+          <KeepFields />
           <Panel
             title="When runs land"
             detail={
@@ -899,6 +908,7 @@ export default async function SettingsAdmin() {
         </div>
 
         <form id="told" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
+          <KeepFields />
           <Panel
             title="Who gets told"
             detail={
@@ -1182,6 +1192,7 @@ export default async function SettingsAdmin() {
         </div>
 
         <form id="fees" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
+          <KeepFields />
           <Panel
             title="What delivery costs"
             detail={
@@ -1221,6 +1232,7 @@ export default async function SettingsAdmin() {
         </form>
 
         <form id="aisles" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
+          <KeepFields />
           <Panel
             title="How the whole shop is browsed"
             detail={
@@ -1254,6 +1266,7 @@ export default async function SettingsAdmin() {
         </form>
 
         <form id="plans" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
+          <KeepFields />
           <Panel
             title="Standing orders"
             detail={
@@ -1311,6 +1324,7 @@ export default async function SettingsAdmin() {
         </form>
 
         <form id="areas" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
+          <KeepFields />
           <Panel
             title="Restaurants further out"
             detail={
@@ -1334,6 +1348,7 @@ export default async function SettingsAdmin() {
         </form>
 
         <form id="bot" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
+          <KeepFields />
           <Panel
             title="Sudu Bot"
             detail={
@@ -1402,6 +1417,7 @@ export default async function SettingsAdmin() {
         </form>
 
         <form id="same-day" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
+          <KeepFields />
           <Panel
             title="Pick a time, instead of a run"
             detail={
@@ -1507,6 +1523,7 @@ export default async function SettingsAdmin() {
         </form>
 
         <form id="week" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
+          <KeepFields />
           <Panel
             title="Days that are different"
             detail={
@@ -1539,6 +1556,7 @@ export default async function SettingsAdmin() {
         </form>
 
         <form id="messages" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
+          <KeepFields />
           <Panel
             title="WhatsApp messages"
             detail={
@@ -1604,6 +1622,7 @@ export default async function SettingsAdmin() {
         </form>
 
         <form id="paid-note" action={saveSettings} className="scroll-mt-4">
+          <KeepFields />
           <Panel
             title="What a paid customer reads"
             detail={
@@ -1626,6 +1645,7 @@ export default async function SettingsAdmin() {
         </form>
 
         <form id="pitch" action={saveSettings} className="scroll-mt-4">
+          <KeepFields />
           <Panel
             title="The line under the headline"
             detail={

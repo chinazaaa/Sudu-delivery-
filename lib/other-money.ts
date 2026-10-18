@@ -69,8 +69,15 @@ export function otherMoneyTotals(rows: OtherMoney[]): {
   };
 }
 
-/** The day the dashboard and this page both count back to. */
-export const WINDOW_DAYS = 28;
+/**
+ * The day the dashboard and this page both count back to.
+ *
+ * Four weeks was too short to see a shape. A shop that does two runs a week
+ * had eight runs in the window, so one slow fortnight read as a collapse
+ * and one good Saturday as a boom. Thirteen weeks is a term, which is the
+ * unit this shop actually runs in.
+ */
+export const WINDOW_DAYS = 90;
 
 export const windowStart = (days = WINDOW_DAYS): string =>
   new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
