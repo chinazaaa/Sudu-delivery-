@@ -48,32 +48,42 @@ export type Errand = {
 export const ERRANDS: Errand[] = [
   {
     slug: "pau-project-printing",
-    title: "Project printing and binding",
-    ticket: "Final year · Pan-Atlantic University",
-    lead: "Send us the file. We print it, bind it, and bring it to your block.",
-    pills: ["Spiral or hard cover", "Priced from your page count", "Brought to your block"],
-    opening: "Hi Sudu, I need my project printed and bound.",
-    label: "Tell us about the project",
-    preset: "Project printing: ",
+    title: "Project, thesis and assignment printing",
+    ticket: "Printing and binding · Pan-Atlantic University",
+    lead: "Send us the file. Assignments and handouts printed, final year projects and theses bound, all brought to your block.",
+    pills: [
+      "Assignments from a few pages",
+      "Projects and theses bound",
+      "Brought to your block",
+    ],
+    opening: "Hi Sudu, I need something printed.",
+    label: "Tell us what you need printed",
+    preset: "Printing: ",
     chips: [
+      "An assignment: ",
+      "A project or thesis: ",
+      "Slides or a presentation: ",
       "Spiral bound: ",
       "Hard cover: ",
-      "Black and white: ",
       "Colour pages inside: ",
       "I need it this week: ",
     ],
     needs: [
       {
+        what: "What it is",
+        why: "An assignment, a seminar handout, a set of slides, a final year project. The small ones are usually same week; a binding is its own job.",
+      },
+      {
         what: "How many copies",
-        why: "Most departments want three or four, and your supervisor may want one of their own.",
+        why: "One for an assignment, three or four for a project, and your supervisor may want one of their own.",
       },
       {
         what: "How many pages",
         why: "The single biggest part of the price. Read it off the last page of your document.",
       },
       {
-        what: "Spiral or hard cover",
-        why: "Spiral for a draft or a seminar. Hard cover is what most departments take at final submission.",
+        what: "Bound, or just printed",
+        why: "An assignment is usually just printed and stapled. Spiral suits a draft or a seminar copy, and hard cover is what most departments take at final submission.",
       },
       {
         what: "Black and white, or colour",
@@ -87,7 +97,7 @@ export const ERRANDS: Errand[] = [
     steps: [
       [
         "Send the file",
-        "As a PDF on WhatsApp, so nothing moves about between your laptop and the printer. Tell us the five things on this page with it.",
+        "As a PDF on WhatsApp, or through the form on this page. A PDF so nothing moves about between your laptop and the printer. Tell us what is on this page with it.",
       ],
       [
         "We come back with a price",
@@ -104,6 +114,18 @@ export const ERRANDS: Errand[] = [
         "We do not read your project, correct it, or reformat it. A typo in the file is a typo in four bound copies, and nothing can be done with those afterwards. Read it through, and check your department's own rules on the cover, the lettering and the colour before we bind anything: those vary by school and your supervisor is the one who knows them.",
     },
     asked: [
+      {
+        q: "Where can I print an assignment at PAU?",
+        a: "Send it to us and we print it and bring it to your block. There is no minimum: a three page assignment is as welcome as a two hundred page project, and it costs what three pages costs. Send the file as a PDF so nothing moves about between your laptop and the printer.",
+      },
+      {
+        q: "Can you print and bind a thesis or dissertation?",
+        a: "Yes. A thesis, a dissertation, a final year project: same job and the same five things decide the price, which are on this page. Hard cover is what most departments take at final submission and spiral is what most supervisors want to write on, so tell us which you need and ask for both if your draft and your final copy are different jobs.",
+      },
+      {
+        q: "Can you print slides or a presentation?",
+        a: "Yes, handouts, slides, past questions, lecture notes, anything you can send as a file. Say whether you want them in colour, because slides usually need it and it changes the price per page.",
+      },
       {
         q: "How much does it cost to print and bind a project at PAU?",
         a: "It depends on the page count, the number of copies and the binding, so we price it rather than guess. Send us the file and the five things on this page and we come back with one number that covers printing, binding and bringing it to your block.",

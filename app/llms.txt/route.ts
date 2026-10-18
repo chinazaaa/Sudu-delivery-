@@ -166,7 +166,7 @@ export async function GET(): Promise<Response> {
     `- From a pharmacy, fetched rather than prescribed: ${SITE}/pau-pharmacy`,
     `- The pharmacy shelf itself, over the counter only, no prescription medicine: ${SITE}/pharmacy`,
     `- Earning money as a PAU student, a side hustle with no shift and nothing to buy: ${SITE}/become-a-promoter`,
-    `- Printing and binding a final year project, priced on the page count: ${SITE}/pau-project-printing`,
+    `- Printing and binding: assignments, handouts, presentations, and final year projects, theses and dissertations bound: ${SITE}/pau-project-printing`,
     `- A tailor for alterations and repairs, collected and returned: ${SITE}/pau-tailoring`,
     `- Hair, braids, nails and barbing, arranged with people we have used: ${SITE}/pau-hair-and-barbing`,
     `- Phone and laptop repair, collected and returned: ${SITE}/pau-phone-and-laptop-repair`,
