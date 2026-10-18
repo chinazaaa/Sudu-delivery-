@@ -272,6 +272,15 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   const askOrderRef = useRef<((again?: boolean) => void) | null>(null);
   /** The search, held in a box because the change step runs it too. */
   const huntRef = useRef<((said: string, echo?: boolean) => void) | null>(null);
+  /*
+   * The search already run for this sentence, kept so it is only run once.
+   *
+   * A question that names something we sell is answered first by the
+   * thing, and that has to be known before the shop's written answers get
+   * their turn. Looking twice for one sentence would be a visible pause on
+   * the one path where somebody is already waiting.
+   */
+  const probed = useRef<{ said: string; got: unknown } | null>(null);
   /** The basket editor, held the same way: the step that adds a line
    *  offers it, and it offers the step that adds a line. */
   const changeRef = useRef<((asked?: Swap | null, count?: Amount | null) => void) | null>(null);
@@ -934,7 +943,34 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           changeRef.current?.();
           return;
         }
-        if (sayFaq(said)) return;
+        /*
+         * The thing before the paragraph.
+         *
+         * "Do you have panadol" is question shaped, so the shop's written
+         * answers used to take it and reply with the paragraph about the
+         * pharmacy shelf. True, and not what was asked: they named a
+         * product, and the answer that finishes the conversation in one
+         * message is the product, its price and the way to it.
+         *
+         * So anything that looks like a question is searched first, and
+         * only a search that turns up nothing worth showing hands over to
+         * the written answers. The result is kept, because looking twice
+         * for one sentence is a pause on the one path where somebody is
+         * already waiting.
+         */
+        const peek = await fetch("/api/bot/find", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ said, kitchen: queue.current[0]?.id ?? "" }),
+        })
+          .then((one) => one.json())
+          .catch(() => null);
+
+        const named =
+          peek &&
+          (peek.how === "counter" || peek.how === "sure" || peek.how === "shelf");
+        if (named) probed.current = { said, got: peek };
+        else if (sayFaq(said)) return;
       }
 
       /*
@@ -1297,15 +1333,20 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         }
       }
       try {
-        const answer = await working(
-          "Looking through the menus…",
-          fetch("/api/bot/find", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ said, kitchen: queue.current[0]?.id ?? "" }),
-          })
-        );
-        const got = (await answer.json()) as {
+        const already =
+          probed.current && probed.current.said === said ? probed.current.got : null;
+        probed.current = null;
+        const got = (already ??
+          (await (
+            await working(
+              "Looking through the menus…",
+              fetch("/api/bot/find", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ said, kitchen: queue.current[0]?.id ?? "" }),
+              })
+            )
+          ).json())) as {
           how: string;
           qty: number;
           hits: Hit[];
