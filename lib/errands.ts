@@ -154,17 +154,25 @@ export const ERRANDS: Errand[] = [
   },
   {
     slug: "pau-tailoring",
-    title: "Tailoring and repairs",
+    title: "Tailoring: made to measure, and altered",
     ticket: "Hostel · Pan-Atlantic University",
-    lead: "Alterations, repairs and relining. Dresses, trousers, jackets, gowns, leather. We collect it, the tailor does it, we bring it back.",
-    pills: ["Collected and returned", "Price agreed before anything is cut"],
-    opening: "Hi Sudu, I have something that needs a tailor.",
-    label: "Tell us what needs doing",
+    lead: "Something made for you from scratch, or something you own made to fit. We find the tailor, agree the price, and handle the back and forth.",
+    pills: [
+      "Made to measure, or altered",
+      "Collected and returned",
+      "Price agreed before anything is cut",
+    ],
+    opening: "Hi Sudu, I need a tailor.",
+    label: "Tell us what you want made, or what needs doing",
     preset: "Tailoring: ",
     /* The common ones as taps, because a chip cloud of twenty-seven
        wraps into half a screen and pushes the actual form off it. The
        whole list lives in the questions below, where it can be read. */
     chips: [
+      "A full outfit made: ",
+      "Native wear made: ",
+      "A suit made to measure: ",
+      "Aso ebi for an event: ",
       "Dress alterations: ",
       "Shirt alterations: ",
       "Trouser alterations: ",
@@ -180,31 +188,44 @@ export const ERRANDS: Errand[] = [
     ],
     needs: [
       {
-        what: "What the garment is",
-        why: "A pair of trousers and a lace gown are not the same job, and the second one is not for every tailor.",
+        what: "Made, or mended",
+        why: "A garment made from scratch and one taken in are different jobs on different clocks. Say which and the rest follows.",
       },
       {
-        what: "What needs doing",
-        why: "Taken in, let out, hemmed, a zip replaced, a tear closed. Say it however you would say it out loud.",
+        what: "What it is",
+        why: "An agbada, a two piece suit, a gown for a wedding, a pair of trousers that no longer fit. Lace and leather are not for every tailor, so the name of the thing decides who does it.",
       },
       {
-        what: "Whether you need measuring",
-        why: "An alteration needs your measurements or the garment itself. Tell us which you have and we work round it.",
+        what: "Fabric, if it is being made",
+        why: "Whether you have it already or want it bought. We can go and get it, which is one errand instead of two, and you see it before it is cut.",
+      },
+      {
+        what: "Measurements, or a fitting",
+        why: "Your numbers if you have them, and if not the tailor takes them. For something made there is usually a fitting in the middle as well, so say if getting to one is hard.",
       },
       {
         what: "When you need it",
-        why: "An event date is a real deadline and tailors are busiest before the same ones everybody else has.",
+        why: "An event date is a real deadline, and tailors are busiest before the same ones everybody else has. The date decides whether this is possible at all, so lead with it.",
       },
     ],
     steps: [
-      ["Tell us the job", "What it is, what needs doing, and when you need it back."],
-      ["We collect it from your block", "And take it to a tailor we have used before, with a price agreed first."],
-      ["It comes back to your block", "On the day agreed. Try it on while we are there, so anything still wrong goes straight back."],
+      [
+        "Tell us the job and the date",
+        "What you want made, or what needs altering, and when you need to be wearing it.",
+      ],
+      [
+        "We match you with a tailor and price it",
+        "From people we have used before. For something made we sort the fabric and the measurements at this point, and you see the price before anything is cut.",
+      ],
+      [
+        "Fittings where it needs them, then your block",
+        "Something made usually has a fitting partway through, and we arrange it. Try it on while we are standing there at the end, so anything still wrong goes straight back with us.",
+      ],
     ],
     careful: {
-      title: "The tailor sews it, we carry it",
+      title: "The tailor sews it, we arrange it",
       said:
-        "We find the tailor, agree the price and carry the garment both ways. The sewing is theirs. We will not take anything irreplaceable, and anything you would be heartbroken to lose is better taken by hand. Try it on while we are standing there: an alteration that is not right is a quick fix on the day and a long argument a week later.",
+        "We find the tailor, agree the price, buy the fabric where you ask us to, and carry everything both ways. The sewing is theirs and so is the fit. We will not take anything irreplaceable, and anything you would be heartbroken to lose is better carried by hand. Try it on while we are standing there, at a fitting and at the end: a garment that is not right is a quick fix that day and a long argument a week later. If a tailor we sent you does bad work, tell us the same day, because we stop using people who keep getting it wrong and that only works if we hear about it.",
     },
     asked: [
       {
@@ -220,8 +241,20 @@ export const ERRANDS: Errand[] = [
         a: "It depends on the garment and the job, so we agree the price with the tailor and tell you before anything is cut. Nothing is started until you say yes.",
       },
       {
-        q: "Can you make something from scratch?",
-        a: "Sometimes, and it is a longer conversation: a made garment needs measurements, a fabric and real time. Message us with the event date first, because that decides whether it is possible at all.",
+        q: "Can you get a tailor to make a full outfit?",
+        a: "Yes, and it is half of what this is for. Native wear, a suit, a gown, aso ebi for a wedding: tell us what you want and when you need to be wearing it, and we find a tailor who does that kind of work and agree the price before anything is cut. We can buy the fabric on the way if you do not have it, so it is one errand rather than two.",
+      },
+      {
+        q: "How long does it take to have something made?",
+        a: "Longer than you think and it depends entirely on the tailor's queue, which is worst before the events everybody else is also dressing for. Lead with your date rather than your design: it decides whether the thing is possible at all, and we would rather tell you no at the start than late.",
+      },
+      {
+        q: "Do I need to be measured?",
+        a: "The tailor takes your measurements if you do not have them, and for something made there is usually a fitting partway through as well. Say if getting to a fitting is hard and we work round it, but a garment made without one is a garment nobody can promise will fit.",
+      },
+      {
+        q: "Can you buy the fabric too?",
+        a: "Yes. Tell us roughly what you want and what you would spend, and we send you pictures and a price before anything is bought. Nothing is cut until you have seen it and said yes.",
       },
       {
         q: "What if it comes back wrong?",

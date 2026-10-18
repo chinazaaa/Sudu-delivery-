@@ -80,14 +80,15 @@ export default function PrintCatalogue({
   return (
     <section className="space-y-3">
       <h2 className="font-display text-[32px] font-black uppercase leading-none sm:text-[40px]">
-        Everything else we print
+        What we print
       </h2>
       <div className="max-w-[760px] space-y-2.5 leading-relaxed text-ink/80">
         <p>
-          Banners, flyers, ID cards, stickers, mugs, shirts, packaging and a
+          Projects, theses and assignments first, then everything else:
+          banners, flyers, ID cards, stickers, mugs, shirts, packaging and a
           good deal besides. None of it has a price here because none of it
-          has one until we know the size and the quantity: a hundred flyers
-          and a thousand are different jobs. Tap a thing and we will come
+          has one until we know the size and the quantity, and a hundred
+          flyers and a thousand are different jobs. Tap a thing and we come
           back with a number.
         </p>
       </div>

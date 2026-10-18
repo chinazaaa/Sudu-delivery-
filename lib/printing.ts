@@ -16,6 +16,33 @@ export type PrintItem = { slug: string; name: string; said: string };
 export type PrintGroup = { name: string; items: PrintItem[] };
 
 export const PRINTING: PrintGroup[] = [
+  /*
+   * Ours, not the supplier's, and first.
+   *
+   * Their catalogue is a trade list: Thermal Binding, Velo Bind,
+   * Saddle-Stitched, Print out Colored. Every one of those is a real
+   * thing and not one of them is a word a student would ever type. The
+   * job somebody at PAU actually has is "my project needs binding" or "I
+   * have an assignment to print", so that is what the shelf opens on.
+   */
+  {
+    name: "Projects and coursework",
+    items: [
+      { slug: "final-year-project-hard-cover", name: "Final year project, hard cover bound", said: "The one most departments take at final submission. Printed, bound and brought to your block, with as many copies as your department and your supervisor need." },
+      { slug: "final-year-project-spiral", name: "Final year project, spiral bound", said: "For a draft, a seminar copy or anything your supervisor is going to write on." },
+      { slug: "thesis-hard-cover", name: "Thesis or dissertation, hard cover", said: "Same job as a project binding, by the name your programme uses for it. Check your department's rules on the cover and the lettering before we bind." },
+      { slug: "thesis-spiral", name: "Thesis or dissertation, spiral bound", said: "For corrections, a supervisor's copy, or anything that is not the final submission." },
+      { slug: "project-chapter-draft", name: "A chapter or a draft", said: "Printed and stapled or spiral bound, for marking up. Cheaper than binding the whole thing twice." },
+      { slug: "assignment-printing", name: "Assignment printing", said: "No minimum. Three pages is as welcome as three hundred and costs what three pages costs." },
+      { slug: "seminar-handout", name: "Seminar papers and handouts", said: "However many copies the room needs, stapled or loose." },
+      { slug: "presentation-slides", name: "Presentation slides", said: "Printed as handouts, several to a page if you want them that way. Say if they need colour, because slides usually do." },
+      { slug: "lecture-notes-past-questions", name: "Lecture notes and past questions", said: "Send the file and say how many copies. Going in with your class makes it cheaper for everybody." },
+      { slug: "photocopying", name: "Photocopying", said: "Black and white or colour, from a document you send or one we collect." },
+      { slug: "lamination", name: "Lamination", said: "ID cards, certificates, anything that has to survive a bag." },
+      { slug: "passport-photographs", name: "Passport photographs", said: "The standard sizes, for forms and applications." },
+      { slug: "typing-and-formatting", name: "Typing and formatting", said: "Handwritten work typed up, or a document put into the format your department asks for." },
+    ],
+  },
   {
     name: "Branding Material",
     items: [
