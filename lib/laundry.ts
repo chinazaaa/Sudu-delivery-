@@ -387,6 +387,41 @@ export function retail(cost: number, markup: number, round: number): number {
   return Math.ceil(up / step) * step;
 }
 
+const WEEKDAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+/**
+ * The days the car goes, read off the setting rather than written down.
+ *
+ * They used to be in six sentences and a pair of buttons, so adding a
+ * Tuesday meant a deploy and remembering all seven places. Anything
+ * unreadable falls back to Monday and Thursday, which is what the shop
+ * ran when this was written: a settings box somebody has mistyped should
+ * not close the service.
+ */
+export function collectionDays(saved: string): string[] {
+  const days = String(saved ?? "")
+    .split(/[,\s]+/)
+    .map((one) => Number(one.trim()))
+    .filter((one) => Number.isInteger(one) && one >= 0 && one <= 6);
+  const unique = [...new Set(days)].sort((a, b) => a - b);
+  return (unique.length > 0 ? unique : [1, 4]).map((one) => WEEKDAYS[one]);
+}
+
+/** "Mondays and Thursdays", for a sentence rather than a list. */
+export function daysSaid(days: string[]): string {
+  const plural = days.map((one) => `${one}s`);
+  if (plural.length === 1) return plural[0];
+  return `${plural.slice(0, -1).join(", ")} and ${plural[plural.length - 1]}`;
+}
+
 export type Priced = { name: string; price: number };
 export type PricedGroup = { name: string; items: Priced[] };
 
@@ -401,15 +436,26 @@ export async function laundryList(): Promise<{
   groups: PricedGroup[];
   minimum: number;
   note: string;
+  days: string[];
+  daysSaid: string;
+  otherDay: number;
 }> {
   const settings = await safeSettings();
   const markup = Number(settings.laundry_markup);
   const minimum = Number(settings.laundry_minimum);
 
+  const days = collectionDays(settings.laundry_days);
+  const otherDay = Number(settings.laundry_other_day);
+
   return {
     on: settings.laundry_on === "on",
     minimum: Number.isFinite(minimum) ? minimum : 0,
     note: settings.laundry_note ?? "",
+    days,
+    daysSaid: daysSaid(days),
+    /* What another day costs on top. Zero is not a free Tuesday: it means
+       we do not go on one, and the choice is simply not offered. */
+    otherDay: Number.isFinite(otherDay) && otherDay > 0 ? otherDay : 0,
     groups: inOrder(COST).map((group) => ({
       name: group.name,
       items: group.items.map((one) => ({

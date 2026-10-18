@@ -3044,6 +3044,8 @@ const SETTING_FIELDS = [
   "laundry_markup",
   "laundry_minimum",
   "laundry_note",
+  "laundry_days",
+  "laundry_other_day",
   "santa_delivery",
   "santa_delivery_included",
   "santa_delivery_extra",
@@ -4812,7 +4814,14 @@ export async function saveSkincare(
   const asked = String(form.get("kind") ?? "").trim();
   const SHAPES: Record<string, { fields: string[]; path: string }> = {
     laundry: {
-      fields: ["laundry_on", "laundry_markup", "laundry_minimum", "laundry_note"],
+      fields: [
+        "laundry_on",
+        "laundry_markup",
+        "laundry_minimum",
+        "laundry_note",
+        "laundry_days",
+        "laundry_other_day",
+      ],
       path: "/pau-laundry",
     },
     ...Object.fromEntries(
@@ -4842,6 +4851,27 @@ export async function saveSkincare(
   for (const field of fields) {
     const value = form.get(field);
     if (value !== null) patch[field] = String(value).trim();
+  }
+
+  /*
+   * A row of tick boxes is a list, and the column is one string.
+   *
+   * Saved as one field per box there would be seven columns for a
+   * question that is "which days", so the ticks come back under one name
+   * and are joined here. A form that offered the boxes and saved nothing
+   * is worse than one that never offered them.
+   *
+   * Written even when nothing is ticked, because an unticked row is an
+   * answer: it empties the setting, and reading it falls back to Monday
+   * and Thursday, which is what the page beside the boxes promises. Only
+   * the laundry form carries this field, so nothing else can reach it.
+   */
+  if (fields.includes("laundry_days")) {
+    patch.laundry_days = form
+      .getAll("laundry_day")
+      .map((one) => String(one).trim())
+      .filter((one) => /^[0-6]$/.test(one))
+      .join(",");
   }
   if (Object.keys(patch).length === 0) return { done: "", error: "" };
 

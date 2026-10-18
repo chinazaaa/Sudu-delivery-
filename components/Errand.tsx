@@ -36,7 +36,13 @@ export default function Errand({
 }: {
   spec: Spec;
   /** The priced list, where this errand has one. */
-  prices?: { groups: PricedGroup[]; minimum: number; note: string } | null;
+  prices?: {
+    groups: PricedGroup[];
+    minimum: number;
+    note: string;
+    days: string[];
+    otherDay: number;
+  } | null;
   /** The printing catalogue, where this errand carries one. */
   catalogue?: { groups: PrintGroup[]; photos: Record<string, string> } | null;
   /** The questions as admin has them, which may differ from the shipped
@@ -125,6 +131,8 @@ export default function Errand({
               note={prices.note}
               whatsapp={whatsapp}
               opening={spec.opening}
+              days={prices.days}
+              otherDay={prices.otherDay}
             />
           ) : (
             <section className="space-y-3">

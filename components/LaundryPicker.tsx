@@ -22,18 +22,27 @@ import type { PricedGroup } from "@/lib/laundry";
  * comes back, so the end of this is a message with an itemised list in it,
  * not a card.
  */
+/** The one option that is not a weekday: a collection on a day of its own. */
+const OTHER_DAY = "Another day";
+
 export default function LaundryPicker({
   groups,
   minimum,
   note,
   whatsapp,
   opening,
+  days,
+  otherDay,
 }: {
   groups: PricedGroup[];
   minimum: number;
   note: string;
   whatsapp: string;
   opening: string;
+  /** The days the car goes, from admin rather than from here. */
+  days: string[];
+  /** What a day of its own costs on top. Zero and it is not offered. */
+  otherDay: number;
 }) {
   const [picked, setPicked] = useState<Record<string, number>>({});
   const [typed, setTyped] = useState("");
@@ -49,11 +58,15 @@ export default function LaundryPicker({
   }, [groups]);
 
   const lines = Object.entries(picked).filter(([, qty]) => qty > 0);
+  /* A day that is not one of the shared ones is a trip for one person, and
+     it is priced the way the food side prices one. */
+  const offSchedule = day === OTHER_DAY;
   const items = lines.reduce((total, [, qty]) => total + qty, 0);
   const total = lines.reduce(
     (sum, [name, qty]) => sum + (priceOf.get(name) ?? 0) * qty,
     0
   );
+  const extra = offSchedule ? otherDay : 0;
   const short = Math.max(0, minimum - total);
 
   const set = (name: string, qty: number) =>
@@ -87,7 +100,8 @@ export default function LaundryPicker({
               `${qty} x ${name} — ${naira((priceOf.get(name) ?? 0) * qty)}`
           )
           .join("\n") +
-        `\n\nTotal: ${naira(total)}`
+        `\n\nTotal: ${naira(total)}` +
+        (extra > 0 ? `\nAnother day: ${naira(extra)}` : "")
       : "") +
     (day !== "" ? `\nCollection: ${day}` : "");
   const link = waLink(whatsapp || null, message);
@@ -241,7 +255,7 @@ export default function LaundryPicker({
                 {items} item{items === 1 ? "" : "s"}
               </span>
               <span className="font-display text-2xl font-black leading-none">
-                {naira(total)}
+                {naira(total + extra)}
               </span>
             </div>
 
@@ -264,8 +278,18 @@ export default function LaundryPicker({
               </>
             )}
 
+            {/* Said rather than quietly added, because a number that
+                changes when you tap a day is the number people remember
+                getting wrong. */}
+            {extra > 0 && (
+              <p className="text-xs font-semibold text-ink">
+                {naira(total)} of washing and {naira(extra)} for a day of its
+                own, which is a trip we make for you alone.
+              </p>
+            )}
+
             <div className="flex flex-wrap gap-2">
-              {["Monday", "Thursday"].map((one) => (
+              {[...days, ...(otherDay > 0 ? [OTHER_DAY] : [])].map((one) => (
                 <button
                   key={one}
                   type="button"
@@ -277,7 +301,7 @@ export default function LaundryPicker({
                       : "border-black/10 bg-shell text-muted"
                   }`}
                 >
-                  {one}
+                  {one === OTHER_DAY ? `${OTHER_DAY} · +${naira(otherDay)}` : one}
                 </button>
               ))}
               <button

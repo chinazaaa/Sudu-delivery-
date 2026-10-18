@@ -1,7 +1,7 @@
 import PageHeader from "@/components/admin/PageHeader";
 import SkincareForm from "@/components/admin/SkincareForm";
 import { safeSettings } from "@/lib/settings";
-import { laundryCount, laundryList, retail } from "@/lib/laundry";
+import { collectionDays, laundryCount, laundryList, retail } from "@/lib/laundry";
 import { naira } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +19,7 @@ export default async function AdminLaundryPage() {
   const settings = await safeSettings();
   const list = await laundryList();
   const markup = Number(settings.laundry_markup) || 0;
+  const going = collectionDays(settings.laundry_days);
 
   // A few real rows, so a number typed into the box above can be seen as
   // the prices it will actually put on the page.
@@ -99,6 +100,62 @@ export default async function AdminLaundryPage() {
               all, which reads as no minimum.
             </p>
           </div>
+        </div>
+
+        <div className="border-t border-black/5 pt-3">
+          <p className="label mb-1">The days the car goes</p>
+          <p className="mb-2 text-xs text-muted">
+            Tick the days you are collecting. Change them whenever the week
+            changes: every sentence on the page and the buttons under the
+            price list read this, so they cannot disagree with each other.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map(
+              (day, at) => (
+                <label
+                  key={day}
+                  className={`chip cursor-pointer text-sm ${
+                    going.includes(day)
+                      ? "border-ink bg-ink text-white"
+                      : "border-black/10 bg-shell text-muted"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    name="laundry_day"
+                    value={at}
+                    defaultChecked={going.includes(day)}
+                    className="sr-only"
+                  />
+                  {day.slice(0, 3)}
+                </label>
+              )
+            )}
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            Now: {going.join(", ")}. Untick everything and it falls back to
+            Monday and Thursday rather than closing the service.
+          </p>
+        </div>
+
+        <div>
+          <label className="label" htmlFor="laundry_other_day">
+            Any other day costs extra, in naira
+          </label>
+          <input
+            id="laundry_other_day"
+            name="laundry_other_day"
+            type="number"
+            min={0}
+            defaultValue={Number(settings.laundry_other_day) || 0}
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">
+            The same bargain the food side offers: the shared car is the cheap
+            one and a day of its own costs what a trip for one person costs.
+            Zero is not a free Tuesday, it means we do not go on one, and the
+            choice is not offered at all.
+          </p>
         </div>
 
         <div>

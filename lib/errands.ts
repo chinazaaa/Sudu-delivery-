@@ -484,8 +484,8 @@ export const ERRANDS: Errand[] = [
     priceList: true,
     title: "Laundry, collected from your block",
     ticket: "Hostel · Pan-Atlantic University",
-    lead: "We collect from your block on Mondays and Thursdays, get it washed, and bring it back folded within 48 hours.",
-    pills: ["Mondays and Thursdays", "Back within 48 hours", "Collection included"],
+    lead: "We collect from your block on {days}, get it washed, and bring it back folded within 48 hours.",
+    pills: ["{days}", "Back within 48 hours", "Collection included"],
     opening: "Hi Sudu, I would like my laundry collected.",
     label: "Tell us about the load",
     preset: "Laundry: ",
@@ -511,13 +511,13 @@ export const ERRANDS: Errand[] = [
       },
       {
         what: "Which collection you want",
-        why: "Mondays and Thursdays. Say which one and we have your block on the list for it.",
+        why: "{days}. Say which one and we have your block on the list for it.",
       },
     ],
     steps: [
       [
         "Tell us the night before",
-        "Message us or fill the form, with roughly what is in the bag. We collect on Mondays and Thursdays, so say which of the two and we put your block on the list.",
+        "Message us or fill the form, with roughly what is in the bag. We collect on {days}, so say which one and we put your block on the list.",
       ],
       [
         "We collect from your block",
@@ -536,7 +536,7 @@ export const ERRANDS: Errand[] = [
     asked: [
       {
         q: "Do you do laundry for students at PAU?",
-        a: "Yes. We collect from your block on Mondays and Thursdays, get it washed, and bring it back folded within 48 hours. Everything is priced per item and the whole list is on this page, so you can work out what a bag costs before you message anybody.",
+        a: "Yes. We collect from your block on {days}, get it washed, and bring it back folded within 48 hours. Everything is priced per item and the whole list is on this page, so you can work out what a bag costs before you message anybody.",
       },
       {
         q: "How much is it?",
@@ -544,11 +544,11 @@ export const ERRANDS: Errand[] = [
       },
       {
         q: "How long does it take?",
-        a: "Within 48 hours of collection, back at your block. We collect on Mondays and Thursdays, so something handed over on Monday is back by Wednesday. We would rather say two days and be early than say one and be late.",
+        a: "Within 48 hours of collection, back at your block. We collect on {days}, so a bag handed over on a collection day is back two days later. We would rather say two days and be early than say one and be late.",
       },
       {
         q: "How does collection and return work?",
-        a: "There is nothing to drop off anywhere. Tell us the night before, on WhatsApp or through the form on this page, and say which collection you want: we come on Mondays and Thursdays. We meet you at your block, count the bag through with you standing there, and bring it back folded within 48 hours, counted again in front of you. You pay when you have it back.",
+        a: "There is nothing to drop off anywhere. Tell us the night before, on WhatsApp or through the form on this page, and say which collection you want: we come on {days}. We meet you at your block, count the bag through with you standing there, and bring it back folded within 48 hours, counted again in front of you. You pay when you have it back.",
       },
       {
         q: "Can I get it back the same day?",
@@ -565,6 +565,27 @@ export const ERRANDS: Errand[] = [
     ],
   },
 ];
+
+/**
+ * The days written into the copy, filled in from settings.
+ *
+ * They were spelt out in seven sentences, so moving a collection day
+ * meant a deploy and finding all seven. The copy says {days} and the page
+ * fills it, which also means the shop can add a Tuesday and have every
+ * sentence on the page agree with the buttons underneath it.
+ */
+export function withDays(spec: Errand, said: string): Errand {
+  const swap = (text: string) => text.split("{days}").join(said);
+  return {
+    ...spec,
+    lead: swap(spec.lead),
+    pills: spec.pills.map(swap),
+    needs: spec.needs.map((one) => ({ what: swap(one.what), why: swap(one.why) })),
+    steps: spec.steps.map(([title, body]) => [swap(title), swap(body)] as [string, string]),
+    careful: { title: swap(spec.careful.title), said: swap(spec.careful.said) },
+    asked: spec.asked.map((one) => ({ q: swap(one.q), a: swap(one.a) })),
+  };
+}
 
 export function errandBySlug(slug: string): Errand | null {
   return ERRANDS.find((one) => one.slug === slug) ?? null;

@@ -194,6 +194,11 @@ export type Settings = {
   laundry_markup: number;
   laundry_minimum: number;
   laundry_note: string;
+  /** Which weekdays the laundry car goes, Sunday 0, as "1,4". */
+  laundry_days: string;
+  /** What a collection on any other day costs on top. Zero means we do
+   *  not go on another day at all. */
+  laundry_other_day: number;
   /** When each page of small print last said something different, as the
    *  shop typed it. Empty means the page says what it is instead. */
   /** The shop's Google Business Profile, and the link that opens straight
@@ -323,6 +328,8 @@ export const EMPTY: Settings = {
   laundry_markup: 0,
   laundry_minimum: 0,
   laundry_note: "",
+  laundry_days: "1,4",
+  laundry_other_day: 0,
   google_profile: "",
   google_review: "",
   google_rating: 0,

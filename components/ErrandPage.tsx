@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Errand from "@/components/Errand";
 import { faqGraph } from "@/components/Guide";
-import { errandBySlug } from "@/lib/errands";
+import { errandBySlug, withDays } from "@/lib/errands";
 import { askedFor } from "@/lib/page-faq";
 import { hostelNames } from "@/lib/hostels";
 import { safeSettings } from "@/lib/settings";
@@ -38,14 +38,16 @@ export function errandMeta(slug: string): Metadata {
 }
 
 export default async function ErrandPage({ slug }: { slug: string }) {
-  const spec = errandBySlug(slug);
-  if (!spec) notFound();
+  const found = errandBySlug(slug);
+  if (!found) notFound();
 
   const settings = await safeSettings();
-  const asked = await askedFor(spec.slug, spec.asked);
   // Only the one errand that has a price per item. The rest are quoted,
   // and a page that invented a list for them would be inventing prices.
-  const prices = spec.priceList ? await laundryList() : null;
+  const prices = found.priceList ? await laundryList() : null;
+  // The days the car goes, put into the words before anybody reads them.
+  const spec = prices ? withDays(found, prices.daysSaid) : found;
+  const asked = await askedFor(spec.slug, spec.asked);
   const catalogue = spec.catalogue
     ? { groups: printInOrder(), photos: await printPhotos() }
     : null;
