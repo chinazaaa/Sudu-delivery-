@@ -4395,6 +4395,10 @@ export async function importSkincare(
         banner_url: "",
         brand_hex: "",
         kind,
+        /* Never offered as an answer to "I do not know what to eat". The
+           chat guards this by kind as well, because the column is the
+           sort of thing an import forgets and unset reads as yes. */
+        suggest_in_chat: false,
       })
       .select("id")
       .single();

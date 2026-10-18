@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/supabase";
+import { onTheMenu } from "@/lib/shelf";
 
 export const dynamic = "force-dynamic";
 
@@ -49,18 +50,30 @@ export async function POST(request: Request): Promise<NextResponse> {
      */
     const { data: shops } = await db()
       .from("restaurants")
-      .select("id, name, suggest_in_chat")
+      .select("id, name, kind, suggest_in_chat")
       .eq("active", true);
     const open = (shops ?? []) as {
       id: string;
       name: string;
+      kind: string | null;
       suggest_in_chat: boolean | null;
     }[];
     if (open.length === 0) return NextResponse.json({ items: [] });
 
     const named = new Map(open.map((one) => [one.id, one.name]));
+    /*
+     * Never a counter, whatever its switch says.
+     *
+     * The switch is unset on anything the importer made, and unset counts
+     * as yes, so "here is what fifty thousand of food buys" offered a
+     * hundred capsules of inositol and a bottle of cod liver oil. The
+     * switch is for deciding whether a kitchen is suggested unasked; it
+     * was never meant to be the only thing standing between a drugs shelf
+     * and a dinner suggestion, and leaving it as that would make every
+     * counter opened from here on a fresh chance at the same bug.
+     */
     const ids = open
-      .filter((one) => one.suggest_in_chat !== false)
+      .filter((one) => onTheMenu(one.kind) && one.suggest_in_chat !== false)
       .map((one) => one.id);
     if (kitchen === "" && ids.length === 0) return NextResponse.json({ items: [] });
 
