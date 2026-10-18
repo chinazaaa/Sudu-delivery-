@@ -37,6 +37,7 @@ export default function Shelf({
   picked,
   drawing,
   counter = "skincare",
+  href = "/skincare",
 }: {
   products: SkincareProduct[];
   total: number;
@@ -57,6 +58,11 @@ export default function Shelf({
   drawing?: DrawingName;
   /** Which counter's basket things go into. */
   counter?: string;
+  /** Where this shelf lives. Every filter, every page and the clear-all
+   *  navigate here: spelt as "/skincare" they walked somebody off the
+   *  pharmacy shelf the moment they picked a shelf to narrow by, onto a
+   *  skincare page carrying a filter it had never heard of. */
+  href?: string;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -96,7 +102,7 @@ export default function Shelf({
     next.delete("page");
     // Replaced rather than pushed: typing six letters must not put six pages
     // in the back button.
-    router.replace(`/skincare?${next.toString()}`, { scroll: false });
+    router.replace(`${href}?${next.toString()}`, { scroll: false });
   };
 
   const pages = Math.max(1, Math.ceil(total / perPage));
@@ -134,7 +140,7 @@ export default function Shelf({
             value={typed}
             onChange={(event) => setTyped(event.target.value)}
             placeholder="Search a product or a brand"
-            aria-label="Search skincare"
+            aria-label="Search this shelf"
             className="field py-3.5 pl-11"
           />
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted">
@@ -195,7 +201,7 @@ export default function Shelf({
           ))}
           <button
             type="button"
-            onClick={() => router.push("/skincare")}
+            onClick={() => router.push(href)}
             className="text-sm font-semibold text-muted underline"
           >
             Clear all
@@ -271,13 +277,20 @@ export default function Shelf({
                     {product.name}
                   </p>
 
-                  <div className="mt-auto flex items-center justify-between gap-2 pt-1.5">
+                  {/* Wraps rather than overflows. A price and a stepper side
+                      by side fit a card at ₦850 and do not at ₦12,550: the
+                      price cannot shrink below its own digits and the stepper
+                      will not shrink at all, so the plus was being pushed out
+                      through the side of the card. Given room to wrap, the
+                      stepper drops under the price on the few that are too
+                      long instead of leaving the shelf. */}
+                  <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 pt-1.5">
                     <span className="font-display text-2xl font-extrabold leading-none">
                       {naira(product.price)}
                     </span>
 
                     {inCart ? (
-                      <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-ink p-0.5 text-white">
+                      <span className="ml-auto flex shrink-0 items-center gap-0.5 rounded-full bg-ink p-0.5 text-white">
                         <button
                           type="button"
                           aria-label={`One less ${product.name}`}
@@ -314,7 +327,7 @@ export default function Shelf({
                             counter
                           )
                         }
-                        className="grid size-11 shrink-0 place-items-center rounded-full border-2 border-ink bg-brand text-white shadow-press"
+                        className="ml-auto grid size-11 shrink-0 place-items-center rounded-full border-2 border-ink bg-brand text-white shadow-press"
                       >
                         <svg viewBox="0 0 24 24" className="size-[18px]" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
                           <path d="M12 5v14" />
@@ -332,13 +345,13 @@ export default function Shelf({
 
       {pages > 1 && (
         <div className="flex items-center justify-between gap-3">
-          <Step to={page - 1} disabled={page <= 1} params={params}>
+          <Step to={page - 1} disabled={page <= 1} params={params} href={href}>
             Back
           </Step>
           <span className="text-sm text-muted">
             Page {page} of {pages}
           </span>
-          <Step to={page + 1} disabled={page >= pages} params={params}>
+          <Step to={page + 1} disabled={page >= pages} params={params} href={href}>
             More
           </Step>
         </div>
@@ -556,11 +569,13 @@ function Step({
   to,
   disabled,
   params,
+  href,
   children,
 }: {
   to: number;
   disabled: boolean;
   params: URLSearchParams;
+  href: string;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -571,7 +586,7 @@ function Step({
       onClick={() => {
         const next = new URLSearchParams(params.toString());
         next.set("page", String(to));
-        router.push(`/skincare?${next.toString()}`);
+        router.push(`${href}?${next.toString()}`);
         window.scrollTo({ top: 0 });
       }}
       className="btn-quiet px-5 py-2 text-sm disabled:opacity-40"

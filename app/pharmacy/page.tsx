@@ -129,6 +129,7 @@ export default async function PharmacyPage({
         shelves={facets.shelves}
         brands={facets.brands}
         counter="pharmacy"
+        href="/pharmacy"
         // One drawing for the whole shelf. Guessing off a name draws a
         // parcel for every drug it does not recognise, and a wall of
         // parcels is worse than a wall of the same honest icon.
