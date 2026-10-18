@@ -15,7 +15,8 @@ import { hostelNames } from "@/lib/hostels";
 import { namedPromoters } from "@/lib/promoters";
 import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
 import { currentCustomer, customerDetails } from "@/lib/customer-auth";
-import { clockOf } from "@/lib/same-day";
+import { clockOf, deliverySlots } from "@/lib/same-day";
+import { hoursByDay, sameDayPricing } from "@/lib/settings";
 import ShelfCheckout from "@/components/ShelfCheckout";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +38,19 @@ export default async function PharmacyCheckoutPage() {
   const drop = nextDrop(settings);
   const [hour, minute] = cutOffTime(pharmacyCutOff(settings));
   const signedIn = await currentCustomer();
+
+  /*
+   * The other way, where there is one.
+   *
+   * Only today's slots: the weekly drop already answers "some day soon",
+   * and a list offering Saturday twice over helps nobody. Only while same
+   * day is running at all, so switching it off switches this off with it.
+   */
+  const soon =
+    settings.same_day_on === "on"
+      ? deliverySlots(new Date(), await hoursByDay()).filter((one) => one.day === "today")
+      : [];
+  const sameDay = await sameDayPricing();
 
   return (
     <>
@@ -68,6 +82,9 @@ export default async function PharmacyCheckoutPage() {
           rate: rateFor(settings, code),
         }))}
         me={signedIn ? await customerDetails(signedIn) : null}
+        slots={soon}
+        sameDayBands={sameDay.bands}
+        urgentExtra={sameDay.urgentExtra}
       />
       <HelpLine number={settings.whatsapp_number} about="a pharmacy order" />
     </>

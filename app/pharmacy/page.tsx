@@ -15,6 +15,8 @@ import {
   pharmacyShop,
 } from "@/lib/pharmacy";
 import { naira } from "@/lib/money";
+import { deliverySlots } from "@/lib/same-day";
+import { hoursByDay, sameDayPricing } from "@/lib/settings";
 import Shelf from "@/components/Shelf";
 import ShelfBar from "@/components/ShelfBar";
 
@@ -70,6 +72,21 @@ export default async function PharmacyPage({
   const drop = nextDrop(settings);
   const bands = pharmacyBands(settings);
 
+  /*
+   * Whether somebody could have it today instead.
+   *
+   * Medicine is the counter where waiting until Saturday is sometimes not
+   * an answer, so the other way is offered here rather than discovered at
+   * the checkout. Only where there is actually a slot left: an offer of a
+   * car today, made at eleven at night, is a promise the morning has to
+   * break.
+   */
+  const soon =
+    settings.same_day_on === "on"
+      ? deliverySlots(new Date(), await hoursByDay()).filter((one) => one.day === "today")
+      : [];
+  const sameDayFrom = soon.length > 0 ? (await sameDayPricing()).bands[0]?.fee ?? 0 : 0;
+
   return (
     <div className="-mt-4 space-y-4 pb-36">
       <header className="bleed relative overflow-hidden border-b-2 border-ink">
@@ -112,11 +129,23 @@ export default async function PharmacyPage({
                 Delivery from {naira(bands[0].fee)}
               </span>
             )}
+            {sameDayFrom > 0 && (
+              <span className="flex items-center rounded-full border-2 border-ink bg-paper px-4 py-2 text-sm font-semibold text-ink">
+                Or today, a car of its own · from {naira(sameDayFrom)}
+              </span>
+            )}
           </div>
           <p className="max-w-[640px] text-[15px] leading-relaxed text-ink/70">
             {pharmacyBlurb(settings) ||
               `Order any day. Order before ${pharmacyCutOff(settings) || "08:00"} on the morning of the drop and you are on it, otherwise it is the week after.`}{" "}
             To PAU, or anywhere in Lagos.
+            {sameDayFrom > 0 && (
+              <>
+                {" "}
+                If it cannot wait, choose a time at the checkout and we make
+                the trip today instead, at what a trip costs.
+              </>
+            )}
           </p>
         </div>
       </header>

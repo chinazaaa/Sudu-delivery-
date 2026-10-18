@@ -528,6 +528,16 @@ export async function closeSharedGroup(
 export async function placeSkincareOrder(input: {
   /** Which counter this basket came off. Skincare unless it says. */
   counter?: string;
+  /**
+   * A car of its own, at this time, instead of the weekly one.
+   *
+   * Medicine is the counter where waiting until Saturday is sometimes not
+   * an answer. Given a time, this stops being a drop and becomes an
+   * ordinary same day trip: the same car the food uses, priced by the same
+   * ladder, landing in admin beside the food ones rather than as a kind of
+   * run nobody has seen before.
+   */
+  deliverAt?: string;
   lines: { id: string; qty: number }[];
   name: string;
   phone: string;
@@ -566,8 +576,14 @@ export async function placeSkincareOrder(input: {
   // The car for the next drop, made if it is not there yet. Everybody who
   // ordered for that Saturday is in this one, which is what makes one flat
   // fee honest.
-  const car = await dropBatch(counter, settings);
-  if (!car) {
+  //
+  // Unless they asked for a time instead, and then there is no drop to join:
+  // placeOrder makes the trip itself, the way it does for food, and the
+  // checks that belong to a car of its own happen there against the real
+  // clock rather than here against a page that may have been open for hours.
+  const urgent = (input.deliverAt ?? "").trim();
+  const car = urgent === "" ? await dropBatch(counter, settings) : null;
+  if (urgent === "" && !car) {
     return { ok: false, error: "Could not open the next delivery. Try again shortly." };
   }
 
@@ -577,7 +593,8 @@ export async function placeSkincareOrder(input: {
     // answered that nobody sent them.
     autoCoupon: await linkCouponNow(input.heardFrom),
     source: "web",
-    batchId: car.id,
+    batchId: car?.id ?? "",
+    deliverAt: urgent === "" ? undefined : urgent,
     name: input.name,
     phone: input.phone,
     hostel: goesTo,
@@ -586,13 +603,21 @@ export async function placeSkincareOrder(input: {
     customerNote: input.note,
     heardFrom: input.heardFrom ?? "",
     payCurrency: input.paymentMethod === "card" ? input.payCurrency : undefined,
-    // Priced by the skincare ladder, which is its own: it is the car, not
-    // the cream, so it goes by how much room the order takes.
-    fixedFee: counterFee(
-      counter,
-      settings,
-      lines.reduce((count, one) => count + one.qty, 0)
-    ),
+    // Priced by the counter's own ladder: it is the car, not the cream, so
+    // it goes by how much room the order takes.
+    //
+    // Left unset for a car of its own, so the same day ladder prices it the
+    // way it prices food. A trip made for one person costs what a trip
+    // costs, and quoting the weekly fee for it would be selling a car at
+    // the price of a seat in one.
+    fixedFee:
+      urgent === ""
+        ? counterFee(
+            counter,
+            settings,
+            lines.reduce((count, one) => count + one.qty, 0)
+          )
+        : undefined,
   });
 
   if (!result.ok) return { ok: false, error: result.error };

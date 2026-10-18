@@ -9,7 +9,8 @@ import AbroadMoney, { type Money } from "./AbroadMoney";
 import Thumb from "./Thumb";
 import { naira } from "@/lib/money";
 import FeeBands from "./FeeBands";
-import { feeFor, type Band } from "@/lib/fees";
+import { feeFor, sameDayFee, type Band } from "@/lib/fees";
+import type { Slot } from "@/lib/same-day";
 import { placeSkincareOrder } from "@/app/actions";
 import { emptyShelf, setShelfQty, shelfTotal, useShelf } from "@/lib/skincare-cart";
 import type { DrawingName } from "./Drawing";
@@ -36,6 +37,9 @@ export default function ShelfCheckout({
   caution = "",
   drawing,
   href = "/skincare",
+  slots = [],
+  sameDayBands = [],
+  urgentExtra = 0,
 }: {
   /** The skincare ladder: it is the car, not the cream, so it goes by how
    *  much room the order takes. */
@@ -68,6 +72,11 @@ export default function ShelfCheckout({
   /** The shelf this basket came off, for the ways back to it. Spelt as
    *  "/skincare" they sent somebody buying medicine to the cleansers. */
   href?: string;
+  /** Times a car of its own could come today. Empty and the weekly drop is
+   *  the only way, which is how every counter worked to begin with. */
+  slots?: Slot[];
+  sameDayBands?: Band[];
+  urgentExtra?: number;
 }) {
   const router = useRouter();
   const cart = useShelf(counter);
@@ -118,7 +127,19 @@ export default function ShelfCheckout({
 
   const food = shelfTotal(cart);
   const items = cart.reduce((count, one) => count + one.qty, 0);
-  const fee = feeFor(items, null, bands);
+
+  /*
+   * Which car, and so which ladder.
+   *
+   * Empty is the weekly drop, and a slot's time is a trip made today. The
+   * drop is the default because it is the cheaper of the two and the one
+   * most people want; the other is there for the day somebody cannot wait.
+   */
+  const [soon, setSoon] = useState("");
+  const picked = slots.find((one) => one.at === soon) ?? null;
+  const fee = picked
+    ? sameDayFee(items, picked.urgent, sameDayBands, urgentExtra)
+    : feeFor(items, null, bands);
 
   if (cart.length === 0) {
     return (
@@ -134,6 +155,7 @@ export default function ShelfCheckout({
     try {
       const result = await placeSkincareOrder({
         counter,
+        deliverAt: picked ? picked.at : undefined,
         lines: cart.map((one) => ({ id: one.id, qty: one.qty })),
         name,
         phone,
@@ -173,12 +195,66 @@ export default function ShelfCheckout({
 
       <section className="card space-y-1">
         <h2 className="font-bold">When it arrives</h2>
-        <p className="text-lg font-extrabold text-ink">{when}</p>
-        <p className="text-sm text-muted">
-          {arrives !== "" && `${arrives}. `}
-          One car a week. Orders for it close at {cutOff} that morning, and
-          anything after goes on the next one.
-        </p>
+        {slots.length === 0 ? (
+          <>
+            <p className="text-lg font-extrabold text-ink">{when}</p>
+            <p className="text-sm text-muted">
+              {arrives !== "" && `${arrives}. `}
+              One car a week. Orders for it close at {cutOff} that morning, and
+              anything after goes on the next one.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-muted">
+              The weekly car, or a trip of its own today. The car is cheaper
+              because it is shared; a trip today costs what a trip costs.
+            </p>
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setSoon("")}
+                aria-pressed={soon === ""}
+                className={`flex w-full items-center justify-between gap-3 rounded-xl border-2 px-3.5 py-3 text-left ${
+                  soon === "" ? "border-ink bg-brand-tint" : "border-black/10 bg-shell"
+                }`}
+              >
+                <span>
+                  <span className="block font-extrabold">{when}</span>
+                  <span className="block text-xs text-muted">
+                    {arrives !== "" ? `${arrives}. ` : ""}Closes {cutOff} that
+                    morning
+                  </span>
+                </span>
+                <span className="shrink-0 font-extrabold">
+                  {naira(feeFor(items, null, bands))}
+                </span>
+              </button>
+
+              {slots.map((one) => (
+                <button
+                  key={one.at}
+                  type="button"
+                  onClick={() => setSoon(one.at)}
+                  aria-pressed={soon === one.at}
+                  className={`flex w-full items-center justify-between gap-3 rounded-xl border-2 px-3.5 py-3 text-left ${
+                    soon === one.at ? "border-ink bg-brand-tint" : "border-black/10 bg-shell"
+                  }`}
+                >
+                  <span>
+                    <span className="block font-extrabold">Today, {one.label}</span>
+                    <span className="block text-xs text-muted">
+                      A car of its own, straight there
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-extrabold">
+                    {naira(sameDayFee(items, one.urgent, sameDayBands, urgentExtra))}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
       <section className="card space-y-2">
@@ -373,7 +449,11 @@ export default function ShelfCheckout({
         </div>
         {/* The whole ladder, one tap away. Four bottles costing less than
             fifteen looks arbitrary until you can see why. */}
-        <FeeBands itemCount={items} flashFee={null} bands={bands} />
+        <FeeBands
+          itemCount={items}
+          flashFee={null}
+          bands={picked ? sameDayBands : bands}
+        />
         <p className="text-xs text-muted">
           One fee for the whole basket. It is the car, not the cream, so it
           goes by how much room your order takes.
