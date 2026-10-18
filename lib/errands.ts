@@ -156,16 +156,26 @@ export const ERRANDS: Errand[] = [
     slug: "pau-tailoring",
     title: "Tailoring and repairs",
     ticket: "Hostel · Pan-Atlantic University",
-    lead: "A hem, a zip, a dress for an event. We collect it, the tailor does it, we bring it back.",
+    lead: "Alterations, repairs and relining. Dresses, trousers, jackets, gowns, leather. We collect it, the tailor does it, we bring it back.",
     pills: ["Collected and returned", "Price agreed before anything is cut"],
     opening: "Hi Sudu, I have something that needs a tailor.",
     label: "Tell us what needs doing",
     preset: "Tailoring: ",
+    /* The common ones as taps, because a chip cloud of twenty-seven
+       wraps into half a screen and pushes the actual form off it. The
+       whole list lives in the questions below, where it can be read. */
     chips: [
-      "Take in or let out: ",
-      "A hem: ",
-      "A zip: ",
-      "Native wear for an event: ",
+      "Dress alterations: ",
+      "Shirt alterations: ",
+      "Trouser alterations: ",
+      "Suit alterations: ",
+      "Jacket alterations: ",
+      "Coat alterations: ",
+      "Skirt alterations: ",
+      "Blouse alterations: ",
+      "Agbada or kaftan: ",
+      "Zip replacement: ",
+      "General repairs: ",
       "I need it by: ",
     ],
     needs: [
@@ -200,6 +210,10 @@ export const ERRANDS: Errand[] = [
       {
         q: "Is there a tailor at PAU?",
         a: "Not on campus, which is why we do this. Tell us what needs doing and we collect the garment from your block, take it to a tailor we have used before, and bring it back when it is done.",
+      },
+      {
+        q: "What alterations do you do?",
+        a: "Everyday things: dress, shirt, blouse, trouser, skirt and jumpsuit alterations, taken in, let out or hemmed, and trouser shortening. Tailoring proper: suit, dinner suit, tuxedo, morning suit, wedding suit and waistcoat alterations, and coat or jacket relining. Occasion wear: ball gowns, evening dresses, prom dresses. Native: agbada and kaftan alterations. The harder materials: leather, suede, shearling and fur coat alterations and repairs. And the small jobs that are most of the work, which are zip replacement, general repairs, and jean shortening with the original finish kept so it does not look cut. If what you need is not on that list, ask anyway: it is what we are asked for most, not everything a tailor can do.",
       },
       {
         q: "How much does an alteration cost?",
