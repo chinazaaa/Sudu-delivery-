@@ -315,7 +315,19 @@ export async function POST(request: Request): Promise<NextResponse> {
         const stock = await counterIndex(counter);
         if (stock.length === 0) continue;
         const onCounter = find(said, stock.map((one) => ({ id: one.id, name: one.name })));
-        if (onCounter.how === "lost" || onCounter.hits.length === 0) continue;
+        /*
+         * Only on certainty, because this one makes a claim.
+         *
+         * "Need to amend my clothes" scored against eight hundred drug
+         * names, cleared the floor on "clo" against "S/S OAD CLO" and was
+         * answered with "we do carry it: it is on our pharmacy shelf",
+         * over a bottle of cod liver oil. The ordinary search can afford
+         * a maybe because it asks which one you meant; this says we stock
+         * the thing and then sends you away from the chat, so it has to
+         * be the same certainty the matcher uses for putting something in
+         * a basket.
+         */
+        if (onCounter.how !== "sure" || onCounter.hits.length === 0) continue;
         if (best && (best.hits[0]?.score ?? 0) >= onCounter.hits[0].score) continue;
         best = {
           counter,

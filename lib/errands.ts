@@ -595,7 +595,7 @@ const MEANS: { slug: string; words: RegExp }[] = [
   {
     slug: "pau-tailoring",
     words:
-      /\b(tailor|tailoring|seamstress|alter(ation|ations|ing)?|hem(ming)?|take in|let out|relining|zip (change|replacement)|sew(ing)?|agbada|abgada|kaftan|aso ?ebi|native wear)\b/i,
+      /\b(tailor|tailoring|seamstress|alter(ation|ations|ing)?|amend(ing)?|mend(ing)?|hem(ming)?|take in|let out|relining|resize|re ?size|zip (change|replacement)|sew(ing)?|stitch(ing)?|agbada|abgada|kaftan|aso ?ebi|native wear|too (big|tight|long|short) for me|does ?n[o']?t fit|fits? me|my clothes|my dress|my trouser|my gown|my suit)\b/i,
   },
   {
     slug: "pau-hair-and-barbing",
@@ -612,8 +612,21 @@ const MEANS: { slug: string; words: RegExp }[] = [
   },
 ];
 
+/**
+ * A sentence about the order somebody is already placing, which is never
+ * an errand however it is worded.
+ *
+ * "Amend my clothes" is a tailor and "amend my order" is the basket on
+ * the screen, and the two are one word apart. Sending somebody mid-order
+ * to a page about hemming trousers is far worse than missing a tailoring
+ * lead, so anything naming the order, the cart or the basket is left to
+ * the chat.
+ */
+const ABOUT_THE_ORDER = /\b(my|the|this) (order|cart|basket|delivery|run)\b/i;
+
 /** The errand a sentence is about, where it plainly is about one. */
 export function errandMeant(said: string): Errand | null {
+  if (ABOUT_THE_ORDER.test(said)) return null;
   for (const one of MEANS) {
     if (one.words.test(said)) return errandBySlug(one.slug);
   }

@@ -938,7 +938,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
            they are looking at, so they are handed it. */
         if (
           held.current.lines.length > 0 &&
-          /\b(chang|edit|remov|delet|swap|cancel|add)/i.test(said)
+          /\b(chang|edit|amend|remov|delet|swap|cancel|add)/i.test(said)
         ) {
           changeRef.current?.();
           return;
