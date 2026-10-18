@@ -38,6 +38,7 @@ export default function Shelf({
   drawing,
   counter = "skincare",
   href = "/skincare",
+  wholeName = false,
 }: {
   products: SkincareProduct[];
   total: number;
@@ -63,6 +64,11 @@ export default function Shelf({
    *  pharmacy shelf the moment they picked a shelf to narrow by, onto a
    *  skincare page carrying a filter it had never heard of. */
   href?: string;
+  /** Show the whole name rather than two lines of it. On a cleanser the
+   *  clamp costs a word of marketing; on medicine it costs the strength and
+   *  the count, and "PANADOL ADVANCE 500MG * 32 TABS" cut to "PANADOL
+   *  ADVANCE…" is a different product from the one somebody meant to buy. */
+  wholeName?: boolean;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -273,7 +279,11 @@ export default function Shelf({
                       {product.brand}
                     </button>
                   )}
-                  <p className="line-clamp-2 text-[15px] font-semibold leading-snug">
+                  <p
+                    className={`text-[15px] font-semibold leading-snug ${
+                      wholeName ? "" : "line-clamp-2"
+                    }`}
+                  >
                     {product.name}
                   </p>
 

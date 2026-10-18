@@ -35,6 +35,7 @@ export default function ShelfCheckout({
   counter = "skincare",
   caution = "",
   drawing,
+  href = "/skincare",
 }: {
   /** The skincare ladder: it is the car, not the cream, so it goes by how
    *  much room the order takes. */
@@ -64,6 +65,9 @@ export default function ShelfCheckout({
   caution?: string;
   /** One drawing for everything in the basket, where a name is no guide. */
   drawing?: DrawingName;
+  /** The shelf this basket came off, for the ways back to it. Spelt as
+   *  "/skincare" they sent somebody buying medicine to the cleansers. */
+  href?: string;
 }) {
   const router = useRouter();
   const cart = useShelf(counter);
@@ -85,6 +89,21 @@ export default function ShelfCheckout({
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
 
+  /*
+   * At the top, however they got here.
+   *
+   * The checkout is reached from a bar pinned to the bottom of a shelf
+   * somebody has scrolled a long way down. Arriving, the browser keeps the
+   * position it had, and this page is far shorter than the shelf, so the
+   * position clamps to the end of it: the first thing somebody sees after
+   * pressing Checkout is the footer, and they have to scroll up to find out
+   * what they are paying. The pager on the shelf does the same thing for the
+   * same reason.
+   */
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, []);
+
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("sudu_me_v1") ?? "null");
@@ -103,7 +122,7 @@ export default function ShelfCheckout({
 
   if (cart.length === 0) {
     return (
-      <Empty icon="cart" title="Nothing in the basket" href="/skincare" action="Back to the shelf">
+      <Empty icon="cart" title="Nothing in the basket" href={href} action="Back to the shelf">
         Pick a few things and they gather here, ready for {when}.
       </Empty>
     );
@@ -216,7 +235,7 @@ export default function ShelfCheckout({
             </li>
           ))}
         </ul>
-        <Link href="/skincare" className="text-sm font-semibold text-brand">
+        <Link href={href} className="text-sm font-semibold text-brand">
           Add something else
         </Link>
       </section>

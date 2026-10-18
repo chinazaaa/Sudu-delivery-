@@ -130,6 +130,8 @@ export default async function PharmacyPage({
         brands={facets.brands}
         counter="pharmacy"
         href="/pharmacy"
+        // The strength and the count live at the end of a drug's name.
+        wholeName
         // One drawing for the whole shelf. Guessing off a name draws a
         // parcel for every drug it does not recognise, and a wall of
         // parcels is worse than a wall of the same honest icon.

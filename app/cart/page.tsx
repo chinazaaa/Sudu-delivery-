@@ -3,6 +3,7 @@ import HelpLine from "@/components/HelpLine";
 import ShelfNote from "@/components/ShelfNote";
 import { allAreas, areaOfEach, valueBandsOfEach, openDaysOfEach } from "@/lib/areas-server";
 import { dropLabel, nextDrop, skincareOn } from "@/lib/skincare";
+import { nextDrop as nextPharmacyDrop, pharmacyOn } from "@/lib/pharmacy";
 import { livePrices, openRestaurants } from "@/lib/menu";
 import Reprice from "@/components/Reprice";
 import { hostelNames } from "@/lib/hostels";
@@ -61,6 +62,14 @@ export default async function CartPage({
           sight here, because one you can only see from the shelf is one
           somebody leaves behind. */}
       {skincareOn(settings) && <ShelfNote when={dropLabel(nextDrop(settings).date)} />}
+      {pharmacyOn(settings) && (
+        <ShelfNote
+          when={dropLabel(nextPharmacyDrop(settings).date)}
+          counter="pharmacy"
+          what="pharmacy"
+          href="/pharmacy/checkout"
+        />
+      )}
       <CartView
       restaurants={restaurants}
       runs={batches

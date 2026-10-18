@@ -42,6 +42,7 @@ export default async function PharmacyCheckoutPage() {
     <>
       <ShelfCheckout
         counter="pharmacy"
+        href="/pharmacy"
         drawing="medicine"
         bands={pharmacyBands(settings)}
         when={dropLabel(drop.date)}
