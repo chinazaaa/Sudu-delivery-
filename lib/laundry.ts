@@ -354,6 +354,27 @@ const COST: LaundryGroup[] = [
   },
 ];
 
+/**
+ * The order the sections are shown in.
+ *
+ * The cleaner's own list leads with dry cleaning, which is their business
+ * rather than ours: a student with a bag has shirts and trousers in it,
+ * not a suede jacket. So the two ordinary laundry sections go first and
+ * the rest keeps the list's own order underneath.
+ *
+ * A list of names rather than a reshuffled file, so changing this later is
+ * one line and not three hundred.
+ */
+const FIRST = ["Men - Laundry", "Women - Laundry", "Ironing"];
+
+function inOrder(groups: LaundryGroup[]): LaundryGroup[] {
+  const rank = (name: string) => {
+    const at = FIRST.indexOf(name);
+    return at === -1 ? FIRST.length : at;
+  };
+  return [...groups].sort((a, b) => rank(a.name) - rank(b.name));
+}
+
 /** What a cost becomes once the shop has taken its share. */
 export function retail(cost: number, markup: number, round: number): number {
   const up = Math.round(cost * (1 + Math.max(0, markup) / 100));
@@ -384,7 +405,7 @@ export async function laundryList(): Promise<{
     on: settings.laundry_on === "on",
     minimum: Number.isFinite(minimum) ? minimum : 0,
     note: settings.laundry_note ?? "",
-    groups: COST.map((group) => ({
+    groups: inOrder(COST).map((group) => ({
       name: group.name,
       items: group.items.map((one) => ({
         name: one.name,
