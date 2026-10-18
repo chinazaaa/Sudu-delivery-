@@ -79,14 +79,14 @@ export default async function ReceiptPage({
           The first version was a hair taller than A4 and pushed its own
           footer onto a second page, which is how a receipt becomes two
           pages of mostly nothing. */}
-      <article className="card p-6 print:border-0 print:p-0 print:shadow-none sm:p-8">
+      <article className="receipt card p-6 print:border-0 print:p-0 print:shadow-none sm:p-8">
         {/* Who it is from, and what it is. */}
         {/* Two columns that stay two columns. Allowed to wrap, a phone put
             the whole right-hand block on its own line below the blurb,
             where justify-between has nothing to push it against and it
             read as left-aligned: the word RECEIPT floating under a
             sentence rather than facing the mark across the top. */}
-        <header className="flex items-start justify-between gap-4 border-b-2 border-ink pb-5 print:pb-4">
+        <header className="flex items-start justify-between gap-4 border-b-2 border-ink pb-5 print:pb-2.5">
           <div className="min-w-0 space-y-2">
             <Wordmark size={30} className="sm:hidden" />
             <Wordmark size={34} className="hidden sm:block" />
@@ -96,7 +96,7 @@ export default async function ReceiptPage({
             </p>
           </div>
           <div className="shrink-0 text-right">
-            <p className="font-display text-[30px] font-black uppercase leading-none sm:text-[40px]">
+            <p className="font-display text-[30px] font-black uppercase leading-none print:text-[26px] sm:text-[40px]">
               Receipt
             </p>
             <p className="ticket mt-1 text-muted">{got.ref}</p>
@@ -109,7 +109,7 @@ export default async function ReceiptPage({
             columns became three stacked rows on paper and read as three
             sections of a form. The run belongs under the address, because
             it is part of the answer to "where did it go". */}
-        <section className="flex flex-wrap justify-between gap-6 border-b-2 border-ink py-5 print:py-4">
+        <section className="flex flex-wrap justify-between gap-6 border-b-2 border-ink py-5 print:py-2.5">
           <Fact title="Billed to">
             <p className="font-bold">{got.name}</p>
             <p className="text-muted">{got.phone}</p>
@@ -131,22 +131,22 @@ export default async function ReceiptPage({
         {/* What they bought. A box says its own name over its contents, and
             the contents are what the order actually holds: swap the pizza
             and this says the pizza they are getting. */}
-        <section className="py-5 print:py-4">
+        <section className="py-5 print:py-3">
           {got.box !== "" && (
             <div className="mb-4">
               <p className="ticket text-muted">The box</p>
-              <p className="font-display text-[26px] font-black uppercase leading-none">
+              <p className="font-display text-[26px] font-black uppercase leading-none print:text-[20px]">
                 {got.box}
               </p>
             </div>
           )}
 
           {kitchens.map((kitchen) => (
-            <div key={kitchen.name} className="mb-5 last:mb-0">
+            <div key={kitchen.name} className="mb-5 last:mb-0 print:mb-3">
               <p className="ticket mb-2 border-b-[1.5px] border-line pb-1.5 text-muted">
                 {kitchen.name}
               </p>
-              <ul className="space-y-2.5">
+              <ul className="space-y-2.5 print:space-y-1.5">
                 {kitchen.lines.map((line, at) => (
                   <Line key={`${at}-${line.name}`} line={line} />
                 ))}
@@ -156,7 +156,7 @@ export default async function ReceiptPage({
         </section>
 
         {/* What it came to. */}
-        <section className="border-t-2 border-ink pt-5 print:pt-4">
+        <section className="border-t-2 border-ink pt-5 print:pt-2.5">
           <dl className="ml-auto max-w-[320px] space-y-1.5 text-[15px]">
             <Row said="Food">{naira(got.food)}</Row>
             <Row said="Delivery">{naira(got.fee)}</Row>
@@ -166,10 +166,10 @@ export default async function ReceiptPage({
               </Row>
             )}
             <div className="flex items-baseline justify-between gap-4 border-t-2 border-ink pt-2">
-              <dt className="font-display text-[22px] font-black uppercase leading-none">
+              <dt className="font-display text-[22px] font-black uppercase leading-none print:text-[18px]">
                 Paid
               </dt>
-              <dd className="font-display text-[26px] font-black leading-none">
+              <dd className="font-display text-[26px] font-black leading-none print:text-[21px]">
                 {naira(got.total)}
               </dd>
             </div>
@@ -186,14 +186,14 @@ export default async function ReceiptPage({
         </section>
 
         {got.note.trim() !== "" && (
-          <section className="mt-5 rounded-xl bg-shell p-3.5">
+          <section className="mt-5 rounded-xl bg-shell p-3.5 print:mt-3 print:p-2.5">
             <p className="ticket text-muted">What they asked for</p>
             <p className="mt-1 text-[15px]">{got.note}</p>
           </section>
         )}
 
         {/* How to reach a person about it. */}
-        <footer className="mt-6 border-t-2 border-ink pt-4 print:mt-5">
+        <footer className="mt-6 border-t-2 border-ink pt-4 print:mt-3 print:pt-2.5">
           <p className="font-bold">Something not right?</p>
           <p className="hint mt-1">
             Tell us the same day and a person will answer.
@@ -202,7 +202,7 @@ export default async function ReceiptPage({
               : ""}
             {email ? ` Or write to ${email.orders}.` : ""}
           </p>
-          <p className="ticket mt-3 text-muted">
+          <p className="ticket mt-3 text-muted print:mt-2">
             sudu.store{handle === "" ? "" : ` · @${handle}`}
           </p>
         </footer>

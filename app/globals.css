@@ -353,8 +353,17 @@ body {
  * have come from anywhere.
  */
 @media print {
+  /*
+   * Narrower than it was, because the receipt lost this argument twice.
+   *
+   * Fourteen millimetres all round takes 28mm off the height of an A4
+   * page before a word is set, and a two line receipt was still coming
+   * out on two pages: a header, two facts, two lines, a total and a
+   * footer, spread over enough air to need a second sheet for the last
+   * inch of it. Ten is still a margin any printer can hold.
+   */
   @page {
-    margin: 14mm;
+    margin: 10mm;
   }
 
   html,
@@ -383,6 +392,28 @@ body {
   section,
   footer {
     break-inside: avoid;
+  }
+
+  /*
+   * The receipt, set a size down for paper.
+   *
+   * Everything on it is sized for a screen somebody is holding at arm's
+   * length. On paper it is read at desk distance, so a size down costs
+   * nothing in legibility and is most of what keeps an ordinary order on
+   * one sheet. The headline sizes are taken in beside their own classes;
+   * this catches the body text they sit over.
+   */
+  .receipt {
+    font-size: 13.5px;
+    line-height: 1.4;
+  }
+
+  .receipt .ticket {
+    font-size: 9.5px;
+  }
+
+  .receipt .hint {
+    font-size: 11px;
   }
 }
 
