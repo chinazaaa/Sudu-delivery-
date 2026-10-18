@@ -26,6 +26,9 @@ export default function AskForm({
   lead = "Say what you are looking for, however you would say it out loud. We find it, price it, and send you what it comes to. Nothing is ordered until you say yes.",
   label = "What are you looking for?",
   send = "Ask Sudu to get it",
+  fileLabel = "A picture, if you have one",
+  fileAccept = "image/*",
+  fileHint = "Optional, and often quicker than describing it. A photo of the thing, the damage, or the style you want.",
 }: {
   hostels: string[];
   whatsapp: string | null;
@@ -42,6 +45,11 @@ export default function AskForm({
   /** What the button says. Finding is the smaller half of this and the
    *  wrong half to name: nobody wants a thing located, they want it got. */
   send?: string;
+  /** What the attachment is for on this page. A printing page wants the
+   *  document itself; a repair page wants a photograph of the damage. */
+  fileLabel?: string;
+  fileAccept?: string;
+  fileHint?: string;
 }) {
   const [state, action, busy] = useActionState<AskState, FormData>(sendRequest, {
     error: "",
@@ -71,7 +79,7 @@ export default function AskForm({
     (wanted.trim() ? `\n\nWhat: ${wanted.trim()}` : "") +
     (budget.trim() ? `\nBudget: ${budget.trim()}` : "") +
     (hostel.trim() ? `\nBlock: ${hostel.trim()}` : "") +
-    (photo !== "" ? "\n\n(I have a picture to send.)" : "");
+    (photo !== "" ? "\n\n(I have a file to send.)" : "");
   const link = waLink(whatsapp, message);
 
   return (
@@ -160,20 +168,20 @@ export default function AskForm({
             ask for exactly the things people most want to show. */}
         <div>
           <label className="label" htmlFor="photo">
-            A picture, if you have one
+            {fileLabel}
           </label>
           <input
             id="photo"
             name="photo"
             type="file"
-            accept="image/*"
+            accept={fileAccept}
             onChange={(event) => setPhoto(event.target.files?.[0]?.name ?? "")}
             className="field"
           />
           <p className="mt-1 text-xs text-muted">
             {photo !== ""
               ? `${photo} attached.`
-              : "Optional, and often quicker than describing it. A photo of the thing, the damage, or the style you want."}
+              : fileHint}
           </p>
         </div>
 

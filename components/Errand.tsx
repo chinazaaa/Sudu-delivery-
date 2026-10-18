@@ -116,6 +116,7 @@ export default function Errand({
               chips={spec.chips}
               preset={spec.preset}
               here={`${site}/${spec.slug}`}
+              attach={spec.attach}
             />
           ) : shopping && prices ? (
             <LaundryPicker
@@ -138,6 +139,9 @@ export default function Errand({
                 opening={spec.opening}
                 label={spec.label}
                 lead="Tell us what you need and we come back with a price. Nothing happens until you say yes."
+                fileLabel={spec.attach?.label}
+                fileAccept={spec.attach?.accept}
+                fileHint={spec.attach?.hint}
               />
             </section>
           )}

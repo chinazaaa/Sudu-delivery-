@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { menuView, menuViewFor } from "@/lib/menu";
 import { COUNTERS, counterIndex } from "@/lib/counter";
+import { errandMeant } from "@/lib/errands";
 import type { ItemView } from "@/lib/view";
 import {
   countedInName,
@@ -245,6 +246,36 @@ export async function POST(request: Request): Promise<NextResponse> {
             shops: [],
           });
         }
+      }
+    }
+
+    /*
+     * Nothing on any menu, and it was never going to be: it is an errand.
+     *
+     * Laundry is not a dish, and a thesis binding is not one either. The
+     * chat searched the menu, found nothing and offered to go and source
+     * a thing we run a whole page about, which is the shop forgetting
+     * half of what it does in front of a customer.
+     *
+     * Asked before the counters, because the counters are a shelf of
+     * products and these are jobs: "print" is not a product we stock and
+     * never matches one, so letting it fall through would only waste the
+     * look.
+     */
+    if (found.how === "lost" && kitchen === "" && named.length === 0) {
+      const errand = errandMeant(said);
+      if (errand) {
+        return NextResponse.json({
+          how: "errand",
+          counter: errand.title,
+          href: `/${errand.slug}`,
+          lead: errand.lead,
+          qty: 1,
+          person: false,
+          hits: [],
+          instead: [],
+          shops: [],
+        });
       }
     }
 

@@ -43,6 +43,9 @@ export type Errand = {
   /** Whether the page prints the laundry price list under it. Only one
    *  errand has a per item price; the rest are quoted. */
   priceList?: boolean;
+  /** What the attachment on this page is for. A printing page wants the
+   *  document; most of the others want a photograph. */
+  attach?: { label: string; accept: string; hint: string };
   /** Whether the page carries the printing catalogue: two hundred things
    *  that can be made, every one of them quoted rather than priced. */
   catalogue?: boolean;
@@ -52,6 +55,11 @@ export const ERRANDS: Errand[] = [
   {
     slug: "pau-project-printing",
     catalogue: true,
+    attach: {
+      label: "The file you want printed",
+      accept: "image/*,.pdf,.doc,.docx,.ppt,.pptx,.txt",
+      hint: "A PDF is best, so nothing moves about between your laptop and the printer. Up to 15MB here; anything bigger, send it on WhatsApp.",
+    },
     title: "Project, thesis and assignment printing",
     ticket: "Printing and binding · Pan-Atlantic University",
     lead: "Send us the file. Assignments and handouts printed, final year projects and theses bound, all brought to your block.",
@@ -560,4 +568,54 @@ export const ERRANDS: Errand[] = [
 
 export function errandBySlug(slug: string): Errand | null {
   return ERRANDS.find((one) => one.slug === slug) ?? null;
+}
+
+/**
+ * The words that mean one of these, for the chat.
+ *
+ * It searched the food menu, found nothing, and offered to go and source
+ * a thing we run a whole page about. Laundry is not a dish and never will
+ * be, so the menu was never going to answer it.
+ *
+ * Deliberately specific: a word here sends somebody to a page, so "cut"
+ * must not mean barbing and "suit" must not mean a suit somebody wants
+ * bought. Where a word is genuinely ambiguous it is left out and the
+ * ordinary search keeps it.
+ */
+const MEANS: { slug: string; words: RegExp }[] = [
+  {
+    slug: "pau-project-printing",
+    words:
+      /\b(print(ing|out|s)?|printer|photocopy|photo ?copy|bind(ing)?|bound|thesis|theses|dissertation|project work|final year project|assignment|coursework|seminar paper|handout|lamination|laminate|spiral|hard ?cover|banner|flyer|sticker|poster)\b/i,
+  },
+  {
+    slug: "pau-laundry",
+    words: /\b(laundry|launder|wash(ing|ed)?|dry ?clean(ing|er)?|iron(ing)?|press(ing)? my|fold(ed|ing)?)\b/i,
+  },
+  {
+    slug: "pau-tailoring",
+    words:
+      /\b(tailor|tailoring|seamstress|alter(ation|ations|ing)?|hem(ming)?|take in|let out|relining|zip (change|replacement)|sew(ing)?|agbada|abgada|kaftan|aso ?ebi|native wear)\b/i,
+  },
+  {
+    slug: "pau-hair-and-barbing",
+    words: /\b(barb(er|ing)|braid(s|ing)?|hairdresser|salon|wig|retouch|manicure|pedicure|nails)\b/i,
+  },
+  {
+    slug: "pau-phone-and-laptop-repair",
+    words:
+      /\b(repair|fix my|cracked screen|broken screen|screen replacement|charging port|battery|will ?not charge|wont charge|laptop repair|phone repair)\b/i,
+  },
+  {
+    slug: "pau-buy-a-laptop",
+    words: /\b(buy a (laptop|phone)|looking for a laptop|need a laptop|new laptop|get me a laptop|laptop to buy)\b/i,
+  },
+];
+
+/** The errand a sentence is about, where it plainly is about one. */
+export function errandMeant(said: string): Errand | null {
+  for (const one of MEANS) {
+    if (one.words.test(said)) return errandBySlug(one.slug);
+  }
+  return null;
 }

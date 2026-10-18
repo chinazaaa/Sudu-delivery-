@@ -11,6 +11,16 @@ import { hostelNames } from "@/lib/hostels";
 
 export const dynamic = "force-dynamic";
 
+/** What to call the thing they attached, off its extension. */
+function attachmentKind(path: string): string {
+  const end = path.split(".").pop()?.toLowerCase() ?? "";
+  if (["jpg", "jpeg", "png", "webp", "gif", "heic"].includes(end)) return "a picture";
+  if (end === "pdf") return "a PDF";
+  if (["doc", "docx"].includes(end)) return "a Word document";
+  if (["ppt", "pptx"].includes(end)) return "a presentation";
+  return "a file";
+}
+
 /** Every counter the shop keeps, for the "put it on" dropdown. */
 async function shelfList(): Promise<{ id: string; name: string }[]> {
   try {
@@ -283,27 +293,22 @@ export default async function RequestsPage({
                   {ask.note && !fromTheChat(ask.note) && (
                     <p className="text-sm text-muted">{ask.note}</p>
                   )}
-                  {/* Opened full size in a tab rather than shown large
-                      here: the list is for scanning twenty asks, and the
-                      picture matters at the moment somebody is going out
-                      to buy the thing. */}
-                  {ask.photo_url && (
-                    <a
-                      href={ask.photo_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 inline-flex items-center gap-2 rounded-xl border-2 border-ink bg-shell px-2 py-1.5"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={ask.photo_url}
-                        alt="What they sent"
-                        className="size-12 rounded-lg object-cover"
-                      />
-                      <span className="text-sm font-semibold text-brand">
-                        They sent a picture
-                      </span>
-                    </a>
+                  {/* A signed link, good for an hour, because the bucket
+                      is private: an unsubmitted project at a public
+                      address is a plagiarism risk we would have made
+                      ourselves. No thumbnail, because half of these are
+                      now documents rather than photographs. */}
+                  {ask.file_path !== "" && (
+                    <p className="mt-1">
+                      <a
+                        href={`/admin/requests/${ask.id}/file`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-semibold text-brand underline"
+                      >
+                        They attached {attachmentKind(ask.file_path)}
+                      </a>
+                    </p>
                   )}
                 </div>
                 <span

@@ -1355,6 +1355,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           shelf?: string;
           counter?: string;
           href?: string;
+          lead?: string;
         };
         /*
          * The same thing on four counters.
@@ -1560,6 +1561,31 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           askOrder();
           return;
         }
+        /*
+         * Not food and not a product: it is one of the things we do.
+         *
+         * Laundry, printing, a tailor, a repair. The chat used to search
+         * the menu for these, find nothing, and offer to source them,
+         * which is the shop forgetting half of what it does while
+         * somebody is standing there asking for it.
+         */
+        if (got.how === "errand" && got.href) {
+          misses.current = 0;
+          bot(`That is one of ours. ${got.lead ?? ""}`.trim(), 500);
+          setAsk({
+            of: "buttons",
+            buttons: [
+              { said: `Open ${(got.counter ?? "the page").toLowerCase()}`, look: "green", href: got.href },
+              {
+                said: "Carry on with food",
+                look: "alt",
+                go: () => { me("Carry on with food"); askOrder(true); },
+              },
+            ],
+          });
+          return;
+        }
+
         /*
          * Not food, but we do sell it: it lives on a counter.
          *

@@ -57,8 +57,9 @@ export type CustomRequest = {
   phone: string;
   hostel: string;
   note: string;
-  /** A picture they attached, where they had one. Empty otherwise. */
-  photo_url: string;
+  /** What they attached, as a path in the private bucket. A link to it
+   *  is signed when somebody in admin asks to see it. */
+  file_path: string;
   status: string;
   admin_note: string;
   quoted: number | null;
@@ -80,8 +81,8 @@ export async function askFor(input: {
   phone: string;
   hostel: string;
   note: string;
-  /** A picture of the thing, where they had one. Empty otherwise. */
-  photoUrl?: string;
+  /** What they attached, as a storage path. Empty where nothing came. */
+  filePath?: string;
 }): Promise<AskResult> {
   const wanted = input.wanted.trim();
   // Enough to act on. "Food" is not a request anybody can go and buy.
@@ -105,7 +106,7 @@ export async function askFor(input: {
         phone,
         hostel: input.hostel.trim().slice(0, 80),
         note: input.note.trim().slice(0, 500),
-        photo_url: (input.photoUrl ?? "").slice(0, 500),
+        file_path: (input.filePath ?? "").slice(0, 500),
       })
       .select("id")
       .single();

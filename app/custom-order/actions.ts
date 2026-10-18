@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { askFor } from "@/lib/requests";
-import { fileFrom, uploadImage } from "@/lib/uploads";
+import { fileFrom, uploadAsk } from "@/lib/uploads";
 import { tellAdmin } from "@/lib/admin-alerts";
 
 export type AskState = { error: string };
@@ -21,18 +21,15 @@ export async function sendRequest(
   const said = (name: string) => String(form.get(name) ?? "");
 
   /*
-   * The picture, where they attached one, and never at the cost of the ask.
+   * What they attached, where they attached anything.
    *
-   * A photograph that will not upload must not lose somebody the sentence
-   * they typed: the request is the thing worth keeping and the picture is
-   * the thing that makes it quicker to answer.
+   * A file too big or of the wrong kind is said out loud rather than
+   * swallowed: somebody who attached their project and was told nothing
+   * would believe we had it. Everything else they typed is handed back
+   * with the message, so nothing is lost by saying so.
    */
-  let photoUrl = "";
-  try {
-    photoUrl = (await uploadImage(fileFrom(form, "photo"), "requests")) ?? "";
-  } catch {
-    /* Saved without it. They can send it on WhatsApp instead. */
-  }
+  const attached = await uploadAsk(fileFrom(form, "photo"), "requests");
+  if (attached.error !== "") return { error: attached.error };
 
   const result = await askFor({
     wanted: said("wanted"),
@@ -41,7 +38,7 @@ export async function sendRequest(
     phone: said("phone"),
     hostel: said("hostel"),
     note: said("note"),
-    photoUrl,
+    filePath: attached.path,
   });
 
   if (!result.ok) return { error: result.error };

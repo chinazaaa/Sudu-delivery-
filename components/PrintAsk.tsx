@@ -23,6 +23,7 @@ export default function PrintAsk({
   chips,
   preset,
   here,
+  attach,
 }: {
   groups: PrintGroup[];
   photos: Record<string, string>;
@@ -32,6 +33,7 @@ export default function PrintAsk({
   label: string;
   chips: string[];
   preset: string;
+  attach?: { label: string; accept: string; hint: string };
   /** This page's own address, so a quote links back to the exact item. */
   here: string;
 }) {
@@ -53,6 +55,9 @@ export default function PrintAsk({
           label={label}
           lead="Tell us what you need and we come back with a price. Nothing happens until you say yes."
           send="Request a quote"
+          fileLabel={attach?.label}
+          fileAccept={attach?.accept}
+          fileHint={attach?.hint}
         />
       </section>
 
