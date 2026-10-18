@@ -2,6 +2,8 @@ import Link from "next/link";
 import PageHead from "@/components/PageHead";
 import AskForm from "@/components/AskForm";
 import LaundryPicker from "@/components/LaundryPicker";
+import PrintAsk from "@/components/PrintAsk";
+import type { PrintGroup } from "@/lib/printing";
 import { AlsoSee, Asked, Reason, Section, type Ask } from "@/components/Guide";
 import type { PricedGroup } from "@/lib/laundry";
 import type { Errand as Spec } from "@/lib/errands";
@@ -28,10 +30,13 @@ export default function Errand({
   hostels,
   whatsapp,
   prices,
+  catalogue,
 }: {
   spec: Spec;
   /** The priced list, where this errand has one. */
   prices?: { groups: PricedGroup[]; minimum: number; note: string } | null;
+  /** The printing catalogue, where this errand carries one. */
+  catalogue?: { groups: PrintGroup[]; photos: Record<string, string> } | null;
   /** The questions as admin has them, which may differ from the shipped
    *  ones. Passed in rather than read here so the page stays a page. */
   asked: Ask[];
@@ -81,7 +86,18 @@ export default function Errand({
       <div className="space-y-8 py-8">
         {/* The thing they came to do, before anything explains itself. */}
         <div id="ask" className="scroll-mt-24">
-          {shopping && prices ? (
+          {catalogue ? (
+            <PrintAsk
+              groups={catalogue.groups}
+              photos={catalogue.photos}
+              hostels={hostels}
+              whatsapp={whatsapp}
+              opening={spec.opening}
+              label={spec.label}
+              chips={spec.chips}
+              preset={spec.preset}
+            />
+          ) : shopping && prices ? (
             <LaundryPicker
               groups={prices.groups}
               minimum={prices.minimum}

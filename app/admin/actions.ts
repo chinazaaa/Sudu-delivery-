@@ -4885,6 +4885,51 @@ export async function saveSkincare(
 }
 
 /**
+ * A photograph for one printing service.
+ *
+ * The catalogue is two hundred things and the pictures arrive one at a
+ * time, taken as the shop actually prints them. So this is one upload at
+ * one slug rather than an import: there is no file anybody could hand
+ * over that would fill it in, because the photographs do not exist yet.
+ *
+ * The supplier's own pictures were deliberately left out of the
+ * catalogue. They are theirs, and a shelf of somebody else's photographs
+ * is a shelf that goes blank the day they take them down.
+ */
+export async function savePrintPhoto(
+  _prev: { done: string; error: string },
+  form: FormData
+): Promise<{ done: string; error: string }> {
+  await assertAdmin();
+
+  const slug = String(form.get("slug") ?? "").trim();
+  if (slug === "") return { done: "", error: "No item named." };
+
+  let url = String(form.get("url") ?? "").trim();
+  try {
+    url = (await uploadImage(fileFrom(form, "photo"), "printing")) ?? url;
+  } catch (problem) {
+    return { done: "", error: (problem as Error).message };
+  }
+  if (url === "") return { done: "", error: "Choose a picture, or paste a link." };
+
+  const { error } = await db()
+    .from("print_photos")
+    .upsert({ slug, url, updated_at: new Date().toISOString() }, { onConflict: "slug" });
+  if (error) {
+    return {
+      done: "",
+      error: `${error.message}. If it names a table, run supabase/update.sql in Supabase.`,
+    };
+  }
+
+  updateTag("print-photos");
+  revalidatePath("/admin/printing");
+  revalidatePath("/pau-project-printing");
+  return { done: "Saved.", error: "" };
+}
+
+/**
  * A catalogue into an ordinary restaurant.
  *
  * The same import the skincare shelf uses, pointed at a menu instead. Two

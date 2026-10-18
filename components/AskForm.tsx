@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import { sendRequest, type AskState } from "@/app/custom-order/actions";
 import { waLink } from "@/lib/whatsapp";
@@ -56,6 +56,13 @@ export default function AskForm({
   // Only the name of it, to show that something is attached. The file
   // itself rides the form and is never held in state.
   const [photo, setPhoto] = useState("");
+
+  /* Tapping a thing in a catalogue below fills this in. Done as an effect
+     rather than by remounting the form, which would throw away the name
+     and the number somebody had already typed. */
+  useEffect(() => {
+    if (preset !== "") setWanted(preset);
+  }, [preset]);
 
   // Their own words, carried into the message so nobody types it twice. It
   // is theirs to send: we never send anything on anybody's behalf.

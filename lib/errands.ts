@@ -43,11 +43,15 @@ export type Errand = {
   /** Whether the page prints the laundry price list under it. Only one
    *  errand has a per item price; the rest are quoted. */
   priceList?: boolean;
+  /** Whether the page carries the printing catalogue: two hundred things
+   *  that can be made, every one of them quoted rather than priced. */
+  catalogue?: boolean;
 };
 
 export const ERRANDS: Errand[] = [
   {
     slug: "pau-project-printing",
+    catalogue: true,
     title: "Project, thesis and assignment printing",
     ticket: "Printing and binding · Pan-Atlantic University",
     lead: "Send us the file. Assignments and handouts printed, final year projects and theses bound, all brought to your block.",

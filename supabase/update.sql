@@ -1545,3 +1545,15 @@ alter table settings add column if not exists laundry_note text not null default
 -- the damage in it. WhatsApp has always carried pictures, so the form was
 -- the poorer of the two ways to ask. Now it is not.
 alter table custom_requests add column if not exists photo_url text not null default '';
+
+-- A photograph per printing service, ours rather than the supplier's.
+--
+-- The catalogue itself is in the code: names and descriptions, no prices
+-- and no pictures, because the supplier's photographs are theirs. This is
+-- where ours go as they are taken, keyed by the item's slug, so a shelf of
+-- two hundred can fill up one picture at a time rather than all at once.
+create table if not exists print_photos (
+  slug text primary key,
+  url text not null default '',
+  updated_at timestamptz not null default now()
+);
