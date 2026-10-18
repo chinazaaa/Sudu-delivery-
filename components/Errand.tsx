@@ -42,6 +42,8 @@ export default function Errand({
     note: string;
     days: string[];
     otherDay: number;
+    window: string;
+    back: string;
   } | null;
   /** The printing catalogue, where this errand carries one. */
   catalogue?: { groups: PrintGroup[]; photos: Record<string, string> } | null;
@@ -133,6 +135,8 @@ export default function Errand({
               opening={spec.opening}
               days={prices.days}
               otherDay={prices.otherDay}
+              window={prices.window}
+              back={prices.back}
             />
           ) : (
             <section className="space-y-3">

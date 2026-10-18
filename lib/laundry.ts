@@ -439,6 +439,8 @@ export async function laundryList(): Promise<{
   days: string[];
   daysSaid: string;
   otherDay: number;
+  window: string;
+  back: string;
 }> {
   const settings = await safeSettings();
   const markup = Number(settings.laundry_markup);
@@ -453,6 +455,8 @@ export async function laundryList(): Promise<{
     note: settings.laundry_note ?? "",
     days,
     daysSaid: daysSaid(days),
+    window: settings.laundry_window ?? "",
+    back: settings.laundry_back ?? "",
     /* What another day costs on top. Zero is not a free Tuesday: it means
        we do not go on one, and the choice is simply not offered. */
     otherDay: Number.isFinite(otherDay) && otherDay > 0 ? otherDay : 0,

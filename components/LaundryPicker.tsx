@@ -33,6 +33,8 @@ export default function LaundryPicker({
   opening,
   days,
   otherDay,
+  window: comes,
+  back,
 }: {
   groups: PricedGroup[];
   minimum: number;
@@ -43,6 +45,11 @@ export default function LaundryPicker({
   days: string[];
   /** What a day of its own costs on top. Zero and it is not offered. */
   otherDay: number;
+  /** When on the day we come, and when it comes back. Windows rather
+   *  than times: the round of blocks is not ordered until the list
+   *  closes, so a time would be a promise nobody can keep. */
+  window: string;
+  back: string;
 }) {
   const [picked, setPicked] = useState<Record<string, number>>({});
   const [typed, setTyped] = useState("");
@@ -103,7 +110,9 @@ export default function LaundryPicker({
         `\n\nTotal: ${naira(total)}` +
         (extra > 0 ? `\nAnother day: ${naira(extra)}` : "")
       : "") +
-    (day !== "" ? `\nCollection: ${day}` : "");
+    (day !== ""
+      ? `\nCollection: ${day}${comes !== "" ? `, ${comes.toLowerCase()}` : ""}`
+      : "");
   const link = waLink(whatsapp || null, message);
 
   const Stepper = ({ name, price }: { name: string; price: number }) => {
@@ -162,7 +171,16 @@ export default function LaundryPicker({
         <p>
           Tap what you have and the total works itself out. Collection from
           your block and the trip back are included in these prices.
+          {comes !== "" ? ` We come ${comes.toLowerCase()} on the day you pick` : ""}
+          {comes !== "" && back !== "" ? `, and it is back ${back.toLowerCase()}.` : comes !== "" ? "." : ""}
         </p>
+        {comes !== "" && (
+          <p>
+            A window rather than a time, because the driver does a round of
+            blocks and which one is first depends on who is on the list that
+            morning. We message you the day before with where you are in it.
+          </p>
+        )}
         {note !== "" && <p>{note}</p>}
       </div>
 

@@ -158,6 +158,39 @@ export default async function AdminLaundryPage() {
           </p>
         </div>
 
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="label" htmlFor="laundry_window">
+              When on the day you collect
+            </label>
+            <input
+              id="laundry_window"
+              name="laundry_window"
+              defaultValue={settings.laundry_window}
+              placeholder="Between 9am and 12pm"
+              className="field"
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="laundry_back">
+              When it comes back
+            </label>
+            <input
+              id="laundry_back"
+              name="laundry_back"
+              defaultValue={settings.laundry_back}
+              placeholder="In the evening, two days later"
+              className="field"
+            />
+          </div>
+        </div>
+        <p className="-mt-1 text-xs text-muted">
+          Windows rather than times. The driver does a round of blocks and
+          which one is first depends on who is on the list that morning, so
+          a time is a promise that gets broken and a window is one that does
+          not. Leave either empty and the page simply does not say it.
+        </p>
+
         <div>
           <label className="label" htmlFor="laundry_note">
             A line of your own on the price list

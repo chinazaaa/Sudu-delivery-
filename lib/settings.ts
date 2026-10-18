@@ -196,6 +196,11 @@ export type Settings = {
   laundry_note: string;
   /** Which weekdays the laundry car goes, Sunday 0, as "1,4". */
   laundry_days: string;
+  /** When on a collection day we come, and when it comes back. Windows
+   *  rather than times, because the round of blocks is not ordered until
+   *  the list closes. Empty and the page says neither. */
+  laundry_window: string;
+  laundry_back: string;
   /** What a collection on any other day costs on top. Zero means we do
    *  not go on another day at all. */
   laundry_other_day: number;
@@ -329,6 +334,8 @@ export const EMPTY: Settings = {
   laundry_minimum: 0,
   laundry_note: "",
   laundry_days: "1,4",
+  laundry_window: "",
+  laundry_back: "",
   laundry_other_day: 0,
   google_profile: "",
   google_review: "",
