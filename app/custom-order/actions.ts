@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { askFor } from "@/lib/requests";
+import { fileFrom, uploadImage } from "@/lib/uploads";
 import { tellAdmin } from "@/lib/admin-alerts";
 
 export type AskState = { error: string };
@@ -19,6 +20,20 @@ export async function sendRequest(
 ): Promise<AskState> {
   const said = (name: string) => String(form.get(name) ?? "");
 
+  /*
+   * The picture, where they attached one, and never at the cost of the ask.
+   *
+   * A photograph that will not upload must not lose somebody the sentence
+   * they typed: the request is the thing worth keeping and the picture is
+   * the thing that makes it quicker to answer.
+   */
+  let photoUrl = "";
+  try {
+    photoUrl = (await uploadImage(fileFrom(form, "photo"), "requests")) ?? "";
+  } catch {
+    /* Saved without it. They can send it on WhatsApp instead. */
+  }
+
   const result = await askFor({
     wanted: said("wanted"),
     budget: said("budget"),
@@ -26,6 +41,7 @@ export async function sendRequest(
     phone: said("phone"),
     hostel: said("hostel"),
     note: said("note"),
+    photoUrl,
   });
 
   if (!result.ok) return { error: result.error };

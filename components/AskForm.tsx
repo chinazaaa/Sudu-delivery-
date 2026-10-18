@@ -53,6 +53,9 @@ export default function AskForm({
   const [phone, setPhone] = useState("");
   const [hostel, setHostel] = useState("");
   const [note, setNote] = useState("");
+  // Only the name of it, to show that something is attached. The file
+  // itself rides the form and is never held in state.
+  const [photo, setPhoto] = useState("");
 
   // Their own words, carried into the message so nobody types it twice. It
   // is theirs to send: we never send anything on anybody's behalf.
@@ -60,7 +63,8 @@ export default function AskForm({
     opening +
     (wanted.trim() ? `\n\nWhat: ${wanted.trim()}` : "") +
     (budget.trim() ? `\nBudget: ${budget.trim()}` : "") +
-    (hostel.trim() ? `\nBlock: ${hostel.trim()}` : "");
+    (hostel.trim() ? `\nBlock: ${hostel.trim()}` : "") +
+    (photo !== "" ? "\n\n(I have a picture to send.)" : "");
   const link = waLink(whatsapp, message);
 
   return (
@@ -93,7 +97,7 @@ export default function AskForm({
         {link ? "Or fill this in and we will come back to you" : "Tell us what you need"}
       </p>
 
-      <form action={action} className="card space-y-3">
+      <form action={action} encType="multipart/form-data" className="card space-y-3">
         <div>
           <label className="label" htmlFor="wanted">
             {label}
@@ -140,6 +144,30 @@ export default function AskForm({
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Half of what people want is easier shown than said: a cracked
+            screen, a hairstyle, the damage in a garment, the model sticker
+            under a laptop. WhatsApp has always carried pictures and the
+            form has not, which made the form the poorer of the two ways to
+            ask for exactly the things people most want to show. */}
+        <div>
+          <label className="label" htmlFor="photo">
+            A picture, if you have one
+          </label>
+          <input
+            id="photo"
+            name="photo"
+            type="file"
+            accept="image/*"
+            onChange={(event) => setPhoto(event.target.files?.[0]?.name ?? "")}
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">
+            {photo !== ""
+              ? `${photo} attached.`
+              : "Optional, and often quicker than describing it. A photo of the thing, the damage, or the style you want."}
+          </p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">

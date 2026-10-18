@@ -283,6 +283,28 @@ export default async function RequestsPage({
                   {ask.note && !fromTheChat(ask.note) && (
                     <p className="text-sm text-muted">{ask.note}</p>
                   )}
+                  {/* Opened full size in a tab rather than shown large
+                      here: the list is for scanning twenty asks, and the
+                      picture matters at the moment somebody is going out
+                      to buy the thing. */}
+                  {ask.photo_url && (
+                    <a
+                      href={ask.photo_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-2 rounded-xl border-2 border-ink bg-shell px-2 py-1.5"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={ask.photo_url}
+                        alt="What they sent"
+                        className="size-12 rounded-lg object-cover"
+                      />
+                      <span className="text-sm font-semibold text-brand">
+                        They sent a picture
+                      </span>
+                    </a>
+                  )}
                 </div>
                 <span
                   className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${
