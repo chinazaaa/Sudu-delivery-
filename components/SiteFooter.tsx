@@ -55,6 +55,18 @@ export default function SiteFooter({
       ],
     },
     {
+      heading: "We also run",
+      links: [
+        { href: "/pau-project-printing", said: "Project printing" },
+        { href: "/pau-tailoring", said: "Tailoring" },
+        { href: "/pau-hair-and-barbing", said: "Hair and barbing" },
+        { href: "/pau-phone-and-laptop-repair", said: "Phone and laptop repair" },
+        { href: "/pau-buy-a-laptop", said: "Buying a laptop" },
+        { href: "/pau-laundry", said: "Laundry" },
+        { href: "/custom-order", said: "Anything else at all" },
+      ],
+    },
+    {
       heading: "Sudu",
       links: [
         { href: "/about", said: "About us" },

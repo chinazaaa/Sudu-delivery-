@@ -72,6 +72,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // something from far away, what does a room need.
     { url: `${site}/pau-snacks`, changeFrequency: "monthly" as const, priority: 0.8 },
     { url: `${site}/pau-pharmacy`, changeFrequency: "monthly" as const, priority: 0.8 },
+    { url: `${site}/pau-project-printing`, changeFrequency: "monthly" as const, priority: 0.8 },
+    { url: `${site}/pau-tailoring`, changeFrequency: "monthly" as const, priority: 0.8 },
+    { url: `${site}/pau-hair-and-barbing`, changeFrequency: "monthly" as const, priority: 0.8 },
+    { url: `${site}/pau-phone-and-laptop-repair`, changeFrequency: "monthly" as const, priority: 0.8 },
+    { url: `${site}/pau-buy-a-laptop`, changeFrequency: "monthly" as const, priority: 0.8 },
+    { url: `${site}/pau-laundry`, changeFrequency: "monthly" as const, priority: 0.8 },
     {
       url: `${site}/send-a-gift-to-pau`,
       changeFrequency: "monthly" as const,

@@ -18,6 +18,12 @@ export const FAQ_PAGES: { page: string; label: string; href: string }[] = [
   { page: "pau-snacks", label: "Snacks", href: "/pau-snacks" },
   { page: "pau-pharmacy", label: "Pharmacy", href: "/pau-pharmacy" },
   { page: "become-a-promoter", label: "Become a promoter", href: "/become-a-promoter" },
+  { page: "pau-project-printing", label: "Project printing and binding", href: "/pau-project-printing" },
+  { page: "pau-tailoring", label: "Tailoring and repairs", href: "/pau-tailoring" },
+  { page: "pau-hair-and-barbing", label: "Hair, braids and barbing", href: "/pau-hair-and-barbing" },
+  { page: "pau-phone-and-laptop-repair", label: "Phone and laptop repair", href: "/pau-phone-and-laptop-repair" },
+  { page: "pau-buy-a-laptop", label: "Buying a laptop or a phone", href: "/pau-buy-a-laptop" },
+  { page: "pau-laundry", label: "Laundry, collected from your block", href: "/pau-laundry" },
 ];
 
 /**

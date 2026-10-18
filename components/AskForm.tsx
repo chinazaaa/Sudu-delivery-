@@ -20,15 +20,30 @@ import { waLink } from "@/lib/whatsapp";
 export default function AskForm({
   hostels,
   whatsapp,
+  preset = "",
+  chips,
+  opening = "Hi Sudu, I am looking for something that is not on the menu.",
+  lead = "Say what you are looking for, however you would say it out loud. We find it, price it, and send you what it comes to. Nothing is ordered until you say yes.",
+  label = "What are you looking for?",
 }: {
   hostels: string[];
   whatsapp: string | null;
+  /** What the box starts with, where the page is about one kind of ask.
+   *  A project printing page that opens on an empty "what are you looking
+   *  for?" has thrown away the thing the page just said. */
+  preset?: string;
+  /** The taps above the box. The general list unless a page knows better. */
+  chips?: string[];
+  /** The first line of the message they send themselves. */
+  opening?: string;
+  lead?: string;
+  label?: string;
 }) {
   const [state, action, busy] = useActionState<AskState, FormData>(sendRequest, {
     error: "",
   });
 
-  const [wanted, setWanted] = useState("");
+  const [wanted, setWanted] = useState(preset);
   const [budget, setBudget] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -38,7 +53,7 @@ export default function AskForm({
   // Their own words, carried into the message so nobody types it twice. It
   // is theirs to send: we never send anything on anybody's behalf.
   const message =
-    "Hi Sudu, I am looking for something that is not on the menu." +
+    opening +
     (wanted.trim() ? `\n\nWhat: ${wanted.trim()}` : "") +
     (budget.trim() ? `\nBudget: ${budget.trim()}` : "") +
     (hostel.trim() ? `\nBlock: ${hostel.trim()}` : "");
@@ -57,9 +72,7 @@ export default function AskForm({
         <div className="card space-y-2">
           <p className="font-bold">Tell us on WhatsApp</p>
           <p className="text-sm text-muted">
-            Say what you are looking for, however you would say it out loud. We
-            find it, price it, and send you what it comes to. Nothing is
-            ordered until you say yes.
+            {lead}
           </p>
           <a
             href={link}
@@ -79,7 +92,7 @@ export default function AskForm({
       <form action={action} className="card space-y-3">
         <div>
           <label className="label" htmlFor="wanted">
-            What are you looking for?
+            {label}
           </label>
           <textarea
             id="wanted"
@@ -100,16 +113,16 @@ export default function AskForm({
               which is the worst a chip can be: it says the shop does these
               and then ignores the finger. */}
           <div className="mt-2 flex flex-wrap gap-2">
-            {[
+            {(chips ?? [
               "Tailoring: ",
               "Laundry: ",
               "A cake: ",
               "A charger: ",
               "Hair or nails: ",
-              "Printing: ",
+              "Project printing: ",
               "From a pharmacy: ",
               "From a shop in Lekki: ",
-            ].map((one) => (
+            ]).map((one) => (
               <button
                 key={one}
                 type="button"

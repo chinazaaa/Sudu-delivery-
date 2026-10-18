@@ -113,6 +113,12 @@ const PAGES: { href: string; said: string }[] = [
   { href: "/parcel", said: "Send a parcel to or from PAU" },
   { href: "/pau-pharmacy", said: "Pharmacy delivery to PAU" },
   { href: "/become-a-promoter", said: "Earn money as a student at PAU" },
+  { href: "/pau-project-printing", said: "Print and bind your project at PAU" },
+  { href: "/pau-tailoring", said: "A tailor for students at PAU" },
+  { href: "/pau-hair-and-barbing", said: "Hair, braids and barbing at PAU" },
+  { href: "/pau-phone-and-laptop-repair", said: "Fix a phone or laptop at PAU" },
+  { href: "/pau-buy-a-laptop", said: "Buy a laptop as a PAU student" },
+  { href: "/pau-laundry", said: "Laundry collected from your block" },
 ];
 
 export function AlsoSee({ not }: { not: string }) {
