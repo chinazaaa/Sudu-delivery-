@@ -7,12 +7,13 @@ import { naira } from "@/lib/money";
 export const dynamic = "force-dynamic";
 
 /**
- * The laundry margin, and nothing else.
+ * What laundry costs, and nothing else.
  *
- * The price list itself is in the code, as what the cleaner charges, and is
- * never printed anywhere. What this page sets is the one number that turns
- * cost into price, so the shop's margin can move without a deploy and there
- * is no screen anywhere that publishes what we pay.
+ * The washing is done in the family, so there is no bill coming in and no
+ * margin to work out: what somebody pays is what the shop takes, less the
+ * water, the powder and the hours. The list in the code is the going rate
+ * in Lagos, and what this page sets is how far above or below the town
+ * the shop prices itself.
  */
 export default async function AdminLaundryPage() {
   const settings = await safeSettings();
@@ -32,16 +33,18 @@ export default async function AdminLaundryPage() {
     <div className="space-y-4">
       <PageHeader
         title="Laundry"
-        detail="Collected from a block, washed, brought back. Priced per item from the cleaner's own list."
+        detail="Collected from a block, washed, brought back. Priced per item against what Lagos charges."
       />
 
       <div className="card border-2 border-ink bg-volt/20">
         <h2 className="font-bold">Where the prices come from</h2>
         <p className="mt-1 text-sm leading-relaxed">
-          The {laundryCount()} prices on the list are what the cleaner charges
-          us. They are never shown to anybody. What a customer sees is that
-          cost plus the markup below, rounded up to the nearest fifty naira,
-          so the only place your margin lives is this page.
+          The {laundryCount()} prices on the list are the going rate in Lagos,
+          not a bill from anybody: the washing is done in the family, so what
+          a customer pays is what the shop takes. The list is never shown.
+          What they see is the rate plus the figure below, rounded up to the
+          nearest fifty naira, which is how far above the town you are
+          pricing yourself.
         </p>
       </div>
 
@@ -66,7 +69,7 @@ export default async function AdminLaundryPage() {
 
           <div>
             <label className="label" htmlFor="laundry_markup">
-              What you add, in percent
+              Above the going rate, in percent
             </label>
             <input
               id="laundry_markup"
@@ -112,7 +115,9 @@ export default async function AdminLaundryPage() {
         </div>
 
         <div className="border-t border-black/5 pt-3">
-          <p className="label mb-1">At {markup}%, these are the prices</p>
+          <p className="label mb-1">
+            At {markup}% above the town, these are the prices
+          </p>
           <ul className="divide-y divide-black/5 text-sm">
             {sample.map((one) => (
               <li key={one.name} className="flex justify-between py-1.5">
@@ -128,10 +133,11 @@ export default async function AdminLaundryPage() {
             ))}
           </ul>
           <p className="mt-2 text-xs text-muted">
-            At {markup}% you keep about{" "}
-            {naira(retail(10000, markup, 50) - 10000)} on every{" "}
-            {naira(10000)} of cleaning, before the cost of going to collect it
-            and bringing it back.
+            Nobody is paid out of this, so a {naira(10000)} collection is{" "}
+            {naira(10000)} to the shop, less the water, the powder and the
+            hours. What it has to cover is the trip: collection and return
+            are two journeys the food runs do not make, so the smallest
+            basket worth driving for is the number beside this.
           </p>
         </div>
       </SkincareForm>
@@ -140,9 +146,9 @@ export default async function AdminLaundryPage() {
         <h2 className="font-bold">The list</h2>
         <p className="text-sm text-muted">
           {list.groups.length} sections, {laundryCount()} items. It lives in
-          the code rather than here because it is the cleaner&apos;s list, not
-          ours: when they change their prices, send the new list over and it
-          is one change.
+          the code rather than here because it is the town&apos;s list rather
+          than ours: when Lagos prices move, send the new list over and it is
+          one change.
         </p>
       </div>
     </div>

@@ -187,9 +187,9 @@ export type Settings = {
   pharmacy_blurb: string;
   pharmacy_bands: string;
   pharmacy_promise: string;
-  /** The laundry service: whether it is on, what we add to the cleaner's
-   *  price, the basket worth sending a car for, and a line of our own. The
-   *  cost list itself is in the code; only the margin lives here. */
+  /** The laundry service: whether it is on, what we add to the going rate,
+   *  the basket worth sending a car for, and a line of our own. The rate
+   *  list itself is in the code; only what we add to it lives here. */
   laundry_on: string;
   laundry_markup: number;
   laundry_minimum: number;

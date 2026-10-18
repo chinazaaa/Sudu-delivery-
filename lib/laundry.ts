@@ -1,12 +1,17 @@
 import { safeSettings } from "./settings";
 
 /**
- * What the cleaner charges us, and what we charge for it.
+ * The going rate in Lagos, and what we charge against it.
  *
- * The numbers in this file are cost. They are never printed: every price
- * anybody sees is worked out from them by the markup in admin, so the one
- * place the shop's margin lives is a settings field somebody can change
- * without a deploy, and a page can never accidentally publish what we pay.
+ * These numbers are not what anybody pays us and not what we pay anybody:
+ * the washing is done in the family, so there is no bill coming in. They
+ * are the market, taken off a Lagos price list, and they are the baseline
+ * the shop prices from. Every price a customer sees is one of these plus
+ * the figure in admin, so pricing against the town is one field somebody
+ * can move without a deploy.
+ *
+ * They are still never printed, for the same reason a shop does not show
+ * you the list it worked its prices out from.
  *
  * Priced per item rather than by the bag because that is how the trade
  * works here: a blouse and a duvet are not the same job and nobody who has
@@ -15,7 +20,7 @@ import { safeSettings } from "./settings";
 export type LaundryItem = { name: string; cost: number };
 export type LaundryGroup = { name: string; items: LaundryItem[] };
 
-/** Cost, from the cleaner's own list. Never shown to anybody. */
+/** The going rate, from a Lagos price list. Never shown to anybody. */
 const COST: LaundryGroup[] = [
   {
     name: "Men - Dry Cleaning",
@@ -357,7 +362,7 @@ const COST: LaundryGroup[] = [
 /**
  * The order the sections are shown in.
  *
- * The cleaner's own list leads with dry cleaning, which is their business
+ * The trade's own list leads with dry cleaning, which is its business
  * rather than ours: a student with a bag has shirts and trousers in it,
  * not a suede jacket. So the two ordinary laundry sections go first and
  * the rest keeps the list's own order underneath.
@@ -375,7 +380,7 @@ function inOrder(groups: LaundryGroup[]): LaundryGroup[] {
   return [...groups].sort((a, b) => rank(a.name) - rank(b.name));
 }
 
-/** What a cost becomes once the shop has taken its share. */
+/** What the going rate becomes once the shop has priced against it. */
 export function retail(cost: number, markup: number, round: number): number {
   const up = Math.round(cost * (1 + Math.max(0, markup) / 100));
   const step = Math.max(1, round);
