@@ -48,22 +48,30 @@ export default function PrintCatalogue({
           )
           .slice(0, 30);
 
+  /*
+   * The supplier left sixty-five descriptions as the name of the
+   * category they are filed under, so the line under "Wilson White Gift
+   * Set" read "Branding Material", which the reader can already see. A
+   * line that only repeats what is above it is worse than no line.
+   */
   const Card = ({
     slug,
     name,
     said,
+    group,
   }: {
     slug: string;
     name: string;
     said: string;
+    group: string;
   }) => (
     <li className="flex gap-3 py-3">
       <span className="size-16 shrink-0 overflow-hidden rounded-xl">
-        <Thumb src={photos[slug] ?? ""} name={name} drawing="box" />
+        <Thumb src={photos[slug] ?? ""} name={name} drawing="print" />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[15px] font-semibold leading-snug">{name}</span>
-        {said !== "" && (
+        {said !== "" && said.trim().toLowerCase() !== group.trim().toLowerCase() && (
           <span className="mt-0.5 line-clamp-2 block text-sm text-muted">{said}</span>
         )}
         <button
@@ -119,7 +127,13 @@ export default function PrintCatalogue({
           ) : (
             <ul className="divide-y divide-black/5">
               {found.map((one) => (
-                <Card key={one.slug} slug={one.slug} name={one.name} said={one.said} />
+                <Card
+                  key={one.slug}
+                  slug={one.slug}
+                  name={one.name}
+                  said={one.said}
+                  group={one.group}
+                />
               ))}
             </ul>
           )}
@@ -147,6 +161,7 @@ export default function PrintCatalogue({
                       slug={one.slug}
                       name={one.name}
                       said={one.said}
+                      group={group.name}
                     />
                   ))}
                 </ul>

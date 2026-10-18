@@ -1,6 +1,6 @@
 import PageHeader from "@/components/admin/PageHeader";
 import PrintPhoto from "@/components/admin/PrintPhoto";
-import { PRINTING, printCount } from "@/lib/printing";
+import { printCount, printInOrder } from "@/lib/printing";
 import { printPhotos } from "@/lib/print-photos";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +38,7 @@ export default async function AdminPrintingPage() {
         </p>
       </div>
 
-      {PRINTING.map((group) => (
+      {printInOrder().map((group) => (
         <details key={group.name} className="card">
           <summary className="cursor-pointer font-semibold">
             {group.name}

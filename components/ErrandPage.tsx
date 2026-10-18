@@ -7,7 +7,7 @@ import { askedFor } from "@/lib/page-faq";
 import { hostelNames } from "@/lib/hostels";
 import { safeSettings } from "@/lib/settings";
 import { laundryList } from "@/lib/laundry";
-import { PRINTING } from "@/lib/printing";
+import { printInOrder } from "@/lib/printing";
 import { printPhotos } from "@/lib/print-photos";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
@@ -47,7 +47,7 @@ export default async function ErrandPage({ slug }: { slug: string }) {
   // and a page that invented a list for them would be inventing prices.
   const prices = spec.priceList ? await laundryList() : null;
   const catalogue = spec.catalogue
-    ? { groups: PRINTING, photos: await printPhotos() }
+    ? { groups: printInOrder(), photos: await printPhotos() }
     : null;
 
   /*

@@ -383,6 +383,40 @@ export const PRINTING: PrintGroup[] = [
   },
 ];
 
+/**
+ * The order the shelf shows them in.
+ *
+ * The export comes out biggest group first, which puts seventy-two
+ * promotional giveaways above the four rows that say "photocopy" and
+ * "print out". That is the supplier's business sorted by their volume,
+ * not a student's by their need, so the paper jobs come first and the
+ * mugs and bracelets sit underneath.
+ *
+ * A list of names rather than a reshuffled file, so the next change is one
+ * line.
+ */
+const FIRST = [
+  "Projects and coursework",
+  "Document Printing",
+  "Bindery Service",
+  "Finishing & Binding",
+  "Typing",
+  "Lamination",
+  "Scan",
+  "Photo Prints",
+  "Small Prints",
+  "Flyers",
+  "Stickers",
+];
+
+export function printInOrder(): PrintGroup[] {
+  const rank = (name: string) => {
+    const at = FIRST.indexOf(name);
+    return at === -1 ? FIRST.length : at;
+  };
+  return [...PRINTING].sort((a, b) => rank(a.name) - rank(b.name));
+}
+
 export function printCount(): number {
   return PRINTING.reduce((total, one) => total + one.items.length, 0);
 }
