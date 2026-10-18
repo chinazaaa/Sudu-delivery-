@@ -17,7 +17,10 @@ import { serialiseBands } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
 import { allAreas, areaOfEach, valueBandsOfEach } from "@/lib/areas-server";
 import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
+import { ERRANDS } from "@/lib/errands";
 import { readDoors } from "@/lib/home-doors";
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
 import { liveRibbon } from "@/lib/ribbon";
 import { db } from "@/lib/supabase";
 
@@ -172,6 +175,22 @@ export async function GET(): Promise<NextResponse> {
       homeOrder: readDoors(settings.home_order)
         .filter((row) => row.on)
         .map((row) => row.key),
+      /*
+       * The things we do that are not a shelf, sent rather than built into
+       * the app.
+       *
+       * Every one of them ends in a message to a person, so there is
+       * nothing for the app to do with them but name them and open the
+       * page. Sent from here so a seventh service is live the day it is
+       * written, instead of waiting on a release neither store is in a
+       * hurry to approve.
+       */
+      services: ERRANDS.map((one) => ({
+        slug: one.slug,
+        title: one.title,
+        lead: one.lead,
+        url: `${SITE}/${one.slug}`,
+      })),
       // Whose money a card link can be made out in. The website's food
       // checkout has asked this all along and the app's never did, so a
       // parent in London reached the last screen and was shown a naira

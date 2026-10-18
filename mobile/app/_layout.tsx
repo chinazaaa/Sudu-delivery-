@@ -139,6 +139,7 @@ export default function Layout() {
         <Stack.Screen name="skincare-checkout" options={{ title: "Checkout" }} />
         <Stack.Screen name="pharmacy" options={{ title: "Pharmacy" }} />
         <Stack.Screen name="pharmacy-checkout" options={{ title: "Checkout" }} />
+        <Stack.Screen name="services" options={{ title: "What else we do" }} />
         {/* A basket somebody was sent. sudu.store/c/<code> opens here rather
             than in a browser, which is the whole reason the app knows about
             links at all. */}

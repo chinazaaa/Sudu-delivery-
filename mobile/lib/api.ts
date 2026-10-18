@@ -318,7 +318,20 @@ export type Shop = {
   /** The order of the front page, as admin set it, and what is switched off.
    *  Older servers send none, and then the app keeps the order it shipped
    *  with, which is the same one the website ships with. */
-  homeOrder?: ("food" | "shelves" | "parcel" | "skincare" | "custom" | "group")[];
+  homeOrder?: (
+    | "food"
+    | "shelves"
+    | "parcel"
+    | "skincare"
+    | "pharmacy"
+    | "custom"
+    | "group"
+  )[];
+  /** The things the shop does that are not a shelf: laundry, printing, a
+   *  tailor. Sent by the server rather than built in, so a new one appears
+   *  without waiting on a release. Absent on older servers, and then the
+   *  app simply does not mention them, which is what it did before. */
+  services?: { slug: string; title: string; lead: string; url: string }[];
   /** Today's automatic offer, for the card in the corner. Null or absent
    *  means nothing is on, which is most days. */
   nudge?: Nudge | null;

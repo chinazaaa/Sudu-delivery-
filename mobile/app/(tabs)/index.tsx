@@ -692,6 +692,18 @@ export default function Home() {
               onPress={() => router.push("/pharmacy" as never)}
             />
           )}
+          {/* Named rather than called "Services" or "More", because the
+              whole point of this door is that somebody who installed the
+              app to order dinner does not know the same shop will collect
+              their laundry. A door labelled "More" teaches them nothing
+              and they never open it. */}
+          {(shop?.services ?? []).length > 0 && (
+            <Door
+              label="Laundry, printing & more"
+              glyph="services"
+              onPress={() => router.push("/services" as never)}
+            />
+          )}
           <Door
             label="Anything else"
             glyph="ask"
@@ -764,7 +776,7 @@ function Door({
   onPress,
 }: {
   label: string;
-  glyph: "group" | "parcel" | "skincare" | "pharmacy" | "ask";
+  glyph: "group" | "parcel" | "skincare" | "pharmacy" | "services" | "ask";
   onPress: () => void;
 }) {
   return (
@@ -803,7 +815,7 @@ function Door({
 function Glyph({
   kind,
 }: {
-  kind: "group" | "parcel" | "skincare" | "pharmacy" | "ask";
+  kind: "group" | "parcel" | "skincare" | "pharmacy" | "services" | "ask";
 }) {
   const name =
     kind === "group"
@@ -814,6 +826,8 @@ function Glyph({
           ? "flask-outline"
           : kind === "pharmacy"
             ? "medkit-outline"
-            : "help-circle-outline";
+            : kind === "services"
+              ? "construct-outline"
+              : "help-circle-outline";
   return <Ionicons name={name} size={22} color={T.brand} />;
 }
