@@ -6,6 +6,7 @@ import Thumb from "./Thumb";
 import { naira } from "@/lib/money";
 import { addToShelf, setShelfQty, useShelf } from "@/lib/skincare-cart";
 import type { SkincareProduct } from "@/lib/skincare";
+import type { DrawingName } from "./Drawing";
 
 type Facet = { name: string; items: number };
 
@@ -34,6 +35,8 @@ export default function Shelf({
   shelves,
   brands,
   picked,
+  drawing,
+  counter = "skincare",
 }: {
   products: SkincareProduct[];
   total: number;
@@ -49,10 +52,15 @@ export default function Shelf({
     under: string;
     over: string;
   };
+  /** One drawing for the whole shelf, where guessing off a name would not
+   *  do. Left out and each product is guessed at as before. */
+  drawing?: DrawingName;
+  /** Which counter's basket things go into. */
+  counter?: string;
 }) {
   const router = useRouter();
   const params = useSearchParams();
-  const cart = useShelf();
+  const cart = useShelf(counter);
   const [typed, setTyped] = useState(picked.q);
   const [open, setOpen] = useState(false);
 
@@ -242,7 +250,12 @@ export default function Shelf({
                 className="flex flex-col overflow-hidden rounded-2xl border-2 border-ink bg-paper"
               >
                 <div className="aspect-square border-b-2 border-ink">
-                  <Thumb src={product.imageUrl} name={product.name} rounded="" />
+                  <Thumb
+                    src={product.imageUrl}
+                    name={product.name}
+                    rounded=""
+                    drawing={drawing}
+                  />
                 </div>
                 <div className="flex flex-1 flex-col gap-1.5 p-3">
                   {product.brand !== "" && (
@@ -268,7 +281,7 @@ export default function Shelf({
                         <button
                           type="button"
                           aria-label={`One less ${product.name}`}
-                          onClick={() => setShelfQty(product.id, inCart.qty - 1)}
+                          onClick={() => setShelfQty(product.id, inCart.qty - 1, counter)}
                           className="grid size-9 place-items-center rounded-full text-lg leading-none"
                         >
                           −
@@ -279,7 +292,7 @@ export default function Shelf({
                         <button
                           type="button"
                           aria-label={`One more ${product.name}`}
-                          onClick={() => setShelfQty(product.id, inCart.qty + 1)}
+                          onClick={() => setShelfQty(product.id, inCart.qty + 1, counter)}
                           className="grid size-9 place-items-center rounded-full bg-brand text-lg leading-none"
                         >
                           +
@@ -296,7 +309,10 @@ export default function Shelf({
                             brand: product.brand,
                             price: product.price,
                             imageUrl: product.imageUrl,
-                          })
+                          },
+                            1,
+                            counter
+                          )
                         }
                         className="grid size-11 shrink-0 place-items-center rounded-full border-2 border-ink bg-brand text-white shadow-press"
                       >

@@ -199,6 +199,7 @@ export default async function AdminSkincarePage() {
         missingPhotos={missing?.count ?? 0}
         borrowedPhotos={borrowed?.count ?? 0}
         photosHref={shop ? `/admin/menu/${shop.id}/photos` : ""}
+        kind="skincare"
       />
     </div>
   );

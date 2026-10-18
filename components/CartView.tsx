@@ -98,8 +98,11 @@ export default function CartView({
   }, []);
 
   const cart = useCart();
-  // Theirs too, and waiting, even though it checks out on its own run.
-  const waitingSkincare = shelfCount(useShelf());
+  // Theirs too, and waiting, even though each checks out on its own run.
+  // Every counter, not only skincare: the bag counts them all, so a page
+  // that knows about one of them is the same wrong badge as before.
+  const waitingSkincare = shelfCount(useShelf("skincare"));
+  const waitingPharmacy = shelfCount(useShelf("pharmacy"));
   const { people } = usePeople();
   const [newPerson, setNewPerson] = useState("");
   const router = useRouter();
@@ -408,17 +411,24 @@ export default function CartView({
      * lost something somebody picked. It is still their stuff and it is
      * still waiting; it just checks out somewhere else.
      */
-    if (waitingSkincare > 0) {
+    const waiting =
+      waitingSkincare > 0
+        ? { count: waitingSkincare, what: "skincare", href: "/skincare/checkout" }
+        : waitingPharmacy > 0
+          ? { count: waitingPharmacy, what: "pharmacy", href: "/pharmacy/checkout" }
+          : null;
+
+    if (waiting) {
       return (
         <Empty
           icon="cart"
           title="Nothing from the kitchens yet"
-          href="/skincare/checkout"
-          action="Check out the skincare"
+          href={waiting.href}
+          action={`Check out the ${waiting.what}`}
         >
-          {waitingSkincare === 1
-            ? "You have one skincare item waiting. It is its own order on its own run, so it does not travel with food, and it is still here when you come back for some."
-            : `You have ${waitingSkincare} skincare items waiting. They are their own order on their own run, so they do not travel with food, and they are still here when you come back for some.`}
+          {waiting.count === 1
+            ? `You have one ${waiting.what} item waiting. It is its own order on its own run, so it does not travel with food, and it is still here when you come back for some.`
+            : `You have ${waiting.count} ${waiting.what} items waiting. They are their own order on their own run, so they do not travel with food, and they are still here when you come back for some.`}
         </Empty>
       );
     }

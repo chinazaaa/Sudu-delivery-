@@ -25,7 +25,8 @@ export default function ShareDelivery({
   /** What is in the car. The skincare drop is the same offer in every way
    *  that matters and a different word, and calling somebody's cleanser
    *  food is the tell that a page was written for the other shop. */
-  what?: "food" | "skincare";
+  /** What is travelling, in a word: "food", or a counter's name. */
+  what?: string;
 }) {
   const message =
     `${name} is ordering ${what} to campus with Sudu, closing ${closes}. ` +
@@ -37,7 +38,7 @@ export default function ShareDelivery({
       <p className="mt-1 text-sm text-ink/80">
         Send them this. Whatever they order rides in the same delivery, so between
         you there is one delivery fee instead of one each. They pay for their own
-        {what === "skincare" ? " things" : " food"}, on their own number.
+        {what === "food" ? " food" : " things"}, on their own number.
       </p>
       <div className="mt-3">
         <SendLink message={message} link={url} label="Send my friends the link on WhatsApp" />

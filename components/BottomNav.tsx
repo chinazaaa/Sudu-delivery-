@@ -19,7 +19,10 @@ export default function BottomNav() {
   // remembers they have.
   // What is in the bag, not what it would cost to carry: countItems is
   // never less than one container, so it read 1 over an empty cart.
-  const count = cartCount(cart) + shelfCount(useShelf());
+  // Every basket there is, because the bag is one bag to whoever is
+  // looking at it.
+  const count =
+    cartCount(cart) + shelfCount(useShelf("skincare")) + shelfCount(useShelf("pharmacy"));
 
   // Ordering together is the whole point of the shop, so it gets a thumb on
   // the bar rather than a card somebody has to scroll to. Which group, or

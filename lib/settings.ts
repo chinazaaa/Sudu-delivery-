@@ -176,6 +176,17 @@ export type Settings = {
   /** Where the products come from, in the shop's own words. Empty falls back
    *  to the line in the code, so this reads right before anybody sets it. */
   skincare_promise: string;
+  /** The pharmacy counter, in the same shape as skincare above: a shop of
+   *  its own, on its own car, with its own ladder. Its own columns rather
+   *  than a share of skincare's, so closing one does not close the other. */
+  pharmacy_on: string;
+  pharmacy_fee: number;
+  pharmacy_day: number;
+  pharmacy_cut_off: string;
+  pharmacy_window: string;
+  pharmacy_blurb: string;
+  pharmacy_bands: string;
+  pharmacy_promise: string;
   /** When each page of small print last said something different, as the
    *  shop typed it. Empty means the page says what it is instead. */
   /** The shop's Google Business Profile, and the link that opens straight
@@ -293,6 +304,14 @@ export const EMPTY: Settings = {
   skincare_blurb: "",
   skincare_bands: "",
   skincare_promise: "",
+  pharmacy_on: "",
+  pharmacy_fee: 0,
+  pharmacy_day: 6,
+  pharmacy_cut_off: "08:00",
+  pharmacy_window: "",
+  pharmacy_blurb: "",
+  pharmacy_bands: "",
+  pharmacy_promise: "",
   google_profile: "",
   google_review: "",
   google_rating: 0,

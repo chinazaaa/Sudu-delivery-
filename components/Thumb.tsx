@@ -1,4 +1,4 @@
-import Drawing from "./Drawing";
+import Drawing, { type DrawingName } from "./Drawing";
 import { drawingFor } from "@/lib/drawing";
 
 /**
@@ -18,11 +18,16 @@ export default function Thumb({
   rounded = "rounded-xl",
   variant = "tile",
   category = "",
+  drawing,
 }: {
   src: string;
   name: string;
   className?: string;
   rounded?: string;
+  /** The drawing to wear, where the whole shelf wears one. Guessing off a
+   *  name works on a menu, where the names are food; on eight hundred drugs
+   *  it draws a parcel for anything it does not recognise. */
+  drawing?: DrawingName;
   /** What the menu files it under, which is the shop's own decision and
    *  usually righter about what a thing is than one word in its name. */
   category?: string;
@@ -67,7 +72,7 @@ export default function Thumb({
       className={`${rounded} ${className} flex h-full w-full items-center justify-center overflow-hidden`}
       style={{ background: WASH[hue % WASH.length] }}
     >
-      <Drawing name={drawingFor(name, category)} size="72%" />
+      <Drawing name={drawing ?? drawingFor(name, category)} size="72%" />
     </div>
   );
 }

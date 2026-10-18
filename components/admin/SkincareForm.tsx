@@ -12,11 +12,20 @@ import { saveSkincare } from "@/app/admin/actions";
  * the error boundary: an exclamation mark and a minified React number, where
  * a sentence saying "run the migration" belongs.
  */
-export default function SkincareForm({ children }: { children: React.ReactNode }) {
+export default function SkincareForm({
+  children,
+  kind = "skincare",
+}: {
+  children: React.ReactNode;
+  /** Which counter these settings belong to. The action reads it off the
+   *  form, so both counters share one save. */
+  kind?: string;
+}) {
   const [state, action, busy] = useActionState(saveSkincare, { done: "", error: "" });
 
   return (
     <form action={action} className="card space-y-3">
+      <input type="hidden" name="kind" value={kind} />
       {children}
 
       {state.error !== "" && (

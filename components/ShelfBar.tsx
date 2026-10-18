@@ -6,14 +6,24 @@ import { feeFor, type Band } from "@/lib/fees";
 import { shelfCount, shelfTotal, useShelf } from "@/lib/skincare-cart";
 
 /**
- * What is in the skincare basket, and the way out of it.
+ * What is in a counter's basket, and the way out of it.
  *
  * Its own bar, because its own basket: the food bar is about a car going this
  * afternoon and this one is about a car going on Saturday, and one bar trying
- * to say both says neither.
+ * to say both says neither. One counter per bar for the same reason.
  */
-export default function ShelfBar({ bands, when }: { bands: Band[]; when: string }) {
-  const cart = useShelf();
+export default function ShelfBar({
+  bands,
+  when,
+  counter = "skincare",
+  href = "/skincare/checkout",
+}: {
+  bands: Band[];
+  when: string;
+  counter?: string;
+  href?: string;
+}) {
+  const cart = useShelf(counter);
   const count = shelfCount(cart);
   if (count === 0) return null;
 
@@ -26,7 +36,7 @@ export default function ShelfBar({ bands, when }: { bands: Band[]; when: string 
   return (
     <div data-actionbar className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 px-3 sm:bottom-3">
       <Link
-        href="/skincare/checkout"
+        href={href}
         className="mx-auto flex max-w-2xl items-center justify-between gap-3 rounded-2xl bg-brand px-4 py-3 text-white shadow-bar"
       >
         <span className="flex items-center gap-3">

@@ -3,13 +3,19 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * A basket of its own, kept apart from the food.
+ * A basket of its own, kept apart from the food, and one per counter.
  *
  * Skincare arrives on one car a week and food arrives this afternoon, so they
  * cannot be the same order, and a single cart holding both would have to
  * explain that at the worst possible moment. Two baskets is the honest shape:
  * putting a cleanser in changes nothing about the pizza waiting in the other
  * one, and ordering either leaves the other where it is.
+ *
+ * The pharmacy made it three. It is a different shop from the skincare
+ * shelf even though both go on a Saturday, so a basket holding cough syrup
+ * and a cleanser would be one order against two shops. Each counter gets
+ * its own store and its own key in storage, and a basket somebody left on
+ * one shelf is still there when they come back to it.
  */
 export type ShelfLine = {
   id: string;
@@ -19,8 +25,6 @@ export type ShelfLine = {
   imageUrl: string;
   qty: number;
 };
-
-const KEY = "sudu_skincare_v1";
 
 /**
  * The empty basket, as one object that never changes.
@@ -32,66 +36,105 @@ const KEY = "sudu_skincare_v1";
  */
 const EMPTY: ShelfLine[] = [];
 
-let lines: ShelfLine[] = [];
-let loaded = false;
-const listeners = new Set<() => void>();
+type Store = {
+  lines: ShelfLine[];
+  loaded: boolean;
+  listeners: Set<() => void>;
+  key: string;
+};
 
-function load(): void {
-  if (loaded) return;
-  loaded = true;
+/*
+ * One store per counter, made the first time anything asks for it.
+ *
+ * The skincare key is the one it shipped with, spelt out rather than built
+ * from the counter's name: changing it would empty the basket of everybody
+ * who had one open the day this went out.
+ */
+const KEYS: Record<string, string> = { skincare: "sudu_skincare_v1" };
+const stores = new Map<string, Store>();
+
+function storeFor(counter: string): Store {
+  let store = stores.get(counter);
+  if (!store) {
+    store = {
+      lines: [],
+      loaded: false,
+      listeners: new Set(),
+      key: KEYS[counter] ?? `sudu_shelf_${counter}_v1`,
+    };
+    stores.set(counter, store);
+  }
+  return store;
+}
+
+function load(store: Store): void {
+  if (store.loaded) return;
+  store.loaded = true;
   try {
-    const saved = JSON.parse(window.localStorage.getItem(KEY) ?? "[]");
-    lines = Array.isArray(saved) ? saved : [];
+    const saved = JSON.parse(window.localStorage.getItem(store.key) ?? "[]");
+    store.lines = Array.isArray(saved) ? saved : [];
   } catch {
-    lines = [];
+    store.lines = [];
   }
 }
 
-function save(next: ShelfLine[]): void {
-  lines = next;
+function save(store: Store, next: ShelfLine[]): void {
+  store.lines = next;
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(next));
+    window.localStorage.setItem(store.key, JSON.stringify(next));
   } catch {
     /* Without storage it still works until the tab is closed. */
   }
-  for (const listen of listeners) listen();
+  for (const listen of store.listeners) listen();
 }
 
-export function useShelf(): ShelfLine[] {
+/** The basket on one counter. Skincare where nothing says otherwise. */
+export function useShelf(counter = "skincare"): ShelfLine[] {
+  const store = storeFor(counter);
   return useSyncExternalStore(
     (listen) => {
-      listeners.add(listen);
-      return () => listeners.delete(listen);
+      store.listeners.add(listen);
+      return () => store.listeners.delete(listen);
     },
     () => {
-      load();
-      return lines;
+      load(store);
+      return store.lines;
     },
     () => EMPTY
   );
 }
 
-export function addToShelf(line: Omit<ShelfLine, "qty">, qty = 1): void {
-  load();
-  const found = lines.find((one) => one.id === line.id);
+export function addToShelf(
+  line: Omit<ShelfLine, "qty">,
+  qty = 1,
+  counter = "skincare"
+): void {
+  const store = storeFor(counter);
+  load(store);
+  const found = store.lines.find((one) => one.id === line.id);
   save(
+    store,
     found
-      ? lines.map((one) => (one.id === line.id ? { ...one, qty: one.qty + qty } : one))
-      : [...lines, { ...line, qty }]
+      ? store.lines.map((one) =>
+          one.id === line.id ? { ...one, qty: one.qty + qty } : one
+        )
+      : [...store.lines, { ...line, qty }]
   );
 }
 
-export function setShelfQty(id: string, qty: number): void {
-  load();
+export function setShelfQty(id: string, qty: number, counter = "skincare"): void {
+  const store = storeFor(counter);
+  load(store);
   save(
+    store,
     qty <= 0
-      ? lines.filter((one) => one.id !== id)
-      : lines.map((one) => (one.id === id ? { ...one, qty } : one))
+      ? store.lines.filter((one) => one.id !== id)
+      : store.lines.map((one) => (one.id === id ? { ...one, qty } : one))
   );
 }
 
-export function emptyShelf(): void {
-  save([]);
+export function emptyShelf(counter = "skincare"): void {
+  save(storeFor(counter), []);
 }
 
 export function shelfCount(list: ShelfLine[]): number {

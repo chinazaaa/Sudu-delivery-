@@ -12,7 +12,7 @@ import { rememberCart } from "@/lib/carts";
 import { countCheckoutLinkUse, getCheckoutLink } from "@/lib/checkout-links";
 import { arrivalNow } from "@/lib/arrival-server";
 import { OPENED, sprung, tooFast, TRAP } from "@/lib/guard";
-import { dropBatch, skincareFee } from "@/lib/skincare";
+import { COUNTERS, counterFee, counterOn, dropBatch } from "@/lib/counter";
 import { safeSettings } from "@/lib/settings";
 import { db } from "@/lib/supabase";
 import { closeGroup, getSharedGroup, groupOrders, leaderSeat } from "@/lib/groups";
@@ -514,14 +514,20 @@ export async function closeSharedGroup(
 }
 
 /**
- * A skincare order: one flat fee, and the next Saturday.
+ * A counter order: one flat fee, and the next car.
  *
  * It goes through the same placeOrder as everything else, because everything
  * downstream, the payment, the order page, the admin, already understands an
  * order and has no reason to learn about skincare. What is different is only
  * which car it is on and what delivery costs, and both are decided here.
+ *
+ * Which counter comes in on the input, defaulting to skincare: it was the
+ * only one when this was written and every caller that has not been told
+ * about the pharmacy is still a skincare checkout.
  */
 export async function placeSkincareOrder(input: {
+  /** Which counter this basket came off. Skincare unless it says. */
+  counter?: string;
   lines: { id: string; qty: number }[];
   name: string;
   phone: string;
@@ -534,8 +540,12 @@ export async function placeSkincareOrder(input: {
   paymentMethod: "transfer" | "card";
 }): Promise<{ ok: true; orderId: string } | { ok: false; error: string }> {
   const settings = await safeSettings();
-  if (settings.skincare_on !== "on") {
-    return { ok: false, error: "The skincare shop is closed just now." };
+  const counter = COUNTERS[input.counter ?? "skincare"] ?? COUNTERS.skincare;
+  if (!counterOn(counter, settings)) {
+    return {
+      ok: false,
+      error: `The ${counter.fallbackName.toLowerCase()} shop is closed just now.`,
+    };
   }
 
   const lines = input.lines
@@ -556,9 +566,9 @@ export async function placeSkincareOrder(input: {
   // The car for the next drop, made if it is not there yet. Everybody who
   // ordered for that Saturday is in this one, which is what makes one flat
   // fee honest.
-  const car = await dropBatch(settings);
+  const car = await dropBatch(counter, settings);
   if (!car) {
-    return { ok: false, error: "Could not open Saturday's delivery. Try again shortly." };
+    return { ok: false, error: "Could not open the next delivery. Try again shortly." };
   }
 
   const result = await placeOrder({
@@ -578,7 +588,8 @@ export async function placeSkincareOrder(input: {
     payCurrency: input.paymentMethod === "card" ? input.payCurrency : undefined,
     // Priced by the skincare ladder, which is its own: it is the car, not
     // the cream, so it goes by how much room the order takes.
-    fixedFee: skincareFee(
+    fixedFee: counterFee(
+      counter,
       settings,
       lines.reduce((count, one) => count + one.qty, 0)
     ),

@@ -18,7 +18,15 @@ type Shelf = { id: string; name: string; items: number; filed: number };
  * be the one a delivery fills this afternoon, and that is a judgement only
  * the person running the shop can make.
  */
-export default function Shelves({ shelves }: { shelves: Shelf[] }) {
+export default function Shelves({
+  shelves,
+  kind = "skincare",
+}: {
+  shelves: Shelf[];
+  /** Which counter these shelves belong to, so the tidy-up asks the right
+   *  one what is empty. */
+  kind?: string;
+}) {
   const empty = shelves.filter((one) => one.items === 0 && one.filed === 0);
   const [ticked, setTicked] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
@@ -30,6 +38,7 @@ export default function Shelves({ shelves }: { shelves: Shelf[] }) {
 
   return (
     <form action={deleteEmptyShelves} className="card space-y-3">
+      <input type="hidden" name="kind" value={kind} />
       <div>
         <h2 className="font-bold">Shelves</h2>
         <p className="text-sm text-muted">

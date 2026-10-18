@@ -42,6 +42,7 @@ import {
   type ImportedProduct,
 } from "@/lib/skincare-import";
 import { skincareShelves } from "@/lib/skincare";
+import { COUNTERS, counterShelves } from "@/lib/counter";
 import { areaText } from "@/lib/areas";
 import { codeFrom } from "@/lib/promoter-applications";
 import { typicalRate } from "@/lib/promoters";
@@ -3031,6 +3032,14 @@ const SETTING_FIELDS = [
   "skincare_blurb",
   "skincare_bands",
   "skincare_promise",
+  "pharmacy_on",
+  "pharmacy_fee",
+  "pharmacy_day",
+  "pharmacy_cut_off",
+  "pharmacy_window",
+  "pharmacy_blurb",
+  "pharmacy_bands",
+  "pharmacy_promise",
   "santa_delivery",
   "santa_delivery_included",
   "santa_delivery_extra",
@@ -4396,8 +4405,9 @@ export async function importSkincare(
 
   // The shelf is read through the same cached menu as everything else.
   updateTag("menu");
+  updateTag(kind);
   revalidatePath("/admin", "layout");
-  revalidatePath("/skincare");
+  revalidatePath(COUNTERS[kind].href);
 
   return { done: said(added, changed, sections, skipped, choices), error: "" };
 }
@@ -4737,7 +4747,14 @@ export async function deleteEmptyShelves(form: FormData): Promise<void> {
   const asked = new Set(form.getAll("shelf_id").map(String).filter(Boolean));
   if (asked.size === 0) return;
 
-  const empty = (await skincareShelves())
+  // Which counter's shelves are being tidied. Read off the form, because
+  // asking skincare about a pharmacy shelf finds nothing and the button
+  // would quietly do nothing at all.
+  const kind = COUNTERS[String(form.get("kind") ?? "").trim()]
+    ? String(form.get("kind")).trim()
+    : "skincare";
+
+  const empty = (await counterShelves(COUNTERS[kind]))
     .filter((one) => one.items === 0 && one.filed === 0)
     .map((one) => one.id)
     .filter((id) => asked.has(id));
@@ -4747,7 +4764,7 @@ export async function deleteEmptyShelves(form: FormData): Promise<void> {
   }
 
   revalidatePath("/admin", "layout");
-  revalidatePath("/skincare");
+  revalidatePath(COUNTERS[kind].href);
 }
 
 /**
@@ -4766,16 +4783,29 @@ export async function saveSkincare(
 ): Promise<{ done: string; error: string }> {
   await assertAdmin();
 
+  /*
+   * Which counter is being saved, read off the form rather than assumed.
+   *
+   * This was skincare's form alone and then the pharmacy arrived wanting
+   * the identical eight fields with a different prefix. Two copies of the
+   * dropped-column dance below would have been two places to fix it the
+   * next time a column is added, so the form says which counter it is and
+   * the rest of this is unchanged.
+   */
+  const kind = COUNTERS[String(form.get("kind") ?? "").trim()]
+    ? String(form.get("kind")).trim()
+    : "skincare";
+
   const fields = [
-    "skincare_on",
-    "skincare_fee",
-    "skincare_day",
-    "skincare_cut_off",
-    "skincare_window",
-    "skincare_blurb",
-    "skincare_bands",
-    "skincare_promise",
-  ] as const;
+    `${kind}_on`,
+    `${kind}_fee`,
+    `${kind}_day`,
+    `${kind}_cut_off`,
+    `${kind}_window`,
+    `${kind}_blurb`,
+    `${kind}_bands`,
+    `${kind}_promise`,
+  ];
 
   const patch: Record<string, string> = {};
   for (const field of fields) {
@@ -4807,7 +4837,7 @@ export async function saveSkincare(
   }
 
   revalidatePath("/admin", "layout");
-  revalidatePath("/skincare");
+  revalidatePath(COUNTERS[kind].href);
   revalidatePath("/", "layout");
 
   if (error) {

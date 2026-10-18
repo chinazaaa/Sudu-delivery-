@@ -22,6 +22,7 @@ import { placesOfRun } from "@/lib/run-places";
 import { openRestaurants } from "@/lib/menu";
 import SaveButton from "@/components/SaveButton";
 import { SLOT_LABEL } from "@/lib/config";
+import { COUNTERS } from "@/lib/counter";
 import { naira } from "@/lib/money";
 import { clockLabel, lagosToday, runDateLabel } from "@/lib/time";
 import { adminStatusWord } from "@/lib/stages";
@@ -304,8 +305,8 @@ export default async function RunsPage({
           <h2 className="mt-2 font-display text-[27px] font-black uppercase leading-[1.05]">
             {happening.kind === "same_day"
               ? `${runDateLabel(happening.run_date)} · ${timeOnly(happening.delivery_window_text)}`
-              : happening.kind === "skincare"
-                ? `Skincare drop · ${runDateLabel(happening.run_date)}`
+              : COUNTERS[happening.kind ?? ""]
+                ? `${COUNTERS[happening.kind!].fallbackName} drop · ${runDateLabel(happening.run_date)}`
                 : `${runDateLabel(happening.run_date)} · ${SLOT_LABEL[happening.slot]}`}
           </h2>
           <p className="mt-1 text-[13px] text-rail-text">
@@ -605,11 +606,11 @@ export default async function RunsPage({
                   <p className="text-[17px] font-bold">
                     {batch.kind === "same_day"
                       ? `${runDateLabel(batch.run_date)} · ${timeOnly(batch.delivery_window_text)}`
-                      : batch.kind === "skincare"
+                      : COUNTERS[batch.kind ?? ""]
                         ? // A drop borrows a run's date and slot too, and
                           // titled like one it is the run, as far as anybody
                           // reading this list can tell.
-                          `Skincare drop · ${runDateLabel(batch.run_date)}`
+                          `${COUNTERS[batch.kind!].fallbackName} drop · ${runDateLabel(batch.run_date)}`
                         : batch.kind === "parcel"
                           ? batch.delivery_window_text || "Parcel"
                           : `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`}
@@ -635,9 +636,9 @@ export default async function RunsPage({
                     {batch.kind === "same_day" && (
                       <span className="tag bg-brand-tint text-brand-dark">Same day</span>
                     )}
-                    {batch.kind === "skincare" && (
+                    {COUNTERS[batch.kind ?? ""] && (
                       <span className="tag bg-brand-tint text-brand-dark">
-                        Skincare, not food
+                        {COUNTERS[batch.kind!].fallbackName}, not food
                       </span>
                     )}
                     {batch.kind === "parcel" && (

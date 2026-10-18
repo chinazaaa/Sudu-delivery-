@@ -12,6 +12,7 @@ import FeeBands from "./FeeBands";
 import { feeFor, type Band } from "@/lib/fees";
 import { placeSkincareOrder } from "@/app/actions";
 import { emptyShelf, setShelfQty, shelfTotal, useShelf } from "@/lib/skincare-cart";
+import type { DrawingName } from "./Drawing";
 
 /**
  * Paying for skincare.
@@ -31,6 +32,9 @@ export default function ShelfCheckout({
   promoters = [],
   monies = [],
   me,
+  counter = "skincare",
+  caution = "",
+  drawing,
 }: {
   /** The skincare ladder: it is the car, not the cream, so it goes by how
    *  much room the order takes. */
@@ -51,9 +55,18 @@ export default function ShelfCheckout({
   /** The currencies a card link can be made out in. Empty where off. */
   monies?: Money[];
   me: { name: string; hostel: string; paymentMethod: "transfer" | "card" } | null;
+  /** Which counter's basket this is, and which car the order goes on. */
+  counter?: string;
+  /** What the shop has to say before money changes hands, where the counter
+   *  has something to say. The pharmacy does: we fetch, we do not advise,
+   *  and the screen where somebody pays is the one place that cannot be
+   *  left to a page they may never have opened. */
+  caution?: string;
+  /** One drawing for everything in the basket, where a name is no guide. */
+  drawing?: DrawingName;
 }) {
   const router = useRouter();
-  const cart = useShelf();
+  const cart = useShelf(counter);
   const [name, setName] = useState(me?.name ?? "");
   const [phone, setPhone] = useState("");
   const [hostel, setHostel] = useState(me?.hostel ?? "");
@@ -101,6 +114,7 @@ export default function ShelfCheckout({
     setBusy(true);
     try {
       const result = await placeSkincareOrder({
+        counter,
         lines: cart.map((one) => ({ id: one.id, qty: one.qty })),
         name,
         phone,
@@ -125,7 +139,7 @@ export default function ShelfCheckout({
       }
       // Emptied only once there is an order to show for it. A basket cleared
       // by a failed payment is somebody's evening gone.
-      emptyShelf();
+      emptyShelf(counter);
       router.push(`/o/${result.orderId}`);
     } catch {
       setProblem("Could not place that just now. Try again in a moment.");
@@ -151,11 +165,16 @@ export default function ShelfCheckout({
       <section className="card space-y-2">
         <h2 className="font-bold">What you are getting</h2>
         <p className="text-sm text-muted">{promise}</p>
+        {caution !== "" && (
+          <p className="rounded-xl border-2 border-ink bg-volt/20 px-3.5 py-3 text-sm font-semibold leading-relaxed text-ink">
+            {caution}
+          </p>
+        )}
         <ul className="divide-y divide-black/5">
           {cart.map((line) => (
             <li key={line.id} className="flex items-center gap-3 py-2">
               <span className="size-12 shrink-0">
-                <Thumb src={line.imageUrl} name={line.name} />
+                <Thumb src={line.imageUrl} name={line.name} drawing={drawing} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold">{line.name}</span>
@@ -168,7 +187,7 @@ export default function ShelfCheckout({
                 <button
                   type="button"
                   aria-label={`One less ${line.name}`}
-                  onClick={() => setShelfQty(line.id, line.qty - 1)}
+                  onClick={() => setShelfQty(line.id, line.qty - 1, counter)}
                   className="chip size-8 justify-center border-black/10 bg-white"
                 >
                   −
@@ -177,7 +196,7 @@ export default function ShelfCheckout({
                 <button
                   type="button"
                   aria-label={`One more ${line.name}`}
-                  onClick={() => setShelfQty(line.id, line.qty + 1)}
+                  onClick={() => setShelfQty(line.id, line.qty + 1, counter)}
                   className="chip size-8 justify-center border-black/10 bg-white"
                 >
                   +
@@ -188,7 +207,7 @@ export default function ShelfCheckout({
                 <button
                   type="button"
                   aria-label={`Remove ${line.name}`}
-                  onClick={() => setShelfQty(line.id, 0)}
+                  onClick={() => setShelfQty(line.id, 0, counter)}
                   className="text-xs font-semibold text-muted underline hover:text-ink"
                 >
                   Remove

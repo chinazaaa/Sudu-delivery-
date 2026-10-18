@@ -6,6 +6,7 @@ import Reorder from "@/components/admin/Reorder";
 import Thumb from "@/components/Thumb";
 import SaveButton from "@/components/SaveButton";
 import { db } from "@/lib/supabase";
+import { onTheMenu } from "@/lib/shelf";
 import { diagnoseEmpty } from "@/lib/health";
 import { addRestaurant, moveRestaurant, seedLaunchRestaurants } from "../actions";
 import type { MenuItem, Restaurant } from "@/lib/types";
@@ -45,7 +46,7 @@ export default async function RestaurantsAdmin() {
   // products through here to look for missing photographs would be the row
   // cap all over again.
   const foodIds = list
-    .filter((one) => (one.kind ?? "food") !== "skincare")
+    .filter((one) => onTheMenu(one.kind))
     .map((one) => one.id);
   const { data: items } =
     foodIds.length > 0

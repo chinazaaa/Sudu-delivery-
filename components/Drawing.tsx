@@ -30,7 +30,8 @@ export type DrawingName =
   | "box"
   | "parcel"
   | "car"
-  | "skincare";
+  | "skincare"
+  | "medicine";
 
 /** Every one of them, in the order the board lays them out. */
 export const DRAWINGS: DrawingName[] = [
@@ -49,6 +50,7 @@ export const DRAWINGS: DrawingName[] = [
   "parcel",
   "car",
   "skincare",
+  "medicine",
 ];
 
 /**
@@ -163,6 +165,11 @@ const BODY: Record<DrawingName, React.ReactNode> = {
   car: (
     <>
 <g stroke="#15110E" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round"><path d="M4 64h14M2 74h12M8 54h12" fill="none" stroke="#E5321D" strokeWidth="4"/><path d="M22 86V58c0-6 4-10 10-10h46l16 14h12c4 0 8 4 8 8v16z" fill="#E5321D"/><path d="M68 52h10l13 11H68z" fill="#BFE3F5"/><path d="M30 64h30" stroke="#FFD23F" strokeWidth="5"/><circle cx="44" cy="88" r="10" fill="#15110E"/><circle cx="44" cy="88" r="3" fill="#F2EFE9"/><circle cx="96" cy="88" r="10" fill="#15110E"/><circle cx="96" cy="88" r="3" fill="#F2EFE9"/></g>
+    </>
+  ),
+  medicine: (
+    <>
+<g stroke="#15110E" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round"><rect x="26" y="40" width="68" height="44" rx="7" fill="#FFF8EC"/><path d="M26 54h68" fill="none" strokeWidth="2.5"/><circle cx="42" cy="68" r="6" fill="#E5321D"/><circle cx="60" cy="68" r="6" fill="#E5321D"/><circle cx="78" cy="68" r="6" fill="#E5321D"/><path d="M52 32h16M60 24v16" fill="none" strokeWidth="5"/></g>
     </>
   ),
   skincare: (

@@ -28,7 +28,8 @@ import { naira, orderRef } from "./money";
 import { SLOT_LABEL } from "./config";
 import { runDateLabel, weekdayLabel } from "./time";
 import { createSameDayBatch, getBatch, isOrderable, orderCounts } from "./batches";
-import { bandsFor, isSkincareBatch, skincareIn } from "./skincare";
+import { bandsFor, isSkincareBatch } from "./skincare";
+import { counterHolding } from "./counter";
 import { areaOfCart } from "./areas-server";
 import { feeAcross } from "./value-bands";
 import { realPromoter } from "./promoters";
@@ -323,20 +324,26 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     console.error("group not joinable, ordering alone:", input.partyId);
   }
 
-  // Skincare goes in one car a week and food goes this afternoon, so a
+  // A counter goes in one car a week and food goes this afternoon, so a
   // basket holding both cannot be one order. The shelf and the menu are kept
   // apart everywhere somebody can reach them, and this is the last door:
   // priced on the food ladder, a cleanser would go out on a run at a fee
   // nobody set, on a day nobody said.
-  const mixed = await skincareIn(input.lines.map((line) => line.menu_item_id));
+  //
+  // Which counter, rather than whether: with two of them the answer has to
+  // name the one whose car this basket belongs on, or a pharmacy basket
+  // would be waved onto the skincare drop.
+  const mixed = await counterHolding(input.lines.map((line) => line.menu_item_id));
   if (mixed && input.deliverAt === undefined && !input.partyId) {
     const car = await getBatch(input.batchId);
-    if (!car || (car.kind ?? "run") !== "skincare") {
+    if (!car || (car.kind ?? "run") !== mixed.kind) {
+      const what = mixed.fallbackName.toLowerCase();
       return {
         ok: false,
         error:
-          "Skincare comes on its own car, once a week, so it cannot go on a " +
-          "food run. Order it from the skincare shelf and your food here.",
+          `${mixed.fallbackName} comes on its own car, once a week, so it ` +
+          `cannot go on a food run. Order it from the ${what} shelf and your ` +
+          "food here.",
       };
     }
   }

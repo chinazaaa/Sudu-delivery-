@@ -6,6 +6,7 @@ import Thumb from "@/components/Thumb";
 import { menuViewFor } from "@/lib/menu";
 import { dealsAt } from "@/lib/coupons";
 import { isSkincare } from "@/lib/skincare";
+import { isPharmacy } from "@/lib/pharmacy";
 import Deals from "@/components/Deals";
 import { photoOf } from "@/lib/product-photo";
 import { openBatches } from "@/lib/batches";
@@ -67,6 +68,7 @@ export default async function RestaurantPage({
   // this one would put its products in the food cart. Anybody who reached
   // here wanted the shelf, so they are sent to it rather than turned away.
   if (!place && (await isSkincare(restaurantId))) redirect("/skincare");
+  if (!place && (await isPharmacy(restaurantId))) redirect("/pharmacy");
   if (!place) notFound();
 
   // One page, one address. A restaurant answers to its id as well as its

@@ -25,6 +25,7 @@ import { SLOT_LABEL } from "@/lib/config";
 import { naira, shareRef } from "@/lib/money";
 import { shortRef } from "@/lib/links";
 import { bandsFor, isSkincareBatch } from "@/lib/skincare";
+import { COUNTERS } from "@/lib/counter";
 import { bandFor, splitFee } from "@/lib/fees";
 import { fillNote, narration, PAID_NOTE_DEFAULT } from "@/lib/messages";
 import {
@@ -649,7 +650,7 @@ export default async function OrderPage({
           url={`${site}/join/${order.shared_with ?? order.id}`}
           name={(order.for_name ?? order.customer_name).split(" ")[0]}
           closes={clockLabel(order.batch.cut_off_at)}
-          what={isSkincareBatch(order.batch) ? "skincare" : "food"}
+          what={COUNTERS[order.batch.kind ?? ""]?.fallbackName.toLowerCase() ?? "food"}
         />
       )}
 

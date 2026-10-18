@@ -11,7 +11,14 @@
  * just not on the page this week. Anything the line does not mention is new
  * since it was saved, and lands at the end rather than vanishing.
  */
-export type DoorKey = "food" | "shelves" | "parcel" | "skincare" | "custom" | "group";
+export type DoorKey =
+  | "food"
+  | "shelves"
+  | "parcel"
+  | "skincare"
+  | "pharmacy"
+  | "custom"
+  | "group";
 
 /** Every door there is, in the order the shop shipped with. */
 export const DOORS: DoorKey[] = [
@@ -19,6 +26,9 @@ export const DOORS: DoorKey[] = [
   "shelves",
   "parcel",
   "skincare",
+  // Under skincare, because it is the other counter and the two read as a
+  // pair. A shop that would rather lead with it moves it in admin.
+  "pharmacy",
   "custom",
   "group",
 ];
@@ -29,6 +39,7 @@ export const DOOR_LABEL: Record<DoorKey, string> = {
   shelves: "Collections and occasions, one card each",
   parcel: "Send a parcel",
   skincare: "Skincare",
+  pharmacy: "Pharmacy",
   custom: "Can't find it?",
   group: "Ordering together?",
 };
@@ -41,6 +52,7 @@ export const DOOR_NOTE: Record<DoorKey, string> = {
     "is the one you set on the Collections screen.",
   parcel: "Only shows while parcels are on and a route is priced.",
   skincare: "Only shows while the skincare shop is on.",
+  pharmacy: "Only shows while the pharmacy counter is on and has stock.",
   custom: "Tell us what you are looking for and we will get it.",
   group: "Everybody adds their own, one delivery between them.",
 };

@@ -32,6 +32,12 @@ const BY_WORD: [RegExp, DrawingName][] = [
     /drink|juice|water|soda|coke|fanta|sprite|pepsi|7up|malt|smoothie|tea|coffee|latte|cappuccino|milkshake|zobo|cl\)|litre|ml\b/i,
     "drink",
   ],
+  // Before the skincare line, because half a pharmacy shelf has the word
+  // cream or body in it and a tube of antifungal cream is not a serum.
+  [
+    /tablet|caps?(ule)?s?\b|\bsyrup\b|suspension|lozenge|sachet|\bmg\b|\bml\b.*(syrup|susp)|paracetamol|ibuprofen|vitamin|antacid|inhaler|plaster|bandage|antiseptic|\bdrops?\b|ointment|\bgel\b.*(pain|relief)|pharmac/i,
+    "medicine",
+  ],
   [/cream|lotion|serum|cleanser|toner|soap|skin|body|hair|shampoo|sunscreen|spf/i, "skincare"],
   [/parcel|package|courier|envelope/i, "parcel"],
   [/market|grocer|shop\b|store\b|pantry|provisions?/i, "market"],

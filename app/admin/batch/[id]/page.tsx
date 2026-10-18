@@ -1,4 +1,5 @@
 import PageHeader from "@/components/admin/PageHeader";
+import { COUNTERS } from "@/lib/counter";
 import SaveButton from "@/components/SaveButton";
 import type { Batch } from "@/lib/types";
 import { deliverySlots } from "@/lib/same-day";
@@ -325,8 +326,8 @@ export default async function BatchPage({
   // ticked on the wrong car, and the food run they were meant for carried on
   // going nowhere. It says what it is.
   const batchLabel =
-    batch.kind === "skincare"
-      ? `Skincare drop · ${runDateLabel(batch.run_date)}`
+    COUNTERS[batch.kind ?? ""]
+      ? `${COUNTERS[batch.kind!].fallbackName} drop · ${runDateLabel(batch.run_date)}`
       : batch.kind === "parcel"
         ? // Reachable once two parcels share a day and a route: one drive, so
           // one trip, and this is the sheet for it.
@@ -1823,7 +1824,7 @@ export default async function BatchPage({
                       <div className="soft space-y-2 bg-shell p-3">
                         <input type="hidden" name="areas_set" value="1" />
                         <p className="label mb-0">
-                          Where this {batch.kind === "skincare" ? "drop" : "car"} goes
+                          Where this {COUNTERS[batch.kind ?? ""] ? "drop" : "car"} goes
                         </p>
                         <p className="text-xs text-muted">
                           It always passes Sangotedo. Tick anywhere else it is

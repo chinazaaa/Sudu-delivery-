@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { skincareFacets, skincareOn } from "@/lib/skincare";
+import { pharmacyFacets, pharmacyOn } from "@/lib/pharmacy";
 import { safeSettings } from "@/lib/settings";
 import { isExtra, onTheMenu } from "@/lib/shelf";
 import { db } from "@/lib/supabase";
@@ -52,6 +53,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // with two thousand products on it, and the one that makes delivery
     // cheap enough to bother with.
     { url: `${site}/skincare`, changeFrequency: "weekly" as const, priority: 0.8 },
+    { url: `${site}/pharmacy`, changeFrequency: "weekly" as const, priority: 0.8 },
     { url: `${site}/group`, changeFrequency: "monthly" as const, priority: 0.6 },
     { url: `${site}/custom-order`, changeFrequency: "monthly" as const, priority: 0.7 },
     // Two shelves of boxes, each its own page since a care package and a
@@ -188,9 +190,36 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ]
       : [];
 
+    // The same again for the pharmacy counter. "Paracetamol delivered in
+    // Lagos" is the same kind of search as "CeraVe delivered in Lagos", and
+    // a shelf page answers it better than eight hundred product pages
+    // nobody would ever crawl.
+    const drugFacets = await pharmacyFacets().catch(() => ({ shelves: [], brands: [] }));
+    const pharmacy = pharmacyOn(await safeSettings())
+      ? [
+          ...drugFacets.brands
+            .filter((one) => one.items >= 3)
+            .slice(0, 120)
+            .map((one) => ({
+              url: `${site}/pharmacy?brand=${encodeURIComponent(one.name)}`,
+              changeFrequency: "weekly" as const,
+              priority: 0.6,
+            })),
+          ...drugFacets.shelves
+            .filter((one) => one.items >= 3)
+            .slice(0, 60)
+            .map((one) => ({
+              url: `${site}/pharmacy?shelf=${encodeURIComponent(one.name)}`,
+              changeFrequency: "weekly" as const,
+              priority: 0.6,
+            })),
+        ]
+      : [];
+
     return [
       ...home,
       ...skincare,
+      ...pharmacy,
       ...packed
         .filter((one) => one.slug)
         .map((one) => ({

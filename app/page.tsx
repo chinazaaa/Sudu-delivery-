@@ -23,6 +23,11 @@ import { collectedFrom, parseAreas } from "@/lib/areas";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { nextArrival, runArrival } from "@/lib/arrival";
 import { dropLabel, nextDrop, skincareOn, skincareShop } from "@/lib/skincare";
+import {
+  nextDrop as nextPharmacyDrop,
+  pharmacyOn,
+  pharmacyShop,
+} from "@/lib/pharmacy";
 import { placesSaid, parcelsFrom } from "@/lib/parcels";
 import { sweepGroups } from "@/lib/groups";
 
@@ -163,6 +168,13 @@ export default async function HomePage() {
       ? `Order any day. It comes ${dropLabel(nextDrop(settings).date)}.`
       : "";
 
+  // The other counter, on the same terms: a line only while it is on and
+  // there is a shop with something on it.
+  const pharmacyLine =
+    pharmacyOn(settings) && (await pharmacyShop())
+      ? `Order any day. It comes ${dropLabel(nextPharmacyDrop(settings).date)}.`
+      : "";
+
   // Every door there is, keyed, so the order can be a setting rather than the
   // order somebody typed them in. A door with nothing behind it is not a
   // door: it would be a card that opens on an apology.
@@ -210,6 +222,17 @@ export default async function HomePage() {
               image: "/covers/skincare.svg",
               title: "Skincare",
               line: skincareLine,
+            },
+          ],
+    pharmacy:
+      pharmacyLine === ""
+        ? []
+        : [
+            {
+              href: "/pharmacy",
+              image: "/covers/pharmacy.svg",
+              title: "Pharmacy",
+              line: pharmacyLine,
             },
           ],
     custom: [

@@ -18,6 +18,7 @@ export default function ImportProducts({
   missingPhotos,
   borrowedPhotos,
   photosHref,
+  kind = "",
 }: {
   shopName: string;
   products: number;
@@ -30,6 +31,13 @@ export default function ImportProducts({
    *  replacing before that shop takes them down. */
   borrowedPhotos: number;
   photosHref: string;
+  /** The counter this importer belongs to. Given, the shop is settled and
+   *  the choice is not offered: an import run from the pharmacy's own page
+   *  going into skincare because a select was left alone is a mistake
+   *  nobody would notice until the wrong shelf had eight hundred drugs on
+   *  it. Empty keeps the choice, for the page that has no counter of its
+   *  own. */
+  kind?: string;
 }) {
   const [state, action, busy] = useActionState(importSkincare, { done: "", error: "" });
 
@@ -68,19 +76,23 @@ export default function ImportProducts({
       {/* Which shop it is going into. Both are counters of their own,
           kept off the food menu for the same reason: a thousand products
           among the pizzas is a menu nobody can read. */}
-      <div>
-        <label className="label" htmlFor="kind">
-          Which shop
-        </label>
-        <select id="kind" name="kind" defaultValue="skincare" className="field">
-          <option value="skincare">Skincare</option>
-          <option value="pharmacy">Pharmacy</option>
-        </select>
-        <p className="mt-1 text-xs text-muted">
-          Each has its own counter and its own shelf. Nothing from either
-          appears on the food menu.
-        </p>
-      </div>
+      {kind !== "" ? (
+        <input type="hidden" name="kind" value={kind} />
+      ) : (
+        <div>
+          <label className="label" htmlFor="kind">
+            Which shop
+          </label>
+          <select id="kind" name="kind" defaultValue="skincare" className="field">
+            <option value="skincare">Skincare</option>
+            <option value="pharmacy">Pharmacy</option>
+          </select>
+          <p className="mt-1 text-xs text-muted">
+            Each has its own counter and its own shelf. Nothing from either
+            appears on the food menu.
+          </p>
+        </div>
+      )}
 
       <div>
         <label className="label" htmlFor="csv">
