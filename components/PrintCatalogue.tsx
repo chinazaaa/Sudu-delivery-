@@ -86,7 +86,7 @@ export default function PrintCatalogue({
   );
 
   return (
-    <section className="space-y-3">
+    <section id="catalogue" className="scroll-mt-24 space-y-3">
       <h2 className="font-display text-[32px] font-black uppercase leading-none sm:text-[40px]">
         What we print
       </h2>

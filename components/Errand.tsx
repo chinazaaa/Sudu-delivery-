@@ -3,6 +3,7 @@ import PageHead from "@/components/PageHead";
 import AskForm from "@/components/AskForm";
 import LaundryPicker from "@/components/LaundryPicker";
 import PrintAsk from "@/components/PrintAsk";
+import { printCount } from "@/lib/printing";
 import type { PrintGroup } from "@/lib/printing";
 import { AlsoSee, Asked, Reason, Section, type Ask } from "@/components/Guide";
 import type { PricedGroup } from "@/lib/laundry";
@@ -64,16 +65,31 @@ export default function Errand({
           ))}
         </div>
 
-        {link && (
-          <a
-            href={link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-primary mt-1 self-start border-2 border-ink text-[17px]"
-          >
-            Message us on WhatsApp <span aria-hidden>→</span>
-          </a>
-        )}
+        <div className="mt-1 flex flex-col items-start gap-2.5 sm:flex-row sm:items-center">
+          {link && (
+            <a
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary self-start border-2 border-ink text-[17px]"
+            >
+              Message us on WhatsApp <span aria-hidden>→</span>
+            </a>
+          )}
+          {/* The breadth is the whole argument for this page and it sits
+              two screens down, where nobody scrolls to discover that a
+              shop is bigger than they assumed. The number does more work
+              than the words: two hundred is a different shop from a
+              printer. */}
+          {catalogue && (
+            <a
+              href="#catalogue"
+              className="btn-quiet self-start border-2 border-ink text-[17px]"
+            >
+              See all {printCount()} things we print
+            </a>
+          )}
+        </div>
         <p className="hint">
           {whatsapp ? `${whatsapp} · ` : ""}we reply the same day.{" "}
           <a href="#ask" className="font-semibold text-brand-dark underline">
