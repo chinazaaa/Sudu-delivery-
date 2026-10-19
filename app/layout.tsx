@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Big_Shoulders, IBM_Plex_Mono, Schibsted_Grotesk } from "next/font/google";
 import BottomNav from "@/components/BottomNav";
 import SuduBot from "@/components/bot/SuduBot";
 import Track from "@/components/Track";
@@ -39,6 +40,46 @@ import "./globals.css";
  * change; everything else on the site builds its links from the request, so
  * this is the only place a domain is written down.
  */
+/*
+ * The three faces, fetched at build time and served from our own domain.
+ *
+ * They used to come from a stylesheet on fonts.googleapis.com, three
+ * families in one request, sitting in front of everything: the browser
+ * cannot draw a word until that file arrives, and the file is on somebody
+ * else's domain, so a phone on 4G pays a DNS lookup and a TLS handshake
+ * before the request even starts. Two seconds of the five it took to show
+ * the headline were spent waiting on it.
+ *
+ * Built in, the faces ship from the same origin as the page, on a
+ * connection that is already open, and the @font-face rules are inlined
+ * rather than fetched. Next also works out a fallback with the same
+ * metrics, so the swap when the real face lands no longer nudges the
+ * layout.
+ *
+ * Big Shoulders Display was folded into Big Shoulders when Google
+ * reorganised the family; it is the same drawing at display sizes.
+ */
+const sans = Schibsted_Grotesk({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const display = Big_Shoulders({
+  subsets: ["latin"],
+  weight: ["700", "800", "900"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  variable: "--font-mono",
+  display: "swap",
+});
+
 const SITE = new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store");
 
 const BLURB =
@@ -211,7 +252,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   };
 
   return (
-    <html lang="en">
+    <html lang="en" className={`${sans.variable} ${display.variable} ${mono.variable}`}>
       <body>
         <script
           type="application/ld+json"
@@ -223,12 +264,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {settings.ios_app_id && (
           <meta name="apple-itunes-app" content={`app-id=${settings.ios_app_id}`} />
         )}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Schibsted+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap"
-          rel="stylesheet"
-        />
         {/* Each line of the footer is there because something is set. Empty
             it in admin and it goes. */}
         <ShopOnly>

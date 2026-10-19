@@ -90,14 +90,14 @@ export default async function HomePage() {
   // sentence that gets the tap.
   const packed = await liveOccasions();
   const packedBoxes = await boxesAcross(packed.map((one) => one.id));
-  const from = await cheapestBoxes(packedBoxes).catch(
-    () => new Map<string, number>()
-  );
-  // A photograph of the best thing on each shelf, because a line drawing
-  // beside a card carrying an actual pizza reads as unfinished.
-  const photo = await shelfPhotos(packedBoxes).catch(
-    () => ({}) as Record<string, string>
-  );
+  // Together, because neither needs the other and this page is the one
+  // thing every visitor waits for. A photograph of the best thing on each
+  // shelf, because a line drawing beside a card carrying an actual pizza
+  // reads as unfinished.
+  const [from, photo] = await Promise.all([
+    cheapestBoxes(packedBoxes).catch(() => new Map<string, number>()),
+    shelfPhotos(packedBoxes).catch(() => ({}) as Record<string, string>),
+  ]);
 
   const boxCount = new Map<string, number>();
   for (const box of packedBoxes) {
@@ -162,22 +162,37 @@ export default async function HomePage() {
     ? `${placesSaid(parcelSetup.routes)}, to PAU and back. Its own trip, on a day we agree.`
     : "";
 
+  /*
+   * The two counters and the hours, asked for at once.
+   *
+   * These were three round trips to the database standing in a queue, each
+   * waiting on the one before it for no reason: whether skincare has a
+   * shelf has nothing to do with whether pharmacy has one, and neither has
+   * anything to do with what time the car stops. On a page every visitor
+   * waits for, three trips in a row is three trips of latency instead of
+   * one.
+   */
+  const [skincareShelf, pharmacyShelf, dayHours] = await Promise.all([
+    skincareOn(settings) ? skincareShop() : Promise.resolve(null),
+    pharmacyOn(settings) ? pharmacyShop() : Promise.resolve(null),
+    settings.same_day_on === "on" ? hoursByDay() : Promise.resolve(null),
+  ]);
+
   // One car a week, on a Saturday. Empty when that shelf is off, and then the
   // page does not mention it at all.
-  const skincareLine =
-    skincareOn(settings) && (await skincareShop())
-      ? `Order any day. It comes ${dropLabel(nextDrop(settings).date)}.`
-      : "";
+  const skincareLine = skincareShelf
+    ? `Order any day. It comes ${dropLabel(nextDrop(settings).date)}.`
+    : "";
 
   // What a trip today would start at, where one can still be made. Medicine
   // is the counter somebody opens because they are ill now, so the card has
   // to answer "can I have it today" rather than only "which Saturday".
   const counterSlots =
-    settings.same_day_on === "on"
-      ? deliverySlots(new Date(), await hoursByDay()).filter(
+    dayHours === null
+      ? []
+      : deliverySlots(new Date(), dayHours).filter(
           (one) => one.day === "today" || one.day === "tomorrow"
-        )
-      : [];
+        );
   const sameDayFrom =
     counterSlots.length > 0 ? (await sameDayPricing()).bands[0]?.fee ?? 0 : 0;
   const soonest = counterSlots.some((one) => one.day === "today") ? "today" : "tomorrow";
@@ -185,7 +200,7 @@ export default async function HomePage() {
   // The other counter, on the same terms: a line only while it is on and
   // there is a shop with something on it.
   const pharmacyLine =
-    pharmacyOn(settings) && (await pharmacyShop())
+    pharmacyShelf
       ? `Saturday's car, ${dropLabel(nextPharmacyDrop(settings).date)}.` +
         (sameDayFrom > 0
           ? ` Or ${soonest}, a car of its own, from ${naira(sameDayFrom)}.`

@@ -12,10 +12,11 @@
    * it is unreadable at body size, which is the point: it is only ever
    * used big. IBM Plex Mono is the ticket voice, for run times, references
    * and counters, where a number has to line up with the one under it.
+   *
+   * Set in app/layout.tsx rather than here: next/font builds the faces in
+   * and names the variables, fallbacks and all, and a second set written
+   * here would race it depending on which stylesheet landed last.
    */
-  --font-sans: "Schibsted Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
 }
 
 html {
