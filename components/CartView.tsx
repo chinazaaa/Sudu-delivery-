@@ -525,6 +525,35 @@ export default function CartView({
       .filter((line) => opensOn(openDaysOf[line.restaurantId], goingOn))
       .map((line) => line.restaurantName)
   )];
+  /*
+   * Food in the cart that a car of its own cannot fetch.
+   *
+   * A far area rides a run or it does not come: three hours is the whole
+   * promise of a car of its own, and an hour each way to Lekki eats it
+   * before the kitchen has started. The checkout has always said so and
+   * names the date, but by then the food is chosen and the sentence reads
+   * as small print about somebody else's order. Somebody put a Jay's Diner
+   * burger in a cart, was given a date six days out, and still expected it
+   * that afternoon.
+   *
+   * So it is said here too, where the thing they would take out is on the
+   * screen in front of them with a button beside it, and it names the
+   * counter rather than the part of Lagos it happens to sit in.
+   */
+  const runOnlyLines = cart.filter((line) => {
+    const area = areas.find((one) => one.id === (areaOf[line.restaurantId] ?? ""));
+    return area !== undefined && !area.sameDay;
+  });
+  const runOnlyNames = [...new Set(runOnlyLines.map((line) => line.restaurantName))];
+  const runOnlySaid =
+    runOnlyNames.length === 1
+      ? runOnlyNames[0]
+      : `${runOnlyNames.slice(0, -1).join(", ")} and ${runOnlyNames[runOnlyNames.length - 1]}`;
+  const runOnlyArea =
+    runOnlyLines.length > 0
+      ? areas.find((one) => one.id === (areaOf[runOnlyLines[0].restaurantId] ?? ""))?.name ?? ""
+      : "";
+
   const soonSlot = onItsOwn ? slots.find((one) => one.at === going.at) ?? null : null;
   const carFee =
     soonSlot && sameDayBands.length > 0
@@ -697,6 +726,24 @@ export default function CartView({
         <h2 className="ticket text-muted">
           Yours
         </h2>
+      )}
+
+      {/* Only on a run, which is the surprise people hit at checkout after
+          the food is already chosen. Said while the thing is still on this
+          screen with a button next to it. */}
+      {runOnlyLines.length > 0 && (
+        <div className="rounded-2xl border border-brand/30 bg-brand-tint px-4 py-3">
+          <p className="text-sm text-brand-dark">
+            <span className="font-bold">
+              {runOnlySaid} {runOnlyNames.length === 1 ? "is" : "are"} in{" "}
+              {runOnlyArea}, so {runOnlyNames.length === 1 ? "it comes" : "they come"}{" "}
+              on a run rather than today.
+            </span>{" "}
+            {runOnlyLines.length < cart.length
+              ? "Everything travels in one car, so the whole order waits for that run. Take it out and the rest can come sooner."
+              : "Checkout shows which run, and it is not always this week."}
+          </p>
+        </div>
       )}
 
       {/* Shut on the day this cart is quoting for.

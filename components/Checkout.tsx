@@ -270,6 +270,25 @@ export default function Checkout({
   );
   const noRunThere = far.length > 0 && openable.length === 0;
 
+  /*
+   * The counters holding the cart up, by their own names.
+   *
+   * This notice used to name the area: "Lekki/Ikoyi goes out on a run
+   * only". Nobody thinks of themselves as ordering from Lekki. They think
+   * they ordered a burger from Jay's Diner, so a sentence about a part of
+   * Lagos is a sentence about somebody else's order, and it got read as
+   * boilerplate and skipped. Somebody put Jay's Diner in a cart, was given
+   * a date six days out, and still expected it that afternoon.
+   *
+   * So it names the thing they chose. The area stays in the sentence,
+   * because it is the reason, but it is no longer the subject.
+   */
+  const farShops = [...new Set(farLines.map((line) => line.restaurantName))];
+  const farShopSaid =
+    farShops.length === 1
+      ? farShops[0]
+      : `${farShops.slice(0, -1).join(", ")} and ${farShops[farShops.length - 1]}`;
+
 
   // The soonest run that can carry the far half of this cart, against the
   // soonest run there is at all. Where they are not the same day, the far
@@ -996,21 +1015,17 @@ export default function Checkout({
           <Step at="01">Order now, get it {arriving}</Step>
         )}
 
-        {!noRunThere && (
-          <p className="text-sm text-muted">
-            {onARun
-              ? "Everybody's food in one car, which is why it costs less."
-              : "A car of its own, because no run is going in time for this."}
-          </p>
-        )}
-
-        {/* One line, because three paragraphs about Lekki is three
-            paragraphs nobody reads. Why it waits for a run, and the way out
-            if waiting is the wrong trade. Why the fee is higher belongs in
-            "Why this much?", which is where somebody asks it. */}
+        {/* Before the explaining rather than under it, and named.
+            The date above is the surprising part of this page whenever a
+            far counter is in the cart, and the only sentence that makes
+            sense of it was the third paragraph down in small grey type. */}
         {far.length > 0 && !noRunThere && (
-          <p className="text-sm text-brand-dark">
-            <span className="font-semibold">{farNames} goes out on a run only.</span>{" "}
+          <p className="soft border-2 border-brand bg-brand-wash px-3.5 py-2.5 text-[14.5px] text-brand-dark">
+            <span className="font-semibold">
+              {farShopSaid} {farShops.length === 1 ? "is" : "are"} in {farNames},
+              and we only go there on a run.
+            </span>{" "}
+            That is what sets the date above.{" "}
             {farHoldsItUp && withoutFar ? (
               <>
                 Take {farLines.length === 1 ? "it" : "those"} out and the rest
@@ -1022,6 +1037,14 @@ export default function Checkout({
             ) : (
               "Everything here travels together, so there is one delivery fee."
             )}
+          </p>
+        )}
+
+        {!noRunThere && (
+          <p className="text-sm text-muted">
+            {onARun
+              ? "Everybody's food in one car, which is why it costs less."
+              : "A car of its own, because no run is going in time for this."}
           </p>
         )}
 
