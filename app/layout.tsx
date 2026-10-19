@@ -130,19 +130,41 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const settings = await safeSettings();
-  // Checked against what it points at, so a banner for a match that has been
-  // played takes itself down rather than promising a box that is gone.
-  const ribbon = await liveRibbon(settings).catch(() => ({
-    text: settings.ribbon_text,
-    href: settings.ribbon_href,
-  }));
-  // A break the shop is on, or one starting inside the days anybody can
-  // order into. Caught rather than left to throw: every page of the site
-  // renders through here, and a list of days off is not worth taking the
-  // shop down over.
-  const closed = await closureNotice(settings.order_horizon_days || 7).catch(
-    () => null
-  );
+
+  /*
+   * Everything else at once, rather than one after another.
+   *
+   * This layout wraps every page on the site, so whatever it waits for is
+   * added to the time before anybody sees anything, on every visit. It was
+   * asking for eight things in a row: the ribbon, then the closures, then
+   * the offer, then the nudge, then the cookie, then the perk, then whose
+   * link it was, then the QR square. None of the first four has anything to
+   * do with the others, and a queue of round trips to Lagos and back is how
+   * a page that renders in milliseconds takes a second and a half to start.
+   *
+   * Only the ones that genuinely depend on something still wait: the perk
+   * needs the cookie read first, and the square needs the address.
+   */
+  const [ribbon, closed, offer, nudge, jar] = await Promise.all([
+    // Checked against what it points at, so a banner for a match that has
+    // been played takes itself down rather than promising a box that is
+    // gone.
+    liveRibbon(settings).catch(() => ({
+      text: settings.ribbon_text,
+      href: settings.ribbon_href,
+    })),
+    // A break the shop is on, or one starting inside the days anybody can
+    // order into. Caught rather than left to throw: every page of the site
+    // renders through here, and a list of days off is not worth taking the
+    // shop down over.
+    closureNotice(settings.order_horizon_days || 7).catch(() => null),
+    // Read from the code itself, so the strip cannot outlive the offer.
+    publicOffer(settings.offer_code),
+    // Read from the offer itself too: an automatic promotion has no code to
+    // type, so nobody finds it unless the shop says it is on.
+    offerNudge(),
+    cookies(),
+  ]);
   const instagram = instagramLink(settings.instagram_handle);
   const x = xLink(settings.x_handle);
   const email = shopEmails(settings.contact_email);
@@ -167,25 +189,26 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     ...(skincareOn(settings) ? ([["/skincare", "Skincare"]] as [string, string][]) : []),
     ...(pharmacyOn(settings) ? ([["/pharmacy", "Pharmacy"]] as [string, string][]) : []),
   ];
-  // Read from the code itself, so the strip cannot outlive the offer.
-  const offer = await publicOffer(settings.offer_code);
-  // Read from the offer itself too: an automatic promotion has no code to
-  // type, so nobody finds it unless the shop says it is on.
-  const nudge = await offerNudge();
-  // Drawn here because it is the same square for everybody and never
-  // changes. A laptop cannot install an app; it can hold up something a
-  // phone can read.
   // Somebody who arrived on a promoter's own link, and what that link is
   // worth. Read off the coupon itself rather than a sentence typed beside
   // it, so the strip cannot go on promising ₦500 after the code has been
-  // switched off, run out or had its amount changed.
-  const sentBy = (await cookies()).get(WHO_COOKIE)?.value ?? "";
-  const perk = sentBy ? await publicOffer(settings.promoter_perk_code) : null;
-  const perkFrom = perk ? await promoterCalledName(sentBy) : "";
+  // switched off, run out or had its amount changed. Both together: the
+  // coupon and the name are two different tables and neither waits on the
+  // other, only on the cookie that has already been read.
+  const sentBy = jar.get(WHO_COOKIE)?.value ?? "";
+  const [perk, perkFrom] = sentBy
+    ? await Promise.all([
+        publicOffer(settings.promoter_perk_code),
+        promoterCalledName(sentBy),
+      ])
+    : [null, ""];
 
   // The square goes to the one address that asks the phone which store it
   // wants. A printed code is scanned by both kinds of phone, and one that
   // only ever opens the App Store is wrong half the time.
+  // Drawn here because it is the same square for everybody and never
+  // changes. A laptop cannot install an app; it can hold up something a
+  // phone can read.
   const hasApp = settings.ios_app_id !== "" || settings.android_package !== "";
   const appQr = hasApp ? await qrSvg(`${await siteUrl()}/app`) : "";
 
