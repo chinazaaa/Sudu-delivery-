@@ -572,6 +572,8 @@ export default function Checkout({
   // window. Nobody is asked, because there is one right answer and the
   // dropdown that used to be here only made somebody find it.
   const [deliverAt, setDeliverAt] = useState(decided?.at ?? "");
+  // Ticked by hand when the food is not coming today. See comesToday below.
+  const [agreedWhen, setAgreedWhen] = useState(false);
   const sameDay = sameDaySlots.find((one) => one.at === deliverAt) ?? null;
   const shared = joining !== null || party !== "";
 
@@ -648,6 +650,22 @@ export default function Checkout({
       ? `${aroundPhrase(sameDay.at)} ${sameDay.day}`
       : "on the next run";
 
+  /*
+   * Food that is not coming today has to be agreed to, not merely printed.
+   *
+   * The date is on this page three times over and somebody still ordered a
+   * burger from a counter we reach once a week, was told Saturday, and
+   * expected it that afternoon. A sentence can be skimmed past; a box you
+   * cannot pay without ticking cannot.
+   *
+   * Only when it is not today. An order landing in three hours surprises
+   * nobody, and a tick on every order is a tick people learn to click
+   * without reading, which would cost the one that matters its force.
+   */
+  const comesToday = onARun
+    ? runNow !== null && runNow.runDate === today
+    : sameDay !== null && sameDay !== undefined && sameDay.day === "today";
+
   // The same arrival as a line of its own rather than the tail of a
   // sentence: "Between 3:30pm and 5:30pm, Saturday, 26 Sept". Beside the
   // delivery fee, where what the money buys is the question being asked.
@@ -658,6 +676,10 @@ export default function Checkout({
     : sameDay
       ? `${aroundPhrase(sameDay.at).charAt(0).toUpperCase()}${aroundPhrase(sameDay.at).slice(1)} ${sameDay.day}`
       : "";
+
+  // Nothing to agree to where there is no arrival to name, and nothing to
+  // agree to on a cart that cannot be bought at all.
+  const mustAgreeWhen = !comesToday && !noRunThere && arrivingWhen !== "";
 
   /*
    * Comparing one way of getting the food here with the other.
@@ -1910,6 +1932,32 @@ export default function Checkout({
               {state.error}
             </p>
           )}
+          {/* The one thing on this page somebody has to do rather than
+              read. Directly above the button, because that is the last
+              place anybody looks before paying. */}
+          {mustAgreeWhen && (
+            <label
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 px-3.5 py-3 ${
+                agreedWhen ? "border-ink bg-shell" : "border-brand bg-brand-wash"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={agreedWhen}
+                onChange={(event) => setAgreedWhen(event.target.checked)}
+                className="mt-0.5 size-5 shrink-0 accent-brand"
+              />
+              <span className="text-[14.5px] leading-snug">
+                <span className="font-bold">
+                  This is not coming today. {arrivingWhen}.
+                </span>{" "}
+                {far.length > 0
+                  ? `${farShopSaid} only ${farShops.length === 1 ? "goes" : "go"} out on a run, so it cannot come sooner.`
+                  : "Tick to say that works for you."}
+              </span>
+            </label>
+          )}
+
           <div className="flex items-center gap-3">
             <span className="flex shrink-0 flex-col">
               <span className="ticket text-muted">
@@ -1929,6 +1977,7 @@ export default function Checkout({
               (!batchId && party === "" && !sameDay) ||
               noRunThere ||
               !splitReady ||
+              (mustAgreeWhen && !agreedWhen) ||
               unresolved.length > 0
             }
           >
