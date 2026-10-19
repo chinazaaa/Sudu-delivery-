@@ -58,8 +58,14 @@ export default function HelpLine({
     );
   }
 
+  /* Room above and below it.
+     
+     The quiet one is the last thing on a dozen pages and carried no
+     spacing of its own, so it sat flush against whatever came next, which
+     on most of them is the footer's black rule. A footnote printed on top
+     of a rule reads as a mistake even when every word of it is right. */
   return (
-    <p className="text-center text-xs text-muted">
+    <p className="px-4 pb-10 pt-6 text-center text-xs text-muted">
       Something not right? Message us on{" "}
       {link ? (
         <a
