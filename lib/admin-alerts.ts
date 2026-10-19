@@ -296,6 +296,46 @@ export function cartsLeftAlert(
   };
 }
 
+/**
+ * A cart that can still catch the run, which is a different message.
+ *
+ * "₦28,000 left in a cart" is a thing to deal with when there is time. A
+ * cart whose owner can still be rung, talked through it and put on a car
+ * that has not left yet is worth stopping for, and the two were being said
+ * in the same words at the same volume. The money is recoverable for
+ * exactly as long as the run is open and not a minute longer, so the
+ * minutes are the headline.
+ *
+ * Told under its own key, so a cart already mentioned quietly this morning
+ * is still allowed to shout when the run it could make is about to close.
+ */
+export function cartsCatchableAlert(
+  carts: { name: string; value: number; items: number }[],
+  closing: { closes: string; minutesLeft: number }
+): AdminAlert {
+  const total = carts.reduce((sum, cart) => sum + cart.value, 0);
+  const money = "\u20a6" + Math.round(total).toLocaleString("en-NG");
+  const left =
+    closing.minutesLeft >= 60
+      ? `${Math.floor(closing.minutesLeft / 60)}h ${closing.minutesLeft % 60}m`
+      : `${closing.minutesLeft}m`;
+
+  if (carts.length === 1) {
+    const only = carts[0];
+    return {
+      title: `Call ${only.name || "them"}: ${money} can still make this run`,
+      body: `${only.items} item${only.items === 1 ? "" : "s"} sitting unpaid, and the run closes ${closing.closes}, in ${left}.`,
+      url: "/admin/carts",
+    };
+  }
+
+  return {
+    title: `${money} can still make this run`,
+    body: `${carts.length} carts could be on it if they pay before ${closing.closes}, which is ${left} away. Each has a WhatsApp button.`,
+    url: "/admin/carts",
+  };
+}
+
 /** What the run-closing-with-money-outstanding alert says. */
 export function unpaidRunAlert(run: {
   label: string;

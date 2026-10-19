@@ -10,6 +10,7 @@ import {
   alreadyTold,
   tellAdminOnce,
   cartsLeftAlert,
+  cartsCatchableAlert,
   markTold,
   tellAdmin,
   toldKey,
@@ -71,19 +72,84 @@ export async function GET(request: Request): Promise<NextResponse> {
       if (!(await alreadyTold(toldKey("cart", cart.id)))) fresh.push(cart);
     }
 
-    if (fresh.length > 0) {
+    /*
+     * The ones that can still be saved, told apart from the ones that
+     * cannot, and told louder.
+     *
+     * A cart becomes worthless the minute the run it could have caught
+     * closes, and until then it is a phone call away from being an order.
+     * Both were going out in the same words, so the one worth stopping for
+     * looked exactly like the one that can wait until the morning.
+     *
+     * Its own told key, so a cart mentioned quietly at nine is still
+     * allowed to shout at one when the car is about to leave without it.
+     */
+    const { data: openRuns } = await db()
+      .from("batches")
+      .select("id, cut_off_at, kind")
+      .eq("status", "open")
+      .gt("cut_off_at", new Date().toISOString())
+      .order("cut_off_at", { ascending: true })
+      .limit(5);
+
+    // Shared runs only. A parcel's trip sits open with a cut-off at the end
+    // of the day it was asked for, so it looks exactly like a run closing
+    // tonight, and a cart judged catchable against somebody's parcel is a
+    // phone call about a car that was never going to carry it. A row with
+    // no kind at all predates the column and is a run.
+    const run =
+      ((openRuns ?? []) as { id: string; cut_off_at: string; kind: string | null }[]).find(
+        (one) => one.kind !== "same_day" && one.kind !== "parcel"
+      ) ?? null;
+    const closesAt = run ? new Date(run.cut_off_at).getTime() : 0;
+    const minutesLeft = run ? Math.round((closesAt - Date.now()) / 60_000) : 0;
+
+    // Catchable means this run can carry it: a cart with no run on it yet,
+    // or one already pointed at this one. A cart saved against a different
+    // run is somebody waiting for that run on purpose.
+    const catchable = run
+      ? carts.filter(
+          (cart) => cart.batch_id === null || cart.batch_id === run.id
+        )
+      : [];
+    const urgent: typeof carts = [];
+    for (const cart of catchable) {
+      if (!(await alreadyTold(toldKey("cart-catch", cart.id)))) urgent.push(cart);
+    }
+
+    if (urgent.length > 0 && run) {
       await tellAdmin(
-        cartsLeftAlert(
-          fresh.map((cart) => ({ name: cart.name, value: cart.value, items: cart.items }))
+        cartsCatchableAlert(
+          urgent.map((cart) => ({ name: cart.name, value: cart.value, items: cart.items })),
+          { closes: clockLabel(run.cut_off_at), minutesLeft }
         )
       );
-      // Marked whether or not a phone was reached, for the same reason the
-      // abandoned-cart email marks its carts: a shop with no phone subscribed
-      // must not build up a backlog that all fires the day one is.
-      for (const cart of fresh) {
-        await markTold(toldKey("cart", cart.id));
-        told.push(toldKey("cart", cart.id));
+      for (const cart of urgent) {
+        await markTold(toldKey("cart-catch", cart.id));
+        told.push(toldKey("cart-catch", cart.id));
       }
+    }
+
+    // And the ordinary notice, for whatever the urgent one did not cover.
+    const urgentIds = new Set(urgent.map((cart) => cart.id));
+    const quiet = fresh.filter((cart) => !urgentIds.has(cart.id));
+
+    if (quiet.length > 0) {
+      await tellAdmin(
+        cartsLeftAlert(
+          quiet.map((cart) => ({ name: cart.name, value: cart.value, items: cart.items }))
+        )
+      );
+    }
+
+    // Marked whether or not a phone was reached, for the same reason the
+    // abandoned-cart email marks its carts: a shop with no phone subscribed
+    // must not build up a backlog that all fires the day one is. Every
+    // fresh cart is marked, the loud ones included, so neither notice
+    // repeats itself a quarter of an hour later.
+    for (const cart of fresh) {
+      await markTold(toldKey("cart", cart.id));
+      told.push(toldKey("cart", cart.id));
     }
   } catch {
     /* One alert failing must not take the other down with it. */
