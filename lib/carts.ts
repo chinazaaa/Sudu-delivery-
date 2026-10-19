@@ -271,6 +271,25 @@ export function cartLine(cart: SavedCart): string {
 }
 
 /**
+ * The same line with the phone call attached to it.
+ *
+ * The number was already printed, in the middle of a sentence, where no
+ * phone offers to dial it: reading it in the mail and then typing it into
+ * the keypad is enough friction that the cart goes uncalled. A cart is only
+ * worth money for as long as the run is open, so the call has to be one
+ * tap from the thing that told you about it.
+ */
+export function cartLineToCall(
+  cart: SavedCart
+): { text: string; href: string; action: string } {
+  return {
+    text: cartLine(cart),
+    href: `tel:${cart.phone.replace(/[^\d+]/g, "")}`,
+    action: `Call ${cart.phone}`,
+  };
+}
+
+/**
  * Puts a number back in the nudging, however it came out of it.
  *
  * There has to be a way back. The commonest reason a number is marked wrong

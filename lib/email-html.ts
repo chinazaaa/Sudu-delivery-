@@ -14,8 +14,20 @@ export type Block =
   | { kind: "button"; label: string; href: string }
   /** Label on the left, value on the right: total, number, block. */
   | { kind: "rows"; rows: { label: string; value: string }[] }
-  /** What was ordered, or which carts are waiting. */
-  | { kind: "list"; title?: string; items: string[] }
+  /**
+   * What was ordered, or which carts are waiting.
+   *
+   * A line can carry something to do as well as something to read. A cart
+   * nobody finished is worth nothing until somebody rings the person, and
+   * the number was printed in the middle of a sentence where no phone will
+   * offer to dial it. So a line may end in a link, which is the one thing
+   * a mail on a phone is good for.
+   */
+  | {
+      kind: "list";
+      title?: string;
+      items: (string | { text: string; href: string; action: string })[];
+    }
   /** Quieter than a paragraph, for the housekeeping at the end. */
   | { kind: "note"; text: string };
 
@@ -76,12 +88,18 @@ function block(item: Block): string {
             )}</p>`
           : ""
       }<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 18px;border-collapse:collapse;background:${SHELL};border-radius:12px">${item.items
-        .map(
-          (line, index) =>
-            `<tr><td style="padding:9px 14px;font-size:14px;line-height:1.45;color:${INK};${
-              index > 0 ? `border-top:1px solid ${LINE};` : ""
-            }">${escape(line)}</td></tr>`
-        )
+        .map((line, index) => {
+          const said = typeof line === "string" ? line : line.text;
+          const doing =
+            typeof line === "string"
+              ? ""
+              : ` <a href="${escape(line.href)}" style="color:${BRAND};font-weight:700;text-decoration:none;white-space:nowrap">${escape(
+                  line.action
+                )}</a>`;
+          return `<tr><td style="padding:9px 14px;font-size:14px;line-height:1.45;color:${INK};${
+            index > 0 ? `border-top:1px solid ${LINE};` : ""
+          }">${escape(said)}${doing}</td></tr>`;
+        })
         .join("")}</table>`;
   }
 }
@@ -142,7 +160,14 @@ export function renderText(title: string, blocks: Block[]): string {
     }
     if (item.kind === "list") {
       if (item.title) parts.push(item.title);
-      parts.push(...item.items.map((line) => `  ${line}`), "");
+      // The plain-text half says the link rather than hiding it: a mail
+      // client that will not draw HTML still has to be able to ring them.
+      parts.push(
+        ...item.items.map((line) =>
+          typeof line === "string" ? `  ${line}` : `  ${line.text} ${line.href}`
+        ),
+        ""
+      );
     }
   }
   return parts.join("\n").trim();

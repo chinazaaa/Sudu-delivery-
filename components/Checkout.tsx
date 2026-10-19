@@ -927,8 +927,12 @@ export default function Checkout({
         batchId={batchId}
         items={itemCount}
         value={total}
+        /* Named by counter, because "1x Shawarma" is three counters'
+           shawarma and the person ringing a cart back has to know which
+           car it was going on before they can say anything useful about
+           when it could come. */
         summary={cart
-          .map((line) => `${line.qty}x ${line.name}`)
+          .map((line) => `${line.qty}x ${line.name} (${line.restaurantName})`)
           .join(", ")}
       />
 

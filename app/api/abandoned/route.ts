@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { abandonedCarts, cartLine, markAlerted } from "@/lib/carts";
+import { abandonedCarts, cartLine, cartLineToCall, markAlerted } from "@/lib/carts";
 import { emailAdmins } from "@/lib/email";
 import { renderEmail, renderText, type Block } from "@/lib/email-html";
 import { naira } from "@/lib/money";
 import { safeSettings } from "@/lib/settings";
+import { siteUrl } from "@/lib/admin-templates";
 
 export const dynamic = "force-dynamic";
 
@@ -52,14 +53,35 @@ export async function GET(request: Request): Promise<NextResponse> {
         `never paid for, worth ${naira(total)}.`,
     },
     ...(fresh.length > 0
-      ? [{ kind: "list" as const, title: "Since yesterday", items: fresh.map(cartLine) }]
+      ? [
+          {
+            kind: "list" as const,
+            title: "Since yesterday",
+            items: fresh.map(cartLineToCall),
+          },
+        ]
       : []),
     ...(older.length > 0
-      ? [{ kind: "list" as const, title: "Still waiting", items: older.map(cartLine) }]
+      ? [
+          {
+            kind: "list" as const,
+            title: "Still waiting",
+            items: older.map(cartLineToCall),
+          },
+        ]
       : []),
+    // The way in, rather than a sentence telling somebody where to go and
+    // look. A mail read on a phone that then asks you to find admin
+    // yourself is a mail that gets dealt with later, and later is after
+    // the run has closed.
     {
-      kind: "note",
-      text: "They are all in admin under Left behind, each with a WhatsApp button. Tapping Done with this takes one off the list.",
+      kind: "button" as const,
+      label: "Open Left behind in admin",
+      href: `${await siteUrl()}/admin/carts`,
+    },
+    {
+      kind: "note" as const,
+      text: "Each one has a WhatsApp button there too. Tapping Done with this takes it off the list.",
     },
   ];
 
