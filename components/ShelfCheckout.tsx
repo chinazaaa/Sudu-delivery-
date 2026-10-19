@@ -13,6 +13,7 @@ import { feeFor, sameDayFee, type Band } from "@/lib/fees";
 import type { Slot } from "@/lib/same-day";
 import { placeSkincareOrder } from "@/app/actions";
 import { emptyShelf, setShelfQty, shelfTotal, useShelf } from "@/lib/skincare-cart";
+import KeepCart from "@/components/KeepCart";
 import type { DrawingName } from "./Drawing";
 
 /**
@@ -189,8 +190,34 @@ export default function ShelfCheckout({
     }
   };
 
+  // The counter's own name, for the summary line somebody reads in the
+  // morning: "2x Paracetamol" says nothing about which car it was for.
+  const counterSaid = counter.charAt(0).toUpperCase() + counter.slice(1);
+
   return (
     <div className="space-y-4 pb-36">
+      {/*
+        A basket left here is worth chasing too.
+        
+        Only the food checkout remembered carts, so every skincare and
+        pharmacy basket that got as far as a phone number and no further
+        vanished the moment the tab closed. Nobody was told and nobody could
+        ring them, and these are the two counters where a basket is worth
+        most. The same component as the food side, because a cart is a cart
+        and the list in admin should not care which shelf it came off.
+      */}
+      <KeepCart
+        phone={phone}
+        name={name}
+        hostel={inPau ? hostel : address}
+        batchId=""
+        items={items}
+        value={food + fee}
+        summary={cart
+          .map((one) => `${one.qty}x ${one.name} (${counterSaid})`)
+          .join(", ")}
+      />
+
       <h1 className="text-2xl font-extrabold">Checkout</h1>
 
       <section className="card space-y-1">
