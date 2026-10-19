@@ -251,11 +251,33 @@ export async function closeExpiredBatches(): Promise<void> {
   // Read first rather than closing in one statement, because an empty run
   // is not closed at all now and whether it is empty is a second question
   // the update cannot ask.
-  const { data: due } = await db()
-    .from("batches")
-    .select("*")
-    .eq("status", "open")
-    .lt("cut_off_at", now.toISOString());
+  /*
+   * Runs only. A car of its own is never swept.
+   *
+   * A same day car and a parcel trip are one customer's journey, made the
+   * moment they ask for it, and both are created with their cut-off set to
+   * that moment: there is no window for anybody else to join, so there is
+   * nothing for a cut-off to hold open. Which made every one of them
+   * already expired the second it existed, and this sweep shut it within
+   * the minute: ordered, car opened, car closed, all before the food was
+   * bought. On those two it is the stage that says where the trip has got
+   * to, never the status.
+   *
+   * Asked in a way that survives a database without the column, because
+   * this runs on the home page and must never be the thing that takes the
+   * shop down. Before the column exists every batch is a run anyway.
+   */
+  const ask = (byKind: boolean) => {
+    const query = db()
+      .from("batches")
+      .select("*")
+      .eq("status", "open")
+      .lt("cut_off_at", now.toISOString());
+    return byKind ? query.not("kind", "in", '("same_day","parcel")') : query;
+  };
+
+  let { data: due, error: wrong } = await ask(true);
+  if (wrong) ({ data: due } = await ask(false));
 
   const { settleGroupFees } = await import("./groups");
   // Read once rather than per run: a sweep usually has one or two runs on

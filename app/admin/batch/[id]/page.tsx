@@ -207,6 +207,14 @@ export default async function BatchPage({
   // Past the counter, the shopping is done and the list is history. Past the
   // handout, so is the run.
   const shopped = stageIndex(batch.stage) >= stageIndex("on_the_road");
+
+  // The run's closing time, said exactly the way the reopen notice says it,
+  // so the two can be compared rather than one of them trusted.
+  const closesAtNow = new Date(batch.cut_off_at).toLocaleTimeString("en-GB", {
+    timeZone: "Africa/Lagos",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
   const finished = batch.stage === "handed_out";
   // A run used to be judged against an eight order minimum. It is not the
   // measure any more: one urgent same day order covers its own car. What
@@ -415,6 +423,11 @@ export default async function BatchPage({
         }
       />
 
+      {/* The notice below is only true while the closing time it names is
+          still the one on the run. Changing the time under Times is exactly
+          what it asks for, and the notice went on sitting there afterwards
+          contradicting it, because a query string survives every reload
+          until you navigate away. So it is compared rather than trusted. */}
       {/*
         Said, rather than done quietly.
 
@@ -425,7 +438,7 @@ export default async function BatchPage({
         this run can still manage is the one who just reopened it, so it
         says what it did and where to change it.
       */}
-      {query.moved ? (
+      {query.moved && query.moved === closesAtNow ? (
         <p className="mb-[18px] rounded-2xl border-[1.5px] border-ink bg-volt px-3.5 py-2.5 text-[14.5px] font-semibold">
           Ordering is open again, closing {query.moved}. Its old closing time
           had passed, and a run open past its closing time is shut again
