@@ -12,13 +12,17 @@ import {
   type SavedCart,
 } from "@/lib/carts";
 import { getSettings } from "@/lib/settings";
-import { isOrderable } from "@/lib/batches";
+import { isOrderable, openBatches } from "@/lib/batches";
+import { deliverySlots } from "@/lib/same-day";
+import { hoursByDay } from "@/lib/settings";
+import { toBatchView } from "@/lib/view";
 import { db } from "@/lib/supabase";
 import type { Batch } from "@/lib/types";
 import { whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
 import { agoLabel, countdown } from "@/lib/time";
 import {
+  cartToOrder,
   closeCart,
   deleteCart,
   deleteClosedCarts,
@@ -138,6 +142,36 @@ export default async function CartsPage({
 
   const open = unhandled.filter(stillGoing);
   const shut = unhandled.filter((cart) => !stillGoing(cart));
+  /*
+   * Where a cart could go, if it became an order now.
+   *
+   * The same two choices the order page offers when moving an order: a run
+   * still taking orders, or a window of its own, which makes its car when
+   * it is picked. Read once for the page rather than per card, because
+   * every card offers the same list.
+   */
+  const [openRuns, carSlots] = await Promise.all([
+    openBatches().catch(() => []),
+    settings.same_day_on === "on"
+      ? hoursByDay()
+          .then((hours) => deliverySlots(new Date(), hours))
+          .catch(() => [])
+      : Promise.resolve([]),
+  ]);
+  const goingTo = [
+    ...openRuns
+      .map(toBatchView)
+      .filter((one) => !one.closed && !one.full)
+      .map((one) => ({
+        value: `run:${one.id}`,
+        label: `${one.deliveryWindow}, ${one.label.split(" \u00b7 ")[0]}`,
+      })),
+    ...carSlots.map((one) => ({
+      value: one.at,
+      label: `A car of its own \u00b7 ${one.label}`,
+    })),
+  ];
+
   const carts =
     cut === "done"
       ? done
@@ -466,6 +500,54 @@ export default async function CartsPage({
                       >
                         Call
                       </a>
+                    </div>
+
+                    {/*
+                      Agreed on WhatsApp, now put it through.
+                      
+                      This was the gap: the page could message a cart or
+                      close it, and everything in between was typed in by
+                      hand off a sentence that does not say which counter
+                      sold the shawarma. Offered only where the basket kept
+                      what was in it, because rebuilding one that did not
+                      would mean guessing at a price.
+                    */}
+                    <div className="mt-2.5">
+                      {cart.lines && goingTo.length > 0 ? (
+                        <form action={cartToOrder} className="flex gap-2">
+                          <input type="hidden" name="cart_id" value={cart.id} />
+                          <select
+                            name="going"
+                            defaultValue=""
+                            className="field field-admin min-h-[46px] grow border-[1.5px] border-line py-0 text-[14.5px]"
+                          >
+                            <option value="" disabled>
+                              Make it an order on…
+                            </option>
+                            {goingTo.map((one) => (
+                              <option key={one.value} value={one.value}>
+                                {one.label}
+                              </option>
+                            ))}
+                          </select>
+                          <ActionButton
+                            className="btn-admin shrink-0"
+                            done="Made ✓"
+                          >
+                            Make it
+                          </ActionButton>
+                        </form>
+                      ) : cart.lines ? (
+                        <p className="hint">
+                          Nothing is taking orders just now, so there is
+                          nowhere to put this yet.
+                        </p>
+                      ) : (
+                        <p className="hint">
+                          Filled before baskets were kept, so this one has to
+                          be typed in by hand.
+                        </p>
+                      )}
                     </div>
 
                     {/* Saying what came of it opens its own card below the

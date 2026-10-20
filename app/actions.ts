@@ -8,7 +8,7 @@ import { lastOrderForPhone, perkFor, type LinkPerk } from "@/lib/orders";
 import { accountNumber, normalisePhone } from "@/lib/phone";
 import { cameFromNow, linkCouponNow } from "@/lib/where-from";
 import { tidyChannel } from "@/lib/came-from";
-import { rememberCart } from "@/lib/carts";
+import { rememberCart, type CartBasket } from "@/lib/carts";
 import { countCheckoutLinkUse, getCheckoutLink } from "@/lib/checkout-links";
 import { arrivalNow } from "@/lib/arrival-server";
 import { OPENED, sprung, tooFast, TRAP } from "@/lib/guard";
@@ -183,6 +183,18 @@ export async function keepCart(form: FormData): Promise<void> {
     items: Math.round(items),
     value: Math.round(Number(form.get("value") ?? 0)) || 0,
     summary: String(form.get("summary") ?? "").slice(0, 500),
+    // What was in it, so admin can rebuild the order rather than read a
+    // sentence and guess. Bad JSON is no lines rather than a failed save:
+    // a cart half kept is worth more than one lost over a parse.
+    lines: (() => {
+      const raw = String(form.get("lines") ?? "").trim();
+      if (raw === "") return null;
+      try {
+        return JSON.parse(raw) as CartBasket;
+      } catch {
+        return null;
+      }
+    })(),
   });
 }
 

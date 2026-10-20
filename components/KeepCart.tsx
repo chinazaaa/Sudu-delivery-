@@ -16,6 +16,7 @@ export default function KeepCart({
   items,
   value,
   summary,
+  lines = "",
 }: {
   phone: string;
   name: string;
@@ -24,6 +25,9 @@ export default function KeepCart({
   items: number;
   value: number;
   summary: string;
+  /** The basket itself, as JSON, so admin can rebuild it exactly rather
+   *  than read the summary and guess which counter a Shawarma came from. */
+  lines?: string;
 }) {
   const last = useRef("");
 
@@ -44,12 +48,13 @@ export default function KeepCart({
       form.set("items", String(items));
       form.set("value", String(value));
       form.set("summary", summary);
+      form.set("lines", lines);
       // Nothing to show the customer, and nothing to do if it fails.
       keepCart(form).catch(() => {});
     }, 4000);
 
     return () => clearTimeout(timer);
-  }, [phone, name, hostel, batchId, items, value, summary]);
+  }, [phone, name, hostel, batchId, items, value, summary, lines]);
 
   return null;
 }

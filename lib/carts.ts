@@ -18,6 +18,27 @@ export function fromTheChat(summary: string): boolean {
   return String(summary ?? "").startsWith(FROM_CHAT);
 }
 
+/**
+ * A basket as it stood, tagged by which shelf it came off.
+ *
+ * The two place orders by different routes: food carries its options and
+ * goes through placeOrder, a counter basket is ids and quantities and goes
+ * through its own. Keeping the tag means the thing reading this never has
+ * to guess which, and a shelf added later cannot be quietly mistaken for
+ * one of these two.
+ */
+export type CartBasket =
+  | {
+      kind: "food";
+      lines: {
+        itemId: string;
+        optionIds: string[];
+        qty: number;
+        forName: string;
+      }[];
+    }
+  | { kind: "counter"; counter: string; lines: { id: string; qty: number }[] };
+
 export type SavedCart = {
   id: string;
   phone: string;
@@ -31,6 +52,9 @@ export type SavedCart = {
   alerted_at: string | null;
   /** The order it became, where it became one. */
   converted_order_id: string | null;
+  /** What was in it, exactly, so it can be rebuilt rather than guessed at.
+   *  Null on every cart saved before this was kept. */
+  lines: CartBasket | null;
   handled_at: string | null;
   handled_reason: string;
   /** Nothing is nudged to this number until this moment has passed. */
@@ -57,6 +81,8 @@ export async function rememberCart(cart: {
   items: number;
   value: number;
   summary: string;
+  /** What is actually in it, where the caller knows. */
+  lines?: CartBasket | null;
 }): Promise<void> {
   if (!cart.phone || cart.items === 0) return;
 
@@ -89,6 +115,7 @@ export async function rememberCart(cart: {
       items: cart.items,
       value: cart.value,
       summary: cart.summary,
+      lines: cart.lines ?? null,
       converted_at: fresh ? converted : null,
       // Touching a cart again clears any previous alert, so a person who comes
       // back and leaves again is chased once more rather than never.

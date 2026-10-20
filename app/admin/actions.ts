@@ -25,7 +25,7 @@ import {
   openRunsBetween,
 } from "@/lib/batches";
 import { closeGroup } from "@/lib/groups";
-import { moveOrder, NOT_ORDERS_SQL } from "@/lib/orders";
+import { moveOrder, placeOrder, NOT_ORDERS_SQL } from "@/lib/orders";
 import { followRun, followRuns } from "@/lib/run-follow";
 import { canTravel, groupCarts } from "@/lib/group-carts";
 import {
@@ -71,7 +71,8 @@ import { naira, orderRef } from "@/lib/money";
 import { namedPromoters, realPromoter } from "@/lib/promoters";
 import { pushDeal, pushToPhone, tellDelivered } from "@/lib/push";
 import { recordDealSend } from "@/lib/deal-sends";
-import { freeNumber, quietUntil } from "@/lib/carts";
+import { freeNumber, quietUntil, type SavedCart } from "@/lib/carts";
+import { placeSkincareOrder } from "@/app/actions";
 
 async function assertAdmin(): Promise<void> {
   if (!(await isSignedIn())) throw new Error("Not signed in.");
@@ -5694,4 +5695,99 @@ export async function setOrderTimes(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
   revalidatePath("/o", "layout");
   revalidatePath("/orders");
+}
+
+/**
+ * A basket somebody left, turned into a real order.
+ *
+ * The carts page could do two things about a cart: send a message about it,
+ * or close it. Everything between those, agreeing it on WhatsApp and then
+ * putting it through, was typed in by hand, and typing it by hand means
+ * reading a sentence like "1x Shawarma" and deciding which of two counters
+ * sold it. Two do, at ₦4,750 and ₦11,300, and the sentence does not say.
+ *
+ * So this rebuilds it from what the basket actually held, through the same
+ * two paths a customer's own checkout uses: the food one with its options,
+ * a counter basket through its own. The price is today's, not the price on
+ * the day they filled it, which is the honest way round when a markup has
+ * moved underneath them.
+ *
+ * It lands unpaid on purpose. Nobody has transferred anything yet, so it
+ * goes on the list of orders waiting for money like any other, and the
+ * message asking for it is a tap away on the order.
+ */
+export async function cartToOrder(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const cartId = String(form.get("cart_id") ?? "");
+  const going = String(form.get("going") ?? "");
+  if (cartId === "" || going === "") return;
+
+  const { data } = await db().from("carts").select("*").eq("id", cartId).maybeSingle();
+  const cart = data as SavedCart | null;
+  if (!cart) redirect("/admin/carts?made=Could+not+find+that+cart.");
+
+  const basket = cart.lines;
+  if (!basket || basket.lines.length === 0) {
+    redirect("/admin/carts?made=That+cart+did+not+keep+what+was+in+it.");
+  }
+
+  // Where it goes: a run still taking orders, or a car of its own, which is
+  // made here the way the order page makes one.
+  let batchId = going.startsWith("run:") ? going.slice(4) : "";
+  const deliverAt = batchId === "" ? going : "";
+  if (batchId === "") {
+    const car = await createSameDayBatch({
+      deliverAt: going,
+      label: windowPhrase(going).replace(/^./, (one) => one.toUpperCase()),
+    });
+    if (!car) redirect("/admin/carts?made=Could+not+make+that+car.");
+    batchId = car.id;
+  }
+
+  const hostel = cart.hostel.trim() || "Ask them";
+
+  const made =
+    basket.kind === "food"
+      ? await placeOrder({
+          batchId,
+          name: cart.name || "No name given",
+          phone: cart.phone,
+          hostel,
+          source: "web",
+          paymentMethod: "transfer",
+          lines: basket.lines.map((line) => ({
+            menu_item_id: line.itemId,
+            qty: line.qty,
+            option_ids: line.optionIds,
+            for_name: line.forName || null,
+          })),
+        })
+      : await placeSkincareOrder({
+          counter: basket.counter,
+          deliverAt: deliverAt || undefined,
+          lines: basket.lines,
+          name: cart.name || "No name given",
+          phone: cart.phone,
+          hostel,
+          note: "",
+          paymentMethod: "transfer",
+        });
+
+  if (!made.ok) {
+    redirect(`/admin/carts?made=${encodeURIComponent(made.error)}`);
+  }
+
+  // The cart is spent, and says what it became rather than simply going
+  // quiet: a cart that vanishes and a cart lost to a bug look the same.
+  await db()
+    .from("carts")
+    .update({
+      converted_at: new Date().toISOString(),
+      converted_order_id: made.orderId,
+    })
+    .eq("id", cartId);
+
+  revalidatePath("/admin", "layout");
+  redirect(`/admin/orders/${made.orderId}`);
 }

@@ -216,6 +216,11 @@ export default function ShelfCheckout({
         summary={cart
           .map((one) => `${one.qty}x ${one.name} (${counterSaid})`)
           .join(", ")}
+        lines={JSON.stringify({
+          kind: "counter",
+          counter,
+          lines: cart.map((one) => ({ id: one.id, qty: one.qty })),
+        })}
       />
 
       <h1 className="text-2xl font-extrabold">Checkout</h1>

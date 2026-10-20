@@ -934,6 +934,18 @@ export default function Checkout({
         summary={cart
           .map((line) => `${line.qty}x ${line.name} (${line.restaurantName})`)
           .join(", ")}
+        /* And the basket itself, which is what lets admin turn it back
+           into an order without working out from the total which of two
+           counters sold the shawarma. */
+        lines={JSON.stringify({
+          kind: "food",
+          lines: cart.map((line) => ({
+            itemId: line.itemId,
+            optionIds: line.optionIds,
+            qty: line.qty,
+            forName: line.forName,
+          })),
+        })}
       />
 
       {joining && (

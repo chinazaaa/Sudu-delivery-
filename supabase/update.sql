@@ -1707,3 +1707,20 @@ alter table carts add column if not exists converted_order_id uuid references or
 -- contents back before it names a price, because the person filled it days
 -- ago and will not remember what was in it.
 alter table settings add column if not exists msg_basket text not null default '';
+-- What was in the basket, not just a sentence describing it.
+--
+-- A cart stored "1x Shawarma, 1x Classic Asun Pasta" and nothing else: no
+-- item id, no counter, no options. Two counters sell a thing called
+-- Shawarma at ₦4,750 and ₦11,300, so turning that sentence back into an
+-- order meant working backwards from the saved total to prove which one it
+-- was, and noticing a ₦600 sausage that the sentence never mentioned.
+--
+-- A button cannot do that, and one that guessed would charge somebody
+-- ₦6,550 too much. So the lines are kept as they were, and the sentence
+-- stays for reading.
+--
+-- Tagged by kind because the two shelves place orders differently: food
+-- goes through placeOrder with its options, a counter basket through its
+-- own path with ids and quantities. Null on every cart saved before this,
+-- which is what the button checks before offering itself.
+alter table carts add column if not exists lines jsonb;
