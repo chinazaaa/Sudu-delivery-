@@ -9,6 +9,7 @@ import {
   doors,
   feedback,
   funnel,
+  ownPages,
   parcelNumbers,
   shelfNumbers,
   traffic,
@@ -29,7 +30,7 @@ export default async function AnalyticsPage({
   const days = RANGES.includes(asked as (typeof RANGES)[number]) ? asked : 7;
 
   // Null means nothing is counting yet. The rest of the page still works.
-  const [views, steps, said, shelf, boxes, parcels, settings, came, ways, earned] =
+  const [views, steps, said, shelf, boxes, parcels, settings, came, ways, earned, mine] =
     await Promise.all([
     traffic(days),
     funnel(days),
@@ -41,6 +42,8 @@ export default async function AnalyticsPage({
     channels(days),
     doors(days),
     profitByChannel(days),
+    // Every page this shop wrote, including the ones nobody has opened.
+    ownPages(days),
   ]);
   const busiest = views ? Math.max(...views.perDay.map((day) => day.views), 1) : 1;
   // A route is stored by its id, and the id is not what anybody calls it.
@@ -395,6 +398,94 @@ export default async function AnalyticsPage({
           </>
         )}
       </section>
+
+      {/*
+        Every page the shop wrote, including the noughts.
+
+        "What they looked at" below is sorted by views, so it can only ever
+        name pages somebody looked at. The question actually worth asking is
+        the other one, and it has no row in that list: nine pages were
+        written for the services this shop offers and there was no way to
+        find out that nobody has opened one of them since it went up.
+
+        People rather than views, because one person reloading a page
+        eleven times is one person who was interested, and a page written to
+        be found by a stranger is doing nothing if everybody on it was
+        already shopping.
+      */}
+      {mine && (
+        <section className="card mb-4 space-y-2">
+          <h2 className="font-bold">Your own pages</h2>
+          <p className="hint">
+            Every page the shop wrote, over the last {days} days. Admin is
+            never counted, so none of this is you checking a page works.
+          </p>
+          {(() => {
+            const quiet = mine.filter((one) => one.people === 0);
+            const busiest = Math.max(...mine.map((one) => one.people), 1);
+            return (
+              <>
+                <ul className="divide-y divide-black/5 text-sm">
+                  {mine
+                    .filter((one) => one.people > 0)
+                    .map((page) => (
+                      <li key={page.path} className="py-2">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <Link
+                            href={page.path}
+                            className="min-w-0 truncate font-semibold"
+                          >
+                            {page.said}
+                          </Link>
+                          <span className="shrink-0 text-muted">
+                            <span className="font-semibold text-ink">
+                              {page.people}
+                            </span>{" "}
+                            {page.people === 1 ? "person" : "people"} · {page.views}{" "}
+                            {page.views === 1 ? "view" : "views"}
+                          </span>
+                        </div>
+                        <div className="mt-1 h-[7px] rounded-full bg-rule">
+                          <div
+                            className="h-full rounded-full bg-brand"
+                            style={{
+                              width: `${Math.round((page.people / busiest) * 100)}%`,
+                            }}
+                          />
+                        </div>
+                      </li>
+                    ))}
+                </ul>
+                {/* The point of the panel. Said as a sentence rather than
+                    as more rows of nought, because a page nobody has opened
+                    is one fact however many pages it is true of. */}
+                {quiet.length > 0 && (
+                  <div className="soft mt-1 bg-brand-tint px-3 py-2.5">
+                    <p className="text-sm font-semibold">
+                      Nobody opened {quiet.length} of them in {days} days
+                    </p>
+                    <p className="hint mt-1">
+                      {quiet.map((one, at) => (
+                        <span key={one.path}>
+                          <Link href={one.path} className="font-semibold text-brand-dark">
+                            {one.said}
+                          </Link>
+                          {at < quiet.length - 1 ? " · " : ""}
+                        </span>
+                      ))}
+                    </p>
+                    <p className="hint mt-1.5">
+                      A page nobody finds is a page nothing links to. These
+                      are the ones to put in a bio, a status or a poster,
+                      or to stop keeping.
+                    </p>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </section>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="card space-y-2">

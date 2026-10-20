@@ -761,3 +761,97 @@ export async function doors(days = 28): Promise<Door[] | null> {
     .map((one) => ({ ...one, share: Math.round((one.orders / all) * 100) }))
     .sort((a, b) => b.orders - a.orders);
 }
+
+/**
+ * The pages this shop wrote, and whether anybody opens them.
+ *
+ * The page list above answers "what got looked at", which only ever names
+ * things that got looked at. The question somebody actually has is the
+ * other one: nine pages were written for the services this shop offers,
+ * and there was no way to find out that nobody has opened one of them
+ * since it went up. A page at nought does not appear in a list of pages
+ * sorted by views, which is exactly the page worth knowing about.
+ *
+ * So the list is written down rather than read off the traffic, and every
+ * one of them is shown whether it has anything against it or not.
+ *
+ * Add a page to the shop, add a line here. That is the cost of being able
+ * to see a nought.
+ */
+export const OWN_PAGES: { path: string; said: string }[] = [
+  { path: "/", said: "The front page" },
+  { path: "/products", said: "Everything on the menu" },
+  { path: "/collections", said: "Boxes" },
+  { path: "/occasions", said: "Occasions" },
+  { path: "/skincare", said: "Skincare" },
+  { path: "/pharmacy", said: "Pharmacy" },
+  { path: "/parcel", said: "Parcels" },
+  { path: "/custom-order", said: "Ask for anything" },
+  { path: "/parents", said: "For parents" },
+  { path: "/delivery-to-pau", said: "Delivery to PAU" },
+  { path: "/send-a-gift-to-pau", said: "Send a gift to PAU" },
+  { path: "/pau-student-store", said: "The student store" },
+  { path: "/pau-snacks", said: "Snacks" },
+  { path: "/pau-pharmacy", said: "Pharmacy, for searching" },
+  { path: "/pau-laundry", said: "Laundry" },
+  { path: "/pau-project-printing", said: "Project printing" },
+  { path: "/pau-tailoring", said: "Tailoring" },
+  { path: "/pau-hair-and-barbing", said: "Hair and barbing" },
+  { path: "/pau-phone-and-laptop-repair", said: "Phone and laptop repair" },
+  { path: "/pau-buy-a-laptop", said: "Buying a laptop" },
+  { path: "/become-a-promoter", said: "Become a promoter" },
+  { path: "/wish", said: "Wishlists" },
+  { path: "/app", said: "The app" },
+  { path: "/about", said: "About" },
+  { path: "/support", said: "Support" },
+];
+
+export type OwnPage = {
+  path: string;
+  said: string;
+  views: number;
+  people: number;
+};
+
+/**
+ * How many opened each of them, and how many different people.
+ *
+ * People rather than views is the figure that matters here: one person
+ * reloading a page eleven times is one person who was interested, and a
+ * page written to be found by a stranger is doing nothing if the only
+ * people on it are the ones who were already shopping.
+ *
+ * Admin is not counted anywhere in this table, so these are strangers and
+ * customers, never us checking the page still works.
+ */
+export async function ownPages(days = 28): Promise<OwnPage[] | null> {
+  const since = new Date(Date.now() - days * 86400_000).toISOString();
+
+  try {
+    const { data, error } = await db()
+      .from("page_views")
+      .select("path, visitor")
+      .in("path", OWN_PAGES.map((one) => one.path))
+      .gte("created_at", since)
+      .limit(50_000);
+    if (error) throw new Error(error.message);
+
+    const views = new Map<string, number>();
+    const people = new Map<string, Set<string>>();
+    for (const row of (data ?? []) as { path: string; visitor: string | null }[]) {
+      views.set(row.path, (views.get(row.path) ?? 0) + 1);
+      const seen = people.get(row.path) ?? new Set<string>();
+      if (row.visitor) seen.add(row.visitor);
+      people.set(row.path, seen);
+    }
+
+    return OWN_PAGES.map((one) => ({
+      ...one,
+      views: views.get(one.path) ?? 0,
+      people: people.get(one.path)?.size ?? 0,
+    })).sort((a, b) => b.people - a.people || b.views - a.views);
+  } catch {
+    // Nothing counting yet, which is not the same as nobody looking.
+    return null;
+  }
+}
