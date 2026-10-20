@@ -42,16 +42,7 @@ set order_id = (select id from orders
     status = 'converted'
 where wanted = 'Sanitary pads' and phone = '07076340910';
 
--- And the errand line stops counting, or the 20,000 is counted twice.
--- Emptied rather than deleted, and named so anybody reading the errand
--- book knows where it went. The order number comes off a running counter
--- rather than off the date, so an order written down late carries today's
--- number for a run three weeks ago.
-update other_money
-set what = 'Sanitary pads · moved onto order 1053 on the 2 October run',
-    took = 0,
-    spent = 0,
-    fee = 0,
-    how_many = 1,
-    note = 'Counted on the run now, not here. Safe to remove.'
-where id = '022da2f3-ecbd-4d1b-af4b-b55e3d70491e';
+-- And the errand line goes, or the 20,000 is counted twice. The errand
+-- book is empty now: every custom order this shop has taken is an order
+-- on a run.
+delete from other_money where id = '022da2f3-ecbd-4d1b-af4b-b55e3d70491e';
