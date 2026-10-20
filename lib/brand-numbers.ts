@@ -89,7 +89,7 @@ export async function brandNumbers(
   let lines = db()
     .from("order_items")
     .select(
-      "menu_item_id, qty, unit_price_at_order, orders!inner(id, status, created_at, customer_phone)"
+      "id, menu_item_id, qty, unit_price_at_order, orders!inner(id, status, created_at, customer_phone)"
     )
     .in("menu_item_id", itemIds)
     // Refunded and cancelled are not takings, and a brand can disprove them.
@@ -106,6 +106,7 @@ export async function brandNumbers(
   if (error) return EMPTY_BRAND;
 
   type Row = {
+    id: string;
     menu_item_id: string;
     qty: number | null;
     unit_price_at_order: number | null;
@@ -114,9 +115,48 @@ export async function brandNumbers(
 
   const rows = (data ?? []) as unknown as Row[];
 
+  /*
+   * What was chosen on each line.
+   *
+   * A plate is its dish and the things ticked on it, and this read the
+   * dish alone. The Place sells prawn rice at 3,900 and honey BBQ chicken
+   * at 2,750 as a choice on top, so one plate at 6,650 came back as
+   * "Prawn rice" and a number nearly twice the price of prawn rice. The
+   * kitchen reading its own page would not recognise the line.
+   *
+   * Named the way the counter sheet names a line, because it is the same
+   * thing being named and somebody should not have to learn it twice.
+   */
+  const chosen = new Map<string, string[]>();
+  if (rows.length > 0) {
+    const { data: picks } = await db()
+      .from("order_item_options")
+      .select("order_item_id, name_at_order")
+      .in("order_item_id", rows.map((row) => row.id));
+    for (const pick of (picks ?? []) as {
+      order_item_id: string;
+      name_at_order: string;
+    }[]) {
+      const was = chosen.get(pick.order_item_id) ?? [];
+      was.push(pick.name_at_order);
+      chosen.set(pick.order_item_id, was);
+    }
+  }
+
+  const plateOf = (row: Row): { key: string; name: string } => {
+    const picks = [...(chosen.get(row.id) ?? [])].sort();
+    const dish = named.get(row.menu_item_id) ?? "Something since removed";
+    return picks.length === 0
+      ? { key: row.menu_item_id, name: dish }
+      : {
+          key: `${row.menu_item_id}|${picks.join("|")}`,
+          name: `${dish} · ${picks.join(", ")}`,
+        };
+  };
+
   const orderIds = new Set<string>();
   const phones = new Set<string>();
-  const perItem = new Map<string, { qty: number; spend: number }>();
+  const perItem = new Map<string, { name: string; qty: number; spend: number }>();
   const perMonth = new Map<string, { spend: number; orders: Set<string> }>();
 
   let spend = 0;
@@ -138,8 +178,16 @@ export async function brandNumbers(
     orderIds.add(order.id);
     if (order.customer_phone) phones.add(order.customer_phone);
 
-    const was = perItem.get(row.menu_item_id) ?? { qty: 0, spend: 0 };
-    perItem.set(row.menu_item_id, { qty: was.qty + qty, spend: was.spend + money });
+    // One row per plate as it was actually ordered, so prawn rice with
+    // chicken on it and prawn rice without are two lines rather than one
+    // line at a price neither of them is.
+    const plate = plateOf(row);
+    const was = perItem.get(plate.key) ?? { name: plate.name, qty: 0, spend: 0 };
+    perItem.set(plate.key, {
+      name: plate.name,
+      qty: was.qty + qty,
+      spend: was.spend + money,
+    });
 
     const month = String(order.created_at).slice(0, 7);
     const month_was = perMonth.get(month) ?? { spend: 0, orders: new Set<string>() };
@@ -151,8 +199,7 @@ export async function brandNumbers(
     if (lastAt === null || order.created_at > lastAt) lastAt = order.created_at;
   }
 
-  const best = [...perItem.entries()]
-    .map(([id, one]) => ({ name: named.get(id) ?? "Something since removed", ...one }))
+  const best = [...perItem.values()]
     // By how many went out rather than by money. A kitchen reads its own
     // menu by what sells, and the dearest thing selling twice is not the
     // thing they want to hear about.
