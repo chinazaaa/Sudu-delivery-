@@ -52,8 +52,15 @@ export type CartArea = {
   /** What the second and any further area in this cart add, on top of the
    *  dearest one's extra. Nought on a cart that is one detour. */
   mixedExtra: number;
-  /** The two ladders as this cart is charged them. */
+  /** The two ladders as this cart is charged them: the shop's own, with
+   *  the distance and the stops already added to every rung. */
   bands: Band[];
+  /** The same ladder before any of that, for the one sum that adds the
+   *  extra itself. A market half is priced off what the shopping comes to
+   *  and a restaurant half off how much room it takes, and the trip is one
+   *  trip: charging it inside the restaurant half and again on the total
+   *  charges a mixed cart twice for one car. */
+  baseBands: Band[];
   sameDayBands: Band[];
   urgentExtra: number;
   /** Where a kitchen prices by what the shopping comes to rather than by how
@@ -94,6 +101,7 @@ export async function areaOfCart(restaurantIds: string[]): Promise<CartArea> {
     sameDay: canGoSameDay(all),
     mixedExtra: mixed,
     bands: withExtra(base, dearest.runExtra + mixed),
+    baseBands: base,
     sameDayBands: withExtra(sameDay.bands, dearest.sameDayExtra + mixed),
     urgentExtra: sameDay.urgentExtra,
   };

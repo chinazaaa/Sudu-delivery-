@@ -4597,3 +4597,34 @@ test("every pair of areas is offered once", () => {
   assert.deepEqual(everyPair(["l"]), []);
   assert.deepEqual(everyPair([]), []);
 });
+
+/*
+ * One car, one trip, charged once.
+ *
+ * A cart holding a market and a kitchen is two errands and two ways of
+ * measuring them: the market by what the shopping comes to, the kitchen by
+ * how much room it takes. The trip out of Sangotedo is neither. It is the
+ * car, and there is one car.
+ *
+ * It was being put on the kitchen's ladder and then added again to the
+ * total, so a cart with a pepper and a pizza in it paid the distance twice
+ * and a cart with only a pepper paid it once.
+ */
+test("a mixed cart pays for the trip once, not once per half", () => {
+  const base: Band[] = [{ maxItems: 3, fee: 4000 }, { maxItems: 99, fee: 6000 }];
+  const far = 2500 + 1000; // Lekki, plus a second stop in Ajah.
+  const withTrip = withExtra(base, far);
+
+  // The kitchen half off the plain ladder, the trip added once.
+  const right = feeFor(2, null, base) + far;
+  // What it did: the trip inside the ladder and again on the total.
+  const wrong = feeFor(2, null, withTrip) + far;
+
+  assert.equal(right, 7500);
+  assert.equal(wrong, 11000);
+  assert.equal(wrong - right, far);
+
+  // A cart that is only a kitchen never took that path, so it was always
+  // charged the trip once. The two agree now.
+  assert.equal(feeFor(2, null, withTrip), right);
+});

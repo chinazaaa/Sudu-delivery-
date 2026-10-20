@@ -275,7 +275,12 @@ export default function Checkout() {
           // fee, not the price of a container nobody ordered.
           restaurantFee: (() => {
             const containers = restHalf.length === 0 ? 0 : countItems(restHalf);
-            return containers === 0 ? 0 : feeFrom(containers, runBands, flash);
+            // The plain ladder. The trip is added once below, for the whole
+            // order: taking the one with it already in charged a cart
+            // holding both a market and a kitchen twice for one car.
+            return containers === 0
+              ? 0
+              : feeFrom(containers, shop?.bands ?? [], flash);
           })(),
           bands: byValue,
         }) + farExtra

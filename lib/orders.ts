@@ -594,7 +594,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
                     restaurantFee: feeOfHalf(
                       onlyFrom(priced.lines, where.byValueKitchens, false),
                       batch.flash_fee,
-                      where.bands
+                      // The plain ladder. The trip is added once below,
+                      // for the whole order; taking the one with it
+                      // already in charged a cart holding both a market
+                      // and a kitchen for the same car twice.
+                      where.baseBands
                     ),
                     bands: where.valueBands,
                   }) + where.dearest.runExtra + where.mixedExtra
@@ -743,12 +747,27 @@ export async function quote(args: {
         restaurantFee: feeOfHalf(
           onlyFrom(priced.lines, where.byValueKitchens, false),
           batch?.flash_fee ?? null,
-          where.bands
+          // The plain ladder: the trip is added once, below.
+          where.baseBands
         ),
         bands: where.valueBands,
       }) + where.dearest.runExtra + where.mixedExtra;
   } else {
-    fee = feeFor(carrying, batch?.flash_fee ?? null, await bandsFor(batch));
+    /*
+     * The ordinary ladder, as this cart is charged it.
+     *
+     * This read the shop's plain ladder and nothing else, so a quote for a
+     * cart holding anything past Sangotedo came back at the Sangotedo
+     * price while the order itself charged the distance. The chat prices
+     * from here, so it was quoting four thousand for a car that was going
+     * to bill seven and a half.
+     *
+     * The same line the order is placed by: a counter with a ladder of its
+     * own is asked for it, and everything else takes the one the areas
+     * have already been added to.
+     */
+    const bands = isSkincareBatch(batch) ? await bandsFor(batch) : where.bands;
+    fee = feeFor(carrying, batch?.flash_fee ?? null, bands);
   }
 
   const food = countFood(priced.lines);
