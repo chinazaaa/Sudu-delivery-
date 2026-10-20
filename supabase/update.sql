@@ -2217,3 +2217,16 @@ set converted_at = null,
     converted_order_id = null,
     handled_at = coalesce(handled_at, '2026-10-20 06:14:22+00')
 where id = '5c0ca01a-0499-40f8-a8c8-d3f0a454eac2';
+
+-- "Can't find it?" sits directly under the food.
+--
+-- The front page ships its doors in the order food, collections, parcel,
+-- skincare, pharmacy, custom, group, which put the one thing that makes
+-- this shop different from a menu sixth, under every collection card and
+-- every occasion card. On a phone that is a long scroll past things
+-- somebody has already decided they do not want.
+--
+-- Under the food is where the card's own question gets asked. Somebody who
+-- has just read the whole list of counters and not found what they came
+-- for is exactly the person it is written for.
+update settings set home_order = 'food,custom,shelves,parcel,skincare,pharmacy,group';

@@ -1,0 +1,12 @@
+-- "Can't find it?" sits directly under the food.
+--
+-- The front page ships its doors in the order food, collections, parcel,
+-- skincare, pharmacy, custom, group, which put the one thing that makes
+-- this shop different from a menu sixth, under every collection card and
+-- every occasion card. On a phone that is a long scroll past things
+-- somebody has already decided they do not want.
+--
+-- Under the food is where the card's own question gets asked. Somebody who
+-- has just read the whole list of counters and not found what they came
+-- for is exactly the person it is written for.
+update settings set home_order = 'food,custom,shelves,parcel,skincare,pharmacy,group';
