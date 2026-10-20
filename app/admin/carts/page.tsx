@@ -172,6 +172,53 @@ export default async function CartsPage({
     })),
   ];
 
+  /*
+   * What is actually in each basket, by name.
+   *
+   * A cart keeps item ids, which is what makes rebuilding it exact and
+   * also what makes it unreadable: nobody can decide whether to drop the
+   * Jay's Diner line from a list of uuids. One lookup for the page rather
+   * than one per card, and a line whose item has since been deleted still
+   * shows, named as gone, because leaving it out silently would change
+   * somebody's order without telling them.
+   */
+  const wantedIds = [
+    ...new Set(
+      unhandled.flatMap((cart) =>
+        cart.lines
+          ? cart.lines.kind === "food"
+            ? cart.lines.lines.map((line) => line.itemId)
+            : cart.lines.lines.map((line) => line.id)
+          : []
+      )
+    ),
+  ];
+  const { data: itemRows } = wantedIds.length
+    ? await db()
+        .from("menu_items")
+        .select("id, name, restaurants(name)")
+        .in("id", wantedIds)
+    : { data: [] };
+  const named = new Map(
+    ((itemRows ?? []) as { id: string; name: string; restaurants?: { name?: string } }[]).map(
+      (row) => [row.id, { name: row.name, shop: row.restaurants?.name ?? "" }]
+    )
+  );
+  const basketOf = (cart: SavedCart) =>
+    !cart.lines
+      ? []
+      : cart.lines.kind === "food"
+        ? cart.lines.lines.map((line, at) => ({
+            at,
+            qty: line.qty,
+            ...(named.get(line.itemId) ?? { name: "No longer on the menu", shop: "" }),
+          }))
+        : cart.lines.lines.map((line, at) => ({
+            at,
+            qty: line.qty,
+            ...(named.get(line.id) ?? { name: "No longer on the menu", shop: "" }),
+          }));
+
   const carts =
     cut === "done"
       ? done
@@ -514,8 +561,37 @@ export default async function CartsPage({
                     */}
                     <div className="mt-2.5">
                       {cart.lines && goingTo.length > 0 ? (
-                        <form action={cartToOrder} className="flex gap-2">
+                        <form action={cartToOrder} className="space-y-2">
                           <input type="hidden" name="cart_id" value={cart.id} />
+                          {/* Ticked to begin with, because the usual answer
+                              is all of it. Untick what they have changed
+                              their mind about, or what cannot travel on the
+                              car you are about to pick: a Lekki counter
+                              cannot go on a car of its own, and taking that
+                              line out is what makes the rest possible. */}
+                          <ul className="soft bg-shell p-2.5">
+                            {basketOf(cart).map((line) => (
+                              <li key={line.at}>
+                                <label className="flex items-center gap-2.5 py-1 text-[14.5px]">
+                                  <input
+                                    type="checkbox"
+                                    name="keep"
+                                    value={line.at}
+                                    defaultChecked
+                                    className="size-5 shrink-0 accent-brand"
+                                  />
+                                  <span className="min-w-0 flex-1">
+                                    {line.qty > 1 ? `${line.qty}x ` : ""}
+                                    {line.name}
+                                    {line.shop && (
+                                      <span className="text-muted"> · {line.shop}</span>
+                                    )}
+                                  </span>
+                                </label>
+                              </li>
+                            ))}
+                          </ul>
+                          <div className="flex gap-2">
                           <select
                             name="going"
                             defaultValue=""
@@ -536,6 +612,7 @@ export default async function CartsPage({
                           >
                             Make it
                           </ActionButton>
+                          </div>
                         </form>
                       ) : cart.lines ? (
                         <p className="hint">

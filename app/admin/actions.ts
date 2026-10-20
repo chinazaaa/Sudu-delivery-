@@ -5727,9 +5727,34 @@ export async function cartToOrder(form: FormData): Promise<void> {
   const cart = data as SavedCart | null;
   if (!cart) redirect("/admin/carts?made=Could+not+find+that+cart.");
 
-  const basket = cart.lines;
-  if (!basket || basket.lines.length === 0) {
+  const whole = cart.lines;
+  if (!whole || whole.lines.length === 0) {
     redirect("/admin/carts?made=That+cart+did+not+keep+what+was+in+it.");
+  }
+
+  /*
+   * Only the lines still ticked.
+   *
+   * Dropping one is the commonest thing that happens between a basket and
+   * an order: they changed their mind, or the thing they picked is at a
+   * counter the car you are about to send cannot reach. A Lekki line on a
+   * car of its own is the usual one, and taking it out is exactly what
+   * makes the rest of the order possible.
+   *
+   * Positions rather than ids, because the same thing can be in a basket
+   * twice with different options and dropping "the Shawarma" would have to
+   * guess which.
+   */
+  const keeping = new Set(
+    form.getAll("keep").map((one) => Number(String(one))).filter(Number.isFinite)
+  );
+  const basket = {
+    ...whole,
+    lines: whole.lines.filter((_: unknown, at: number) => keeping.has(at)),
+  } as typeof whole;
+
+  if (basket.lines.length === 0) {
+    redirect("/admin/carts?made=Nothing+was+left+ticked.");
   }
 
   // Where it goes: a run still taking orders, or a car of its own, which is
