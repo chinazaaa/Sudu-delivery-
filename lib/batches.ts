@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { DELIVERY_LEAD_HOURS } from "./fees";
 import { NOT_ORDERS_SQL } from "./orders";
 import { closedDates } from "./closures";
 import { emptyRunClosesAt, windowAfterHolding } from "./run-window";
@@ -624,7 +625,25 @@ export async function createSameDayBatch(args: {
       // Five is the sensible line between them and nothing reads it for a
       // same day trip anyway.
       slot: at.getUTCHours() >= 16 ? "night" : "afternoon",
-      cut_off_at: new Date().toISOString(),
+      /*
+       * Three hours before it lands, which is the real deadline.
+       *
+       * This was the moment the car was made, on the reasoning that a car
+       * of its own is nobody else's to join so a cut-off protects nothing.
+       * But the sheet reads it: a car booked at seven in the morning for
+       * four in the afternoon showed "orders close 07:14", which says the
+       * thing shut before it existed and is no help to anybody looking at
+       * the run.
+       *
+       * Three hours is the same number the shop promises on a car of its
+       * own, and the same one an empty run is held open to: the point
+       * where there is no longer time to go and fetch the food. Never
+       * before now, so a car booked for two hours' time does not get a
+       * deadline in the past.
+       */
+      cut_off_at: new Date(
+        Math.max(Date.now(), at.getTime() - DELIVERY_LEAD_HOURS * 3_600_000)
+      ).toISOString(),
       delivery_window_text: args.label,
       status: "open",
       capacity: null,
