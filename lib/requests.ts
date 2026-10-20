@@ -128,7 +128,7 @@ export async function askFor(input: {
         `${name} is looking for something we do not carry.`,
         "",
         `Wants: ${wanted}`,
-        input.budget.trim() ? `Budget: ${input.budget.trim()}` : "",
+        input.budget.trim() ? `Limit: ${input.budget.trim()}` : "",
         `Number: ${phone}`,
         input.hostel.trim() ? `Block: ${input.hostel.trim()}` : "",
         input.note.trim() ? `Note: ${input.note.trim()}` : "",

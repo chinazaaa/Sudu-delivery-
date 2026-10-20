@@ -238,7 +238,7 @@ export default async function RequestsPage({
           <input
             name="budget"
             className="field w-full py-2 text-sm"
-            placeholder="What they would pay, if they said"
+            placeholder="A limit, if they gave one"
           />
           <input
             name="note"
@@ -312,7 +312,7 @@ export default async function RequestsPage({
                   </p>
                   {ask.budget && (
                     <p className="text-sm text-muted">
-                      Would pay: {ask.budget}
+                      Not over: {ask.budget}
                     </p>
                   )}
                   {ask.note && !fromTheChat(ask.note) && (

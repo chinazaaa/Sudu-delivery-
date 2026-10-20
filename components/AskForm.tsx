@@ -77,7 +77,7 @@ export default function AskForm({
   const message =
     opening +
     (wanted.trim() ? `\n\nWhat: ${wanted.trim()}` : "") +
-    (budget.trim() ? `\nBudget: ${budget.trim()}` : "") +
+    (budget.trim() ? `\nLimit: ${budget.trim()}` : "") +
     (hostel.trim() ? `\nBlock: ${hostel.trim()}` : "") +
     (photo !== "" ? "\n\n(I have a file to send.)" : "");
   const link = waLink(whatsapp, message);
@@ -186,18 +186,40 @@ export default function AskForm({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
+          {/*
+            A ceiling, not an offer.
+
+            This asked "what would you pay for it?", which is the question a
+            market stall asks: it puts the customer in the position of
+            naming a price before the shop has, and quietly says the price
+            depends on what they will bear.
+
+            It is also a question most of them cannot answer. Somebody
+            asking for roasted plantain has no idea what roasted plantain
+            costs, and whatever they guess becomes the number in their head,
+            so a real quote above it reads as a markup rather than a price.
+
+            A limit is answerable even by somebody who has no idea what the
+            thing costs, it reads as protection rather than haggling, and it
+            is the one thing actually needed at this end: whether to go
+            ahead without asking again.
+          */}
           <div>
             <label className="label" htmlFor="budget">
-              What would you pay for it?
+              A limit, if you have one
             </label>
             <input
               id="budget"
               name="budget"
               value={budget}
               onChange={(event) => setBudget(event.target.value)}
-              placeholder="About ₦20,000"
+              placeholder="Nothing over ₦20,000"
               className="field"
             />
+            <p className="hint mt-1">
+              Optional. Only if there is a price you would not want us to go
+              past.
+            </p>
           </div>
           <div>
             <label className="label" htmlFor="name">Your name</label>

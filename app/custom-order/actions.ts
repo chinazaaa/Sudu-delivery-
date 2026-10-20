@@ -49,7 +49,7 @@ export async function sendRequest(
   try {
     const budget = said("budget").trim();
     await tellAdmin({
-      title: `Custom order · ${budget || "no budget said"}`,
+      title: `Custom order · ${budget || "no limit said"}`,
       body: `${said("name").trim() || "Someone"} wants ${said("wanted").trim()}.`,
       url: "/admin/requests",
     });
