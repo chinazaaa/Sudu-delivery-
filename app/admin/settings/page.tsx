@@ -6,7 +6,7 @@ import { naira } from "@/lib/money";
 import SaveButton from "@/components/SaveButton";
 import BandEditor from "@/components/admin/BandEditor";
 import AreaEditor from "@/components/admin/AreaEditor";
-import { parseAreas } from "@/lib/areas";
+import { parseAreaPairs, parseAreas } from "@/lib/areas";
 import DayHours from "@/components/admin/DayHours";
 import ActionButton from "@/components/admin/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
@@ -1339,6 +1339,7 @@ export default async function SettingsAdmin() {
             <div className="space-y-3">
               <AreaEditor
                 initial={parseAreas(settings.delivery_areas)}
+                initialPairs={parseAreaPairs(settings.area_pairs)}
                 runBands={parseBands(settings.fee_bands)}
                 sameDayBands={parseBands(settings.same_day_bands)}
               />

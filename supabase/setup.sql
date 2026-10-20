@@ -1285,3 +1285,5 @@ alter default privileges for role postgres in schema public
 alter table restaurants drop constraint if exists restaurants_kind_check;
 alter table restaurants add constraint restaurants_kind_check
   check (kind = any (array['food', 'skincare', 'pharmacy', 'own', 'custom']));
+
+alter table settings add column if not exists area_pairs text not null default '';

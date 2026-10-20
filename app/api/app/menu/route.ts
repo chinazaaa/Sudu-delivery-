@@ -15,7 +15,12 @@ import { offerBadge, offerLine } from "@/lib/offers";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { serialiseBands } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
-import { allAreas, areaOfEach, valueBandsOfEach } from "@/lib/areas-server";
+import {
+  allAreas,
+  allAreaPairs,
+  areaOfEach,
+  valueBandsOfEach,
+} from "@/lib/areas-server";
 import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
 import { ERRANDS } from "@/lib/errands";
 import { readDoors } from "@/lib/home-doors";
@@ -161,6 +166,7 @@ export async function GET(): Promise<NextResponse> {
       // number. Empty means one area, and every price as it was.
       areas: await allAreas(),
       areaOf: await areaOfEach(),
+      areaPairs: await allAreaPairs(),
       // The kitchens that charge by what the shopping comes to rather than
       // by how many things it is. Without this the app prices a market
       // basket off the container ladder and quotes a number nobody is

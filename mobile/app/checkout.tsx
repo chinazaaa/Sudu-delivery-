@@ -174,7 +174,7 @@ export default function Checkout() {
   const area = dearestArea(shop, kitchens);
   // The dearest area sets the distance; every area after the first is a
   // second stop, and a second stop costs the same whichever two they are.
-  const secondStop = mixedExtra(cartAreas);
+  const secondStop = mixedExtra(cartAreas, shop?.areaPairs ?? []);
   const farExtra = area.runExtra + secondStop;
   const runBands = withExtra(shop?.bands ?? [], farExtra);
   const sameDayBands = withExtra(shop?.sameDay?.bands ?? [], area.sameDayExtra + secondStop);

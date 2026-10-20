@@ -340,6 +340,9 @@ export type Shop = {
    *  Sangotedo and every price is what it always was. */
   areas?: Area[];
   areaOf?: Record<string, string>;
+  /** What a stop between each two areas costs. Older servers send none,
+   *  and then every stop falls back to the one figure below. */
+  areaPairs?: AreaPair[];
   /** The kitchens that price by what the shopping comes to rather than by
    *  how many things it is. A market is one; a restaurant is not. */
   valueBandsOf?: Record<string, ValueBand[]>;
@@ -1012,19 +1015,71 @@ export function dearestArea(shop: Shop | null, restaurantIds: string[]): Area {
 }
 
 /**
- * What a second area adds on top of the dearest one.
+ * What a second stop costs, by which two places it is between.
  *
- * The dearest area sets the distance, which is right for a cart that is one
- * detour. A cart holding Lekki and Ajah is two: the Lekki trip plus a
- * second shop to find, park at and queue in, and that second stop costs the
- * same whichever two areas it is. Home is never one of them, because every
- * run passes Sangotedo on the way back.
+ * The dearest area says how far the car has to go. It says nothing about a
+ * cart that is two errands rather than one, and a second shop is a second
+ * place to find, park at, queue in and carry out of.
+ *
+ * Not worth the same everywhere, which is why the shop keeps a table and
+ * this reads it. Two places minutes apart is one more queue; crossing the
+ * town is an afternoon. Sangotedo is in the table like anywhere else: a
+ * run passes it on the way back, which is why it adds nothing to the
+ * distance, but somebody still has to stop the car and go into the shop.
  */
+export type AreaPair = { a: string; b: string; extra: number };
+
+/** What a shop charges for a hop nobody has priced yet. */
 export const MIXED_AREA_EXTRA = 1000;
 
-export function mixedExtra(cartAreas: Area[], each = MIXED_AREA_EXTRA): number {
-  const far = new Set(cartAreas.filter((one) => one.id !== "").map((one) => one.id));
-  return far.size <= 1 ? 0 : Math.max(0, each) * (far.size - 1);
+const pairKey = (a: string, b: string): string => [a, b].sort().join("\t");
+
+export function pairExtra(
+  pairs: AreaPair[],
+  a: string,
+  b: string,
+  fallback = MIXED_AREA_EXTRA
+): number {
+  if (a === b) return 0;
+  const want = pairKey(a, b);
+  const found = pairs.find((one) => pairKey(one.a, one.b) === want);
+  return Math.max(0, found ? found.extra : fallback);
+}
+
+/**
+ * What the stops in this cart add, over and above the distance.
+ *
+ * Three or more areas is the cheapest way of joining them all up, rather
+ * than every pair added together: that is the route a driver takes.
+ */
+export function mixedExtra(
+  cartAreas: Area[],
+  pairs: AreaPair[] = [],
+  fallback = MIXED_AREA_EXTRA
+): number {
+  const ids = [...new Set(cartAreas.map((one) => one.id))];
+  if (ids.length <= 1) return 0;
+
+  const joined = new Set([ids[0]]);
+  let total = 0;
+  while (joined.size < ids.length) {
+    let cheapest = Number.POSITIVE_INFINITY;
+    let next = "";
+    for (const from of joined) {
+      for (const to of ids) {
+        if (joined.has(to)) continue;
+        const cost = pairExtra(pairs, from, to, fallback);
+        if (cost < cheapest) {
+          cheapest = cost;
+          next = to;
+        }
+      }
+    }
+    if (!Number.isFinite(cheapest)) break;
+    joined.add(next);
+    total += cheapest;
+  }
+  return total;
 }
 
 /** The ladder as that area charges it: every band up by the same amount. */

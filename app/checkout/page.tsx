@@ -17,7 +17,13 @@ import { existingLoad } from "@/lib/orders";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
 import { normalisePhone } from "@/lib/phone";
-import { allAreas, areaOfEach, valueBandsOfEach, openDaysOfEach } from "@/lib/areas-server";
+import {
+  allAreas,
+  allAreaPairs,
+  areaOfEach,
+  valueBandsOfEach,
+  openDaysOfEach,
+} from "@/lib/areas-server";
 import { toBatchView, toClosedBatchView } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -120,6 +126,7 @@ export default async function CheckoutPage({
       // by, so the number on this page is the number on the bill.
       areas={await allAreas()}
       areaOf={await areaOfEach()}
+      areaPairs={await allAreaPairs()}
       // The kitchens that charge by what the shopping comes to rather than
       // by how many things it is. A market trip is one trip and two bags.
       valueBandsOf={await valueBandsOfEach()}

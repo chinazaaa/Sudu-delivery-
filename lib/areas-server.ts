@@ -1,7 +1,18 @@
 import { db } from "./supabase";
 import { safeSettings } from "./settings";
 import { activeBands, sameDayPricing } from "./settings";
-import { parseAreas, dearestArea, areasIn, canGoSameDay, withExtra, mixedExtra, HOME, type Area } from "./areas";
+import {
+  parseAreas,
+  parseAreaPairs,
+  dearestArea,
+  areasIn,
+  canGoSameDay,
+  withExtra,
+  mixedExtra,
+  HOME,
+  type Area,
+  type AreaPair,
+} from "./areas";
 import type { Band } from "./fees";
 import { parseValueBands, type ValueBand } from "./value-bands";
 
@@ -24,6 +35,11 @@ export async function areaOfEach(): Promise<Record<string, string>> {
 
 export async function allAreas(): Promise<Area[]> {
   return parseAreas((await safeSettings()).delivery_areas);
+}
+
+/** What a stop between any two of them costs, as the shop has priced it. */
+export async function allAreaPairs(): Promise<AreaPair[]> {
+  return parseAreaPairs((await safeSettings()).area_pairs);
 }
 
 export type CartArea = {
@@ -65,9 +81,10 @@ export async function areaOfCart(restaurantIds: string[]): Promise<CartArea> {
 
   const all = areasIn(areas, restaurantIds, where);
   const dearest = dearestArea(areas, restaurantIds, where);
-  // The dearest area sets the distance; a second one is a second stop, and
-  // a second stop costs the same whichever two areas it is.
-  const mixed = mixedExtra(all);
+  // The dearest area sets the distance. A second one is a second stop, and
+  // what a stop is worth depends on which two places it is between, which
+  // is a table somebody fills in rather than a number in the code.
+  const mixed = mixedExtra(all, parseAreaPairs((await safeSettings()).area_pairs));
 
   return {
     valueBands: await valueLadder(restaurantIds),

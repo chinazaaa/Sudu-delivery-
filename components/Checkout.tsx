@@ -22,6 +22,7 @@ import {
   runCovers,
   withExtra,
   type Area,
+  type AreaPair,
 } from "@/lib/areas";
 import { runCarries } from "@/lib/run-places";
 import { DAY_NAMES, nextOpenDay, opensOn, weekdayOf } from "@/lib/open-days";
@@ -88,6 +89,7 @@ export default function Checkout({
   bands: baseBands,
   areas,
   areaOf,
+  areaPairs = [],
   valueBandsOf,
   openDaysOf = {},
   offers,
@@ -115,6 +117,9 @@ export default function Checkout({
   /** The areas the shop delivers from, and which one each kitchen is in. */
   areas: Area[];
   areaOf: Record<string, string>;
+  /** What a stop between any two areas costs, as the shop has priced it.
+   *  A cart that is two errands pays this on top of the distance. */
+  areaPairs?: AreaPair[];
   /** The kitchens that price by what the shopping comes to rather than by
    *  how many things it is, by id. A market is one; a restaurant is not. */
   valueBandsOf: Record<string, ValueBand[]>;
@@ -150,7 +155,7 @@ export default function Checkout({
   // The dearest area sets the distance; every area after the first is a
   // second shop to find, park at and queue in, and costs the same whichever
   // two they are. Sangotedo is not one of them: every run passes it anyway.
-  const secondStop = mixedExtra(cartAreas);
+  const secondStop = mixedExtra(cartAreas, areaPairs);
   const farExtra = area.runExtra + secondStop;
   const bands = withExtra(baseBands, farExtra);
   // A kitchen that charges by what the shopping comes to rather than by how

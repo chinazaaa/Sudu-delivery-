@@ -102,25 +102,134 @@ export function dearestArea(
 }
 
 /**
- * What a second area adds on top of the dearest one.
+ * What a second stop costs, by which two places it is between.
  *
- * The rule the shop prices by is "the furthest thing in the cart", which is
- * right for a cart that is one detour: the car goes to Lekki and comes
- * back past everything else. It is wrong for a cart that is two. Lekki and
- * Ajah are not one stop at the Lekki price; they are the Lekki trip plus a
- * second shop to find, park at, queue in and carry out of, and that second
- * stop costs the same whichever two areas it is.
+ * The dearest area in the cart says how far the car has to go. It says
+ * nothing about a cart that is two errands rather than one, and a second
+ * shop is a second place to find, park at, queue in and carry out of.
  *
- * So the dearest area still sets the distance, and every area after the
- * first adds this on top. Home is not one of them: every run passes
- * Sangotedo on the way back, so a Sangotedo kitchen in the cart is not a
- * detour and never was.
+ * That second stop is not worth the same everywhere, which is why this is a
+ * table and not a number. Lekki and Ikoyi are minutes apart, so a car
+ * already on the island adds one of them to the other cheaply. Sangotedo
+ * and Ajah are the same the other way. Crossing between the two halves is
+ * the expensive hop whichever direction it is taken in.
+ *
+ * Sangotedo is in the table like anywhere else. A run passes it on the way
+ * back, which is why it adds nothing to the distance, but somebody still
+ * has to stop the car and go into the shop.
+ */
+export type AreaPair = { a: string; b: string; extra: number };
+
+/** Two ids in a fixed order, so a lookup does not depend on which was asked
+ *  for first. A tab cannot appear in an id, so it cannot split one. */
+const pairKey = (a: string, b: string): string => [a, b].sort().join("\t");
+
+/** What one hop costs, or the fallback where nobody has priced that pair. */
+export function pairExtra(
+  pairs: AreaPair[],
+  a: string,
+  b: string,
+  fallback = MIXED_AREA_EXTRA
+): number {
+  if (a === b) return 0;
+  const want = pairKey(a, b);
+  const found = pairs.find((one) => pairKey(one.a, one.b) === want);
+  return Math.max(0, found ? found.extra : fallback);
+}
+
+/**
+ * What a shop charges for a hop nobody has priced.
+ *
+ * Only ever reached by a pair the table has not been filled in for, which
+ * is what every pair is for the minute after a new area is added. A figure
+ * rather than nought, because a stop that is free by accident is a stop
+ * the shop makes for nothing.
  */
 export const MIXED_AREA_EXTRA = 1000;
 
-export function mixedExtra(cartAreas: Area[], each = MIXED_AREA_EXTRA): number {
-  const far = new Set(cartAreas.filter((one) => one.id !== "").map((one) => one.id));
-  return far.size <= 1 ? 0 : Math.max(0, each) * (far.size - 1);
+export function parseAreaPairs(json: string | null | undefined): AreaPair[] {
+  if (!json || !json.trim()) return [];
+  try {
+    const raw = JSON.parse(json) as AreaPair[];
+    return raw
+      .filter((one) => typeof one?.a === "string" && typeof one?.b === "string")
+      .map((one) => ({
+        a: one.a.trim(),
+        b: one.b.trim(),
+        extra: Math.max(0, Math.round(Number(one.extra) || 0)),
+      }))
+      .filter((one) => one.a !== one.b);
+  } catch {
+    return [];
+  }
+}
+
+export function serialiseAreaPairs(pairs: AreaPair[]): string {
+  const seen = new Set<string>();
+  return JSON.stringify(
+    pairs
+      .map((one) => ({
+        a: one.a.trim(),
+        b: one.b.trim(),
+        extra: Math.max(0, Math.round(one.extra || 0)),
+      }))
+      .filter((one) => {
+        if (one.a === one.b) return false;
+        const key = pairKey(one.a, one.b);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+  );
+}
+
+/** Every pair of these ids, once each, in the order they are given. */
+export function everyPair(ids: string[]): [string, string][] {
+  const out: [string, string][] = [];
+  for (let i = 0; i < ids.length; i += 1) {
+    for (let j = i + 1; j < ids.length; j += 1) out.push([ids[i], ids[j]]);
+  }
+  return out;
+}
+
+/**
+ * What the stops in this cart add, over and above the distance.
+ *
+ * Two places is the pair's own price, straight off the table. Three or more
+ * is the cheapest way of joining them all up: Sangotedo, Ajah and Lekki is
+ * the Sangotedo-to-Ajah hop plus the Ajah-to-Lekki hop, because that is the
+ * route a driver would actually take, rather than every pair added
+ * together, which would charge for a leg nobody drives.
+ */
+export function mixedExtra(
+  cartAreas: Area[],
+  pairs: AreaPair[] = [],
+  fallback = MIXED_AREA_EXTRA
+): number {
+  const ids = [...new Set(cartAreas.map((one) => one.id))];
+  if (ids.length <= 1) return 0;
+
+  // Join them up one at a time, always by the cheapest hop still on offer.
+  const joined = new Set([ids[0]]);
+  let total = 0;
+  while (joined.size < ids.length) {
+    let cheapest = Number.POSITIVE_INFINITY;
+    let next = "";
+    for (const from of joined) {
+      for (const to of ids) {
+        if (joined.has(to)) continue;
+        const cost = pairExtra(pairs, from, to, fallback);
+        if (cost < cheapest) {
+          cheapest = cost;
+          next = to;
+        }
+      }
+    }
+    if (!Number.isFinite(cheapest)) break;
+    joined.add(next);
+    total += cheapest;
+  }
+  return total;
 }
 
 /**

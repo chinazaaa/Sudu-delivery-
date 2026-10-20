@@ -18,7 +18,16 @@ import { weekAround } from "../lib/time";
 import { monthOf, nextMonth } from "../lib/standing";
 import { googleTagId, instagramLink, numberOr, shopEmails, xLink } from "../lib/settings";
 import { isExtra } from "../lib/shelf";
-import { collectedFrom, everywhere, mixedExtra, withExtra } from "../lib/areas";
+import {
+  collectedFrom,
+  everyPair,
+  everywhere,
+  mixedExtra,
+  parseAreaPairs,
+  serialiseAreaPairs,
+  withExtra,
+  MIXED_AREA_EXTRA,
+} from "../lib/areas";
 import { cartsInTime, howLong, needsDoing } from "../lib/needs-doing";
 import { howPaid, orderStory } from "../lib/order-story";
 import { codeFrom } from "../lib/promoter-applications";
@@ -4456,42 +4465,135 @@ test("the front page names everywhere the shop collects from", () => {
 });
 
 /*
- * Two areas in one cart is two stops, and the second one is not free.
+ * Two areas in one cart is two stops, and what the stop costs depends on
+ * which two.
  *
  * The rule was "the furthest thing in the cart pays for the trip", which is
- * right for a cart that is one detour: the car goes to Lekki and passes
- * everything else on the way back. A cart holding Lekki and Ajah is two
- * detours, and the second shop is one more place to find, park at, queue in
- * and carry out of, whichever two areas it happens to be.
+ * right for a cart that is one detour. A cart holding Lekki and Ajah is
+ * two, and the second shop is one more place to find, park at, queue in and
+ * carry out of.
+ *
+ * A flat figure for that was wrong in both directions. Lekki and Ikoyi are
+ * minutes apart and a car already on the island adds one to the other
+ * cheaply; Sangotedo and Ajah are the same the other way; crossing between
+ * the two halves is the dear hop. So it is a table the shop fills in, and
+ * Sangotedo is in it like anywhere else: a run passes it on the way back,
+ * which is why it adds nothing to the distance, but somebody still has to
+ * stop the car and go into the shop.
  */
-test("a second far area adds a flat extra of its own", () => {
-  const ajah = { id: "ajah", name: "Ajah", runExtra: 1000, sameDayExtra: 1000, sameDay: true };
-  const lekki = { id: "l", name: "Lekki", runExtra: 2500, sameDayExtra: 0, sameDay: false };
-  const ikoyi = { id: "ikoyi", name: "Ikoyi", runExtra: 3500, sameDayExtra: 0, sameDay: false };
-  const home = { id: "", name: "Sangotedo", runExtra: 0, sameDayExtra: 0, sameDay: true };
+const HOPS = [
+  { a: "", b: "ajah", extra: 500 },
+  { a: "", b: "l", extra: 1000 },
+  { a: "", b: "ikoyi", extra: 1000 },
+  { a: "ajah", b: "l", extra: 1000 },
+  { a: "ajah", b: "ikoyi", extra: 1000 },
+  { a: "ikoyi", b: "l", extra: 500 },
+];
+const SANGOTEDO = { id: "", name: "Sangotedo", runExtra: 0, sameDayExtra: 0, sameDay: true };
+const AJAH = { id: "ajah", name: "Ajah", runExtra: 1000, sameDayExtra: 1000, sameDay: true };
+const LEKKI = { id: "l", name: "Lekki", runExtra: 2500, sameDayExtra: 0, sameDay: false };
+const IKOYI = { id: "ikoyi", name: "Ikoyi", runExtra: 3500, sameDayExtra: 0, sameDay: false };
 
-  // One area, however many shops in it, is one detour.
-  assert.equal(mixedExtra([lekki]), 0);
-  assert.equal(mixedExtra([home, lekki]), 0);
-  // Sangotedo is never a detour: every run passes it on the way back.
-  assert.equal(mixedExtra([home]), 0);
-  assert.equal(mixedExtra([]), 0);
-  // Two far areas: the dearest sets the distance, this is the second stop.
-  assert.equal(mixedExtra([lekki, ajah]), 1000);
-  assert.equal(mixedExtra([home, lekki, ajah]), 1000);
-  // Three is two extra stops, not one.
-  assert.equal(mixedExtra([ajah, lekki, ikoyi]), 2000);
-  // The same area twice is still one stop.
-  assert.equal(mixedExtra([lekki, lekki]), 0);
-  // What it costs is a setting, so a shop can say otherwise.
-  assert.equal(mixedExtra([lekki, ajah], 2500), 2500);
-  assert.equal(mixedExtra([lekki, ajah], 0), 0);
+test("a second stop is priced by which two places it is between", () => {
+  // The six the shop was asked for, read straight off the table and not
+  // depending on which of the pair is named first.
+  assert.equal(mixedExtra([LEKKI, SANGOTEDO], HOPS), 1000);
+  assert.equal(mixedExtra([SANGOTEDO, LEKKI], HOPS), 1000);
+  assert.equal(mixedExtra([LEKKI, IKOYI], HOPS), 500);
+  assert.equal(mixedExtra([LEKKI, AJAH], HOPS), 1000);
+  assert.equal(mixedExtra([SANGOTEDO, AJAH], HOPS), 500);
+  assert.equal(mixedExtra([IKOYI, SANGOTEDO], HOPS), 1000);
+  assert.equal(mixedExtra([IKOYI, AJAH], HOPS), 1000);
 
-  // What a Lekki-and-Ajah cart is actually charged: the Lekki ladder, plus
-  // the second stop, at every rung.
+  // One place, however many shops in it, is one stop.
+  assert.equal(mixedExtra([LEKKI], HOPS), 0);
+  assert.equal(mixedExtra([LEKKI, LEKKI], HOPS), 0);
+  assert.equal(mixedExtra([SANGOTEDO], HOPS), 0);
+  assert.equal(mixedExtra([], HOPS), 0);
+});
+
+/*
+ * Three places is the route, not every pair added up.
+ *
+ * Lekki, Ajah and Ikoyi added pairwise would be 2,500 for a car that drives
+ * Ajah to Lekki to Ikoyi and never once does the Ajah-to-Ikoyi leg it would
+ * be charging for.
+ */
+test("three areas pay the cheapest way of joining them up", () => {
+  // Ajah to Lekki (1,000) and Lekki to Ikoyi (500). Not the 1,000 it would
+  // cost to go from Ajah to Ikoyi, because nobody drives that.
+  assert.equal(mixedExtra([LEKKI, AJAH, IKOYI], HOPS), 1500);
+  // Named in any order, the same route.
+  assert.equal(mixedExtra([IKOYI, LEKKI, AJAH], HOPS), 1500);
+  // All four: Sangotedo to Ajah (500), Ajah to Lekki (1,000), Lekki to
+  // Ikoyi (500).
+  assert.equal(mixedExtra([SANGOTEDO, AJAH, LEKKI, IKOYI], HOPS), 2000);
+  // Sangotedo, Lekki and Ikoyi, with no Ajah in between: 1,000 then 500.
+  assert.equal(mixedExtra([SANGOTEDO, LEKKI, IKOYI], HOPS), 1500);
+});
+
+/*
+ * A pair nobody has priced, which is what every pair is the minute after a
+ * new area is added. A figure rather than nought, because a stop that is
+ * free by accident is a stop the shop makes for nothing.
+ */
+test("an unpriced pair falls back rather than costing nothing", () => {
+  assert.equal(mixedExtra([LEKKI, AJAH], []), MIXED_AREA_EXTRA);
+  assert.equal(mixedExtra([LEKKI, AJAH], [], 2500), 2500);
+  // A shop that wants stops free can say so.
+  assert.equal(mixedExtra([LEKKI, AJAH], [], 0), 0);
+  // Priced at nought on purpose is nought, not the fallback.
+  assert.equal(mixedExtra([LEKKI, AJAH], [{ a: "l", b: "ajah", extra: 0 }]), 0);
+  // A pair priced the other way round is the same pair.
+  assert.equal(mixedExtra([LEKKI, AJAH], [{ a: "ajah", b: "l", extra: 300 }]), 300);
+});
+
+test("what a Lekki and Ajah cart is actually charged", () => {
   const bands: Band[] = [{ maxItems: 3, fee: 4000 }, { maxItems: 99, fee: 6000 }];
-  assert.deepEqual(withExtra(bands, lekki.runExtra + mixedExtra([lekki, ajah])), [
-    { maxItems: 3, fee: 7500 },
-    { maxItems: 99, fee: 9500 },
+  // Lekki sets the distance at 2,500; the stop in Ajah adds 1,000; both go
+  // on every rung, because the petrol is the same whether the car carries
+  // two bags or twelve.
+  assert.deepEqual(
+    withExtra(bands, LEKKI.runExtra + mixedExtra([LEKKI, AJAH], HOPS)),
+    [{ maxItems: 3, fee: 7500 }, { maxItems: 99, fee: 9500 }]
+  );
+});
+
+/*
+ * The table survives a trip through settings and back.
+ */
+test("the stop table is written and read back the same", () => {
+  const back = parseAreaPairs(serialiseAreaPairs(HOPS));
+  assert.equal(back.length, 6);
+  assert.equal(mixedExtra([LEKKI, IKOYI], back), 500);
+  assert.equal(mixedExtra([LEKKI, AJAH, IKOYI], back), 1500);
+
+  // Nonsense in, nothing out, rather than a price nobody meant.
+  assert.deepEqual(parseAreaPairs(""), []);
+  assert.deepEqual(parseAreaPairs("not json"), []);
+  assert.deepEqual(parseAreaPairs('[{"a":"l","b":"l","extra":500}]'), []);
+  // A negative stop would pay somebody to order across town.
+  assert.deepEqual(parseAreaPairs('[{"a":"l","b":"ajah","extra":-500}]'), [
+    { a: "l", b: "ajah", extra: 0 },
   ]);
+  // The same pair twice keeps the first and drops the rest.
+  assert.equal(
+    parseAreaPairs(
+      serialiseAreaPairs([
+        { a: "l", b: "ajah", extra: 700 },
+        { a: "ajah", b: "l", extra: 900 },
+      ])
+    ).length,
+    1
+  );
+});
+
+test("every pair of areas is offered once", () => {
+  assert.deepEqual(everyPair(["", "ajah", "l"]), [
+    ["", "ajah"],
+    ["", "l"],
+    ["ajah", "l"],
+  ]);
+  assert.deepEqual(everyPair(["l"]), []);
+  assert.deepEqual(everyPair([]), []);
 });

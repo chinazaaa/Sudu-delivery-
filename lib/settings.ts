@@ -236,6 +236,7 @@ export type Settings = {
   /** The areas the shop delivers from, as JSON. Empty means one area, and
    *  every price exactly as it was. */
   delivery_areas: string;
+  area_pairs: string;
   /** Which admin notifications to stop sending, by kind. Empty is all of
    *  them, which is what it has always been. */
   email_mute: string;
@@ -352,6 +353,7 @@ export const EMPTY: Settings = {
   santa_delivery_included: 3,
   santa_delivery_extra: 0,
   delivery_areas: "",
+  area_pairs: "",
   email_mute: "",
   parcel_on: "",
   parcel_routes: "",

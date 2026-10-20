@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 import { naira } from "@/lib/money";
-import { serialiseAreas, type Area } from "@/lib/areas";
+import {
+  everyPair,
+  pairExtra,
+  serialiseAreas,
+  serialiseAreaPairs,
+  HOME,
+  MIXED_AREA_EXTRA,
+  type Area,
+  type AreaPair,
+} from "@/lib/areas";
 import { feeFor, type Band } from "@/lib/fees";
 
 /**
@@ -17,10 +26,14 @@ import { feeFor, type Band } from "@/lib/fees";
  */
 export default function AreaEditor({
   initial,
+  initialPairs = [],
   runBands,
   sameDayBands,
 }: {
   initial: Area[];
+  /** What a stop between each two of them costs. Filled in for the pairs
+   *  somebody has priced; the rest fall back until they are. */
+  initialPairs?: AreaPair[];
   /** The two ladders as they stand, so each row can show what it becomes. */
   runBands: Band[];
   sameDayBands: Band[];
@@ -44,12 +57,48 @@ export default function AreaEditor({
   const edit = (index: number, patch: Partial<(typeof areas)[number]>) =>
     setAreas(areas.map((one, at) => (at === index ? { ...one, ...patch } : one)));
 
+  /*
+   * What a second stop costs, by which two places it is between.
+   *
+   * Kept as typed text rather than numbers so a box can be emptied while
+   * somebody is halfway through typing one, the same as the boxes above.
+   * The key is the two ids in a fixed order, so it does not matter which
+   * of the pair the grid happens to draw first.
+   */
+  const [hops, setHops] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      initialPairs.map((one) => [[one.a, one.b].sort().join("\t"), String(one.extra)])
+    )
+  );
+  const hopKey = (a: string, b: string) => [a, b].sort().join("\t");
+  const hopOf = (a: string, b: string) =>
+    hops[hopKey(a, b)] ?? String(pairExtra(initialPairs, a, b, MIXED_AREA_EXTRA));
+
+  // Home belongs in this grid even though it is not in the list above. It
+  // adds nothing to the distance, because every run passes it on the way
+  // back, but somebody still has to stop the car and go into the shop.
+  const everywhereNamed = [
+    { id: HOME.id, name: parsed.find((one) => one.id === "")?.name ?? HOME.name },
+    ...parsed.filter((one) => one.id !== "" && one.id !== undefined),
+  ].filter((one, at, all) => all.findIndex((other) => other.id === one.id) === at);
+
+  const pairRows = everyPair(everywhereNamed.map((one) => one.id));
+  const nameOf = (id: string) =>
+    everywhereNamed.find((one) => one.id === id)?.name ?? id;
+
+  const pairsOut: AreaPair[] = pairRows.map(([a, b]) => ({
+    a,
+    b,
+    extra: Number(hopOf(a, b)) || 0,
+  }));
+
   const runFrom = runBands.length > 0 ? feeFor(1, null, runBands) : 0;
   const sameDayFrom = sameDayBands.length > 0 ? feeFor(1, null, sameDayBands) : 0;
 
   return (
     <div className="space-y-3">
       <input type="hidden" name="delivery_areas" value={serialiseAreas(parsed)} />
+      <input type="hidden" name="area_pairs" value={serialiseAreaPairs(pairsOut)} />
 
       <ul className="space-y-3">
         {areas.map((area, index) => (
@@ -157,10 +206,49 @@ export default function AreaEditor({
 
       <p className="text-xs text-muted">
         Sangotedo is not on this list: it is what the ladders above are
-        written for, and everything here is measured against it. A cart with
-        two areas in it pays the dearer one, because one car fetches all of
-        it.
+        written for, and everything here is measured against it. A cart that
+        reaches two areas pays the dearer one, because one car fetches all of
+        it, and then a stop from the table below.
       </p>
+
+      {pairRows.length > 0 && (
+        <div className="space-y-2 border-t-[1.5px] border-rule pt-3">
+          <h3 className="text-sm font-bold">What a second stop costs</h3>
+          <p className="text-xs text-muted">
+            The areas above say how far the car goes. This says what it costs
+            to stop twice, which is not the same everywhere: two places
+            minutes apart is one queue more, and crossing the town is an
+            afternoon. Sangotedo is in here because somebody still has to
+            stop the car and go into the shop, even on the way back.
+          </p>
+          <ul className="space-y-2">
+            {pairRows.map(([a, b]) => (
+              <li key={hopKey(a, b)} className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {nameOf(a)} and {nameOf(b)}
+                </span>
+                <input
+                  value={hopOf(a, b)}
+                  onChange={(event) =>
+                    setHops({
+                      ...hops,
+                      [hopKey(a, b)]: event.target.value.replace(/\D/g, ""),
+                    })
+                  }
+                  inputMode="numeric"
+                  aria-label={`What a stop in both ${nameOf(a)} and ${nameOf(b)} costs`}
+                  className="field w-28 py-2 text-sm"
+                />
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-muted">
+            A cart reaching three areas pays the cheapest way of joining all
+            three, rather than every pair added up: that is the route a
+            driver actually takes.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
