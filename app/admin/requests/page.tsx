@@ -9,6 +9,7 @@ import {
   markRequest,
   settleRequest,
   shelveRequest,
+  unlinkRequestOrder,
 } from "./actions";
 import SaveButton from "@/components/SaveButton";
 import Link from "next/link";
@@ -530,6 +531,24 @@ export default async function RequestsPage({
                       "Not going ahead. Nothing to count."
                     )}
                   </p>
+                  {/* Two different undos, and only one of them makes
+                      sense on a card that already names an order.
+
+                      Putting back an ask that became an order says the
+                      order never happened, which is a thing somebody means
+                      about once: the order was cancelled, or it was never
+                      this ask's. Typing the wrong number into the box
+                      above is the thing somebody does constantly, and the
+                      only way out of it was to reopen the whole ask, chase
+                      nothing for a while and finish it again. */}
+                  {ask.order_id && (
+                    <form action={unlinkRequestOrder} className="shrink-0">
+                      <input type="hidden" name="id" value={ask.id} />
+                      <button className="btn-quiet px-3 py-2 text-sm">
+                        Wrong order
+                      </button>
+                    </form>
+                  )}
                   <form action={markRequest} className="shrink-0">
                     <input type="hidden" name="id" value={ask.id} />
                     <button

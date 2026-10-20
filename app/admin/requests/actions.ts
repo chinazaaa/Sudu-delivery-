@@ -29,7 +29,14 @@ export async function markRequest(form: FormData): Promise<void> {
     .update({
       status,
       ...(quoted > 0 ? { quoted } : {}),
-      ...(status === "new" ? {} : { answered_at: new Date().toISOString() }),
+      // Putting an ask back says nothing came of it after all, so the
+      // order it was pointing at is let go with it. Keeping the link
+      // would leave an ask that is waiting on somebody and finished at
+      // the same time, and the order is still there to be pointed at
+      // again if it turns out it was the right one.
+      ...(status === "new"
+        ? { order_id: null }
+        : { answered_at: new Date().toISOString() }),
     })
     .eq("id", id);
 
@@ -294,6 +301,31 @@ export async function linkRequestToOrder(form: FormData): Promise<void> {
     .from("custom_requests")
     .update({ order_id: order.id, status: "converted" })
     .eq("id", id);
+
+  revalidatePath("/admin/requests");
+}
+
+/**
+ * The order on this ask was the wrong one.
+ *
+ * Separate from putting the ask back, because they mean different things.
+ * Putting it back says nothing came of the ask at all, which somebody
+ * means about once: the order was cancelled, or it belonged to a different
+ * ask. Typing the wrong number into a box is the thing somebody does
+ * constantly, and the only way out of it was to reopen the whole ask,
+ * leave it sitting in the waiting list for a while and then finish it
+ * again.
+ *
+ * So this lets go of the order and leaves the ask finished, which puts the
+ * box for the number straight back on the card.
+ */
+export async function unlinkRequestOrder(form: FormData): Promise<void> {
+  if (!(await isSignedIn())) throw new Error("Not signed in.");
+
+  const id = String(form.get("id") ?? "");
+  if (id === "") return;
+
+  await db().from("custom_requests").update({ order_id: null }).eq("id", id);
 
   revalidatePath("/admin/requests");
 }
