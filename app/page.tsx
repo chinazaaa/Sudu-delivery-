@@ -193,8 +193,11 @@ export default async function HomePage() {
       : deliverySlots(new Date(), dayHours).filter(
           (one) => one.day === "today" || one.day === "tomorrow"
         );
-  const sameDayFrom =
-    counterSlots.length > 0 ? (await sameDayPricing()).bands[0]?.fee ?? 0 : 0;
+  // Read once, for both the counter cards and the ticket at the top.
+  const sameDayLadder =
+    settings.same_day_on === "on" ? await sameDayPricing() : null;
+  const sameDayFirst = sameDayLadder?.bands[0]?.fee ?? 0;
+  const sameDayFrom = counterSlots.length > 0 ? sameDayFirst : 0;
   const soonest = counterSlots.some((one) => one.day === "today") ? "today" : "tomorrow";
 
   // The other counter, on the same terms: a line only while it is on and
@@ -369,6 +372,20 @@ export default async function HomePage() {
       // The ladder as it is set, rather than a table written on the page.
       // A home page quoting four thousand over a checkout about to charge
       // six is worse than one that says nothing about the fee at all.
+      /*
+       * The fee the ticket quotes is the fee the checkout will charge.
+       *
+       * It always quoted the run ladder's first band, whatever the headline
+       * above it said. On a day with no run the headline is a car of its
+       * own, which is priced off its own ladder, so the ticket read
+       * "around 4pm today" over four thousand and the checkout then asked
+       * for six and a half. The comment two lines down had the right rule
+       * written on it the whole time and the code underneath did not
+       * follow it.
+       */
+      arrivalFee={
+        decided?.onARun === false ? sameDayFirst : (bands[0]?.fee ?? 0)
+      }
       fees={bandTable(null, bands).map((row, at, all) => ({
         label: row.label,
         fee: row.fee,

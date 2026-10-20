@@ -42,7 +42,8 @@ export type TemplateKind =
   | "review"
   | "google"
   | "google_payer"
-  | "parents";
+  | "parents"
+  | "basket";
 
 export const TEMPLATE_LABEL: Record<TemplateKind, string> = {
   confirmed: "Payment confirmed",
@@ -56,6 +57,7 @@ export const TEMPLATE_LABEL: Record<TemplateKind, string> = {
   google: "Ask for a Google review",
   google_payer: "Ask the parent for a review",
   parents: "Tell them about Sudu for parents",
+  basket: "Their basket, priced up",
 };
 
 /** What was ordered, in one word. The shop sells three things now. */
@@ -89,6 +91,7 @@ export const TEMPLATE_FIELD: Record<TemplateKind, keyof Settings> = {
   google: "msg_google",
   google_payer: "msg_google_payer",
   parents: "msg_parents",
+  basket: "msg_basket",
 };
 
 /** The wording used until the admin writes their own. */
@@ -100,6 +103,28 @@ export const TEMPLATE_DEFAULT: Record<TemplateKind, string> = {
   payment:
     "Hi {name}, your {batch} order {ref} comes to {total}.\n\n" +
     "{bank}\n\nYour order: {link}",
+  /*
+   * A basket somebody left, priced up and sent back to them.
+   *
+   * Said the way a customer would say it rather than the way the shop
+   * talks to itself. Nobody outside this building knows what a run is, or
+   * a car of its own, or why Lekki is different from Sangotedo, and a
+   * message that opens with any of that reads as an excuse. What they want
+   * to know is what is in it, what it costs, and when it turns up.
+   *
+   * It ends on a question on purpose. The basket was abandoned once
+   * already, so the message that revives it should invite a reply rather
+   * than only a transfer, and "anything else" is how a two item order
+   * becomes a four item one.
+   */
+  basket:
+    "Hi {name}, I have put your basket together for you.\n\n" +
+    "{items}\n\n" +
+    "Total: {total}\n\n" +
+    "It comes {window}, to {hostel}.\n\n" +
+    "{bank}\n\n" +
+    "Send me the receipt once you have paid. Anything else you fancy before " +
+    "I head out?\n\nYour order: {link}",
   card:
     "Hi {name}, here is the card link for your {batch} order ({total}):\n\n" +
     "{card_link}\n\nYour order: {link}",
@@ -186,6 +211,10 @@ export const TEMPLATE_TOKENS: { token: string; means: string }[] = [
     token: "{ordered}",
     means: 'what they actually got, like "the KFC". "the last one" where it is not known',
   },
+  {
+    token: "{items}",
+    means: "every line of the order, one per line, with what each comes to",
+  },
   { token: "{window}", means: "when the run lands" },
   { token: "{link}", means: "their order page" },
   { token: "{site}", means: "the site address" },
@@ -265,8 +294,15 @@ type TemplateOrder = {
   hostel: string;
   payment_link?: string | null;
   /** Where it was fetched from, so a message can name the thing rather
-   *  than calling it "the last one". */
-  lines?: { restaurant?: string | null }[];
+   *  than calling it "the last one", and what is actually in it, so a
+   *  message can read the basket back. */
+  lines?: {
+    restaurant?: string | null;
+    qty?: number;
+    name?: string;
+    unit_price_at_order?: number;
+    choices?: string[];
+  }[];
 };
 
 /**
@@ -285,6 +321,39 @@ export function narration(
 ): string {
   const ref = group && group.length > 1 ? shareRef(order, group) : orderRef(order);
   return ref.replace("#", "");
+}
+
+/**
+ * The basket read back, a line each.
+ *
+ * For the one message that exists because somebody did not finish: they
+ * filled a basket days ago and are being asked to pay for it now, so it has
+ * to say what is in it before it says what it costs. "The KFC" does not
+ * settle an argument about whether the sausage was on there.
+ *
+ * Nothing is said about money per line unless the price is known, because a
+ * list of names with one price missing reads as a mistake rather than as a
+ * gap.
+ */
+function itemsList(lines: TemplateOrder["lines"]): string {
+  const rows = (lines ?? []).filter((line) => (line.name ?? "") !== "");
+  if (rows.length === 0) return "";
+
+  return rows
+    .map((line) => {
+      const qty = line.qty && line.qty > 1 ? `${line.qty}x ` : "";
+      const where = line.restaurant ? ` (${line.restaurant})` : "";
+      const extras =
+        line.choices && line.choices.length > 0
+          ? ` with ${line.choices.join(", ")}`
+          : "";
+      const money =
+        typeof line.unit_price_at_order === "number" && line.unit_price_at_order > 0
+          ? ` - ${naira(line.unit_price_at_order * (line.qty ?? 1))}`
+          : "";
+      return `${qty}${line.name}${extras}${where}${money}`;
+    })
+    .join("\n");
 }
 
 /**
@@ -382,6 +451,7 @@ export function template(args: {
      * review worth having and the only kind people will write.
      */
     "{ordered}": orderedWas(order.lines),
+    "{items}": itemsList(order.lines),
     "{window}": args.deliveryWindow,
     "{link}": `${siteUrl}/o/${shortRef(order)}`,
     // The one place a review is worth asking for is the moment somebody has
@@ -456,6 +526,7 @@ export function templateFor(args: {
     // Sent down the customer list rather than against an order, so there
     // is nothing to name.
     "{ordered}": "the last one",
+    "{items}": "",
     "{pin}": args.pin ?? "----",
     "{pin_line}": args.pin
       ? `Your PIN is ${args.pin}. Every order you place: ${siteUrl}/orders`

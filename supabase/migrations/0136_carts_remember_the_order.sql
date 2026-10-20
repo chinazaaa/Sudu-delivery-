@@ -1,0 +1,13 @@
+-- A cart that became an order says which order it became.
+--
+-- A converted cart fell out of every list on the carts page: the open list
+-- asks for carts with no converted_at, and the closed list asks for ones
+-- with a handled_at, which a conversion never sets. So the moment a cart
+-- turned into money it vanished from the one screen that is about carts
+-- turning into money, and the only way to know it had worked was that it
+-- had stopped being there.
+--
+-- Nullable because the carts already converted have no order recorded
+-- against them, and inventing one by matching a phone number to an order
+-- placed around the same minute would be a guess printed as a fact.
+alter table carts add column if not exists converted_order_id uuid references orders(id) on delete set null;

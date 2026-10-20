@@ -2986,6 +2986,7 @@ const SETTING_FIELDS = [
   "msg_google",
   "msg_google_payer",
   "msg_parents",
+  "msg_basket",
   "paid_note",
   "card_item_id",
   "fee_bands",
