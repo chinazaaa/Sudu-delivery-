@@ -29,6 +29,8 @@ export type SavedCart = {
   summary: string;
   converted_at: string | null;
   alerted_at: string | null;
+  /** The order it became, where it became one. */
+  converted_order_id: string | null;
   handled_at: string | null;
   handled_reason: string;
   /** Nothing is nudged to this number until this moment has passed. */
@@ -249,6 +251,30 @@ export async function closedCarts(limit = 100): Promise<SavedCart[]> {
     .select("*")
     .not("handled_at", "is", null)
     .order("handled_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as SavedCart[];
+}
+
+/**
+ * Carts that became orders.
+ *
+ * They used to be in no list at all. The open list asks for carts with no
+ * converted_at and the closed list asks for ones with a handled_at, which
+ * converting never sets, so the moment a cart turned into money it fell out
+ * of the one screen that is about carts turning into money. The only sign
+ * it had worked was that it had stopped being there, which is also what a
+ * bug looks like.
+ *
+ * Newest first, and only as far back as the page can use: this is a record
+ * of what the chasing is worth, not an archive.
+ */
+export async function boughtCarts(limit = 100): Promise<SavedCart[]> {
+  const { data, error } = await db()
+    .from("carts")
+    .select("*")
+    .not("converted_at", "is", null)
+    .order("converted_at", { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
   return (data ?? []) as SavedCart[];

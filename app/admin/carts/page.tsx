@@ -3,6 +3,7 @@ import AdminLive from "@/components/admin/AdminLive";
 import Link from "next/link";
 import {
   abandonedCarts,
+  boughtCarts,
   closedCarts,
   fromTheChat,
   hushedCarts,
@@ -68,7 +69,7 @@ const REASONS = [
 ];
 
 /** The cuts along the top, in the board's order. */
-type Cut = "open" | "run-closed" | "done";
+type Cut = "open" | "run-closed" | "done" | "bought";
 
 /**
  * Carts somebody filled and never paid for.
@@ -89,15 +90,18 @@ export default async function CartsPage({
   const cut: Cut =
     params.show === "done"
       ? "done"
-      : params.show === "run-closed"
-        ? "run-closed"
-        : "open";
+      : params.show === "bought"
+        ? "bought"
+        : params.show === "run-closed"
+          ? "run-closed"
+          : "open";
   const settings = await getSettings();
   const minutes = settings.abandon_minutes || 45;
 
-  const [unhandled, done, hushed] = await Promise.all([
+  const [unhandled, done, bought, hushed] = await Promise.all([
     abandonedCarts(minutes),
     closedCarts(),
+    boughtCarts(),
     hushedCarts(),
   ]);
 
@@ -134,7 +138,14 @@ export default async function CartsPage({
 
   const open = unhandled.filter(stillGoing);
   const shut = unhandled.filter((cart) => !stillGoing(cart));
-  const carts = cut === "done" ? done : cut === "run-closed" ? shut : open;
+  const carts =
+    cut === "done"
+      ? done
+      : cut === "bought"
+        ? bought
+        : cut === "run-closed"
+          ? shut
+          : open;
   const value = unhandled.reduce((total, cart) => total + cart.value, 0);
 
   // When the first of the open runs stops taking orders, which is the whole
@@ -244,6 +255,17 @@ export default async function CartsPage({
         >
           Done <span className="font-mono opacity-60">{done.length}</span>
         </Link>
+        {/* What the chasing is actually worth. Without it a cart that
+            becomes an order simply disappears, which is also what a bug
+            looks like. */}
+        <Link
+          href="/admin/carts?show=bought"
+          className={`pill-admin flex-1 justify-center px-2 ${
+            cut === "bought" ? "pill-admin-on" : ""
+          }`}
+        >
+          Bought <span className="font-mono opacity-60">{bought.length}</span>
+        </Link>
       </div>
 
       {cut === "done" && done.length > 0 && (
@@ -307,6 +329,8 @@ export default async function CartsPage({
         <p className="card p-3.5 text-sm text-muted sm:p-4">
           {cut === "done"
             ? "Nothing closed yet."
+            : cut === "bought"
+              ? "No cart has become an order yet."
             : cut === "run-closed"
               ? "Nothing waiting on a run that has gone."
               : "Nothing left behind. Every cart with a number on it became an order."}
@@ -316,7 +340,8 @@ export default async function CartsPage({
           <BulkCarts reasons={REASONS.map((one) => one.label)} />
           <ul className="space-y-2.5">
           {carts.map((cart) => {
-            const going = cut === "done" ? false : stillGoing(cart);
+            const going =
+              cut === "done" || cut === "bought" ? false : stillGoing(cart);
             return (
               <li
                 key={cart.id}
@@ -355,7 +380,11 @@ export default async function CartsPage({
                 </p>
 
                 <div className="mt-2.5 flex items-center gap-2">
-                  {cut === "done" ? (
+                  {cut === "bought" ? (
+                    <span className="tag bg-mint-tint text-mint">
+                      became an order
+                    </span>
+                  ) : cut === "done" ? (
                     <span className="tag bg-wash text-ink">
                       {cart.handled_reason || "closed"}
                     </span>
@@ -377,7 +406,26 @@ export default async function CartsPage({
                   )}
                 </div>
 
-                {cut === "done" ? (
+                {cut === "bought" ? (
+                  /* Nothing to chase and nothing to close. The one useful
+                     thing is the order it turned into, where we know it:
+                     carts converted before this was recorded have nothing
+                     to point at, and a guessed link is worse than none. */
+                  <div className="mt-2.5">
+                    {cart.converted_order_id ? (
+                      <Link
+                        href={`/admin/orders/${cart.converted_order_id}`}
+                        className="btn-admin min-h-[46px] w-full"
+                      >
+                        Open the order
+                      </Link>
+                    ) : (
+                      <p className="hint">
+                        Paid for before the order was recorded against it.
+                      </p>
+                    )}
+                  </div>
+                ) : cut === "done" ? (
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
                     <form action={reopenCart}>
                       <input type="hidden" name="cart_id" value={cart.id} />
