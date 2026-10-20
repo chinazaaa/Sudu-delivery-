@@ -14,6 +14,7 @@ import {
 import { getSettings } from "@/lib/settings";
 import { isOrderable, openBatches } from "@/lib/batches";
 import { deliverySlots } from "@/lib/same-day";
+import { allAreas } from "@/lib/areas-server";
 import { hoursByDay } from "@/lib/settings";
 import { toBatchView } from "@/lib/view";
 import { db } from "@/lib/supabase";
@@ -31,6 +32,7 @@ import {
 } from "../actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import BulkCarts from "@/components/admin/BulkCarts";
+import MakeOrder from "@/components/admin/MakeOrder";
 import { Picking, Tick } from "@/components/admin/Picking";
 import ActionButton from "@/components/admin/ActionButton";
 
@@ -165,10 +167,12 @@ export default async function CartsPage({
       .map((one) => ({
         value: `run:${one.id}`,
         label: `${one.deliveryWindow}, ${one.label.split(" \u00b7 ")[0]}`,
+        car: false,
       })),
     ...carSlots.map((one) => ({
       value: one.at,
       label: `A car of its own \u00b7 ${one.label}`,
+      car: true,
     })),
   ];
 
@@ -196,13 +200,30 @@ export default async function CartsPage({
   const { data: itemRows } = wantedIds.length
     ? await db()
         .from("menu_items")
-        .select("id, name, restaurants(name)")
+        .select("id, name, restaurants(name, area)")
         .in("id", wantedIds)
     : { data: [] };
+  // Which areas a car of its own cannot reach, so a line from one can say
+  // so before somebody picks a car it rules out.
+  const areas = await allAreas().catch(() => []);
+  const noCarTo = new Set(
+    areas.filter((one) => !one.sameDay).map((one) => one.id)
+  );
   const named = new Map(
-    ((itemRows ?? []) as { id: string; name: string; restaurants?: { name?: string } }[]).map(
-      (row) => [row.id, { name: row.name, shop: row.restaurants?.name ?? "" }]
-    )
+    (
+      (itemRows ?? []) as {
+        id: string;
+        name: string;
+        restaurants?: { name?: string; area?: string };
+      }[]
+    ).map((row) => [
+      row.id,
+      {
+        name: row.name,
+        shop: row.restaurants?.name ?? "",
+        runOnly: noCarTo.has(row.restaurants?.area ?? ""),
+      },
+    ])
   );
   const basketOf = (cart: SavedCart) =>
     !cart.lines
@@ -211,12 +232,20 @@ export default async function CartsPage({
         ? cart.lines.lines.map((line, at) => ({
             at,
             qty: line.qty,
-            ...(named.get(line.itemId) ?? { name: "No longer on the menu", shop: "" }),
+            ...(named.get(line.itemId) ?? {
+              name: "No longer on the menu",
+              shop: "",
+              runOnly: false,
+            }),
           }))
         : cart.lines.lines.map((line, at) => ({
             at,
             qty: line.qty,
-            ...(named.get(line.id) ?? { name: "No longer on the menu", shop: "" }),
+            ...(named.get(line.id) ?? {
+              name: "No longer on the menu",
+              shop: "",
+              runOnly: false,
+            }),
           }));
 
   const carts =
@@ -561,59 +590,12 @@ export default async function CartsPage({
                     */}
                     <div className="mt-2.5">
                       {cart.lines && goingTo.length > 0 ? (
-                        <form action={cartToOrder} className="space-y-2">
-                          <input type="hidden" name="cart_id" value={cart.id} />
-                          {/* Ticked to begin with, because the usual answer
-                              is all of it. Untick what they have changed
-                              their mind about, or what cannot travel on the
-                              car you are about to pick: a Lekki counter
-                              cannot go on a car of its own, and taking that
-                              line out is what makes the rest possible. */}
-                          <ul className="soft bg-shell p-2.5">
-                            {basketOf(cart).map((line) => (
-                              <li key={line.at}>
-                                <label className="flex items-center gap-2.5 py-1 text-[14.5px]">
-                                  <input
-                                    type="checkbox"
-                                    name="keep"
-                                    value={line.at}
-                                    defaultChecked
-                                    className="size-5 shrink-0 accent-brand"
-                                  />
-                                  <span className="min-w-0 flex-1">
-                                    {line.qty > 1 ? `${line.qty}x ` : ""}
-                                    {line.name}
-                                    {line.shop && (
-                                      <span className="text-muted"> · {line.shop}</span>
-                                    )}
-                                  </span>
-                                </label>
-                              </li>
-                            ))}
-                          </ul>
-                          <div className="flex gap-2">
-                          <select
-                            name="going"
-                            defaultValue=""
-                            className="field field-admin min-h-[46px] grow border-[1.5px] border-line py-0 text-[14.5px]"
-                          >
-                            <option value="" disabled>
-                              Make it an order on…
-                            </option>
-                            {goingTo.map((one) => (
-                              <option key={one.value} value={one.value}>
-                                {one.label}
-                              </option>
-                            ))}
-                          </select>
-                          <ActionButton
-                            className="btn-admin shrink-0"
-                            done="Made ✓"
-                          >
-                            Make it
-                          </ActionButton>
-                          </div>
-                        </form>
+                        <MakeOrder
+                          cartId={cart.id}
+                          lines={basketOf(cart)}
+                          going={goingTo}
+                          action={cartToOrder}
+                        />
                       ) : cart.lines ? (
                         <p className="hint">
                           Nothing is taking orders just now, so there is
