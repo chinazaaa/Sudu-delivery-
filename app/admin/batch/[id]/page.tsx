@@ -1208,12 +1208,24 @@ export default async function BatchPage({
                         slipped digit must not raise a price nobody meant to
                         raise. Nothing is offered when it came in under,
                         because that is usually a promo and following it down
-                        would cut the shop's price on one afternoon. */}
+                        would cut the shop's price on one afternoon.
+
+                        Never on a line that came with choices. What was
+                        handed over at the counter covers the whole plate,
+                        and the price being compared is the dish on its own:
+                        a prawn rice with honey BBQ chicken paid at ₦6,000
+                        read as rice at ₦3,900 costing ₦2,100 more than it
+                        does, and the offer was to put rice up to the price
+                        of rice and chicken together. Which of the two moved
+                        is not in these figures, so the honest thing is not
+                        to guess. */}
                     {counter.flatMap((group) =>
                       group.lines
                         .filter(
                           (line) =>
-                            line.paid !== null && line.paid > line.qty * line.menuPrice
+                            line.paid !== null &&
+                            line.choices.length === 0 &&
+                            line.paid > line.qty * line.menuPrice
                         )
                         .map((line) => {
                           const upBy = Math.ceil(
@@ -1243,6 +1255,27 @@ export default async function BatchPage({
                           );
                         })
                     )}
+
+                    {/* The same signal on a line that came with choices,
+                        said rather than offered. The figures cannot tell
+                        the dish from the choice, so this points at the menu
+                        instead of changing it. */}
+                    {counter
+                      .flatMap((group) => group.lines)
+                      .filter(
+                        (line) =>
+                          line.paid !== null &&
+                          line.choices.length > 0 &&
+                          line.paid > line.qty * line.unitPrice
+                      )
+                      .map((line) => (
+                        <p key={`choices-${line.key}`} className="hint">
+                          <span className="font-semibold">{line.name}</span> came
+                          with {line.choices.join(", ")}, so what you handed over
+                          covers the whole plate. If it has gone up, put the dish
+                          or the choice up on the menu itself.
+                        </p>
+                      ))}
 
                     {/* One at a time, because one is what usually changed, and
                         only the ones still at the menu price: a line already
