@@ -33,9 +33,21 @@ export const metadata: Metadata = {
 export default async function CustomOrderPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sent?: string }>;
+  searchParams: Promise<{ sent?: string; want?: string }>;
 }) {
-  const sent = (await searchParams).sent === "1";
+  const asks = await searchParams;
+  const sent = asks.sent === "1";
+  /*
+   * What they typed into a search that found nothing.
+   *
+   * A menu search for something a kitchen does not sell is the clearest
+   * statement of intent anybody makes on this site, and it was landing on
+   * "0 results" and a suggestion to try a shorter word. The link out of
+   * that page brings the word with it, so the box here opens already
+   * holding the thing they were looking for rather than throwing it away
+   * and asking again.
+   */
+  const want = String(asks.want ?? "").trim().slice(0, 120);
   const [hostels, settings] = await Promise.all([hostelNames(), safeSettings()]);
 
   /*
@@ -141,7 +153,11 @@ export default async function CustomOrderPage({
               </p>
             </div>
           ) : (
-            <AskForm hostels={hostels} whatsapp={settings.whatsapp_number || null} />
+            <AskForm
+              hostels={hostels}
+              whatsapp={settings.whatsapp_number || null}
+              preset={want}
+            />
           )}
         </div>
 

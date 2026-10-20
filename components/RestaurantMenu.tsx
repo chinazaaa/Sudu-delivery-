@@ -236,11 +236,29 @@ export default function RestaurantMenu({
           )}
 
           {list.length === 0 ? (
-            <p className="text-muted">
-              {found
-                ? "Nothing here matches that. Try a shorter word."
-                : "Nothing on the menu here yet."}
-            </p>
+            <div className="text-muted">
+              <p>
+                {found
+                  ? "Nothing here matches that. Try a shorter word."
+                  : "Nothing on the menu here yet."}
+              </p>
+              {/* A search that finds nothing is the clearest thing anybody
+                  says on this site: they wanted a particular thing and we
+                  do not list it. It was answered with "try a shorter word"
+                  and a dead end. The word goes with them, so the box on the
+                  other side opens already holding it. */}
+              {found && (
+                <p className="mt-2">
+                  <Link
+                    href={`/custom-order?want=${encodeURIComponent(query.trim())}`}
+                    className="font-semibold text-brand-dark underline"
+                  >
+                    Ask us to get it anyway
+                  </Link>{" "}
+                  and we will find it, price it and bring it.
+                </p>
+              )}
+            </div>
           ) : (
             <div className={`${GRID} pb-28 lg:pb-8`}>
               {list.map((item) => (
