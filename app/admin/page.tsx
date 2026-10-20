@@ -646,20 +646,34 @@ export default async function AdminHome() {
             )}
           </Panel>
 
-          <Link
-            href="/admin/money"
-            className="soft flex items-center gap-3 border-volt-line bg-brand-tint px-4 py-3.5"
-          >
-            <span className="flex-1">
-              <strong className="text-[14.5px]">Other money</strong>
-              <span className="hint block">
-                {aside.length} entr{aside.length === 1 ? "y" : "ies"} in the last{" "}
-                {WINDOW_DAYS} days,{" "}
-                {naira(asideTotals.made)}
+          {/* Only once there is some.
+
+              The errand book holds money that never came through a run, and
+              on most days there is none of it: every custom order anybody
+              asks for now goes out as an ordinary order on a car. A tile
+              reading "0 entries, ₦0" is a row on the one screen that is
+              supposed to be what needs doing, telling somebody about a
+              thing that is not happening.
+
+              Nothing is lost by it going. The way in is on the profit page,
+              under "Money with no run behind it", which is where somebody
+              adding a cost with no car behind it is already standing. */}
+          {aside.length > 0 && (
+            <Link
+              href="/admin/money"
+              className="soft flex items-center gap-3 border-volt-line bg-brand-tint px-4 py-3.5"
+            >
+              <span className="flex-1">
+                <strong className="text-[14.5px]">Other money</strong>
+                <span className="hint block">
+                  {aside.length} entr{aside.length === 1 ? "y" : "ies"} in the last{" "}
+                  {WINDOW_DAYS} days,{" "}
+                  {naira(asideTotals.made)}
+                </span>
               </span>
-            </span>
-            <span className="btn-admin btn-admin-sm">Add one</span>
-          </Link>
+              <span className="btn-admin btn-admin-sm">Add one</span>
+            </Link>
+          )}
         </div>
       </div>
     </div>
