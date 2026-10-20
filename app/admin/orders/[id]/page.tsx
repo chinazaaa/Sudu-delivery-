@@ -36,6 +36,7 @@ import {
   markDelivered,
   setDeliveredAt,
   moveOrderToAnother,
+  settledUp,
   cancelOrder,
   deleteOrder,
   refundOrder,
@@ -446,6 +447,7 @@ async function orderPage(id: string, said: string) {
               addOption={addLineOption}
               removeOption={removeLineOption}
               settle={settleCustom}
+              settleUp={settledUp}
             />
           )}
 

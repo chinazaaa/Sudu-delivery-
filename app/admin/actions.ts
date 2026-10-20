@@ -5816,3 +5816,31 @@ export async function cartToOrder(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
   redirect(`/admin/orders/${made.orderId}`);
 }
+
+/**
+ * The difference on an edited order, collected or given back.
+ *
+ * An order can be changed after it is paid for: somebody adds a drink at
+ * the counter, or the thing they wanted is off and a cheaper one goes in.
+ * The order page has always said what that left owing, in either
+ * direction, and had no way to say it was settled, so the line sat there
+ * through delivery and into the books claiming money that had long since
+ * changed hands.
+ *
+ * `charged` is what was actually taken, which is the only honest record of
+ * it: moving it to today's total says the two agree again. Nothing else
+ * moves, because nothing else is wrong.
+ */
+export async function settledUp(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("order_id") ?? "");
+  if (id === "") return;
+
+  await db()
+    .from("orders")
+    .update({ charged: await orderTotal(id) })
+    .eq("id", id);
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/o", "layout");
+}

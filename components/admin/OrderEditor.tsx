@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ActionButton from "@/components/admin/ActionButton";
 
 import { naira } from "@/lib/money";
 import type { EditedLine } from "@/lib/order-edit";
@@ -36,6 +37,7 @@ export default function OrderEditor({
   addOption,
   removeOption,
   settle,
+  settleUp,
 }: {
   orderId: string;
   lines: EditedLine[];
@@ -62,6 +64,9 @@ export default function OrderEditor({
   addOption: (form: FormData) => void;
   removeOption: (form: FormData) => void;
   settle: (form: FormData) => void;
+  /** The difference on an order edited after it was paid for, collected or
+   *  given back. Not the same thing as settling a custom order's price. */
+  settleUp: (form: FormData) => void;
 }) {
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
@@ -115,15 +120,26 @@ export default function OrderEditor({
       )}
 
       {charged !== null && charged !== total && (
-        <p className="rounded-xl bg-shell px-3 py-2 text-sm font-semibold">
-          They paid {naira(charged)}. It now comes to {naira(total)}:{" "}
-          <span className={total > charged ? "text-red-700" : "text-mint"}>
-            {total > charged
-              ? `${naira(total - charged)} still to collect`
-              : `${naira(charged - total)} to give back`}
-          </span>
-          .
-        </p>
+        <div className="rounded-xl bg-shell px-3 py-2.5">
+          <p className="text-sm font-semibold">
+            They paid {naira(charged)}. It now comes to {naira(total)}:{" "}
+            <span className={total > charged ? "text-red-700" : "text-mint"}>
+              {total > charged
+                ? `${naira(total - charged)} still to collect`
+                : `${naira(charged - total)} to give back`}
+            </span>
+            .
+          </p>
+          {/* Said and then settled, in the same place. Without this the
+              line sat there through delivery and into the books, claiming
+              money that had long since changed hands. */}
+          <form action={settleUp} className="mt-2">
+            <input type="hidden" name="order_id" value={orderId} />
+            <ActionButton className="btn-admin btn-admin-sm" done="Settled ✓">
+              {total > charged ? "They have paid the difference" : "I have given it back"}
+            </ActionButton>
+          </form>
+        </div>
       )}
 
       <ul className="divide-y divide-black/5">
