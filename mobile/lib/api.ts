@@ -1011,6 +1011,22 @@ export function dearestArea(shop: Shop | null, restaurantIds: string[]): Area {
   );
 }
 
+/**
+ * What a second area adds on top of the dearest one.
+ *
+ * The dearest area sets the distance, which is right for a cart that is one
+ * detour. A cart holding Lekki and Ajah is two: the Lekki trip plus a
+ * second shop to find, park at and queue in, and that second stop costs the
+ * same whichever two areas it is. Home is never one of them, because every
+ * run passes Sangotedo on the way back.
+ */
+export const MIXED_AREA_EXTRA = 1000;
+
+export function mixedExtra(cartAreas: Area[], each = MIXED_AREA_EXTRA): number {
+  const far = new Set(cartAreas.filter((one) => one.id !== "").map((one) => one.id));
+  return far.size <= 1 ? 0 : Math.max(0, each) * (far.size - 1);
+}
+
 /** The ladder as that area charges it: every band up by the same amount. */
 export function withExtra(
   bands: Shop["bands"],

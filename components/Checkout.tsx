@@ -18,6 +18,7 @@ import {
   areasIn,
   canGoSameDay,
   dearestArea,
+  mixedExtra,
   runCovers,
   withExtra,
   type Area,
@@ -146,7 +147,12 @@ export default function Checkout({
   const kitchens = [...new Set(cart.map((line) => line.restaurantId))];
   const cartAreas = areasIn(areas, kitchens, areaOf);
   const area = dearestArea(areas, kitchens, areaOf);
-  const bands = withExtra(baseBands, area.runExtra);
+  // The dearest area sets the distance; every area after the first is a
+  // second shop to find, park at and queue in, and costs the same whichever
+  // two they are. Sangotedo is not one of them: every run passes it anyway.
+  const secondStop = mixedExtra(cartAreas);
+  const farExtra = area.runExtra + secondStop;
+  const bands = withExtra(baseBands, farExtra);
   // A kitchen that charges by what the shopping comes to rather than by how
   // many things it is. A market trip is one trip and two bags, and the
   // container ladder would call eleven peppers eleven containers.
@@ -155,7 +161,7 @@ export default function Checkout({
   // the restaurant half by how much of the car it fills.
   const marketHalf = cart.filter((line) => pricesByValue(line.restaurantId, valueBandsOf));
   const restHalf = cart.filter((line) => !pricesByValue(line.restaurantId, valueBandsOf));
-  const sameDayBands = withExtra(baseSameDayBands, area.sameDayExtra);
+  const sameDayBands = withExtra(baseSameDayBands, area.sameDayExtra + secondStop);
   // One thing from a far area makes the whole order a run: a car cannot be
   // in two places in three hours.
   // A car of its own goes today, so a counter shut today cannot be fetched
@@ -264,7 +270,11 @@ export default function Checkout({
   // together and there is one fee. It is only when no run is going there
   // that the two halves cannot be one order.
   const far = cartAreas.filter((one) => one.id !== "");
-  const farNames = far.map((one) => one.name).join(" and ");
+  const farNames = (() => {
+    const names = [...new Set(far.map((one) => one.name))];
+    if (names.length < 3) return names.join(" and ");
+    return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  })();
   const farLines = cart.filter((line) =>
     far.some((one) => one.id === (areaOf[line.restaurantId] ?? ""))
   );
@@ -629,7 +639,7 @@ export default function Checkout({
           })(),
           bands: byValue,
         }) +
-        area.runExtra
+        farExtra
       : feeFor(itemCount, selected?.flashFee ?? null, bands);
 
   /**
@@ -1760,6 +1770,15 @@ export default function Checkout({
                   <span>{naira(area.runExtra)}</span>
                 </li>
               )}
+              {/* Said as its own line rather than folded into the one
+                  above, which names a single area and would be quietly
+                  wrong about why the number moved. */}
+              {secondStop > 0 && (
+                <li className="flex justify-between text-muted">
+                  <span>A second stop, in {farNames}</span>
+                  <span>{naira(secondStop)}</span>
+                </li>
+              )}
               <li className="flex justify-between border-t border-black/10 pt-1 font-bold text-ink">
                 <span>Delivery</span>
                 <span>{naira(charged)}</span>
@@ -1786,8 +1805,8 @@ export default function Checkout({
             // higher, and a ladder that is higher for no stated reason reads
             // as the price having gone up. It is the trip that is longer.
             note={
-              area.runExtra > 0
-                ? `${area.name} is a longer trip than Sangotedo, so every rung is ${naira(area.runExtra)} more. One fee for the whole order, however many restaurants are in it: it is the car, not the food, so it goes by how much room your order takes.`
+              farExtra > 0
+                ? `${secondStop > 0 ? `Your order comes from ${farNames}, which is two stops rather than one` : `${area.name} is a longer trip than Sangotedo`}, so every rung is ${naira(farExtra)} more. One fee for the whole order, however many restaurants are in it: it is the car, not the food, so it goes by how much room your order takes.`
                 : undefined
             }
           />

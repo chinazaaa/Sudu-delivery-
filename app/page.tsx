@@ -20,7 +20,7 @@ import {
 } from "@/lib/settings";
 import { toBatchView } from "@/lib/view";
 import { bandTable } from "@/lib/fees";
-import { collectedFrom, parseAreas } from "@/lib/areas";
+import { collectedFrom, everywhere, parseAreas } from "@/lib/areas";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { nextArrival, runArrival } from "@/lib/arrival";
 import { dropLabel, nextDrop, skincareOn, skincareShop } from "@/lib/skincare";
@@ -363,12 +363,7 @@ export default async function HomePage() {
           : "",
         parseAreas(settings.delivery_areas)
       )}
-      where={(() => {
-        const names = parseAreas(settings.delivery_areas).map((one) => one.name);
-        if (names.length === 0) return "Sangotedo";
-        if (names.length === 1) return names[0];
-        return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
-      })()}
+      where={everywhere(parseAreas(settings.delivery_areas))}
       // The ladder as it is set, rather than a table written on the page.
       // A home page quoting four thousand over a checkout about to charge
       // six is worse than one that says nothing about the fee at all.

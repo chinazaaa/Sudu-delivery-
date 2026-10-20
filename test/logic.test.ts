@@ -18,6 +18,7 @@ import { weekAround } from "../lib/time";
 import { monthOf, nextMonth } from "../lib/standing";
 import { googleTagId, instagramLink, numberOr, shopEmails, xLink } from "../lib/settings";
 import { isExtra } from "../lib/shelf";
+import { collectedFrom, everywhere, mixedExtra, withExtra } from "../lib/areas";
 import { cartsInTime, howLong, needsDoing } from "../lib/needs-doing";
 import { howPaid, orderStory } from "../lib/order-story";
 import { codeFrom } from "../lib/promoter-applications";
@@ -39,6 +40,7 @@ import {
   parseBands,
   splitFee,
   HEADLINE_FEE,
+  type Band,
 } from "../lib/fees";
 import {
   choiceCombinations,
@@ -4393,4 +4395,103 @@ test("a holiday skips the months inside it rather than storing them up", () => {
   const mine = owed(aPlan({ madeThrough: "2026-11-03", pausedUntil: "2026-12-20" }), "2026-12-01", 5, "");
   assert.deepEqual(mine.raise, []);
   assert.deepEqual(mine.skip, ["2026-12-03"]);
+});
+
+/*
+ * The route ticket names the far end of the trip, not the near end.
+ *
+ * One area called "Lekki/Ikoyi" never raised the question. Split into Ajah,
+ * Lekki and Ikoyi, the Saturday car covers all three, and a ticket with room
+ * for two names took them in the order they are set: "Sangotedo/Ajah", the
+ * nearest thing on a route that ends an hour past it.
+ */
+test("the route ticket names the furthest area a run reaches", () => {
+  const areas = [
+    { id: "ajah", name: "Ajah", runExtra: 1000, sameDayExtra: 1000, sameDay: true },
+    { id: "l", name: "Lekki", runExtra: 2500, sameDayExtra: 0, sameDay: false },
+    { id: "ikoyi", name: "Ikoyi", runExtra: 3500, sameDayExtra: 0, sameDay: false },
+  ];
+
+  assert.equal(collectedFrom("|l|ikoyi|ajah|", areas), "Sangotedo/Ikoyi");
+  // Set in any order, the answer is the same: it is read off the fare.
+  assert.equal(collectedFrom("|ajah|l|", areas), "Sangotedo/Lekki");
+  // One area, named as it is.
+  assert.equal(collectedFrom("|ajah|", areas), "Sangotedo/Ajah");
+  // A run that goes nowhere else is the home run.
+  assert.equal(collectedFrom("", areas), "Sangotedo");
+  // An id no area answers to any more does not become an empty name.
+  assert.equal(collectedFrom("|gone|", areas), "Sangotedo");
+  // An area's own name holding two towns still gives the ticket one word.
+  assert.equal(
+    collectedFrom("|l|", [{ id: "l", name: "Lekki/Ikoyi", runExtra: 5000, sameDayExtra: 0, sameDay: false }]),
+    "Sangotedo/Lekki"
+  );
+});
+
+/*
+ * Where the shop buys, said on the front page, with home in it.
+ *
+ * The line was filled from the areas list, which is the list of places that
+ * are not home. With one area named "Lekki/Ikoyi" that read as a list and
+ * nobody noticed Sangotedo missing from it. Split into three it read "from
+ * Ajah, Lekki and Ikoyi", leaving out the town fourteen of the seventeen
+ * counters are on.
+ */
+test("the front page names everywhere the shop collects from", () => {
+  const areas = [
+    { id: "ajah", name: "Ajah", runExtra: 1000, sameDayExtra: 1000, sameDay: true },
+    { id: "l", name: "Lekki", runExtra: 2500, sameDayExtra: 0, sameDay: false },
+    { id: "ikoyi", name: "Ikoyi", runExtra: 3500, sameDayExtra: 0, sameDay: false },
+  ];
+
+  assert.equal(everywhere(areas), "Sangotedo, Ajah, Lekki and Ikoyi");
+  assert.equal(everywhere([areas[0]]), "Sangotedo and Ajah");
+  // No areas set is the shop as it was before areas existed.
+  assert.equal(everywhere([]), "Sangotedo");
+  // A home row in the list is not home said twice.
+  assert.equal(
+    everywhere([{ id: "", name: "Sangotedo", runExtra: 0, sameDayExtra: 0, sameDay: true }, areas[1]]),
+    "Sangotedo and Lekki"
+  );
+});
+
+/*
+ * Two areas in one cart is two stops, and the second one is not free.
+ *
+ * The rule was "the furthest thing in the cart pays for the trip", which is
+ * right for a cart that is one detour: the car goes to Lekki and passes
+ * everything else on the way back. A cart holding Lekki and Ajah is two
+ * detours, and the second shop is one more place to find, park at, queue in
+ * and carry out of, whichever two areas it happens to be.
+ */
+test("a second far area adds a flat extra of its own", () => {
+  const ajah = { id: "ajah", name: "Ajah", runExtra: 1000, sameDayExtra: 1000, sameDay: true };
+  const lekki = { id: "l", name: "Lekki", runExtra: 2500, sameDayExtra: 0, sameDay: false };
+  const ikoyi = { id: "ikoyi", name: "Ikoyi", runExtra: 3500, sameDayExtra: 0, sameDay: false };
+  const home = { id: "", name: "Sangotedo", runExtra: 0, sameDayExtra: 0, sameDay: true };
+
+  // One area, however many shops in it, is one detour.
+  assert.equal(mixedExtra([lekki]), 0);
+  assert.equal(mixedExtra([home, lekki]), 0);
+  // Sangotedo is never a detour: every run passes it on the way back.
+  assert.equal(mixedExtra([home]), 0);
+  assert.equal(mixedExtra([]), 0);
+  // Two far areas: the dearest sets the distance, this is the second stop.
+  assert.equal(mixedExtra([lekki, ajah]), 1000);
+  assert.equal(mixedExtra([home, lekki, ajah]), 1000);
+  // Three is two extra stops, not one.
+  assert.equal(mixedExtra([ajah, lekki, ikoyi]), 2000);
+  // The same area twice is still one stop.
+  assert.equal(mixedExtra([lekki, lekki]), 0);
+  // What it costs is a setting, so a shop can say otherwise.
+  assert.equal(mixedExtra([lekki, ajah], 2500), 2500);
+  assert.equal(mixedExtra([lekki, ajah], 0), 0);
+
+  // What a Lekki-and-Ajah cart is actually charged: the Lekki ladder, plus
+  // the second stop, at every rung.
+  const bands: Band[] = [{ maxItems: 3, fee: 4000 }, { maxItems: 99, fee: 6000 }];
+  assert.deepEqual(withExtra(bands, lekki.runExtra + mixedExtra([lekki, ajah])), [
+    { maxItems: 3, fee: 7500 },
+    { maxItems: 99, fee: 9500 },
+  ]);
 });

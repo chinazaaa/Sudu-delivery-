@@ -1,7 +1,7 @@
 import { db } from "./supabase";
 import { safeSettings } from "./settings";
 import { activeBands, sameDayPricing } from "./settings";
-import { parseAreas, dearestArea, areasIn, canGoSameDay, withExtra, HOME, type Area } from "./areas";
+import { parseAreas, dearestArea, areasIn, canGoSameDay, withExtra, mixedExtra, HOME, type Area } from "./areas";
 import type { Band } from "./fees";
 import { parseValueBands, type ValueBand } from "./value-bands";
 
@@ -33,6 +33,9 @@ export type CartArea = {
   all: Area[];
   /** Whether a car of its own can go at all. */
   sameDay: boolean;
+  /** What the second and any further area in this cart add, on top of the
+   *  dearest one's extra. Nought on a cart that is one detour. */
+  mixedExtra: number;
   /** The two ladders as this cart is charged them. */
   bands: Band[];
   sameDayBands: Band[];
@@ -62,6 +65,9 @@ export async function areaOfCart(restaurantIds: string[]): Promise<CartArea> {
 
   const all = areasIn(areas, restaurantIds, where);
   const dearest = dearestArea(areas, restaurantIds, where);
+  // The dearest area sets the distance; a second one is a second stop, and
+  // a second stop costs the same whichever two areas it is.
+  const mixed = mixedExtra(all);
 
   return {
     valueBands: await valueLadder(restaurantIds),
@@ -69,8 +75,9 @@ export async function areaOfCart(restaurantIds: string[]): Promise<CartArea> {
     dearest,
     all,
     sameDay: canGoSameDay(all),
-    bands: withExtra(base, dearest.runExtra),
-    sameDayBands: withExtra(sameDay.bands, dearest.sameDayExtra),
+    mixedExtra: mixed,
+    bands: withExtra(base, dearest.runExtra + mixed),
+    sameDayBands: withExtra(sameDay.bands, dearest.sameDayExtra + mixed),
     urgentExtra: sameDay.urgentExtra,
   };
 }

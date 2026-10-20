@@ -19,6 +19,7 @@ import {
   aroundPhrase,
   canGoSameDay,
   dearestArea,
+  mixedExtra,
   ESTIMATE_NOTE,
   lagosToday,
   naira,
@@ -171,8 +172,12 @@ export default function Checkout() {
   const marketHalf = lines.filter((line) => pricesByValue(shop, kitchenOf(line)));
   const restHalf = lines.filter((line) => !pricesByValue(shop, kitchenOf(line)));
   const area = dearestArea(shop, kitchens);
-  const runBands = withExtra(shop?.bands ?? [], area.runExtra);
-  const sameDayBands = withExtra(shop?.sameDay?.bands ?? [], area.sameDayExtra);
+  // The dearest area sets the distance; every area after the first is a
+  // second stop, and a second stop costs the same whichever two they are.
+  const secondStop = mixedExtra(cartAreas);
+  const farExtra = area.runExtra + secondStop;
+  const runBands = withExtra(shop?.bands ?? [], farExtra);
+  const sameDayBands = withExtra(shop?.sameDay?.bands ?? [], area.sameDayExtra + secondStop);
 
   const runsHere = (shop?.runs ?? []).filter(
     (one) => !one.closed && !one.full && runCovers(one, cartAreas) && runCarries(one, kitchens)
@@ -273,7 +278,7 @@ export default function Checkout() {
             return containers === 0 ? 0 : feeFrom(containers, runBands, flash);
           })(),
           bands: byValue,
-        }) + area.runExtra
+        }) + farExtra
       : feeFrom(items, runBands, flash);
 
   /** And what it costs in a car of its own, which is one ladder either way:
@@ -922,6 +927,12 @@ export default function Checkout() {
                 ...(area.runExtra > 0
                   ? [{ label: `${area.name} is a longer trip`, fee: area.runExtra }]
                   : []),
+                // Its own row rather than folded into the one above, which
+                // names a single area and would be quietly wrong about why
+                // the number moved.
+                ...(secondStop > 0
+                  ? [{ label: `A second stop, in ${farNames}`, fee: secondStop }]
+                  : []),
               ]}
               here={-1}
               total={{ label: "Delivery", fee }}
@@ -941,15 +952,21 @@ export default function Checkout() {
               extra={
                 picked && picked.urgent && (shop.sameDay?.urgentExtra ?? 0) > 0
                   ? { label: "Leaving within the hour", fee: shop.sameDay!.urgentExtra }
-                  : area.runExtra > 0
-                    ? { label: `${area.name} is a longer trip`, fee: area.runExtra }
+                  : farExtra > 0
+                    ? {
+                        label:
+                          secondStop > 0
+                            ? `Two stops, in ${farNames}`
+                            : `${area.name} is a longer trip`,
+                        fee: farExtra,
+                      }
                     : null
               }
               note={
                 picked
                   ? "A car of its own is one order, one driver, one trip, so there is nobody to share the petrol with. A run carries everybody at once, which is why it costs less."
-                  : area.runExtra > 0
-                    ? `${area.name} is a longer trip than Sangotedo, so every rung is ${naira(area.runExtra)} more. One fee for the whole order, however many kitchens are in it: it is the car, not the food, so it goes by how much room your order takes.`
+                  : farExtra > 0
+                    ? `${secondStop > 0 ? `Your order comes from ${farNames}, which is two stops rather than one` : `${area.name} is a longer trip than Sangotedo`}, so every rung is ${naira(farExtra)} more. One fee for the whole order, however many kitchens are in it: it is the car, not the food, so it goes by how much room your order takes.`
                     : "One fee for the whole order, however many kitchens are in it. It is the car, not the food, so it goes by how much room your order takes."
               }
             />

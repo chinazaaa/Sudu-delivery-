@@ -597,7 +597,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
                       where.bands
                     ),
                     bands: where.valueBands,
-                  }) + where.dearest.runExtra
+                  }) + where.dearest.runExtra + where.mixedExtra
                 : undefined),
           promotionCode: promotion?.coupon.code ?? null,
           sameDayFee: sameDay && !party
@@ -746,7 +746,7 @@ export async function quote(args: {
           where.bands
         ),
         bands: where.valueBands,
-      }) + where.dearest.runExtra;
+      }) + where.dearest.runExtra + where.mixedExtra;
   } else {
     fee = feeFor(carrying, batch?.flash_fee ?? null, await bandsFor(batch));
   }

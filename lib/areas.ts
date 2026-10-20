@@ -102,6 +102,28 @@ export function dearestArea(
 }
 
 /**
+ * What a second area adds on top of the dearest one.
+ *
+ * The rule the shop prices by is "the furthest thing in the cart", which is
+ * right for a cart that is one detour: the car goes to Lekki and comes
+ * back past everything else. It is wrong for a cart that is two. Lekki and
+ * Ajah are not one stop at the Lekki price; they are the Lekki trip plus a
+ * second shop to find, park at, queue in and carry out of, and that second
+ * stop costs the same whichever two areas it is.
+ *
+ * So the dearest area still sets the distance, and every area after the
+ * first adds this on top. Home is not one of them: every run passes
+ * Sangotedo on the way back, so a Sangotedo kitchen in the cart is not a
+ * detour and never was.
+ */
+export const MIXED_AREA_EXTRA = 1000;
+
+export function mixedExtra(cartAreas: Area[], each = MIXED_AREA_EXTRA): number {
+  const far = new Set(cartAreas.filter((one) => one.id !== "").map((one) => one.id));
+  return far.size <= 1 ? 0 : Math.max(0, each) * (far.size - 1);
+}
+
+/**
  * The ladder as that area charges it: every band up by the same amount.
  *
  * Every band, because the petrol to Lekki is the same petrol whether the car
@@ -187,12 +209,44 @@ export function collectedFrom(
   const home = firstTown(areas.find((one) => one.id === "")?.name ?? "Sangotedo");
   const named = new Map(areas.map((one) => [one.id, firstTown(one.name)]));
 
+  /*
+   * Furthest first, because the furthest place is what the trip is.
+   *
+   * While there was one far area called "Lekki/Ikoyi" the order never came
+   * up. Split into Ajah, Lekki and Ikoyi, the Saturday car covers all
+   * three, and a ticket holding two names had to choose: in the order they
+   * are set it said "Sangotedo/Ajah", which is the nearest thing on a route
+   * that ends an hour past it. They are one corridor out of Sangotedo, so
+   * naming the end of it is the honest short version, and the fees section
+   * below names every area with what it adds.
+   */
   const rest = areasOfRun(runAreas)
     .filter((id) => id !== "")
-    .map((id) => named.get(id) ?? "")
+    .map((id) => areas.find((one) => one.id === id))
+    .filter((one): one is Area => one !== undefined)
+    .sort((a, b) => b.runExtra + b.sameDayExtra - (a.runExtra + a.sameDayExtra))
+    .map((one) => named.get(one.id) ?? "")
     .filter((name) => name !== "" && name !== home);
 
   return [home, ...new Set(rest)].slice(0, Math.max(1, most)).join("/");
+}
+
+/**
+ * Everywhere the shop collects from, named, home included.
+ *
+ * The front page says "KFC, Domino's and more from ___". It was filled from
+ * the areas list, which is the list of places that are not home: with one
+ * area named "Lekki/Ikoyi" that read as a list and nobody noticed Sangotedo
+ * was missing from it. Split into three, it read "from Ajah, Lekki and
+ * Ikoyi", naming three places the shop barely buys from and leaving out the
+ * one fourteen of its seventeen counters are on.
+ */
+export function everywhere(areas: Area[], home = HOME.name): string {
+  const names = [home, ...areas.filter((one) => one.id !== "").map((one) => one.name)];
+  const real = [...new Set(names.map((one) => one.trim()).filter(Boolean))];
+  if (real.length === 0) return home;
+  if (real.length === 1) return real[0];
+  return `${real.slice(0, -1).join(", ")} and ${real[real.length - 1]}`;
 }
 
 /**
