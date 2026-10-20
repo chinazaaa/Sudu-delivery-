@@ -255,3 +255,45 @@ export async function addRequest(form: FormData): Promise<void> {
   revalidatePath("/admin/requests");
   revalidatePath("/admin");
 }
+
+/**
+ * Which order an ask turned into.
+ *
+ * An ask can become three things: a product on a shelf, a line in the
+ * errand book, or an ordinary order on a run. The first two were already
+ * remembered and the third was not, so the card could say somebody had
+ * placed it and not say which one, and the only question this list exists
+ * to answer, whether asking for a thing ever came to anything, meant going
+ * and looking.
+ *
+ * Taken as the order's number rather than its id, because the number is
+ * what it is called everywhere else in here and on the message that went
+ * to the customer. An id is on a URL and nowhere a person reads.
+ */
+export async function linkRequestToOrder(form: FormData): Promise<void> {
+  if (!(await isSignedIn())) throw new Error("Not signed in.");
+
+  const id = String(form.get("id") ?? "");
+  const number = Number(String(form.get("order_no") ?? "").replace(/[^\d]/g, ""));
+  if (id === "" || !Number.isFinite(number) || number <= 0) return;
+
+  const { data } = await db()
+    .from("orders")
+    .select("id")
+    .eq("order_no", number)
+    .maybeSingle();
+
+  // Quiet about a number nobody recognises rather than loud: this box sits
+  // on a card somebody is tidying up, and a thrown error there loses the
+  // page. An unrecognised number simply does not link, and the box is
+  // still there to try again.
+  const order = data as { id: string } | null;
+  if (!order) return;
+
+  await db()
+    .from("custom_requests")
+    .update({ order_id: order.id, status: "converted" })
+    .eq("id", id);
+
+  revalidatePath("/admin/requests");
+}

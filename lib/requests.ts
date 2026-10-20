@@ -69,6 +69,12 @@ export type CustomRequest = {
   /** The line of money it became, when it was a one-off and never a
    *  product. Most asks are: bought once, for one person, never again. */
   money_id: string | null;
+  /** The order it became, where it went out as an ordinary order on a run
+   *  rather than as a line in the errand book. The card could say somebody
+   *  had placed it and not which one, which left the only question this
+   *  list exists to answer, did asking for it come to anything, a matter
+   *  of going and looking. */
+  order_id: string | null;
 };
 
 export type AskResult = { ok: true; id: string } | { ok: false; error: string };

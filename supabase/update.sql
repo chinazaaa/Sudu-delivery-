@@ -2120,3 +2120,19 @@ where restaurant_id = (select id from restaurants where slug = 'pitakwa-boleandg
 alter table settings add column if not exists area_pairs text not null default '';
 
 update settings set area_pairs = '[{"a":"","b":"ajah","extra":500},{"a":"","b":"l","extra":1000},{"a":"","b":"ikoyi","extra":1000},{"a":"ajah","b":"l","extra":1000},{"a":"ajah","b":"ikoyi","extra":1000},{"a":"ikoyi","b":"l","extra":500}]';
+
+-- Which order an ask turned into.
+--
+-- A request already remembers the product it became and the line of money
+-- it became. The third thing it can become is an ordinary order, and that
+-- was the one it forgot: the card said "they placed it as an ordinary
+-- order" and then left you to find which one.
+--
+-- That link is the whole answer to "did asking for this ever come to
+-- anything", which is the question the asking list exists to answer.
+alter table custom_requests
+  add column if not exists order_id uuid references orders(id) on delete set null;
+
+create index if not exists custom_requests_order_id_idx
+  on custom_requests (order_id) where order_id is not null;
+

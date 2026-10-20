@@ -3,7 +3,13 @@ import { requestList, fromTheChat, isAQuestion } from "@/lib/requests";
 import { faqFromRequest } from "../faq/actions";
 import { safeSettings, whatsappLink } from "@/lib/settings";
 import { naira } from "@/lib/money";
-import { addRequest, markRequest, settleRequest, shelveRequest } from "./actions";
+import {
+  addRequest,
+  linkRequestToOrder,
+  markRequest,
+  settleRequest,
+  shelveRequest,
+} from "./actions";
 import SaveButton from "@/components/SaveButton";
 import Link from "next/link";
 import { db } from "@/lib/supabase";
@@ -123,6 +129,24 @@ export default async function RequestsPage({
   // would send somebody to the wrong page.
   const itemShelf = await shelfOfItems(
     all.map((one) => one.menu_item_id).filter((one): one is string => Boolean(one))
+  );
+
+  // The number of the order an ask became, where it became one. Read rather
+  // than stored, for the same reason as the shelf above: an order's number
+  // is the order's to keep, and a copy of it here would be a second place
+  // for it to be wrong.
+  const becameIds = [
+    ...new Set(all.map((one) => one.order_id).filter((one): one is string => Boolean(one))),
+  ];
+  const { data: becameRows } =
+    becameIds.length > 0
+      ? await db().from("orders").select("id, order_no").in("id", becameIds)
+      : { data: [] };
+  const orderNo = new Map(
+    ((becameRows ?? []) as { id: string; order_no: number | null }[]).map((one) => [
+      one.id,
+      one.order_no,
+    ])
   );
 
   return (
@@ -478,9 +502,33 @@ export default async function RequestsPage({
               {!ask.money_id && isClosed(ask.status) ? (
                 <div className="flex flex-wrap items-center gap-2.5 rounded-xl bg-black/[0.04] px-3 py-2">
                   <p className="min-w-0 flex-1 text-sm font-semibold">
-                    {ask.status === "converted"
-                      ? "Finished. They placed it as an ordinary order, so the money is on that order and none is counted here."
-                      : "Not going ahead. Nothing to count."}
+                    {ask.status === "converted" ? (
+                      <>
+                        Finished. It went out as an ordinary order, so the money
+                        is on that order and none is counted here.
+                        {/* Which order, where somebody has said. The card
+                            used to stop at "an ordinary order", which left
+                            the one question this list exists to answer, did
+                            asking for it come to anything, a matter of going
+                            and looking for it. */}
+                        {ask.order_id && (
+                          <>
+                            {" "}
+                            <Link
+                              href={`/admin/orders/${ask.order_id}`}
+                              className="underline"
+                            >
+                              {orderNo.get(ask.order_id)
+                                ? `Order #${orderNo.get(ask.order_id)}`
+                                : "Open the order"}
+                            </Link>
+                            .
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      "Not going ahead. Nothing to count."
+                    )}
                   </p>
                   <form action={markRequest} className="shrink-0">
                     <input type="hidden" name="id" value={ask.id} />
@@ -492,6 +540,30 @@ export default async function RequestsPage({
                       Put it back
                     </button>
                   </form>
+                  {/* Said by its number, because that is what an order is
+                      called everywhere else in here and on the message
+                      that went to the customer. */}
+                  {ask.status === "converted" && !ask.order_id && (
+                    <form
+                      action={linkRequestToOrder}
+                      className="flex w-full items-end gap-2 border-t border-black/5 pt-2"
+                    >
+                      <input type="hidden" name="id" value={ask.id} />
+                      <div className="w-28">
+                        <label className="label" htmlFor={`became-${ask.id}`}>
+                          Which order?
+                        </label>
+                        <input
+                          id={`became-${ask.id}`}
+                          name="order_no"
+                          inputMode="numeric"
+                          placeholder="1052"
+                          className="field py-2 text-sm"
+                        />
+                      </div>
+                      <SaveButton look="btn-admin btn-admin-sm">Link it</SaveButton>
+                    </form>
+                  )}
                 </div>
               ) : ask.money_id ? (
                 <div className="rounded-xl bg-mint/10 px-3 py-2">
