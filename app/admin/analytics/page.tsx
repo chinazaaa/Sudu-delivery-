@@ -15,6 +15,9 @@ import {
   traffic,
 } from "@/lib/analytics";
 import { parseRoutes, routeById } from "@/lib/parcels";
+import { shopPicture, customerPicture, QUIET_AFTER_DAYS } from "@/lib/shop-numbers";
+import { dashboard } from "@/lib/admin-data";
+import { runDateLabel } from "@/lib/time";
 import { safeSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +33,7 @@ export default async function AnalyticsPage({
   const days = RANGES.includes(asked as (typeof RANGES)[number]) ? asked : 7;
 
   // Null means nothing is counting yet. The rest of the page still works.
-  const [views, steps, said, shelf, boxes, parcels, settings, came, ways, earned, mine] =
+  const [views, steps, said, shelf, boxes, parcels, settings, came, ways, earned, mine, shop, who, board] =
     await Promise.all([
     traffic(days),
     funnel(days),
@@ -44,6 +47,11 @@ export default async function AnalyticsPage({
     profitByChannel(days),
     // Every page this shop wrote, including the ones nobody has opened.
     ownPages(days),
+    // The shop itself: what each counter sold, and how much of what is on
+    // sale has ever been bought by anybody.
+    shopPicture(days),
+    customerPicture(days),
+    dashboard(days),
   ]);
   const busiest = views ? Math.max(...views.perDay.map((day) => day.views), 1) : 1;
   // A route is stored by its id, and the id is not what anybody calls it.
@@ -79,6 +87,57 @@ export default async function AnalyticsPage({
           orders is already true.
         </p>
       )}
+
+      {/*
+        The shop, before the traffic.
+
+        This page opened on views and a conversion rate, which is the shape
+        a page like this takes when it is copied from a website that sells
+        software. Twenty-nine paid orders is not a sample: a percentage of
+        it is a coin toss with a decimal point on it, and the four figures
+        that matter are all counts somebody could check by hand.
+      */}
+      <section className="card space-y-3">
+        <h2 className="font-bold">The shop</h2>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Stat
+            label="Customers"
+            value={who.all}
+            hint={`${who.repeat} came back · ${who.fresh} new in ${days} days`}
+          />
+          <Stat
+            label="An order"
+            value={who.perOrder}
+            money
+            hint={`A customer is worth ${naira(who.perCustomer)}`}
+          />
+          <Stat
+            label="Counters selling"
+            value={shop.counters.filter((one) => one.everSold > 0).length}
+            hint={`Of ${shop.counters.length} on the shop`}
+          />
+          <Stat
+            label="Things ever sold"
+            value={shop.everSold}
+            hint={`Of ${shop.onSale.toLocaleString()} on sale`}
+          />
+        </div>
+        {/* The one number this shop should look at. Said as a sentence,
+            because as a tile it reads as a statistic and as a sentence it
+            reads as the morning's work. */}
+        {shop.onSale > 0 && shop.everSold < shop.onSale / 2 && (
+          <p className="soft bg-brand-tint px-3 py-2.5 text-sm">
+            <strong>
+              {(shop.onSale - shop.everSold).toLocaleString()} things are on
+              sale that nobody has ever ordered.
+            </strong>{" "}
+            A menu is not a warehouse: every one of them is a row somebody
+            scrolls past to reach the thing they wanted, and a page Google
+            crawls instead of a page that sells. The counters below say
+            which shelves they are on.
+          </p>
+        )}
+      </section>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Views" value={views?.views ?? 0} hint={`Last ${days} days`} />
@@ -400,6 +459,186 @@ export default async function AnalyticsPage({
       </section>
 
       {/*
+        Every counter, with what it sold and what it is carrying.
+
+        Fifteen of them, so all fifteen are here. A list cut at ten would
+        hide exactly the counters worth knowing about, which are the ones
+        at the bottom: a shelf carrying eight hundred things that has sold
+        two of them is not a counter, it is a catalogue somebody imported
+        and never came back to.
+      */}
+      {shop.counters.length > 0 && (
+        <section className="card space-y-2">
+          <h2 className="font-bold">Every counter</h2>
+          <p className="hint">
+            What went over each one in the last {days} days. The shelf
+            figures are all time, because a thing that sold once in May is a
+            thing that sells.
+          </p>
+          <ul className="divide-y divide-black/5 text-sm">
+            {shop.counters.map((one) => (
+              <li key={one.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2.5">
+                <Link
+                  href={`/admin/brands?brand=${one.id}`}
+                  className="min-w-0 flex-1 truncate font-semibold"
+                >
+                  {one.name}
+                </Link>
+                <span className="shrink-0 font-mono text-[13px]">
+                  {one.orders === 0 ? (
+                    <span className="text-muted">nothing in {days} days</span>
+                  ) : (
+                    <>
+                      {naira(one.spend)} · {one.orders}{" "}
+                      {one.orders === 1 ? "order" : "orders"}
+                    </>
+                  )}
+                </span>
+                <span className="w-full text-xs text-muted">
+                  {one.everSold} of {one.onSale.toLocaleString()}{" "}
+                  {one.onSale === 1 ? "thing" : "things"} on its shelf has ever
+                  sold
+                  {one.lastAt !== null
+                    ? ` · last ${runDateLabel(one.lastAt.slice(0, 10))}`
+                    : " · never"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/*
+        Everybody, because everybody fits.
+
+        A repeat rate tells somebody "five came back" in a way they cannot
+        act on: nobody can ring a percentage. The quiet list is the one
+        that earns its place. At twenty customers, somebody who ordered
+        three times and has not been seen for a month has not churned,
+        they have got busy, and that is a message rather than a strategy.
+      */}
+      {who.best.length > 0 && (
+        <section className="card space-y-2">
+          <h2 className="font-bold">Everybody who has ordered</h2>
+          <p className="hint">
+            All {who.all} of them, most spent first. {who.repeat} have ordered
+            more than once.
+          </p>
+          <ul className="divide-y divide-black/5 text-sm">
+            {who.best.map((one) => (
+              <li key={one.phone} className="flex items-baseline justify-between gap-3 py-2">
+                <Link
+                  href={`/admin/customers?q=${encodeURIComponent(one.phone)}`}
+                  className="min-w-0 truncate"
+                >
+                  <span className="font-semibold">{one.name || one.phone}</span>
+                  <span className="ml-2 text-xs text-muted">
+                    {one.orders} {one.orders === 1 ? "order" : "orders"}
+                    {one.lastAt
+                      ? ` · last ${runDateLabel(one.lastAt.slice(0, 10))}`
+                      : ""}
+                  </span>
+                </Link>
+                <span className="shrink-0 font-mono text-[13px]">
+                  {naira(one.spend)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {who.quiet.length > 0 && (
+            <div className="soft bg-brand-tint px-3 py-2.5">
+              <p className="text-sm font-semibold">
+                {who.quiet.length}{" "}
+                {who.quiet.length === 1 ? "person has" : "people have"} not
+                ordered in {QUIET_AFTER_DAYS} days
+              </p>
+              <p className="hint mt-1">
+                {who.quiet.slice(0, 12).map((one, at, all) => (
+                  <span key={one.phone}>
+                    <Link
+                      href={`/admin/customers?q=${encodeURIComponent(one.phone)}`}
+                      className="font-semibold text-brand-dark"
+                    >
+                      {one.name || one.phone}
+                    </Link>
+                    {at < all.length - 1 ? " · " : ""}
+                  </span>
+                ))}
+                {who.quiet.length > 12 ? ` and ${who.quiet.length - 12} more` : ""}
+              </p>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/*
+        What sold, and which day earned.
+
+        Both read off the orders rather than off anything counting views,
+        so they are true whether or not a single visit was ever recorded.
+      */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="card space-y-2">
+          <h2 className="font-bold">What sold</h2>
+          <p className="hint">Last {days} days, by how many went out.</p>
+          {board.topItems.length > 0 ? (
+            <ul className="divide-y divide-black/5 text-sm">
+              {board.topItems.map((item) => (
+                <li
+                  key={`${item.restaurant}-${item.name}`}
+                  className="flex items-baseline justify-between gap-3 py-2"
+                >
+                  <span className="min-w-0 truncate">
+                    <span className="font-semibold">{item.name}</span>
+                    <span className="ml-2 text-xs text-muted">{item.restaurant}</span>
+                  </span>
+                  <span className="shrink-0 font-semibold">{item.qty}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted">Nothing sold in this window.</p>
+          )}
+        </section>
+
+        <section className="card space-y-2">
+          <h2 className="font-bold">Which day is worth a car</h2>
+          <p className="hint">Last {days} days, by what came in.</p>
+          {board.byWeekday.some((day) => day.orders > 0) ? (
+            <ul className="divide-y divide-black/5 text-sm">
+              {board.byWeekday.map((day) => {
+                const most = Math.max(...board.byWeekday.map((one) => one.gross), 1);
+                return (
+                  <li key={day.label} className="py-2">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="font-semibold">{day.label}</span>
+                      <span className="font-mono text-[13px]">
+                        {day.orders === 0 ? (
+                          <span className="text-muted">nothing</span>
+                        ) : (
+                          <>
+                            {naira(day.gross)} · {day.orders}
+                          </>
+                        )}
+                      </span>
+                    </div>
+                    <div className="mt-1 h-[7px] rounded-full bg-rule">
+                      <div
+                        className="h-full rounded-full bg-brand"
+                        style={{ width: `${Math.round((day.gross / most) * 100)}%` }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted">Nothing yet.</p>
+          )}
+        </section>
+      </div>
+
+      {/*
         Every page the shop wrote, including the noughts.
 
         "What they looked at" below is sorted by views, so it can only ever
@@ -456,30 +695,57 @@ export default async function AnalyticsPage({
                       </li>
                     ))}
                 </ul>
-                {/* The point of the panel. Said as a sentence rather than
-                    as more rows of nought, because a page nobody has opened
-                    is one fact however many pages it is true of. */}
-                {quiet.length > 0 && (
+                {/* Two different noughts, and only one of them means
+                    anything.
+
+                    A page that went up on Saturday has had no chance to be
+                    found, and reading its nought as neglect is how a shop
+                    talks itself out of a page before anybody has seen it.
+                    A page that has been up for months with nobody on it is
+                    a different sentence entirely. */}
+                {quiet.filter((one) => !one.tooNew).length > 0 && (
                   <div className="soft mt-1 bg-brand-tint px-3 py-2.5">
                     <p className="text-sm font-semibold">
-                      Nobody opened {quiet.length} of them in {days} days
+                      Nobody opened{" "}
+                      {quiet.filter((one) => !one.tooNew).length} of them in{" "}
+                      {days} days
                     </p>
                     <p className="hint mt-1">
-                      {quiet.map((one, at) => (
+                      {quiet
+                        .filter((one) => !one.tooNew)
+                        .map((one, at, all) => (
+                          <span key={one.path}>
+                            <Link href={one.path} className="font-semibold text-brand-dark">
+                              {one.said}
+                            </Link>
+                            {at < all.length - 1 ? " · " : ""}
+                          </span>
+                        ))}
+                    </p>
+                    <p className="hint mt-1.5">
+                      A page nobody finds is a page nothing links to. These
+                      are the ones to put in a bio, a status or a poster, or
+                      to stop keeping.
+                    </p>
+                  </div>
+                )}
+                {quiet.filter((one) => one.tooNew).length > 0 && (
+                  <p className="hint mt-1">
+                    Too new to tell yet:{" "}
+                    {quiet
+                      .filter((one) => one.tooNew)
+                      .map((one, at, all) => (
                         <span key={one.path}>
                           <Link href={one.path} className="font-semibold text-brand-dark">
                             {one.said}
                           </Link>
-                          {at < quiet.length - 1 ? " · " : ""}
+                          {one.age !== null ? ` (${one.age}d)` : ""}
+                          {at < all.length - 1 ? " · " : ""}
                         </span>
                       ))}
-                    </p>
-                    <p className="hint mt-1.5">
-                      A page nobody finds is a page nothing links to. These
-                      are the ones to put in a bio, a status or a poster,
-                      or to stop keeping.
-                    </p>
-                  </div>
+                    . Google has not finished crawling a page that went up
+                    this week, and nothing links to it yet.
+                  </p>
                 )}
               </>
             );

@@ -777,14 +777,20 @@ export async function doors(days = 28): Promise<Door[] | null> {
  *
  * Add a page to the shop, add a line here. That is the cost of being able
  * to see a nought.
+ *
+ * A date where the page is new. A nought on a page that went up on
+ * Saturday says nothing at all, and reading it as neglect is how a shop
+ * talks itself out of a page before anybody has had the chance to find
+ * it. Pages with no date here are older than anything this counts and are
+ * judged on the whole window.
  */
-export const OWN_PAGES: { path: string; said: string }[] = [
+export const OWN_PAGES: { path: string; said: string; since?: string }[] = [
   { path: "/", said: "The front page" },
   { path: "/products", said: "Everything on the menu" },
   { path: "/collections", said: "Boxes" },
   { path: "/occasions", said: "Occasions" },
   { path: "/skincare", said: "Skincare" },
-  { path: "/pharmacy", said: "Pharmacy" },
+  { path: "/pharmacy", said: "Pharmacy" , since: "2026-10-18" },
   { path: "/parcel", said: "Parcels" },
   { path: "/custom-order", said: "Ask for anything" },
   { path: "/parents", said: "For parents" },
@@ -792,13 +798,13 @@ export const OWN_PAGES: { path: string; said: string }[] = [
   { path: "/send-a-gift-to-pau", said: "Send a gift to PAU" },
   { path: "/pau-student-store", said: "The student store" },
   { path: "/pau-snacks", said: "Snacks" },
-  { path: "/pau-pharmacy", said: "Pharmacy, for searching" },
-  { path: "/pau-laundry", said: "Laundry" },
-  { path: "/pau-project-printing", said: "Project printing" },
-  { path: "/pau-tailoring", said: "Tailoring" },
-  { path: "/pau-hair-and-barbing", said: "Hair and barbing" },
-  { path: "/pau-phone-and-laptop-repair", said: "Phone and laptop repair" },
-  { path: "/pau-buy-a-laptop", said: "Buying a laptop" },
+  { path: "/pau-pharmacy", said: "Pharmacy, for searching" , since: "2026-10-17" },
+  { path: "/pau-laundry", said: "Laundry" , since: "2026-10-18" },
+  { path: "/pau-project-printing", said: "Project printing" , since: "2026-10-18" },
+  { path: "/pau-tailoring", said: "Tailoring" , since: "2026-10-18" },
+  { path: "/pau-hair-and-barbing", said: "Hair and barbing" , since: "2026-10-18" },
+  { path: "/pau-phone-and-laptop-repair", said: "Phone and laptop repair" , since: "2026-10-18" },
+  { path: "/pau-buy-a-laptop", said: "Buying a laptop" , since: "2026-10-18" },
   { path: "/become-a-promoter", said: "Become a promoter" },
   { path: "/wish", said: "Wishlists" },
   { path: "/app", said: "The app" },
@@ -811,7 +817,15 @@ export type OwnPage = {
   said: string;
   views: number;
   people: number;
+  /** How many days it has been up, where that is less than the window.
+   *  Null means longer than anything being counted. */
+  age: number | null;
+  /** Up for less than a week, so a nought on it is not an answer. */
+  tooNew: boolean;
 };
+
+/** A page gets a week before anybody is entitled to a conclusion about it. */
+export const TOO_NEW_DAYS = 7;
 
 /**
  * How many opened each of them, and how many different people.
@@ -845,11 +859,24 @@ export async function ownPages(days = 28): Promise<OwnPage[] | null> {
       people.set(row.path, seen);
     }
 
-    return OWN_PAGES.map((one) => ({
-      ...one,
-      views: views.get(one.path) ?? 0,
-      people: people.get(one.path)?.size ?? 0,
-    })).sort((a, b) => b.people - a.people || b.views - a.views);
+    const today = Date.now();
+    return OWN_PAGES.map((one) => {
+      const age =
+        one.since === undefined
+          ? null
+          : Math.max(
+              0,
+              Math.round((today - new Date(`${one.since}T00:00:00Z`).getTime()) / 86400_000)
+            );
+      return {
+        path: one.path,
+        said: one.said,
+        views: views.get(one.path) ?? 0,
+        people: people.get(one.path)?.size ?? 0,
+        age: age === null || age >= days ? null : age,
+        tooNew: age !== null && age < TOO_NEW_DAYS,
+      };
+    }).sort((a, b) => b.people - a.people || b.views - a.views);
   } catch {
     // Nothing counting yet, which is not the same as nobody looking.
     return null;
