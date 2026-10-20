@@ -2060,3 +2060,14 @@ join (values
   ('Extra sauce', 900, 18, 'The sauce on its own, no container', 'Singles'),
   ('Plate', 250, 19, 'The container a plate of food goes in. One per plate.', 'Singles')
 ) as v(name, price, sort, descr, cat) on c.name = v.cat;
+) as v(name, price, sort, descr, cat) on c.name = v.cat;
+
+-- The three things the custom shelf held until somebody knew which shop
+-- sold them. The Place and Pitakwa Boleandgrill are counters now, so these
+-- would only be a second, unbranded way to order the same food. Switched
+-- off rather than deleted: a line that was once on an order is a record of
+-- what somebody actually bought.
+update menu_items
+set available = false
+where restaurant_id = (select id from restaurants where slug = 'custom-order')
+  and name in ('Prawn rice with honey BBQ chicken', 'Bole, roasted plantain', 'Bole sauce');
