@@ -146,17 +146,33 @@ export default async function AdminHome() {
    *
    * Errands and sales are settled the moment they are written down, because
    * there is no car coming for them.
+   *
+   * A run counts as done when somebody has pressed Settle on it, or when
+   * some cost has been typed into it. The button first, because it is the
+   * one that actually means "I have finished the books on this": it
+   * refuses to go through until every bag is ticked off and the counter
+   * prices are confirmed, so a run carrying it has been looked at by a
+   * person. A cost on its own is the older test and stays, for a run
+   * half-done where the fuel is in and the button has not been pressed.
+   *
+   * Costs alone could not say a run cost nothing. Not every trip has a
+   * fare: a drop made on the way home, or one somebody walked across
+   * campus, is finished and free, and the old test parked it in "waiting"
+   * for ever and held its takings out of the headline. There is nothing to
+   * wait for, and the only way to say so was to type a cost that was not
+   * paid.
    */
-  const costsIn = (batch: (typeof batches)[number]) =>
+  const done = (batch: (typeof batches)[number]) =>
+    batch.settled_at !== null ||
     batch.fuel_cost +
       batch.driver_cost +
       (batch.transport_cost ?? 0) +
       batch.other_cost >
-    0;
-  const waiting = batches.filter((batch) => batch.paidCount > 0 && !costsIn(batch));
+      0;
+  const waiting = batches.filter((batch) => batch.paidCount > 0 && !done(batch));
   const profit =
     batches
-      .filter((batch) => batch.paidCount === 0 || costsIn(batch))
+      .filter((batch) => batch.paidCount === 0 || done(batch))
       .reduce((total, batch) => total + batch.profit, 0) + asideTotals.made;
   // Never called profit: it is the figure that will fall.
   const waitingBefore = waiting.reduce((total, batch) => total + batch.profit, 0);
@@ -559,10 +575,11 @@ export default async function AdminHome() {
                 {/* "settled" was every status that was not open, so a run
                     that went out last night with nothing typed into it read
                     as settled and showed a profit that was going to fall.
-                    The costs being in is what settles a run. */}
+                    Pressing Settle, or the costs being in, is what settles
+                    a run. */}
                 {batch.status === "open" ? (
                   <span className="tag bg-mint-tint text-mint">open</span>
-                ) : costsIn(batch) ? (
+                ) : done(batch) ? (
                   <span className="tag bg-wash text-ink">settled</span>
                 ) : (
                   <span className="tag bg-brand-wash text-brand-dark">costs due</span>
