@@ -34,8 +34,19 @@ export function onTheMenu(kind: string | null | undefined): boolean {
   return !OFF_THE_MENU.has(kind ?? "food");
 }
 
-/** Counters with a shop of their own rather than a place on the menu. */
-export const OFF_THE_MENU = new Set(["skincare", "pharmacy"]);
+/**
+ * Counters with a shop of their own rather than a place on the menu.
+ *
+ * Custom is not a shop at all. It is where a thing nobody sells goes when
+ * somebody asks for it: a roadside bole, a sauce to go with it. Admin puts
+ * those on an order and prices them there, so the picker has to see the
+ * shelf, and the shop front must not: a bole has no business sitting
+ * between a burger and a bowl of rice on a menu nobody can order it from.
+ */
+export const OFF_THE_MENU = new Set(["skincare", "pharmacy", "custom"]);
+
+/** The shelf a thing goes on when no counter sells it. */
+export const CUSTOM = "custom";
 
 /**
  * A thing you add to an order rather than a thing you order.
