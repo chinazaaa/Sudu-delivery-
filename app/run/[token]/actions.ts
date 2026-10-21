@@ -87,3 +87,51 @@ export async function sayWhatItCost(form: FormData): Promise<void> {
   revalidatePath(`/run/${batch.runner_token}`);
   revalidatePath("/admin", "layout");
 }
+
+/**
+ * One sentence about what happened at a counter.
+ *
+ * The whole of the driver's part in a sold out item. The customer almost
+ * always says "give me something else for the same money", and what
+ * follows is real work: swapping the line so the brand figures count what
+ * actually sold, and so the receipt and the order agree. That work is the
+ * shop's. Asking somebody standing at a till with a bag in one hand to
+ * re-pick and reprice an order is how a run sheet stops being used.
+ *
+ * Emptying the box clears the note, because a note that cannot be taken
+ * back is a note nobody risks writing.
+ */
+export async function leaveNote(form: FormData): Promise<void> {
+  const batch = await runForAction(String(form.get("token") ?? ""));
+  if (!batch) return;
+
+  const lineKey = String(form.get("line_key") ?? "").trim();
+  if (lineKey === "") return;
+
+  const said = String(form.get("said") ?? "").trim();
+  const about = String(form.get("said_about") ?? "").trim();
+
+  if (said === "") {
+    await db()
+      .from("run_notes")
+      .delete()
+      .eq("batch_id", batch.id)
+      .eq("line_key", lineKey);
+  } else {
+    await db().from("run_notes").upsert(
+      {
+        batch_id: batch.id,
+        line_key: lineKey,
+        said_about: about,
+        said,
+        // Written again is written again: a corrected note is not a note
+        // the shop has already dealt with.
+        done_at: null,
+      },
+      { onConflict: "batch_id,line_key" }
+    );
+  }
+
+  revalidatePath(`/run/${batch.runner_token}`);
+  revalidatePath("/admin", "layout");
+}

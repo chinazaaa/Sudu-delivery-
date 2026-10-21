@@ -6,6 +6,7 @@ import { deliverySlots } from "@/lib/same-day";
 import { hoursByDay } from "@/lib/settings";
 import {
   moveSameDayCar,
+  noteSorted,
   raiseMenuPrice,
   reopenRun,
   setCounterSpend,
@@ -28,7 +29,7 @@ import {
   howToOrderAhead,
   paysAtCounter,
 } from "@/lib/runner";
-import { counterContacts } from "@/lib/runner-server";
+import { counterContacts, notesOn } from "@/lib/runner-server";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import ActionButton from "@/components/ActionButton";
 import StagePicker from "@/components/admin/StagePicker";
@@ -193,6 +194,9 @@ export default async function BatchPage({
   // group is grouped by the name on the order line. Not every kitchen is
   // on WhatsApp and some take one only in person.
   const reach = await counterContacts();
+  // What a counter said that still needs doing. Everything else on this
+  // page is the run; this is the work the run left behind.
+  const openNotes = (await notesOn(batch.id)).filter((note) => note.done_at === null);
 
   // One wording for a share, here and in the message the customer gets:
   // #1001a and #1001b, never #1001 on this screen and #1001a on theirs.
@@ -683,6 +687,43 @@ export default async function BatchPage({
           last few runs.
           Put this run&apos;s real costs in under Profit and this becomes exact.
         </p>
+      )}
+
+      {/*
+        What happened at the counters, and has not been put right yet.
+
+        The handover between two people doing one job. Whoever was standing
+        at the till wrote one sentence and carried on, because re-picking
+        and repricing an order at a counter with a bag in one hand is how a
+        run sheet stops being used. This is the other half: the part that
+        needs a desk.
+
+        Above everything, and only when there is something. A panel that is
+        usually empty teaches people to scroll past it, so it is not there
+        at all on the nine runs in ten where nothing went wrong.
+      */}
+      {openNotes.length > 0 && (
+        <Panel
+          title={`${openNotes.length} thing${openNotes.length === 1 ? "" : "s"} to put right`}
+          detail="Written at the counter by whoever was there. Swap the line on the order so the brand figures count what actually sold, then tick it off."
+          className="mb-4 space-y-2.5"
+        >
+          {openNotes.map((note) => (
+            <div key={note.id} className="soft bg-brand-wash p-3">
+              {note.said_about !== "" && (
+                <p className="ticket text-[11px] text-brand-dark">
+                  {note.said_about}
+                </p>
+              )}
+              <p className="text-[15px]">{note.said}</p>
+              <form action={noteSorted} className="mt-2">
+                <input type="hidden" name="note_id" value={note.id} />
+                <input type="hidden" name="done" value="true" />
+                <ActionButton done="Sorted ✓">Sorted</ActionButton>
+              </form>
+            </div>
+          ))}
+        </Panel>
       )}
 
       {/*

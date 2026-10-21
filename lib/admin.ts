@@ -1297,6 +1297,7 @@ export async function waitingCounts(): Promise<Record<string, number>> {
       asked,
       carrying,
       unhappy,
+      toPutRight,
     ] = await Promise.all([
       // Money owed.
       db().from("orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
@@ -1358,6 +1359,15 @@ export async function waitingCounts(): Promise<Record<string, number>> {
         .select("id", { count: "exact", head: true })
         .lte("rating", 2)
         .gte("rated_at", since(14)),
+      // Written at a counter and not yet put right. A sold out item that
+      // somebody swapped on the phone leaves the order saying one thing
+      // and the evening having been another, and nothing else on the
+      // board can know: the only person who saw it was standing at a till
+      // and has gone home.
+      db()
+        .from("run_notes")
+        .select("id", { count: "exact", head: true })
+        .is("done_at", null),
     ]);
 
     const out: Record<string, number> = {};
@@ -1372,6 +1382,7 @@ export async function waitingCounts(): Promise<Record<string, number>> {
     put("/admin/requests", asked.count);
     put("/admin/parcels", carrying.count);
     put("/admin/reviews", unhappy.count);
+    put("/admin/runs", toPutRight.count);
 
     return out;
   } catch {

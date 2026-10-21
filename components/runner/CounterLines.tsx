@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 
 import SaveButton from "@/components/SaveButton";
 import { naira } from "@/lib/money";
-import { markStop, sayWhatItCost } from "@/app/run/[token]/actions";
+import { leaveNote, markStop, sayWhatItCost } from "@/app/run/[token]/actions";
 
 /**
  * What to collect at one counter, and what it came to.
@@ -53,6 +53,8 @@ export default function CounterLines({
     paid: number | null;
     /** Who ordered it, for the one stop in ten that has run out. */
     buyers: { name: string; phone: string; qty: number; forName: string }[];
+    /** What was already written about this line, where anything was. */
+    note: string;
   }[];
 }) {
   const storageKey = `sudu_check_${storageId}`;
@@ -68,6 +70,8 @@ export default function CounterLines({
    * across orders and may be three.
    */
   const [short, setShort] = useState("");
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [savingNote, saveNote] = useTransition();
 
   // What is in the boxes right now, so the running total can be compared
   // with the receipt without saving first. A total that only appears after
@@ -269,16 +273,57 @@ export default function CounterLines({
                 ))}
               </ul>
             )}
+            {/*
+              One sentence, and then back to the counter.
+
+              This is the whole of her part in it. What follows, swapping
+              the line so the brand figures count what actually sold and
+              so the receipt and the order agree, is the shop's work, done
+              afterwards and at a desk. Asking somebody at a till with a
+              bag in one hand to re-pick and reprice an order is how a run
+              sheet stops being used.
+            */}
+            <p className="mt-3 text-[13px] font-semibold">
+              What did they take instead?
+            </p>
+            <textarea
+              name="said"
+              rows={2}
+              defaultValue={line.note}
+              placeholder="Sold out, took the Vegetarian for the same money"
+              className="field mt-1 w-full py-2 text-[15px]"
+              onChange={(event) =>
+                setNotes((now) => ({ ...now, [line.key]: event.target.value }))
+              }
+            />
+            <button
+              type="button"
+              disabled={savingNote}
+              onClick={() => {
+                const form = new FormData();
+                form.set("token", token);
+                form.set("line_key", line.key);
+                form.set("said_about", `${line.qty}x ${line.name}`);
+                form.set("said", notes[line.key] ?? line.note);
+                saveNote(() => {
+                  void leaveNote(form);
+                });
+                setShort("");
+              }}
+              className="btn-primary mt-2 w-full justify-center py-3 text-[15px]"
+            >
+              {savingNote ? "Saving…" : "Save the note"}
+            </button>
             <p className="mt-2 text-xs text-muted">
-              Agree a swap on the phone, then type what the new thing cost in
-              the box on the line. The shop sorts the difference afterwards.
+              That is all you need to do. The shop changes the order and
+              sorts the money afterwards.
             </p>
             <button
               type="button"
               onClick={() => setShort("")}
-              className="mt-1 text-[13px] font-semibold text-muted underline"
+              className="mt-2 text-[13px] font-semibold text-muted underline"
             >
-              Close
+              Close without saving
             </button>
           </div>
         ) : null
@@ -293,7 +338,9 @@ export default function CounterLines({
             onClick={() => setShort(short === line.key ? "" : line.key)}
             className="text-[12.5px] text-muted underline"
           >
-            {line.name} sold out?
+            {(notes[line.key] ?? line.note) !== ""
+              ? `${line.name}: noted ✓`
+              : `${line.name} sold out?`}
           </button>
         ))}
       </div>

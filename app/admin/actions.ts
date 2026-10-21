@@ -5912,3 +5912,30 @@ export async function clearRunnerLink(form: FormData): Promise<void> {
   await db().from("batches").update({ runner_token: null }).eq("id", id);
   revalidatePath("/admin", "layout");
 }
+
+/**
+ * A note from a counter, put right.
+ *
+ * The note is the handover between two people doing one job: whoever was
+ * standing at the till wrote what happened, and this is the shop saying it
+ * has done the part that needs a desk, which is swapping the line so the
+ * brand figures count what actually sold.
+ *
+ * Marked rather than deleted. What was swapped and why is the explanation
+ * for a receipt that does not match the menu, and throwing it away the
+ * moment it is handled means the only record of a strange evening is gone
+ * by the time anybody asks about it.
+ */
+export async function noteSorted(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("note_id") ?? "");
+  if (!id) return;
+
+  const done = form.get("done") === "true";
+  await db()
+    .from("run_notes")
+    .update({ done_at: done ? new Date().toISOString() : null })
+    .eq("id", id);
+
+  revalidatePath("/admin", "layout");
+}

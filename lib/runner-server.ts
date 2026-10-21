@@ -129,3 +129,29 @@ export async function runForAction(token: string): Promise<Batch | null> {
 export async function batchOf(id: string): Promise<Batch | null> {
   return getBatch(id);
 }
+
+export type RunNote = {
+  id: string;
+  line_key: string;
+  said_about: string;
+  said: string;
+  done_at: string | null;
+};
+
+/**
+ * What was written at the counters on one run.
+ *
+ * Everything, done and not, because the driver's page has to show her the
+ * note she already left rather than an empty box over a line she knows she
+ * wrote about. The shop's page filters to the ones still open, which is
+ * the list of what it owes the run.
+ */
+export async function notesOn(batchId: string): Promise<RunNote[]> {
+  const { data } = await db()
+    .from("run_notes")
+    .select("id, line_key, said_about, said, done_at")
+    .eq("batch_id", batchId)
+    .order("created_at");
+
+  return (data ?? []) as RunNote[];
+}

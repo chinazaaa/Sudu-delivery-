@@ -19,6 +19,7 @@ import {
 } from "@/lib/runner";
 import {
   counterContacts,
+  notesOn,
   runByToken,
   type CounterContact,
 } from "@/lib/runner-server";
@@ -70,6 +71,11 @@ export default async function RunPage({
   // something. Built once here, because the answer lives in the bags and
   // the question gets asked at the counter.
   const buyers = whoOrdered(handout);
+  // What was already written at a counter tonight, so a line she has
+  // noted shows as noted rather than offering her an empty box again.
+  const notes = Object.fromEntries(
+    (await notesOn(batch.id)).map((note) => [note.line_key, note.said])
+  );
   const progress = runProgress(counter, batch.runner_got, handout);
 
   const when = `${runDateLabel(batch.run_date)}, ${SLOT_LABEL[batch.slot] ?? ""}`.trim();
@@ -113,6 +119,7 @@ export default async function RunPage({
               got={hasGot(batch.runner_got, group.restaurant)}
               contact={reach[group.restaurant]}
               buyers={buyers}
+              notes={notes}
             />
           )),
           <section key="drops" className="space-y-3">
@@ -213,6 +220,7 @@ function StopScreen({
   got,
   contact,
   buyers,
+  notes,
 }: {
   token: string;
   batchId: string;
@@ -223,6 +231,8 @@ function StopScreen({
   contact: CounterContact | undefined;
   /** Who ordered each line, by the key the line was grouped under. */
   buyers: Record<string, Buyer[]>;
+  /** What was already written about a line, by the same key. */
+  notes: Record<string, string>;
 }) {
   const way = howToOrderAhead(contact);
   const pays = paysAtCounter(contact);
@@ -312,6 +322,7 @@ function StopScreen({
           menuTotal: line.qty * line.unitPrice,
           paid: line.paid,
           buyers: buyers[line.key] ?? [],
+          note: notes[line.key] ?? "",
         }))}
       />
 
