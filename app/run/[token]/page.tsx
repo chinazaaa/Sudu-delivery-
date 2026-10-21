@@ -58,11 +58,42 @@ export default async function RunPage({
   const { token } = await params;
   const run = await runByToken(token);
 
-  // A token that matches nothing, a run settled since the link went out,
-  // and a token the shop has cleared all land here. They are different
-  // facts, and telling them apart for somebody holding a link they should
-  // not have is a courtesy to the wrong person.
-  if (!run) notFound();
+  /*
+   * A token matching nothing says nothing, and that is the case that
+   * matters: a link the shop has taken back has to look exactly like one
+   * that never existed, or clearing it announces there was something
+   * worth taking.
+   */
+  if (run.state === "unknown") notFound();
+
+  /*
+   * A good link whose night is over says so, rather than showing the same
+   * blank page. Whoever holds this drove the run: they watched it happen,
+   * so being told it is finished tells them nothing new, and the
+   * alternative is the person who did the work getting a not-found page
+   * and wondering what they have broken.
+   */
+  if (run.state === "finished") {
+    return (
+      <div className="mx-auto w-full max-w-xl space-y-3 px-4 py-10 text-center">
+        <p className="ticket text-[11px] text-muted">
+          {runDateLabel(run.runDate)}
+        </p>
+        <h1 className="font-display text-[clamp(2rem,9vw,2.8rem)] font-black uppercase leading-[0.92]">
+          That run is finished
+        </h1>
+        <p className="text-[15px] text-muted">
+          Its books are closed, so there is nothing left to collect or hand
+          over here. Anything still to put right is on the shop&rsquo;s own
+          sheet.
+        </p>
+        <p className="text-[15px] text-muted">
+          A link for the next run is made the same way, and this one stops
+          working on its own.
+        </p>
+      </div>
+    );
+  }
 
   const { batch, sheet } = run;
   const { counter, handout } = sheet;
@@ -196,8 +227,8 @@ export default async function RunPage({
       </RunSwitch>
 
       <p className="pt-2 text-center text-xs text-muted">
-        This link opens tonight&rsquo;s run only, and stops working once the
-        run is settled.
+        This link opens tonight&rsquo;s run only. Once the run is settled it
+        says so and shows nothing else.
       </p>
     </div>
   );

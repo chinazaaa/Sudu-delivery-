@@ -16,21 +16,37 @@ import type { Batch } from "./types";
  * either a run it is allowed to see or nothing at all.
  */
 
-export type DrivenRun = { batch: Batch; sheet: BatchSheet };
+export type DrivenRun =
+  | { state: "driving"; batch: Batch; sheet: BatchSheet }
+  /** The link is good and its night is over. */
+  | { state: "finished"; runDate: string }
+  /** No such link, or one the shop has taken back. */
+  | { state: "unknown" };
 
 /**
- * The run this link opens, or nothing.
+ * What this link opens, if anything.
  *
- * Nothing covers all of it: a token that matches no run, a run that has
- * been settled since the link went out, and a token the shop has cleared.
- * The page says the same thing to all three on purpose. "That run is
- * finished" and "there is no such run" are different facts, and telling
- * them apart for somebody holding a link they should not have is a
- * courtesy to the wrong person.
+ * Three answers rather than two, which is a correction. This used to say
+ * the same nothing to a settled run and to a token that matches no run at
+ * all, on the reasoning that telling them apart is a courtesy to somebody
+ * holding a link they should not have.
+ *
+ * That was over-cautious in one direction and unhelpful in the other.
+ * Anybody holding a token that matches a real run has already seen that
+ * run: the token is the whole of the authorisation, and it was handed to
+ * them to drive with. Confirming "this one is finished" tells them
+ * nothing they did not watch happen, and the alternative is the person who
+ * actually drove it getting a blank not-found page and wondering whether
+ * they have broken something.
+ *
+ * A token that matches nothing still says nothing, and that is the case
+ * that matters: a cleared token has to look exactly like a token that
+ * never existed, or taking a link back announces that there was something
+ * worth taking.
  */
-export async function runByToken(token: string): Promise<DrivenRun | null> {
+export async function runByToken(token: string): Promise<DrivenRun> {
   const clean = String(token ?? "").trim();
-  if (clean === "") return null;
+  if (clean === "") return { state: "unknown" };
 
   const { data } = await db()
     .from("batches")
@@ -39,11 +55,12 @@ export async function runByToken(token: string): Promise<DrivenRun | null> {
     .maybeSingle();
 
   const batch = data as Batch | null;
-  if (!stillDriving(batch) || !batch) return null;
+  if (!batch) return { state: "unknown" };
+  if (!stillDriving(batch)) return { state: "finished", runDate: batch.run_date };
 
   const sheet = await batchSheet(batch.id);
-  if (!sheet) return null;
-  return { batch, sheet };
+  if (!sheet) return { state: "unknown" };
+  return { state: "driving", batch, sheet };
 }
 
 export type CounterContact = {
