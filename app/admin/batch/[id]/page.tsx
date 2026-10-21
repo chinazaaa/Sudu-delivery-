@@ -20,7 +20,7 @@ import HandoutList from "@/components/HandoutList";
 import Figure from "@/components/admin/Figure";
 import Panel from "@/components/admin/Panel";
 import SheetShape from "@/components/admin/SheetShape";
-import Checklist from "@/components/admin/Checklist";
+import Checklist from "@/components/Checklist";
 import RunnerLink from "@/components/admin/RunnerLink";
 import { counterMessage, hasGot, howToOrderAhead } from "@/lib/runner";
 import { counterContacts } from "@/lib/runner-server";

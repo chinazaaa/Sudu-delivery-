@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import ActionButton from "@/components/ActionButton";
+import Checklist from "@/components/Checklist";
 import RunStage from "@/components/runner/RunStage";
 import { SLOT_LABEL } from "@/lib/config";
 import { counterMessage, expectedAt, hasGot, howToOrderAhead, runProgress } from "@/lib/runner";
@@ -130,21 +131,25 @@ export default async function RunPage({
                 )}
               </div>
 
-              <ul className="space-y-1.5">
-                {group.lines.map((line) => (
-                  <li key={line.key} className="flex gap-2.5 text-[15px]">
-                    <span className="font-display font-black">{line.qty}×</span>
-                    <span>
-                      {line.name}
-                      {line.choices.length > 0 && (
-                        <span className="block text-[13px] text-muted">
-                          {line.choices.join(", ")}
-                        </span>
-                      )}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              {/*
+                Ticked off one at a time, in this phone and nowhere else.
+                Six lines come over a counter in no particular order and
+                there is no way to hold which three have arrived, which is
+                the whole job this does. Nothing waits on it and nobody
+                else ever sees it, so it can be tapped freely and ignored
+                entirely.
+              */}
+              <Checklist
+                id={`run-${batch.id}-${group.restaurant}`}
+                label="got"
+                done={got}
+                items={group.lines.map((line) => ({
+                  key: line.key,
+                  lead: `${line.qty}×`,
+                  text: line.name,
+                  detail: line.choices.join(", "),
+                }))}
+              />
 
               {/*
                 The one figure on this page, and the only question asked at

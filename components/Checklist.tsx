@@ -7,6 +7,13 @@ import { useEffect, useState } from "react";
  * list in a shop: what has been bought, what is in the boot. Nothing here
  * changes an order or anything a customer sees, which is exactly why it can be
  * tapped freely.
+ *
+ * The one kind of ticking that pays the person doing it. Everything else a
+ * run asks to be ticked is the shop wanting to know something; this is six
+ * lines at a counter and no way to hold which three have come over it yet.
+ * It costs a tap and nothing waits on it, so it lives out here rather than
+ * under admin: the person at the counter is often not the person with the
+ * password.
  */
 export default function Checklist({
   id,
