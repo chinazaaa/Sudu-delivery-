@@ -61,6 +61,9 @@ export async function tendBatches(force = false): Promise<void> {
 
   await ensureUpcomingBatches();
   await closeExpiredBatches();
+  // A run nobody ordered on closes its own books, rather than waiting in
+  // the board for somebody to settle a night that never happened.
+  await settleEmptyRuns();
 }
 
 /**
@@ -441,6 +444,92 @@ export async function tidyEmptySameDay(): Promise<number> {
     return error ? 0 : dead.length;
   } catch {
     // Tidying is never worth a page that will not load.
+    return 0;
+  }
+}
+
+/**
+ * Whether a run that nobody ordered on can close its own books.
+ *
+ * A scheduled run opens itself every week whether or not anybody wants it,
+ * and the quiet ones used to sit in the board for ever: past, closed, with
+ * no orders, no costs and nothing to do, counted among the jobs still open
+ * because nothing had ever said otherwise. Somebody then had to go and
+ * settle a run that never happened, which is a chore invented entirely by
+ * the software.
+ *
+ * Settled rather than deleted, which is the difference between this and a
+ * same day car. A same day car is a container for one order and is worth
+ * nothing without it. A scheduled run is a date the shop offered: deleting
+ * it loses the fact that Tuesday was offered and nobody wanted it, which is
+ * the single most useful thing an empty run has to say.
+ *
+ * Only with nothing on it at all. One unpaid order is somebody who may
+ * still pay, and settling over their head would close the books on a run
+ * that is about to take money.
+ */
+export function emptyAndDone(
+  batch: Pick<Batch, "kind" | "settled_at" | "cut_off_at">,
+  orders: number,
+  now: number = Date.now()
+): boolean {
+  if (batch.settled_at !== null) return false;
+  if (orders > 0) return false;
+
+  // Same day cars and parcels are deleted when they are empty, not
+  // settled, and the skincare drop and box days keep their own books.
+  if (batch.kind !== "run") return false;
+
+  const closed = new Date(batch.cut_off_at).getTime();
+  if (!Number.isFinite(closed)) return false;
+  return closed <= now;
+}
+
+/**
+ * Close the books on every run that closed with nothing on it.
+ *
+ * Runs on the same sweep that opens the week and shuts expired runs, so a
+ * quiet Tuesday tidies itself up without anybody opening it. Never worth a
+ * page that will not load, which is why the whole thing is wrapped.
+ */
+export async function settleEmptyRuns(): Promise<number> {
+  try {
+    const { data: quiet } = await db()
+      .from("batches")
+      .select("id, kind, settled_at, cut_off_at")
+      .eq("kind", "run")
+      .is("settled_at", null)
+      .lt("cut_off_at", new Date().toISOString())
+      .limit(200);
+
+    const rows = (quiet ?? []) as {
+      id: string;
+      kind: Batch["kind"];
+      settled_at: string | null;
+      cut_off_at: string;
+    }[];
+    if (rows.length === 0) return 0;
+
+    const { data: used } = await db()
+      .from("orders")
+      .select("batch_id")
+      .in(
+        "batch_id",
+        rows.map((row) => row.id)
+      );
+    const busy = new Set((used ?? []).map((row) => row.batch_id as string));
+
+    const dead = rows
+      .filter((row) => emptyAndDone(row, busy.has(row.id) ? 1 : 0))
+      .map((row) => row.id);
+    if (dead.length === 0) return 0;
+
+    const { error } = await db()
+      .from("batches")
+      .update({ settled_at: new Date().toISOString(), status: "closed" })
+      .in("id", dead);
+    return error ? 0 : dead.length;
+  } catch {
     return 0;
   }
 }

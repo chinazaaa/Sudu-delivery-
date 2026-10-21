@@ -18,6 +18,7 @@ import { weekAround } from "../lib/time";
 import { monthOf, nextMonth } from "../lib/standing";
 import { googleTagId, instagramLink, numberOr, shopEmails, xLink } from "../lib/settings";
 import { isExtra } from "../lib/shelf";
+import { emptyAndDone } from "../lib/batches";
 import {
   counterMessage,
   expectedAt,
@@ -4761,4 +4762,42 @@ test("how a counter takes an order ahead is said, not guessed", () => {
   // offering neither throws away a number that is probably good.
   assert.equal(howToOrderAhead({ phone: "08011", orders_ahead: "" }), "both");
   assert.equal(howToOrderAhead({ phone: "08011" }), "both");
+});
+
+/*
+ * A quiet Tuesday tidies itself up.
+ *
+ * A scheduled run opens itself every week whether or not anybody wants it,
+ * and the ones nobody ordered on used to sit in the board for ever, counted
+ * among the jobs still open because nothing had ever said otherwise.
+ */
+test("a run that closed with nothing on it settles itself", () => {
+  const closed = "2026-10-21T15:00:00Z";
+  const after = new Date("2026-10-21T16:00:00Z").getTime();
+  const before = new Date("2026-10-21T14:00:00Z").getTime();
+  const run = { kind: "run" as const, settled_at: null, cut_off_at: closed };
+
+  assert.equal(emptyAndDone(run, 0, after), true);
+
+  // Still open for orders. Settling here closes the books on a run that is
+  // about to take money.
+  assert.equal(emptyAndDone(run, 0, before), false);
+
+  // One order, even unpaid, is somebody who may still pay.
+  assert.equal(emptyAndDone(run, 1, after), false);
+
+  // Already settled, so there is nothing to do and nothing to overwrite.
+  assert.equal(
+    emptyAndDone({ ...run, settled_at: "2026-10-21T20:00:00Z" }, 0, after),
+    false
+  );
+
+  // A same day car and a parcel trip are deleted when empty, not settled:
+  // they are a container for one order and are worth nothing without it.
+  assert.equal(emptyAndDone({ ...run, kind: "same_day" }, 0, after), false);
+  assert.equal(emptyAndDone({ ...run, kind: "parcel" }, 0, after), false);
+
+  // A run whose closing time never made sense is left alone rather than
+  // settled on the strength of a date nobody can read.
+  assert.equal(emptyAndDone({ ...run, cut_off_at: "soon" }, 0, after), false);
 });
