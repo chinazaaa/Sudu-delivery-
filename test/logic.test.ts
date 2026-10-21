@@ -23,6 +23,7 @@ import {
   expectedAt,
   gotList,
   hasGot,
+  howToOrderAhead,
   runProgress,
   stillDriving,
   withGot,
@@ -4734,4 +4735,30 @@ test("the counter message says what to cook and never what we expect to pay", ()
   // A counter with no collection time still reads as a sentence.
   const vague = counterMessage(group, { shopName: "Sudu", collectingAt: "" });
   assert.match(vague, /for collection:/);
+});
+
+/*
+ * Not every kitchen is on WhatsApp.
+ *
+ * Sending tonight's list into an inbox nobody reads is worse than not
+ * sending it: the stop becomes a wait for food that was never started, by
+ * somebody who believes it was.
+ */
+test("how a counter takes an order ahead is said, not guessed", () => {
+  assert.equal(howToOrderAhead({ phone: "08011", orders_ahead: "whatsapp" }), "whatsapp");
+  assert.equal(howToOrderAhead({ phone: "08011", orders_ahead: "call" }), "call");
+
+  // Only ever ordered in person. Said out loud so nobody spends next week
+  // wondering whether somebody forgot to fill the number in.
+  assert.equal(howToOrderAhead({ phone: "08011", orders_ahead: "no" }), "none");
+
+  // No number is no way to reach them, whatever anybody ticked.
+  assert.equal(howToOrderAhead({ phone: "", orders_ahead: "whatsapp" }), "none");
+  assert.equal(howToOrderAhead({ phone: "   ", orders_ahead: "call" }), "none");
+  assert.equal(howToOrderAhead(undefined), "none");
+
+  // Nobody has said yet. Offering both is honest about not knowing;
+  // offering neither throws away a number that is probably good.
+  assert.equal(howToOrderAhead({ phone: "08011", orders_ahead: "" }), "both");
+  assert.equal(howToOrderAhead({ phone: "08011" }), "both");
 });

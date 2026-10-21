@@ -199,7 +199,7 @@ export default async function RestaurantAdmin({
             <input name="address" defaultValue={restaurant.address} className="field" />
           </div>
           <div>
-            <label className="label" htmlFor="phone">Their WhatsApp number</label>
+            <label className="label" htmlFor="phone">Their number</label>
             <input
               id="phone"
               name="phone"
@@ -209,9 +209,29 @@ export default async function RestaurantAdmin({
               className="field"
             />
             <p className="mt-1 text-xs text-muted">
-              Where the run list is sent before the car leaves, so the food is
-              being cooked while it is still on the road. Empty means the list
-              is read out at the counter.
+              Where tonight&apos;s list goes before the car leaves, so the food
+              is being cooked while it is still on the road.
+            </p>
+          </div>
+          <div>
+            <label className="label" htmlFor="orders_ahead">
+              How they take an order ahead
+            </label>
+            <select
+              id="orders_ahead"
+              name="orders_ahead"
+              defaultValue={restaurant.orders_ahead ?? ""}
+              className="field"
+            >
+              <option value="">Nobody has said yet</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="call">A phone call</option>
+              <option value="no">Only at the counter</option>
+            </select>
+            <p className="mt-1 text-xs text-muted">
+              A list sent to a WhatsApp nobody watches is worse than no list:
+              the stop becomes a wait for food that was never started. Say
+              which works and the run sheet offers only that.
             </p>
           </div>
           <div>

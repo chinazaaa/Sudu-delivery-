@@ -123,6 +123,38 @@ export function counterMessage(
 }
 
 /**
+ * How a counter takes an order before the car gets there.
+ *
+ * Not every kitchen is on WhatsApp. Some take a call, some have a number
+ * printed on a banner that nobody watches, and some are only ever ordered
+ * at the counter. Sending tonight's list into an inbox nobody reads is
+ * worse than not sending it: the stop is then a wait for food that was
+ * never started, by somebody who thinks it was.
+ *
+ * So the shop says which, per counter, and nothing is guessed. The one
+ * case that is not a guess is "nobody has said yet": a counter with a
+ * number is offered both ways until somebody knows which works, because
+ * offering both is honest about not knowing and offering neither throws
+ * away a number that is probably good.
+ */
+export type AheadWay = "whatsapp" | "call" | "both" | "none";
+
+export function howToOrderAhead(
+  counter: { phone?: string | null; orders_ahead?: string | null } | undefined
+): AheadWay {
+  const number = String(counter?.phone ?? "").trim();
+  const said = String(counter?.orders_ahead ?? "").trim().toLowerCase();
+
+  // Only ever ordered at the counter. Said, so it is not asked again every
+  // run by somebody wondering whether the number is missing.
+  if (said === "no") return "none";
+  if (number === "") return "none";
+  if (said === "whatsapp") return "whatsapp";
+  if (said === "call") return "call";
+  return "both";
+}
+
+/**
  * What the card should be charged at this stop.
  *
  * The one number the driver needs and the only money on the page. Every

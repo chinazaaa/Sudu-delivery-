@@ -22,8 +22,8 @@ import Panel from "@/components/admin/Panel";
 import SheetShape from "@/components/admin/SheetShape";
 import Checklist from "@/components/admin/Checklist";
 import RunnerLink from "@/components/admin/RunnerLink";
-import { counterMessage, hasGot } from "@/lib/runner";
-import { counterPhones as readCounterPhones } from "@/lib/runner-server";
+import { counterMessage, hasGot, howToOrderAhead } from "@/lib/runner";
+import { counterContacts } from "@/lib/runner-server";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import ActionButton from "@/components/ActionButton";
 import StagePicker from "@/components/admin/StagePicker";
@@ -184,9 +184,10 @@ export default async function BatchPage({
   // For the run that is one counter's run. Read here rather than typed, so
   // a restaurant added this morning is tickable this afternoon.
   const counters = await openRestaurants();
-  // Where each counter can be sent tonight's list, by name, because a
-  // counter group is grouped by the name on the order line.
-  const counterPhones = await readCounterPhones();
+  // How each counter takes an order ahead, by name, because a counter
+  // group is grouped by the name on the order line. Not every kitchen is
+  // on WhatsApp and some take one only in person.
+  const reach = await counterContacts();
 
   // One wording for a share, here and in the message the customer gets:
   // #1001a and #1001b, never #1001 on this screen and #1001a on theirs.
@@ -982,18 +983,30 @@ export default async function BatchPage({
                       queue. Nothing downstream waits on it, and a counter
                       with no number saved simply does not offer it.
                     */}
-                    {!shopped && (counterPhones[group.restaurant] ?? "") !== "" && (
-                      <a
-                        href={whatsappTo(
-                          counterPhones[group.restaurant],
-                          counterMessage(group, { shopName: "Sudu", collectingAt: "" })
+                    {!shopped && howToOrderAhead(reach[group.restaurant]) !== "none" && (
+                      <span className="mt-2 flex flex-wrap gap-2">
+                        {howToOrderAhead(reach[group.restaurant]) !== "call" && (
+                          <a
+                            href={whatsappTo(
+                              reach[group.restaurant].phone,
+                              counterMessage(group, { shopName: "Sudu", collectingAt: "" })
+                            )}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn-admin btn-admin-sm btn-admin-go inline-flex"
+                          >
+                            Send them this list
+                          </a>
                         )}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn-admin btn-admin-sm btn-admin-go mt-2 inline-flex"
-                      >
-                        Send them this list
-                      </a>
+                        {howToOrderAhead(reach[group.restaurant]) !== "whatsapp" && (
+                          <a
+                            href={`tel:${reach[group.restaurant].phone}`}
+                            className="btn-admin btn-admin-sm inline-flex"
+                          >
+                            Ring it through
+                          </a>
+                        )}
+                      </span>
                     )}
 
                     <div className="mt-2">
@@ -1474,7 +1487,7 @@ export default async function BatchPage({
                 <Panel
                   title="Handout"
                   size="sm"
-                  detail={`One bag per name. Anything added later in the week is already merged in. Mark each one delivered as you hand it over: that is the tick, and the customer sees it on their own page. Setting the run itself to "Delivered, every bag" at the top does all of them at once.`}
+                  detail={`One bag per name, to read at the gate. Anything added later in the week is already merged in. There is nothing here that has to be ticked: setting the run to "Delivered, every bag" marks all of them and tells everybody, which is the usual way. The ticks below are for the odd night when one bag goes much later than the rest.`}
                   className="space-y-2"
                 >
                   {handout.length > 0 && finished && (
@@ -2101,15 +2114,31 @@ export default async function BatchPage({
                 </section>
 
                 <section className="card space-y-3 p-3.5 sm:p-5">
-                  <form action={setFlashFee} className="space-y-2">
+                  {/*
+                    Folded, because neither of these is ever reached for.
+
+                    A flash fee rescues a thin batch and a capacity caps a
+                    fat one, and this shop has done neither: every run goes
+                    out at the normal bands with room to spare. Open on the
+                    page they were two forms to scroll past on the way to
+                    reopening a run, which is the thing actually wanted
+                    here. Still a tap away, and still exactly as they were.
+                  */}
+                  <details className="space-y-2">
+                    <summary className="cursor-pointer font-display text-[21px] font-black uppercase leading-none sm:text-[26px]">
+                      Flash fee and capacity
+                    </summary>
+                    <p className="mt-1 text-xs text-muted">
+                      Neither is normally set. A run goes out at the usual
+                      bands, with no cap on how many can order onto it.
+                    </p>
+
+                  <form action={setFlashFee} className="mt-3 space-y-2">
                     <input type="hidden" name="batch_id" value={batch.id} />
-                    <h2 className="font-display text-[21px] font-black uppercase leading-none sm:text-[26px]">
-                      Flash fee drop
-                    </h2>
                     <p className="text-xs text-muted">
-                      For rescuing a thin batch, not rewarding customers. Never
-                      announce it in advance, never make it a fixed day, and always
-                      give a reason.
+                      A flash fee rescues a thin batch and is not a reward.
+                      Never announce it in advance, never make it a fixed
+                      day, and always give a reason.
                     </p>
                     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
                       <div className="sm:w-32">
@@ -2168,6 +2197,8 @@ export default async function BatchPage({
                       Save
                     </SaveButton>
                   </form>
+
+                  </details>
 
                   <div className="border-t-[1.5px] border-rule pt-3">
                     <h2 className="font-display text-[21px] font-black uppercase leading-none sm:text-[26px]">

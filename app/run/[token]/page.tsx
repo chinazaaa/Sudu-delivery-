@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import ActionButton from "@/components/ActionButton";
 import RunStage from "@/components/runner/RunStage";
 import { SLOT_LABEL } from "@/lib/config";
-import { counterMessage, expectedAt, hasGot, runProgress } from "@/lib/runner";
-import { counterPhones, runByToken } from "@/lib/runner-server";
+import { counterMessage, expectedAt, hasGot, howToOrderAhead, runProgress } from "@/lib/runner";
+import { counterContacts, runByToken } from "@/lib/runner-server";
 import { whatsappTo } from "@/lib/messages";
 import { runDateLabel } from "@/lib/time";
 import { markStop } from "./actions";
@@ -52,7 +52,7 @@ export default async function RunPage({
 
   const { batch, sheet } = run;
   const { counter, handout } = sheet;
-  const phones = await counterPhones();
+  const reach = await counterContacts();
   const progress = runProgress(counter, batch.runner_got, handout);
 
   const when = `${runDateLabel(batch.run_date)}, ${SLOT_LABEL[batch.slot] ?? ""}`.trim();
@@ -107,7 +107,9 @@ export default async function RunPage({
 
         {counter.map((group, at) => {
           const got = hasGot(batch.runner_got, group.restaurant);
-          const number = phones[group.restaurant] ?? "";
+          const contact = reach[group.restaurant];
+          const way = howToOrderAhead(contact);
+          const number = contact?.phone ?? "";
           // No collection time in the message. The hour the car reaches a
           // given counter is not a thing the shop knows in advance, and a
           // time promised to a kitchen and then missed by forty minutes is
@@ -156,7 +158,12 @@ export default async function RunPage({
               </p>
 
               <div className="flex flex-wrap items-center gap-2.5">
-                {number !== "" ? (
+                {/*
+                  Only the way that works. A list sent to a WhatsApp nobody
+                  watches is worse than no list: the stop becomes a wait for
+                  food that was never started, by somebody who thinks it was.
+                */}
+                {(way === "whatsapp" || way === "both") && (
                   <a
                     href={whatsappTo(number, ahead)}
                     target="_blank"
@@ -165,10 +172,23 @@ export default async function RunPage({
                   >
                     Send them the list
                   </a>
-                ) : (
+                )}
+                {(way === "call" || way === "both") && (
+                  <a
+                    href={`tel:${number}`}
+                    className={
+                      way === "call"
+                        ? "btn-primary px-4 py-2 text-sm"
+                        : "btn-quiet px-4 py-2 text-sm"
+                    }
+                  >
+                    Ring it through
+                  </a>
+                )}
+                {way === "none" && (
                   <span className="text-[13px] text-muted">
-                    No number saved for this counter, so the list is read out
-                    there.
+                    Ordered at the counter. The list above is what to read
+                    out.
                   </span>
                 )}
 

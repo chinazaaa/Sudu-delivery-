@@ -46,27 +46,35 @@ export async function runByToken(token: string): Promise<DrivenRun | null> {
   return { batch, sheet };
 }
 
+export type CounterContact = { phone: string; orders_ahead: string };
+
 /**
- * Where each counter can be sent tonight's list.
+ * How each counter can be reached before the car gets there.
  *
  * By name rather than by id, because a counter group is grouped by the
- * name on the order line and that is the only handle the sheet has. A
- * counter with no number is not a problem to solve here: the list is read
- * out at the counter as it always was, and the page simply does not offer
- * to send it.
+ * name on the order line and that is the only handle the sheet has.
+ *
+ * Both halves, not just the number. A number says where; it does not say
+ * whether anybody is watching that inbox, and a page holding only a number
+ * has to guess. Reading them together is what lets the sheet offer the way
+ * that works and stay quiet where none does.
  */
-export async function counterPhones(): Promise<Record<string, string>> {
+export async function counterContacts(): Promise<Record<string, CounterContact>> {
   const { data } = await db()
     .from("restaurants")
-    .select("name, phone")
-    .overrideTypes<{ name: string; phone: string | null }[]>();
+    .select("name, phone, orders_ahead")
+    .overrideTypes<
+      { name: string; phone: string | null; orders_ahead: string | null }[]
+    >();
 
-  const phones: Record<string, string> = {};
+  const reach: Record<string, CounterContact> = {};
   for (const row of data ?? []) {
-    const number = String(row.phone ?? "").trim();
-    if (number !== "") phones[row.name] = number;
+    reach[row.name] = {
+      phone: String(row.phone ?? "").trim(),
+      orders_ahead: String(row.orders_ahead ?? "").trim(),
+    };
   }
-  return phones;
+  return reach;
 }
 
 /**

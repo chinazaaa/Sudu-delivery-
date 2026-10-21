@@ -3500,6 +3500,9 @@ export async function updateRestaurant(form: FormData): Promise<void> {
       // be cooked is most of a run; sending the same six lines forty
       // minutes earlier turns the stop into a collection.
       phone: String(form.get("phone") ?? "").trim(),
+      // And how that number is used, because not every kitchen is on
+      // WhatsApp and some take an order only in person.
+      orders_ahead: String(form.get("orders_ahead") ?? "").trim(),
       closes_at: String(form.get("closes_at") ?? "").trim() || undefined,
       // All seven, or none ticked, both mean "every day": a restaurant
       // nobody has thought about must behave exactly as it always has.

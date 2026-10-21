@@ -8,9 +8,14 @@ export type Restaurant = {
    *  has not had the migration run, which is why nothing depends on it. */
   slug?: string | null;
   address: string;
-  /** The counter's own WhatsApp number, for sending the run list ahead.
-   *  Empty means the list is read out at the counter, as it always was. */
+  /** The counter's own number, for getting tonight's list to it before the
+   *  car arrives. Empty means the list is read out at the counter. */
   phone?: string | null;
+  /** How that number is used: "whatsapp", "call", "no" for a counter that
+   *  only takes an order in person, or empty for nobody has said. Not every
+   *  kitchen is on WhatsApp, and sending a list into an inbox nobody reads
+   *  is worse than not sending it. */
+  orders_ahead?: string | null;
   closes_at: string;
   active: boolean;
   /** Whether the chat may put this counter forward when somebody says they
