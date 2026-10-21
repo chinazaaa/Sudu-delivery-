@@ -4,6 +4,7 @@ import { feeFor } from "./fees";
 import { activeBands } from "./settings";
 import { getBatch } from "./batches";
 import { lagosToday } from "./time";
+import { counterKey } from "./runner";
 import { ALERTS_AT } from "./mail";
 import { isGone, isPaid, NOT_ORDERS_SQL } from "./orders";
 import { groupShortfalls, refundsOwed, settleGroupFees, type GroupShortfall } from "./groups";
@@ -343,8 +344,10 @@ export function groupForCounter(
     const items = byRestaurant.get(line.restaurant) ?? new Map<string, CounterLine>();
     const choices = [...line.choices].sort();
     // A large pepperoni and a small margherita are two different things to
-    // order, so the choices are part of what makes a counter line.
-    const key = `${line.name}|${choices.join("|")}@${line.unit_price_at_order}`;
+    // order, so the choices are part of what makes a counter line. The
+    // rule itself lives in runner.ts, because the run sheet has to ask the
+    // same question in the same words to say who ordered a line.
+    const key = counterKey(line);
     const existing = items.get(key);
     if (existing) existing.qty += line.qty;
     else
@@ -353,7 +356,7 @@ export function groupForCounter(
         choices,
         qty: line.qty,
         unitPrice: line.unit_price_at_order,
-        key: `${line.restaurant}|${key}`,
+        key,
         paid: null,
         itemId: line.menu_item_id,
         recovered: 0,

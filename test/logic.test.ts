@@ -20,6 +20,7 @@ import { googleTagId, instagramLink, numberOr, shopEmails, xLink } from "../lib/
 import { isExtra } from "../lib/shelf";
 import { emptyAndDone } from "../lib/batches";
 import {
+  counterKey,
   counterMessage,
   expectedAt,
   gotList,
@@ -27,6 +28,7 @@ import {
   howToOrderAhead,
   paysAtCounter,
   runProgress,
+  whoOrdered,
   stillDriving,
   withGot,
 } from "../lib/runner";
@@ -4904,4 +4906,80 @@ test("a counter is paid at the till unless somebody says otherwise", () => {
   assert.equal(paysAtCounter({ pay_by: "" }), true);
   assert.equal(paysAtCounter({}), true);
   assert.equal(paysAtCounter(undefined), true);
+});
+
+/*
+ * About one stop in ten ends with "we don't have that".
+ *
+ * The question then is not "call somebody", it is which of these people
+ * ordered the thing that is gone. A counter line is grouped across orders
+ * so it can be read out at a till, which is exactly what makes it useless
+ * for ringing anybody.
+ */
+test("a sold out line knows who ordered it, by the same key it was grouped by", () => {
+  const pizza = {
+    restaurant: "Panarottis",
+    name: "Panarottis Special",
+    choices: ["Large"],
+    unit_price_at_order: 28450,
+  };
+
+  // The same thing, written the other way round. An order is a set of
+  // choices, not a sequence, so these are one line to cook and one line
+  // to ring about.
+  const samePizza = { ...pizza, choices: ["Large"] };
+
+  const bags = [
+    { name: "Temi", phone: "08011111111", lines: [{ ...pizza, qty: 1 }] },
+    { name: "Ada", phone: "08022222222", lines: [{ ...samePizza, qty: 2 }] },
+  ];
+
+  const buyers = whoOrdered(bags);
+  const key = counterKey(pizza);
+
+  assert.equal(buyers[key].length, 2);
+  assert.deepEqual(
+    buyers[key].map((one) => `${one.name} x${one.qty}`),
+    ["Temi x1", "Ada x2"]
+  );
+
+  // The key is the grouping's key, not a second opinion about it. If these
+  // ever drift, somebody rings the wrong customer from a counter.
+  assert.equal(counterKey(samePizza), key);
+
+  // A different size is a different thing to cook and a different line.
+  assert.equal(counterKey({ ...pizza, choices: ["Monsterito"] }) === key, false);
+
+  // And a different counter, however identical the food.
+  assert.equal(counterKey({ ...pizza, restaurant: "Dodo Pizza" }) === key, false);
+});
+
+test("one person ordering twice is one person to ring", () => {
+  const bowl = {
+    restaurant: "DO Bowls",
+    name: "Dirty Jerk",
+    choices: [],
+    unit_price_at_order: 18550,
+  };
+
+  const buyers = whoOrdered([
+    {
+      name: "Temi",
+      phone: "08011111111",
+      lines: [
+        { ...bowl, qty: 1 },
+        { ...bowl, qty: 2 },
+        // Bought for somebody else is a different conversation, so it
+        // stays its own row: "Temi, for Ada" is not "Temi".
+        { ...bowl, qty: 1, for_name: "Ada" },
+      ],
+    },
+  ]);
+
+  const key = counterKey(bowl);
+  assert.equal(buyers[key].length, 2);
+  assert.equal(buyers[key][0].qty, 3);
+  assert.equal(buyers[key][0].forName, "");
+  assert.equal(buyers[key][1].qty, 1);
+  assert.equal(buyers[key][1].forName, "Ada");
 });

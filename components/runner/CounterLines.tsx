@@ -51,10 +51,23 @@ export default function CounterLines({
     menuTotal: number;
     /** What somebody already typed, where they have. */
     paid: number | null;
+    /** Who ordered it, for the one stop in ten that has run out. */
+    buyers: { name: string; phone: string; qty: number; forName: string }[];
   }[];
 }) {
   const storageKey = `sudu_check_${storageId}`;
   const [ticked, setTicked] = useState<Record<string, boolean>>({});
+
+  /*
+   * Which line has run out, if any.
+   *
+   * One at a time, and shut by default. This happens about once in ten
+   * stops, so it earns a quiet word under the line and nothing more: a
+   * phone icon on every row would be noise nine times out of ten, and
+   * would anyway imply one person to ring when a counter line is grouped
+   * across orders and may be three.
+   */
+  const [short, setShort] = useState("");
 
   // What is in the boxes right now, so the running total can be compared
   // with the receipt without saving first. A total that only appears after
@@ -217,6 +230,73 @@ export default function CounterLines({
           </li>
         ))}
       </ul>
+
+      {/* Nothing here most evenings, and everything here when it matters. */}
+      {lines.map((line) =>
+        short === line.key ? (
+          <div key={`${line.key}-short`} className="soft bg-shell p-3">
+            <p className="text-[13px] font-semibold">
+              Who ordered {line.name}
+              {line.choices.length > 0 ? ` ${line.choices.join(", ")}` : ""}
+            </p>
+            {line.buyers.length === 0 ? (
+              <p className="mt-1 text-[13px] text-muted">
+                Nobody on this run, which should not happen. Ring the shop.
+              </p>
+            ) : (
+              <ul className="mt-2 space-y-2">
+                {line.buyers.map((buyer) => (
+                  <li
+                    key={`${buyer.phone}-${buyer.forName}`}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <span className="min-w-0 text-[15px]">
+                      <span className="font-bold">{buyer.name}</span>
+                      {buyer.forName !== "" && (
+                        <span className="text-muted">, for {buyer.forName}</span>
+                      )}
+                      {buyer.qty > 1 && (
+                        <span className="text-muted"> · {buyer.qty} of them</span>
+                      )}
+                    </span>
+                    <a
+                      href={`tel:${buyer.phone}`}
+                      className="btn-quiet shrink-0 px-4 py-2 text-sm"
+                    >
+                      Ring
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-2 text-xs text-muted">
+              Agree a swap on the phone, then type what the new thing cost in
+              the box on the line. The shop sorts the difference afterwards.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShort("")}
+              className="mt-1 text-[13px] font-semibold text-muted underline"
+            >
+              Close
+            </button>
+          </div>
+        ) : null
+      )}
+
+      {/* The quiet word itself, one per line, under the list. */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        {lines.map((line) => (
+          <button
+            key={`${line.key}-ask`}
+            type="button"
+            onClick={() => setShort(short === line.key ? "" : line.key)}
+            className="text-[12.5px] text-muted underline"
+          >
+            {line.name} sold out?
+          </button>
+        ))}
+      </div>
 
       {/*
         The receipt check, which is the reason the figures are typed here

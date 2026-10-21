@@ -14,6 +14,8 @@ import {
   howToOrderAhead,
   paysAtCounter,
   runProgress,
+  whoOrdered,
+  type Buyer,
 } from "@/lib/runner";
 import {
   counterContacts,
@@ -64,6 +66,10 @@ export default async function RunPage({
   const { batch, sheet } = run;
   const { counter, handout } = sheet;
   const reach = await counterContacts();
+  // Who ordered each line, for the one stop in ten that has run out of
+  // something. Built once here, because the answer lives in the bags and
+  // the question gets asked at the counter.
+  const buyers = whoOrdered(handout);
   const progress = runProgress(counter, batch.runner_got, handout);
 
   const when = `${runDateLabel(batch.run_date)}, ${SLOT_LABEL[batch.slot] ?? ""}`.trim();
@@ -106,6 +112,7 @@ export default async function RunPage({
               stop={group}
               got={hasGot(batch.runner_got, group.restaurant)}
               contact={reach[group.restaurant]}
+              buyers={buyers}
             />
           )),
           <section key="drops" className="space-y-3">
@@ -205,6 +212,7 @@ function StopScreen({
   stop,
   got,
   contact,
+  buyers,
 }: {
   token: string;
   batchId: string;
@@ -213,6 +221,8 @@ function StopScreen({
   stop: CounterGroup;
   got: boolean;
   contact: CounterContact | undefined;
+  /** Who ordered each line, by the key the line was grouped under. */
+  buyers: Record<string, Buyer[]>;
 }) {
   const way = howToOrderAhead(contact);
   const pays = paysAtCounter(contact);
@@ -301,6 +311,7 @@ function StopScreen({
           qty: line.qty,
           menuTotal: line.qty * line.unitPrice,
           paid: line.paid,
+          buyers: buyers[line.key] ?? [],
         }))}
       />
 

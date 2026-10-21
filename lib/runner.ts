@@ -92,6 +92,83 @@ export function withGot(
 }
 
 /**
+ * What makes two orders of the same thing one line at a counter.
+ *
+ * Lives here, next to the only other thing that needs it, rather than
+ * inside the grouping it came from. "Who ordered this line" has to ask the
+ * question in exactly the words the grouping asked it: a second copy of
+ * "name, choices and price" would agree for a month and then disagree over
+ * a sorted array, and the failure is somebody ringing the wrong customer
+ * from a counter.
+ *
+ * The choices are sorted because an order is a set of them, not a
+ * sequence: a large hand-tossed and a hand-tossed large are one thing to
+ * cook. The price is in the key because a thing that cost one person more
+ * than another is two things to reconcile, whatever it is called.
+ */
+export function counterKey(line: {
+  restaurant: string;
+  name: string;
+  choices: string[];
+  unit_price_at_order: number;
+}): string {
+  const choices = [...line.choices].sort();
+  return `${line.restaurant}|${line.name}|${choices.join("|")}@${line.unit_price_at_order}`;
+}
+
+/**
+ * Who ordered each line, for the counter that has run out of it.
+ *
+ * About one stop in ten ends with "we don't have that". The question then
+ * is not "call somebody", it is "which of these three people ordered the
+ * thing that is gone", and the sheet is the only place that knows: a
+ * counter line is grouped across orders precisely so it can be read out at
+ * a till, which is exactly what makes it useless for ringing anybody.
+ *
+ * Keyed the same way the grouping keys them, so a line on screen and its
+ * buyers are the same line by construction rather than by agreement.
+ */
+export type Buyer = { name: string; phone: string; qty: number; forName: string };
+
+export function whoOrdered(
+  bags: {
+    name: string;
+    phone: string;
+    lines: {
+      restaurant: string;
+      name: string;
+      choices: string[];
+      unit_price_at_order: number;
+      qty: number;
+      for_name?: string | null;
+    }[];
+  }[]
+): Record<string, Buyer[]> {
+  const buyers: Record<string, Buyer[]> = {};
+
+  for (const bag of bags) {
+    for (const line of bag.lines) {
+      const key = counterKey(line);
+      const forName = String(line.for_name ?? "").trim();
+      const here = buyers[key] ?? [];
+
+      // One person ordering the same thing twice in one bag is one person
+      // to ring, not two. Bought for somebody else keeps them apart,
+      // because "Temi, for Ada" and "Temi" are different conversations.
+      const already = here.find(
+        (buyer) => buyer.phone === bag.phone && buyer.forName === forName
+      );
+      if (already) already.qty += line.qty;
+      else here.push({ name: bag.name, phone: bag.phone, qty: line.qty, forName });
+
+      buyers[key] = here;
+    }
+  }
+
+  return buyers;
+}
+
+/**
  * How a counter takes an order before the car gets there.
  *
  * Not every kitchen is on WhatsApp. Some take a call, some have a number
