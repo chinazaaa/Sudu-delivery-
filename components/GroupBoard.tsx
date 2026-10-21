@@ -278,8 +278,48 @@ export default function GroupBoard({
         </div>
       )}
 
+      {/*
+        Nobody else is in it yet, so sending the link is the only thing
+        that matters.
+
+        This board put "Now pick your food · Open the menu" at the top as
+        the one red button, and the link to send sat two sections below it,
+        styled quiet. So the person who started a group was walked straight
+        off to the menu, and the one action that turns a group into a group
+        happened on a page they had already left. Five of the first seven
+        groups ever made took no orders at all, including from the person
+        who made them.
+
+        A group of one is not a group: there is nobody to split the fee
+        with, so there is nothing here worth doing until somebody else is
+        in. Picking food can wait the thirty seconds it takes to send a
+        message. The moment of intent cannot.
+      */}
+      {mine && leader && members.length <= 1 && (
+        <section className="card space-y-3 border-2 border-ink shadow-[6px_6px_0_#e5321d]">
+          <h2 className="font-display text-[26px] font-black uppercase leading-none">
+            Send the link first
+          </h2>
+          <p className="text-sm leading-relaxed text-ink/75">
+            It is just you in this car so far, and a car of one splits
+            nothing. Send it to the people you are ordering with, then pick
+            your food while they add theirs.
+          </p>
+          <SendLink message={invite} link={shareUrl} label="Send the link on WhatsApp" />
+          <button
+            type="button"
+            onClick={() => router.push(waiting > 0 ? "/cart" : "/")}
+            className="w-full text-sm font-semibold text-brand-dark underline"
+          >
+            {waiting > 0 ? "Review my food instead" : "Pick my food instead"}
+          </button>
+        </section>
+      )}
+
       {/* In, and still choosing. What they are told depends on whether there
-          is already food in their cart. */}
+          is already food in their cart. Quiet while the leader is still
+          alone in the car, because sending the link is the thing to do
+          first and two red buttons on one screen pick for nobody. */}
       {mine?.stage === "shopping" && (
         <section className="card space-y-2 border-2 border-brand/30 bg-brand-tint">
           <h2 className="font-bold text-brand-dark">
@@ -295,7 +335,11 @@ export default function GroupBoard({
           <button
             type="button"
             onClick={() => router.push(waiting > 0 ? "/cart" : "/")}
-            className="btn-primary w-full"
+            className={
+              leader && members.length <= 1
+                ? "btn-quiet w-full"
+                : "btn-primary w-full"
+            }
           >
             {waiting > 0 ? "Review and finalise my food" : "Open the menu"}
           </button>
@@ -471,11 +515,16 @@ export default function GroupBoard({
           </div>
         )}
 
+        {/* The same link again, down where the money is explained, for
+            somebody who has scrolled here to work out what their share
+            will be and realised the answer is "fewer of us, more each".
+            Quiet, because on an empty group the board has already asked
+            at the top in a louder voice. */}
         <SendLink
           message={invite}
           link={shareUrl}
           tone="quiet"
-          label={members.length === 0 ? "Send the link on WhatsApp" : "Add somebody on WhatsApp"}
+          label={members.length <= 1 ? "Send the link on WhatsApp" : "Add somebody on WhatsApp"}
         />
 
         {leader && anyFood && (
