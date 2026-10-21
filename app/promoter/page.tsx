@@ -81,7 +81,8 @@ export default async function PromoterPage() {
   const site = await siteUrl().catch(() => "");
   // Read off the code, so this page cannot go on promising a discount that
   // has been switched off, run out or had its amount changed.
-  const perk = await publicOffer((await safeSettings()).promoter_perk_code).catch(
+  const shopSettings = await safeSettings();
+  const perk = await publicOffer(shopSettings.promoter_perk_code).catch(
     () => null
   );
   // The box only appears once the column is there, rather than offering a
@@ -135,6 +136,26 @@ export default async function PromoterPage() {
   }
 
   const link = `${site}/s/${earnings.handle}`;
+
+  /*
+   * Switched off at the checkout, and told so here.
+   *
+   * Before this, a retired promoter saw the page exactly as they always
+   * had, link and all, and went on sharing a link that quietly credited
+   * nobody. The other half was worse: signing in fresh was refused with
+   * "That code is not in use", which to somebody still owed money reads as
+   * having been deleted, and is not true. Their customers stay theirs by
+   * phone number for life and the commission keeps accruing.
+   *
+   * So it is said plainly, at the top, with the one thing they would want
+   * next to it: a way to ask about it. The figures below are unchanged,
+   * because they are unchanged.
+   */
+  const askAboutIt = whatsappTo(
+    shopSettings.whatsapp_number,
+    `Hi Sudu, this is ${earnings.name} (${earnings.code}). My promoter link ` +
+      `is switched off and I would like to ask about it.`
+  );
   const brought = whoTheyBrought(earnings.runs);
   const counted = earnings.runs.reduce((all, run) => all + run.orders, 0);
   const standing = earnings.runs.slice(0, FEW);
@@ -152,6 +173,32 @@ export default async function PromoterPage() {
         <p className="hint mt-0.5">
           Everything people you brought have ordered, and what you have been paid.
         </p>
+
+        {!earnings.active && (
+          <section className="card mt-3.5 space-y-2 border-2 border-ink">
+            <h2 className="font-display text-[22px] font-black uppercase leading-none">
+              Your link is paused
+            </h2>
+            <p className="text-sm leading-relaxed text-ink/75">
+              Your name is not at the checkout at the moment, and anybody
+              opening your link now orders without it counting to you.
+              Everything below is unaffected: the people you already brought
+              stay yours, they keep earning you{" "}
+              <strong>{naira(earnings.rate)}</strong> on every order they
+              place, and anything still to come is still owed to you.
+            </p>
+            {askAboutIt && (
+              <a
+                href={askAboutIt}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-quiet w-full"
+              >
+                Ask us about it
+              </a>
+            )}
+          </section>
+        )}
 
         {/* Three numbers, each labelled, rather than one big one that needs
             reading twice. A promoter who has been paid everything sees a zero

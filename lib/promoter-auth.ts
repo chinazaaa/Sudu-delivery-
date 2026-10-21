@@ -38,7 +38,21 @@ export async function checkPromoterPin(
     .eq("code", wanted)
     .maybeSingle();
 
-  if (!data || !data.active) return { ok: false, error: "That code is not in use." };
+  /*
+   * A retired code still signs in.
+   *
+   * It was turned away with "That code is not in use", which to somebody
+   * who has brought this shop eight customers reads as having been deleted,
+   * and for anybody still owed money it is simply wrong: a promoter's
+   * customers stay theirs by phone number for life, and the commission on
+   * every order those people place keeps accruing whether or not the code
+   * is still offered at the checkout. Money owed is not something to lock
+   * somebody out of.
+   *
+   * What being switched off means is said on the page instead, where there
+   * is room to say it properly and a way to ask about it.
+   */
+  if (!data) return { ok: false, error: "That code is not in use." };
   if (!data.pin || !same(String(data.pin), pin.trim())) {
     return { ok: false, error: "That PIN is wrong. Ask us to send it again." };
   }

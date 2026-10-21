@@ -2525,3 +2525,21 @@ from (values
 ) as v(was, fixed)
 where i.restaurant_id = (select id from restaurants where slug = 'local-market')
   and i.name = v.was;
+
+-- Nine names in the checkout dropdown, two of whom have ever brought
+-- anybody, and only one of those in the last month.
+--
+-- The question is the last one on a form somebody is trying to get to the
+-- end of, and every name on it that means nothing to them is a reason to
+-- leave it on "Somewhere else". Onize has brought eight customers and
+-- 182,400 naira, which is the most of anything this shop has. Ralph
+-- brought two in the shop's first week and nobody since. The other seven
+-- have never brought one.
+--
+-- Switched off, not deleted, and that difference matters: a promoter's
+-- customers stay bound to them by phone number for life, and their
+-- earnings page still pays out on every order those people ever place.
+-- What stops is new attribution: they leave the dropdown, and their link
+-- brings people to the shop without a name attached. Switching one back on
+-- is a tick box in admin.
+update promoters set active = false where code <> 'ONIZE';

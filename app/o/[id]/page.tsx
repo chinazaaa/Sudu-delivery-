@@ -48,6 +48,7 @@ import {
   getSettings,
   whatsappLink,
 } from "@/lib/settings";
+import { typicalRate, isPromoter } from "@/lib/promoters";
 import { payableAccounts } from "@/lib/banks";
 
 export const dynamic = "force-dynamic";
@@ -705,6 +706,13 @@ export default async function OrderPage({
             rating={order.rating ?? null}
             feedback={order.feedback ?? ""}
             google={reviewedBefore ? "" : googleLinks(settings).review}
+            // What a promoter earns, read from the promoters themselves
+            // rather than written here, so the figure on this card is the
+            // figure the shop actually pays.
+            promoterRate={await typicalRate()}
+            // Somebody already promoting has a link of their own and does
+            // not need inviting to get one.
+            promoting={await isPromoter(order.customer_phone)}
           />
         )}
 

@@ -67,6 +67,10 @@ export type AbandonedCart = {
 export type PromoterEarnings = {
   code: string;
   name: string;
+  /** Whether the code is still offered at the checkout and still carries a
+   *  name on their link. Switched off, everything already earned is still
+   *  theirs and still paid; only new introductions stop. */
+  active: boolean;
   /** The short name in their own link. Their code, if nobody set one. */
   handle: string;
   rate: number;
@@ -135,6 +139,7 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
   if (!promoter) return null;
 
   const rate = promoter.rate as number;
+  const active = (promoter as { active?: boolean }).active !== false;
   // Older shops have no column for it, and a promoter earning the ordinary
   // rate on a box is better than a page that will not load.
   const boxRate = Number((promoter as { box_rate?: number }).box_rate ?? rate) || rate;
@@ -265,6 +270,7 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
   return {
     code: promoter.code as string,
     name: promoter.name as string,
+    active,
     handle:
       ((promoter as { handle?: string }).handle || "").trim() ||
       String(promoter.code).toLowerCase(),
@@ -435,5 +441,28 @@ export async function typicalBoxRate(): Promise<number> {
     return [...seen.entries()].sort((a, b) => b[1] - a[1])[0][0];
   } catch {
     return 1000;
+  }
+}
+
+/**
+ * Whether this number is already promoting.
+ *
+ * Only so the shop does not invite somebody to get a link they already
+ * have. Quiet on any failure, because the answer is only ever used to hide
+ * an invitation: a customer shown one they did not need is a smaller
+ * problem than a delivered order that will not render.
+ */
+export async function isPromoter(phone: string): Promise<boolean> {
+  const number = String(phone ?? "").trim();
+  if (number === "") return false;
+  try {
+    const { count } = await db()
+      .from("promoters")
+      .select("code", { count: "exact", head: true })
+      .eq("phone", number)
+      .eq("active", true);
+    return (count ?? 0) > 0;
+  } catch {
+    return false;
   }
 }

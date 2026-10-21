@@ -1,7 +1,9 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import { rateOrder, type RatingState } from "@/app/actions";
+import { naira } from "@/lib/money";
 
 const WORDS = ["", "Bad", "Not great", "Fine", "Good", "Perfect"];
 
@@ -17,6 +19,8 @@ export default function RateOrder({
   rating,
   feedback,
   google = "",
+  promoterRate = 0,
+  promoting = false,
 }: {
   orderId: string;
   /** What they said last time, if they have already answered. */
@@ -26,6 +30,11 @@ export default function RateOrder({
    *  whatever they said: asking only the happy ones is against Google's own
    *  rules and is the kind of thing that gets a profile taken down. */
   google?: string;
+  /** What a promoter earns on every order somebody they brought ever
+   *  places. Nought hides the invitation, for a shop not running one. */
+  promoterRate?: number;
+  /** Already promoting, so there is nothing to invite them to. */
+  promoting?: boolean;
 }) {
   const [state, action, pending] = useActionState<RatingState, FormData>(rateOrder, {
     error: null,
@@ -98,6 +107,44 @@ export default function RateOrder({
         <p className="rounded-lg bg-mint/10 px-3 py-2 text-sm font-semibold text-mint">
           Got it. Thank you.
         </p>
+      )}
+
+      {/*
+        The other thing worth asking a happy customer, and the one nobody
+        was ever asked.
+
+        Every customer this shop has who came through a promoter's link
+        became a customer: twelve people arrived on one and ten of them
+        ordered. It is the best thing the shop has by a long way, and
+        nothing anywhere invited anybody into it. The page that explains it
+        had four visitors in three months and has never taken a single
+        application, because the only way to reach it is to already be
+        looking for it.
+
+        Here, and only here, because this is the one moment somebody has
+        just been handed food they liked, and the ask is small: send your
+        friends a link.
+
+        Four stars and up, unlike the Google ask above it. Google's rules
+        say a review may not be solicited from the happy only, and quite
+        right. This is not a review. Asking somebody who rated it two out
+        of five to go and recruit their block is asking them to vouch for
+        something they have just said was poor.
+      */}
+      {answered && !promoting && promoterRate > 0 && chosen >= 4 && (
+        <div className="flex flex-col gap-2 border-t-2 border-dashed border-line pt-3">
+          <span className="text-sm text-ink/75">
+            Friends in your block order too? Share your own link and earn{" "}
+            <strong>{naira(promoterRate)}</strong> on every order they ever
+            place, not just their first.
+          </span>
+          <Link href="/become-a-promoter" className="btn-quiet w-full">
+            <span aria-hidden className="text-brand">
+              ↗
+            </span>
+            Get my link
+          </Link>
+        </div>
       )}
 
       {/* The public one, once they have said something here. A review from
