@@ -16,6 +16,12 @@ export type Restaurant = {
    *  kitchen is on WhatsApp, and sending a list into an inbox nobody reads
    *  is worse than not sending it. */
   orders_ahead?: string | null;
+  /** Who settles this counter: "card" for the driver paying at the till,
+   *  "transfer" for the shop paying ahead, empty for nobody has said.
+   *  Empty behaves as card, which is the safe way to be wrong: a driver
+   *  who finds it was already paid is surprised, one who finds it was not
+   *  is stuck at a counter with a bag she cannot take. */
+  pay_by?: string | null;
   closes_at: string;
   active: boolean;
   /** Whether the chat may put this counter forward when somebody says they

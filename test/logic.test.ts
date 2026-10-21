@@ -25,6 +25,7 @@ import {
   gotList,
   hasGot,
   howToOrderAhead,
+  paysAtCounter,
   runProgress,
   stillDriving,
   withGot,
@@ -4800,4 +4801,50 @@ test("a run that closed with nothing on it settles itself", () => {
   // A run whose closing time never made sense is left alone rather than
   // settled on the strength of a date nobody can read.
   assert.equal(emptyAndDone({ ...run, cut_off_at: "soon" }, 0, after), false);
+});
+
+test("the message asks for the total and promises the right way to pay", () => {
+  const group = {
+    restaurant: "DO Bowls",
+    lines: [
+      { name: "Chicken Bowl", choices: [], qty: 3, unitPrice: 9000, key: "a", paid: null, itemId: "x", recovered: 0, menuPrice: 9000 },
+    ],
+    expectedFoodTotal: 27000,
+  };
+
+  // Asking for the total back is the most useful thing in the exchange: a
+  // price confirmed before the car leaves can be checked against a
+  // receipt, settled by transfer, and noticed when it rises.
+  const card = counterMessage(group, { shopName: "Sudu", collectingAt: "" });
+  assert.match(card, /confirm the total/i);
+  assert.match(card, /card on collection/i);
+
+  // Promising card at a counter the shop settles by transfer is a small
+  // lie that costs real minutes at the counter sorting out.
+  const transfer = counterMessage(group, {
+    shopName: "Sudu",
+    collectingAt: "",
+    payByTransfer: true,
+  });
+  assert.match(transfer, /confirm the total/i);
+  assert.match(transfer, /send the transfer/i);
+  assert.equal(/card/i.test(transfer), false);
+
+  // Still no prices in either, whoever is paying.
+  assert.equal(card.includes("27,000"), false);
+  assert.equal(transfer.includes("9,000"), false);
+});
+
+test("a counter is paid at the till unless somebody says otherwise", () => {
+  assert.equal(paysAtCounter({ pay_by: "card" }), true);
+  assert.equal(paysAtCounter({ pay_by: "transfer" }), false);
+  assert.equal(paysAtCounter({ pay_by: "TRANSFER" }), false);
+
+  // Unsaid is card. That is how it has always worked and it is the safe
+  // way to be wrong: a driver who finds a counter already paid is mildly
+  // surprised, while one who finds it is not is stuck with a bag she
+  // cannot take.
+  assert.equal(paysAtCounter({ pay_by: "" }), true);
+  assert.equal(paysAtCounter({}), true);
+  assert.equal(paysAtCounter(undefined), true);
 });

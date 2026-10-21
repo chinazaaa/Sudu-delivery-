@@ -46,7 +46,11 @@ export async function runByToken(token: string): Promise<DrivenRun | null> {
   return { batch, sheet };
 }
 
-export type CounterContact = { phone: string; orders_ahead: string };
+export type CounterContact = {
+  phone: string;
+  orders_ahead: string;
+  pay_by: string;
+};
 
 /**
  * How each counter can be reached before the car gets there.
@@ -62,9 +66,14 @@ export type CounterContact = { phone: string; orders_ahead: string };
 export async function counterContacts(): Promise<Record<string, CounterContact>> {
   const { data } = await db()
     .from("restaurants")
-    .select("name, phone, orders_ahead")
+    .select("name, phone, orders_ahead, pay_by")
     .overrideTypes<
-      { name: string; phone: string | null; orders_ahead: string | null }[]
+      {
+        name: string;
+        phone: string | null;
+        orders_ahead: string | null;
+        pay_by: string | null;
+      }[]
     >();
 
   const reach: Record<string, CounterContact> = {};
@@ -72,6 +81,7 @@ export async function counterContacts(): Promise<Record<string, CounterContact>>
     reach[row.name] = {
       phone: String(row.phone ?? "").trim(),
       orders_ahead: String(row.orders_ahead ?? "").trim(),
+      pay_by: String(row.pay_by ?? "").trim(),
     };
   }
   return reach;

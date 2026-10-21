@@ -235,6 +235,25 @@ export default async function RestaurantAdmin({
             </p>
           </div>
           <div>
+            <label className="label" htmlFor="pay_by">Who pays, and how</label>
+            <select
+              id="pay_by"
+              name="pay_by"
+              defaultValue={restaurant.pay_by ?? ""}
+              className="field"
+            >
+              <option value="">Card at the counter</option>
+              <option value="card">Card at the counter</option>
+              <option value="transfer">We transfer it before collection</option>
+            </select>
+            <p className="mt-1 text-xs text-muted">
+              A transfer counter is a different stop: nothing to pay, collect
+              and leave. The run sheet stops saying &ldquo;the card should
+              be&rdquo; there, because somebody will otherwise stand at a
+              settled counter trying to pay it.
+            </p>
+          </div>
+          <div>
             <label className="label" htmlFor="area">Which area</label>
             <select
               id="area"

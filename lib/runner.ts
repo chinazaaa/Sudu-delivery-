@@ -107,7 +107,7 @@ export function withGot(
  */
 export function counterMessage(
   group: CounterGroup,
-  when: { shopName: string; collectingAt: string }
+  when: { shopName: string; collectingAt: string; payByTransfer?: boolean }
 ): string {
   const lines = group.lines.map((line) => {
     const choices = line.choices.length > 0 ? ` (${line.choices.join(", ")})` : "";
@@ -119,7 +119,22 @@ export function counterMessage(
       ? `Good afternoon, this is ${when.shopName}. Please can we order the following for collection:`
       : `Good afternoon, this is ${when.shopName}. Please can we order the following for collection around ${when.collectingAt}:`;
 
-  return [head, "", ...lines, "", "We will pay by card on collection. Thank you."].join("\n");
+  /*
+   * Asking for the total back, because that is what these counters
+   * already do and it is the most useful thing in the exchange. A price
+   * confirmed before the car leaves is a price the shop can check a
+   * receipt against, settle a transfer against, and notice a rise in,
+   * all without anybody standing at a till working it out.
+   *
+   * And the right sentence about paying. Promising to pay by card at a
+   * counter the shop settles by transfer is a small lie that costs real
+   * minutes at the counter sorting out.
+   */
+  const settle = when.payByTransfer
+    ? "Please confirm the total and we will send the transfer. Thank you."
+    : "Please confirm the total. We will pay by card on collection. Thank you.";
+
+  return [head, "", ...lines, "", settle].join("\n");
 }
 
 /**
@@ -152,6 +167,26 @@ export function howToOrderAhead(
   if (said === "whatsapp") return "whatsapp";
   if (said === "call") return "call";
   return "both";
+}
+
+/**
+ * Who settles this counter, and therefore what the stop even is.
+ *
+ * The sheet assumed every stop ended at a card machine, because that is
+ * what a stop used to be. Some counters take a transfer from the shop
+ * before the car arrives, and at those the driver collects and leaves.
+ * Telling her "the card should be 26,500" at a counter already paid is
+ * worse than telling her nothing: she will stand there trying to pay it.
+ *
+ * Unsaid behaves as card, which is both the way it has always worked and
+ * the safe way to be wrong. A driver who expected to pay and did not is
+ * mildly surprised; a driver who expected the shop to have paid and finds
+ * it has not is stuck at a counter with a bag she cannot take.
+ */
+export function paysAtCounter(
+  counter: { pay_by?: string | null } | undefined
+): boolean {
+  return String(counter?.pay_by ?? "").trim().toLowerCase() !== "transfer";
 }
 
 /**

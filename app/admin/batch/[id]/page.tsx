@@ -22,7 +22,12 @@ import Panel from "@/components/admin/Panel";
 import SheetShape from "@/components/admin/SheetShape";
 import Checklist from "@/components/Checklist";
 import RunnerLink from "@/components/admin/RunnerLink";
-import { counterMessage, hasGot, howToOrderAhead } from "@/lib/runner";
+import {
+  counterMessage,
+  hasGot,
+  howToOrderAhead,
+  paysAtCounter,
+} from "@/lib/runner";
 import { counterContacts } from "@/lib/runner-server";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import ActionButton from "@/components/ActionButton";
@@ -989,7 +994,11 @@ export default async function BatchPage({
                           <a
                             href={whatsappTo(
                               reach[group.restaurant].phone,
-                              counterMessage(group, { shopName: "Sudu", collectingAt: "" })
+                              counterMessage(group, {
+                                shopName: "Sudu",
+                                collectingAt: "",
+                                payByTransfer: !paysAtCounter(reach[group.restaurant]),
+                              })
                             )}
                             target="_blank"
                             rel="noreferrer"

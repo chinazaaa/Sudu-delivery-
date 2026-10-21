@@ -3503,6 +3503,9 @@ export async function updateRestaurant(form: FormData): Promise<void> {
       // And how that number is used, because not every kitchen is on
       // WhatsApp and some take an order only in person.
       orders_ahead: String(form.get("orders_ahead") ?? "").trim(),
+      // Who settles it. A counter the shop pays ahead is a stop with
+      // nothing to pay, and saying otherwise strands somebody at a till.
+      pay_by: String(form.get("pay_by") ?? "").trim(),
       closes_at: String(form.get("closes_at") ?? "").trim() || undefined,
       // All seven, or none ticked, both mean "every day": a restaurant
       // nobody has thought about must behave exactly as it always has.

@@ -13,9 +13,14 @@ import {
   expectedAt,
   hasGot,
   howToOrderAhead,
+  paysAtCounter,
   runProgress,
 } from "@/lib/runner";
-import { counterContacts, runByToken } from "@/lib/runner-server";
+import {
+  counterContacts,
+  runByToken,
+  type CounterContact,
+} from "@/lib/runner-server";
 import { runDateLabel } from "@/lib/time";
 import { markStop } from "./actions";
 
@@ -266,13 +271,18 @@ function StopScreen({
   ofStops: number;
   stop: CounterGroup;
   got: boolean;
-  contact: { phone: string; orders_ahead: string } | undefined;
+  contact: CounterContact | undefined;
   nextHref: string;
   nextLabel: string;
 }) {
   const way = howToOrderAhead(contact);
+  const pays = paysAtCounter(contact);
   const number = contact?.phone ?? "";
-  const ahead = counterMessage(stop, { shopName: "Sudu", collectingAt: "" });
+  const ahead = counterMessage(stop, {
+    shopName: "Sudu",
+    collectingAt: "",
+    payByTransfer: !pays,
+  });
 
   return (
     <section className="space-y-3">
@@ -288,12 +298,29 @@ function StopScreen({
       {/*
         The figure read at arm's length with a till waiting, so it is the
         biggest thing on the screen after the name.
+
+        Two different sentences over the same number, because a stop that
+        the shop has already paid is a different job: collect and leave.
+        Saying "the card should be" at a counter already settled is worse
+        than saying nothing, because she will stand there trying to pay it.
       */}
-      <div className="card border-ink bg-ink px-4 py-3 text-paper">
-        <span className="ticket block text-rail-faint">The card should be</span>
+      <div
+        className={`card px-4 py-3 ${
+          pays ? "border-ink bg-ink text-paper" : "border-mint bg-mint/10"
+        }`}
+      >
+        <span className={`ticket block ${pays ? "text-rail-faint" : "text-mint"}`}>
+          {pays ? "The card should be" : "Already paid by transfer"}
+        </span>
         <span className="block font-display text-[44px] font-black leading-none">
           {expectedAt(stop)}
         </span>
+        {!pays && (
+          <span className="mt-0.5 block text-[13px] text-muted">
+            Nothing to pay here. Check it against what they confirmed, then
+            collect.
+          </span>
+        )}
       </div>
 
       {/* Ordering ahead, where the counter actually takes one. */}
