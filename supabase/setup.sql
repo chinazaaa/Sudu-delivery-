@@ -1287,3 +1287,5 @@ alter table restaurants add constraint restaurants_kind_check
   check (kind = any (array['food', 'skincare', 'pharmacy', 'own', 'custom']));
 
 alter table settings add column if not exists area_pairs text not null default '';
+
+alter table customers add column if not exists heard_said text not null default '';

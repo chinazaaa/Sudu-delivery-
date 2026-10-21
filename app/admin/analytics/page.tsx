@@ -15,7 +15,12 @@ import {
   traffic,
 } from "@/lib/analytics";
 import { parseRoutes, routeById } from "@/lib/parcels";
-import { shopPicture, customerPicture, QUIET_AFTER_DAYS } from "@/lib/shop-numbers";
+import {
+  shopPicture,
+  customerPicture,
+  whatTheySaid,
+  QUIET_AFTER_DAYS,
+} from "@/lib/shop-numbers";
 import { dashboard } from "@/lib/admin-data";
 import { runDateLabel } from "@/lib/time";
 import { safeSettings } from "@/lib/settings";
@@ -33,7 +38,7 @@ export default async function AnalyticsPage({
   const days = RANGES.includes(asked as (typeof RANGES)[number]) ? asked : 7;
 
   // Null means nothing is counting yet. The rest of the page still works.
-  const [views, steps, said, shelf, boxes, parcels, settings, came, ways, earned, mine, shop, who, board] =
+  const [views, steps, said, shelf, boxes, parcels, settings, came, ways, earned, mine, shop, who, board, saidWhere] =
     await Promise.all([
     traffic(days),
     funnel(days),
@@ -52,6 +57,8 @@ export default async function AnalyticsPage({
     shopPicture(days),
     customerPicture(days),
     dashboard(days),
+    // Their own words for where they heard about us.
+    whatTheySaid(),
   ]);
   const busiest = views ? Math.max(...views.perDay.map((day) => day.views), 1) : 1;
   // A route is stored by its id, and the id is not what anybody calls it.
@@ -650,6 +657,39 @@ export default async function AnalyticsPage({
           )}
         </section>
       </div>
+
+      {/*
+        Where they heard about us, in their own words.
+
+        The dropdown at the checkout offers a name or two and a channel,
+        and everybody else picks "Somewhere else". Those are most people,
+        and at a university almost every real answer is a sentence rather
+        than an option. This is the only free text the shop ever gets about
+        how somebody found it, so it is shown as written rather than sorted
+        into categories decided in advance.
+      */}
+      {saidWhere.length > 0 && (
+        <section className="card space-y-2">
+          <h2 className="font-bold">How they say they found us</h2>
+          <p className="hint">
+            Typed into the box under &ldquo;Somewhere else&rdquo;, in their own
+            words.
+          </p>
+          <ul className="divide-y divide-black/5 text-sm">
+            {saidWhere.map((one) => (
+              <li key={one.phone} className="py-2">
+                <span className="block">{one.said}</span>
+                <Link
+                  href={`/admin/customers?q=${encodeURIComponent(one.phone)}`}
+                  className="text-xs font-semibold text-brand-dark"
+                >
+                  {one.name || one.phone}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/*
         Every page the shop wrote, including the noughts.

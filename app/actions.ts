@@ -116,6 +116,8 @@ export async function submitOrder(
     // Who they say they heard about us from. Checked against the promoters
     // table on the way in, because a code off a form is not a promoter.
     heardFrom: String(form.get("heard_from") ?? "").trim(),
+    // And in their own words, where the list had nothing that fitted.
+    heardSaid: String(form.get("heard_said") ?? "").trim(),
     // Buying it for somebody else. The payer stays the customer and keeps
     // every message about money; this is only who the driver rings.
     giftTo: giftFrom(form),
@@ -557,6 +559,9 @@ export async function placeSkincareOrder(input: {
   note: string;
   /** Whoever sent them, so the order counts for somebody. */
   heardFrom?: string;
+  /** Their own words for where they heard about us, from the box under
+   *  "Somewhere else". Kept as typed. */
+  heardSaid?: string;
   /** Whose money the card link is made out in. Naira unless they say. */
   payCurrency?: "GBP" | "USD";
   paymentMethod: "transfer" | "card";
@@ -614,6 +619,7 @@ export async function placeSkincareOrder(input: {
     paymentMethod: input.paymentMethod,
     customerNote: input.note,
     heardFrom: input.heardFrom ?? "",
+    heardSaid: input.heardSaid ?? "",
     payCurrency: input.paymentMethod === "card" ? input.payCurrency : undefined,
     // Priced by the counter's own ladder: it is the car, not the cream, so
     // it goes by how much room the order takes.

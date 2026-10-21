@@ -278,3 +278,39 @@ export async function customerPicture(
     return empty;
   }
 }
+
+/**
+ * What people typed when the list had nothing that fitted.
+ *
+ * The dropdown at the checkout offers a promoter or two and a channel, and
+ * everybody else lands on "Somewhere else". Those are most people, and at
+ * a university almost every real answer is a sentence rather than an
+ * option: a roommate, a group chat, a poster in a block.
+ *
+ * Their words exactly, with the name of whoever said it, because at twenty
+ * customers the useful form of this is a short list somebody reads, not a
+ * tally of categories somebody invented beforehand.
+ */
+export async function whatTheySaid(): Promise<
+  { name: string; phone: string; said: string }[]
+> {
+  try {
+    const { data, error } = await db()
+      .from("customers")
+      .select("name, phone, heard_said")
+      .neq("heard_said", "")
+      .limit(500);
+    if (error) throw new Error(error.message);
+    return ((data ?? []) as { name: string; phone: string; heard_said: string }[])
+      .map((one) => ({
+        name: one.name,
+        phone: one.phone,
+        said: String(one.heard_said ?? "").trim(),
+      }))
+      .filter((one) => one.said !== "");
+  } catch {
+    // The column is not there yet, which is not the same as nobody having
+    // answered: the page is better without the panel than without the page.
+    return [];
+  }
+}

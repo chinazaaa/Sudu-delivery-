@@ -85,6 +85,8 @@ export type PlaceOrderInput = {
   /** Who they say they heard about the shop from, as a promoter's code.
    *  Empty is a real answer: most people are nobody's referral. */
   heardFrom?: string;
+  /** And in their own words, from the box under "Somewhere else". */
+  heardSaid?: string;
   /** The channel that brought them: "google", "instagram", "whatsapp". A
    *  place, not a person, and nobody is paid for it. Worked out from the
    *  link they arrived on or the site that sent them. */
@@ -647,6 +649,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     returning,
     paymentMethod,
     heardFrom: input.heardFrom ?? "",
+    heardSaid: input.heardSaid ?? "",
     cameFrom: input.cameFrom ?? "",
   });
   // The cart behind this order is no longer abandoned, and the admins are told
@@ -2134,6 +2137,10 @@ async function bindCustomer(args: {
   paymentMethod?: "transfer" | "card";
   /** Who they said they heard about us from, on their first order. */
   heardFrom?: string;
+  /** And in their own words, where none of the list fitted. Kept exactly
+   *  as typed: it is the only free sentence this shop ever gets about how
+   *  somebody found it. */
+  heardSaid?: string;
   /** Where they were when they first saw us. Written once, like the
    *  promoter: whatever introduced somebody introduced them once, and the
    *  orders after that are not Google's doing. */
@@ -2145,6 +2152,10 @@ async function bindCustomer(args: {
   // off a form, and a made-up one would pay commission to nobody for ever.
   const heardFrom =
     args.heardFrom && (await realPromoter(args.heardFrom)) ? args.heardFrom.trim() : null;
+  // Their own sentence, trimmed to something a column can hold and
+  // otherwise left exactly as typed: the capitals and the block name are
+  // the half of it worth having.
+  const heardWords = String(args.heardSaid ?? "").trim().slice(0, 120);
 
   // Whether the row is there, which is no longer the same question as
   // whether they have ordered: somebody who paid for an errand has a row and
@@ -2161,10 +2172,22 @@ async function bindCustomer(args: {
     // makes commission lifetime. But a row made by an errand has nobody in
     // it, and the first order they place is still somebody's doing.
     const owed = there.trim() === "" && heardFrom ? { promoter_code: heardFrom } : {};
+    // The same rule as the promoter beside it: written once, on the first
+    // order, and never over an answer already given.
+    const said =
+      (already as { heard_said?: string }).heard_said?.trim() === "" && heardWords
+        ? { heard_said: heardWords }
+        : {};
 
     const { error } = await db()
       .from("customers")
-      .update({ name: args.name, hostel: args.hostel, payment_method: way, ...owed })
+      .update({
+        name: args.name,
+        hostel: args.hostel,
+        payment_method: way,
+        ...owed,
+        ...said,
+      })
       .eq("phone", args.phone);
     // The column is not there yet, so the rest of the update is worth saving
     // on its own rather than losing the lot to a migration nobody has run.
@@ -2185,6 +2208,7 @@ async function bindCustomer(args: {
     // Written once, on the first order, and never touched again. That single
     // column is what makes a promoter's commission lifetime.
     promoter_code: heardFrom,
+    heard_said: heardWords,
   };
   const { error } = await db()
     .from("customers")
