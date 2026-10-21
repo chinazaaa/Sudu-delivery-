@@ -141,7 +141,20 @@ export default async function AnalyticsPage({
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Views" value={views?.views ?? 0} hint={`Last ${days} days`} />
-        <Stat label="People" value={views?.visitors ?? 0} hint="Different browsers" />
+        {/* People who read a second page. The raw browser count is said
+            underneath rather than dropped: it is a true count of what hit
+            the server, it is simply not a count of people, and a
+            conversion rate with it underneath said this shop converts
+            nobody when it converts rather well. */}
+        <Stat
+          label="People"
+          value={views?.people ?? 0}
+          hint={
+            views && views.visitors > views.people
+              ? `${views.visitors.toLocaleString()} browsers, most read one page and went`
+              : "Read more than one page"
+          }
+        />
         <Stat label="Orders" value={steps.orders} hint={`${steps.paid} paid`} />
         <Stat
           label="Look to order"
@@ -150,7 +163,7 @@ export default async function AnalyticsPage({
               ? `${Math.round((steps.orders / steps.visitors) * 100)}%`
               : "0%"
           }
-          hint="Of the people who looked"
+          hint="Of the people who read a second page"
         />
       </div>
 

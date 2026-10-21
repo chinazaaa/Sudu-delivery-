@@ -8,7 +8,20 @@ import { channelLabel } from "./came-from";
 export type Traffic = {
   days: number;
   views: number;
+  /** Every browser that hit the server, crawlers included. */
   visitors: number;
+  /**
+   * The ones that looked at a second page.
+   *
+   * The tracker turns away everything that admits to being a robot, and
+   * the ones that matter do not admit to it: a crawler running JavaScript
+   * fires the same beacon a phone does, with a clean id every time. Of
+   * 6,971 visitors in ninety days, 6,663 read one page and were never seen
+   * again. A second page is a low bar and the only honest one available
+   * without guessing at user agents, because nothing reading a shop stops
+   * after one page and nothing crawling it comes back as the same id.
+   */
+  people: number;
   /** Views per day, oldest first, for the little bar chart. */
   perDay: { date: string; views: number; visitors: number }[];
   /** The busiest pages, with a readable name. */
@@ -43,6 +56,8 @@ export type Channel = {
 };
 
 export type Funnel = {
+  /** People rather than browsers: a rate with crawlers underneath says a
+   *  shop converts nobody when it converts rather well. */
   visitors: number;
   /** People who got as far as opening their cart. */
   openedCart: number;
@@ -57,6 +72,7 @@ export type Funnel = {
 type Summary = {
   views: number;
   visitors: number;
+  people: number;
   reachedCart: number;
   perDay: { date: string; views: number; visitors: number }[];
   pages: { path: string; views: number }[];
@@ -91,6 +107,7 @@ async function readSummary(days: number): Promise<Summary | null> {
     return {
       views: Number(row.views ?? 0),
       visitors: Number(row.visitors ?? 0),
+      people: Number(row.people ?? 0),
       reachedCart: Number(row.reached_cart ?? 0),
       perDay: ((row.per_day ?? []) as Record<string, any>[]).map((one) => ({
         date: String(one.date),
@@ -179,6 +196,7 @@ export async function traffic(days = 7): Promise<Traffic | null> {
     days,
     views: sum.views,
     visitors: sum.visitors,
+    people: sum.people,
     perDay: sum.perDay,
     pages: sum.pages.map((one) => ({
       path: one.path,
@@ -242,7 +260,7 @@ export async function funnel(days = 7): Promise<Funnel> {
   const sum = await readSummary(days);
 
   return {
-    visitors: sum?.visitors ?? 0,
+    visitors: sum?.people ?? 0,
     // Both baskets. The skincare shelf has a basket of its own and its
     // orders are counted in the step below, so leaving it out put more
     // orders in the funnel than people who reached a cart, which is a shape
