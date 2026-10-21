@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import ActionButton from "@/components/ActionButton";
+import SendLink from "@/components/SendLink";
 import { clearRunnerLink, makeRunnerLink } from "@/app/admin/actions";
 
 /**
@@ -23,44 +24,47 @@ import { clearRunnerLink, makeRunnerLink } from "@/app/admin/actions";
 export default function RunnerLink({
   batchId,
   token,
+  when,
 }: {
   batchId: string;
   token: string | null;
+  /** Which run this is, so the message says what is being sent. */
+  when: string;
 }) {
-  const [copied, setCopied] = useState(false);
-  const link =
-    token && typeof window !== "undefined"
-      ? `${window.location.origin}/run/${token}`
-      : token
-        ? `/run/${token}`
-        : "";
+  /*
+   * The address, read after the page is up rather than during it.
+   *
+   * It has to be absolute: this is pasted into a chat and opened on
+   * somebody else's phone, where a path on its own means nothing. Reading
+   * window during the render would mean the server and the browser
+   * printing different things, which React is right to complain about.
+   */
+  const [origin, setOrigin] = useState("");
+  useEffect(() => setOrigin(window.location.origin), []);
+
+  const link = token ? `${origin}/run/${token}` : "";
 
   return (
     <div className="space-y-2.5">
       {token ? (
         <>
-          <div className="flex flex-wrap items-center gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-lg bg-shell px-3 py-2 font-mono text-[12.5px]">
-              {link}
-            </code>
-            <button
-              type="button"
-              onClick={() => {
-                navigator.clipboard?.writeText(link).then(
-                  () => {
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                  },
-                  () => setCopied(false)
-                );
-              }}
-              className={`btn-admin btn-admin-sm ${
-                copied ? "!border-transparent !bg-mint !text-white" : ""
-              }`}
-            >
-              {copied ? "Copied ✓" : "Copy"}
-            </button>
-          </div>
+          {/*
+            The shop's own way of sending a link, rather than a second one
+            invented here. Nearly every link Sudu sends goes into a
+            WhatsApp chat, so that is the named button; copy is for
+            everywhere else. The sheet is deliberately not offered, for
+            the reasons written on the component itself.
+          */}
+          <SendLink
+            tone="quiet"
+            label="Send it on WhatsApp"
+            link={link}
+            message={`Tonight's run, ${when}. Everything to collect, what the card should be, and where it all goes: ${link}`}
+          />
+
+          <code className="block truncate rounded-lg bg-shell px-3 py-2 font-mono text-[12.5px]">
+            {link}
+          </code>
 
           <p className="text-[12.5px] text-muted">
             Whoever has this can see what to collect, who it goes to and the

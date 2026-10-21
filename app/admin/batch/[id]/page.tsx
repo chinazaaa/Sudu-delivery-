@@ -740,7 +740,11 @@ export default async function BatchPage({
           detail="A link that opens this run and nothing else, so somebody who is not trusted with the shop can still work the night from their own phone."
           className="mb-4"
         >
-          <RunnerLink batchId={batch.id} token={batch.runner_token ?? null} />
+          <RunnerLink
+            batchId={batch.id}
+            token={batch.runner_token ?? null}
+            when={`${runDateLabel(batch.run_date)} ${SLOT_LABEL[batch.slot]}`}
+          />
         </Panel>
       )}
 
