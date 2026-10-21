@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { DAILY, EVERY, GROUPS, TABS, whatIsIn, YOU, type Item } from "@/lib/admin-nav";
 import Tapped from "./Tapped";
 import { useWaiting } from "./Waiting";
+import ActionButton from "@/components/ActionButton";
 
 /**
  * The frame every admin page sits in: an Ink rail on a desktop, a drawer on
@@ -186,9 +187,14 @@ export default function AdminShell({
         View the shop ↗
       </Link>
       <form action={signOut} className="px-3 pt-1">
-        <button className="text-[13px] font-semibold text-rail-dim hover:text-rail-text">
+        <ActionButton
+          className="text-[13px] font-semibold text-rail-dim hover:text-rail-text"
+          doneClassName="text-volt"
+          busy="Signing out…"
+          done="Signed out"
+        >
           Sign out
-        </button>
+        </ActionButton>
       </form>
     </div>
   );

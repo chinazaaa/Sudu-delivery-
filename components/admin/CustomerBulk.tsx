@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo, useState } from "react";
+import ActionButton from "@/components/ActionButton";
 import PageHeader from "@/components/admin/PageHeader";
 import { whatsappTo } from "@/lib/messages";
 import { naira } from "@/lib/money";
@@ -271,8 +272,8 @@ export function Bar({
               <input key={phone} type="hidden" name="phone" value={phone} />
             ))}
             <input type="hidden" name="reviewed" value={String(!allReviewed)} />
-            <button
-              type="submit"
+            <ActionButton
+              keepLabel
               aria-pressed={allReviewed}
               className="flex min-h-[42px] items-center gap-1.5 px-1 text-[13px] font-bold"
             >
@@ -283,7 +284,7 @@ export function Bar({
                 {allReviewed ? "✓" : ""}
               </span>
               Reviewed
-            </button>
+            </ActionButton>
           </form>
         )}
         <a
@@ -329,15 +330,15 @@ export function Bar({
                 <input key={phone} type="hidden" name="phone" value={phone} />
               ))}
               <input type="hidden" name="reviewed" value={String(!allReviewed)} />
-              <button
-                type="submit"
+              <ActionButton
+                keepLabel
                 aria-pressed={allReviewed}
                 className={`btn-admin btn-admin-sm font-bold ${
                   allReviewed ? "border-mint bg-mint-tint text-mint" : "btn-admin-dark"
                 }`}
               >
                 {allReviewed ? "Reviewed ✓" : "Mark reviewed"}
-              </button>
+              </ActionButton>
             </form>
           )}
           <a

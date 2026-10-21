@@ -3,7 +3,7 @@ import PageHeader from "@/components/admin/PageHeader";
 import StockSearch from "@/components/admin/StockSearch";
 import Jump from "@/components/admin/Jump";
 import { Picking, Tick, Bar, Done } from "@/components/admin/BulkStock";
-import ActionButton from "@/components/admin/ActionButton";
+import ActionButton from "@/components/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import Thumb from "@/components/Thumb";
 import Empty from "@/components/Empty";

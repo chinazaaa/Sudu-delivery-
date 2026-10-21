@@ -19,7 +19,7 @@ import { safeSettings } from "@/lib/settings";
 import { allAreas } from "@/lib/areas-server";
 import { areasOfRun } from "@/lib/areas";
 import { lagosToday, runDateLabel } from "@/lib/time";
-import ActionButton from "@/components/admin/ActionButton";
+import ActionButton from "@/components/ActionButton";
 import {
   deleteClosure,
   deleteScheduleRun,

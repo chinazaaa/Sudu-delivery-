@@ -6,6 +6,7 @@ import { customerDetails } from "@/lib/customer-auth";
 import { lagosToday } from "@/lib/time";
 import { LEAST_MEMBERS } from "@/lib/santa";
 import SantaRibbon from "@/components/SantaRibbon";
+import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -197,12 +198,13 @@ export default async function SantaPage({
               </div>
             </div>
 
-            <button
-              type="submit"
+            <ActionButton
               className="btn-primary w-full border-2 border-ink text-lg"
+              busy="Making the room…"
+              done="Made ✓"
             >
               Make the room
-            </button>
+            </ActionButton>
 
             <p className="text-center text-sm text-ink/70">
               Already in a room? Open the link you were sent, or find it in{" "}

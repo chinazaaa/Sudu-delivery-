@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ActionButton from "@/components/ActionButton";
 import PageHeader from "@/components/admin/PageHeader";
 import LinkBuilder from "@/components/admin/LinkBuilder";
 import { listCheckoutLinks } from "@/lib/checkout-links";
@@ -167,9 +168,13 @@ export default async function LinksPage({
                   </Link>
                   <form action={link.active ? stopLink : startLink}>
                     <input type="hidden" name="link_id" value={link.id} />
-                    <button type="submit" className="chip border-black/10 bg-white">
+                    <ActionButton
+                      className="chip border-black/10 bg-white"
+                      busy="…"
+                      done={link.active ? "Stopped ✓" : "Started ✓"}
+                    >
                       {link.active ? "Stop it" : "Start it again"}
-                    </button>
+                    </ActionButton>
                   </form>
                   <form action={removeLink}>
                     <input type="hidden" name="link_id" value={link.id} />

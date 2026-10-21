@@ -6,6 +6,7 @@ import { openBatches } from "@/lib/batches";
 import { runDateLabel, whenLabel } from "@/lib/time";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
+import ActionButton from "@/components/ActionButton";
 import OccasionForm from "@/components/admin/OccasionForm";
 import BoxForm from "@/components/admin/BoxForm";
 import { removeBox, removeOccasion } from "./actions";
@@ -139,9 +140,14 @@ export default async function AdminOccasionsPage() {
                       />
                       <form action={removeBox} className="mt-3 border-t border-black/5 pt-3">
                         <input type="hidden" name="id" value={box.id} />
-                        <button className="text-sm font-semibold text-red-700">
+                        <ActionButton
+                          className="text-sm font-semibold text-red-700"
+                          doneClassName="text-mint"
+                          busy="Deleting…"
+                          done="Deleted ✓"
+                        >
                           Delete this box
-                        </button>
+                        </ActionButton>
                       </form>
                     </div>
                   </details>
@@ -165,9 +171,14 @@ export default async function AdminOccasionsPage() {
                   <OccasionForm occasion={row} runs={runs} />
                   <form action={removeOccasion} className="mt-3 border-t border-black/5 pt-3">
                     <input type="hidden" name="id" value={row.id} />
-                    <button className="text-sm font-semibold text-red-700">
+                    <ActionButton
+                      className="text-sm font-semibold text-red-700"
+                      doneClassName="text-mint"
+                      busy="Deleting…"
+                      done="Deleted ✓"
+                    >
                       Delete it, and every box in it
-                    </button>
+                    </ActionButton>
                   </form>
                 </div>
               </details>

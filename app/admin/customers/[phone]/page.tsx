@@ -19,6 +19,7 @@ import { channelLabel, everyChannel } from "@/lib/came-from";
 import { SLOT_LABEL } from "@/lib/config";
 import { runDateLabel } from "@/lib/time";
 import { namedPromoters } from "@/lib/promoters";
+import ActionButton from "@/components/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import Household from "@/components/admin/Household";
 import {
@@ -411,8 +412,8 @@ export default async function CustomerPage({
         <form action={setCustomerReviewed}>
           <input type="hidden" name="phone" value={person.phone} />
           <input type="hidden" name="reviewed" value={String(!person.reviewed)} />
-          <button
-            type="submit"
+          <ActionButton
+            keepLabel
             aria-pressed={person.reviewed}
             className={`tag min-h-[34px] gap-1.5 ${
               person.reviewed ? "bg-volt text-ink" : "bg-wash text-muted"
@@ -427,7 +428,7 @@ export default async function CustomerPage({
               {person.reviewed ? "✓" : ""}
             </span>
             {person.reviewed ? "Reviewed on Google" : "Mark reviewed"}
-          </button>
+          </ActionButton>
         </form>
         )}
         {/* The PIN is in the sentence under the title on a phone, so the tag

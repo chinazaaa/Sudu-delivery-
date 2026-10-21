@@ -6,6 +6,7 @@ import { repeatSaid } from "@/lib/box-day";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { orderAgain, planFromOrder } from "../actions";
+import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -114,9 +115,9 @@ export default async function SubscriptionsPage() {
                           className="field mt-0.5 w-44 py-1.5 text-sm"
                         />
                       </label>
-                      <button className="btn-primary px-4 py-2 text-sm">
+                      <ActionButton className="btn-primary px-4 py-2 text-sm" busy="Raising…" done="Raised ✓">
                         Raise the next one
-                      </button>
+                      </ActionButton>
                     </form>
 
                     {/* The other end of the same intention.
@@ -128,9 +129,9 @@ export default async function SubscriptionsPage() {
                         everything agreed since the first one is in it. */}
                     <form action={planFromOrder} className="pt-1">
                       <input type="hidden" name="order_id" value={row.id} />
-                      <button className="btn-quiet px-4 py-2 text-sm">
+                      <ActionButton className="btn-quiet px-4 py-2 text-sm" busy="Setting it up…" done="Set up ✓">
                         Make it a standing order
-                      </button>
+                      </ActionButton>
                     </form>
                   </article>
                 ))}

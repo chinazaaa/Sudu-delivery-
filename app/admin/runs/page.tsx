@@ -26,7 +26,7 @@ import { COUNTERS } from "@/lib/counter";
 import { naira } from "@/lib/money";
 import { clockLabel, lagosToday, runDateLabel } from "@/lib/time";
 import { adminStatusWord } from "@/lib/stages";
-import ActionButton from "@/components/admin/ActionButton";
+import ActionButton from "@/components/ActionButton";
 import { STAGES, STAGE_LABEL, stageIndex } from "@/lib/stages";
 
 export const dynamic = "force-dynamic";

@@ -5,6 +5,7 @@ import SaveButton from "@/components/SaveButton";
 import { naira } from "@/lib/money";
 import { COST_KINDS } from "@/lib/other-money";
 import type { Standing } from "@/lib/standing";
+import ActionButton from "@/components/ActionButton";
 
 /**
  * The costs that come back every month.
@@ -204,9 +205,14 @@ export default function StandingCosts({
 
               <form action={remove} className="mt-1">
                 <input type="hidden" name="id" value={one.id} />
-                <button className="text-xs font-medium text-muted hover:text-red-700">
+                <ActionButton
+                  className="text-xs font-medium text-muted hover:text-red-700"
+                  doneClassName="text-mint"
+                  busy="Dropping…"
+                  done="Dropped ✓"
+                >
                   Drop it altogether
-                </button>
+                </ActionButton>
               </form>
             </li>
           ))}

@@ -24,6 +24,7 @@ import {
   renameAction,
 } from "../../actions";
 import { hostelNames } from "@/lib/hostels";
+import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -227,9 +228,9 @@ export default async function WishlistPage({
             />
           </div>
 
-          <button type="submit" className="btn-primary w-full">
+          <ActionButton className="btn-primary w-full" busy="Adding…" done="Added ✓">
             Add to my list
-          </button>
+          </ActionButton>
         </form>
       ) : (
         <p className="card mt-5 text-muted">
@@ -285,9 +286,14 @@ export default async function WishlistPage({
                 <form action={removeWishAction}>
                   <input type="hidden" name="token" value={token} />
                   <input type="hidden" name="wishId" value={one.id} />
-                  <button type="submit" className="text-sm font-semibold text-brand">
+                  <ActionButton
+                    className="text-sm font-semibold text-brand"
+                    doneClassName="text-mint"
+                    busy="…"
+                    done="Removed"
+                  >
                     Remove
-                  </button>
+                  </ActionButton>
                 </form>
               )}
               </div>
@@ -346,9 +352,9 @@ export default async function WishlistPage({
                         Leave either empty to keep the picture you have.
                       </p>
                     ) : null}
-                    <button type="submit" className="btn-primary w-full">
+                    <ActionButton className="btn-primary w-full" busy="Saving…" done="Saved ✓">
                       Save changes
-                    </button>
+                    </ActionButton>
                   </form>
                 </details>
               )}
@@ -386,7 +392,9 @@ export default async function WishlistPage({
             </label>
             <input id="name" name="name" className="field" defaultValue={me.name} required />
           </div>
-          <button type="submit" className="btn-quiet w-full">Save</button>
+          <ActionButton className="btn-quiet w-full" busy="Saving…" done="Saved ✓">
+            Save
+          </ActionButton>
         </form>
       </details>
 
@@ -436,9 +444,9 @@ export default async function WishlistPage({
               />
             )}
           </div>
-          <button type="submit" className="btn-quiet w-full">
+          <ActionButton className="btn-quiet w-full" busy="Saving…" done="Saved ✓">
             {me.hostel ? "Change it" : "Save"}
-          </button>
+          </ActionButton>
         </form>
       </details>
 

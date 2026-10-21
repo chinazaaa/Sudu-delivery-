@@ -1,6 +1,6 @@
 import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
-import ActionButton from "@/components/admin/ActionButton";
+import ActionButton from "@/components/ActionButton";
 import CopyText from "@/components/CopyText";
 import Figure from "@/components/admin/Figure";
 import Panel from "@/components/admin/Panel";

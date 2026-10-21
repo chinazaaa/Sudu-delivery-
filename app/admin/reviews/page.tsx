@@ -4,6 +4,7 @@ import Stat from "@/components/admin/Stat";
 import { feedback } from "@/lib/analytics";
 import { runDateLabel } from "@/lib/time";
 import { showReview } from "./actions";
+import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -128,7 +129,8 @@ export default async function ReviewsPage({
                 <form action={showReview} className="mt-2 flex items-center gap-2">
                   <input type="hidden" name="id" value={one.id} />
                   <input type="hidden" name="on" value={one.shown ? "no" : "yes"} />
-                  <button
+                  <ActionButton
+                    keepLabel
                     className={`chip py-1 text-xs ${
                       one.shown
                         ? "border-mint bg-mint/20 font-semibold"
@@ -136,7 +138,7 @@ export default async function ReviewsPage({
                     }`}
                   >
                     {one.shown ? "On the site" : "Put on the site"}
-                  </button>
+                  </ActionButton>
                 </form>
               )}
             </li>

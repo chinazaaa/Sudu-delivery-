@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ActionButton from "@/components/ActionButton";
 import ConfirmButton from "./ConfirmButton";
 import type { OrderCardData } from "./OrderCard";
 import { naira } from "@/lib/money";
@@ -109,8 +110,8 @@ export default function HandOverCard({
               name="reviewed"
               value={String(!askReviewed)}
             />
-            <button
-              type="submit"
+            <ActionButton
+              keepLabel
               aria-pressed={Boolean(askReviewed)}
               className="flex min-h-[44px] items-center gap-1.5 text-[13px] font-semibold text-muted"
             >
@@ -121,7 +122,7 @@ export default function HandOverCard({
                 {askReviewed ? "✓" : ""}
               </span>
               {askReviewed ? "Reviewed" : "Mark reviewed"}
-            </button>
+            </ActionButton>
           </form>
         )}
       </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { deleteEmptyShelves } from "@/app/admin/actions";
+import ActionButton from "@/components/ActionButton";
 
 type Shelf = { id: string; name: string; items: number; filed: number };
 
@@ -77,14 +78,15 @@ export default function Shelves({
             >
               {ticked.length === empty.length ? "None of them" : "All of them"}
             </button>
-            <button
-              type="submit"
+            <ActionButton
               disabled={ticked.length === 0}
               className="btn-primary px-5 disabled:opacity-40"
+              busy="Deleting…"
+              done="Deleted ✓"
             >
               Delete {ticked.length > 0 ? ticked.length : ""} shelf
               {ticked.length === 1 ? "" : "s"}
-            </button>
+            </ActionButton>
           </div>
 
           <p className="text-xs text-muted">

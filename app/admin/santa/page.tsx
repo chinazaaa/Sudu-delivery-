@@ -6,6 +6,7 @@ import { naira } from "@/lib/money";
 import { runDateLabel } from "@/lib/time";
 import { jobs, rooms } from "@/lib/santa-admin";
 import { hasPaid, LEAST_MEMBERS, santaDelivery } from "@/lib/santa";
+import ActionButton from "@/components/ActionButton";
 import SaveButton from "@/components/SaveButton";
 import CopyText from "@/components/CopyText";
 import { lagosToday } from "@/lib/time";
@@ -194,13 +195,15 @@ export default async function SantaAdminPage({
                       defaultValue={one.sourcedPrice ?? ""}
                     />
                   </div>
-                  <button className="btn-primary">Save</button>
+                  <SaveButton>Save</SaveButton>
                 </form>
 
                 {one.status === "asking" ? (
                   <form action={agreeOverBudget}>
                     <input type="hidden" name="orderId" value={one.orderId} />
-                    <button className="btn-quiet">They agreed</button>
+                    <ActionButton className="btn-quiet" busy="…" done="Agreed ✓">
+                      They agreed
+                    </ActionButton>
                   </form>
                 ) : null}
 
@@ -208,7 +211,9 @@ export default async function SantaAdminPage({
                   <form action={setStatus}>
                     <input type="hidden" name="orderId" value={one.orderId} />
                     <input type="hidden" name="status" value="bought" />
-                    <button className="btn-quiet">Bought</button>
+                    <ActionButton className="btn-quiet" busy="…" done="Bought ✓">
+                      Bought
+                    </ActionButton>
                   </form>
                 ) : null}
 
@@ -216,13 +221,15 @@ export default async function SantaAdminPage({
                   <>
                     <form action={markHandedOver}>
                       <input type="hidden" name="orderId" value={one.orderId} />
-                      <button className="btn-quiet">Given to {one.buyer}</button>
+                      <ActionButton className="btn-quiet" busy="…" done="Given ✓">
+                        Given to {one.buyer}
+                      </ActionButton>
                     </form>
                     <form action={backToUs}>
                       <input type="hidden" name="orderId" value={one.orderId} />
-                      <button className="btn-quiet">
+                      <ActionButton className="btn-quiet" busy="…" done="Back with us ✓">
                         Could not reach them, we deliver
-                      </button>
+                      </ActionButton>
                     </form>
                   </>
                 ) : null}
@@ -231,16 +238,18 @@ export default async function SantaAdminPage({
                   <form action={setStatus}>
                     <input type="hidden" name="orderId" value={one.orderId} />
                     <input type="hidden" name="status" value="delivered" />
-                    <button className="btn-quiet">Delivered</button>
+                    <ActionButton className="btn-quiet" busy="…" done="Delivered ✓">
+                      Delivered
+                    </ActionButton>
                   </form>
                 ) : null}
 
                 {one.refund !== null && one.refund > 0 && !one.refundedAt ? (
                   <form action={markRefunded}>
                     <input type="hidden" name="orderId" value={one.orderId} />
-                    <button className="btn-quiet">
+                    <ActionButton className="btn-quiet" busy="…" done="Noted ✓">
                       Refunded {naira(one.refund)}
-                    </button>
+                    </ActionButton>
                   </form>
                 ) : null}
               </div>
@@ -499,9 +508,14 @@ export default async function SantaAdminPage({
                       {hasPaid(one) && room.status === "open" ? (
                         <form action={markMemberUnpaid}>
                           <input type="hidden" name="memberId" value={one.id} />
-                          <button className="text-xs font-semibold text-muted underline">
+                          <ActionButton
+                            className="text-xs font-semibold text-muted underline"
+                            doneClassName="text-mint"
+                            busy="…"
+                            done="Undone"
+                          >
                             Undo paid
-                          </button>
+                          </ActionButton>
                         </form>
                       ) : null}
                       {/* Somebody who changed their mind rang us, not the
@@ -547,9 +561,9 @@ export default async function SantaAdminPage({
                             ))}
                         </select>
                       </div>
-                      <button className="btn-primary">
+                      <ActionButton className="btn-primary" busy="Marking…" done="Paid ✓">
                         Mark paid {naira(room.budget)}
-                      </button>
+                      </ActionButton>
                     </form>
                   ) : null}
 
@@ -563,7 +577,9 @@ export default async function SantaAdminPage({
                       <label className="label">Their name</label>
                       <input name="name" className="field w-40" />
                     </div>
-                    <button className="btn-primary">Paid, add them</button>
+                    <ActionButton className="btn-primary" busy="Adding…" done="Added ✓">
+                      Paid, add them
+                    </ActionButton>
                   </form>
                   <p className="mt-1.5 text-sm text-muted">
                     For somebody who paid in cash or never opened the link.
@@ -572,14 +588,16 @@ export default async function SantaAdminPage({
 
                   <form action={drawRoom} className="mt-3">
                     <input type="hidden" name="roomId" value={room.id} />
-                    <button
+                    <ActionButton
                       className="btn-quiet"
+                      busy="Drawing…"
+                      done="Drawn ✓"
                       disabled={room.paidCount < LEAST_MEMBERS}
                     >
                       {room.paidCount < LEAST_MEMBERS
                         ? `${LEAST_MEMBERS - room.paidCount} more paid needed to draw`
                         : `Close and draw ${room.paidCount}`}
-                    </button>
+                    </ActionButton>
                   </form>
                 </>
               ) : null}

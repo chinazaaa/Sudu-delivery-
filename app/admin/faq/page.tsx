@@ -1,7 +1,7 @@
 import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import SaveButton from "@/components/SaveButton";
-import ActionButton from "@/components/admin/ActionButton";
+import ActionButton from "@/components/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import Empty from "@/components/Empty";
 import { faqList } from "@/lib/faq";

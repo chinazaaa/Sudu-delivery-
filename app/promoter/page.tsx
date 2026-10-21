@@ -14,6 +14,7 @@ import SaveButton from "@/components/SaveButton";
 import { confirmPayout, saveBank, saveNudge, signOut } from "./actions";
 import ChangePin from "@/components/ChangePin";
 import CopyText from "@/components/CopyText";
+import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -99,9 +100,14 @@ export default async function PromoterPage() {
       </span>
       {earnings && (
         <form action={signOut} className="ml-auto">
-          <button className="text-[13.5px] text-shell/80 hover:text-shell hover:underline">
+          <ActionButton
+            className="text-[13.5px] text-shell/80 hover:text-shell hover:underline"
+            doneClassName="text-volt"
+            busy="Signing out…"
+            done="Signed out"
+          >
             Sign out
-          </button>
+          </ActionButton>
         </form>
       )}
     </div>

@@ -11,6 +11,7 @@ import {
   shelveRequest,
   unlinkRequestOrder,
 } from "./actions";
+import ActionButton from "@/components/ActionButton";
 import SaveButton from "@/components/SaveButton";
 import Link from "next/link";
 import { db } from "@/lib/supabase";
@@ -382,38 +383,46 @@ export default async function RequestsPage({
                       className="field py-2 text-sm"
                     />
                   </div>
-                  <button
+                  <ActionButton
                     name="status"
                     value="quoted"
                     className="btn-quiet px-3 py-2 text-sm"
+                    busy="…"
+                    done="Priced ✓"
                   >
                     Priced
-                  </button>
-                  <button
+                  </ActionButton>
+                  <ActionButton
                     name="status"
                     value="done"
                     className="btn-primary px-3 py-2 text-sm"
+                    busy="…"
+                    done="Done ✓"
                   >
                     Done
-                  </button>
+                  </ActionButton>
                   {/* They went and placed it themselves. Finished, with
                       nothing to count here: the money is on that order,
                       and counting it twice is the one mistake this page
                       could make that the books would carry. */}
-                  <button
+                  <ActionButton
                     name="status"
                     value="converted"
                     className="btn-quiet px-3 py-2 text-sm"
+                    busy="…"
+                    done="Filed ✓"
                   >
                     They ordered it
-                  </button>
-                  <button
+                  </ActionButton>
+                  <ActionButton
                     name="status"
                     value="dropped"
                     className="btn-quiet px-3 py-2 text-sm"
+                    busy="…"
+                    done="Dropped ✓"
                   >
                     Drop
-                  </button>
+                  </ActionButton>
                 </form>
                 )}
               </div>
@@ -479,9 +488,9 @@ export default async function RequestsPage({
                         question twice the same way.
                       </p>
                     </div>
-                    <button className="btn-primary px-3 py-2 text-sm">
+                    <ActionButton className="btn-primary px-3 py-2 text-sm" busy="Saving…" done="Saved ✓">
                       Save it and mark this done
-                    </button>
+                    </ActionButton>
                   </form>
                 </details>
               )}
@@ -544,20 +553,22 @@ export default async function RequestsPage({
                   {ask.order_id && (
                     <form action={unlinkRequestOrder} className="shrink-0">
                       <input type="hidden" name="id" value={ask.id} />
-                      <button className="btn-quiet px-3 py-2 text-sm">
+                      <ActionButton className="btn-quiet px-3 py-2 text-sm" busy="…" done="Unlinked ✓">
                         Wrong order
-                      </button>
+                      </ActionButton>
                     </form>
                   )}
                   <form action={markRequest} className="shrink-0">
                     <input type="hidden" name="id" value={ask.id} />
-                    <button
+                    <ActionButton
                       name="status"
                       value="new"
                       className="btn-quiet px-3 py-2 text-sm"
+                      busy="…"
+                      done="Back ✓"
                     >
                       Put it back
-                    </button>
+                    </ActionButton>
                   </form>
                   {/* Said by its number, because that is what an order is
                       called everywhere else in here and on the message
@@ -654,9 +665,9 @@ export default async function RequestsPage({
                       className="field py-2 text-sm"
                     />
                   </div>
-                  <button className="btn-primary px-3 py-2 text-sm">
+                  <ActionButton className="btn-primary px-3 py-2 text-sm" busy="Counting it…" done="Counted ✓">
                     Bought it, count it
-                  </button>
+                  </ActionButton>
                   <p className="w-full text-xs text-muted">
                     The price is for one of them and is multiplied; the cost
                     is the whole amount you paid out and is not. No product
@@ -728,9 +739,9 @@ export default async function RequestsPage({
                         className="field py-2 text-sm"
                       />
                     </div>
-                    <button className="btn-primary px-3 py-2 text-sm">
+                    <ActionButton className="btn-primary px-3 py-2 text-sm" busy="Adding…" done="Added ✓">
                       Add to the shop
-                    </button>
+                    </ActionButton>
                       <p className="w-full text-xs text-muted">
                         Only when the same thing keeps being asked for. Their
                         words become the name and this becomes the price: no

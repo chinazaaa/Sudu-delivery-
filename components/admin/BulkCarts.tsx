@@ -3,6 +3,7 @@
 import { closeManyCarts, deleteManyCarts } from "@/app/admin/actions";
 import ConfirmButton from "./ConfirmButton";
 import { showingNow, usePicked } from "./Picking";
+import ActionButton from "@/components/ActionButton";
 
 /**
  * The bar above the left behind list.
@@ -78,9 +79,13 @@ export default function BulkCarts({ reasons }: { reasons: string[] }) {
               </option>
             ))}
           </select>
-          <button className="btn-admin btn-admin-sm btn-admin-dark font-bold">
+          <ActionButton
+            className="btn-admin btn-admin-sm btn-admin-dark font-bold"
+            busy="Closing…"
+            done="Closed ✓"
+          >
             Close {ids.length}
-          </button>
+          </ActionButton>
         </form>
 
         {/* Deleting is forever, and it is the one anybody clearing their own

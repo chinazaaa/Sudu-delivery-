@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef } from "react";
+
+import ActionButton from "@/components/ActionButton";
 import {
   PARCEL_ACTION,
   STAGES,
@@ -62,9 +64,13 @@ export default function StagePicker({
           <input type="hidden" name="stage" value={next} />
           {/* The single Tomato button on the page: the one thing to do
                next. Everything else here is an outline. */}
-          <button className={primary ? "btn-admin btn-admin-go" : "btn-admin"}>
+          <ActionButton
+            className={primary ? "btn-admin btn-admin-go" : "btn-admin"}
+            busy="Moving…"
+            done="Moved ✓"
+          >
             Move to {said[next].toLowerCase()} →
-          </button>
+          </ActionButton>
         </form>
       )}
 

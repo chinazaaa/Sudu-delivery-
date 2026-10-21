@@ -1570,9 +1570,9 @@ body:has([data-actionbar]) .sudubot-launcher {
  *
  * Fixed, so it drifts past whatever is being read rather than scrolling
  * away. Deaf to the mouse, because a decoration that can swallow a tap on
- * the order button is worse than no decoration at all. And under
- * everything: z-index 0 against cards that sit in their own stacking
- * contexts above it.
+ * the order button is worse than no decoration at all. And over the page
+ * but under every bar and sheet, so it is visible without ever covering
+ * something that has to be pressed.
  */
 .season-decor {
   position: fixed;
@@ -1599,8 +1599,19 @@ body:has([data-actionbar]) .sudubot-launcher {
   position: absolute;
   top: 100%;
   line-height: 1;
-  /* Faint, because it is now over the words rather than behind them. */
-  opacity: 0.38;
+  /*
+   * Solid enough to be seen.
+   *
+   * It started at 0.38, on the theory that something drifting over the
+   * words should be faint. On a phone, in daylight, over a cream
+   * background, 0.38 of a pumpkin is a smudge: the first two people to
+   * look for the decorations said there weren't any. A decoration nobody
+   * can see costs the same as one nobody wanted. It is big, slow and
+   * behind every card, so it can afford to be opaque.
+   */
+  opacity: 0.9;
+  /* A little shadow so a pale ghost still reads over a pale page. */
+  filter: drop-shadow(0 2px 4px rgb(36 22 51 / 0.35));
   animation-name: season-rise;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
@@ -1618,13 +1629,13 @@ body:has([data-actionbar]) .sudubot-launcher {
     opacity: 0;
   }
   10% {
-    opacity: 0.38;
+    opacity: 0.9;
   }
   50% {
     transform: translate3d(26px, -55vh, 0) rotate(14deg);
   }
   90% {
-    opacity: 0.26;
+    opacity: 0.7;
   }
   100% {
     transform: translate3d(-18px, -115vh, 0) rotate(-10deg);

@@ -15,6 +15,7 @@ import { STAGE_LABEL } from "@/lib/stages";
 import { takesMoney } from "@/lib/batches";
 import { dayWord } from "@/lib/time";
 import { forgetMe } from "@/app/actions";
+import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -59,9 +60,9 @@ export default async function OrdersPage({
           </Link>
           <form action={forgetMe}>
             <input type="hidden" name="next" value={`/orders?next=${encodeURIComponent(back)}`} />
-            <button className="btn-quiet w-full">
+            <ActionButton className="btn-quiet w-full" busy="Signing out…" done="Signed out">
               Not you? Sign in with another number
-            </button>
+            </ActionButton>
           </form>
         </div>
       </div>
@@ -134,7 +135,14 @@ export default async function OrdersPage({
           My orders
         </h1>
         <form action={forgetMe}>
-          <button className="text-sm text-muted hover:underline">Not you?</button>
+          <ActionButton
+            className="text-sm text-muted hover:underline"
+            doneClassName="text-mint"
+            busy="Signing out…"
+            done="Signed out"
+          >
+            Not you?
+          </ActionButton>
         </form>
       </div>
 

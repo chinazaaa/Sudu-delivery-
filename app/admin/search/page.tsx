@@ -2,6 +2,7 @@ import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import Panel from "@/components/admin/Panel";
 import { lookFor, type Found } from "@/lib/admin-search";
+import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -69,7 +70,9 @@ export default async function SearchPage({
           placeholder="A name, a number, four digits off a transfer, a dish"
           className="field min-h-[42px] grow border-[1.5px] border-line bg-paper px-3 py-0 text-[14.5px]"
         />
-        <button className="btn-admin">Search</button>
+        <ActionButton className="btn-admin" busy="Searching…" done="Searched ✓">
+          Search
+        </ActionButton>
       </form>
 
       {found.term.length < 2 ? (

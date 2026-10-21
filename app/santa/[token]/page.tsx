@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import ActionButton from "@/components/ActionButton";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { currentCustomer, customerDetails } from "@/lib/customer-auth";
@@ -317,7 +318,9 @@ export default async function RoomPage({
                   So we know where to bring it. You can change it later.
                 </p>
               </div>
-              <button type="submit" className="btn-primary w-full">Join the room</button>
+              <ActionButton className="btn-primary w-full" busy="Joining…" done="Joined ✓">
+                Join the room
+              </ActionButton>
 
               {/* A different phone, or a browser that lost the cookie. The
                 * room cannot tell them apart from a stranger, and joining
@@ -480,9 +483,14 @@ export default async function RoomPage({
                   <form action={kickMemberAction}>
                     <input type="hidden" name="token" value={token} />
                     <input type="hidden" name="memberId" value={one.id} />
-                    <button type="submit" className="text-xs font-semibold text-brand underline">
+                    <ActionButton
+                      className="text-xs font-semibold text-brand underline"
+                      doneClassName="text-mint"
+                      busy="…"
+                      done="Removed"
+                    >
                       Remove
-                    </button>
+                    </ActionButton>
                   </form>
                 ) : null}
                 <span
@@ -570,7 +578,9 @@ export default async function RoomPage({
                   />
                 </div>
               </div>
-              <button type="submit" className="btn-quiet w-full">Save the room</button>
+              <ActionButton className="btn-quiet w-full" busy="Saving…" done="Saved ✓">
+                Save the room
+              </ActionButton>
             </form>
           </details>
         ) : null}
@@ -578,9 +588,9 @@ export default async function RoomPage({
         {phone === room.creatorPhone && room.status === "open" ? (
           <form action={closeRoomAction} className="mt-4">
             <input type="hidden" name="token" value={token} />
-            <button type="submit" className="btn-quiet w-full">
+            <ActionButton className="btn-quiet w-full" busy="Drawing…" done="Drawn ✓">
               Close the room and draw names
-            </button>
+            </ActionButton>
             <p className="mt-1.5 text-sm text-muted">
               This cannot be undone, and nobody can join or change their list
               afterwards.
@@ -599,9 +609,9 @@ export default async function RoomPage({
                 Your list goes with you, and anything you paid comes back to
                 you. You can only do this before names are drawn.
               </p>
-              <button type="submit" className="btn-quiet mt-2 w-full">
+              <ActionButton className="btn-quiet mt-2 w-full" busy="Leaving…" done="Left ✓">
                 Leave the room
-              </button>
+              </ActionButton>
             </form>
           </details>
         ) : null}
@@ -700,13 +710,13 @@ export default async function RoomPage({
                           <form action={unpickWishAction}>
                             <input type="hidden" name="token" value={token} />
                             <input type="hidden" name="wishId" value={one.id} />
-                            <button
-                              type="submit"
+                            <ActionButton
+                              keepLabel
                               aria-pressed="true"
                               className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full border-2 border-ink bg-mint font-bold text-white"
                             >
                               ✓ Picked
-                            </button>
+                            </ActionButton>
                             <span className="mt-1 block text-center text-xs text-muted underline">
                               Tap to take it off
                             </span>
@@ -715,25 +725,26 @@ export default async function RoomPage({
                           <form action={pickWishAction}>
                             <input type="hidden" name="token" value={token} />
                             <input type="hidden" name="wishId" value={one.id} />
-                            <button
-                              type="submit"
+                            <ActionButton
+                              keepLabel
                               className="flex min-h-11 w-full items-center justify-center rounded-full border-2 border-dashed border-line text-sm font-semibold text-muted"
                             >
                               {naira(one.estPrice - match.toSpend)} over budget
-                            </button>
+                            </ActionButton>
                           </form>
                         ) : (
                           <form action={pickWishAction}>
                             <input type="hidden" name="token" value={token} />
                             <input type="hidden" name="wishId" value={one.id} />
-                            <button
-                              type="submit"
+                            <ActionButton
                               className="flex min-h-11 w-full items-center justify-center rounded-full border-2 border-ink bg-brand font-bold text-white shadow-press"
+                              busy="Picking…"
+                              done="Picked ✓"
                             >
                               {match.pickedWishIds.length > 0
                                 ? "Add this too"
                                 : "Pick this"}
-                            </button>
+                            </ActionButton>
                           </form>
                         )}
                       </div>
@@ -768,9 +779,9 @@ export default async function RoomPage({
                   </p>
                   <form action={agreeAction}>
                     <input type="hidden" name="token" value={token} />
-                    <button type="submit" className="btn-primary w-full">
+                    <ActionButton className="btn-primary w-full" busy="Agreeing…" done="Agreed ✓">
                       I will pay the {naira(order.over)}
-                    </button>
+                    </ActionButton>
                   </form>
                 </div>
               ) : (
@@ -865,9 +876,9 @@ export default async function RoomPage({
               />
             </div>
 
-            <button type="submit" className="btn-primary w-full">
+            <ActionButton className="btn-primary w-full" busy="Saving…" done="Saved ✓">
               Save
-            </button>
+            </ActionButton>
 
             <p className="text-sm text-muted">
               {order?.handover === "giver"

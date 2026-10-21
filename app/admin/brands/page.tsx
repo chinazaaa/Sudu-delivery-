@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ActionButton from "@/components/ActionButton";
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import { naira } from "@/lib/money";
@@ -104,9 +105,9 @@ export default async function BrandsPage({
                 ))}
               </select>
             </div>
-            <button type="submit" className="btn-admin-go">
+            <ActionButton className="btn-admin-go" busy="Looking…" done="Shown ✓">
               Show
-            </button>
+            </ActionButton>
           </form>
 
           {numbers === null || numbers.orders === 0 ? (

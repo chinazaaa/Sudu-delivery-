@@ -18,6 +18,7 @@ import { siteUrl } from "@/lib/admin-templates";
 import { publicOffer } from "@/lib/coupons";
 import { safeSettings } from "@/lib/settings";
 import { recordPayout, savePromoter } from "../actions";
+import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -333,7 +334,9 @@ export default async function PromotersAdmin({
               placeholder="Name or code"
               className="field field-admin border-[1.5px] border-line sm:w-56"
             />
-            <button className="btn-admin shrink-0">Search</button>
+            <ActionButton className="btn-admin shrink-0" busy="Searching…" done="Searched ✓">
+              Search
+            </ActionButton>
           </form>
         </div>
       )}

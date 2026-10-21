@@ -8,7 +8,7 @@ import BandEditor from "@/components/admin/BandEditor";
 import AreaEditor from "@/components/admin/AreaEditor";
 import { parseAreaPairs, parseAreas } from "@/lib/areas";
 import DayHours from "@/components/admin/DayHours";
-import ActionButton from "@/components/admin/ActionButton";
+import ActionButton from "@/components/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { AISLES } from "@/lib/aisles";
 import { LEAD_DAYS } from "@/lib/plans";

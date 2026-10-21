@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ActionButton from "@/components/ActionButton";
 import PageHeader from "@/components/admin/PageHeader";
 import Panel from "@/components/admin/Panel";
 import ReplyBox from "@/components/admin/ReplyBox";
@@ -52,7 +53,7 @@ export default async function LetterPage({
             {!letter.readAt && (
               <form action={markMailRead}>
                 <input type="hidden" name="mail_id" value={letter.id} />
-                <button className="btn-admin btn-admin-sm">Mark read</button>
+                <ActionButton done="Read ✓">Mark read</ActionButton>
               </form>
             )}
             <form action={setMailDone}>
@@ -62,9 +63,9 @@ export default async function LetterPage({
                 name="done"
                 value={String(!letter.doneAt)}
               />
-              <button className="btn-admin btn-admin-sm">
+              <ActionButton done="Filed ✓">
                 {letter.doneAt ? "Put it back" : "Nothing needed"}
-              </button>
+              </ActionButton>
             </form>
           </>
         }

@@ -46,7 +46,15 @@ export default function SaveButton({
    */
   look?: string;
 }) {
-  const { pending } = useFormStatus();
+  const status = useFormStatus();
+  /*
+   * Only the button that was pressed answers. The offer board ends on two
+   * ways to commit, and without this pressing one makes both say "Saving…",
+   * which reads as the page having done something twice.
+   */
+  const pending =
+    status.pending &&
+    (name === undefined || status.data === null || status.data.get(name) === value);
   const [saved, setSaved] = useState(false);
   const was = useRef(false);
 
@@ -64,7 +72,7 @@ export default function SaveButton({
       type="submit"
       name={name}
       value={value}
-      disabled={pending}
+      disabled={status.pending}
       className={`${look} ${className} ${
         saved ? "!bg-mint !text-white !border-transparent" : ""
       }`}

@@ -9,6 +9,7 @@ import { profitBetween, profitByKitchen } from "@/lib/profit";
 import { costsByKind, madeOn } from "@/lib/other-money";
 import { catchUpStanding } from "@/lib/standing";
 import { typicalCosts } from "@/lib/admin";
+import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -284,9 +285,13 @@ export default async function ProfitPage({
               className="field h-[42px] w-full px-3 py-0 text-[14.5px] sm:w-auto"
             />
           </label>
-          <button className="btn-admin btn-admin-sm col-span-2 w-full sm:w-auto">
+          <ActionButton
+            className="btn-admin btn-admin-sm col-span-2 w-full sm:w-auto"
+            busy="Working it out…"
+            done="Shown ✓"
+          >
             Show that
-          </button>
+          </ActionButton>
         </form>
       </div>
 

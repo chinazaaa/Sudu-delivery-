@@ -1,7 +1,9 @@
 import Link from "next/link";
 
+import ActionButton from "@/components/ActionButton";
 import PageHeader from "@/components/admin/PageHeader";
 import Panel from "@/components/admin/Panel";
+import SaveButton from "@/components/SaveButton";
 import Stars from "@/components/Stars";
 import { getSettings, googleLinks } from "@/lib/settings";
 import { bandSays, keyOf } from "@/lib/says";
@@ -91,7 +93,7 @@ export default async function GoogleReviewsAdmin() {
               className="field"
             />
           </div>
-          <button className="btn-admin">Save</button>
+          <SaveButton look="btn-admin">Save</SaveButton>
         </form>
         {settings.google_rating > 0 && (
           <p className="mt-3 flex items-center gap-2 text-sm text-muted">
@@ -147,7 +149,7 @@ export default async function GoogleReviewsAdmin() {
                 ))}
               </select>
             </div>
-            <button className="btn-admin">Add it</button>
+            <ActionButton className="btn-admin" done="Added ✓">Add it</ActionButton>
           </div>
         </form>
       </Panel>
@@ -212,7 +214,7 @@ export default async function GoogleReviewsAdmin() {
                             </option>
                           ))}
                         </select>
-                        <button className="btn-admin">Save</button>
+                        <SaveButton look="btn-admin">Save</SaveButton>
                       </div>
                     </form>
                   ) : (
@@ -236,29 +238,53 @@ export default async function GoogleReviewsAdmin() {
                       {at > 0 && (
                         <form action={raiseSay}>
                           <input type="hidden" name="key" value={key} />
-                          <button className="text-xs font-semibold text-brand">Up</button>
+                          <ActionButton
+                            className="text-xs font-semibold text-brand"
+                            doneClassName="text-mint"
+                            busy="…"
+                            done="Moved"
+                          >
+                            Up
+                          </ActionButton>
                         </form>
                       )}
                       {at < band.length - 1 && (
                         <form action={lowerSay}>
                           <input type="hidden" name="key" value={key} />
-                          <button className="text-xs font-semibold text-brand">Down</button>
+                          <ActionButton
+                            className="text-xs font-semibold text-brand"
+                            doneClassName="text-mint"
+                            busy="…"
+                            done="Moved"
+                          >
+                            Down
+                          </ActionButton>
                         </form>
                       )}
                       {at > 0 && (
                         <form action={leadWith}>
                           <input type="hidden" name="key" value={key} />
-                          <button className="text-xs font-semibold text-muted">
+                          <ActionButton
+                            className="text-xs font-semibold text-muted"
+                            doneClassName="text-mint"
+                            busy="…"
+                            done="Moved"
+                          >
                             To the front
-                          </button>
+                          </ActionButton>
                         </form>
                       )}
                       {one.from === "typed" && (
                         <form action={removeQuote}>
                           <input type="hidden" name="at" value={one.at} />
-                          <button className="text-xs font-semibold text-red-700">
+                          <ActionButton
+                            className="text-xs font-semibold text-red-700"
+                            doneClassName="text-mint"
+                            busy="…"
+                            done="Deleted"
+                          >
                             Delete
-                          </button>
+                          </ActionButton>
                         </form>
                       )}
                     </span>

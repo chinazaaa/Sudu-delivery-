@@ -1,3 +1,4 @@
+import ActionButton from "@/components/ActionButton";
 import PageHeader from "@/components/admin/PageHeader";
 import Link from "next/link";
 import Figure from "@/components/admin/Figure";
@@ -391,7 +392,9 @@ export default async function CustomersPage({
             <option value="none">Nobody brought them</option>
           </select>
         )}
-        <button className="btn-admin">Search</button>
+        <ActionButton className="btn-admin" busy="Searching…" done="Searched ✓">
+          Search
+        </ActionButton>
         {(by !== "" || (query.q ?? "") !== "" || view !== "") && (
           <a href="/admin/customers" className="btn-admin">
             Clear

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ActionButton from "@/components/ActionButton";
 import PageHeader from "@/components/admin/PageHeader";
 import MoreList from "@/components/admin/MoreList";
 import { waitingCounts } from "@/lib/admin";
@@ -74,7 +75,14 @@ export default async function MorePage() {
             action={logout}
             className="flex min-h-[46px] items-center border-t-[1.5px] border-rule px-0.5 py-3"
           >
-            <button className="text-[14.5px] font-semibold text-muted">Sign out</button>
+            <ActionButton
+              className="text-[14.5px] font-semibold text-muted"
+              doneClassName="text-mint"
+              busy="Signing out…"
+              done="Signed out"
+            >
+              Sign out
+            </ActionButton>
           </form>
         </section>
       </div>

@@ -3,6 +3,7 @@ import ConfirmButton from "./ConfirmButton";
 import { naira } from "@/lib/money";
 import { agoLabel } from "@/lib/time";
 import type { Candidate, Settled } from "@/lib/alerts";
+import ActionButton from "@/components/ActionButton";
 
 /**
  * One payment alert, with the orders it could be about.
@@ -130,9 +131,9 @@ export default function AlertCard({
         <form action={setMailDone} className="ml-auto">
           <input type="hidden" name="mail_id" value={letter.id} />
           <input type="hidden" name="done" value={String(!done)} />
-          <button className="btn-admin btn-admin-sm">
+          <ActionButton done="Filed ✓">
             {done ? "Put it back" : "Dealt with"}
-          </button>
+          </ActionButton>
         </form>
       </div>
     </article>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import ActionButton from "@/components/admin/ActionButton";
+import ActionButton from "@/components/ActionButton";
 
 /**
  * A left basket, turned into an order, minus whatever you untick.

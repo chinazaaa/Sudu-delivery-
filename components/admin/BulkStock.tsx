@@ -2,6 +2,7 @@
 
 import { setManyStock } from "@/app/admin/actions";
 import { Picking, showingNow, Tick, usePicked } from "./Picking";
+import ActionButton from "@/components/ActionButton";
 
 export { Picking, Tick };
 
@@ -75,20 +76,24 @@ export function Bar({
         </button>
 
         <span className="ml-auto flex flex-wrap gap-1.5">
-          <button
+          <ActionButton
             name="available"
             value="true"
             className="btn-admin btn-admin-sm btn-admin-dark font-bold"
+            busy="…"
+            done="On sale ✓"
           >
             Put on sale
-          </button>
-          <button
+          </ActionButton>
+          <ActionButton
             name="available"
             value="false"
             className="btn-admin btn-admin-sm btn-admin-dark font-bold"
+            busy="…"
+            done="Off sale ✓"
           >
             Take off sale
-          </button>
+          </ActionButton>
         </span>
       </form>
     </div>

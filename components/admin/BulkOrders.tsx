@@ -183,7 +183,7 @@ export function Bar({
               disabled={busy}
               className="btn-admin btn-admin-sm border-brand bg-brand text-white disabled:opacity-50"
             >
-              Move {ids.length}
+              {busy ? "Moving…" : `Move ${ids.length}`}
             </button>
           </span>
         )}

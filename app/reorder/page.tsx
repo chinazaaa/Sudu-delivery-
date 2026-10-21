@@ -11,6 +11,7 @@ import { currentCustomer } from "@/lib/customer-auth";
 import { forgetMe } from "@/app/actions";
 import { db } from "@/lib/supabase";
 import { toBatchView } from "@/lib/view";
+import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -107,9 +108,14 @@ export default async function ReorderPage({
             out of it: stop being this person. */}
         <form action={forgetMe}>
           <input type="hidden" name="next" value="/reorder" />
-          <button className="text-sm text-muted hover:underline">
+          <ActionButton
+            className="text-sm text-muted hover:underline"
+            doneClassName="text-mint"
+            busy="Signing out…"
+            done="Signed out"
+          >
             Not {previous.customer_name}?
-          </button>
+          </ActionButton>
         </form>
       </div>
 

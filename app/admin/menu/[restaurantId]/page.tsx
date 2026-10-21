@@ -3,7 +3,7 @@ import { DAY_NAMES, openDays } from "@/lib/open-days";
 import { notFound } from "next/navigation";
 import AdminItemFilter from "@/components/AdminItemFilter";
 import Thumb from "@/components/Thumb";
-import ActionButton from "@/components/admin/ActionButton";
+import ActionButton from "@/components/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import SaveButton from "@/components/SaveButton";
 import { db } from "@/lib/supabase";

@@ -1,3 +1,5 @@
+import ActionButton from "@/components/ActionButton";
+import SaveButton from "@/components/SaveButton";
 import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
@@ -113,7 +115,9 @@ export default async function SantaWishlistsPage({
             </option>
           ))}
         </select>
-        <button className="btn-quiet px-4 py-2 text-sm">Search</button>
+        <ActionButton className="btn-quiet px-4 py-2 text-sm" busy="Searching…" done="Searched ✓">
+          Search
+        </ActionButton>
         {filtered ? (
           <a href="/admin/santa/wishlists" className="btn-quiet px-4 py-2 text-sm">
             Clear
@@ -237,7 +241,7 @@ export default async function SantaWishlistsPage({
                       placeholder="Balogun, second floor"
                     />
                   </div>
-                  <button className="btn-quiet px-4 py-1.5 text-sm">Save</button>
+                  <SaveButton look="btn-quiet px-4 py-1.5 text-sm">Save</SaveButton>
                 </div>
                 {one.priced ? (
                   <p

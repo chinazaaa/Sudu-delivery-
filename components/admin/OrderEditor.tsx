@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import ActionButton from "@/components/admin/ActionButton";
+import ActionButton from "@/components/ActionButton";
 
 import { naira } from "@/lib/money";
 import type { EditedLine } from "@/lib/order-edit";
@@ -112,9 +112,9 @@ export default function OrderEditor({
           </p>
           <form action={settle} className="mt-2">
             <input type="hidden" name="order_id" value={orderId} />
-            <button className="btn-primary px-4 py-2 text-sm">
+            <ActionButton className="btn-primary px-4 py-2 text-sm" busy="Agreeing…" done="Agreed ✓">
               The price is agreed
-            </button>
+            </ActionButton>
           </form>
         </div>
       )}
@@ -182,12 +182,15 @@ export default function OrderEditor({
                               name="option_row_id"
                               value={one.id}
                             />
-                            <button
+                            <ActionButton
                               aria-label={`Take off ${one.name}`}
                               className="text-muted hover:text-red-700"
+                              doneClassName="text-mint"
+                              busy="…"
+                              done="✓"
                             >
                               ×
-                            </button>
+                            </ActionButton>
                           </form>
                           )}
                         </span>
@@ -245,9 +248,9 @@ export default function OrderEditor({
                         className="field mt-0.5 w-28 bg-white py-1.5 text-sm"
                       />
                     </label>
-                    <button className="btn-quiet bg-white px-3 py-2 text-sm">
+                    <ActionButton className="btn-quiet bg-white px-3 py-2 text-sm" busy="Saving…" done="Saved ✓">
                       Save
-                    </button>
+                    </ActionButton>
                     <span className="text-xs text-muted">0 takes it off</span>
                   </form>
 
@@ -326,7 +329,9 @@ export default function OrderEditor({
                       className="field mt-0.5 w-28 py-1.5 text-sm"
                     />
                   </label>
-                  <button className="btn-quiet px-3 py-2 text-sm">Add it</button>
+                  <ActionButton className="btn-quiet px-3 py-2 text-sm" busy="Adding…" done="Added ✓">
+                    Add it
+                  </ActionButton>
                 </form>
               </li>
             ))}
@@ -419,7 +424,9 @@ function ChoiceForm({
             className="field mt-0.5 w-28 bg-white py-1.5 text-sm"
           />
         </label>
-        <button className="btn-quiet bg-white px-3 py-2 text-sm">Add</button>
+        <ActionButton className="btn-quiet bg-white px-3 py-2 text-sm" busy="Adding…" done="Added ✓">
+          Add
+        </ActionButton>
       </div>
       <p className="text-xs text-muted">Minus works: −2000 takes money off.</p>
     </form>
@@ -513,9 +520,9 @@ function SwapForm({
                   className="field mt-0.5 w-28 bg-white py-1.5 text-sm"
                 />
               </label>
-              <button className="btn-quiet bg-white px-3 py-2 text-sm">
+              <ActionButton className="btn-quiet bg-white px-3 py-2 text-sm" busy="Swapping…" done="Swapped ✓">
                 Make it this
-              </button>
+              </ActionButton>
             </form>
           </li>
         ))}

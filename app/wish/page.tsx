@@ -3,6 +3,7 @@ import Link from "next/link";
 import { safeSettings, whatsappLink } from "@/lib/settings";
 import PageHead from "@/components/PageHead";
 import { wishAction } from "./actions";
+import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -117,12 +118,13 @@ export default async function WishPage({
             />
           </div>
 
-          <button
-            type="submit"
+          <ActionButton
             className="btn-primary w-full border-2 border-ink text-lg"
+            busy="Sending…"
+            done="Sent ✓"
           >
             Send it
-          </button>
+          </ActionButton>
           <p className="text-center text-sm text-muted">
             No account, nothing to sign up for. One box and you are done.
           </p>

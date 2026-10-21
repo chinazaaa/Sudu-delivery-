@@ -4,6 +4,7 @@ import Stat from "@/components/admin/Stat";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { sourceNumbers, sourcesForPicker } from "@/lib/sources";
+import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -112,9 +113,9 @@ export default async function SourcesPage({
                 ))}
               </select>
             </div>
-            <button type="submit" className="btn-admin-go">
+            <ActionButton className="btn-admin-go" busy="Looking…" done="Shown ✓">
               Show
-            </button>
+            </ActionButton>
           </form>
 
           {numbers === null ? (

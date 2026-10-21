@@ -34,7 +34,7 @@ import ConfirmButton from "@/components/admin/ConfirmButton";
 import BulkCarts from "@/components/admin/BulkCarts";
 import MakeOrder from "@/components/admin/MakeOrder";
 import { Picking, Tick } from "@/components/admin/Picking";
-import ActionButton from "@/components/admin/ActionButton";
+import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
 

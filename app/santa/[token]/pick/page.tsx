@@ -17,6 +17,7 @@ import {
   wishesOf,
 } from "@/lib/santa";
 import { addFromMenuAction } from "../../actions";
+import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -227,9 +228,9 @@ export default async function SantaPickPage({
                     {/* Where they are standing, so adding a second thing
                       * does not start with finding this page again. */}
                     <input type="hidden" name="back" value={link({})} />
-                    <button type="submit" className="btn-quiet w-full px-3 py-1.5 text-sm">
+                    <ActionButton className="btn-quiet w-full px-3 py-1.5 text-sm" busy="Adding…" done="Added ✓">
                       Add to my list
-                    </button>
+                    </ActionButton>
                   </form>
                 )}
               </div>

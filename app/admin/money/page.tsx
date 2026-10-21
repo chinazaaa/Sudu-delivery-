@@ -1,3 +1,4 @@
+import ActionButton from "@/components/ActionButton";
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import { naira } from "@/lib/money";
@@ -117,9 +118,14 @@ export default async function OtherMoneyPage() {
 
               <form action={removeOtherMoney} className="mt-2">
                 <input type="hidden" name="id" value={one.id} />
-                <button className="text-sm font-medium text-muted hover:text-red-700">
+                <ActionButton
+                  className="text-sm font-medium text-muted hover:text-red-700"
+                  doneClassName="text-mint"
+                  busy="Taking it off…"
+                  done="Taken off ✓"
+                >
                   Take it off
-                </button>
+                </ActionButton>
               </form>
             </li>
           ))}

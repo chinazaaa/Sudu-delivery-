@@ -6,7 +6,7 @@ import Panel from "@/components/admin/Panel";
 import { howPaid, orderStory } from "@/lib/order-story";
 import { StatusPill } from "@/components/admin/OrderCard";
 import ConfirmButton from "@/components/admin/ConfirmButton";
-import ActionButton from "@/components/admin/ActionButton";
+import ActionButton from "@/components/ActionButton";
 import SaveButton from "@/components/SaveButton";
 import WhenHanded from "@/components/admin/WhenHanded";
 import { orderFeed } from "@/lib/admin-data";
@@ -825,7 +825,9 @@ async function orderPage(id: string, said: string) {
                     className="field min-h-[42px] w-44 py-0 text-[14.5px]"
                   />
                 </label>
-                <button className="btn-admin">Set the day</button>
+                <ActionButton className="btn-admin" busy="Setting…" done="Set ✓">
+                  Set the day
+                </ActionButton>
               </form>
 
               {/* Not only the ones that repeat. Somebody rings up wanting the
@@ -844,9 +846,9 @@ async function orderPage(id: string, said: string) {
                     className="field min-h-[42px] w-44 py-0 text-[14.5px]"
                   />
                 </label>
-                <button className="btn-admin">
+                <ActionButton className="btn-admin" busy="Raising…" done="Raised ✓">
                   {repeatEvery !== "" ? "Raise the next one" : "Order this again"}
-                </button>
+                </ActionButton>
                 <span className="hint">
                   Copies what is in it now, unpaid, ready to send.
                 </span>
@@ -988,9 +990,9 @@ async function orderPage(id: string, said: string) {
                   </optgroup>
                 )}
               </select>
-              <button type="submit" className="btn-admin">
+              <ActionButton className="btn-admin" busy="Moving…" done="Moved ✓">
                 Move it
-              </button>
+              </ActionButton>
             </form>
           </Panel>
 

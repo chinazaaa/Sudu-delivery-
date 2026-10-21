@@ -29,6 +29,7 @@ import {
   setCustomerReviewed,
 } from "../actions";
 import type { OrderStatus } from "@/lib/types";
+import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -621,7 +622,9 @@ export default async function OrdersPage({
               </option>
             ))}
           </select>
-          <button className="btn-admin">Filter</button>
+          <ActionButton className="btn-admin" busy="Filtering…" done="Filtered ✓">
+            Filter
+          </ActionButton>
         </form>
       </div>
 
