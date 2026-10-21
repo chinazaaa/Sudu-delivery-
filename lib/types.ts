@@ -8,6 +8,9 @@ export type Restaurant = {
    *  has not had the migration run, which is why nothing depends on it. */
   slug?: string | null;
   address: string;
+  /** The counter's own WhatsApp number, for sending the run list ahead.
+   *  Empty means the list is read out at the counter, as it always was. */
+  phone?: string | null;
   closes_at: string;
   active: boolean;
   /** Whether the chat may put this counter forward when somebody says they
@@ -133,6 +136,14 @@ export type Batch = {
   /** The order the stops are driven in on this run, by restaurant name.
    *  Null until somebody arranges it, which falls back to alphabetical. */
   stop_order?: string[] | null;
+  /** Opens this one run at /run/<token> with no admin login, so somebody
+   *  who is not trusted with the shop can still drive it. Null means
+   *  nobody is, and the link stops working the moment the run settles. */
+  runner_token?: string | null;
+  /** The counters already collected from, pipe wrapped by name. On the run
+   *  rather than per line, because collecting is a thing that happens to a
+   *  stop: six lines at one counter come over in one bag and tick once. */
+  runner_got?: string | null;
 };
 
 /** "cancelled" is only ever an order nobody paid for: a test, a duplicate,

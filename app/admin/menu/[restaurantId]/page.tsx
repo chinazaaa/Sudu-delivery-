@@ -199,6 +199,22 @@ export default async function RestaurantAdmin({
             <input name="address" defaultValue={restaurant.address} className="field" />
           </div>
           <div>
+            <label className="label" htmlFor="phone">Their WhatsApp number</label>
+            <input
+              id="phone"
+              name="phone"
+              inputMode="tel"
+              defaultValue={restaurant.phone ?? ""}
+              placeholder="080…"
+              className="field"
+            />
+            <p className="mt-1 text-xs text-muted">
+              Where the run list is sent before the car leaves, so the food is
+              being cooked while it is still on the road. Empty means the list
+              is read out at the counter.
+            </p>
+          </div>
+          <div>
             <label className="label" htmlFor="area">Which area</label>
             <select
               id="area"

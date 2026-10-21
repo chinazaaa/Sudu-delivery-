@@ -12,6 +12,10 @@ const PRIVATE = [
   // and redirects. Crawling it indexes nothing and only muddies who brought
   // whom, since a crawler is nobody's referral.
   "/s/",
+  // One night's names, numbers and blocks, opened by a link somebody is
+  // driving with. There is nothing here for a search engine and a great
+  // deal here for anybody else.
+  "/run/",
 ];
 
 /**

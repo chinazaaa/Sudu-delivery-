@@ -27,6 +27,8 @@ import {
 import { closeGroup } from "@/lib/groups";
 import { moveOrder, placeOrder, NOT_ORDERS_SQL } from "@/lib/orders";
 import { followRun, followRuns } from "@/lib/run-follow";
+import { newRunnerToken } from "@/lib/runner";
+import { runForAction } from "@/lib/runner-server";
 import { canTravel, groupCarts } from "@/lib/group-carts";
 import {
   deleteCheckoutLink,
@@ -3233,7 +3235,24 @@ export async function setFlashFee(form: FormData): Promise<void> {
  * whole of tracking: no rider app, no GPS, nothing to go wrong on the road.
  */
 export async function setBatchStage(form: FormData): Promise<void> {
-  await assertAdmin();
+  const batchId = String(form.get("batch_id"));
+
+  /*
+   * Admin, or whoever is driving this particular run.
+   *
+   * Moving a run along is most of what the person in the car does, and it
+   * is the one thing they were having to borrow an admin password for. The
+   * token has to name this run: a link for Tuesday cannot move Saturday.
+   *
+   * Widened here rather than copied into a second action on purpose. A
+   * stage tap carries the run's status, the cut-off when it reopens, two
+   * notifications and the delivery of every paid order with it, and a
+   * second copy of that would drift from this one inside a month.
+   */
+  const driving = await runForAction(String(form.get("runner_token") ?? ""));
+  const asDriver = driving !== null && driving.id === batchId && batchId !== "";
+  if (!asDriver) await assertAdmin();
+
   const stage = String(form.get("stage"));
   if (!STAGES.includes(stage as BatchStage)) return;
 
@@ -3246,8 +3265,6 @@ export async function setBatchStage(form: FormData): Promise<void> {
       : stage === "handed_out"
         ? "delivered"
         : "closed";
-
-  const batchId = String(form.get("batch_id"));
 
   const patch: Record<string, unknown> = {
     stage,
@@ -3361,9 +3378,10 @@ export async function setBatchStage(form: FormData): Promise<void> {
 
   // Said rather than done quietly, and last, because a redirect stops
   // everything after it.
-  if (movedTo !== "") {
+  if (movedTo !== "" && !asDriver) {
     redirect(`/admin/batch/${batchId}?moved=${encodeURIComponent(movedTo)}`);
   }
+  if (asDriver) revalidatePath(`/run/${driving?.runner_token}`);
 }
 
 /** Restaurants are added and edited here, not only by running the seed file. */
@@ -3477,6 +3495,11 @@ export async function updateRestaurant(form: FormData): Promise<void> {
       name: name || undefined,
       ...(slug !== "" ? { slug } : {}),
       address: String(form.get("address") ?? "").trim(),
+      // Where tonight's list gets sent before the car leaves. Standing at a
+      // counter reading six lines off a phone and then waiting for them to
+      // be cooked is most of a run; sending the same six lines forty
+      // minutes earlier turns the stop into a collection.
+      phone: String(form.get("phone") ?? "").trim(),
       closes_at: String(form.get("closes_at") ?? "").trim() || undefined,
       // All seven, or none ticked, both mean "every day": a restaurant
       // nobody has thought about must behave exactly as it always has.
@@ -5845,4 +5868,41 @@ export async function settledUp(form: FormData): Promise<void> {
 
   revalidatePath("/admin", "layout");
   revalidatePath("/o", "layout");
+}
+
+/**
+ * Hand the run to somebody, or take it back.
+ *
+ * The run sheet has always been behind this login, which means the only
+ * person who can drive a run is a person trusted with the whole shop. That
+ * is a staffing decision made by a piece of software, and it is the reason
+ * expanding has always meant finding another relative.
+ *
+ * A token per run is the smallest thing that changes it. Making one is one
+ * press, clearing it is one press, and clearing it works while the run is
+ * still live, which is exactly when somebody would need it to.
+ *
+ * Making a new one on a run that already has a token replaces it, so a
+ * link sent to the wrong person is cancelled by handing out the right one.
+ */
+export async function makeRunnerLink(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("batch_id") ?? "");
+  if (!id) return;
+
+  await db()
+    .from("batches")
+    .update({ runner_token: newRunnerToken() })
+    .eq("id", id);
+
+  revalidatePath("/admin", "layout");
+}
+
+export async function clearRunnerLink(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("batch_id") ?? "");
+  if (!id) return;
+
+  await db().from("batches").update({ runner_token: null }).eq("id", id);
+  revalidatePath("/admin", "layout");
 }

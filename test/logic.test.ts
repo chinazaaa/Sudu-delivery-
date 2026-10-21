@@ -19,6 +19,15 @@ import { monthOf, nextMonth } from "../lib/standing";
 import { googleTagId, instagramLink, numberOr, shopEmails, xLink } from "../lib/settings";
 import { isExtra } from "../lib/shelf";
 import {
+  counterMessage,
+  expectedAt,
+  gotList,
+  hasGot,
+  runProgress,
+  stillDriving,
+  withGot,
+} from "../lib/runner";
+import {
   collectedFrom,
   everyPair,
   everywhere,
@@ -4627,4 +4636,102 @@ test("a mixed cart pays for the trip once, not once per half", () => {
   // A cart that is only a kitchen never took that path, so it was always
   // charged the trip once. The two agree now.
   assert.equal(feeFor(2, null, withTrip), right);
+});
+
+/*
+ * The run sheet somebody can be handed without being handed the shop.
+ *
+ * Every rule here exists because the alternative does real damage on a
+ * Saturday evening: a link that outlives its run, a stop that ticks itself
+ * off because another counter's name contains it, or a customer locked out
+ * of their own orders by a driver's typo.
+ */
+test("a runner link opens one live run and nothing else", () => {
+  const live = { runner_token: "abc", settled_at: null };
+  assert.equal(stillDriving(live), true);
+
+  // Settled is the end of the night. The books are closed and the link is
+  // a copy of a night's names sitting in somebody's messages.
+  assert.equal(stillDriving({ ...live, settled_at: "2026-10-31T20:00:00Z" }), false);
+
+  // Cleared beats everything, and has to work while the run is still live:
+  // that is exactly when the shop needs to take it back.
+  assert.equal(stillDriving({ runner_token: null, settled_at: null }), false);
+  assert.equal(stillDriving({ runner_token: "   ", settled_at: null }), false);
+  assert.equal(stillDriving(null), false);
+});
+
+test("a stop is ticked by its whole name, not by what contains it", () => {
+  const got = withGot("", "KFC", true);
+  assert.equal(got, "|KFC|");
+  assert.equal(hasGot(got, "KFC"), true);
+
+  // The bars are the whole point. Without them a stop called KFC ticks off
+  // KFC Express while its food is still behind the counter.
+  assert.equal(hasGot(got, "KFC Express"), false);
+
+  // Case is how a name is typed, not which counter it is.
+  assert.equal(hasGot(got, "kfc"), true);
+
+  // Putting one back, because the usual mistake is ticking the stop you
+  // are standing in front of rather than the one you just left.
+  assert.equal(withGot(got, "KFC", false), "");
+  assert.equal(hasGot(withGot(got, "KFC", false), "KFC"), false);
+
+  // Ticking twice is still one stop.
+  assert.equal(withGot(withGot("", "KFC", true), "KFC", true), "|KFC|");
+
+  const two = withGot(got, "Dominos Pizza", true);
+  assert.deepEqual(gotList(two), ["KFC", "Dominos Pizza"]);
+});
+
+test("the run's progress is what was collected, not what was priced", () => {
+  const counters = [{ restaurant: "KFC" }, { restaurant: "Dominos Pizza" }];
+  const bags = [
+    { orders: [{ status: "delivered" }] },
+    { orders: [{ status: "delivered" }, { status: "paid" }] },
+  ];
+
+  const half = runProgress(counters, "|KFC|", bags);
+  assert.equal(half.stops, 1);
+  assert.equal(half.ofStops, 2);
+  assert.equal(half.shopping, true);
+
+  // A bag is dropped when everything in it is. One order still paid means
+  // the bag is still in the boot.
+  assert.equal(half.dropped, 1);
+  assert.equal(half.ofBags, 2);
+
+  const shopped = runProgress(counters, "|KFC|Dominos Pizza|", bags);
+  assert.equal(shopped.shopping, false);
+});
+
+test("the counter message says what to cook and never what we expect to pay", () => {
+  const group = {
+    restaurant: "Dominos Pizza",
+    lines: [
+      { name: "Pepperoni", choices: ["Medium 12\"", "Hand Tossed"], qty: 2, unitPrice: 11000, key: "a", paid: null, itemId: "x", recovered: 0, menuPrice: 11000 },
+      { name: "Cheesy Bread", choices: [], qty: 1, unitPrice: 4500, key: "b", paid: null, itemId: "y", recovered: 0, menuPrice: 4500 },
+    ],
+    expectedFoodTotal: 26500,
+  };
+
+  const said = counterMessage(group, { shopName: "Sudu", collectingAt: "4pm" });
+  assert.match(said, /2 x Pepperoni \(Medium 12", Hand Tossed\)/);
+  assert.match(said, /1 x Cheesy Bread/);
+  assert.match(said, /4pm/);
+  assert.match(said, /card on collection/);
+
+  // No prices. Quoting what we expect to pay invites an argument about a
+  // figure nobody at that counter quoted.
+  assert.equal(said.includes("26,500"), false);
+  assert.equal(said.includes("11,000"), false);
+  assert.equal(said.includes("₦"), false);
+
+  // The expected total is the driver's, for checking the card machine.
+  assert.equal(expectedAt(group), "₦26,500");
+
+  // A counter with no collection time still reads as a sentence.
+  const vague = counterMessage(group, { shopName: "Sudu", collectingAt: "" });
+  assert.match(vague, /for collection:/);
 });

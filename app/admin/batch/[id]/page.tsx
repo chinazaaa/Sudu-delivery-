@@ -21,6 +21,9 @@ import Figure from "@/components/admin/Figure";
 import Panel from "@/components/admin/Panel";
 import SheetShape from "@/components/admin/SheetShape";
 import Checklist from "@/components/admin/Checklist";
+import RunnerLink from "@/components/admin/RunnerLink";
+import { counterMessage, hasGot } from "@/lib/runner";
+import { counterPhones as readCounterPhones } from "@/lib/runner-server";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import ActionButton from "@/components/ActionButton";
 import StagePicker from "@/components/admin/StagePicker";
@@ -181,6 +184,9 @@ export default async function BatchPage({
   // For the run that is one counter's run. Read here rather than typed, so
   // a restaurant added this morning is tickable this afternoon.
   const counters = await openRestaurants();
+  // Where each counter can be sent tonight's list, by name, because a
+  // counter group is grouped by the name on the order line.
+  const counterPhones = await readCounterPhones();
 
   // One wording for a share, here and in the message the customer gets:
   // #1001a and #1001b, never #1001 on this screen and #1001a on theirs.
@@ -263,23 +269,31 @@ export default async function BatchPage({
   /**
    * A stop with a real figure against every one of its lines.
    *
-   * The private ticks live in one browser's storage and cannot be read here,
-   * so this is the only thing the page can honestly call done: the money has
-   * been handed over and said.
-   */
-  /*
-   * The one rule, used by the count at the top and by every tick under it.
-   *
-   * The stops used to tick themselves the moment the run reached the road,
-   * while the count went on saying "0 of 3 done", because the count asked
-   * this question and the ticks asked whether the car had set off. So three
-   * stops read "paid for" in green over a line that said none of them were,
-   * and the green was the wrong one: a run being on the road says the food
-   * was bought, not what it cost.
+   * This is reconciliation, not collection. It answers "do we know what
+   * this cost", which is the question asked afterwards when the books are
+   * being closed.
    */
   const paidFor = (group: (typeof counter)[number]) =>
     group.lines.length > 0 && group.lines.every((line) => line.paid !== null);
+
   const doneStops = counter.filter(paidFor).length;
+
+  /*
+   * A stop whoever is driving has said they have the food from.
+   *
+   * Kept apart from priced rather than folded into it. These two were one
+   * rule once and it went wrong in both directions: the ticks said the car
+   * had set off while the count said nothing was paid for, and the fix at
+   * the time was to make both mean "priced", which answered the count
+   * honestly and left the page no way to say the obvious thing.
+   *
+   * It is also optional, and mostly not used, so it is only ever shown
+   * when somebody has actually ticked something. A line reading "0 of 3
+   * collected" over a run whose food is in the boot is worse than no line.
+   */
+  const gotStops = counter.filter((group) =>
+    hasGot(batch.runner_got, group.restaurant)
+  ).length;
 
   /**
    * Which orders to collect at each counter.
@@ -587,7 +601,11 @@ export default async function BatchPage({
             label="Pay at counters"
             value={naira(summary.foodCost)}
             detail={`${counter.length} stop${counter.length === 1 ? "" : "s"}${
-              counter.length > 0 ? ` · ${doneStops} done` : ""
+              counter.length > 0
+                ? gotStops > 0
+                  ? ` · ${gotStops} collected`
+                  : ` · ${doneStops} priced`
+                : ""
             }`}
           />
         </div>
@@ -659,6 +677,24 @@ export default async function BatchPage({
           last few runs.
           Put this run&apos;s real costs in under Profit and this becomes exact.
         </p>
+      )}
+
+      {/*
+        Who is driving this one.
+
+        Next to the run rather than on a page of its own, because a page of
+        links to every run is a page where the wrong one gets copied, and
+        the cost of copying the wrong one is a stranger holding a different
+        night's names and blocks.
+      */}
+      {!batch.settled_at && (
+        <Panel
+          title="Whoever is driving"
+          detail="A link that opens this run and nothing else, so somebody who is not trusted with the shop can still work the night from their own phone."
+          className="mb-4"
+        >
+          <RunnerLink batchId={batch.id} token={batch.runner_token ?? null} />
+        </Panel>
       )}
 
       {short.length > 0 && (
@@ -763,11 +799,16 @@ export default async function BatchPage({
                     </h2>
                     <span className="hint">
                       <span className="lg:hidden">
-                        {doneStops} of {counter.length} done
+                        {gotStops > 0
+                          ? `${gotStops} of ${counter.length} collected`
+                          : `${doneStops} of ${counter.length} priced`}
                       </span>
                       <span className="hidden lg:inline">
-                        {doneStops} of {counter.length} paid for · tap a stop
-                        when you have paid for it. Ticks are yours alone.
+                        {gotStops > 0
+                          ? `${gotStops} of ${counter.length} collected, ticked by whoever is driving. `
+                          : ""}
+                        {doneStops} of {counter.length} priced · the item ticks
+                        under each stop are yours alone.
                       </span>
                     </span>
                   </div>
@@ -931,6 +972,30 @@ export default async function BatchPage({
                         />
                       )}
                     </div>
+                    {/*
+                      Send the list before the car leaves.
+
+                      This is the one piece of a run that costs nobody
+                      anything and shortens the evening for everybody: the
+                      counter starts cooking while the car is still on the
+                      road, so the stop becomes a collection instead of a
+                      queue. Nothing downstream waits on it, and a counter
+                      with no number saved simply does not offer it.
+                    */}
+                    {!shopped && (counterPhones[group.restaurant] ?? "") !== "" && (
+                      <a
+                        href={whatsappTo(
+                          counterPhones[group.restaurant],
+                          counterMessage(group, { shopName: "Sudu", collectingAt: "" })
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn-admin btn-admin-sm btn-admin-go mt-2 inline-flex"
+                      >
+                        Send them this list
+                      </a>
+                    )}
+
                     <div className="mt-2">
                       <Checklist
                         id={`counter-${batch.id}-${group.restaurant}`}
@@ -1683,15 +1748,15 @@ export default async function BatchPage({
                   </p>
                   <p className="text-[12.5px] text-muted">
                     {summary.costs === 0
-                      ? "Fuel and driver are not in this yet. Put them in below and this becomes the real number."
-                      : `After ${naira(summary.costs)} of fuel, driver and anything else.`}
+                      ? "What the car cost is not in this yet. Put it in below and this becomes the real number."
+                      : `After ${naira(summary.costs)} of transport and anything else on the night.`}
                   </p>
                 </Panel>
 
                 <Panel
                   title="Run costs"
                   size="sm"
-                  detail="Fill these in on the night. They come straight off the profit above, and off this run in the dashboard. What the food cost is not here: it is priced at the counter, item by item, under At the counter."
+                  detail="What the car cost, on the night. It comes straight off the profit above and off this run in the dashboard. What the food cost is not here: it is priced at the counter, item by item, under At the counter."
                   className="space-y-3"
                 >
 
@@ -1736,69 +1801,96 @@ export default async function BatchPage({
                         forty-eight, because a thumb needs the extra six and
                         a mouse does not. A phone keeps forty-four, which is
                         the floor the six rules set. */}
-                    <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-                      <div>
-                        <label className="label" htmlFor="fuel_cost">Fuel</label>
-                        <input
-                          id="fuel_cost"
-                          name="fuel_cost"
-                          inputMode="numeric"
-                          defaultValue={batch.fuel_cost || ""}
-                          placeholder="0"
-                          className="field field-admin min-h-[44px] sm:min-h-[42px]"
-                        />
-                      </div>
-                      <div>
-                        <label className="label" htmlFor="driver_cost">Driver</label>
-                        <input
-                          id="driver_cost"
-                          name="driver_cost"
-                          inputMode="numeric"
-                          defaultValue={batch.driver_cost || ""}
-                          placeholder="0"
-                          className="field field-admin min-h-[44px] sm:min-h-[42px]"
-                        />
-                      </div>
-                      <div>
-                        <label className="label" htmlFor="transport_cost">
-                          Transport
-                        </label>
-                        <input
-                          id="transport_cost"
-                          name="transport_cost"
-                          inputMode="numeric"
-                          defaultValue={batch.transport_cost || ""}
-                          placeholder="0"
-                          className="field field-admin min-h-[44px] sm:min-h-[42px]"
-                        />
-                        <p className="mt-1 text-xs text-muted">
-                          Keke, bike, a car for the bags.
-                        </p>
-                      </div>
-                      <div>
-                        <label className="label" htmlFor="other_cost">Anything else</label>
-                        <input
-                          id="other_cost"
-                          name="other_cost"
-                          inputMode="numeric"
-                          defaultValue={batch.other_cost || ""}
-                          placeholder="0"
-                          className="field field-admin min-h-[44px] sm:min-h-[42px]"
-                        />
-                      </div>
-                    </div>
+                    {/*
+                      One box, because one box is what gets filled in.
+
+                      This asked four questions on every run: fuel, driver,
+                      transport, anything else. Transport is the only one
+                      ever answered, because the car is the cost and the
+                      driver is family. Three empty boxes beside the one
+                      real one is not neutral: it makes a thirty second job
+                      look like a form, and a form on a Saturday night gets
+                      skipped, and a run with no cost in it reports a profit
+                      that is too high.
+
+                      The other three are still here, still counted, and
+                      still saved. They are folded away, which is the
+                      difference between a field that is available and a
+                      field that is demanded.
+                    */}
                     <div>
-                      <label className="label" htmlFor="cost_note">
-                        What that other money went on
+                      <label className="label" htmlFor="transport_cost">
+                        What the car cost
                       </label>
                       <input
-                        id="cost_note"
-                        name="cost_note"
-                        defaultValue={batch.cost_note}
-                        placeholder="Bags, gate fee, airtime"
+                        id="transport_cost"
+                        name="transport_cost"
+                        inputMode="numeric"
+                        defaultValue={batch.transport_cost || ""}
+                        placeholder="0"
                         className="field field-admin min-h-[44px] sm:min-h-[42px]"
                       />
+                      <p className="mt-1 text-xs text-muted">
+                        Keke, bike, a car for the bags. This is the one that
+                        comes off the profit on nearly every run.
+                      </p>
                     </div>
+
+                    <details className="border-t-[1.5px] border-rule pt-2.5">
+                      <summary className="cursor-pointer text-[13px] font-semibold text-brand">
+                        Fuel, a driver, or something else on this run
+                      </summary>
+                      <div className="mt-2.5 space-y-3">
+                        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                          <div>
+                            <label className="label" htmlFor="fuel_cost">Fuel</label>
+                            <input
+                              id="fuel_cost"
+                              name="fuel_cost"
+                              inputMode="numeric"
+                              defaultValue={batch.fuel_cost || ""}
+                              placeholder="0"
+                              className="field field-admin min-h-[44px] sm:min-h-[42px]"
+                            />
+                          </div>
+                          <div>
+                            <label className="label" htmlFor="driver_cost">Driver</label>
+                            <input
+                              id="driver_cost"
+                              name="driver_cost"
+                              inputMode="numeric"
+                              defaultValue={batch.driver_cost || ""}
+                              placeholder="0"
+                              className="field field-admin min-h-[44px] sm:min-h-[42px]"
+                            />
+                          </div>
+                          <div>
+                            <label className="label" htmlFor="other_cost">Anything else</label>
+                            <input
+                              id="other_cost"
+                              name="other_cost"
+                              inputMode="numeric"
+                              defaultValue={batch.other_cost || ""}
+                              placeholder="0"
+                              className="field field-admin min-h-[44px] sm:min-h-[42px]"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="label" htmlFor="cost_note">
+                            What that other money went on
+                          </label>
+                          <input
+                            id="cost_note"
+                            name="cost_note"
+                            defaultValue={batch.cost_note}
+                            placeholder="Bags, gate fee, airtime"
+                            className="field field-admin min-h-[44px] sm:min-h-[42px]"
+                          />
+                        </div>
+                      </div>
+                    </details>
+
                     <SaveButton look={ROW_ACTION}>Save costs</SaveButton>
                   </form>
                 </Panel>
