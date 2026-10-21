@@ -182,9 +182,9 @@ export default function CounterLines({
 
       <ul className="divide-y-[1.5px] divide-rule border-y-[1.5px] border-rule">
         {lines.map((line) => (
-          <li
-            key={line.key}
-            className={`flex items-center gap-3 py-3.5 ${
+          <li key={line.key} className="py-3.5">
+          <div
+            className={`flex items-center gap-3 ${
               done || ticked[line.key] ? "opacity-60" : ""
             }`}
           >
@@ -231,119 +231,109 @@ export default function CounterLines({
               placeholder={String(line.menuTotal)}
               className="field w-[104px] shrink-0 py-2 text-right font-mono text-[17px]"
             />
+          </div>
+
+          {/*
+            Under the line it is about, and grey, because a counter is out
+            of something about one stop in ten. A phone icon on every row
+            would be noise the other nine, and it would anyway promise one
+            person to ring when this line can be three people's dinner.
+          */}
+          <button
+            type="button"
+            onClick={() => setShort(short === line.key ? "" : line.key)}
+            className={`mt-1 ml-[46px] text-[12.5px] underline ${
+              (notes[line.key] ?? line.note) !== "" ? "text-mint" : "text-muted"
+            }`}
+          >
+            {(notes[line.key] ?? line.note) !== ""
+              ? "Noted ✓"
+              : short === line.key
+                ? "Never mind"
+                : "Sold out?"}
+          </button>
+
+          {short === line.key && (
+            <div className="mt-2 soft bg-shell p-3">
+              <p className="text-[13px] font-semibold">
+                Who ordered {line.name}
+                {line.choices.length > 0 ? ` ${line.choices.join(", ")}` : ""}
+              </p>
+              {line.buyers.length === 0 ? (
+                <p className="mt-1 text-[13px] text-muted">
+                  Nobody on this run, which should not happen. Ring the shop.
+                </p>
+              ) : (
+                <ul className="mt-2 space-y-2">
+                  {line.buyers.map((buyer) => (
+                    <li
+                      key={`${buyer.phone}-${buyer.forName}`}
+                      className="flex items-center justify-between gap-3"
+                    >
+                      <span className="min-w-0 text-[15px]">
+                        <span className="font-bold">{buyer.name}</span>
+                        {buyer.forName !== "" && (
+                          <span className="text-muted">, for {buyer.forName}</span>
+                        )}
+                        {buyer.qty > 1 && (
+                          <span className="text-muted"> · {buyer.qty} of them</span>
+                        )}
+                      </span>
+                      <a
+                        href={`tel:${buyer.phone}`}
+                        className="btn-quiet shrink-0 px-4 py-2 text-sm"
+                      >
+                        Ring
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {/*
+                One sentence, and then back to the counter. What follows,
+                swapping the line so the brand figures count what actually
+                sold, is the shop's work, done afterwards at a desk.
+              */}
+              <p className="mt-3 text-[13px] font-semibold">
+                What did they take instead?
+              </p>
+              <textarea
+                rows={2}
+                defaultValue={line.note}
+                placeholder="Sold out, took the Vegetarian for the same money"
+                className="field mt-1 w-full py-2 text-[15px]"
+                onChange={(event) =>
+                  setNotes((now) => ({ ...now, [line.key]: event.target.value }))
+                }
+              />
+              <button
+                type="button"
+                disabled={savingNote}
+                onClick={() => {
+                  const form = new FormData();
+                  form.set("token", token);
+                  form.set("line_key", line.key);
+                  form.set("said_about", `${line.qty}x ${line.name}`);
+                  form.set("said", notes[line.key] ?? line.note);
+                  saveNote(() => {
+                    void leaveNote(form);
+                  });
+                  setShort("");
+                }}
+                className="btn-primary mt-2 w-full justify-center py-3 text-[15px]"
+              >
+                {savingNote ? "Saving…" : "Save the note"}
+              </button>
+              <p className="mt-2 text-xs text-muted">
+                That is all you need to do. The shop changes the order and
+                sorts the money afterwards.
+              </p>
+            </div>
+          )}
           </li>
         ))}
       </ul>
-
-      {/* Nothing here most evenings, and everything here when it matters. */}
-      {lines.map((line) =>
-        short === line.key ? (
-          <div key={`${line.key}-short`} className="soft bg-shell p-3">
-            <p className="text-[13px] font-semibold">
-              Who ordered {line.name}
-              {line.choices.length > 0 ? ` ${line.choices.join(", ")}` : ""}
-            </p>
-            {line.buyers.length === 0 ? (
-              <p className="mt-1 text-[13px] text-muted">
-                Nobody on this run, which should not happen. Ring the shop.
-              </p>
-            ) : (
-              <ul className="mt-2 space-y-2">
-                {line.buyers.map((buyer) => (
-                  <li
-                    key={`${buyer.phone}-${buyer.forName}`}
-                    className="flex items-center justify-between gap-3"
-                  >
-                    <span className="min-w-0 text-[15px]">
-                      <span className="font-bold">{buyer.name}</span>
-                      {buyer.forName !== "" && (
-                        <span className="text-muted">, for {buyer.forName}</span>
-                      )}
-                      {buyer.qty > 1 && (
-                        <span className="text-muted"> · {buyer.qty} of them</span>
-                      )}
-                    </span>
-                    <a
-                      href={`tel:${buyer.phone}`}
-                      className="btn-quiet shrink-0 px-4 py-2 text-sm"
-                    >
-                      Ring
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {/*
-              One sentence, and then back to the counter.
-
-              This is the whole of her part in it. What follows, swapping
-              the line so the brand figures count what actually sold and
-              so the receipt and the order agree, is the shop's work, done
-              afterwards and at a desk. Asking somebody at a till with a
-              bag in one hand to re-pick and reprice an order is how a run
-              sheet stops being used.
-            */}
-            <p className="mt-3 text-[13px] font-semibold">
-              What did they take instead?
-            </p>
-            <textarea
-              name="said"
-              rows={2}
-              defaultValue={line.note}
-              placeholder="Sold out, took the Vegetarian for the same money"
-              className="field mt-1 w-full py-2 text-[15px]"
-              onChange={(event) =>
-                setNotes((now) => ({ ...now, [line.key]: event.target.value }))
-              }
-            />
-            <button
-              type="button"
-              disabled={savingNote}
-              onClick={() => {
-                const form = new FormData();
-                form.set("token", token);
-                form.set("line_key", line.key);
-                form.set("said_about", `${line.qty}x ${line.name}`);
-                form.set("said", notes[line.key] ?? line.note);
-                saveNote(() => {
-                  void leaveNote(form);
-                });
-                setShort("");
-              }}
-              className="btn-primary mt-2 w-full justify-center py-3 text-[15px]"
-            >
-              {savingNote ? "Saving…" : "Save the note"}
-            </button>
-            <p className="mt-2 text-xs text-muted">
-              That is all you need to do. The shop changes the order and
-              sorts the money afterwards.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShort("")}
-              className="mt-2 text-[13px] font-semibold text-muted underline"
-            >
-              Close without saving
-            </button>
-          </div>
-        ) : null
-      )}
-
-      {/* The quiet word itself, one per line, under the list. */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1">
-        {lines.map((line) => (
-          <button
-            key={`${line.key}-ask`}
-            type="button"
-            onClick={() => setShort(short === line.key ? "" : line.key)}
-            className="text-[12.5px] text-muted underline"
-          >
-            {(notes[line.key] ?? line.note) !== ""
-              ? `${line.name}: noted ✓`
-              : `${line.name} sold out?`}
-          </button>
-        ))}
-      </div>
 
       {/*
         The receipt check, which is the reason the figures are typed here
