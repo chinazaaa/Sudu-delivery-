@@ -13,6 +13,7 @@ import Frame from "@/components/Frame";
 import ShopOnly from "@/components/ShopOnly";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import SeasonDecor from "@/components/SeasonDecor";
 import { offerNudge, publicOffer } from "@/lib/coupons";
 import {
   googleLinks,
@@ -292,6 +293,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         : {})}
     >
       <body>
+        {/* Behind everything, and only when a season is on. */}
+        <SeasonDecor season={settings.season.trim().toLowerCase()} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify([who, site]) }}

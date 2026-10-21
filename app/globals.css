@@ -1564,3 +1564,76 @@ body:has([data-actionbar]) .sudubot-launcher {
 [data-season="halloween"] .shadow-\[10px_10px_0_\#15110e\] {
   box-shadow: 10px 10px 0 var(--season-dark);
 }
+
+/*
+ * The floating layer, and the three rules that keep it harmless.
+ *
+ * Fixed, so it drifts past whatever is being read rather than scrolling
+ * away. Deaf to the mouse, because a decoration that can swallow a tap on
+ * the order button is worse than no decoration at all. And under
+ * everything: z-index 0 against cards that sit in their own stacking
+ * contexts above it.
+ */
+.season-decor {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.season-float {
+  position: absolute;
+  top: 100%;
+  line-height: 1;
+  opacity: 0.55;
+  animation-name: season-rise;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+/*
+ * Up and gently sideways. The sway is a second transform on the same
+ * keyframes rather than a second animation, so the whole thing is one
+ * compositor job per pumpkin.
+ */
+@keyframes season-rise {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.55;
+  }
+  50% {
+    transform: translate3d(26px, -55vh, 0) rotate(14deg);
+  }
+  90% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translate3d(-18px, -115vh, 0) rotate(-10deg);
+    opacity: 0;
+  }
+}
+
+/*
+ * Stopped for anybody who has asked for it.
+ *
+ * Drifting shapes across a whole page are a common trigger for motion
+ * sickness, and the setting that says so is one the phone already knows.
+ * Hidden rather than frozen: seven motionless pumpkins stuck mid-screen
+ * read as a page that has broken.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .season-decor {
+    display: none;
+  }
+}
+
+/* The shop's own content sits above the drift. */
+[data-season] body > * {
+  position: relative;
+  z-index: 1;
+}
