@@ -15,7 +15,14 @@ export function ownsThePage(path: string | null | undefined): boolean {
   return (
     said.startsWith("/admin") ||
     said.startsWith("/promoter") ||
-    said.startsWith("/receipt")
+    said.startsWith("/receipt") ||
+    // The run sheet, which is a tool and not a shop. It arrived wearing
+    // the whole shop: a menu header, a four tab bar offering Cart and
+    // Group, the ordering chat, an offer card asking whether the person
+    // reading it was hungry, and a pumpkin drifting across the bag list.
+    // All of it addressed to a customer, on a page being read by somebody
+    // working, at a counter, in a hurry.
+    said.startsWith("/run")
   );
 }
 

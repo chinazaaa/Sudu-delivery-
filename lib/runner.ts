@@ -92,52 +92,6 @@ export function withGot(
 }
 
 /**
- * The message a counter gets before the car leaves.
- *
- * This is the whole point of sending anything ahead. Standing at a counter
- * reading six lines off a phone and then waiting for them to be cooked is
- * most of a run; sending the same six lines forty minutes earlier turns
- * the stop into a collection.
- *
- * Written as a person would write it, because a person reads it. No
- * prices: what the shop expects to pay is the shop's business and quoting
- * it back at a counter invites an argument about a figure nobody at that
- * counter quoted. The expected total is on the driver's sheet instead,
- * where it is used to check the card.
- */
-export function counterMessage(
-  group: CounterGroup,
-  when: { shopName: string; collectingAt: string; payByTransfer?: boolean }
-): string {
-  const lines = group.lines.map((line) => {
-    const choices = line.choices.length > 0 ? ` (${line.choices.join(", ")})` : "";
-    return `${line.qty} x ${line.name}${choices}`;
-  });
-
-  const head =
-    when.collectingAt.trim() === ""
-      ? `Good afternoon, this is ${when.shopName}. Please can we order the following for collection:`
-      : `Good afternoon, this is ${when.shopName}. Please can we order the following for collection around ${when.collectingAt}:`;
-
-  /*
-   * Asking for the total back, because that is what these counters
-   * already do and it is the most useful thing in the exchange. A price
-   * confirmed before the car leaves is a price the shop can check a
-   * receipt against, settle a transfer against, and notice a rise in,
-   * all without anybody standing at a till working it out.
-   *
-   * And the right sentence about paying. Promising to pay by card at a
-   * counter the shop settles by transfer is a small lie that costs real
-   * minutes at the counter sorting out.
-   */
-  const settle = when.payByTransfer
-    ? "Please confirm the total and we will send the transfer. Thank you."
-    : "Please confirm the total. We will pay by card on collection. Thank you.";
-
-  return [head, "", ...lines, "", settle].join("\n");
-}
-
-/**
  * How a counter takes an order before the car gets there.
  *
  * Not every kitchen is on WhatsApp. Some take a call, some have a number
@@ -167,6 +121,48 @@ export function howToOrderAhead(
   if (said === "whatsapp") return "whatsapp";
   if (said === "call") return "call";
   return "both";
+}
+
+/**
+ * The message a counter gets before the car leaves.
+ *
+ * This is the whole point of sending anything ahead. Standing at a counter
+ * reading six lines off a phone and then waiting for them to be cooked is
+ * most of a run; sending the same six lines forty minutes earlier turns
+ * the stop into a collection, and the price comes back before anybody is
+ * standing at a till.
+ *
+ * Short, because it is read by somebody with a kitchen to run. It asks the
+ * one thing worth asking and says nothing about paying: how the shop
+ * settles up is the shop's business, and a sentence about cards or
+ * transfers in a message asking for a price is a sentence that invites a
+ * conversation nobody wanted.
+ *
+ * No prices either. What the shop expects to pay invites an argument about
+ * a figure nobody at that counter quoted; the expected total stays on the
+ * driver's sheet where it is used to check the card.
+ *
+ * Sizes and choices are part of the name, not a note beside it. "Panarottis
+ * Special" and "Panarottis Special Large" are two different things to cook,
+ * and a kitchen reading the first one and guessing is the expensive way to
+ * find that out.
+ */
+export function counterMessage(
+  group: CounterGroup,
+  when: { shopName: string }
+): string {
+  const lines = group.lines.map((line) => {
+    const choices = line.choices.length > 0 ? ` ${line.choices.join(", ")}` : "";
+    return `${line.qty} x ${line.name}${choices}`;
+  });
+
+  return [
+    `Good afternoon, this is ${when.shopName}. Please can we confirm the total for the following:`,
+    "",
+    ...lines,
+    "",
+    "Thank you.",
+  ].join("\n");
 }
 
 /**

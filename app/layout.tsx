@@ -293,8 +293,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         : {})}
     >
       <body>
-        {/* Behind everything, and only when a season is on. */}
-        <SeasonDecor season={settings.season.trim().toLowerCase()} />
+        {/* Over the page, and only when a season is on. Not on the back of
+            the shop: a pumpkin drifting across tonight's run sheet is a
+            decoration on somebody's work. */}
+        <ShopOnly>
+          <SeasonDecor season={settings.season.trim().toLowerCase()} />
+        </ShopOnly>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify([who, site]) }}
@@ -376,12 +380,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         )}
         {/* A small card in the corner, once per offer, never over the cart
             or the checkout. */}
-        <OfferNudge
-          nudge={nudge}
-          appId={settings.ios_app_id}
-          androidPackage={settings.android_package}
-          appQr={appQr}
-        />
+        <ShopOnly>
+          <OfferNudge
+            nudge={nudge}
+            appId={settings.ios_app_id}
+            androidPackage={settings.android_package}
+            appQr={appQr}
+          />
+        </ShopOnly>
         {/* A new page opens at the top of itself, rather than showing the
             footer for a frame on the way there. */}
         <ToTop />

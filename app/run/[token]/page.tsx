@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import ActionButton from "@/components/ActionButton";
 import CounterLines from "@/components/runner/CounterLines";
 import RunStage from "@/components/runner/RunStage";
+import RunSwitch from "@/components/runner/RunSwitch";
 import type { CounterGroup } from "@/lib/admin";
 import { SLOT_LABEL } from "@/lib/config";
 import { whatsappTo } from "@/lib/messages";
@@ -22,7 +21,6 @@ import {
   type CounterContact,
 } from "@/lib/runner-server";
 import { runDateLabel } from "@/lib/time";
-import { markStop } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -51,13 +49,10 @@ export const metadata: Metadata = {
  */
 export default async function RunPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ at?: string }>;
 }) {
   const { token } = await params;
-  const { at } = await searchParams;
   const run = await runByToken(token);
 
   // A token that matches nothing, a run settled since the link went out,
@@ -71,30 +66,7 @@ export default async function RunPage({
   const reach = await counterContacts();
   const progress = runProgress(counter, batch.runner_got, handout);
 
-  /*
-   * Which screen to open on.
-   *
-   * Asked for, or else the first stop not yet collected, or else the
-   * drops. Somebody coming back to this page mid-run has not changed what
-   * they are doing, and opening at stop one every time is the page making
-   * them find their place again at every red light.
-   */
-  const firstLeft = counter.findIndex(
-    (group) => !hasGot(batch.runner_got, group.restaurant)
-  );
-  const asked = Number(at);
-  const step: number | "drops" =
-    at === "drops"
-      ? "drops"
-      : Number.isInteger(asked) && asked >= 1 && asked <= counter.length
-        ? asked
-        : firstLeft === -1
-          ? "drops"
-          : firstLeft + 1;
-
-  const stop = typeof step === "number" ? counter[step - 1] : null;
   const when = `${runDateLabel(batch.run_date)}, ${SLOT_LABEL[batch.slot] ?? ""}`.trim();
-  const href = (to: number | "drops") => `/run/${token}?at=${to}`;
 
   return (
     <div className="mx-auto w-full max-w-xl space-y-4 px-4 py-4 pb-10">
@@ -108,65 +80,35 @@ export default async function RunPage({
       <RunStage token={token} batchId={batch.id} stage={batch.stage} />
 
       {/*
-        Where the night is, and a way to jump. Numbers rather than names,
-        because a name wide enough to read is a name that wraps on a phone,
-        and the number is what the stop is called on every other screen.
+        Every screen of the night, built once here and switched on the
+        phone. The stop used to be in the address, which is tidy and was
+        unusable: this page is dynamic, so each tap re-ran the whole sheet
+        against the database before anything moved.
       */}
-      <nav className="flex flex-wrap items-center gap-1.5">
-        {counter.map((group, index) => {
-          const got = hasGot(batch.runner_got, group.restaurant);
-          const here = step === index + 1;
-          return (
-            <Link
+      <RunSwitch
+        stops={[
+          ...counter.map((group, index) => ({
+            short: String(index + 1),
+            name: group.restaurant,
+            got: hasGot(batch.runner_got, group.restaurant),
+          })),
+          { short: "Drops", name: "the drops", wide: true },
+        ]}
+      >
+        {[
+          ...counter.map((group, index) => (
+            <StopScreen
               key={group.restaurant}
-              href={href(index + 1)}
-              aria-label={`Stop ${index + 1}, ${group.restaurant}`}
-              aria-current={here ? "step" : undefined}
-              className={`flex size-11 items-center justify-center rounded-full border-2 font-display text-[17px] font-black ${
-                here
-                  ? "border-ink bg-ink text-paper"
-                  : got
-                    ? "border-mint bg-mint/15 text-mint"
-                    : "border-line bg-paper"
-              }`}
-            >
-              {got && !here ? "✓" : index + 1}
-            </Link>
-          );
-        })}
-        <Link
-          href={href("drops")}
-          aria-current={step === "drops" ? "step" : undefined}
-          className={`flex h-11 items-center rounded-full border-2 px-4 font-display text-[15px] font-black uppercase ${
-            step === "drops" ? "border-ink bg-ink text-paper" : "border-line bg-paper"
-          }`}
-        >
-          Drops
-        </Link>
-      </nav>
-
-      {/* ─── One counter ────────────────────────────────────────────── */}
-      {stop && typeof step === "number" && (
-        <StopScreen
-          token={token}
-          batchId={batch.id}
-          step={step}
-          ofStops={counter.length}
-          stop={stop}
-          got={hasGot(batch.runner_got, stop.restaurant)}
-          contact={reach[stop.restaurant]}
-          nextHref={step < counter.length ? href(step + 1) : href("drops")}
-          nextLabel={
-            step < counter.length
-              ? `Next stop: ${counter[step].restaurant} →`
-              : "On to the drops →"
-          }
-        />
-      )}
-
-      {/* ─── The drops ──────────────────────────────────────────────── */}
-      {step === "drops" && (
-        <section className="space-y-3">
+              token={token}
+              batchId={batch.id}
+              step={index + 1}
+              ofStops={counter.length}
+              stop={group}
+              got={hasGot(batch.runner_got, group.restaurant)}
+              contact={reach[group.restaurant]}
+            />
+          )),
+          <section key="drops" className="space-y-3">
           <div>
             <p className="ticket text-[11px] text-muted">
               {progress.stops} of {progress.ofStops} stop
@@ -235,8 +177,9 @@ export default async function RunPage({
               </a>
             </article>
           ))}
-        </section>
-      )}
+          </section>,
+        ]}
+      </RunSwitch>
 
       <p className="pt-2 text-center text-xs text-muted">
         This link opens tonight&rsquo;s run only, and stops working once the
@@ -262,8 +205,6 @@ function StopScreen({
   stop,
   got,
   contact,
-  nextHref,
-  nextLabel,
 }: {
   token: string;
   batchId: string;
@@ -272,17 +213,11 @@ function StopScreen({
   stop: CounterGroup;
   got: boolean;
   contact: CounterContact | undefined;
-  nextHref: string;
-  nextLabel: string;
 }) {
   const way = howToOrderAhead(contact);
   const pays = paysAtCounter(contact);
   const number = contact?.phone ?? "";
-  const ahead = counterMessage(stop, {
-    shopName: "Sudu",
-    collectingAt: "",
-    payByTransfer: !pays,
-  });
+  const ahead = counterMessage(stop, { shopName: "Sudu" });
 
   return (
     <section className="space-y-3">
@@ -355,6 +290,7 @@ function StopScreen({
 
       <CounterLines
         token={token}
+        restaurant={stop.restaurant}
         storageId={`run-${batchId}-${stop.restaurant}`}
         done={got}
         expected={stop.expectedFoodTotal}
@@ -368,33 +304,6 @@ function StopScreen({
         }))}
       />
 
-      {/*
-        The thing to do next, at the bottom, where the thumb is after
-        typing the receipt.
-      */}
-      <form action={markStop} className="border-t-[1.5px] border-rule pt-3">
-        <input type="hidden" name="token" value={token} />
-        <input type="hidden" name="restaurant" value={stop.restaurant} />
-        <input type="hidden" name="collected" value={got ? "false" : "true"} />
-        <ActionButton
-          className={
-            got
-              ? "btn-quiet w-full justify-center py-3.5 text-base"
-              : "btn-primary w-full justify-center py-3.5 text-base"
-          }
-          busy="…"
-          done={got ? "Put back ✓" : "Got it ✓"}
-        >
-          {got ? "Not collected after all" : "Got everything here"}
-        </ActionButton>
-      </form>
-
-      <Link
-        href={nextHref}
-        className="btn-quiet flex w-full justify-center py-3.5 text-base"
-      >
-        {nextLabel}
-      </Link>
     </section>
   );
 }

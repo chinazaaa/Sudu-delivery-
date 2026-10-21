@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import SaveButton from "@/components/SaveButton";
 import { naira } from "@/lib/money";
-import { sayWhatItCost } from "@/app/run/[token]/actions";
+import { markStop, sayWhatItCost } from "@/app/run/[token]/actions";
 
 /**
  * What to collect at one counter, and what it came to.
@@ -27,12 +27,15 @@ import { sayWhatItCost } from "@/app/run/[token]/actions";
  */
 export default function CounterLines({
   token,
+  restaurant,
   storageId,
   done,
   expected,
   lines,
 }: {
   token: string;
+  /** Which stop this is, for saying it has been collected. */
+  restaurant: string;
   /** Anything unique to this stop, so two stops never share their ticks. */
   storageId: string;
   /** The stop is collected: show it settled rather than half ticked. */
@@ -82,6 +85,37 @@ export default function CounterLines({
   }
 
   const got = done ? lines.length : lines.filter((line) => ticked[line.key]).length;
+  const all = lines.length > 0 && got === lines.length;
+
+  /*
+   * Ticking the last thing off is saying the stop is collected.
+   *
+   * There used to be a second button underneath asking exactly that, and a
+   * stop with every line ticked sitting above a button asking whether it
+   * had been collected is the page refusing to believe what it was just
+   * told. Two ways to say one thing is also how the two come to disagree,
+   * which this run sheet already carries a scar from elsewhere.
+   *
+   * So the ticks are the control, in both directions: the last tick says
+   * collected, clearing them says it was not after all. The button below
+   * survives and does nothing but tick every line, so there is one fact
+   * with two ways of reaching it rather than two facts.
+   */
+  const [saving, save] = useTransition();
+  const was = useRef(done);
+
+  useEffect(() => {
+    if (all === was.current) return;
+    was.current = all;
+
+    const form = new FormData();
+    form.set("token", token);
+    form.set("restaurant", restaurant);
+    form.set("collected", all ? "true" : "false");
+    save(() => {
+      void markStop(form);
+    });
+  }, [all, token, restaurant]);
 
   // A blank line counts at the menu price, exactly as it will when it is
   // saved, so what this says and what the shop records cannot disagree.
@@ -203,6 +237,24 @@ export default function CounterLines({
       <SaveButton look="btn-primary w-full py-3.5 text-base">
         Save what the receipt said
       </SaveButton>
+
+      {/*
+        The same fact as ticking every line, reached in one tap for
+        somebody holding the bag who has no wish to confirm it six times.
+        It ticks the lines rather than setting a flag of its own, so the
+        list above always agrees with it.
+      */}
+      <button
+        type="button"
+        onClick={() =>
+          setTicked(
+            all ? {} : Object.fromEntries(lines.map((line) => [line.key, true]))
+          )
+        }
+        className={`w-full py-3.5 text-base ${all ? "btn-quiet" : "btn-primary"}`}
+      >
+        {saving ? "\u2026" : all ? "Not collected after all" : "Got everything here"}
+      </button>
       <p className="text-[13px] text-muted">
         Leave a box empty where the price was exactly the menu, which is most
         of them.

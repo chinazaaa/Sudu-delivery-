@@ -994,11 +994,7 @@ export default async function BatchPage({
                           <a
                             href={whatsappTo(
                               reach[group.restaurant].phone,
-                              counterMessage(group, {
-                                shopName: "Sudu",
-                                collectingAt: "",
-                                payByTransfer: !paysAtCounter(reach[group.restaurant]),
-                              })
+                              counterMessage(group, { shopName: "Sudu" })
                             )}
                             target="_blank"
                             rel="noreferrer"
