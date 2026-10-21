@@ -275,7 +275,22 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   };
 
   return (
-    <html lang="en" className={`${sans.variable} ${display.variable} ${mono.variable}`}>
+    <html
+      lang="en"
+      className={`${sans.variable} ${display.variable} ${mono.variable}`}
+      /*
+       * What the shop is dressed for, if anything.
+       *
+       * One attribute at the root, so the styling is a handful of CSS rules
+       * under one selector rather than a condition inside every component
+       * that happens to be coloured. Clearing the setting takes the lot off
+       * at once, which is the only way a seasonal theme is safe to turn on:
+       * nobody wants to be hunting for a pumpkin in November.
+       */
+      {...(settings.season.trim() !== ""
+        ? { "data-season": settings.season.trim().toLowerCase() }
+        : {})}
+    >
       <body>
         <script
           type="application/ld+json"

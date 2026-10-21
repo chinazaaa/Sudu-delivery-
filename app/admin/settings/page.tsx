@@ -1666,6 +1666,41 @@ export default async function SettingsAdmin() {
             </div>
           </Panel>
         </form>
+
+        <form id="season" action={saveSettings} className="scroll-mt-4">
+          <KeepFields />
+          <Panel
+            title="Dress the shop for something"
+            detail={
+              <>
+                Puts the whole site in a season&apos;s colours. Set it back to
+                nothing and the shop looks exactly as it did, everywhere, at
+                once. Nothing else changes: the same menu, the same prices,
+                the same runs.
+              </>
+            }
+          >
+            <div className="space-y-3">
+              <label className="label" htmlFor="season">
+                What is on
+              </label>
+              <select
+                id="season"
+                name="season"
+                defaultValue={settings.season}
+                className="field"
+              >
+                <option value="">Nothing, the ordinary shop</option>
+                <option value="halloween">Halloween</option>
+              </select>
+              <p className="hint">
+                Worth taking off the morning after. A shop still wearing
+                pumpkins in November reads as one nobody is looking after.
+              </p>
+              <SaveButton look="btn-admin-go">Save</SaveButton>
+            </div>
+          </Panel>
+        </form>
       </div>
     </div>
   );

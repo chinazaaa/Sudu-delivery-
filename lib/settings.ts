@@ -237,6 +237,8 @@ export type Settings = {
    *  every price exactly as it was. */
   delivery_areas: string;
   area_pairs: string;
+  /** Which season the site is dressed for. Empty is the ordinary shop. */
+  season: string;
   /** Which admin notifications to stop sending, by kind. Empty is all of
    *  them, which is what it has always been. */
   email_mute: string;
@@ -354,6 +356,7 @@ export const EMPTY: Settings = {
   santa_delivery_extra: 0,
   delivery_areas: "",
   area_pairs: "",
+  season: "",
   email_mute: "",
   parcel_on: "",
   parcel_routes: "",

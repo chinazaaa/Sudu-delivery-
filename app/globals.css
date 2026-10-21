@@ -1450,3 +1450,117 @@ body:has([data-actionbar]) .sudubot-launcher {
     animation: none;
   }
 }
+
+/*
+ * Halloween, worn over the ordinary shop.
+ *
+ * Everything here hangs off one attribute on the root, set from a single
+ * setting, so taking it off is clearing a text box rather than finding
+ * every orange thing on the site in November.
+ *
+ * What it deliberately does not do is repaint the page dark. The palette
+ * is built as solid colours rather than variables, and a shop that turns
+ * its paper black has to re-prove every piece of text on it against the
+ * new ground: twenty cards, every hairline, every disabled button. That is
+ * a redesign, not a season, and it is the kind that ships a page somebody
+ * cannot read on a phone in sunlight.
+ *
+ * So the ground stays, and the loud parts change. The brand red moves to
+ * a pumpkin orange it is already next door to, the ink blocks go aubergine
+ * instead of near-black, and the highlight goes acid green. The site reads
+ * as dressed up without any of it resting on a contrast nobody checked.
+ */
+[data-season="halloween"] {
+  --season-orange: #f26419;
+  --season-deep: #c2410c;
+  --season-dark: #241633;
+  --season-glow: #b6e82a;
+  --season-tint: #fdeddd;
+}
+
+/* The loud colour, wherever it is painted on. */
+[data-season="halloween"] .bg-brand {
+  background-color: var(--season-orange);
+}
+[data-season="halloween"] .text-brand {
+  color: var(--season-orange);
+}
+[data-season="halloween"] .text-brand-dark {
+  color: var(--season-deep);
+}
+[data-season="halloween"] .border-brand {
+  border-color: var(--season-orange);
+}
+[data-season="halloween"] .bg-brand-tint {
+  background-color: var(--season-tint);
+}
+
+/* The dark blocks: the hero ticket, the numbered band, the group board. */
+[data-season="halloween"] .bg-ink {
+  background-color: var(--season-dark);
+}
+[data-season="halloween"] .text-volt {
+  color: var(--season-glow);
+}
+
+/* The stripes behind the hero ticket, drawn as a repeating gradient in the
+   brand red: the one place the colour is written into a style attribute
+   rather than a class, so it needs saying again here. */
+[data-season="halloween"] [style*="#e5321d"] {
+  background-image: repeating-linear-gradient(
+    -60deg,
+    var(--season-orange) 0 7px,
+    transparent 7px 16px
+  ) !important;
+}
+
+/*
+ * The component classes, which carry the colour themselves.
+ *
+ * A button built with @apply bg-brand compiles the red onto .btn-primary
+ * rather than wearing a .bg-brand class, so the rules above never reach
+ * it. These are every component in this file that paints itself brand or
+ * ink; without them the page turns orange around a row of red buttons.
+ */
+[data-season="halloween"] .btn-primary,
+[data-season="halloween"] .btn-admin-go {
+  background-color: var(--season-orange);
+}
+[data-season="halloween"] .btn-primary:hover,
+[data-season="halloween"] .btn-admin-go:hover {
+  background-color: var(--season-deep);
+}
+[data-season="halloween"] .btn-admin-brand {
+  border-color: var(--season-deep);
+  color: var(--season-deep);
+}
+[data-season="halloween"] .chip-on,
+[data-season="halloween"] .pill-admin-on {
+  background-color: var(--season-dark);
+  border-color: var(--season-dark);
+}
+[data-season="halloween"] .btn-quiet:hover {
+  background-color: var(--season-dark);
+}
+
+/*
+ * The design system's own hard shadow is ink, not red, and it stays ink:
+ * a drawn black offset works under any palette and turning every card's
+ * shadow orange is a different design rather than a season.
+ *
+ * What does need saying is the handful of places a red shadow is written
+ * into the class itself, on the hero blocks and the group board. Those
+ * are the ones still wearing the ordinary brand.
+ */
+[data-season="halloween"] .shadow-\[8px_8px_0_\#e5321d\] {
+  box-shadow: 8px 8px 0 var(--season-orange);
+}
+[data-season="halloween"] .shadow-\[6px_6px_0_\#e5321d\] {
+  box-shadow: 6px 6px 0 var(--season-orange);
+}
+[data-season="halloween"] .shadow-\[5px_5px_0_\#e5321d\] {
+  box-shadow: 5px 5px 0 var(--season-orange);
+}
+[data-season="halloween"] .shadow-\[10px_10px_0_\#15110e\] {
+  box-shadow: 10px 10px 0 var(--season-dark);
+}
