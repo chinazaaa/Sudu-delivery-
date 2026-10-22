@@ -855,8 +855,12 @@ export default async function BatchPage({
                         <form action={dropSoldOutLine} className="shrink-0">
                           <input type="hidden" name="line_id" value={line.id} />
                           <input type="hidden" name="note_id" value={note.id} />
-                          <input type="hidden" name="said" value={note.said} />
                           <input type="hidden" name="what" value={line.name} />
+                          <input
+                            type="hidden"
+                            name="counter"
+                            value={line.restaurant}
+                          />
                           <ConfirmButton
                             tone="bad"
                             className="btn-admin-sm"

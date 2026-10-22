@@ -30,7 +30,12 @@ import {
   raisedCost,
   sellingFrom,
 } from "../lib/cost-price";
-import { owedByShrinking, owesSomething, refundSaid } from "../lib/refunds";
+import {
+  owedByShrinking,
+  owesSomething,
+  refundSaid,
+  soldOutSaid,
+} from "../lib/refunds";
 import { buyingDone } from "../lib/runner";
 import {
   counterKey,
@@ -5309,4 +5314,21 @@ test("a run's expected food cost is the counter's price, not the customer's", ()
 
   // Nothing bought costs nothing, rather than throwing on an empty run.
   assert.equal(expectedFoodCost([]), 0);
+});
+
+test("a customer is told why in words, not in the driver's shorthand", () => {
+  // The real one. "Needs refund" is a fine thing to write at a till and a
+  // terrible thing to send to somebody waiting for dinner, and it went
+  // straight through to her.
+  const said = soldOutSaid("Chicken Pie", "Chicken Republic");
+  assert.match(said, /Chicken Republic had sold out of the chicken pie/);
+  assert.match(said, /money for it is on its way back/);
+  assert.doesNotMatch(said, /Needs refund/);
+
+  // No counter named still reads as a sentence rather than a gap.
+  assert.match(soldOutSaid("Dodo Cubes", ""), /^The counter had sold out/);
+
+  // Nothing known falls back to something true and plain, never to silence.
+  assert.match(soldOutSaid("", ""), /could not be bought/);
+  assert.match(soldOutSaid("   ", "Dominos"), /could not be bought/);
 });

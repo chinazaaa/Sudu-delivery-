@@ -103,3 +103,27 @@ export function ordersBehindNote<
   }
   return found;
 }
+
+/**
+ * What a customer is told when a counter had sold out.
+ *
+ * Built from the thing itself rather than from what the driver wrote.
+ * That is a correction: the note is written one-handed at a till, for the
+ * shop, and "Needs refund" is a perfectly good thing to write there and a
+ * terrible thing to send to the person waiting for dinner. It went
+ * straight through, so BEST read "Needs refund" under a figure as the
+ * shop's entire explanation of why her order was short.
+ *
+ * The note still reaches the desk, on the run sheet, where it was always
+ * meant to go. This is the other half, in words for the person who did
+ * nothing wrong and got less than they paid for.
+ */
+export function soldOutSaid(what: string, counter: string): string {
+  const item = String(what ?? "").trim();
+  const place = String(counter ?? "").trim();
+  if (item === "") {
+    return "Something in this order could not be bought, so it came off and the money for it is on its way back to you. Sorry about that.";
+  }
+  const where = place === "" ? "The counter" : place;
+  return `${where} had sold out of the ${item.toLowerCase()} by the time we got there. We took it off your order, and the money for it is on its way back to you. Sorry about that.`;
+}

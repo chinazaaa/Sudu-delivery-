@@ -1,5 +1,6 @@
 "use server";
 
+import { soldOutSaid } from "@/lib/refunds";
 import { tidyHandle } from "@/lib/came-from";
 import { messagingNumber, normalisePhone } from "@/lib/phone";
 import { everyChannel, channelLabel, tidyChannel } from "@/lib/came-from";
@@ -6047,17 +6048,24 @@ export async function dropSoldOutLine(form: FormData): Promise<void> {
   const orderId = await orderOfLine(lineId);
   if (orderId === "") return;
 
-  // The reason, in the words of whoever was standing there. Falls back to
-  // something plain rather than to nothing: a customer reading a figure
-  // with no sentence beside it assumes the worst.
-  const said = String(form.get("said") ?? "").trim();
-  const what = String(form.get("what") ?? "").trim();
-  const why =
-    said !== ""
-      ? said
-      : what !== ""
-        ? `${what} was sold out, so it came off your order.`
-        : "";
+  /*
+   * What the customer is told, in words written for them.
+   *
+   * Not the note from the counter, which is the other way round from how
+   * this started and is the correction. That note is written one-handed
+   * at a till, for the shop: "Needs refund" is a fine thing to write there
+   * and a terrible thing to send to somebody waiting for dinner, and it
+   * went straight through as the shop's whole explanation of why her
+   * order came up short.
+   *
+   * The note still reaches the desk on the run sheet, where it was always
+   * meant to go. Whoever is at the desk can still rewrite this sentence on
+   * the order if the real story was something else.
+   */
+  const why = soldOutSaid(
+    String(form.get("what") ?? ""),
+    String(form.get("counter") ?? "")
+  );
 
   // Its options go with it, exactly as setting the quantity to nothing does.
   await db().from("order_item_options").delete().eq("order_item_id", lineId);
