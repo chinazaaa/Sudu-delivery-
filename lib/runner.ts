@@ -1,3 +1,4 @@
+import { STAGES } from "./stages";
 import { randomBytes } from "crypto";
 
 import type { CounterGroup } from "./admin";
@@ -302,4 +303,22 @@ export function runProgress(
     // half is unfinished.
     shopping: counters.length > 0 && stops < counters.length,
   };
+}
+
+/**
+ * Whether the buying part of the night is over.
+ *
+ * The run sheet kept offering "Save what the receipt said" and "Got
+ * everything here" on a run that had already been delivered, which is the
+ * page asking a question whose answer it is already holding. Worse than
+ * useless: pressing either of them on a finished run writes to a run
+ * nobody is driving.
+ *
+ * On the road is the line, not handed out. Once the car has left the last
+ * counter every receipt that is going to exist exists, and the stops
+ * behind it are history rather than work.
+ */
+export function buyingDone(stage: string): boolean {
+  const at = STAGES.indexOf(stage as (typeof STAGES)[number]);
+  return at >= STAGES.indexOf("on_the_road");
 }

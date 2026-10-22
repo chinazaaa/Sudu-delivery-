@@ -24,6 +24,7 @@ import { pauseAfter, waitLeft, waitSaid } from "../lib/admin-gate";
 import { signingKey } from "../lib/signing";
 import { costFrom, keptOn, lineCost, raisedCost, sellingFrom } from "../lib/cost-price";
 import { owedByShrinking, owesSomething, refundSaid } from "../lib/refunds";
+import { buyingDone } from "../lib/runner";
 import {
   counterKey,
   counterMessage,
@@ -5262,4 +5263,22 @@ test("buying fewer than were ordered owes back only the ones not had", () => {
   // None of them had is the whole line, which is the same rule and not a
   // special case: removing a line is just its quantity reaching nothing.
   assert.equal(owedByShrinking("paid", 15800, 13000 - 0), 2800);
+});
+
+test("the buying part of a run ends when the car leaves the counters", () => {
+  // Still shopping: the receipt boxes and the collected button belong here.
+  assert.equal(buyingDone("ordering"), false);
+  assert.equal(buyingDone("closed"), false);
+  assert.equal(buyingDone("at_counter"), false);
+
+  // The car has left. Every receipt that will exist exists, so the stops
+  // behind it are history and must stop asking to be filled in.
+  assert.equal(buyingDone("on_the_road"), true);
+  assert.equal(buyingDone("at_drop"), true);
+  assert.equal(buyingDone("handed_out"), true);
+
+  // Nonsense is not the end of the night: a stage this does not recognise
+  // must leave the sheet working rather than shutting it.
+  assert.equal(buyingDone(""), false);
+  assert.equal(buyingDone("nonsense"), false);
 });

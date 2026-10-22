@@ -210,11 +210,37 @@ export default async function BatchPage({
   const costFor = (group: { restaurant: string }, unitPrice: number, qty: number) =>
     lineCost(unitPrice, qty, reach[group.restaurant]?.markup ?? DEFAULT_MARKUP);
 
-  const costAt = (group: { restaurant: string; lines: { unitPrice: number; qty: number }[] }) =>
-    group.lines.reduce((total, line) => total + costFor(group, line.unitPrice, line.qty), 0);
+  /*
+   * What this counter should actually be charged.
+   *
+   * Less anything it turned out not to have. A till cannot ask for a
+   * chicken pie it has sold the last of, so a figure that still counts it
+   * is a figure that will not match the receipt, and the person holding
+   * the card is the one who has to work out why.
+   */
+  const costAt = (group: {
+    restaurant: string;
+    lines: { key: string; unitPrice: number; qty: number }[];
+  }) =>
+    group.lines.reduce(
+      (total, line) =>
+        total +
+        (couldNotGet.has(line.key) ? 0 : costFor(group, line.unitPrice, line.qty)),
+      0
+    );
   // What a counter said that still needs doing. Everything else on this
   // page is the run; this is the work the run left behind.
-  const openNotes = (await notesOn(batch.id)).filter((note) => note.done_at === null);
+  const allNotes = await notesOn(batch.id);
+  const openNotes = allNotes.filter((note) => note.done_at === null);
+  /*
+   * Which lines somebody at a counter said could not be had.
+   *
+   * Every note, not only the open ones. Ticking a note off means the shop
+   * has sorted the money out, not that the chicken pie turned up: a sheet
+   * that starts showing it as bought the moment the refund is paid is a
+   * sheet that contradicts itself the week afterwards.
+   */
+  const couldNotGet = new Map(allNotes.map((note) => [note.line_key, note.said]));
 
   // One wording for a share, here and in the message the customer gets:
   // #1001a and #1001b, never #1001 on this screen and #1001a on theirs.
@@ -1128,6 +1154,16 @@ export default async function BatchPage({
                         done={shopped}
                         items={group.lines.map((line) => ({
                           key: `${line.name}|${line.choices.join("|")}`,
+                          /* The per line ticks live in the browser of
+                             whoever is at the till, so this copy of the
+                             sheet cannot see them and marks a collected
+                             stop as all bought. Right for four lines in
+                             five and wrong for the fifth: a sold out pie
+                             read as collected and struck through, on the
+                             page the refund gets worked out from. The
+                             note is the part the server does know. */
+                          short: couldNotGet.has(line.key),
+                          shortSaid: couldNotGet.get(line.key) ?? "",
                           lead: `${line.qty}×`,
                           text: line.name,
                           detail: line.choices.join(", "),

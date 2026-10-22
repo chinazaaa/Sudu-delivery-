@@ -39,6 +39,23 @@ export default function Checklist({
      * and in the display face rather than buried in front of the words.
      */
     lead?: string;
+    /**
+     * Somebody at the counter said this one could not be had.
+     *
+     * It outranks every other way a line can look ticked, including the
+     * whole list being marked done. The per line ticks live in the browser
+     * of whoever is standing at the till, so the shop's own copy of this
+     * sheet cannot see them and shows a finished stop as all bought. That
+     * is right for four lines out of five and badly wrong for the fifth:
+     * the sold out chicken pie read as collected, struck through, on the
+     * page the refund is supposed to be worked out from.
+     *
+     * This is the one part of it the server does know, because writing the
+     * note is a thing the driver did to the run rather than to her phone.
+     */
+    short?: boolean;
+    /** What was written at the counter about it, where anything was. */
+    shortSaid?: string;
   }[];
   label: string;
   /** The work this list was for is over: show it settled, not half-ticked. */
@@ -68,9 +85,15 @@ export default function Checklist({
     });
   }
 
-  const checked = done
-    ? items.length
-    : items.filter((item) => ticked[item.key]).length;
+  // A line nobody could buy is never bought, however the list is marked.
+  const had = (item: { key: string; short?: boolean }) =>
+    item.short !== true && (done || ticked[item.key] === true);
+
+  const checked = items.filter(had).length;
+  const shortOf = items.filter((item) => item.short === true).length;
+  // Out of what could actually be got, so a stop where everything
+  // available was collected reads as finished rather than stuck at 4/5.
+  const gettable = items.length - shortOf;
 
   return (
     <div className="space-y-2">
@@ -82,13 +105,19 @@ export default function Checklist({
           <span
             aria-hidden
             className={`tick size-[34px] rounded-full text-[17px] font-black ${
-              checked === items.length && items.length > 0 ? "tick-done" : ""
+              checked === gettable && gettable > 0 ? "tick-done" : ""
             }`}
           >
-            {checked === items.length && items.length > 0 ? "✓" : ""}
+            {checked === gettable && gettable > 0 ? "✓" : ""}
           </span>
           <span>
-            {checked}/{items.length} {label}
+            {checked}/{gettable} {label}
+            {shortOf > 0 && (
+              <span className="text-brand-dark">
+                {" "}
+                · {shortOf} not available
+              </span>
+            )}
           </span>
         </p>
         {checked > 0 && !done && (
@@ -115,22 +144,26 @@ export default function Checklist({
             <button
               type="button"
               onClick={() => toggle(item.key)}
-              disabled={done}
+              disabled={done || item.short === true}
               className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left disabled:opacity-80 ${
-                done || ticked[item.key] ? "bg-mint/5 opacity-60" : ""
+                item.short === true
+                  ? "bg-brand-wash"
+                  : had(item)
+                    ? "bg-mint/5 opacity-60"
+                    : ""
               }`}
             >
               <span
-                className={`tick size-[34px] font-black sm:size-7 ${done || ticked[item.key] ? "tick-done" : ""}`}
+                className={`tick size-[34px] font-black sm:size-7 ${had(item) ? "tick-done" : ""}`}
               >
-                {done || ticked[item.key] ? "✓" : ""}
+                {had(item) ? "✓" : item.short === true ? "—" : ""}
               </span>
               {item.lead && (
                 <span className="min-w-[46px] shrink-0 font-display text-[34px] font-black leading-none sm:min-w-[48px] sm:text-[30px]">
                   {item.lead}
                 </span>
               )}
-              <span className={`min-w-0 ${done || ticked[item.key] ? "line-through" : ""}`}>
+              <span className={`min-w-0 ${had(item) ? "line-through" : ""}`}>
                 <span className="block text-[15px] font-semibold leading-[1.25] sm:text-[15.5px]">
                   {item.text}
                 </span>
@@ -139,6 +172,20 @@ export default function Checklist({
                     {item.detail}
                     {item.detail && item.money ? " · " : ""}
                     {item.money && <span className="font-mono">{item.money}</span>}
+                  </span>
+                )}
+                {/*
+                  Why it is not ticked, on the line it is about. The panel
+                  at the top of the run says the same thing, and somebody
+                  reading down a counter looking for the gap should not
+                  have to scroll back up to find out what the gap was.
+                */}
+                {item.short === true && (
+                  <span className="mt-0.5 block text-[12.5px] font-semibold text-brand-dark">
+                    Not available
+                    {String(item.shortSaid ?? "").trim() !== ""
+                      ? ` · ${item.shortSaid}`
+                      : ""}
                   </span>
                 )}
               </span>

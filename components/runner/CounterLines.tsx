@@ -30,6 +30,7 @@ export default function CounterLines({
   restaurant,
   storageId,
   done,
+  shut,
   expected,
   lines,
 }: {
@@ -40,15 +41,21 @@ export default function CounterLines({
   storageId: string;
   /** The stop is collected: show it settled rather than half ticked. */
   done: boolean;
-  /** What the menu says this stop comes to, for checking the receipt. */
+  /** The run has left the counters, so there is nothing left to buy here
+   *  and nothing to ask. Read only. */
+  shut: boolean;
+  /** What this stop should cost at the till, for checking the receipt.
+   *  The cost, not the menu: the menu is what the customer paid. */
   expected: number;
   lines: {
     key: string;
     name: string;
     choices: string[];
     qty: number;
-    /** The menu's figure for the whole line, as the box's placeholder. */
-    menuTotal: number;
+    /** What the whole line should cost at the till, as the box's
+     *  placeholder. Never the menu price: offering the menu price invites
+     *  somebody to accept it, and the shop records a cost it never paid. */
+    shouldCost: number;
     /** What somebody already typed, where they have. */
     paid: number | null;
     /** Who ordered it, for the one stop in ten that has run out. */
@@ -134,12 +141,13 @@ export default function CounterLines({
     });
   }, [all, token, restaurant]);
 
-  // A blank line counts at the menu price, exactly as it will when it is
-  // saved, so what this says and what the shop records cannot disagree.
+  // A blank line counts at what it should cost, exactly as it will when
+  // it is saved, so what this says and what the shop records cannot
+  // disagree.
   const running = lines.reduce((total, line) => {
     const raw = (typed[line.key] ?? "").trim();
     const value = Math.round(Number(raw));
-    return total + (raw !== "" && Number.isFinite(value) && value >= 0 ? value : line.menuTotal);
+    return total + (raw !== "" && Number.isFinite(value) && value >= 0 ? value : line.shouldCost);
   }, 0);
 
   const off = running - expected;
@@ -162,7 +170,7 @@ export default function CounterLines({
             {got}/{lines.length} got
           </span>
         </p>
-        {got > 0 && !done && (
+        {got > 0 && !done && !shut && (
           <button
             type="button"
             onClick={() => {
@@ -195,7 +203,7 @@ export default function CounterLines({
             <button
               type="button"
               onClick={() => toggle(line.key)}
-              disabled={done}
+              disabled={done || shut}
               className="flex min-w-0 flex-1 items-center gap-3 text-left"
             >
               <span
@@ -225,10 +233,11 @@ export default function CounterLines({
               inputMode="numeric"
               aria-label={`What ${line.name} came to`}
               value={typed[line.key] ?? ""}
+              readOnly={shut}
               onChange={(event) =>
                 setTyped((now) => ({ ...now, [line.key]: event.target.value }))
               }
-              placeholder={String(line.menuTotal)}
+              placeholder={String(line.shouldCost)}
               className="field w-[104px] shrink-0 py-2 text-right font-mono text-[17px]"
             />
           </div>
@@ -239,8 +248,10 @@ export default function CounterLines({
             would be noise the other nine, and it would anyway promise one
             person to ring when this line can be three people's dinner.
           */}
+          {!(shut && (notes[line.key] ?? line.note) === "") && (
           <button
             type="button"
+            disabled={shut}
             onClick={() => setShort(short === line.key ? "" : line.key)}
             className={`mt-1 ml-[46px] text-[12.5px] underline ${
               (notes[line.key] ?? line.note) !== "" ? "text-mint" : "text-muted"
@@ -252,6 +263,7 @@ export default function CounterLines({
                 ? "Never mind"
                 : "Sold out?"}
           </button>
+          )}
 
           {short === line.key && (
             <div className="mt-2 soft bg-shell p-3">
@@ -346,11 +358,28 @@ export default function CounterLines({
         {off !== 0 && (
           <span className={off > 0 ? "text-brand-dark" : "text-mint"}>
             {" "}
-            · {naira(Math.abs(off))} {off > 0 ? "more" : "less"} than the menu
+            · {naira(Math.abs(off))} {off > 0 ? "more" : "less"} than expected
           </span>
         )}
       </p>
 
+      {/*
+        Nothing to press once the car has gone.
+
+        These two kept appearing on runs that had already been delivered,
+        asking whether the food had been collected on a night whose bags
+        were handed out hours earlier. A page that asks a question it is
+        already holding the answer to teaches people to ignore it, and
+        pressing either of them writes to a run nobody is driving.
+      */}
+      {shut ? (
+        <p className="soft bg-shell p-3 text-[14px] text-muted">
+          This run has left the counters, so there is nothing left to buy
+          or tick here. Anything still to put right is on the shop&rsquo;s
+          own sheet.
+        </p>
+      ) : (
+        <>
       <SaveButton look="btn-primary w-full py-3.5 text-base">
         Save what the receipt said
       </SaveButton>
@@ -373,9 +402,11 @@ export default function CounterLines({
         {saving ? "\u2026" : all ? "Not collected after all" : "Got everything here"}
       </button>
       <p className="text-[13px] text-muted">
-        Leave a box empty where the price was exactly the menu, which is most
-        of them.
+        Leave a box empty where the till asked for exactly this, which is
+        most of them.
       </p>
+        </>
+      )}
     </form>
   );
 }

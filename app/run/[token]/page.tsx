@@ -10,6 +10,7 @@ import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
 import { whatsappTo } from "@/lib/messages";
 import {
+  buyingDone,
   counterMessage,
   hasGot,
   howToOrderAhead,
@@ -109,6 +110,9 @@ export default async function RunPage({
     (await notesOn(batch.id)).map((note) => [note.line_key, note.said])
   );
   const progress = runProgress(counter, batch.runner_got, handout);
+  // Past the counters, the stops are history. Everything that buys or
+  // ticks goes quiet rather than asking after the fact.
+  const shut = buyingDone(batch.stage);
 
   const when = `${runDateLabel(batch.run_date)}, ${SLOT_LABEL[batch.slot] ?? ""}`.trim();
 
@@ -149,6 +153,7 @@ export default async function RunPage({
               ofStops={counter.length}
               stop={group}
               got={hasGot(batch.runner_got, group.restaurant)}
+              shut={shut}
               contact={reach[group.restaurant]}
               buyers={buyers}
               notes={notes}
@@ -250,6 +255,7 @@ function StopScreen({
   ofStops,
   stop,
   got,
+  shut,
   contact,
   buyers,
   notes,
@@ -260,6 +266,8 @@ function StopScreen({
   ofStops: number;
   stop: CounterGroup;
   got: boolean;
+  /** The run has left the counters: show this stop, ask nothing of it. */
+  shut: boolean;
   contact: CounterContact | undefined;
   /** Who ordered each line, by the key the line was grouped under. */
   buyers: Record<string, Buyer[]>;
@@ -268,10 +276,15 @@ function StopScreen({
 }) {
   const way = howToOrderAhead(contact);
   const pays = paysAtCounter(contact);
-  // Every line without the markup on, which is what the till will ask for.
+  // Every line without the markup on, which is what the till will ask for,
+  // less anything this counter turned out not to have. Saying a line is
+  // sold out takes it off the figure on the spot, because the card is
+  // about to be handed over and the receipt will not include it either.
   const markup = contact?.markup ?? DEFAULT_MARKUP;
   const toPay = stop.lines.reduce(
-    (total, line) => total + lineCost(line.unitPrice, line.qty, markup),
+    (total, line) =>
+      total +
+      (notes[line.key] ? 0 : lineCost(line.unitPrice, line.qty, markup)),
     0
   );
   const number = contact?.phone ?? "";
@@ -352,18 +365,28 @@ function StopScreen({
         </p>
       )}
 
+      {/*
+        Everything below in the same money as the figure above it.
+
+        The header was corrected to what the card will be charged and this
+        list was not, so one screen said the card should be 7,304 and the
+        total under the lines said 8,400, which is the menu. Two true
+        figures, neither labelled, three centimetres apart, on the page
+        somebody is holding while a cashier waits.
+      */}
       <CounterLines
         token={token}
         restaurant={stop.restaurant}
         storageId={`run-${batchId}-${stop.restaurant}`}
         done={got}
-        expected={stop.expectedFoodTotal}
+        shut={shut}
+        expected={toPay}
         lines={stop.lines.map((line) => ({
           key: line.key,
           name: line.name,
           choices: line.choices,
           qty: line.qty,
-          menuTotal: line.qty * line.unitPrice,
+          shouldCost: lineCost(line.unitPrice, line.qty, markup),
           paid: line.paid,
           buyers: buyers[line.key] ?? [],
           note: notes[line.key] ?? "",
