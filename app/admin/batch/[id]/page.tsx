@@ -6,6 +6,7 @@ import { deliverySlots } from "@/lib/same-day";
 import { hoursByDay } from "@/lib/settings";
 import {
   moveSameDayCar,
+  dropSoldOutLine,
   noteSorted,
   raiseMenuPrice,
   reopenRun,
@@ -781,23 +782,51 @@ export default async function BatchPage({
                 <p className="text-[15px]">{note.said}</p>
 
                 {behind.length > 0 && (
-                  <ul className="mt-1.5 space-y-1">
-                    {behind.map(({ order, worth }) => (
-                      <li key={order.id} className="text-[14px]">
+                  <ul className="mt-2 space-y-2">
+                    {behind.map(({ order, line, worth }) => (
+                      <li
+                        key={order.id}
+                        className="flex flex-wrap items-center gap-2 border-t-[1.5px] border-rule pt-2"
+                      >
                         <Link
                           href={`/admin/orders/${order.id}`}
-                          className="font-semibold text-brand underline"
+                          className="min-w-0 flex-1 text-[14px]"
                         >
-                          {refFor(order)} · {order.customer_name}
-                        </Link>{" "}
-                        <span className="text-muted">
-                          paid {naira(worth)} for it
-                        </span>
+                          <span className="font-semibold text-brand underline">
+                            {refFor(order)} · {order.customer_name}
+                          </span>{" "}
+                          <span className="text-muted">
+                            paid {naira(worth)} for it
+                          </span>
+                        </Link>
+                        {/*
+                          The whole refund, from the line it is about.
+                          
+                          It was three screens: find the order, open it, set
+                          the line to nothing, come back and tick the note
+                          off. Every one of those is a place to stop, and a
+                          refund with three places to stop is one a customer
+                          is still owed a week later.
+                        */}
+                        <form action={dropSoldOutLine} className="shrink-0">
+                          <input type="hidden" name="line_id" value={line.id} />
+                          <input type="hidden" name="note_id" value={note.id} />
+                          <input type="hidden" name="said" value={note.said} />
+                          <input type="hidden" name="what" value={line.name} />
+                          <ConfirmButton
+                            tone="bad"
+                            className="btn-admin-sm"
+                            confirm={`Yes, take it off and owe ${naira(worth)}`}
+                          >
+                            Take it off · owe {naira(worth)}
+                          </ConfirmButton>
+                        </form>
                       </li>
                     ))}
-                    <li className="hint">
-                      Open it, set that line to nothing, and the money for it
-                      is owed back without anything else to remember.
+                    <li className="hint border-t-[1.5px] border-rule pt-2">
+                      That takes the line off the order, owes the money back
+                      and ticks this off. Send the transfer in your bank, then
+                      mark it sent on the order.
                     </li>
                   </ul>
                 )}

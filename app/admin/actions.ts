@@ -6024,6 +6024,63 @@ export async function clearRunnerLink(form: FormData): Promise<void> {
  * moment it is handled means the only record of a strange evening is gone
  * by the time anybody asks about it.
  */
+/**
+ * The counter did not have it: take it off the order and owe the money.
+ *
+ * The whole job in one press, because it was three screens. Find which
+ * order bought the line somebody flagged at a till, open it, set that line
+ * to nothing, then come back and tick the note off. Every one of those is
+ * a place to stop, and a refund that takes three places to stop is a
+ * refund somebody owes a customer a week later.
+ *
+ * It does nothing a hand could not: removing the line is the ordinary edit
+ * and the money owed follows from it the ordinary way, through retotal.
+ * What it adds is that all of it happens at once, from the line it is
+ * about, with the sentence written at the counter carried through as the
+ * reason the customer reads.
+ */
+export async function dropSoldOutLine(form: FormData): Promise<void> {
+  await assertAdmin();
+  const lineId = String(form.get("line_id") ?? "");
+  if (lineId === "") return;
+
+  const orderId = await orderOfLine(lineId);
+  if (orderId === "") return;
+
+  // The reason, in the words of whoever was standing there. Falls back to
+  // something plain rather than to nothing: a customer reading a figure
+  // with no sentence beside it assumes the worst.
+  const said = String(form.get("said") ?? "").trim();
+  const what = String(form.get("what") ?? "").trim();
+  const why =
+    said !== ""
+      ? said
+      : what !== ""
+        ? `${what} was sold out, so it came off your order.`
+        : "";
+
+  // Its options go with it, exactly as setting the quantity to nothing does.
+  await db().from("order_item_options").delete().eq("order_item_id", lineId);
+  await db().from("order_items").delete().eq("id", lineId);
+
+  // The money owed back is worked out here, from the drop in the total.
+  await retotal(orderId, why);
+
+  // The note is answered by doing the thing it asked for, so it ticks
+  // itself off. Leaving it open after the refund exists is how a list of
+  // things to put right fills up with things already put right.
+  const noteId = String(form.get("note_id") ?? "");
+  if (noteId !== "") {
+    await db()
+      .from("run_notes")
+      .update({ done_at: new Date().toISOString() })
+      .eq("id", noteId);
+  }
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/o", "layout");
+}
+
 export async function noteSorted(form: FormData): Promise<void> {
   await assertAdmin();
   const id = String(form.get("note_id") ?? "");
