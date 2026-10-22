@@ -20,6 +20,7 @@ import { googleTagId, instagramLink, numberOr, shopEmails, xLink } from "../lib/
 import { isExtra } from "../lib/shelf";
 import { emptyAndDone } from "../lib/batches";
 import { stillAGuess } from "../lib/profit";
+import { pauseAfter, waitLeft, waitSaid } from "../lib/admin-gate";
 import {
   counterKey,
   counterMessage,
@@ -5013,4 +5014,54 @@ test("only a run that took money can still be guessing", () => {
   // a cost nobody paid.
   assert.equal(stillAGuess(3, 0, "2026-10-21T20:00:00Z"), false);
   assert.equal(stillAGuess(3, 0, null), true);
+});
+
+/*
+ * A pause between wrong admin passwords.
+ *
+ * The customer's four digit PIN already had five tries and a quarter of an
+ * hour's rest. The password that opens the whole shop had nothing, and
+ * could be guessed as fast as a machine could ask.
+ */
+test("wrong passwords buy a pause, and it is short enough to survive", () => {
+  // Nobody is slowed down for mistyping. Five is already more tries than
+  // a person needs.
+  assert.equal(pauseAfter(0), 0);
+  assert.equal(pauseAfter(4), 0);
+
+  // The fifth is the one that starts the wait. A minute is nothing to a
+  // person and caps a machine at five tries a minute.
+  assert.equal(pauseAfter(5), 60);
+  assert.equal(pauseAfter(19), 60);
+
+  // Nobody mistypes twenty times in a row, so past there it is not a
+  // person. Still only five minutes: there is one admin, and locking her
+  // out of her own board on a Saturday evening is the thing being avoided.
+  assert.equal(pauseAfter(20), 300);
+  assert.equal(pauseAfter(2000), 300);
+});
+
+test("the wait left is read from the clock, and a broken one never locks anybody out", () => {
+  const now = new Date("2026-10-22T20:00:00Z").getTime();
+
+  assert.equal(waitLeft("2026-10-22T20:00:30Z", now), 30);
+  assert.equal(waitLeft("2026-10-22T20:01:00Z", now), 60);
+
+  // Past is past.
+  assert.equal(waitLeft("2026-10-22T19:59:00Z", now), 0);
+
+  // Nothing set, and nonsense, both mean go ahead. A throttle that refuses
+  // everybody because a value could not be read is worse than the guessing
+  // it was built to stop.
+  assert.equal(waitLeft(null, now), 0);
+  assert.equal(waitLeft("", now), 0);
+  assert.equal(waitLeft("not a date", now), 0);
+});
+
+test("the wait is said in whatever unit a person would say it in", () => {
+  assert.equal(waitSaid(0), "");
+  assert.equal(waitSaid(1), "Wait 1 second and try again.");
+  assert.equal(waitSaid(45), "Wait 45 seconds and try again.");
+  assert.equal(waitSaid(60), "Wait 1 minute and try again.");
+  assert.equal(waitSaid(300), "Wait 5 minutes and try again.");
 });

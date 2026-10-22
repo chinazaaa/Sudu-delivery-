@@ -7,6 +7,12 @@ import { openDaysText } from "@/lib/open-days";
 import { redirect } from "next/navigation";
 import { revalidatePath, updateTag } from "next/cache";
 import { isSignedIn, passwordMatches, signIn, signOut } from "@/lib/admin-auth";
+import {
+  clearWrongPasswords,
+  noteWrongPassword,
+  waitBeforeTrying,
+  waitSaid,
+} from "@/lib/admin-gate";
 import { batchSheet, stillOpen } from "@/lib/admin";
 import { db } from "@/lib/supabase";
 import { STAGES, type BatchStage } from "@/lib/stages";
@@ -84,9 +90,34 @@ export async function login(
   _prev: { error: string | null },
   form: FormData
 ): Promise<{ error: string | null }> {
+  /*
+   * A pause between wrong passwords, checked before the password is.
+   *
+   * Checked first on purpose: the point is that a machine cannot keep
+   * asking, and a throttle that still compares the password on every
+   * request is a throttle that still answers every request.
+   *
+   * The right password during a pause is refused along with the wrong
+   * ones, which is the uncomfortable half of this and is not avoidable.
+   * Letting a correct password through a pause would mean the pause stops
+   * nobody: guessing is exactly the act of eventually being correct. The
+   * waits are kept short for that reason rather than this being an
+   * oversight.
+   */
+  const wait = await waitBeforeTrying();
+  if (wait > 0) return { error: `Too many tries. ${waitSaid(wait)}` };
+
   if (!passwordMatches(String(form.get("password") ?? ""))) {
-    return { error: "Wrong password." };
+    const paused = await noteWrongPassword();
+    return {
+      error:
+        paused > 0
+          ? `Wrong password. ${waitSaid(paused)}`
+          : "Wrong password.",
+    };
   }
+
+  await clearWrongPasswords();
   await signIn();
   revalidatePath("/admin", "layout");
   return { error: null };
