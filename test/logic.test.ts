@@ -19,6 +19,7 @@ import { monthOf, nextMonth } from "../lib/standing";
 import { googleTagId, instagramLink, numberOr, shopEmails, xLink } from "../lib/settings";
 import { isExtra } from "../lib/shelf";
 import { emptyAndDone } from "../lib/batches";
+import { stillAGuess } from "../lib/profit";
 import {
   counterKey,
   counterMessage,
@@ -4982,4 +4983,34 @@ test("one person ordering twice is one person to ring", () => {
   assert.equal(buyers[key][0].forName, "");
   assert.equal(buyers[key][1].qty, 1);
   assert.equal(buyers[key][1].forName, "Ada");
+});
+
+/*
+ * A run nobody ordered on is not waiting for anything.
+ *
+ * The profit page listed twenty three runs as still using estimates and
+ * asked for real fuel figures on them. Several were from before the shop
+ * had launched. They were empty: a scheduled run opens itself every week
+ * whether or not anybody wants it, and the rule had been written as "no
+ * costs entered" rather than "took money and no costs entered".
+ */
+test("only a run that took money can still be guessing", () => {
+  // Took money, nobody has said what the car cost. A real guess.
+  assert.equal(stillAGuess(3, 0), true);
+
+  // Nobody ordered. There is no car, nothing to pay, and its profit is
+  // zero however long anybody stares at it.
+  assert.equal(stillAGuess(0, 0), false);
+
+  // Costs are in, so it is not a guess whether or not anybody ordered.
+  assert.equal(stillAGuess(3, 8000), false);
+  assert.equal(stillAGuess(0, 8000), false);
+
+  // Settled closes it whatever the costs say. A run can finish owing
+  // nothing: a free delivery, a borrowed car, an evening where the only
+  // order was walked across campus. Reading zero costs as "not told yet"
+  // parks those in waiting for ever, and the only way out would be typing
+  // a cost nobody paid.
+  assert.equal(stillAGuess(3, 0, "2026-10-21T20:00:00Z"), false);
+  assert.equal(stillAGuess(3, 0, null), true);
 });

@@ -98,6 +98,38 @@ export type Profit = {
  * cost, is the profit on the line: the same arithmetic as the page's working,
  * at the size somebody can check against a run sheet.
  */
+/**
+ * Whether a run's profit is still a guess.
+ *
+ * Only a run that took money can be guessing. A run nobody ordered on has
+ * no takings, no car, nothing to pay and nothing to estimate: its profit
+ * is zero whether or not anybody ever types a cost into it, and putting it
+ * on a list of things to go and fix is asking somebody to do work that
+ * does not exist.
+ *
+ * Settled closes it too, whatever the costs say. A run can finish owing
+ * nothing: a free delivery, a car somebody lent, an evening where the only
+ * order was walked across campus. Reading zero costs as "not told yet"
+ * parks those in waiting for ever, and the only way to get them out is to
+ * type a cost that was never paid.
+ *
+ * This went wrong because the rule was written as "no costs entered", and
+ * a scheduled run opens itself every week whether or not anybody wants it.
+ * The result was twenty three runs on the profit page demanding real fuel
+ * figures, several of them from before the shop had launched and nineteen
+ * of them already settled. The board had always asked the whole question;
+ * the profit page asked a shorter one, and this is the two of them
+ * agreeing in one place instead of disagreeing in two.
+ */
+export function stillAGuess(
+  paidOrders: number,
+  costsEntered: number,
+  settledAt: string | null = null
+): boolean {
+  if (settledAt !== null) return false;
+  return paidOrders > 0 && costsEntered === 0;
+}
+
 export type RunLine = {
   id: string;
   runDate: string;
@@ -204,9 +236,33 @@ export async function profitBetween(from: string, to: string): Promise<Profit> {
   const earned = margin - over + totals.took;
   const profit = earned - (commission + runCosts + totals.spent);
 
+  /*
+   * Only the runs that happened.
+   *
+   * A run with no paid order on it did not happen: nobody can drive to a
+   * counter for nothing, so there was no car, no fuel and no evening. A
+   * scheduled run opens itself every week regardless, so the window is
+   * full of dates that were offered and not taken, and listing them run by
+   * run is a table of nights that never were.
+   *
+   * Kept when it carries a cost, whatever its orders say. That is a run
+   * that did go out and whose takings have since been refunded away, and
+   * money that was really spent must not vanish from the working because
+   * the orders behind it were undone.
+   */
+  const happened = batches.filter((one) => {
+    const id = String(one.id);
+    const carried =
+      Number(one.fuel_cost ?? 0) +
+      Number(one.driver_cost ?? 0) +
+      Number(one.transport_cost ?? 0) +
+      Number(one.other_cost ?? 0);
+    return carried > 0 || paid.some((order) => String(order.batch_id) === id);
+  });
+
   // Newest first: the run somebody is asking about is nearly always the
   // last one, and a window can be a year long.
-  const byRun: RunLine[] = batches
+  const byRun: RunLine[] = happened
     .map((one) => {
       const id = String(one.id);
       const mine = paid.filter((order) => String(order.batch_id) === id);
@@ -229,7 +285,7 @@ export async function profitBetween(from: string, to: string): Promise<Profit> {
         food: menu + beyond,
         delivery: took - menu,
         costs: carried + owed,
-        estimated: carried === 0,
+        estimated: stillAGuess(mine.length, carried, one.settled_at as string | null),
         profit: Math.round(took - menu - beyond - owed - carried),
       };
     })
@@ -268,7 +324,7 @@ export async function profitBetween(from: string, to: string): Promise<Profit> {
     settled,
     waitingRuns: waiting.length,
     waitingBeforeCosts: waiting.reduce((sum, run) => sum + run.profit, 0),
-    runs: batches.length,
+    runs: happened.length,
     aside,
     byRun,
   };
@@ -512,7 +568,7 @@ export async function runProfitShares(ids: string[]): Promise<Map<string, RunSha
     runs.set(id, {
       profit: took - menu - (overByRun.get(id) ?? 0) - (owedByRun.get(id) ?? 0) - carried,
       took,
-      estimated: carried === 0,
+      estimated: stillAGuess(onIt.length, carried, one.settled_at as string | null),
     });
   }
   return runs;
