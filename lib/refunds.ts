@@ -63,3 +63,43 @@ export function refundSaid(said: string, fromGroup: boolean): string {
 /** Whether there is anything to pay back. */
 export const owesSomething = (owed: number | null | undefined): boolean =>
   Math.round(Number(owed) || 0) > 0;
+
+/**
+ * Which orders a counter's note is actually about.
+ *
+ * The driver writes one sentence at the till. "Refund" is a complete and
+ * perfectly sensible thing to write while holding a bag in one hand, and
+ * it is also the start of a search: which order, whose, how much. The note
+ * already carries the key of the line it was written against, and the run
+ * already knows which bags hold that line, so the search is unnecessary.
+ *
+ * Returned with the line on it rather than just the order, because what
+ * the desk needs is the amount: the note says a chicken pie was not had,
+ * and this says it was BEST's and it cost 1,400.
+ */
+export function ordersBehindNote<
+  O extends { id: string; order_no: number | null; customer_name: string },
+  L extends { qty: number; unit_price_at_order: number }
+>(
+  bags: { orders: (O & { lines: L[] })[] }[],
+  lineKey: string,
+  keyOf: (line: L) => string
+): { order: O; line: L; worth: number }[] {
+  const key = String(lineKey ?? "").trim();
+  if (key === "") return [];
+
+  const found: { order: O; line: L; worth: number }[] = [];
+  for (const bag of bags) {
+    for (const order of bag.orders) {
+      for (const line of order.lines) {
+        if (keyOf(line) !== key) continue;
+        found.push({
+          order,
+          line,
+          worth: Math.max(0, Math.round(line.qty * line.unit_price_at_order)),
+        });
+      }
+    }
+  }
+  return found;
+}

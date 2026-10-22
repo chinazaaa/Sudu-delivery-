@@ -30,6 +30,8 @@ import {
   paysAtCounter,
 } from "@/lib/runner";
 import { counterContacts, notesOn } from "@/lib/runner-server";
+import { counterKey } from "@/lib/runner";
+import { ordersBehindNote } from "@/lib/refunds";
 import { DEFAULT_MARKUP, lineCost } from "@/lib/cost-price";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import ActionButton from "@/components/ActionButton";
@@ -724,21 +726,64 @@ export default async function BatchPage({
           detail="Written at the counter by whoever was there. Swap the line on the order so the brand figures count what actually sold, then tick it off."
           className="mb-4 space-y-2.5"
         >
-          {openNotes.map((note) => (
-            <div key={note.id} className="soft bg-brand-wash p-3">
-              {note.said_about !== "" && (
-                <p className="ticket text-[11px] text-brand-dark">
-                  {note.said_about}
-                </p>
-              )}
-              <p className="text-[15px]">{note.said}</p>
-              <form action={noteSorted} className="mt-2">
-                <input type="hidden" name="note_id" value={note.id} />
-                <input type="hidden" name="done" value="true" />
-                <ActionButton done="Sorted ✓">Sorted</ActionButton>
-              </form>
-            </div>
-          ))}
+          {openNotes.map((note) => {
+            /*
+             * Whose order it was, and what it is worth.
+             *
+             * "Refund" is a complete thing to write at a till with a bag in
+             * one hand, and it is also the beginning of a search: which
+             * order, whose, how much. The note already carries the key of
+             * the line it was written against and the run already knows
+             * which bags hold that line, so the search is a link instead.
+             */
+            const behind = ordersBehindNote(handout, note.line_key, (line) =>
+              counterKey({
+                restaurant: line.restaurant,
+                name: line.name,
+                choices: line.choices,
+                unit_price_at_order: line.unit_price_at_order,
+              })
+            );
+
+            return (
+              <div key={note.id} className="soft bg-brand-wash p-3">
+                {note.said_about !== "" && (
+                  <p className="ticket text-[11px] text-brand-dark">
+                    {note.said_about}
+                  </p>
+                )}
+                <p className="text-[15px]">{note.said}</p>
+
+                {behind.length > 0 && (
+                  <ul className="mt-1.5 space-y-1">
+                    {behind.map(({ order, worth }) => (
+                      <li key={order.id} className="text-[14px]">
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="font-semibold text-brand underline"
+                        >
+                          {refFor(order)} · {order.customer_name}
+                        </Link>{" "}
+                        <span className="text-muted">
+                          paid {naira(worth)} for it
+                        </span>
+                      </li>
+                    ))}
+                    <li className="hint">
+                      Open it, set that line to nothing, and the money for it
+                      is owed back without anything else to remember.
+                    </li>
+                  </ul>
+                )}
+
+                <form action={noteSorted} className="mt-2">
+                  <input type="hidden" name="note_id" value={note.id} />
+                  <input type="hidden" name="done" value="true" />
+                  <ActionButton done="Sorted ✓">Sorted</ActionButton>
+                </form>
+              </div>
+            );
+          })}
         </Panel>
       )}
 
