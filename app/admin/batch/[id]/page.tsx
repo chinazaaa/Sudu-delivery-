@@ -7,6 +7,7 @@ import { hoursByDay } from "@/lib/settings";
 import {
   moveSameDayCar,
   dropSoldOutLine,
+  markRefundPaid,
   noteSorted,
   raiseMenuPrice,
   reopenRun,
@@ -232,7 +233,6 @@ export default async function BatchPage({
   // What a counter said that still needs doing. Everything else on this
   // page is the run; this is the work the run left behind.
   const allNotes = await notesOn(batch.id);
-  const openNotes = allNotes.filter((note) => note.done_at === null);
   /*
    * Which lines somebody at a counter said could not be had.
    *
@@ -242,6 +242,33 @@ export default async function BatchPage({
    * sheet that contradicts itself the week afterwards.
    */
   const couldNotGet = new Map(allNotes.map((note) => [note.line_key, note.said]));
+
+  /*
+   * What this run still owes somebody.
+   *
+   * Not simply the notes nobody has ticked. Ticking a note is a person
+   * saying they have seen it, which is a different fact from the money
+   * having moved, and the two came apart immediately: the chicken pie note
+   * was ticked, the pie was still on the order, nothing was owed to
+   * anybody, and the panel that would have said so had hidden itself. The
+   * work vanished because somebody acknowledged it.
+   *
+   * So a note stays here while the line it is about is still sitting on a
+   * paid order, ticked or not, and goes when the line does.
+   */
+  const stillOn = (note: { line_key: string }) =>
+    ordersBehindNote(handout, note.line_key, (line) =>
+      counterKey({
+        restaurant: line.restaurant,
+        name: line.name,
+        choices: line.choices,
+        unit_price_at_order: line.unit_price_at_order,
+      })
+    ).length > 0;
+
+  const openNotes = allNotes.filter(
+    (note) => note.done_at === null || stillOn(note)
+  );
 
   // One wording for a share, here and in the message the customer gets:
   // #1001a and #1001b, never #1001 on this screen and #1001a on theirs.
@@ -664,11 +691,18 @@ export default async function BatchPage({
           <Figure
             label="Pay at counters"
             value={naira(summary.foodCost)}
+            /* "0 priced" counted the receipts nobody had typed, which read
+               as a job half done on a run where there was nothing to do:
+               an unpriced line is now reckoned at what the counter charges
+               rather than left at the customer's price. It says what the
+               figure IS instead of what it is missing. */
             detail={`${counter.length} stop${counter.length === 1 ? "" : "s"}${
               counter.length > 0
                 ? gotStops > 0
                   ? ` · ${gotStops} collected`
-                  : ` · ${doneStops} priced`
+                  : doneStops > 0
+                    ? ` · ${doneStops} from receipts`
+                    : " · usual prices"
                 : ""
             }`}
           />
@@ -758,6 +792,7 @@ export default async function BatchPage({
       */}
       {openNotes.length > 0 && (
         <Panel
+          id="to-put-right"
           title={`${openNotes.length} thing${openNotes.length === 1 ? "" : "s"} to put right`}
           detail="Written at the counter by whoever was there. Swap the line on the order so the brand figures count what actually sold, then tick it off."
           className="mb-4 space-y-2.5"
@@ -848,6 +883,63 @@ export default async function BatchPage({
               </div>
             );
           })}
+        </Panel>
+      )}
+
+      {/*
+        Money this run is holding that is not the shop's.
+
+        Out here with the work rather than folded into a tab, because that
+        is what it is: somebody is owed money tonight. It used to live
+        three taps away under Profit, described as a group shrinking, which
+        was the only way a refund could happen when it was written and is
+        now the rarer of two.
+
+        It is also the answer to a question the page could not answer. The
+        refund gets created on the run and paid out of a bank app, and
+        there was nowhere on the run that said which ones were still
+        outstanding or let you say one had gone.
+      */}
+      {refunds.length > 0 && (
+        <Panel
+          id="owed-back"
+          title={`${naira(
+            refunds.reduce((all, one) => all + one.refund_owed, 0)
+          )} owed back`}
+          detail="Paid for and not supplied. Send the transfer in your bank, then mark it here so it stops being owed."
+          className="mb-4 space-y-2"
+        >
+          {refunds.map((order) => (
+            <div
+              key={order.id}
+              className="flex flex-wrap items-center gap-2 border-t-[1.5px] border-rule py-2.5"
+            >
+              <Link
+                href={`/admin/orders/${order.id}`}
+                className="min-w-0 flex-1 text-[14.5px]"
+              >
+                <span className="font-semibold text-brand underline">
+                  {refFor(order)} · {order.for_name ?? order.customer_name}
+                </span>
+                <span className="block text-muted">
+                  {formatPhone(order.customer_phone)}
+                  {String(order.refund_said ?? "").trim() !== ""
+                    ? ` · ${order.refund_said}`
+                    : ""}
+                </span>
+              </Link>
+              <span className="font-display text-[22px] font-black">
+                {naira(order.refund_owed)}
+              </span>
+              <form action={markRefundPaid} className="shrink-0">
+                <input type="hidden" name="order_id" value={order.id} />
+                <input type="hidden" name="sent" value="yes" />
+                <ActionButton className="btn-admin btn-admin-sm" done="Marked sent">
+                  I have sent it
+                </ActionButton>
+              </form>
+            </div>
+          ))}
         </Panel>
       )}
 
@@ -2100,31 +2192,6 @@ export default async function BatchPage({
 
                 <ShortGroups groups={groupsShort} />
 
-                {refunds.length > 0 && (
-                  <Panel
-                    title="Refunds owed"
-                    size="sm"
-                    detail="A group shrank when unpaid shares dropped out, so its delivery fee fell a band. Send these back tonight."
-                    className="space-y-2"
-                  >
-                    <ul className="mt-2 text-[14.5px]">
-                      {refunds.map((order) => (
-                        <li
-                          key={order.id}
-                          className="flex justify-between gap-3 border-t-[1.5px] border-rule py-2"
-                        >
-                          <span>
-                            {order.for_name ?? order.customer_name} ·{" "}
-                            {formatPhone(order.customer_phone)}
-                          </span>
-                          <span className="font-semibold">
-                            {naira(order.refund_owed)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </Panel>
-                )}
               </>
             ),
           },
