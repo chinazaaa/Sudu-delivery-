@@ -2,6 +2,8 @@ import Constants from "expo-constants";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { me } from "./store";
+
 /**
  * Everything the app knows comes from the shop's own server.
  *
@@ -49,12 +51,56 @@ async function body<T>(response: Response): Promise<T & { error?: string }> {
   }
 }
 
+/**
+ * What a customer is told when the phone's sign-in is no longer good.
+ *
+ * Said as a fact about the phone rather than as a failure, because that is
+ * what it is: nothing has gone wrong with their account, their orders or
+ * their money, and the next tap fixes it.
+ */
+export const SIGN_IN_AGAIN = "This phone needs signing in again. Your PIN is all it takes.";
+
+/**
+ * A sign-in that no longer verifies, dropped where it is noticed.
+ *
+ * The app carried a signed token and threw a plain error on any failed
+ * request, so when the shop changed the key that signs them, every stored
+ * token quietly became wrong and the app told people to sign in again
+ * without showing them the door. The only way out was Account, sign out,
+ * sign in, which is a thing nobody finds.
+ *
+ * So a 401 clears the token here, in the one place every signed-in request
+ * passes through. The screens already send somebody to sign in when there
+ * is no token, so dropping it is the whole fix: the next render offers the
+ * sign in rather than an error about one.
+ *
+ * Never on a request that carried no token. An endpoint answering 401 to an
+ * anonymous call is saying this needs signing in, not that what the phone
+ * holds is stale, and clearing nothing is the right amount of damage.
+ */
+async function dropDeadToken(response: Response, token?: string | null): Promise<void> {
+  if (response.status !== 401 || !token) return;
+  try {
+    // Only this phone's own stale token. A request that raced a sign-in
+    // would otherwise clear the good token the sign-in had just written.
+    if ((await me.read()).token === token) await me.save({ token: null });
+  } catch {
+    /* Storage is not worth an error on top of an error. The request still
+       fails and still says so; the phone simply asks again next time. */
+  }
+}
+
 async function get<T>(path: string, token?: string | null): Promise<T> {
   const response = await reach(`${BASE}/api/app${path}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const said = await body<T>(response);
-  if (!response.ok) throw new Error(said.error ?? "Something went wrong.");
+  if (!response.ok) {
+    await dropDeadToken(response, token);
+    throw new Error(
+      response.status === 401 ? SIGN_IN_AGAIN : said.error ?? "Something went wrong."
+    );
+  }
   return said;
 }
 
@@ -91,7 +137,12 @@ async function post<T>(path: string, data: unknown, token?: string | null): Prom
     body: JSON.stringify(data),
   });
   const said = await body<T>(response);
-  if (!response.ok) throw new Error(said.error ?? "Something went wrong.");
+  if (!response.ok) {
+    await dropDeadToken(response, token);
+    throw new Error(
+      response.status === 401 ? SIGN_IN_AGAIN : said.error ?? "Something went wrong."
+    );
+  }
   return said;
 }
 
