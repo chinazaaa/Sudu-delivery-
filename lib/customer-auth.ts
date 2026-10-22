@@ -1,19 +1,18 @@
 import { createHmac, randomInt, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import { db } from "./supabase";
+import { tokenKey } from "./signing";
 
 const COOKIE = "sudu_customer";
 const MAX_FAILURES = 5;
 const LOCK_MINUTES = 15;
 
-function secret(): string {
-  const value = process.env.ADMIN_PASSWORD;
-  if (!value) throw new Error("ADMIN_PASSWORD must be set. See .env.example.");
-  return value;
-}
-
 function sign(phone: string): string {
-  return createHmac("sha256", secret()).update(`customer:${phone}`).digest("hex");
+  // TOKEN_SECRET where it is set, the admin password where it is not. A
+  // customer being signed in is not a claim about the shop's board, and
+  // the two stopped sharing a key so that changing one never silently
+  // signs out everybody holding the other.
+  return createHmac("sha256", tokenKey()).update(`customer:${phone}`).digest("hex");
 }
 
 function sameString(a: string, b: string): boolean {

@@ -1,17 +1,12 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import { db } from "./supabase";
+import { tokenKey } from "./signing";
 
 const COOKIE = "sudu_promoter";
 
-function secret(): string {
-  const value = process.env.ADMIN_PASSWORD;
-  if (!value) throw new Error("ADMIN_PASSWORD must be set. See .env.example.");
-  return value;
-}
-
 function sign(code: string): string {
-  return createHmac("sha256", secret()).update(`promoter:${code}`).digest("hex");
+  return createHmac("sha256", tokenKey()).update(`promoter:${code}`).digest("hex");
 }
 
 function same(a: string, b: string): boolean {

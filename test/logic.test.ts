@@ -21,6 +21,7 @@ import { isExtra } from "../lib/shelf";
 import { emptyAndDone } from "../lib/batches";
 import { stillAGuess } from "../lib/profit";
 import { pauseAfter, waitLeft, waitSaid } from "../lib/admin-gate";
+import { signingKey } from "../lib/signing";
 import {
   counterKey,
   counterMessage,
@@ -5064,4 +5065,40 @@ test("the wait is said in whatever unit a person would say it in", () => {
   assert.equal(waitSaid(45), "Wait 45 seconds and try again.");
   assert.equal(waitSaid(60), "Wait 1 minute and try again.");
   assert.equal(waitSaid(300), "Wait 5 minutes and try again.");
+});
+
+/*
+ * One key for the board, another for everybody else.
+ *
+ * Customer and promoter cookies were signed with ADMIN_PASSWORD, so one
+ * secret spanned two kinds of trust. Nothing was exploitable through it,
+ * but changing the admin password silently signed out every customer in
+ * the shop, and a security measure with a surprise attached is one nobody
+ * takes.
+ */
+test("the signing key is its own, and falls back so nothing breaks on the way", () => {
+  // Set, so it is used. This is the state after somebody fills it in.
+  assert.equal(signingKey("a-long-random-string", "hunter2"), "a-long-random-string");
+
+  // Unset, so the old key carries on. This is the whole reason the split
+  // can ship without signing anybody out: every cookie already issued
+  // still verifies, because the key is still the same value.
+  assert.equal(signingKey(undefined, "hunter2"), "hunter2");
+  assert.equal(signingKey("", "hunter2"), "hunter2");
+  assert.equal(signingKey(null, "hunter2"), "hunter2");
+
+  // Whitespace counts as unset. That is the shape a mistake takes in a
+  // dashboard: a stray space, or a newline surviving a paste. Signing
+  // every identity in the shop with " " is worse than carrying on.
+  assert.equal(signingKey("   ", "hunter2"), "hunter2");
+  assert.equal(signingKey("\n", "hunter2"), "hunter2");
+
+  // Trimmed, so a pasted key with a trailing newline is the same key as
+  // the one without it, rather than a silent sign-out on the next deploy.
+  assert.equal(signingKey("  a-long-random-string\n", "hunter2"), "a-long-random-string");
+
+  // Neither set is a shop that cannot sign anybody in, and it says so
+  // rather than signing with an empty string.
+  assert.throws(() => signingKey(undefined, undefined), /TOKEN_SECRET or ADMIN_PASSWORD/);
+  assert.throws(() => signingKey("", "  "), /TOKEN_SECRET or ADMIN_PASSWORD/);
 });
