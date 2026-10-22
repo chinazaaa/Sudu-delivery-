@@ -81,10 +81,21 @@ export default function SettleRun({
       </h2>
       <p className="hint mt-1">
         Delivered, paid for, and the costs are in.
+        {/*
+          It used to say these lines stayed at the menu price, which is
+          fine if that is what you paid. It never was what she paid: the
+          menu price is the cost with the shop's markup already on it, so
+          the sentence talked somebody into accepting a food cost around a
+          sixth too high, every run. They sit at what the counter is
+          reckoned to charge instead, and typing a receipt still beats a
+          reckoning.
+        */}
         {unpriced > 0 &&
           ` ${unpriced} counter line${
             unpriced === 1 ? "" : "s"
-          } stayed at the menu price, which is fine if that is what you paid.`}
+          } had no receipt typed, so ${
+            unpriced === 1 ? "it is" : "they are"
+          } counted at what the counter usually charges. Type the real figure on any that came out different.`}
       </p>
 
       {!asking ? (

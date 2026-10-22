@@ -139,3 +139,28 @@ export function raisedCost(
   const was = Math.round(Number(expected) || 0);
   return paid > was ? paid : null;
 }
+
+/**
+ * What a run's food should cost at the counters.
+ *
+ * Every line backed off its selling price by the counter's own markup,
+ * which is the shop's best standing guess at what a till will ask for and
+ * is now a good one: every item on the menu carries a cost, and a few
+ * hundred of them have been checked against a board.
+ *
+ * It replaces the menu price as the figure used where nobody has typed a
+ * receipt. The menu price was never a guess at the cost at all: it is the
+ * cost with the markup already on it, so using it said the shop paid
+ * exactly what it charged and earned nothing on food. On the run that
+ * prompted this, the counter sheet said 7,304 and the tile above it said
+ * 8,400, which is the customer's price, on the same screen.
+ */
+export function expectedFoodCost(
+  lines: { qty: number; unitPrice: number }[],
+  markup: number = DEFAULT_MARKUP
+): number {
+  return lines.reduce(
+    (total, line) => total + lineCost(line.unitPrice, line.qty, markup),
+    0
+  );
+}

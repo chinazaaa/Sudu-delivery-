@@ -5,11 +5,37 @@ import { activeBands } from "./settings";
 import { getBatch } from "./batches";
 import { lagosToday } from "./time";
 import { counterKey } from "./runner";
+import { DEFAULT_MARKUP, lineCost, markupOf } from "./cost-price";
+import { safeSettings } from "./settings";
 import { ALERTS_AT } from "./mail";
 import { isGone, isPaid, NOT_ORDERS_SQL } from "./orders";
 import { groupShortfalls, refundsOwed, settleGroupFees, type GroupShortfall } from "./groups";
 import { linesFor, type OrderLine } from "./orders";
 import type { Batch, Order, Promoter } from "./types";
+
+
+/**
+ * Each counter's markup, by the name the order lines carry.
+ *
+ * Null is the ordinary case: nearly every counter uses the shop's own
+ * figure and only the odd one out stores its own. Kept here as well as in
+ * runner-server because the dependency has to run this way: the run sheet
+ * reads the admin sheet, so the admin sheet cannot read the run sheet.
+ */
+export async function counterMarkups(): Promise<Record<string, number>> {
+  const shop = markupOf((await safeSettings()).food_markup);
+
+  const { data } = await db()
+    .from("restaurants")
+    .select("name, markup")
+    .overrideTypes<{ name: string; markup: number | null }[]>();
+
+  const out: Record<string, number> = {};
+  for (const row of data ?? []) {
+    out[row.name] = row.markup === null ? shop : markupOf(row.markup, shop);
+  }
+  return out;
+}
 
 export type CounterLine = {
   name: string;
@@ -166,19 +192,44 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   const everyLine = counterLines.flatMap((place) => place.lines);
   const reconciled = everyLine.filter((line) => spentOn.has(line.key));
 
+  /*
+   * What a line is reckoned to cost where nobody has typed a receipt.
+   *
+   * It used to be the menu price, which was never a guess at the cost at
+   * all: the menu price IS the cost with the shop's markup already on it,
+   * so using it claimed the shop paid exactly what it charged and earned
+   * nothing whatever on food. That is where the markup went. It was right
+   * when the shop had no idea what a counter asks for, and every item now
+   * carries a cost, hundreds of them checked against a board.
+   *
+   * The same arithmetic the run sheet and the counter sheet already use,
+   * so the three cannot disagree. They did: the counter sheet read 7,304
+   * and the tile above it read 8,400, on one screen.
+   */
+  const markups = await counterMarkups();
+  const shouldCost = (restaurant: string, line: { qty: number; unitPrice: number }) =>
+    lineCost(line.unitPrice, line.qty, markups[restaurant] ?? DEFAULT_MARKUP);
+
+  const reckoned = counterLines.reduce(
+    (total, place) =>
+      total +
+      place.lines.reduce(
+        (here, line) =>
+          here +
+          (spentOn.has(line.key)
+            ? (spentOn.get(line.key) as number) - (gotBack.get(line.key) ?? 0)
+            : shouldCost(place.restaurant, line)),
+        0
+      ),
+    0
+  );
+
   const foodCost =
     reconciled.length > 0
-      ? everyLine.reduce(
-          (total, line) =>
-            total +
-            (spentOn.has(line.key)
-              ? (spentOn.get(line.key) as number) - (gotBack.get(line.key) ?? 0)
-              : line.qty * line.unitPrice),
-          0
-        )
+      ? reckoned
       : batch.food_spend > 0
         ? batch.food_spend
-        : menuCost;
+        : reckoned;
   const margin = sum(paid, (o) => o.total) - foodCost;
 
   const onMenu = await menuPrices(everyLine.map((line) => line.itemId));
@@ -878,9 +929,34 @@ export async function overMenu(
   } catch {
     return out;
   }
-  if (spend.length === 0) return out;
 
-  const reconciledIds = [...new Set(spend.map((row) => row.batch_id))];
+  /*
+   * Every run, not only the ones with a receipt typed against them.
+   *
+   * This used to give up here when nobody had typed anything, leaving the
+   * run at a food cost of exactly the menu price and so at no food margin
+   * at all. That is almost every run: the figures are typed at a till, by
+   * somebody with a bag in one hand, and mostly they are not. The shop's
+   * markup was therefore absent from its own profit, which is where tens
+   * of thousands of naira of it went.
+   */
+  const markups = await counterMarkups();
+  /*
+   * A run where somebody typed one figure for the whole shop keeps it.
+   *
+   * That figure is a real receipt total and beats any reckoning, so it is
+   * left alone unless there are per line figures as well, which are better
+   * still. Without this guard, opening the window to every run would
+   * quietly throw away the one number somebody had actually counted.
+   */
+  const typedPerLine = new Set(spend.map((row) => String(row.batch_id)));
+  const reconciledIds = batches
+    .map((b) => String(b.id))
+    .filter(
+      (id) =>
+        typedPerLine.has(id) ||
+        Number(batches.find((b) => String(b.id) === id)?.food_spend ?? 0) <= 0
+    );
   const wanted = orders.filter(
     (o) => reconciledIds.includes(o.batch_id) && isPaid(o.status)
   );
@@ -889,7 +965,11 @@ export async function overMenu(
 
   for (const id of reconciledIds) {
     const mine = lines.filter((line) => batchOfOrder.get(line.order_id) === id);
-    const real = chargedByRestaurant(mine, spend.filter((row) => row.batch_id === id)).reduce(
+    const real = chargedByRestaurant(
+      mine,
+      spend.filter((row) => row.batch_id === id),
+      markups
+    ).reduce(
       (total, place) => total + place.charged,
       0
     );
@@ -925,23 +1005,40 @@ export type CounterCharge = {
  */
 export function chargedByRestaurant(
   lines: OrderLine[],
-  spend: { line_key: string; paid: number; recovered?: number | null }[]
+  spend: { line_key: string; paid: number; recovered?: number | null }[],
+  /*
+   * Each counter's markup, so a line nobody typed a receipt for can be
+   * reckoned at what that counter charges rather than at what the customer
+   * was charged.
+   *
+   * Optional, and the old behaviour without it, because this is read in
+   * two places and one of them only ever wants the figures somebody really
+   * typed. Falling back to the menu price was the bug: the menu price is
+   * the cost with the markup already on it, so an unreconciled line
+   * claimed the shop handed the counter every naira it took.
+   */
+  markups: Record<string, number> = {}
 ): CounterCharge[] {
   const spentOn = new Map(spend.map((row) => [row.line_key, Number(row.paid ?? 0)]));
   const gotBack = new Map(spend.map((row) => [row.line_key, Number(row.recovered ?? 0)]));
 
-  return groupForCounter(lines).map((place) => ({
-    restaurant: place.restaurant,
-    menu: place.expectedFoodTotal,
-    charged: place.lines.reduce(
-      (total, line) =>
-        total +
-        (spentOn.has(line.key)
-          ? (spentOn.get(line.key) as number) - (gotBack.get(line.key) ?? 0)
-          : line.qty * line.unitPrice),
-      0
-    ),
-  }));
+  return groupForCounter(lines).map((place) => {
+    const markup = markups[place.restaurant];
+    return {
+      restaurant: place.restaurant,
+      menu: place.expectedFoodTotal,
+      charged: place.lines.reduce(
+        (total, line) =>
+          total +
+          (spentOn.has(line.key)
+            ? (spentOn.get(line.key) as number) - (gotBack.get(line.key) ?? 0)
+            : markup === undefined
+              ? line.qty * line.unitPrice
+              : lineCost(line.unitPrice, line.qty, markup)),
+        0
+      ),
+    };
+  });
 }
 
 export type PromoterPayout = {

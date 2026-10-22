@@ -22,7 +22,14 @@ import { emptyAndDone } from "../lib/batches";
 import { stillAGuess } from "../lib/profit";
 import { pauseAfter, waitLeft, waitSaid } from "../lib/admin-gate";
 import { signingKey } from "../lib/signing";
-import { costFrom, keptOn, lineCost, raisedCost, sellingFrom } from "../lib/cost-price";
+import {
+  costFrom,
+  expectedFoodCost,
+  keptOn,
+  lineCost,
+  raisedCost,
+  sellingFrom,
+} from "../lib/cost-price";
 import { owedByShrinking, owesSomething, refundSaid } from "../lib/refunds";
 import { buyingDone } from "../lib/runner";
 import {
@@ -5281,4 +5288,25 @@ test("the buying part of a run ends when the car leaves the counters", () => {
   // must leave the sheet working rather than shutting it.
   assert.equal(buyingDone(""), false);
   assert.equal(buyingDone("nonsense"), false);
+});
+
+test("a run's expected food cost is the counter's price, not the customer's", () => {
+  // The run that prompted this: five lines of Chicken Republic selling for
+  // 8,400, which is 7,304 at the till once the shop's 15 per cent comes
+  // back off. The tile used to show 8,400, meaning the shop paid exactly
+  // what it charged and made nothing at all on food.
+  const lines = [
+    { qty: 1, unitPrice: 2100 },
+    { qty: 1, unitPrice: 1300 },
+    { qty: 1, unitPrice: 700 },
+    { qty: 1, unitPrice: 1400 },
+    { qty: 1, unitPrice: 2900 },
+  ];
+  assert.equal(expectedFoodCost(lines), 7304);
+
+  // A counter with its own markup is backed off by its own figure.
+  assert.equal(expectedFoodCost([{ qty: 2, unitPrice: 1150 }], 15), 2000);
+
+  // Nothing bought costs nothing, rather than throwing on an empty run.
+  assert.equal(expectedFoodCost([]), 0);
 });

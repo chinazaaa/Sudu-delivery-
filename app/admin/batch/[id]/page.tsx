@@ -305,8 +305,17 @@ export default async function BatchPage({
       .filter((line) => line.paid === null)
       .map((line) => ({ restaurant: group.restaurant, line }))
   );
+  // At what it should cost, not at the menu. The menu price is the cost
+  // with the markup already on it, so a "still to spend" built from it
+  // said the shop was about to hand over the customer's money entire.
   const stillToSpend = unpriced.reduce(
-    (total, one) => total + one.line.qty * one.line.unitPrice,
+    (total, one) =>
+      total +
+      lineCost(
+        one.line.unitPrice,
+        one.line.qty,
+        reach[one.restaurant]?.markup ?? DEFAULT_MARKUP
+      ),
     0
   );
   const stillAt = [...new Set(unpriced.map((one) => one.restaurant))];
