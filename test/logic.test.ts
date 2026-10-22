@@ -5248,3 +5248,18 @@ test("a refund says why, in the customer's own words where there are some", () =
   assert.equal(owesSomething(0), false);
   assert.equal(owesSomething(null), false);
 });
+
+test("buying fewer than were ordered owes back only the ones not had", () => {
+  // Two chicken pies ordered at 1,400 each, the counter had one. The
+  // quantity goes to 1 and the order falls by exactly one pie, so one pie
+  // is what comes back. The most common shape of this, and the one where
+  // getting it wrong means handing back twice what is owed.
+  assert.equal(owedByShrinking("paid", 14400, 13000), 1400);
+
+  // Three down to one is two pies, not one and not three.
+  assert.equal(owedByShrinking("paid", 15800, 13000), 2800);
+
+  // None of them had is the whole line, which is the same rule and not a
+  // special case: removing a line is just its quantity reaching nothing.
+  assert.equal(owedByShrinking("paid", 15800, 13000 - 0), 2800);
+});
