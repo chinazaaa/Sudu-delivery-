@@ -88,3 +88,54 @@ export function keptOn(
   const kept = price - paid;
   return { kept, share: Math.round((kept / price) * 100) };
 }
+
+/**
+ * What a whole counter line is expected to cost.
+ *
+ * The one figure the person at the till actually needs, and for a long
+ * time the run sheet showed the other one. It said "the card should be"
+ * over the menu total, which is the cost with the markup on: she would
+ * have paid six thousand against a sheet asking for six thousand nine
+ * hundred, on every line, every run, and spent the evening correcting a
+ * difference that was never a difference.
+ *
+ * The division works on the whole line, choices and all, because the
+ * markup was applied to the choices too: a large pepperoni's price is a
+ * large pepperoni's cost with fifteen on. So there is nothing to
+ * apportion between the pizza and the size, which is the thing that
+ * looked hard about this and turned out not to exist.
+ */
+export function lineCost(
+  unitPrice: number,
+  qty: number,
+  markup: number = DEFAULT_MARKUP
+): number {
+  const each = costFrom(unitPrice, markup);
+  return each * Math.max(0, Math.round(Number(qty) || 0));
+}
+
+/**
+ * Whether a receipt says a counter has put its price up.
+ *
+ * Only upward, which is the shop's rule one level down from the menu and
+ * for the same reason written on it: a counter charging less is usually a
+ * deal or a good mood on the day, and following it down would drop what
+ * the shop expects to pay on the strength of one afternoon. Next week the
+ * deal is over and the sheet is wrong in the direction that costs money.
+ *
+ * Null where there is nothing to learn, so a caller can tell "this is
+ * news" from "this is the price we already had".
+ */
+export function raisedCost(
+  expected: number | null | undefined,
+  paidForOne: number
+): number | null {
+  const paid = Math.round(Number(paidForOne) || 0);
+  if (paid <= 0) return null;
+
+  // Nothing known is something learned, whatever the figure.
+  if (expected === null || expected === undefined) return paid;
+
+  const was = Math.round(Number(expected) || 0);
+  return paid > was ? paid : null;
+}

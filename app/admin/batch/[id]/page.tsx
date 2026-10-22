@@ -30,6 +30,7 @@ import {
   paysAtCounter,
 } from "@/lib/runner";
 import { counterContacts, notesOn } from "@/lib/runner-server";
+import { DEFAULT_MARKUP, lineCost } from "@/lib/cost-price";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import ActionButton from "@/components/ActionButton";
 import StagePicker from "@/components/admin/StagePicker";
@@ -194,6 +195,21 @@ export default async function BatchPage({
   // group is grouped by the name on the order line. Not every kitchen is
   // on WhatsApp and some take one only in person.
   const reach = await counterContacts();
+
+  /*
+   * What a counter will actually charge, which is its prices without the
+   * shop's markup on them.
+   *
+   * The sheet showed the menu total under "pay at this counter" for as
+   * long as it has existed. That is the cost with the markup on: somebody
+   * stood at a till reading 6,900 while it asked for 6,000, on every line
+   * of every run, and the difference was never a difference.
+   */
+  const costFor = (group: { restaurant: string }, unitPrice: number, qty: number) =>
+    lineCost(unitPrice, qty, reach[group.restaurant]?.markup ?? DEFAULT_MARKUP);
+
+  const costAt = (group: { restaurant: string; lines: { unitPrice: number; qty: number }[] }) =>
+    group.lines.reduce((total, line) => total + costFor(group, line.unitPrice, line.qty), 0);
   // What a counter said that still needs doing. Everything else on this
   // page is the run; this is the work the run left behind.
   const openNotes = (await notesOn(batch.id)).filter((note) => note.done_at === null);
@@ -990,16 +1006,17 @@ export default async function BatchPage({
                           Pay at this counter
                         </span>
                         <span className="block font-display text-[44px] font-black leading-none">
-                          {naira(group.expectedFoodTotal)}
+                          {naira(costAt(group))}
                         </span>
                         <span className="mt-0.5 block text-[12.5px] text-rail-text">
-                          Carrying {naira(summary.foodCost)} in total today
+                          Carrying {naira(counter.reduce((all, one) => all + costAt(one), 0))} in
+                          total today
                         </span>
                       </span>
                       <span className="hidden shrink-0 text-right lg:block">
                         <span className="ticket block text-muted">Pay here</span>
                         <span className="font-display text-[30px] font-black leading-none">
-                          {naira(group.expectedFoodTotal)}
+                          {naira(costAt(group))}
                         </span>
                       </span>
                       {/* Only worth arranging when there is more than one,
@@ -1069,12 +1086,16 @@ export default async function BatchPage({
                           lead: `${line.qty}×`,
                           text: line.name,
                           detail: line.choices.join(", "),
-                          // The each-price, said as the menu, because it is
-                          // the figure to argue with at the counter when the
-                          // till asks for something else. Apart from the
-                          // choices because the boards set it in mono, and
-                          // the second rule is that money always is.
-                          money: `menu ${naira(line.unitPrice)} ea`,
+                          /* What one of them costs at the counter, not what
+                             it sells for. The menu price is the cost with
+                             the shop's markup on, so printing it here had
+                             somebody reading 6,900 at a till about to ask
+                             for 6,000, every line, every run. Apart from
+                             the choices because the boards set it in mono,
+                             and the second rule is that money always is. */
+                          money: `${naira(
+                            costFor(group, line.unitPrice, 1)
+                          )} ea at the counter`,
                         }))}
                       />
                     </div>

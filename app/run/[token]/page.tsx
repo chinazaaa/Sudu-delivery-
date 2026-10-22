@@ -5,11 +5,12 @@ import CounterLines from "@/components/runner/CounterLines";
 import RunStage from "@/components/runner/RunStage";
 import RunSwitch from "@/components/runner/RunSwitch";
 import type { CounterGroup } from "@/lib/admin";
+import { DEFAULT_MARKUP, lineCost } from "@/lib/cost-price";
 import { SLOT_LABEL } from "@/lib/config";
+import { naira } from "@/lib/money";
 import { whatsappTo } from "@/lib/messages";
 import {
   counterMessage,
-  expectedAt,
   hasGot,
   howToOrderAhead,
   paysAtCounter,
@@ -267,6 +268,12 @@ function StopScreen({
 }) {
   const way = howToOrderAhead(contact);
   const pays = paysAtCounter(contact);
+  // Every line without the markup on, which is what the till will ask for.
+  const markup = contact?.markup ?? DEFAULT_MARKUP;
+  const toPay = stop.lines.reduce(
+    (total, line) => total + lineCost(line.unitPrice, line.qty, markup),
+    0
+  );
   const number = contact?.phone ?? "";
   const ahead = counterMessage(stop, { shopName: "Sudu" });
 
@@ -282,13 +289,19 @@ function StopScreen({
       </div>
 
       {/*
-        The figure read at arm's length with a till waiting, so it is the
-        biggest thing on the screen after the name.
+        What the card will actually be charged, which for a long time this
+        did not say.
 
-        Two different sentences over the same number, because a stop that
-        the shop has already paid is a different job: collect and leave.
-        Saying "the card should be" at a counter already settled is worse
-        than saying nothing, because she will stand there trying to pay it.
+        It showed the menu total, which is the cost with the shop's markup
+        on it: she would have paid six thousand against a sheet asking for
+        six thousand nine hundred, on every line, every run, and spent the
+        evening correcting a difference that was never a difference. The
+        customer's price belongs on the order, not at the till.
+
+        Two sentences over it, because a stop the shop has already paid is
+        a different job: collect and leave. Saying "the card should be" at
+        a counter already settled is worse than saying nothing, because
+        she will stand there trying to pay it.
       */}
       <div
         className={`card px-4 py-3 ${
@@ -299,7 +312,7 @@ function StopScreen({
           {pays ? "The card should be" : "Already paid by transfer"}
         </span>
         <span className="block font-display text-[44px] font-black leading-none">
-          {expectedAt(stop)}
+          {naira(toPay)}
         </span>
         {!pays && (
           <span className="mt-0.5 block text-[13px] text-muted">

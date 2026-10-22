@@ -193,6 +193,10 @@ export type Settings = {
    *  list itself is in the code; only what we add to it lives here. */
   laundry_on: string;
   laundry_markup: number;
+  /** Per cent added to a counter's price to get the menu price. What a
+   *  line is expected to cost is its price without this on, which is the
+   *  figure the person at the till needs. A counter can store its own. */
+  food_markup: number;
   laundry_minimum: number;
   laundry_note: string;
   /** Which weekdays the laundry car goes, Sunday 0, as "1,4". */
@@ -336,6 +340,7 @@ export const EMPTY: Settings = {
   pharmacy_promise: "",
   laundry_on: "",
   laundry_markup: 0,
+  food_markup: 15,
   laundry_minimum: 0,
   laundry_note: "",
   laundry_days: "1,4",

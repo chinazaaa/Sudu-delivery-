@@ -2,6 +2,8 @@ import { db } from "./supabase";
 import { batchSheet, type BatchSheet } from "./admin";
 import { getBatch } from "./batches";
 import { stillDriving } from "./runner";
+import { markupOf } from "./cost-price";
+import { safeSettings } from "./settings";
 import type { Batch } from "./types";
 
 /**
@@ -67,6 +69,9 @@ export type CounterContact = {
   phone: string;
   orders_ahead: string;
   pay_by: string;
+  /** Per cent this counter is marked up by, so a price can be turned back
+   *  into what the card will actually be charged. */
+  markup: number;
 };
 
 /**
@@ -81,15 +86,18 @@ export type CounterContact = {
  * that works and stay quiet where none does.
  */
 export async function counterContacts(): Promise<Record<string, CounterContact>> {
+  const shopMarkup = markupOf((await safeSettings()).food_markup);
+
   const { data } = await db()
     .from("restaurants")
-    .select("name, phone, orders_ahead, pay_by")
+    .select("name, phone, orders_ahead, pay_by, markup")
     .overrideTypes<
       {
         name: string;
         phone: string | null;
         orders_ahead: string | null;
         pay_by: string | null;
+        markup: number | null;
       }[]
     >();
 
@@ -99,6 +107,9 @@ export async function counterContacts(): Promise<Record<string, CounterContact>>
       phone: String(row.phone ?? "").trim(),
       orders_ahead: String(row.orders_ahead ?? "").trim(),
       pay_by: String(row.pay_by ?? "").trim(),
+      // Null is the ordinary case: nearly every counter uses the shop's
+      // own figure, and only the odd one out stores its own.
+      markup: row.markup === null ? shopMarkup : markupOf(row.markup, shopMarkup),
     };
   }
   return reach;

@@ -22,7 +22,7 @@ import { emptyAndDone } from "../lib/batches";
 import { stillAGuess } from "../lib/profit";
 import { pauseAfter, waitLeft, waitSaid } from "../lib/admin-gate";
 import { signingKey } from "../lib/signing";
-import { costFrom, keptOn, sellingFrom } from "../lib/cost-price";
+import { costFrom, keptOn, lineCost, raisedCost, sellingFrom } from "../lib/cost-price";
 import {
   counterKey,
   counterMessage,
@@ -5156,4 +5156,50 @@ test("what the shop keeps, and the difference between none and not known", () =>
   // nobody has priced is the kind of wrong that gets believed.
   assert.equal(keptOn(2300, null), null);
   assert.equal(keptOn(2300, undefined), null);
+});
+
+/*
+ * The figure the person at the till actually needs.
+ *
+ * The run sheet said "the card should be" over the menu total, which is
+ * the cost with the markup on. She would have paid six thousand against a
+ * sheet asking for six thousand nine hundred, on every line, every run.
+ */
+test("a line costs its price without the markup, choices and all", () => {
+  // A medium pizza selling at 6,900 cost 6,000 at the counter.
+  assert.equal(lineCost(6900, 1, 15), 6000);
+  assert.equal(lineCost(6900, 2, 15), 12000);
+
+  // The division works on the whole line because the markup was applied to
+  // the choices too: a large pepperoni's price is a large pepperoni's cost
+  // with fifteen on. Nothing to apportion between the pizza and the size.
+  assert.equal(lineCost(9200, 1, 15), 8000);
+
+  // A counter marked up by nothing costs what it sells for, which is KFC:
+  // the food earns the shop nothing and the delivery fee pays for the run.
+  assert.equal(lineCost(64999, 1, 0), 64999);
+
+  assert.equal(lineCost(6900, 0, 15), 0);
+});
+
+test("a receipt only ever teaches the cost upward", () => {
+  // Dearer than expected is news, and next run's sheet should say so.
+  assert.equal(raisedCost(6000, 6200), 6200);
+
+  // Cheaper is a deal or a good mood on the day. Following it down would
+  // drop what the shop expects to pay on the strength of one afternoon,
+  // and next week the deal is over and the sheet is wrong in the direction
+  // that costs money.
+  assert.equal(raisedCost(6000, 4500), null);
+  assert.equal(raisedCost(6000, 6000), null);
+
+  // Nothing known is something learned, whatever the figure. This is how a
+  // counter with no cost on it gets its first one.
+  assert.equal(raisedCost(null, 4500), 4500);
+  assert.equal(raisedCost(undefined, 6200), 6200);
+
+  // Nothing paid is not a price of nothing: a blank box means the menu was
+  // right, and it must never teach the shop that something is free.
+  assert.equal(raisedCost(6000, 0), null);
+  assert.equal(raisedCost(null, 0), null);
 });

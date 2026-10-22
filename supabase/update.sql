@@ -2980,3 +2980,53 @@ where r.id = mi.restaurant_id
   and mi.price_food > 0
   and mi.price_cost is not null
   and round(round(mi.price_cost * 1.15 / 50) * 50) = mi.price_food;
+
+-- What each counter is marked up by, so a cost can be worked out from a
+-- price without assuming the whole shop does one thing.
+--
+-- It does not. Fifteen per cent is the rule at most counters and it holds
+-- for their choices as well as their base prices, which is the useful part:
+-- a large pepperoni's price is a large pepperoni's cost with fifteen on, so
+-- the cost of any line is its price divided by 1.15 and there is nothing to
+-- attribute between the pizza and the size.
+--
+-- KFC is the exception that proves it is worth storing. Its prices run from
+-- 599 to 64,999, none of them fits the rule, and they are KFC's own menu
+-- prices typed in off the board. A counter like that is marked up by
+-- nothing, and dividing its prices by 1.15 invents a discount nobody gives.
+alter table restaurants
+  add column if not exists markup numeric;
+
+comment on column restaurants.markup is
+  'Per cent this counter is marked up by. Null falls back to settings.food_markup, which is what nearly every counter uses.';
+
+-- Sold at what KFC charges, so the food earns nothing and the delivery fee
+-- pays for the run. Recorded rather than inferred every time somebody looks.
+update restaurants set markup = 0 where name = 'KFC';
+
+-- A cost on everything, so there is a figure to check rather than a blank.
+--
+-- Each counter's own markup, not one number across the shop. Nearly every
+-- counter is fifteen per cent and its cost is its price divided by 1.15,
+-- which is what the website shows plus fifteen, read backwards.
+--
+-- KFC is the exception and keeps it. Its markup is recorded as nothing,
+-- because its prices are KFC's own board typed in: 599 and 64,999 are not
+-- figures that come out of a sum. So its cost is its price, which says the
+-- true thing, that the food earns the shop nothing and the delivery fee
+-- pays for the run. Dividing those by 1.15 would invent a discount KFC
+-- does not give and would quietly report profit that was never made.
+--
+-- All of it is a starting point rather than an answer, which is what the
+-- checked tick is for. The shop's plan is to go counter by counter and
+-- make sure its cost is never lower than what the counter really charges,
+-- and a wrong figure somebody can see is what makes that possible.
+update menu_items mi
+set price_cost = greatest(
+      0,
+      round(mi.price_food / (1 + coalesce(r.markup, (select food_markup from settings limit 1), 15) / 100))
+    )
+from restaurants r
+where r.id = mi.restaurant_id
+  and mi.price_food > 0
+  and mi.price_cost is null;
