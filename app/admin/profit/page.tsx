@@ -452,6 +452,78 @@ export default async function ProfitPage({
             <p className="hint mb-1.5 mt-1">
               Every line is money that moved. Tap one to see the orders or runs behind it.
             </p>
+
+            {/*
+              The four questions actually asked of this page, answered
+              before the working rather than inside it.
+
+              All four were already here and none of them was named. What
+              the counters really charged was two lines that had to be
+              added; what the deliveries brought in was a subtraction
+              somebody had to do in their head; and the expenses were
+              three lines apart. The working below is the audit trail and
+              is right to be itemised, but reading a number off an audit
+              trail is not the same as being told it.
+
+              Deliberately not laid out as a sum. These do not add up to
+              the profit on their own: buying under the menu is already
+              part of what the food cost, and showing both as if they
+              stacked would be a fifth wrong number. The sentence
+              underneath says how they actually relate.
+            */}
+            <div className="my-3 grid grid-cols-2 gap-2.5 border-y-[1.5px] border-rule py-3 sm:gap-3.5">
+              <div>
+                <p className="ticket text-[11px] text-muted">Delivery money</p>
+                <p className="font-display text-[22px] font-black leading-none sm:text-[26px]">
+                  {naira(sums.margin)}
+                </p>
+                <p className="mt-0.5 text-[12px] text-muted">
+                  The fees, after any coupons
+                </p>
+              </div>
+              <div>
+                <p className="ticket text-[11px] text-muted">Food bought</p>
+                <p className="font-display text-[22px] font-black leading-none sm:text-[26px]">
+                  {naira(sums.foodAtMenu + sums.overMenu)}
+                </p>
+                <p className="mt-0.5 text-[12px] text-muted">
+                  What the counters were really charged
+                </p>
+              </div>
+              <div>
+                <p className="ticket text-[11px] text-muted">
+                  {sums.overMenu <= 0 ? "Bought under the menu" : "Counters charged over"}
+                </p>
+                <p
+                  className={`font-display text-[22px] font-black leading-none sm:text-[26px] ${
+                    sums.overMenu < 0 ? "text-mint" : sums.overMenu > 0 ? "text-brand-dark" : ""
+                  }`}
+                >
+                  {naira(Math.abs(sums.overMenu))}
+                </p>
+                <p className="mt-0.5 text-[12px] text-muted">
+                  {sums.overMenu === 0
+                    ? "Nothing reconciled yet, so this is still the menu"
+                    : "Only across the runs you have priced"}
+                </p>
+              </div>
+              <div>
+                <p className="ticket text-[11px] text-muted">Expenses</p>
+                <p className="font-display text-[22px] font-black leading-none sm:text-[26px]">
+                  {naira(sums.commission + sums.runCosts + sums.otherOut)}
+                </p>
+                <p className="mt-0.5 text-[12px] text-muted">
+                  Cars, commission and anything else paid out
+                </p>
+              </div>
+            </div>
+
+            <p className="hint mb-2">
+              The deliveries pay for the cars. Food bought is money that was
+              never the shop&rsquo;s: customers paid it and it went straight
+              back out over a counter, and buying under the menu is the part
+              of it that stayed.
+            </p>
             {/* Every line that moved it, in the order it is taken off. A
                 figure somebody disputes is disputed at this level, not at
                 the summary's. */}
