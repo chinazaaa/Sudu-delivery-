@@ -84,6 +84,13 @@ export type MenuItem = {
   restaurant_id: string;
   name: string;
   price_food: number;
+  /** What it costs at the counter, before the shop's markup. Null means
+   *  nobody has said. */
+  price_cost?: number | null;
+  /** True once somebody has seen that cost on a receipt or a counter's own
+   *  menu. False means it was worked back from the selling price, which is
+   *  arithmetic rather than knowledge. */
+  cost_confirmed?: boolean;
   available: boolean;
   sort_order: number;
   image_url: string;

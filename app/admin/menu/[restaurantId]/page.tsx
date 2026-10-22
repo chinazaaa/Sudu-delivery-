@@ -9,6 +9,7 @@ import SaveButton from "@/components/SaveButton";
 import { db } from "@/lib/supabase";
 import { optionGroupsFor } from "@/lib/menu";
 import { naira } from "@/lib/money";
+import { keptOn } from "@/lib/cost-price";
 import {
   addCategory,
   addOption,
@@ -612,6 +613,27 @@ export default async function RestaurantAdmin({
                   <span className="block truncate font-semibold">{item.name}</span>
                   <span className="block text-sm text-muted">
                     {item.price_food > 0 ? naira(item.price_food) : "no price yet"}
+                    {/*
+                      What the shop keeps, where there is a cost to compare
+                      against, and whether that cost is worth believing.
+
+                      Four thousand of them were worked back from the menu
+                      rather than read off a receipt, so a margin shown
+                      without saying which kind it is would be a figure
+                      that looks checked and is not. The guesses say so
+                      until somebody confirms them.
+                    */}
+                    {(() => {
+                      const kept = keptOn(item.price_food, item.price_cost);
+                      if (!kept) return null;
+                      return (
+                        <span className={item.cost_confirmed ? "text-mint" : ""}>
+                          {" · "}
+                          {naira(kept.kept)} kept ({kept.share}%)
+                          {!item.cost_confirmed && " · cost is a guess"}
+                        </span>
+                      );
+                    })()}
                     {groups.length > 0 && ` · ${groups.map((g) => g.name).join(", ")}`}
                   </span>
                 </span>
@@ -653,8 +675,30 @@ export default async function RestaurantAdmin({
                       <label className="label">Name</label>
                       <input name="name" defaultValue={item.name} className="field" />
                     </div>
+                    {/*
+                      Cost first, then what it sells for, in the order
+                      somebody with a receipt in their hand works.
+
+                      Both are typed rather than one being computed from
+                      the other, because a counter's own price is not
+                      always the markup away from what this shop should
+                      charge: a round number beats arithmetic on a menu
+                      card. The line underneath says what the markup would
+                      make it, so the difference is visible without being
+                      forced.
+                    */}
                     <div className="w-28">
-                      <label className="label">Base price</label>
+                      <label className="label">Cost</label>
+                      <input
+                        name="price_cost"
+                        inputMode="numeric"
+                        defaultValue={item.price_cost ?? ""}
+                        placeholder="at the counter"
+                        className="field"
+                      />
+                    </div>
+                    <div className="w-28">
+                      <label className="label">Sells for</label>
                       <input
                         name="price_food"
                         inputMode="numeric"
@@ -662,6 +706,14 @@ export default async function RestaurantAdmin({
                         className="field"
                       />
                     </div>
+                    <label className="flex items-center gap-2 pb-2.5 text-[13px] font-semibold">
+                      <input
+                        type="checkbox"
+                        name="cost_confirmed"
+                        defaultChecked={item.cost_confirmed === true}
+                      />
+                      Cost checked
+                    </label>
                     <div className="w-40">
                       <label className="label">Category</label>
                       <select

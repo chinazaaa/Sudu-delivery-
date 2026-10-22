@@ -1566,8 +1566,27 @@ export async function updateMenuItem(form: FormData): Promise<void> {
   const price = Number(form.get("price_food"));
   if (!Number.isFinite(price) || price < 0) return;
 
+  /*
+   * The cost, and whether anybody has checked it.
+   *
+   * Typing one is the act of checking it: four thousand items were given a
+   * cost by working back from the menu, which is arithmetic rather than
+   * knowledge, and the only way to tell those apart is whether a person
+   * has since put a figure in. So saving a cost that differs from what was
+   * there, or confirming the one that was, marks it.
+   *
+   * Emptying the box takes the cost off and the tick with it, which is the
+   * honest answer for an item nobody knows the cost of.
+   */
+  const costTyped = String(form.get("price_cost") ?? "").trim();
+  const costValue = Math.round(Number(costTyped));
+  const cost =
+    costTyped === "" || !Number.isFinite(costValue) || costValue < 0 ? null : costValue;
+
   const fields = {
     price_food: Math.round(price),
+    price_cost: cost,
+    cost_confirmed: cost !== null && form.get("cost_confirmed") === "on",
     // Priced at nothing means off, whatever the tick says. The menu prints a
     // zero rather than hiding it, so an item on sale at ₦0 is free food on
     // the website. The database refuses this outright; coercing it here means

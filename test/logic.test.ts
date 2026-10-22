@@ -22,6 +22,7 @@ import { emptyAndDone } from "../lib/batches";
 import { stillAGuess } from "../lib/profit";
 import { pauseAfter, waitLeft, waitSaid } from "../lib/admin-gate";
 import { signingKey } from "../lib/signing";
+import { costFrom, keptOn, sellingFrom } from "../lib/cost-price";
 import {
   counterKey,
   counterMessage,
@@ -5101,4 +5102,58 @@ test("the signing key is its own, and falls back so nothing breaks on the way", 
   // rather than signing with an empty string.
   assert.throws(() => signingKey(undefined, undefined), /TOKEN_SECRET or ADMIN_PASSWORD/);
   assert.throws(() => signingKey("", "  "), /TOKEN_SECRET or ADMIN_PASSWORD/);
+});
+
+/*
+ * Cost beside selling price.
+ *
+ * The menu held one price, so the shop's margin on food could only be
+ * learned afterwards by typing a receipt into a run sheet.
+ */
+test("a selling price is the cost with the markup on, rounded the shop's way", () => {
+  // Rounded up to the nearest fifty, not to the nearest. Rounding down is
+  // the shop paying the difference, and on four hundred items that is real
+  // money given away by a rule nobody chose.
+  assert.equal(sellingFrom(2000, 15), 2300);
+  // 1,826 with fifteen per cent on is 2,099.9, which rounds up to 2,100:
+  // the figure Chicken Republic's spaghetti actually sells at, which is
+  // what made it a plausible cost to work back to in the first place.
+  assert.equal(sellingFrom(1826, 15), 2100);
+  assert.equal(sellingFrom(1000, 15), 1150);
+
+  // A markup of nothing is a real answer: sold at cost, rounded up.
+  assert.equal(sellingFrom(1000, 0), 1000);
+  assert.equal(sellingFrom(1010, 0), 1050);
+
+  // Nothing in, nothing out. An item with no cost is not a free item.
+  assert.equal(sellingFrom(0, 15), 0);
+
+  // Nonsense markups fall back rather than pricing everything at zero.
+  assert.equal(sellingFrom(2000, Number.NaN), 2300);
+  assert.equal(sellingFrom(2000, -40), 2300);
+});
+
+test("working a cost back out is a starting point, not an answer", () => {
+  // Exact where the arithmetic happens to be clean.
+  assert.equal(costFrom(2300, 15), 2000);
+
+  // And not where it is not. 2,100 works back to 1,826, which is not a
+  // number a restaurant charges, which is exactly why these land
+  // unconfirmed and wait for somebody with a receipt.
+  assert.equal(costFrom(2100, 15), 1826);
+
+  assert.equal(costFrom(0, 15), 0);
+});
+
+test("what the shop keeps, and the difference between none and not known", () => {
+  assert.deepEqual(keptOn(2300, 2000), { kept: 300, share: 13 });
+  assert.deepEqual(keptOn(2000, 2000), { kept: 0, share: 0 });
+
+  // Sold under cost is a real thing to be told about, not clamped away.
+  assert.deepEqual(keptOn(1800, 2000), { kept: -200, share: -11 });
+
+  // No cost is not a margin of zero. A page reading "0% kept" over an item
+  // nobody has priced is the kind of wrong that gets believed.
+  assert.equal(keptOn(2300, null), null);
+  assert.equal(keptOn(2300, undefined), null);
 });
