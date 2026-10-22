@@ -204,13 +204,23 @@ export async function shortGroupsNow(): Promise<GroupShortfall[]> {
   return out;
 }
 
-/** Refunds created by a group shrinking, so the admin can pay them out. */
+/**
+ * What the run still owes people, so the admin can pay it out.
+ *
+ * Owed and not yet sent. A refund the shop has already transferred is not
+ * a job any more, and leaving it here means the list never empties and so
+ * stops being read, which is the way a list of debts fails.
+ *
+ * No longer only group refunds: an order that shrank because a counter had
+ * sold out lands here by the same route.
+ */
 export async function refundsOwed(batchId: string): Promise<Order[]> {
   const { data } = await db()
     .from("orders")
     .select("*")
     .eq("batch_id", batchId)
-    .gt("refund_owed", 0);
+    .gt("refund_owed", 0)
+    .is("refund_paid_at", null);
   return (data ?? []) as Order[];
 }
 /** How long a shared delivery stays open for friends to pile into. */

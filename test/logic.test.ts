@@ -23,6 +23,7 @@ import { stillAGuess } from "../lib/profit";
 import { pauseAfter, waitLeft, waitSaid } from "../lib/admin-gate";
 import { signingKey } from "../lib/signing";
 import { costFrom, keptOn, lineCost, raisedCost, sellingFrom } from "../lib/cost-price";
+import { owedByShrinking, owesSomething, refundSaid } from "../lib/refunds";
 import {
   counterKey,
   counterMessage,
@@ -5202,4 +5203,48 @@ test("a receipt only ever teaches the cost upward", () => {
   // right, and it must never teach the shop that something is free.
   assert.equal(raisedCost(6000, 0), null);
   assert.equal(raisedCost(null, 0), null);
+});
+
+test("a paid order that shrinks owes the difference back", () => {
+  // The case this was built for: a chicken pie the counter had sold out of
+  // comes off a paid order of 14,400, and the 1,400 it cost is money the
+  // shop is holding that is not its own.
+  assert.equal(owedByShrinking("paid", 14400, 13000), 1400);
+
+  // Every paid state owes it, not just the one called paid: an order can
+  // be collected or delivered by the time somebody notices.
+  assert.equal(owedByShrinking("delivered", 14400, 13000), 1400);
+  assert.equal(owedByShrinking("collected", 5000, 4000), 1000);
+
+  // Nothing has moved on an unpaid order, so nothing is owed. Editing a
+  // pending order is just editing it.
+  assert.equal(owedByShrinking("pending", 14400, 13000), 0);
+
+  // A refunded or cancelled order is not owed a second refund.
+  assert.equal(owedByShrinking("refunded", 14400, 13000), 0);
+  assert.equal(owedByShrinking("cancelled", 14400, 13000), 0);
+
+  // Growing is money the shop is owed, which is a conversation with the
+  // customer and never a negative refund quietly cancelling a real one.
+  assert.equal(owedByShrinking("paid", 13000, 14400), 0);
+  assert.equal(owedByShrinking("paid", 14400, 14400), 0);
+});
+
+test("a refund says why, in the customer's own words where there are some", () => {
+  assert.equal(refundSaid("Chicken pie was sold out", false), "Chicken pie was sold out");
+
+  // Whitespace is not a reason.
+  assert.match(refundSaid("   ", false), /could not be bought/);
+
+  // The group case keeps its own wording, which is more specific than
+  // anything the general one could say.
+  assert.match(refundSaid("", true), /group got smaller/);
+
+  // A typed reason beats the group wording too: somebody who bothered to
+  // write one knows more than the rule does.
+  assert.equal(refundSaid("Two people dropped out", true), "Two people dropped out");
+
+  assert.equal(owesSomething(1400), true);
+  assert.equal(owesSomething(0), false);
+  assert.equal(owesSomething(null), false);
 });

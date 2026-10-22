@@ -8,6 +8,7 @@ import { StatusPill } from "@/components/admin/OrderCard";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import ActionButton from "@/components/ActionButton";
 import SaveButton from "@/components/SaveButton";
+import { owesSomething } from "@/lib/refunds";
 import WhenHanded from "@/components/admin/WhenHanded";
 import { orderFeed } from "@/lib/admin-data";
 import { oneCustomer, reachFor, shareOfProfit, whoFor } from "@/lib/customer";
@@ -39,7 +40,9 @@ import {
   settledUp,
   cancelOrder,
   deleteOrder,
+  markRefundPaid,
   refundOrder,
+  sayWhyRefund,
   savePaymentLink,
   setOrderPayment,
   setOrderTimes,
@@ -995,6 +998,74 @@ async function orderPage(id: string, said: string) {
               </ActionButton>
             </form>
           </Panel>
+
+          {/*
+           * What the shop is holding that is not its own.
+           *
+           * Appears by itself the moment a paid order shrinks, because the
+           * shrink is what creates the debt: take the sold out chicken pie
+           * off the order and the money for it is owed, without anybody
+           * having to think of it on the one evening they are busiest.
+           *
+           * Two things are asked for here and nothing else. Why, because a
+           * customer reading "₦1,400" with no sentence beside it assumes
+           * the worst, and whether it has gone, because the transfer is
+           * made by hand in a banking app and no amount of software can
+           * see it happen.
+           */}
+          {owesSomething(order.refund_owed) && (
+            <Panel
+              title="Owed back"
+              detail={`${naira(order.refund_owed)} of this order was paid for and not supplied.`}
+            >
+              <form
+                action={sayWhyRefund}
+                className="border-t-[1.5px] border-rule py-3"
+              >
+                <input type="hidden" name="order_id" value={order.id} />
+                <label className="ticket block text-muted" htmlFor="refund-said">
+                  Why, in a line they will read
+                </label>
+                <input
+                  id="refund-said"
+                  name="said"
+                  defaultValue={order.refund_said ?? ""}
+                  maxLength={300}
+                  placeholder="Chicken pie was sold out that evening"
+                  className="input mt-1 w-full"
+                />
+                <p className="hint mt-1">
+                  Shown on their own order page under the amount. Left empty
+                  it says something could not be bought, which is true and
+                  says less.
+                </p>
+                <SaveButton className="mt-2">Save the reason</SaveButton>
+              </form>
+
+              <form
+                action={markRefundPaid}
+                className="flex items-center gap-2.5 border-t-[1.5px] border-rule py-3"
+              >
+                <input type="hidden" name="order_id" value={order.id} />
+                <input
+                  type="hidden"
+                  name="sent"
+                  value={order.refund_paid_at ? "no" : "yes"}
+                />
+                <p className="hint flex-1">
+                  {order.refund_paid_at
+                    ? `Marked sent on ${runDateLabel(order.refund_paid_at)}. Press to put it back on the owed list.`
+                    : "Send the transfer in your bank, then mark it here. Until then it stays on the run's owed list."}
+                </p>
+                <ActionButton
+                  className="min-h-[44px] shrink-0"
+                  done={order.refund_paid_at ? "Back on the list" : "Marked sent"}
+                >
+                  {order.refund_paid_at ? "Not sent after all" : "I have sent it"}
+                </ActionButton>
+              </form>
+            </Panel>
+          )}
 
           {/*
            * The three that cannot be taken back, in one place and away from

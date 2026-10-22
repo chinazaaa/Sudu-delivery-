@@ -1,3 +1,4 @@
+import { refundSaid } from "@/lib/refunds";
 import Link from "next/link";
 import { hasReviewedUs } from "@/lib/customer";
 import { boxWhere } from "@/lib/boxes";
@@ -942,13 +943,30 @@ export default async function OrderPage({
         )}
       </section>
 
+      {/*
+        Money the shop is holding that is not its own.
+        
+        The reason matters more than the figure here. This used to say the
+        group had got smaller, which was the only way a refund could happen
+        at the time and is now one of two: the other is something in the
+        order the counter had sold out of. A customer reading an amount with
+        the wrong explanation beside it trusts the number less, not more.
+      */}
       {order.refund_owed > 0 && (
         <section className="card border-mint/30 bg-mint/5">
-          <h2 className="font-bold">Refund owed: {naira(order.refund_owed)}</h2>
+          <h2 className="font-bold">
+            {order.refund_paid_at ? "Sent back" : "Coming back"}:{" "}
+            {naira(order.refund_owed)}
+          </h2>
           <p className="mt-1 text-sm text-ink/75">
-            Your group got smaller, so the delivery fee dropped a band. The
-            difference comes back to you.
+            {refundSaid(order.refund_said ?? "", Boolean(order.group_id))}
           </p>
+          {!order.refund_paid_at && (
+            <p className="mt-1 text-sm text-ink/75">
+              It goes back to the number you paid from. If it has not arrived
+              by tomorrow, message us and we will chase it.
+            </p>
+          )}
         </section>
       )}
 

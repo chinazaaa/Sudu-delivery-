@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { owedByShrinking } from "./refunds";
 
 /**
  * Changing what is in an order after it has been placed.
@@ -111,27 +112,59 @@ export async function choicesOn(lineId: string): Promise<number> {
  * at the point of ordering and changing the cake inside it does not change
  * what the car costs. The discount stays as it was for the same reason.
  */
-export async function retotal(orderId: string): Promise<void> {
+export async function retotal(orderId: string, why: string = ""): Promise<void> {
   const lines = await linesToEdit(orderId);
   // The price of a line already has its choices in it. See above.
   const food = lines.reduce((sum, line) => sum + line.qty * line.unit_price_at_order, 0);
 
   const { data } = await db()
     .from("orders")
-    .select("fee, discount")
+    .select("fee, discount, status, total, refund_owed, refund_said")
     .eq("id", orderId)
     .maybeSingle();
 
-  const fee = Number((data as { fee?: number } | null)?.fee ?? 0);
-  const discount = Number((data as { discount?: number } | null)?.discount ?? 0);
+  const was = (data ?? {}) as {
+    fee?: number;
+    discount?: number;
+    status?: string;
+    total?: number;
+    refund_owed?: number;
+    refund_said?: string;
+  };
+
+  const fee = Number(was.fee ?? 0);
+  const discount = Number(was.discount ?? 0);
+  // Never below nothing, whatever a discount and a shrinking order do
+  // between them.
+  const total = Math.max(0, food + fee - discount);
+
+  /*
+   * Money already collected for something the order no longer contains.
+   *
+   * This sits here rather than in the handful of actions that edit a line
+   * because every one of them ends in a retotal, and a refund that depends
+   * on remembering to record it is a refund that goes unrecorded on the
+   * one busy evening it matters. Taking the pie off IS the refund.
+   */
+  const owed = owedByShrinking(String(was.status ?? ""), Number(was.total ?? 0), total);
 
   await db()
     .from("orders")
     .update({
       subtotal_food: food,
-      // Never below nothing, whatever a discount and a shrinking order do
-      // between them.
-      total: Math.max(0, food + fee - discount),
+      total,
+      ...(owed > 0
+        ? {
+            refund_owed: Number(was.refund_owed ?? 0) + owed,
+            // A reason only ever replaces nothing. An edit made without
+            // one must not wipe the explanation of an earlier refund that
+            // somebody took the trouble to write.
+            ...(String(why).trim() !== "" ? { refund_said: String(why).trim() } : {}),
+            // Owing again un-pays it: the figure on the page is now larger
+            // than what went back, so it is not settled any more.
+            refund_paid_at: null,
+          }
+        : {}),
     })
     .eq("id", orderId);
 }

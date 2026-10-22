@@ -339,6 +339,54 @@ export async function setDeliveredAt(form: FormData): Promise<void> {
   revalidatePath("/orders");
 }
 
+/**
+ * Why money is owed back on this order, and whether it has gone.
+ *
+ * The owing itself is recorded by the edit that caused it: take the sold
+ * out pie off the order and the money for it is owed, without anybody
+ * pressing anything here. What these two are for is the part a machine
+ * cannot know. Why it happened, so the customer reads a sentence instead
+ * of a figure, and whether the transfer has actually been made, which is
+ * done by hand in a banking app and so has to be said by hand here.
+ */
+export async function sayWhyRefund(form: FormData): Promise<void> {
+  await assertAdmin();
+  const orderId = String(form.get("order_id") ?? "");
+  if (orderId === "") return;
+
+  await db()
+    .from("orders")
+    .update({ refund_said: String(form.get("said") ?? "").trim().slice(0, 300) })
+    .eq("id", orderId);
+
+  revalidatePath("/admin", "layout");
+  // Their own page carries the reason, so it has to hear about it.
+  revalidatePath("/o", "layout");
+}
+
+/**
+ * The money went back, or it did not after all.
+ *
+ * Both directions, because the mark is somebody's memory of a transfer and
+ * memories of transfers are wrong often enough to need an undo. Clearing
+ * it puts the order back on the list of what the shop owes.
+ */
+export async function markRefundPaid(form: FormData): Promise<void> {
+  await assertAdmin();
+  const orderId = String(form.get("order_id") ?? "");
+  if (orderId === "") return;
+
+  const sent = String(form.get("sent") ?? "") !== "no";
+
+  await db()
+    .from("orders")
+    .update({ refund_paid_at: sent ? new Date().toISOString() : null })
+    .eq("id", orderId);
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/o", "layout");
+}
+
 /** Refunds are same-night and in full. There are no partial refunds here. */
 export async function refundOrder(form: FormData): Promise<void> {
   await assertAdmin();
