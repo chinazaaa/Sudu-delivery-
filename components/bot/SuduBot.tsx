@@ -25,6 +25,7 @@ import { Asking, Rail, Said, Typing, useSaying, type Ask, type Line } from "./Ch
 import Rider from "./Rider";
 import {
   looksLikeAGift,
+  orderPart,
   occasionBy,
   isGift,
   cardCalled,
@@ -1435,10 +1436,33 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           placeholder: "Their first name",
           onSay: (who) => {
             me(who);
-            held.current.forName = (nameIn(who) || who).split(" ")[0];
-            /* Back to what they actually said, now that the order knows
-               there are two people in it. */
-            huntRef.current?.(said, false);
+            const forName = (nameIn(who) || who).split(" ")[0];
+            held.current.forName = forName;
+            /*
+             * Back to what they actually said, with the gift phrasing
+             * taken off it.
+             *
+             * "Need to order for my son" went back to the menu as written
+             * and came out as three jars of Sonia tinned tomato, because
+             * "son" sits inside "Sonia". Somebody who had just told us
+             * their child's name was asked which purée they meant.
+             *
+             * Stripped, that sentence is nothing at all, which is the
+             * truth of it: they have said who it is for and not yet said
+             * what it is. So the bot asks, rather than searching the menu
+             * for a word out of a sentence about a person.
+             */
+            const rest = orderPart(said);
+            if (rest === "") {
+              bot(`Lovely. What would you like me to send ${forName}?`, 440);
+              setAsk({
+                of: "text",
+                placeholder: "e.g. 2 medium bbq pizza",
+                onSay: (then) => huntRef.current?.(then),
+              });
+              return;
+            }
+            huntRef.current?.(rest, false);
           },
         });
         return;

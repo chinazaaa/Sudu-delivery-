@@ -76,11 +76,24 @@ type Shelf = {
 };
 
 export default async function ParentsPage() {
-  const settings = await safeSettings();
-  const packed = await liveOccasions();
+  /*
+   * Six round trips stood in a queue here, five of them for no reason: the
+   * settings have nothing to do with the shelves, the blocks have nothing
+   * to do with either, and what Google says has nothing to do with any of
+   * it. Only the boxes need the shelves, and only the prices and the
+   * photographs need the boxes.
+   */
+  const [settings, packed, blocks] = await Promise.all([
+    safeSettings(),
+    liveOccasions(),
+    hostelNames(),
+  ]);
   const boxes = await boxesAcross(packed.map((one) => one.id));
-  const from = await cheapestBoxes(boxes).catch(() => new Map<string, number>());
-  const photo = await shelfPhotos(boxes).catch(() => ({}) as Record<string, string>);
+  const [from, photo, quotes] = await Promise.all([
+    cheapestBoxes(boxes).catch(() => new Map<string, number>()),
+    shelfPhotos(boxes).catch(() => ({}) as Record<string, string>),
+    shownSays(settings.google_quotes),
+  ]);
 
   // A shelf with nothing on it is not an offer, it is an apology waiting to
   // happen. Same rule as the front page.
@@ -123,7 +136,7 @@ export default async function ParentsPage() {
     ...googleLinks(settings),
     rating: Number(settings.google_rating) || 0,
     count: Number(settings.google_reviews) || 0,
-    quotes: await shownSays(settings.google_quotes),
+    quotes,
   };
 
   /* The shelves a parent actually sends from, as a flat list for the
@@ -146,7 +159,7 @@ export default async function ParentsPage() {
       name: box.name,
       shelf: shelfName.get(box.occasion_id) ?? "",
     }));
-  const blocks = await hostelNames();
+
 
   /*
    * The parents who already have the thing.

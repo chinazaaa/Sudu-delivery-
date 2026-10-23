@@ -9,6 +9,10 @@ type Draft = {
   label: string;
   toPau: boolean;
   on: boolean;
+  /** The one route that asks rather than charges. It keeps no bands, and
+   *  the editor hides its weight table rather than offering a price nobody
+   *  can set. */
+  custom: boolean;
   bands: { upTo: string; fee: string }[];
 };
 
@@ -18,6 +22,7 @@ const draftsOf = (routes: Route[]): Draft[] =>
     label: one.label,
     toPau: one.toPau,
     on: one.on,
+    custom: one.custom === true,
     bands: one.bands.map((band) => ({
       upTo: String(band.upTo),
       fee: String(band.fee),
@@ -30,6 +35,7 @@ const routesOf = (drafts: Draft[]): Route[] =>
     label: one.label,
     toPau: one.toPau,
     on: one.on,
+    custom: one.custom === true,
     bands: one.bands.map((band) => ({
       upTo: Number(band.upTo) || 0,
       fee: Number(band.fee) || 0,
@@ -111,7 +117,11 @@ export default function ParcelRoutes({ saved }: { saved: Route[] }) {
       )
     );
 
-  const offered = drafts.filter((one) => one.on && one.bands.length > 0).length;
+  // The custom one needs no weights to be offered: it is the route that
+  // asks for a price rather than charging one.
+  const offered = drafts.filter(
+    (one) => one.on && (one.bands.length > 0 || one.custom)
+  ).length;
 
   return (
     <div className="space-y-2">
@@ -143,16 +153,38 @@ export default function ParcelRoutes({ saved }: { saved: Route[] }) {
                   {route.on ? "offered" : "not offered"}
                 </span>
               </label>
-              <button
-                type="button"
-                onClick={() => addBand(route.id)}
-                className="chip border-black/10 bg-white py-1.5 text-xs"
-              >
-                Add a weight
-              </button>
+              {!route.custom && (
+                <button
+                  type="button"
+                  onClick={() => addBand(route.id)}
+                  className="chip border-black/10 bg-white py-1.5 text-xs"
+                >
+                  Add a weight
+                </button>
+              )}
             </div>
 
-            {route.bands.length === 0 ? (
+            {route.custom ? (
+              <div className="mt-2 space-y-1.5">
+                <p className="text-xs text-muted">
+                  No price, on purpose. Somebody picking this one is asking for
+                  a quote: it lands in Requests, nothing is charged, and you
+                  come back with a figure on WhatsApp.
+                </p>
+                <input
+                  value={route.label}
+                  onChange={(event) =>
+                    change(route.id, { label: event.target.value })
+                  }
+                  className="field w-full py-1.5 text-sm"
+                  aria-label="What this route says on the form"
+                  placeholder="Somewhere else, or heavier than 3kg"
+                />
+                <p className="text-xs text-muted">
+                  What it says in the dropdown on the parcel form.
+                </p>
+              </div>
+            ) : route.bands.length === 0 ? (
               <p className="mt-2 text-xs text-muted">
                 No weights yet, so this one is not offered whether it is ticked
                 or not.

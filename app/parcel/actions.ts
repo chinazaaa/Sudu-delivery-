@@ -2,6 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { placeParcel } from "@/lib/parcel-order";
+import { isCustom, parcels, routeById } from "@/lib/parcels";
+import { askFor } from "@/lib/requests";
+import { tellAdmin } from "@/lib/admin-alerts";
 
 export type ParcelState = { error: string };
 
@@ -17,6 +20,62 @@ export async function sendParcel(
   form: FormData
 ): Promise<ParcelState> {
   const said = (name: string) => String(form.get(name) ?? "");
+
+  /*
+   * The trip nobody has priced.
+   *
+   * Four towns each way covers most of what gets asked for and none of what
+   * does not: a pickup in Epe, something that plainly will not fit in three
+   * kilos, a shop that will only hand it to a named person. Those were a
+   * dead end on a page whose whole job is to say yes.
+   *
+   * So that route does not place an order. It asks, the way the custom
+   * order page asks, and somebody comes back with a figure. Nothing is
+   * charged, nothing is promised, and nobody is quoted off a ladder that
+   * was never meant for them.
+   */
+  const setup = await parcels();
+  const chosen = routeById(setup.routes, said("route"));
+  if (chosen && isCustom(chosen)) {
+    const where = said("address").trim();
+    const block = said("hostel").trim();
+    const asked = await askFor({
+      wanted: `Parcel: ${said("item").trim() || "something"}`,
+      budget: "",
+      name: said("name"),
+      phone: said("phone"),
+      hostel: block,
+      note: [
+        `Collecting from: ${said("shop").trim() || "not said"}`,
+        where !== "" ? `Address: ${where}` : "",
+        block !== "" ? `Block: ${block}${said("room").trim() ? `, ${said("room").trim()}` : ""}` : "",
+        said("wanted_on").trim() !== "" ? `Wanted on: ${said("wanted_on").trim()}` : "",
+        said("to_name").trim() !== ""
+          ? `Going to: ${said("to_name").trim()} ${said("to_phone").trim()}`.trim()
+          : "",
+        said("value").trim() !== "" ? `Worth about: ${said("value").trim()}` : "",
+        said("note").trim(),
+      ]
+        .filter((one) => one !== "")
+        .join("\n"),
+    });
+    if (!asked.ok) return { error: asked.error };
+
+    // After the row exists and never in a way that can fail it.
+    try {
+      await tellAdmin({
+        title: "Parcel · needs a price",
+        body: `${said("name").trim() || "Someone"} wants a parcel carried: ${
+          said("item").trim() || "something"
+        }.`,
+        url: "/admin/requests",
+      });
+    } catch {
+      /* The ask is saved either way. */
+    }
+
+    redirect("/parcel?asked=1");
+  }
 
   const result = await placeParcel({
     name: said("name"),

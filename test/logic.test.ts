@@ -38,7 +38,15 @@ import {
 } from "../lib/refunds";
 import { buyingDone } from "../lib/runner";
 import { didYouMean } from "../lib/did-you-mean";
-import { looksLikeAGift } from "../lib/occasions";
+import { looksLikeAGift, orderPart } from "../lib/occasions";
+import {
+  isCustom,
+  liveRoutes,
+  parcelsFrom,
+  placesSaid,
+  pricedRoutes,
+  type Route as ParcelRoute,
+} from "../lib/parcels";
 import {
   MOST,
   NOTHING_READ,
@@ -5457,6 +5465,36 @@ test("the reading model is the small one, and moving up is a setting", () => {
   assert.equal(botModel("nonsense"), "claude-haiku-5-5");
 });
 
+test("a sentence about a person is not searched against the menu", () => {
+  /*
+   * The bug this exists for.
+   *
+   * "Need to order for my son" went to the menu as written and came back
+   * with Sonia tinned tomato, because "son" sits inside "Sonia". Somebody
+   * who had just told us their child's name was asked which purée they
+   * meant.
+   */
+  assert.equal(orderPart("Need to order for my son"), "");
+  assert.equal(orderPart("I want to order something for my daughter"), "");
+  assert.equal(orderPart("a gift for someone"), "");
+  assert.equal(orderPart("surprise for my roommate"), "");
+  assert.equal(orderPart("can i get a birthday gift"), "");
+  assert.equal(orderPart("it's for Bola"), "");
+  assert.equal(orderPart("order"), "");
+  assert.equal(orderPart("hi"), "");
+  assert.equal(orderPart(""), "");
+
+  // The food survives, which is the whole point: stripping the manners
+  // must never cost anybody their order.
+  assert.equal(
+    orderPart("2 chicken pie and a shawarma for my sister"),
+    "2 chicken pie and a shawarma"
+  );
+  assert.equal(orderPart("please i need 1 bucket of chicken"), "1 bucket of chicken");
+  assert.equal(orderPart("2 medium bbq pizza"), "2 medium bbq pizza");
+  assert.equal(orderPart("jollof rice"), "jollof rice");
+});
+
 test("a gift is noticed rather than asked about", () => {
   // The orders the opening question existed to catch.
   assert.equal(looksLikeAGift("it's my friend's birthday"), true);
@@ -5600,4 +5638,67 @@ test("a suggestion is the word they typed, not the nearest thing in the shop", (
   // And the ones that are genuinely a typo still come through.
   assert.deepEqual(didYouMean("birthdat", shelf, 1), ["Birthday Cake Remix"]);
   assert.deepEqual(didYouMean("chiken", shelf, 1), ["Chicken Pie"]);
+});
+
+test("a parcel route with no price is still a route", () => {
+  /*
+   * Four towns each way covers most of what gets asked for and none of what
+   * does not: a pickup in Epe, a box plainly heavier than three kilos. Those
+   * were a dead end on a page whose whole job is to say yes, so one route
+   * carries no bands at all and asks for a quote instead.
+   */
+  const priced: ParcelRoute = {
+    id: "sango-pau",
+    label: "Sangotedo/Ajah to PAU",
+    bands: [{ upTo: 3, fee: 4000 }],
+    toPau: true,
+    on: true,
+    custom: false,
+  };
+  const quote: ParcelRoute = {
+    id: "custom",
+    label: "Somewhere else, or heavier than 3kg",
+    bands: [],
+    toPau: true,
+    on: true,
+    custom: true,
+  };
+  const half: ParcelRoute = {
+    id: "pau-ikorodu",
+    label: "PAU to Ikorodu",
+    bands: [],
+    toPau: false,
+    on: true,
+    custom: false,
+  };
+
+  // Offered, though it has no ladder behind it.
+  assert.deepEqual(
+    liveRoutes([priced, quote, half]).map((one) => one.id),
+    ["sango-pau", "custom"]
+  );
+  // And kept out of every sum, because asking an empty ladder for its
+  // cheapest rung answers infinity.
+  assert.deepEqual(
+    pricedRoutes([priced, quote, half]).map((one) => one.id),
+    ["sango-pau"]
+  );
+  assert.equal(isCustom(quote), true);
+  assert.equal(isCustom(priced), false);
+
+  // "Somewhere else" is not a place. A front page reading "Sangotedo/Ajah
+  // and Somewhere else" names a town that is not on any map.
+  assert.equal(placesSaid([priced, quote]), "Sangotedo/Ajah");
+
+  // A shop whose only live route is the unpriced one is still carrying
+  // parcels: there is something somebody can ask for.
+  assert.equal(
+    parcelsFrom({ parcel_on: "on", parcel_routes: JSON.stringify([quote]) } as never).on,
+    true
+  );
+  // One with nothing live at all is not.
+  assert.equal(
+    parcelsFrom({ parcel_on: "on", parcel_routes: JSON.stringify([half]) } as never).on,
+    false
+  );
 });

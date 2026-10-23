@@ -136,3 +136,69 @@ export function looksLikeAGift(said: string): boolean {
   if (/\bfor (me|myself)\b/i.test(text)) return false;
   return GIFTY.some((one) => one.test(text));
 }
+
+/*
+ * The part of a sentence that is actually an order.
+ *
+ * "Need to order for my son" is a whole sentence with no food in it. Taken
+ * to the menu as written it matched Sonia tinned tomatoes, because "son"
+ * sits inside "Sonia", and somebody who had just told us who the food was
+ * going to was handed three jars of tomato purée and asked which one they
+ * meant.
+ *
+ * So the gift phrasing and the polite run-up come off before anything is
+ * searched. What is left is either the food or nothing, and nothing is a
+ * question worth asking rather than a search worth running.
+ */
+const GIFT_PHRASES = [
+  /\bfor (?:my|his|her|their) (?:friend|girlfriend|boyfriend|sister|brother|daughter|son|child|mum|mom|dad|roommate|room mate|course mate|coursemate)\b/gi,
+  /\bfor (?:someone|somebody|him|her|them|my friend)\b/gi,
+  /\bas a (?:gift|surprise|present)\b/gi,
+  /\bit(?:'s| is)? for\b.*$/gi,
+  /\bits for\b.*$/gi,
+  /\bsend (?:it|this|them|her|him) to\b.*$/gi,
+  /\bfor (?:his|her|their|my) (?:birthday|anniversary)\b/gi,
+  /\b(?:birthday|anniversary) (?:gift|surprise|present)\b/gi,
+  /\bcongratulations?\b/gi,
+];
+
+/** The run-up to an order, which is manners rather than food. */
+const OPENER =
+  /^[\s,.!-]*(?:hi|hey|hello|good (?:morning|afternoon|evening)|please|pls|abeg)?[\s,.!-]*(?:can|could|may|would|will)?\s*(?:i(?:'| a)?m |i |you )?(?:just )?(?:would like|want|wanna|need|like|have|wish|get|send)?\s*(?:to )?(?:place |make )?(?:an? )?(?:order|get|buy|have|take)?\s*(?:for|some|me)?[\s,.:;-]*/i;
+
+/** Words that are never the name of anything on a shelf. */
+const EMPTY_WORDS = new Set([
+  "a", "an", "the", "it", "this", "that", "some", "any", "thing", "things",
+  "something", "anything", "food", "order", "please", "pls", "now", "today",
+  "tonight", "tomorrow", "and", "or", "for", "to", "my", "his", "her",
+  "their", "me", "you", "us", "them", "we", "i",
+  // A gift is an occasion, not a thing on a shelf. Left in, "a gift for
+  // someone" went to the menu as the word "gift".
+  "gift", "present", "surprise", "treat",
+]);
+
+/**
+ * What is left of a sentence once the manners and the gift phrasing are off.
+ *
+ * Empty means there was never anything to search for, which is the honest
+ * answer for "need to order for my son" and the one that stops the menu
+ * being asked about somebody's child.
+ */
+export function orderPart(said: string): string {
+  let text = String(said ?? "");
+  for (const phrase of GIFT_PHRASES) text = text.replace(phrase, " ");
+  text = text.replace(OPENER, " ");
+  text = text.replace(/\s+/g, " ").trim();
+
+  // Nothing but filler is nothing. A single letter is not a dish either,
+  // and the search is happy to find something for it, which is the whole
+  // problem.
+  const words = text
+    .toLowerCase()
+    .split(/[^a-z0-9']+/i)
+    .filter((one) => one !== "" && !EMPTY_WORDS.has(one));
+  if (words.length === 0) return "";
+  if (words.every((one) => one.length < 3) && !/\d/.test(text)) return "";
+
+  return text;
+}

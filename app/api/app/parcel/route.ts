@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { hostelNames } from "@/lib/hostels";
 import { lagosToday } from "@/lib/time";
-import { liveRoutes, parcels } from "@/lib/parcels";
+import { parcels, pricedRoutes } from "@/lib/parcels";
 import { namedPromoters } from "@/lib/promoters";
 import { placeParcel } from "@/lib/parcel-order";
 
@@ -18,7 +18,16 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<NextResponse> {
   try {
     const setup = await parcels();
-    const routes = liveRoutes(setup.routes);
+    /*
+     * The priced ones only.
+     *
+     * The website has a route that carries no price, for the trip nobody
+     * has priced: picking it asks for a quote rather than placing an
+     * order. The app has no way to ask, so sending it the route would be
+     * offering a button that cannot work. It comes back here the day the
+     * app learns to ask.
+     */
+    const routes = pricedRoutes(setup.routes);
 
     return NextResponse.json({
       on: setup.on && routes.length > 0,

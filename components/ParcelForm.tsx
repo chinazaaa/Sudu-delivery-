@@ -5,7 +5,7 @@ import PayChoice from "./PayChoice";
 import AbroadMoney, { type Money } from "./AbroadMoney";
 import { naira } from "@/lib/money";
 import HeardFrom from "./HeardFrom";
-import { feeFor, type Route } from "@/lib/parcels";
+import { feeFor, isCustom, type Route } from "@/lib/parcels";
 import { sendParcel, type ParcelState } from "@/app/parcel/actions";
 
 /**
@@ -58,6 +58,16 @@ export default function ParcelForm({
   const [routeId, setRouteId] = useState(routes[0]?.id ?? "");
   const route = routes.find((one) => one.id === routeId) ?? null;
   const toPau = route?.toPau ?? true;
+  /*
+   * The route that asks rather than charges.
+   *
+   * It has no weight bands and no price, because the trips it carries are
+   * the ones nobody can price in advance: a pickup in Epe, something that
+   * plainly will not fit in three kilos, a shop that will only release the
+   * thing to a named person. Picking it does not place an order; it sends
+   * the details and somebody comes back with a figure.
+   */
+  const asking = route !== null && isCustom(route);
 
   // Priced by weight as well as by route, so the bands change with the route
   // and the one that was picked may not exist on the new one.
@@ -147,6 +157,14 @@ export default function ParcelForm({
           </p>
         </div>
 
+        {asking ? (
+          <p className="rounded-xl bg-brand/5 px-3 py-2 text-sm leading-snug text-ink/80">
+            We have not priced this one, so tell us what it is and where it
+            is and we will come back to you on WhatsApp with a figure.
+            Nothing is charged and nothing moves until you have said yes to
+            it.
+          </p>
+        ) : (
         <div>
           <label className="label" htmlFor="kg">
             About how heavy is it?
@@ -169,6 +187,7 @@ export default function ParcelForm({
             collect it.
           </p>
         </div>
+        )}
 
         <div>
           <label className="label" htmlFor="item">
@@ -409,7 +428,7 @@ export default function ParcelForm({
       {/* The price at the end, once they have said what it is and how far it
           is going. Those two are the price, so quoting before either is
           known is a number that has to change later. */}
-      {route && fee !== null && (
+      {route && fee !== null && !asking && (
         <div className="card space-y-1 text-sm">
           <div className="flex justify-between text-muted">
             <span>{route.label}</span>
@@ -429,7 +448,7 @@ export default function ParcelForm({
       {/* How they are paying. A parcel was transfer only, which is fine for
           a student on campus and no use at all to the sister in London
           sending something home. */}
-      {route && fee !== null && (
+      {route && fee !== null && !asking && (
         <div className="card space-y-3 sm:p-6">
           <Step at="04">Pay</Step>
           <PayChoice value={method} onChange={setMethod} />
@@ -456,21 +475,25 @@ export default function ParcelForm({
 
       <button
         type="submit"
-        disabled={busy || tooDear || halfRecipient}
+        disabled={busy || (tooDear && !asking) || halfRecipient}
         className="btn-primary w-full py-4 text-base"
       >
         {busy
-          ? "Sending…"
-          : tooDear
+          ? "Sending\u2026"
+          : tooDear && !asking
             ? `Over the ${naira(maxValue)} limit`
             : halfRecipient
               ? "Their name and number, or neither"
-            : fee !== null
-              ? `Send it · ${naira(fee)}`
-              : "Send it"}
+              : asking
+                ? "Ask us for a price"
+                : fee !== null
+                  ? `Send it \u00b7 ${naira(fee)}`
+                  : "Send it"}
       </button>
       <p className="text-center text-xs text-muted">
-        We agree the day with you on WhatsApp once it is paid.
+        {asking
+          ? "Nothing is charged now. We come back with a price on WhatsApp."
+          : "We agree the day with you on WhatsApp once it is paid."}
       </p>
     </form>
   );

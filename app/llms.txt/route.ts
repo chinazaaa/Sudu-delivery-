@@ -1,7 +1,7 @@
 import { openRestaurants } from "@/lib/menu";
 import { activeBands, safeSettings } from "@/lib/settings";
 import { hostelNames } from "@/lib/hostels";
-import { liveRoutes, parcels } from "@/lib/parcels";
+import { liveRoutes, parcels, pricedRoutes } from "@/lib/parcels";
 import { dropLabel, nextDrop, skincareOn } from "@/lib/skincare";
 import { parseAreas } from "@/lib/areas";
 import { bandTable } from "@/lib/fees";
@@ -38,6 +38,9 @@ export async function GET(): Promise<Response> {
 
   const areas = parseAreas(settings.delivery_areas);
   const routes = liveRoutes(parcelSetup.routes ?? []);
+  // The ones with a ladder behind them. There is now a route that carries
+  // no price at all, and asking it for its cheapest band returns infinity.
+  const priced = pricedRoutes(parcelSetup.routes ?? []);
   const ladder = bands.length > 0 ? bandTable(null, bands) : [];
   const skincare = skincareOn(settings);
 
@@ -127,11 +130,21 @@ export async function GET(): Promise<Response> {
           "  in a named student's hands at their own block. Collected from the",
           "  address you give, photographed at both ends. Priced by weight,",
           "  from:",
-          ...routes.map((route) => {
+          ...priced.map((route) => {
             const cheapest = Math.min(...route.bands.map((band) => band.fee));
             const upTo = Math.max(...route.bands.map((band) => band.upTo));
             return `  - ${route.label}: from ${naira(cheapest)}, up to ${upTo}kg`;
           }),
+          // The rest of Lagos, and anything heavier. Said plainly, because
+          // a list of four towns reads as the whole of what we carry and
+          // sends away the half of the asking that is neither.
+          ...(priced.length < routes.length
+            ? [
+                "  - Anywhere else in Lagos, or heavier than the bands above:",
+                "    say where it is and we come back with a price. Nothing is",
+                "    charged until it is agreed.",
+              ]
+            : []),
         ]
       : []),
     ""

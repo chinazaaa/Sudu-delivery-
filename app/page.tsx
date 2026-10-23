@@ -29,7 +29,7 @@ import {
   pharmacyOn,
   pharmacyShop,
 } from "@/lib/pharmacy";
-import { placesSaid, parcelsFrom } from "@/lib/parcels";
+import { isCustom, liveRoutes, placesSaid, parcelsFrom } from "@/lib/parcels";
 import { sweepGroups } from "@/lib/groups";
 
 export const dynamic = "force-dynamic";
@@ -196,8 +196,14 @@ export default async function HomePage() {
   // The places, not the first two routes. Listing routes read "Sangotedo to
   // PAU, PAU to Sangotedo and more", which names one town twice and makes a
   // service covering Lekki to Ikorodu look like a Sangotedo errand.
+  // And anywhere else, where there is a route that asks rather than
+  // charges. Four towns and a full stop reads as the whole of what we
+  // carry, which sends away the parent in Epe and the box over three kilos.
+  const anywhereElse = liveRoutes(parcelSetup.routes).some(isCustom)
+    ? ", and anywhere else on a quote"
+    : "";
   const parcelLine = parcelSetup.on
-    ? `${placesSaid(parcelSetup.routes)}, to PAU and back. Its own trip, on a day we agree.`
+    ? `${placesSaid(parcelSetup.routes)}, to PAU and back${anywhereElse}. Its own trip, on a day we agree.`
     : "";
 
   // The hours, off the settings already read rather than a trip of its own.

@@ -30,6 +30,20 @@ export type Route = {
   toPau: boolean;
   /** A route can be turned off without losing what it charged. */
   on: boolean;
+  /**
+   * A trip nobody has priced, and nobody can price in advance.
+   *
+   * Four towns, each way, covers most of what gets asked for and none of
+   * what does not: a pickup in Epe, a drop in Ajah on the way to somewhere
+   * else, a shop that will only release the thing to a named person. Those
+   * were a dead end on a page whose whole job is to say yes.
+   *
+   * So one route carries no bands and no price. Picking it does not place
+   * an order: it asks, the way the custom order page asks, and somebody
+   * comes back with a figure. Nothing is charged, nothing is promised, and
+   * nobody is quoted a number off a ladder that was never meant for them.
+   */
+  custom: boolean;
 };
 
 /** The default price cap, where nobody has set one. */
@@ -90,6 +104,7 @@ export function parseRoutes(json: string | null | undefined): Route[] {
         // Off unless it says otherwise, so a route half set up is not one
         // somebody can order and then be rung about.
         on: one.on === true,
+        custom: one.custom === true,
       }));
   } catch {
     return [];
@@ -107,6 +122,7 @@ export function serialiseRoutes(routes: Route[]): string {
           bands: bandsOf(one.bands),
           toPau: one.toPau !== false,
           on: one.on === true,
+          custom: one.custom === true,
         }))
       );
 }
@@ -117,8 +133,8 @@ export function serialiseRoutes(routes: Route[]): string {
  * and a route with no price cannot be ordered.
  */
 export const ROUTES_DEFAULT: Route[] = [
-  ["sango-pau", "Sangotedo to PAU", "to"],
-  ["pau-sango", "PAU to Sangotedo", "from"],
+  ["sango-pau", "Sangotedo/Ajah to PAU", "to"],
+  ["pau-sango", "PAU to Sangotedo/Ajah", "from"],
   ["lekki-pau", "Lekki/Ikoyi to PAU", "to"],
   ["pau-lekki", "PAU to Lekki/Ikoyi", "from"],
   ["mainland-pau", "Mainland to PAU", "to"],
@@ -133,7 +149,31 @@ export const ROUTES_DEFAULT: Route[] = [
   bands: [] as Band[],
   toPau: way === "to",
   on: false,
+  custom: false,
 }));
+
+/** The id of the one route that is a question rather than a price. */
+export const CUSTOM_ROUTE = "custom";
+
+/** Whether this route is the one that asks rather than charges. */
+export function isCustom(route: Route): boolean {
+  return route.custom === true || route.id === CUSTOM_ROUTE;
+}
+
+/**
+ * The anywhere-else route, as it reads when nobody has edited it.
+ *
+ * On by default, unlike the eight priced ones, because there is nothing to
+ * set up: it has no price to get wrong.
+ */
+export const CUSTOM_DEFAULT: Route = {
+  id: CUSTOM_ROUTE,
+  label: "Somewhere else · we will quote you",
+  bands: [],
+  toPau: true,
+  on: true,
+  custom: true,
+};
 
 export type Parcels = {
   on: boolean;
@@ -151,7 +191,7 @@ export function parcelsFrom(settings: Settings): Parcels {
     // route, so a switch turned on over an empty list is still off.
     on:
       settings.parcel_on === "on" &&
-      routes.some((one) => one.on && one.bands.length > 0),
+      routes.some((one) => one.on && (one.bands.length > 0 || isCustom(one))),
     routes,
     maxValue: numberOr(settings.parcel_max_value, MAX_VALUE),
     blurb: (settings.parcel_blurb ?? "").trim(),
@@ -168,7 +208,14 @@ export async function parcels(): Promise<Parcels> {
 
 /** The routes worth offering: on, and priced. */
 export function liveRoutes(all: Route[]): Route[] {
-  return all.filter((one) => one.on && one.bands.length > 0);
+  // The custom one has no bands and never will: it is the route for the
+  // trip nobody has priced, and a price is exactly what it does not carry.
+  return all.filter((one) => one.on && (one.bands.length > 0 || isCustom(one)));
+}
+
+/** The priced ones, for anything that has to do sums: tiles, "from", weight. */
+export function pricedRoutes(all: Route[]): Route[] {
+  return liveRoutes(all).filter((one) => !isCustom(one));
 }
 
 /**
@@ -184,7 +231,10 @@ export function liveRoutes(all: Route[]): Route[] {
  */
 export function placesServed(all: Route[]): string[] {
   const seen: string[] = [];
-  for (const route of liveRoutes(all)) {
+  // The priced ones only. "Somewhere else" is not a place, and a front page
+  // reading "Sangotedo/Ajah, Lekki/Ikoyi and Somewhere else" names a town
+  // that is not on any map.
+  for (const route of pricedRoutes(all)) {
     const place = route.label
       .replace(/\s*to\s+PAU\s*$/i, "")
       .replace(/^\s*PAU\s+to\s*/i, "")

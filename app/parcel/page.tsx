@@ -6,7 +6,7 @@ import HelpLine from "@/components/HelpLine";
 import { naira } from "@/lib/money";
 import Link from "next/link";
 import ParcelForm from "@/components/ParcelForm";
-import { liveRoutes, parcels, placesSaid } from "@/lib/parcels";
+import { isCustom, liveRoutes, parcels, placesSaid, pricedRoutes } from "@/lib/parcels";
 import { hostelNames } from "@/lib/hostels";
 import { lagosToday } from "@/lib/time";
 import { namedPromoters } from "@/lib/promoters";
@@ -26,14 +26,34 @@ export const metadata: Metadata = {
   title: "Send a parcel to or from PAU",
   alternates: { canonical: "/parcel" },
   description:
-    "Sangotedo, Lekki/Ikoyi, the mainland and Ikorodu, both ways to PAU. " +
-    "Collected sealed, handed over sealed, photographed at each end.",
+    "Sangotedo/Ajah, Lekki/Ikoyi, the mainland and Ikorodu, both ways to " +
+    "PAU, and anywhere else in Lagos on a quote. Collected sealed, handed " +
+    "over sealed, photographed at each end.",
 };
 
-export default async function ParcelPage() {
+export default async function ParcelPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ asked?: string }>;
+}) {
+  // Somebody who has just asked for a price on a trip nobody has priced.
+  // The form is no use to them now; the answer is coming on WhatsApp.
+  const asked1 = (await searchParams).asked === "1";
   const setup = await parcels();
   const settings = await safeSettings();
   const routes = liveRoutes(setup.routes);
+  /*
+   * The ones with a ladder behind them.
+   *
+   * There is now a route that carries no price at all, for the trip nobody
+   * has priced: a pickup in Epe, something that plainly will not fit in
+   * three kilos. Every sum on this page is about the priced ones, and
+   * asking the custom one what its cheapest band is returns infinity.
+   */
+  const priced = pricedRoutes(setup.routes);
+  // Whether the page can say yes to anywhere, which changes what it is
+  // allowed to promise.
+  const anywhere = routes.some(isCustom);
   // The same list the food and skincare checkouts use. A block typed by hand
   // is misspelt every other order, and a parcel is one bag with one place to
   // take it, so it matters more here than anywhere.
@@ -63,7 +83,7 @@ export default async function ParcelPage() {
   // The cheapest band on each route, for the board's price tiles. A parcel
   // is priced by how heavy it is, so this is a "from" and the form says the
   // rest once somebody has told us which one it is.
-  const from = routes.map((one) => ({
+  const from = priced.map((one) => ({
     label: one.label.replace(/\s+(to|from)\s+PAU$/i, ""),
     price: Math.min(...one.bands.map((band) => band.fee)),
   }));
@@ -71,7 +91,7 @@ export default async function ParcelPage() {
   // written out twice.
   const heaviest = Math.max(
     0,
-    ...routes.flatMap((one) => one.bands.map((band) => band.upTo))
+    ...priced.flatMap((one) => one.bands.map((band) => band.upTo))
   );
   const seen = new Set<string>();
   const tiles = from.filter((one) => {
@@ -96,24 +116,39 @@ export default async function ParcelPage() {
    * a price nobody charges any more.
    */
   const cheapest = Math.min(...from.map((one) => one.price));
-  const bothWays = routes.some((one) => one.toPau) && routes.some((one) => !one.toPau);
+  const bothWays = priced.some((one) => one.toPau) && priced.some((one) => !one.toPau);
+  /*
+   * Anywhere else, said in the same breath as the four towns.
+   *
+   * The page listed four places and stopped, which reads as the whole of
+   * what we do and sends away the parent in Epe and the one with a box
+   * that is plainly heavier than three kilos. There is a route for both of
+   * them now, so the copy says so rather than drawing a boundary the shop
+   * no longer keeps.
+   */
+  const elsewhere = anywhere
+    ? ", and anywhere else in Lagos: tell us where and we come back with a price"
+    : "";
+  const overWeight = anywhere
+    ? ` Heavier than ${heaviest}kg, or somewhere not on the list? Pick "somewhere else" on the form and we will quote you.`
+    : "";
 
   const asked: { q: string; a: string }[] = [
     {
       q: "How do I send a parcel to my child at Pan-Atlantic University?",
       a:
         `Tell us where it is and we collect it, from anywhere in ` +
-        `${placesSaid(routes)}. ` +
+        `${placesSaid(priced)}${elsewhere}. ` +
         "It is sealed when we take it, photographed at both ends, and handed " +
         "to your child at their own block on campus rather than left at a " +
-        `gate. From ${naira(cheapest)}, by weight, up to ${heaviest}kg.`,
+        `gate. From ${naira(cheapest)}, by weight.${overWeight}`,
     },
     {
       q: "Can you collect it from my house or office?",
       a:
-        `Yes, anywhere in ${placesSaid(routes)}. Give us the address and a ` +
-        "time and we come to it, so you do not have to find a courier " +
-        "office, queue at a counter or know anybody's opening hours.",
+        `Yes, anywhere in ${placesSaid(priced)}${elsewhere}. Give us the ` +
+        "address and a time and we come to it, so you do not have to find a " +
+        "courier office, queue at a counter or know anybody's opening hours.",
     },
     {
       /*
@@ -126,11 +161,17 @@ export default async function ParcelPage() {
        */
       q: "Do you carry parcels anywhere else in Lagos?",
       a:
-        "No. One end is always Pan-Atlantic University, and that is the " +
-        "point of it. We are not a courier covering Lagos: we are the people " +
-        "who go to that campus, know the blocks and can put a parcel in a " +
-        "named student's hands. For anything that does not touch PAU, an " +
-        "ordinary courier is the right answer and will be cheaper.",
+        (anywhere
+          ? "The other end can be anywhere in Lagos. Four routes are priced " +
+            "on the form and anything else is quoted: tell us where it is " +
+            "and we come back with a figure. "
+          : "") +
+        "What does not change is that one end is always Pan-Atlantic " +
+        "University, and that is the point of it. We are not a courier " +
+        "covering Lagos: we are the people who go to that campus, know the " +
+        "blocks and can put a parcel in a named student's hands. For " +
+        "anything that does not touch PAU, an ordinary courier is the right " +
+        "answer and will be cheaper.",
     },
     {
       q: "How much does it cost to send a parcel to PAU?",
@@ -139,7 +180,8 @@ export default async function ParcelPage() {
         "is in it. " +
         tiles.map((one) => `${one.label}, from ${naira(one.price)}`).join(". ") +
         `. The exact figure is on the form before you pay, once you have said ` +
-        "how heavy it is.",
+        "how heavy it is." +
+        overWeight,
     },
     {
       q: "Will I know it arrived?",
@@ -243,6 +285,17 @@ export default async function ParcelPage() {
 
       <div className="flex flex-col gap-7 py-8 lg:flex-row lg:items-start">
         <div className="min-w-0 flex-1">
+      {asked1 ? (
+        <div className="rounded-2xl border-2 border-ink bg-paper p-6 shadow-lift lg:shadow-[10px_10px_0_#e5321d]">
+          <p className="font-display text-[32px] font-black uppercase leading-none text-mint">
+            We have it.
+          </p>
+          <p className="mt-2 text-ink/75">
+            We will message you on WhatsApp with the price for that trip.
+            Nothing is charged and nothing moves until you say yes.
+          </p>
+        </div>
+      ) : (
       <ParcelForm
         routes={routes}
         maxValue={setup.maxValue}
@@ -257,6 +310,7 @@ export default async function ParcelPage() {
         }))}
         today={lagosToday()}
       />
+      )}
         </div>
 
         {/* The board's right column: what we will and will not carry, and
