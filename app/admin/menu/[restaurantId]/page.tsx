@@ -128,7 +128,28 @@ export default async function RestaurantAdmin({
         <span className="text-xl">→</span>
       </Link>
 
-      <form action={updateRestaurant} className="card space-y-3">
+      {/*
+        Keyed on what is saved, so every box shows what was saved.
+
+        Every field in here is uncontrolled: React sets a defaultValue
+        once when the element appears and then leaves the DOM alone. The
+        save works, the page re-renders with the new values, and the boxes
+        go on showing the old ones until a full reload. Saving Burger King
+        to Ajah and watching it say Sangotedo reads as the save having
+        failed and quietly undone itself, so somebody saves again, or
+        gives up and believes the shop has the wrong area for a kitchen.
+
+        One key on the form rather than twenty-five on the fields: the
+        signature changes when anything saved changes, the form is a new
+        form, and every box inside it takes its new default.
+      */}
+      <form
+        key={`${restaurant.area ?? ""}|${restaurant.name}|${restaurant.active}|${
+          restaurant.value_bands ?? ""
+        }`}
+        action={updateRestaurant}
+        className="card space-y-3"
+      >
         <input type="hidden" name="restaurant_id" value={restaurant.id} />
         <div className="flex items-center gap-3">
           <span className="size-14 shrink-0 overflow-hidden rounded-xl">
