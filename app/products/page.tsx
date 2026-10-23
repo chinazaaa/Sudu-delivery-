@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { didYouMean } from "@/lib/did-you-mean";
 import Link from "next/link";
 import { permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
 import ProductGrid from "@/components/ProductGrid";
 import { optionGroupsFor } from "@/lib/menu";
 
-import { browseProducts, productFacets, PER_PAGE } from "@/lib/products";
+import { browseProducts, productFacets, shelfNames, PER_PAGE } from "@/lib/products";
 import ProductSearch from "@/components/ProductSearch";
 
 export const dynamic = "force-dynamic";
@@ -119,6 +120,24 @@ export default async function ProductsPage({
     }),
     productFacets(asked.place),
   ]);
+
+  /*
+   * What they probably meant, when nothing matched.
+   *
+   * "birthdat" is seven letters of eight and the shop has a Birthday Cake
+   * Remix on a shelf, so the only thing between somebody and their money
+   * leaving their account was a key they missed. Nothing is a dead end on
+   * the one screen where somebody is actively trying to spend.
+   *
+   * Only on nothing, so the extra query is paid for exactly when the page
+   * has nothing else to offer, and only as a suggestion: searching for one
+   * thing and being shown another unasked is how people stop trusting a
+   * search.
+   */
+  const meant =
+    total === 0 && String(asked.q ?? "").trim() !== ""
+      ? didYouMean(String(asked.q), await shelfNames(asked.place))
+      : [];
 
   // What each thing on this page asks before it can go in a cart. Looked up
   // for the twenty-four on screen rather than for the whole shop, so a card
@@ -280,10 +299,30 @@ export default async function ProductsPage({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <div
-          aria-label="Kitchen"
-          className="-mx-4 flex min-w-0 flex-[1_1_320px] gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
-        >
+        {/*
+          The row scrolls, and said so to nobody.
+
+          Nine kitchens, five of them visible, and the fifth sat flush
+          against the edge looking exactly like the last one there is.
+          Somebody looking for Krispy Kreme read Burger King as the end of
+          the shop and stopped. A list that hides half itself with no
+          sign is worse than a shorter list.
+
+          A fade at the edge, and only where there is actually more to
+          reach: the count is known here, so nothing has to be measured in
+          a browser to know whether the hint is honest.
+        */}
+        <div className="relative -mx-4 min-w-0 flex-[1_1_320px] sm:mx-0">
+          {facets.places.length > 4 && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-shell to-transparent sm:hidden"
+            />
+          )}
+          <div
+            aria-label="Kitchen"
+            className="flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:px-0 [&::-webkit-scrollbar]:hidden"
+          >
           <Kitchen href={link({ place: "", category: "", aisle: "" })} on={!asked.place}>
             All kitchens
           </Kitchen>
@@ -295,7 +334,8 @@ export default async function ProductsPage({
             >
               {one.name}
             </Kitchen>
-          ))}
+            ))}
+          </div>
         </div>
 
         <div
@@ -353,13 +393,32 @@ export default async function ProductsPage({
       </p>
 
       {total === 0 ? (
-        <p className="card text-sm text-muted">
-          Try a different word, or{" "}
-          <Link href="/products" className="font-semibold text-brand">
-            start again
-          </Link>
-          .
-        </p>
+        <div className="card space-y-2 text-sm text-muted">
+          {meant.length > 0 && (
+            <p className="text-ink">
+              Did you mean{" "}
+              {meant.map((one, which) => (
+                <span key={one}>
+                  {which > 0 && (which === meant.length - 1 ? " or " : ", ")}
+                  <Link
+                    href={link({ q: one, category: "", aisle: "" })}
+                    className="font-semibold text-brand underline"
+                  >
+                    {one}
+                  </Link>
+                </span>
+              ))}
+              ?
+            </p>
+          )}
+          <p>
+            Try a different word, or{" "}
+            <Link href="/products" className="font-semibold text-brand">
+              start again
+            </Link>
+            .
+          </p>
+        </div>
       ) : (
         <ProductGrid items={cards} />
       )}

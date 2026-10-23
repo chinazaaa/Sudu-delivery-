@@ -37,6 +37,7 @@ import {
   soldOutSaid,
 } from "../lib/refunds";
 import { buyingDone } from "../lib/runner";
+import { didYouMean } from "../lib/did-you-mean";
 import { looksLikeAGift } from "../lib/occasions";
 import {
   MOST,
@@ -5555,4 +5556,31 @@ test("one question answers what a trip costs, whichever trip it is", () => {
   assert.equal(isCar({ kind: "same_day" }), true);
   assert.equal(isCar({ kind: "food" }), false);
   assert.equal(isCar(null), false);
+});
+
+test("a near miss on the search is offered rather than left as nothing", () => {
+  const shelf = [
+    "Birthday Cake Remix",
+    "Chicken Pie",
+    "Pepperoni",
+    "Assorted doughnuts",
+    "Smokey jollof rice",
+  ];
+
+  // The real one. Seven letters of eight, and the shop has the thing.
+  assert.deepEqual(didYouMean("birthdat", shelf, 1), ["Birthday Cake Remix"]);
+  assert.deepEqual(didYouMean("chiken", shelf, 1), ["Chicken Pie"]);
+  assert.deepEqual(didYouMean("peperoni", shelf, 1), ["Pepperoni"]);
+
+  // Nothing like anything is nothing, not the least bad option. A search
+  // for a thing the shop does not have must say so rather than offer a
+  // doughnut and look as though it is not listening.
+  assert.deepEqual(didYouMean("lawnmower", shelf), []);
+  assert.deepEqual(didYouMean("", shelf), []);
+  assert.deepEqual(didYouMean("pie", []), []);
+
+  // A name is offered once however many times the shelf carries it.
+  assert.deepEqual(didYouMean("chiken", ["Chicken Pie", "chicken pie"], 3), [
+    "Chicken Pie",
+  ]);
 });

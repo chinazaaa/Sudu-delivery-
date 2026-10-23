@@ -264,3 +264,38 @@ export async function browseProducts(
 
 /** Kept for the page that wants a number without a page of results. */
 export { pctOf };
+
+/**
+ * Names on the shelves, for working out what somebody meant.
+ *
+ * Only ever asked when a search found nothing, which is the one moment the
+ * cost of a second query is obviously worth paying: the alternative on
+ * screen is a dead end on the page where somebody is trying to spend
+ * money.
+ *
+ * Names alone, and capped. Scoring a few hundred of them against one typo
+ * is instant; fetching the whole shop to do it would not be.
+ */
+export async function shelfNames(place?: string, cap = 600): Promise<string[]> {
+  try {
+    let ask = db()
+      .from("menu_items")
+      .select("name, restaurants!inner(name, is_open)")
+      .eq("available", true)
+      .gt("price_food", 0)
+      .limit(cap);
+
+    if (place && place.trim() !== "") {
+      ask = ask.eq("restaurants.name", place.trim());
+    }
+
+    const { data, error } = await ask;
+    if (error) return [];
+    return ((data ?? []) as { name?: string }[])
+      .map((one) => String(one.name ?? "").trim())
+      .filter(Boolean);
+  } catch {
+    // A suggestion nobody gets is a search that behaves as it always has.
+    return [];
+  }
+}
