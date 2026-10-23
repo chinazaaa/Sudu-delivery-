@@ -60,7 +60,17 @@ export default function ShelfCheckout({
   promoters?: { code: string; name: string }[];
   /** The currencies a card link can be made out in. Empty where off. */
   monies?: Money[];
-  me: { name: string; hostel: string; paymentMethod: "transfer" | "card" } | null;
+  /** Whoever is signed in, as the shop already knows them. The number is
+   *  part of it: without it this filled in a name and a block and then
+   *  asked for the one thing a signed cookie already proves. */
+  me: {
+    name: string;
+    phone: string;
+    hostel: string;
+    paymentMethod: "transfer" | "card";
+    /** Who brought them, where that promoter is still promoting. */
+    heardFrom: string;
+  } | null;
   /** Which counter's basket this is, and which car the order goes on. */
   counter?: string;
   /** What the shop has to say before money changes hands, where the counter
@@ -82,7 +92,7 @@ export default function ShelfCheckout({
   const router = useRouter();
   const cart = useShelf(counter);
   const [name, setName] = useState(me?.name ?? "");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(me?.phone ?? "");
   const [hostel, setHostel] = useState(me?.hostel ?? "");
   // Where it goes: a block on campus, or an address anywhere in Lagos.
   //
@@ -93,7 +103,21 @@ export default function ShelfCheckout({
   const [inPau, setInPau] = useState(true);
   const [address, setAddress] = useState("");
   const [note, setNote] = useState("");
-  const [heardFrom, setHeardFrom] = useState("");
+  /*
+   * Who brought them, already answered where the shop knows.
+   *
+   * Written once on their first order and never touched again, which is
+   * what makes the commission lifetime, so for anybody the shop knows this
+   * question has an answer and asking it again is asking them to remember
+   * something the shop wrote down for them.
+   *
+   * Only while that promoter is still promoting. One who has stopped is
+   * not a name to put in front of anybody, and then it is Somewhere else,
+   * which is honest.
+   */
+  const [heardFrom, setHeardFrom] = useState(() =>
+    promoters.some((one) => one.code === me?.heardFrom) ? me!.heardFrom : ""
+  );
   const [money, setMoney] = useState("");
   const [method, setMethod] = useState<"transfer" | "card">(me?.paymentMethod ?? "transfer");
   const [busy, setBusy] = useState(false);

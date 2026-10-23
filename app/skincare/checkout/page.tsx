@@ -5,7 +5,7 @@ import { dropLabel, nextDrop, skincareBands, skincareOn, skincarePromise, skinca
 import { hostelNames } from "@/lib/hostels";
 import { namedPromoters } from "@/lib/promoters";
 import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
-import { currentCustomer, customerDetails } from "@/lib/customer-auth";
+import { whoIsSignedIn } from "@/lib/customer";
 import { clockOf } from "@/lib/same-day";
 import { cutOffTime } from "@/lib/skincare";
 import ShelfCheckout from "@/components/ShelfCheckout";
@@ -19,7 +19,6 @@ export default async function SkincareCheckoutPage() {
 
   const drop = nextDrop(settings);
   const [hour, minute] = cutOffTime(settings.skincare_cut_off);
-  const signedIn = await currentCustomer();
 
   return (
     <>
@@ -40,7 +39,7 @@ export default async function SkincareCheckoutPage() {
         symbol: SYMBOL[code],
         rate: rateFor(settings, code),
       }))}
-      me={signedIn ? await customerDetails(signedIn) : null}
+      me={await whoIsSignedIn()}
       />
       <HelpLine number={settings.whatsapp_number} about="a skincare order" />
     </>

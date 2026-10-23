@@ -80,10 +80,34 @@ export type AddingTo = {
   hostel: string;
 };
 
+/**
+ * Whoever is signed in, as the shop already knows them.
+ *
+ * The checkout asked everybody for their name, their number and their
+ * block every single time, including the person whose number it was
+ * holding a signed cookie for. The only way to fill it in was the PIN box,
+ * which asks a regular to prove again what she proved when she signed in,
+ * and which the shop cannot use at all when it is taking an order for
+ * somebody: a PIN only ever goes to the number it belongs to.
+ *
+ * Null for a visitor nobody knows, which is how it was for everybody.
+ */
+export type SignedIn = {
+  name: string;
+  phone: string;
+  hostel: string;
+  paymentMethod: "transfer" | "card";
+  /** Who brought them, written once on their first order. Checked against
+   *  the live promoters where it is used, so one who has stopped is never
+   *  put in front of anybody. */
+  heardFrom: string;
+};
+
 export default function Checkout({
   batches,
   today,
   adding,
+  you,
   sameDaySlots: allSlots,
   sameDayBands: baseSameDayBands,
   urgentExtra,
@@ -106,6 +130,9 @@ export default function Checkout({
    *  today opens instead of a time of their own. */
   today: string;
   adding: AddingTo | null;
+  /** Whoever is signed in, so a regular is not asked again for what the
+   *  shop already has. Null for a visitor nobody knows. */
+  you: SignedIn | null;
   /** Times still available today, worked out on the server so the clock is
    *  the shop's rather than the phone's. Empty means same day is off. */
   sameDaySlots: Slot[];
@@ -396,7 +423,7 @@ export default function Checkout({
   ) {
     setBatchId(decided?.runId ?? openable[0]?.id ?? "");
   }
-  const [method, setMethod] = useState<"transfer" | "card">("transfer");
+  const [method, setMethod] = useState<"transfer" | "card">(you?.paymentMethod ?? "transfer");
   // Empty is naira, which is nearly every order. Cleared whenever somebody
   // goes back to a transfer, so a currency cannot ride along on an order
   // that is not being paid by card at all.
@@ -409,9 +436,18 @@ export default function Checkout({
   // React resets an uncontrolled form once its action finishes, which wiped
   // the name, number and block every time the server rejected something. They
   // are held here instead, and remembered for the next order.
-  const [name, setName] = useState(adding?.name ?? "");
-  const [phone, setPhone] = useState(adding?.phone ?? "");
-  const [hostel, setHostel] = useState(adding?.hostel ?? "");
+  /*
+   * The order being added to first, then whoever is signed in.
+   *
+   * Signed in beats what this browser last typed: the record on the shop is
+   * the person, and the box is one machine's memory of the last order
+   * placed on it. That difference is invisible until the shop takes an
+   * order for somebody on its own laptop, and then it is her order under
+   * whoever used the laptop last.
+   */
+  const [name, setName] = useState(adding?.name ?? you?.name ?? "");
+  const [phone, setPhone] = useState(adding?.phone ?? you?.phone ?? "");
+  const [hostel, setHostel] = useState(adding?.hostel ?? you?.hostel ?? "");
   const [filled, setFilled] = useState(false);
   const [note, setNote] = useState("");
   // Set once, when the page is drawn, rather than read at submit: what
@@ -450,10 +486,17 @@ export default function Checkout({
     if (adding) return;
     try {
       const saved = JSON.parse(localStorage.getItem("sudu_me_v1") ?? "null");
-      if (saved?.name) setName((current) => current || saved.name);
-      if (saved?.phone) setPhone((current) => current || saved.phone);
-      if (saved?.hostel) setHostel((current) => current || saved.hostel);
-      if (saved?.method === "card" || saved?.method === "transfer") setMethod(saved.method);
+      // Not over somebody who is signed in. The shop knows who they are;
+      // the box knows who last used this machine, and on the shop's own
+      // laptop those are different people.
+      if (!you) {
+        if (saved?.name) setName((current) => current || saved.name);
+        if (saved?.phone) setPhone((current) => current || saved.phone);
+        if (saved?.hostel) setHostel((current) => current || saved.hostel);
+        if (saved?.method === "card" || saved?.method === "transfer") {
+          setMethod(saved.method);
+        }
+      }
       // Carried over by "want this again". Taken out once it is used, so it
       // does not haunt an order three weeks later that has nothing to do
       // with it.
@@ -467,7 +510,7 @@ export default function Checkout({
     } catch {
       /* Nothing saved, or storage is blocked. The fields simply start empty. */
     }
-  }, [adding]);
+  }, [adding, you]);
 
   useEffect(() => {
     try {
@@ -1435,6 +1478,14 @@ export default function Checkout({
           {/* In a group, the friends' details are already above, so this
               section has to say whose it is. */}
           <Step at="02">{whereHeading}</Step>
+          {/* Not to somebody already signed in.
+
+              It asks for the PIN, which is the thing they proved when they
+              signed in, to fill in what is already filled in. Offering it
+              there reads as the shop not knowing who it is talking to, and
+              the shop cannot use it at all when it is taking an order for
+              somebody: a PIN only ever goes to the number it belongs to. */}
+          {you === null && (
           <FillDetails
             phone={phone}
             onFilled={(me) => {
@@ -1448,6 +1499,7 @@ export default function Checkout({
               if (me.paymentMethod) setMethod(me.paymentMethod);
             }}
           />
+          )}
         </div>
         {groupOn && !ownFood && !bagsToMe && (
           <p className="text-sm text-muted">

@@ -11,7 +11,9 @@ import { liveOffers } from "@/lib/coupons";
 import { hostelNames } from "@/lib/hostels";
 import { namedPromoters } from "@/lib/promoters";
 import { WHO_COOKIE } from "@/lib/came-from";
-import Checkout, { type AddingTo } from "@/components/Checkout";
+import Checkout, { type AddingTo, type SignedIn } from "@/components/Checkout";
+import { whoIsSignedIn } from "@/lib/customer";
+import { db } from "@/lib/supabase";
 import { openBatches, recentlyClosedBatch } from "@/lib/batches";
 import { existingLoad } from "@/lib/orders";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
@@ -82,7 +84,26 @@ export default async function CheckoutPage({
   // is whatever somebody types into it.
   const promoters = await namedPromoters();
   const fromLink = (await cookies()).get(WHO_COOKIE)?.value ?? "";
-  const sent = promoters.find((one) => one.code === fromLink);
+  const me = await whoIsSignedIn();
+  /*
+   * The link first, then whoever already brought them.
+   *
+   * A promoter is written once on a first order and never touched again,
+   * which is what makes the commission lifetime. So for anybody the shop
+   * already knows, this question has an answer and asking it again is
+   * asking them to remember something the shop wrote down for them: the
+   * box opened on "Somewhere else" and a regular who had been brought in
+   * by somebody picked it, which is the one answer that is never true for
+   * her.
+   *
+   * Only while that promoter is still promoting. One who has stopped is
+   * not a name to put in front of anybody, and then it is Somewhere else,
+   * which is honest.
+   */
+  const theirs = me?.heardFrom ?? "";
+  const sent =
+    promoters.find((one) => one.code === fromLink) ??
+    promoters.find((one) => one.code === theirs);
   const sentBy = sent?.code ?? "";
   // First name only: a discount line saying "Claire Okonkwo's link" is a
   // surname nobody needed on a checkout.
@@ -103,6 +124,18 @@ export default async function CheckoutPage({
       batches={views}
       today={lagosToday()}
       adding={adding}
+      /*
+       * Whoever is signed in, as the shop already knows them.
+       *
+       * This page asked everybody for their name, their number and their
+       * block every single time, including the person whose number it was
+       * holding a signed cookie for. The only way to fill it in was the PIN
+       * box, which asks a regular to prove again what she proved when she
+       * signed in, and which the shop cannot use at all when it is taking
+       * an order for somebody: a PIN only ever goes to the number it
+       * belongs to.
+       */
+      you={me}
       // Worked out here so the clock is the shop's, not whatever the phone
       // says, and so a page left open all morning cannot offer a time that
       // has already gone.

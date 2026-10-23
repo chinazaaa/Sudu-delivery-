@@ -4,6 +4,7 @@ import { orderFeed, type FeedOrder } from "./admin-data";
 import { isGone, isPaid, NOT_ORDERS_SQL } from "./orders";
 import { errandsBy } from "./other-money";
 import type { Batch, Order } from "./types";
+import { currentCustomer, customerDetails } from "./customer-auth";
 
 /**
  * One person, and everything the shop knows about them.
@@ -587,5 +588,67 @@ export async function linkedTo(phone: string): Promise<Linked[]> {
     });
   } catch {
     return [];
+  }
+}
+
+/**
+ * Who this browser is signed in as, with everything a checkout needs.
+ *
+ * The checkouts asked everybody for their name, their number and their
+ * block every single time, including the person whose number the shop was
+ * holding a signed cookie for. The only way to fill it in was a box asking
+ * for the PIN, which asks a regular to prove again what she proved when
+ * she signed in, and which the shop cannot use at all when it is taking an
+ * order for somebody: a PIN only ever goes to the number it belongs to.
+ *
+ * One reader for all three checkouts, because three copies of this is
+ * three places for a field to go missing from. Quietly: a checkout that
+ * will not load because the customer book is having a bad minute is a
+ * worse failure than a form somebody has to type into, which is what it
+ * was before.
+ */
+export type SignedInNow = {
+  name: string;
+  phone: string;
+  hostel: string;
+  paymentMethod: "transfer" | "card";
+  /** Who brought them, written once on their first order and never touched
+   *  again. Checked against the live promoters where it is used, so one who
+   *  has stopped is never put in front of anybody. */
+  heardFrom: string;
+};
+
+export async function whoIsSignedIn(): Promise<SignedInNow | null> {
+  try {
+    const phone = await currentCustomer();
+    if (!phone) return null;
+
+    const [me, brought] = await Promise.all([
+      customerDetails(phone),
+      (async () => {
+        try {
+          const { data } = await db()
+            .from("customers")
+            .select("promoter_code")
+            .eq("phone", phone)
+            .maybeSingle();
+          return String(
+            (data as { promoter_code?: string } | null)?.promoter_code ?? ""
+          );
+        } catch {
+          return "";
+        }
+      })(),
+    ]);
+
+    return {
+      name: me?.name ?? "",
+      phone,
+      hostel: me?.hostel ?? "",
+      paymentMethod: me?.paymentMethod ?? "transfer",
+      heardFrom: brought,
+    };
+  } catch {
+    return null;
   }
 }

@@ -14,7 +14,7 @@ import {
 import { hostelNames } from "@/lib/hostels";
 import { namedPromoters } from "@/lib/promoters";
 import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
-import { currentCustomer, customerDetails } from "@/lib/customer-auth";
+import { whoIsSignedIn } from "@/lib/customer";
 import { clockOf, deliverySlots } from "@/lib/same-day";
 import { hoursByDay, sameDayPricing } from "@/lib/settings";
 import ShelfCheckout from "@/components/ShelfCheckout";
@@ -37,7 +37,6 @@ export default async function PharmacyCheckoutPage() {
 
   const drop = nextDrop(settings);
   const [hour, minute] = cutOffTime(pharmacyCutOff(settings));
-  const signedIn = await currentCustomer();
 
   /*
    * The other way, where there is one.
@@ -88,7 +87,7 @@ export default async function PharmacyCheckoutPage() {
           symbol: SYMBOL[code],
           rate: rateFor(settings, code),
         }))}
-        me={signedIn ? await customerDetails(signedIn) : null}
+        me={await whoIsSignedIn()}
         slots={soon}
         sameDayBands={sameDay.bands}
         urgentExtra={sameDay.urgentExtra}
