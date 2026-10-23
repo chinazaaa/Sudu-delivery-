@@ -82,6 +82,10 @@ type Start = {
   }[];
   whatsapp: string;
   email: string;
+  /** Who is reading this, where the shop already knows them from the
+   *  cookie that signs them in. Null for somebody new, which is the only
+   *  case that still gets asked for a name. */
+  you: { name: string; phone: string; hostel: string } | null;
 };
 
 type Car = {
@@ -272,6 +276,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   const askOrderRef = useRef<((again?: boolean) => void) | null>(null);
   /** The search, held in a box because the change step runs it too. */
   const huntRef = useRef<((said: string, echo?: boolean) => void) | null>(null);
+  /* Whether the reading layer answered at all. Set once, when it says it
+     has no key, so the chat stops asking something that will not answer. */
+  const readingOff = useRef(false);
   /*
    * The search already run for this sentence, kept so it is only run once.
    *
@@ -1297,6 +1304,101 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
        * it was agreed somewhere else first. Taken one at a time, because
        * each thing on it may have a question of its own.
        */
+      /*
+       * The sentence read rather than pattern matched.
+       *
+       * Only where the rules have already failed to split it, and only on
+       * something long enough to be worth reading: "2 chicken pie, 1 coke"
+       * is split by the rule below in no time and without a round trip,
+       * and the layer has nothing to add to it.
+       *
+       * What it adds is the sentence that is not a list. "Can I get two
+       * of those chicken pies and a shawarma for Naza, 0704 268 5535,
+       * Trezadel" has no comma pattern the rules can trust, and taken by
+       * them it becomes one long search for a dish that does not exist.
+       * Read, it is three answers and an order.
+       *
+       * Everything it finds goes through the machinery that was already
+       * here: the items are handed to the same queue the comma rule
+       * fills, and each one is searched against the real menu exactly as
+       * before. The reading chooses the words, never the food, never the
+       * price, and never whether any of it is in stock.
+       */
+      if (
+        echo &&
+        list.current.length === 0 &&
+        !readingOff.current &&
+        splitOrder(said).length < 2 &&
+        said.trim().split(/\s+/).length >= 4
+      ) {
+        const got = await fetch("/api/bot/understand", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            said,
+            shop: {
+              shopName: "Sudu",
+              counters: (startRef.current?.kitchens ?? []).map((one) => one.name),
+              hostels: startRef.current?.hostels ?? [],
+              nextRun: startRef.current?.runs?.[0]?.said ?? "",
+              cutOff: startRef.current?.runs?.[0]?.closes ?? "",
+              open: (startRef.current?.runs ?? []).length > 0,
+            },
+          }),
+        })
+          .then((one) => one.json())
+          .catch(() => null);
+
+        /* No key, no credit, no answer: remembered, so this is the last
+           time it is asked this session, and the rules carry on. */
+        if (got?.off) readingOff.current = true;
+
+        const reading = got?.ok ? got.reading : null;
+        if (reading) {
+          /* Details they happened to mention. Only ever filling a blank:
+             a sentence must not quietly move an order somebody has
+             already given a block for. */
+          const mine = held.current;
+          if (mine.name === "" && reading.name !== "") {
+            mine.name = String(reading.name).split(" ")[0];
+          }
+          if (mine.phone === "" && reading.phone !== "") mine.phone = reading.phone;
+          if (mine.hostel === "" && reading.hostel !== "") {
+            const blocks = startRef.current?.hostels ?? [];
+            const match = blocks.find(
+              (one) => one.toLowerCase() === String(reading.hostel).toLowerCase()
+            );
+            /* Only a block the shop actually has. A reading is a reading,
+               and a hostel nobody has heard of is not a delivery address. */
+            if (match) mine.hostel = match;
+          }
+
+          const wanted: { what: string; qty: number }[] = reading.wanted ?? [];
+          if (wanted.length >= 2) {
+            const parts = wanted.map((one) => `${one.qty} ${one.what}`);
+            list.current = parts.slice(1);
+            listing.current = parts.length;
+            bot(
+              `<b>${parts.length}</b> things. I will take them one at a time, ` +
+                "and ask about any I cannot place.",
+              460
+            );
+            huntRef.current?.(parts[0], false);
+            return;
+          }
+          if (wanted.length === 1) {
+            /* One thing, said in a sentence. Searched for as the thing
+               rather than as the sentence, which is the whole difference
+               between finding it and apologising. */
+            const only = `${wanted[0].qty} ${wanted[0].what}`;
+            if (only.toLowerCase() !== said.trim().toLowerCase()) {
+              huntRef.current?.(only, false);
+              return;
+            }
+          }
+        }
+      }
+
       if (echo && list.current.length === 0) {
         const parts = splitOrder(said);
         if (parts.length >= 2) {
@@ -4110,6 +4212,29 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           me(one.said);
           held.current.occasion = one.key;
           bot(one.greet, 450);
+          /*
+           * Somebody the shop already knows is not asked who they are.
+           *
+           * The chat used to ask everybody their name, including the
+           * person who ordered last Tuesday and is signed in on the very
+           * phone she ordered from. Asking what to call somebody you
+           * already call that is the shop admitting it was not paying
+           * attention, and it costs a message at the moment somebody is
+           * hungry and deciding whether this beats WhatsApp.
+           *
+           * It is said rather than done silently, because a chat that
+           * knows your name and your block without mentioning it is
+           * unsettling, and because it has to be wrong out loud: Not me
+           * is the way back for a shared phone or a borrowed laptop.
+           */
+          const known = startRef.current?.you ?? null;
+          if (known && known.name !== "" && !one.gift) {
+            held.current.name = known.name.split(" ")[0];
+            held.current.phone = known.phone;
+            held.current.hostel = known.hostel;
+            greetKnown(known);
+            return;
+          }
           askTheName();
         },
       })),
@@ -4117,6 +4242,67 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     });
 
     let tries = 0;
+
+    /*
+     * Hello again, and straight to the food.
+     *
+     * Three questions skipped for somebody who has ordered before: their
+     * name, their number and their block are all already known, and asking
+     * again is the shop losing somebody at the only moment it has their
+     * attention.
+     *
+     * Said out loud rather than assumed, with the block in it, because the
+     * one thing worse than asking a returning customer where she lives is
+     * sending her dinner to where she lived last term. And Not me beside
+     * it, because phones get lent and laptops get shared, and a chat that
+     * cannot be told it has the wrong person is a chat that will one day
+     * deliver to the wrong person.
+     */
+    const greetKnown = (known: { name: string; phone: string; hostel: string }) => {
+      const first = known.name.split(" ")[0];
+      bot(
+        known.hostel !== ""
+          ? `Welcome back, ${first}. Still ${known.hostel}?`
+          : `Welcome back, ${first}.`,
+        420
+      );
+      setAsk({
+        of: "chips",
+        chips: [
+          {
+            said: known.hostel !== "" ? "Yes, what have you got?" : "What have you got?",
+            hot: true,
+            go: () => {
+              me(known.hostel !== "" ? "Yes, what have you got?" : "What have you got?");
+              remember("came back, details already known");
+              askSlotRef.current?.();
+            },
+          },
+          {
+            said: "Different block",
+            go: () => {
+              me("Different block");
+              askHostelRef.current?.();
+            },
+          },
+          {
+            said: "Not me",
+            go: () => {
+              me("Not me");
+              /* Everything the cookie said, dropped. Somebody on a
+                 borrowed phone starts where a stranger starts. */
+              held.current.name = "";
+              held.current.phone = "";
+              held.current.hostel = "";
+              bot("No problem. What should I call you?", 400);
+              askTheName();
+            },
+          },
+        ],
+        hint: "",
+      });
+    };
+
     /* Asked again after something else was dealt with. The greeting is not
        repeated: somebody who has just been answered does not need to be
        told who they are talking to a second time. */

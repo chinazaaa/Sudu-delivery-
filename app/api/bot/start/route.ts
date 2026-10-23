@@ -14,8 +14,35 @@ import { headlineFee } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
 import { runDateLabel } from "@/lib/time";
 import { TZ } from "@/lib/config";
+import { currentCustomer, customerDetails } from "@/lib/customer-auth";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * The customer behind the cookie, where there is one.
+ *
+ * Fails to null rather than throwing, because not knowing who somebody is
+ * is the ordinary case and must never be the reason the chat will not
+ * open.
+ */
+async function whoIsAsking(): Promise<
+  { name: string; phone: string; hostel: string } | null
+> {
+  try {
+    const phone = await currentCustomer();
+    if (!phone) return null;
+    const details = await customerDetails(phone);
+    if (!details) return null;
+    return {
+      name: String(details.name ?? "").trim(),
+      phone,
+      hostel: String(details.hostel ?? "").trim(),
+    };
+  } catch {
+    return null;
+  }
+}
+
 
 /**
  * What the chat needs before it can ask anything.
@@ -172,6 +199,20 @@ export async function GET(): Promise<NextResponse> {
        * guess at it, so raising it in Settings widens the chat too.
        */
       horizonDays: Math.max(1, Number(settings.order_horizon_days) || 7),
+      /*
+       * Who is reading this, where the shop already knows.
+       *
+       * The chat opened by asking everybody their name, including the
+       * person who ordered last Tuesday and whose name is on the order
+       * she is looking at. Asking somebody what to call them when you
+       * already call them that is the shop admitting it was not paying
+       * attention, and it costs a message at the exact moment somebody is
+       * hungry and deciding whether this is quicker than WhatsApp.
+       *
+       * Only ever read, never written from here: the cookie is the proof
+       * of who they are and the chat does not get to claim it for them.
+       */
+      you: await whoIsAsking(),
       whatsapp: String(settings.whatsapp_number ?? ""),
       // So the way out is never only one door: somebody who will not open
       // WhatsApp still has somewhere to write to.
@@ -194,6 +235,7 @@ export async function GET(): Promise<NextResponse> {
       feeFrom: 0,
       whatsapp: "",
       email: "",
+      you: null,
     });
   }
 }
