@@ -690,7 +690,25 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
      *   is asked from; the block question when it was asked from there,
      *   since the block is still needed either way.
      */
-    (said: string, after?: () => void): boolean => {
+    (
+      said: string,
+      after?: () => void,
+      /*
+       * Whether a near miss counts.
+       *
+       * "What restaurants do you deliver from" had no written answer, so
+       * the near miss offered "Where do you deliver?" -- a different
+       * question, about PAU -- and the chat then answered it. Somebody who
+       * asked which kitchens we buy from was told where we drive to.
+       *
+       * Where the chat already holds the real answer, a guess at a written
+       * one is worse than no guess: the counters open tonight are read
+       * live and cannot go stale, and a written answer about them would.
+       * So the written answers still win when one of them is plainly the
+       * question, and never on a maybe.
+       */
+      sureOnly = false
+    ): boolean => {
       const all = startRef.current?.faqs ?? [];
       if (all.length === 0) return false;
 
@@ -733,7 +751,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         return true;
       }
 
-      if (found.maybe.length > 0) {
+      if (found.maybe.length > 0 && !sureOnly) {
         bot("I think I have been asked this before. Is it one of these?", 480);
         setAsk({
           of: "chips",
@@ -1083,7 +1101,12 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           peek &&
           (peek.how === "counter" || peek.how === "sure" || peek.how === "shelf");
         if (named) probed.current = { said, got: peek };
-        else if (sayFaq(said)) return;
+        // A near miss never beats a question the chat can answer off what
+        // is open tonight. "What restaurants do you deliver from" came
+        // back with "Where do you deliver?", which is a different
+        // question, about PAU, and the chat then answered it: somebody who
+        // asked which kitchens we buy from was told where we drive to.
+        else if (sayFaq(said, undefined, intentOf(said) === "menu")) return;
       }
 
       /*
@@ -1106,7 +1129,16 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
          * is written in admin. Only where there is one: with nothing
          * written, each of these still has a sensible next question.
          */
-        if (meant !== "" && meant !== "vague-order" && sayFaq(said)) return;
+        if (
+          meant !== "" &&
+          meant !== "vague-order" &&
+          // A near miss never beats the counters. The chat holds that list
+          // live, and a written answer guessed at from the wrong question
+          // is how "which restaurants" got answered with "Ibeju-Lekki".
+          sayFaq(said, undefined, meant === "menu")
+        ) {
+          return;
+        }
 
         if (meant === "question") {
           askAQuestion();

@@ -1075,8 +1075,25 @@ export function intentOf(said: string): Intent {
     .filter((word) => word !== "" && !FILLER.has(word) && !NOISE.has(word));
   if (left.length > 0 && left.every((word) => UNSURE.has(word))) return "unsure";
 
-  /* What there is, as against which one of it. */
-  if (/\b(menu|menus|catalogue|available|availability|what do you (?:have|sell|offer))\b/.test(flat)) {
+  /*
+   * What there is, as against which one of it.
+   *
+   * Including the counters themselves. "What restaurants do you deliver
+   * from" went to the shop's written answers, which had nothing about
+   * restaurants in them, and came back offering "Where do you deliver?" --
+   * a different question, about PAU, which the chat then answered. The
+   * person had asked which kitchens we buy from and been told where we
+   * drive to.
+   *
+   * The counters are the one answer the chat already holds and that can
+   * never go stale, because it is read off what is open tonight. A general
+   * word only: "order from Dominos" names one and belongs in the search,
+   * and nothing on any shelf is called a restaurant.
+   */
+  if (
+    /\b(menu|menus|catalogue|available|availability|what do you (?:have|sell|offer))\b/.test(flat) ||
+    /\b(restaurants?|kitchens?|counters?|vendors?|outlets?|eateries|eatery)\b/.test(flat)
+  ) {
     return "menu";
   }
 

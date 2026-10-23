@@ -5971,3 +5971,31 @@ test("what goes on the card is the counters and the fare", () => {
     { areas: ["sango"], amount: 0 },
   ]);
 });
+
+test("which kitchens is a question the chat can answer itself", () => {
+  /*
+   * "What restaurants do you deliver from" had no written answer, so the
+   * near miss offered "Where do you deliver?" -- a different question,
+   * about PAU -- and the chat answered it. Somebody who asked which
+   * kitchens we buy from was told where we drive to.
+   *
+   * The counters open tonight are the one answer the chat already holds
+   * and that can never go stale.
+   */
+  assert.equal(botIntentOf("What restaurants do you deliver from"), "menu");
+  assert.equal(botIntentOf("which kitchens do you buy from"), "menu");
+  assert.equal(botIntentOf("what counters are open"), "menu");
+  assert.equal(botIntentOf("what is on the menu"), "menu");
+
+  // A general word only. Naming one belongs in the search, and nothing on
+  // any shelf is called a restaurant.
+  assert.equal(botIntentOf("I want to order from Dominos"), "");
+  assert.equal(botIntentOf("2 chicken pie"), "");
+  // The one that started it: a different question, and still its own.
+  assert.equal(botIntentOf("Where do you deliver?"), "");
+  // And a dish whose name holds a word the rule nearly wanted.
+  assert.equal(
+    botIntentOf("Extra large value munch - fried rice & chicken in stew The Place"),
+    ""
+  );
+});

@@ -1,6 +1,7 @@
 import { db } from "./supabase";
 import { naira } from "./money";
 import { dayLabel } from "./time";
+import { isGone } from "./orders";
 
 /**
  * How a cart says it came from the chat.
@@ -284,14 +285,23 @@ export async function closedCarts(limit = 100): Promise<SavedCart[]> {
 }
 
 /**
- * Carts that became orders.
+ * Carts that were chased and then became orders.
  *
- * They used to be in no list at all. The open list asks for carts with no
- * converted_at and the closed list asks for ones with a handled_at, which
- * converting never sets, so the moment a cart turned into money it fell out
- * of the one screen that is about carts turning into money. The only sign
- * it had worked was that it had stopped being there, which is also what a
- * bug looks like.
+ * Which is not the same as carts that became orders. Every visitor's
+ * basket is saved as they browse, and ordering marks it converted, so
+ * "became an order" was every website order the shop has ever taken:
+ * forty-one of them, including people who simply checked out, people who
+ * ordered and then cancelled, and an order somebody here typed in. A
+ * number that counts everything answers nothing.
+ *
+ * This list exists to say what the chasing is worth, so it is the carts
+ * the chasing actually touched: the ones somebody was told about, in the
+ * recap or by the nightly alert, which then came good. A basket that went
+ * from browse to checkout in four minutes was never chased and never
+ * abandoned; it is an order, and orders have their own screen.
+ *
+ * And not the ones that were cancelled afterwards. A cart that became an
+ * order that became nothing is not money the chasing made.
  *
  * Newest first, and only as far back as the page can use: this is a record
  * of what the chasing is worth, not an archive.
@@ -301,10 +311,36 @@ export async function boughtCarts(limit = 100): Promise<SavedCart[]> {
     .from("carts")
     .select("*")
     .not("converted_at", "is", null)
+    .not("alerted_at", "is", null)
     .order("converted_at", { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
-  return (data ?? []) as SavedCart[];
+
+  const carts = (data ?? []) as SavedCart[];
+  const ids = carts
+    .map((cart) => cart.converted_order_id)
+    .filter((id): id is string => Boolean(id));
+  if (ids.length === 0) return carts;
+
+  // The orders they became, so the ones that were cancelled or given back
+  // come off. Quietly: a list that will not draw because one lookup failed
+  // is worse than a list with a cancelled order left on it.
+  try {
+    const { data: rows } = await db()
+      .from("orders")
+      .select("id, status")
+      .in("id", ids);
+    const gone = new Set(
+      ((rows ?? []) as { id: string; status: string }[])
+        .filter((row) => isGone(row.status))
+        .map((row) => row.id)
+    );
+    return carts.filter(
+      (cart) => !cart.converted_order_id || !gone.has(cart.converted_order_id)
+    );
+  } catch {
+    return carts;
+  }
 }
 
 export async function markAlerted(ids: string[]): Promise<void> {

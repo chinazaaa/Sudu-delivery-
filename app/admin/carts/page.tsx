@@ -374,7 +374,8 @@ export default async function CartsPage({
             cut === "bought" ? "pill-admin-on" : ""
           }`}
         >
-          Bought <span className="font-mono opacity-60">{bought.length}</span>
+          Chased, bought{" "}
+          <span className="font-mono opacity-60">{bought.length}</span>
         </Link>
       </div>
 
@@ -440,7 +441,7 @@ export default async function CartsPage({
           {cut === "done"
             ? "Nothing closed yet."
             : cut === "bought"
-              ? "No cart has become an order yet."
+              ? "No cart that was chased has come good yet. Only the ones somebody was told about count here: a basket that went from browse to checkout was never abandoned, and that is an order rather than a rescue."
             : cut === "run-closed"
               ? "Nothing waiting on a run that has gone."
               : "Nothing left behind. Every cart with a number on it became an order."}
@@ -492,7 +493,7 @@ export default async function CartsPage({
                 <div className="mt-2.5 flex items-center gap-2">
                   {cut === "bought" ? (
                     <span className="tag bg-mint-tint text-mint">
-                      became an order
+                      chased, then bought
                     </span>
                   ) : cut === "done" ? (
                     <span className="tag bg-wash text-ink">
