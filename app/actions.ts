@@ -610,8 +610,22 @@ export async function placeSkincareOrder(input: {
     return { ok: false, error: "Could not open the next delivery. Try again shortly." };
   }
 
+  /*
+   * A channel rather than a person.
+   *
+   * The counter's list now offers ChatGPT the way the food checkout always
+   * has, and it carries a prefix a promoter's code can never have. Read
+   * here as it is read there, so it is recorded as where they came from
+   * and credits nobody, rather than going through as a promoter code that
+   * matches no promoter and quietly meaning nothing.
+   */
+  const saidHeard = (input.heardFrom ?? "").trim();
+  const saidChannel = saidHeard.startsWith("c:")
+    ? tidyChannel(saidHeard.slice(2))
+    : "";
+
   const result = await placeOrder({
-    cameFrom: await cameFromNow(),
+    cameFrom: saidChannel || (await cameFromNow()),
     // Undefined where the skincare checkout never asked, empty where they
     // answered that nobody sent them.
     autoCoupon: await linkCouponNow(input.heardFrom),

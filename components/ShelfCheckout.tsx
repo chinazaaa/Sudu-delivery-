@@ -70,6 +70,8 @@ export default function ShelfCheckout({
     paymentMethod: "transfer" | "card";
     /** Who brought them, where that promoter is still promoting. */
     heardFrom: string;
+    /** The channel they came through, as the shop files it: "chatgpt". */
+    cameFrom: string;
   } | null;
   /** Which counter's basket this is, and which car the order goes on. */
   counter?: string;
@@ -115,9 +117,14 @@ export default function ShelfCheckout({
    * not a name to put in front of anybody, and then it is Somewhere else,
    * which is honest.
    */
-  const [heardFrom, setHeardFrom] = useState(() =>
-    promoters.some((one) => one.code === me?.heardFrom) ? me!.heardFrom : ""
-  );
+  const [heardFrom, setHeardFrom] = useState(() => {
+    if (promoters.some((one) => one.code === me?.heardFrom)) return me!.heardFrom;
+    // Then the channel they came through, where the list offers it. A
+    // channel is nobody and pays nobody, and it is still the answer they
+    // gave on their first order.
+    const channel = (me?.cameFrom ?? "").trim().toLowerCase();
+    return channel === "chatgpt" ? "c:chatgpt" : "";
+  });
   const [money, setMoney] = useState("");
   const [method, setMethod] = useState<"transfer" | "card">(me?.paymentMethod ?? "transfer");
   const [busy, setBusy] = useState(false);
@@ -463,22 +470,28 @@ export default function ShelfCheckout({
         {/* The one question that pays somebody. It was on the food checkout
             and on a parcel and nowhere else, so every skincare order a
             promoter brought in counted for nobody. */}
-        {promoters.length > 0 && (
-          <select
-            value={heardFrom}
-            onChange={(event) => setHeardFrom(event.target.value)}
-            aria-label="Where did you hear about us?"
-            className="field"
-          >
-            <option value="">Where did you hear about us?</option>
-            {promoters.map((one) => (
-              <option key={one.code} value={one.code}>
-                {one.name}
-              </option>
-            ))}
-            <option value="other">Somewhere else</option>
-          </select>
-        )}
+        <select
+          value={heardFrom}
+          onChange={(event) => setHeardFrom(event.target.value)}
+          aria-label="Where did you hear about us?"
+          className="field"
+        >
+          <option value="">Where did you hear about us?</option>
+          {/* Not a person, so it carries a prefix a promoter's code can
+              never have: codes are letters and numbers, and this one has a
+              colon in it. It is recorded as the channel they came through
+              and credits nobody, which is the whole difference. The food
+              checkout has offered it all along and these two never did, so
+              somebody who found the shop through ChatGPT and came back for
+              skincare had no way to say so. */}
+          <option value="c:chatgpt">ChatGPT</option>
+          {promoters.map((one) => (
+            <option key={one.code} value={one.code}>
+              {one.name}
+            </option>
+          ))}
+          <option value="other">Somewhere else</option>
+        </select>
 
         <PayChoice value={method} onChange={setMethod} />
 

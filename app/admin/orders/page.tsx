@@ -194,9 +194,25 @@ export default async function OrdersPage({
         !isGone(order.status) &&
         (placedToday(order.created_at) || order.runDate === today)
     )
+    /*
+     * In the order the work actually happens.
+     *
+     * This sorted by when the order came in, which put an order placed this
+     * morning for Saturday above one placed yesterday for tonight: the top
+     * of the list was the one with the most time left on it and the bag
+     * going out in two hours was underneath it.
+     *
+     * So the day it goes first, then what needs doing on it, then the
+     * order number, which is the only tie-break anybody here reads and the
+     * one they say out loud. A parcel with no day agreed yet sorts last:
+     * nothing can be loaded for a day nobody has named.
+     */
     .sort(
       (a, b) =>
-        rank(a.status) - rank(b.status) || a.created_at.localeCompare(b.created_at)
+        (a.runDate || "9999-99-99").localeCompare(b.runDate || "9999-99-99") ||
+        rank(a.status) - rank(b.status) ||
+        (a.order_no ?? 0) - (b.order_no ?? 0) ||
+        a.created_at.localeCompare(b.created_at)
     );
 
   // Money still out from before today. The chasing list the cut started as,
