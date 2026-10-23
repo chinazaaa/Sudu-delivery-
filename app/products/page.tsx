@@ -372,6 +372,42 @@ export default async function ProductsPage({
         </div>
       </div>
 
+      {/*
+        What they probably meant, as the loudest thing on the screen.
+
+        It read as a sentence in the same grey as everything else, under a
+        line saying nothing matches that, which is the page contradicting
+        itself in body text. Somebody who has just been told the shop has
+        nothing has already decided it has nothing: the suggestion has to
+        interrupt that, not sit politely underneath it.
+
+        So it goes first, it says the word they typed back to them, and
+        the thing they meant is a button at the size of a thumb rather
+        than a link in a paragraph.
+      */}
+      {meant.length > 0 && (
+        <div className="rounded-2xl border-2 border-ink bg-brand-wash p-4 shadow-card">
+          <p className="font-display text-[22px] font-black uppercase leading-none">
+            Did you mean
+          </p>
+          <p className="mt-1 text-sm text-ink/75">
+            Nothing is spelled <b>{String(asked.q ?? "").trim()}</b>, but this is
+            on a shelf.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {meant.map((one) => (
+              <Link
+                key={one}
+                href={link({ q: one, category: "", aisle: "" })}
+                className="inline-flex min-h-11 items-center rounded-full bg-ink px-4 text-[15px] font-extrabold text-paper"
+              >
+                {one}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Somebody has just told us what they want and been told we do not
           have it. There is no better moment to offer to go and find it. */}
       {total === 0 && (
@@ -389,39 +425,22 @@ export default async function ProductsPage({
 
       <p className="ticket text-muted">
         {total === 0
-          ? "Nothing matches that"
+          ? meant.length > 0
+            ? "Nothing with that spelling"
+            : "Nothing matches that"
           : products.length >= total
             ? `${total} ${total === 1 ? "thing" : "things"}`
             : `${products.length} of ${total}`}
       </p>
 
       {total === 0 ? (
-        <div className="card space-y-2 text-sm text-muted">
-          {meant.length > 0 && (
-            <p className="text-ink">
-              Did you mean{" "}
-              {meant.map((one, which) => (
-                <span key={one}>
-                  {which > 0 && (which === meant.length - 1 ? " or " : ", ")}
-                  <Link
-                    href={link({ q: one, category: "", aisle: "" })}
-                    className="font-semibold text-brand underline"
-                  >
-                    {one}
-                  </Link>
-                </span>
-              ))}
-              ?
-            </p>
-          )}
-          <p>
-            Try a different word, or{" "}
-            <Link href="/products" className="font-semibold text-brand">
-              start again
-            </Link>
-            .
-          </p>
-        </div>
+        <p className="card text-sm text-muted">
+          Try a different word, or{" "}
+          <Link href="/products" className="font-semibold text-brand">
+            start again
+          </Link>
+          .
+        </p>
       ) : (
         <ProductGrid items={cards} />
       )}
