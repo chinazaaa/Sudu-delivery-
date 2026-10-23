@@ -14,6 +14,9 @@ import ShopOnly from "@/components/ShopOnly";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import SeasonDecor from "@/components/SeasonDecor";
+import ActingBar from "@/components/admin/ActingBar";
+import { actingAs, customerDetails } from "@/lib/customer-auth";
+import { stopOrderingAs } from "@/app/admin/actions";
 import { offerNudge, publicOffer } from "@/lib/coupons";
 import {
   googleLinks,
@@ -166,6 +169,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     offerNudge(),
     cookies(),
   ]);
+
+  /*
+   * Whether the shop is being worn as a customer.
+   *
+   * Only ever set behind the admin password, and signed, so it is not a
+   * cookie anybody can write for themselves. The name is read so the strip
+   * can say who it is rather than eleven digits, and quietly: a shop that
+   * will not load because the customer book is having a bad minute is a
+   * worse failure than a strip that says the number.
+   */
+  const taking = await actingAs().catch(() => null);
+  const takingName = taking
+    ? (await customerDetails(taking).catch(() => null))?.name ?? ""
+    : "";
   const instagram = instagramLink(settings.instagram_handle);
   const x = xLink(settings.x_handle);
   const email = shopEmails(settings.contact_email);
@@ -293,6 +310,21 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         : {})}
     >
       <body>
+        {/* Above everything, including the season and the ribbon.
+
+            The shop can be worn as a customer, so that somebody who
+            ordered on WhatsApp gets a real order placed with the real
+            search, the real choices and the real checkout. The one way
+            that goes wrong is somebody walking away still wearing it, so
+            it says so on every page, in a colour nothing else uses, with
+            the way out beside it. */}
+        {taking && (
+          <ActingBar
+            name={takingName}
+            phone={taking}
+            stop={stopOrderingAs}
+          />
+        )}
         {/* Over the page, and only when a season is on. Not on the back of
             the shop: a pumpkin drifting across tonight's run sheet is a
             decoration on somebody's work. */}

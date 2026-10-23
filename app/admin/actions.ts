@@ -66,7 +66,13 @@ import {
 } from "@/lib/email";
 import { addressOf, READS_AT, replySubject } from "@/lib/mail";
 import { placesText } from "@/lib/run-places";
-import { newPin } from "@/lib/customer-auth";
+import {
+  actAs,
+  newPin,
+  signInCustomer,
+  signOutCustomer,
+  stopActing,
+} from "@/lib/customer-auth";
 import { recordDeletion } from "@/lib/deletions";
 import {
   choicesOn,
@@ -6112,85 +6118,36 @@ export async function noteSorted(form: FormData): Promise<void> {
 }
 
 /**
- * An order somebody placed on WhatsApp, typed in by the shop.
+ * The shop taking an order for somebody, from the inside.
  *
- * Everything under here is the ordinary machinery: the same pricing, the
- * same ladder, the same fee, the same PIN rules, the same chasing. Nothing
- * about an order being keyed in makes it a different kind of order, and a
- * second way of making one would be a second set of bugs.
+ * Somebody orders on WhatsApp and it has to be put on a run. The first go
+ * at this was a form in admin, and it was a second, poorer shop: half a
+ * picker, no sizes, no offers, no "order again", and a second set of bugs
+ * to keep in step with the real one. The real one already does all of
+ * that, so the shop uses it as them: search, cart, choices, order again,
+ * checkout, every rule exactly as she would meet it.
  *
- * What it does not do is pretend. The door says a person took it rather
- * than the website, because the door counts are there to say how well each
- * way of ordering is working, and this one is somebody at a keyboard.
+ * Their PIN is not involved and is never read. A PIN only ever goes to the
+ * number it belongs to, and this needs none: the admin password is what
+ * was checked.
  */
-export async function deskOrder(form: FormData): Promise<void> {
+export async function orderAs(form: FormData): Promise<void> {
   await assertAdmin();
 
-  const back = (said: string, phone: string) =>
-    redirect(
-      `/admin/orders/new?phone=${encodeURIComponent(phone)}&said=${encodeURIComponent(said)}`
-    );
-
   const phone = normalisePhone(String(form.get("phone") ?? "")) ?? "";
-  if (phone === "") back("Find them by their number first.", "");
+  if (phone === "") redirect("/admin/customers");
 
-  const name = String(form.get("name") ?? "").trim();
-  if (name.length < 2) back("Their name, so the bag has something on it.", phone);
+  await signInCustomer(phone);
+  await actAs(phone);
+  // The shop itself, at the top, because that is where somebody starts
+  // when they are told what she wants.
+  redirect("/");
+}
 
-  const hostel = String(form.get("hostel") ?? "").trim();
-  if (hostel === "") back("Which block is it going to?", phone);
-
-  let picked: { id: string; qty: number }[] = [];
-  try {
-    picked = JSON.parse(String(form.get("lines") ?? "[]")) as typeof picked;
-  } catch {
-    picked = [];
-  }
-  const lines = picked
-    .map((one) => ({
-      menu_item_id: String(one?.id ?? ""),
-      qty: Math.max(1, Math.round(Number(one?.qty) || 0)),
-      option_ids: [] as string[],
-      for_name: null,
-    }))
-    .filter((one) => one.menu_item_id !== "");
-  if (lines.length === 0) back("Nothing is in it yet.", phone);
-
-  // Where it goes: a run still taking orders, or a car of its own, which is
-  // made here the way the carts page makes one.
-  const going = String(form.get("going") ?? "");
-  if (going === "") back("Pick a run, or a car of its own.", phone);
-
-  let batchId = going.startsWith("run:") ? going.slice(4) : "";
-  if (batchId === "") {
-    const car = await createSameDayBatch({
-      deliverAt: going,
-      label: windowPhrase(going).replace(/^./, (one) => one.toUpperCase()),
-    });
-    if (!car) back("Could not make that car.", phone);
-    batchId = car!.id;
-  }
-
-  const made = await placeOrder({
-    batchId,
-    name,
-    phone,
-    hostel,
-    // Not "web". The door counts say how each way of ordering is working,
-    // and an order a person typed in says nothing about any of them.
-    source: "desk",
-    paymentMethod: "transfer",
-    customerNote: String(form.get("note") ?? "").trim(),
-    lines,
-  });
-
-  if (!made.ok) {
-    back(made.error, phone);
-    return;
-  }
-
-  revalidatePath("/admin", "layout");
-  // Straight to the order, which is where the sizes and the flavours get
-  // added and where the payment message is sent from.
-  redirect(`/admin/orders/${made.orderId}`);
+/** Done taking it. Back to whoever it was for. */
+export async function stopOrderingAs(form: FormData): Promise<void> {
+  const phone = String(form.get("phone") ?? "").trim();
+  await stopActing();
+  await signOutCustomer();
+  redirect(phone === "" ? "/admin/customers" : `/admin/customers/${phone}`);
 }

@@ -30,6 +30,7 @@ import {
   saveCustomerNote,
   setCustomerPromoter,
   setCustomerReviewed,
+  orderAs,
 } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -318,6 +319,16 @@ export default async function CustomerPage({
            both widths, each in the place the hand is. */
         actions={
           <>
+            {/* They said what they wanted on WhatsApp. This opens the real
+                shop signed in as them: the real search, the real choices,
+                the real checkout, and "order again" with everything they
+                have had before. Their PIN is not needed and never read. */}
+            <form action={orderAs}>
+              <input type="hidden" name="phone" value={person.phone} />
+              <button type="submit" className="btn-admin">
+                Take an order
+              </button>
+            </form>
             {person.pin !== "" && (
               <a
                 href={sendPin}

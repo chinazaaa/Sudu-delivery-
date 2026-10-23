@@ -19,6 +19,8 @@ import { closeGroup, getSharedGroup, groupOrders, leaderSeat } from "@/lib/group
 import { groupCarts } from "@/lib/group-carts";
 import { shortRef } from "@/lib/links";
 import {
+  actingAs,
+  stopActing,
   checkPin,
   currentCustomer,
   customerDetails,
@@ -91,7 +93,7 @@ export async function submitOrder(
   const result = await placeOrder({
     cameFrom: saidChannel || (await cameFromNow()),
     autoCoupon: await linkCouponNow(saidHeard),
-    source: "web",
+    source: await whichDoor(),
     batchId: String(form.get("batch_id") ?? ""),
     name: String(form.get("name") ?? ""),
     phone: String(form.get("phone") ?? ""),
@@ -153,7 +155,7 @@ export async function submitReorder(
   const result = await placeOrder({
     cameFrom: await cameFromNow(),
     autoCoupon: await linkCouponNow(),
-    source: "web",
+    source: await whichDoor(),
     batchId: String(form.get("batch_id") ?? ""),
     name: previous.customer_name,
     phone,
@@ -332,6 +334,10 @@ export async function signInWithPin(
 
 export async function forgetMe(form?: FormData): Promise<void> {
   await signOutCustomer();
+  // And stop wearing the shop as them, where that is what this was. The
+  // two are set together, so signing out and leaving the other behind
+  // would be a yellow strip over a shop nobody is signed into.
+  await stopActing();
   const next = String(form?.get("next") ?? "");
   redirect(next.startsWith("/") ? next : "/orders");
 }
@@ -443,7 +449,7 @@ export async function orderFromLink(input: {
     // No "where did you hear about us?" on this one, so there is no answer
     // to honour and the link stands as it always did.
     autoCoupon: await linkCouponNow(),
-    source: "web",
+    source: await whichDoor(),
     batchId: going.runId,
     deliverAt: going.at || undefined,
     name: input.name,
@@ -609,7 +615,7 @@ export async function placeSkincareOrder(input: {
     // Undefined where the skincare checkout never asked, empty where they
     // answered that nobody sent them.
     autoCoupon: await linkCouponNow(input.heardFrom),
-    source: "web",
+    source: await whichDoor(),
     batchId: car?.id ?? "",
     deliverAt: urgent === "" ? undefined : urgent,
     name: input.name,
@@ -661,4 +667,27 @@ function giftFrom(form: FormData): { name: string; phone: string } | undefined {
   const name = String(form.get("gift_name") ?? "").trim();
   const phone = String(form.get("gift_phone") ?? "").trim();
   return name === "" && phone === "" ? undefined : { name, phone };
+}
+
+/**
+ * Which door this order came through.
+ *
+ * The website, nearly always. The exception is the shop taking an order
+ * for somebody who said what they wanted on WhatsApp: that is done by
+ * wearing the shop as them, so every rule, every price and every choice is
+ * the real one, and the order would otherwise be indistinguishable from
+ * one she placed herself.
+ *
+ * It is worth telling apart. The door counts exist to say how well each
+ * way of ordering is working, and an order a person at a keyboard placed
+ * says nothing about any of them.
+ */
+async function whichDoor(): Promise<"web" | "desk"> {
+  try {
+    return (await actingAs()) ? "desk" : "web";
+  } catch {
+    // The shop takes the order either way. A door recorded wrong is worth
+    // less than an order lost.
+    return "web";
+  }
 }

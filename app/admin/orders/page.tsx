@@ -1,4 +1,5 @@
 import PageHeader from "@/components/admin/PageHeader";
+import TakeAnOrder from "@/components/admin/TakeAnOrder";
 import Link from "next/link";
 import AdminLive from "@/components/admin/AdminLive";
 import Figure from "@/components/admin/Figure";
@@ -27,6 +28,7 @@ import {
   savePaymentLink,
   saveOrderNote,
   setCustomerReviewed,
+  orderAs,
 } from "../actions";
 import type { OrderStatus } from "@/lib/types";
 import ActionButton from "@/components/ActionButton";
@@ -316,12 +318,10 @@ export default async function OrdersPage({
           }
           actions={
             /* For the orders that never touch the site. Somebody says what
-               they want on WhatsApp and this is where it gets typed in,
-               rather than opening the shop in another tab and ordering as
-               them, which needs their PIN. */
-            <Link href="/admin/orders/new" className="btn-admin">
-              Take an order
-            </Link>
+               they want on WhatsApp, and this finds them and opens the real
+               shop signed in as them: the real search, the real choices,
+               the real checkout. Their PIN is not needed and never shown. */
+            <TakeAnOrder orderAs={orderAs} />
           }
         />
         {cuts}

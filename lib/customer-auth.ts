@@ -140,3 +140,57 @@ export async function customerDetails(
     paymentMethod: way === "card" ? "card" : "transfer",
   };
 }
+
+/**
+ * The shop taking an order for somebody, from the inside.
+ *
+ * Somebody orders on WhatsApp and it has to be put on a run. Typing it into
+ * a form in admin was a second, poorer shop: half a picker, no sizes, no
+ * offers, no "order again", and a second set of bugs to keep in step with
+ * the real one. The real one already does all of that, so the shop uses it
+ * as them.
+ *
+ * Only ever set behind the admin password, and signed with the same key as
+ * everything else, so it is not a cookie anybody can write for themselves.
+ * It carries the number so a stale one cannot follow the shop onto a
+ * different customer.
+ *
+ * It never involves their PIN. A PIN only ever goes to the number it
+ * belongs to, and nothing here reads one, shows one or needs one.
+ */
+const ACTING = "sudu_acting";
+
+export async function actAs(phone: string): Promise<void> {
+  (await cookies()).set(ACTING, `${phone}.${sign(`acting:${phone}`)}`, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    // Short on purpose. Forgetting to stop is the way this goes wrong, and
+    // an afternoon is longer than anybody needs to key in an order.
+    maxAge: 60 * 60 * 4,
+  });
+}
+
+export async function stopActing(): Promise<void> {
+  (await cookies()).delete(ACTING);
+}
+
+/**
+ * Whose order the shop is taking, or null for an ordinary visitor.
+ *
+ * Checked against the signed-in number as well: the two cookies are set
+ * together and a browser holding one without the other is not in the middle
+ * of anything.
+ */
+export async function actingAs(): Promise<string | null> {
+  const value = (await cookies()).get(ACTING)?.value;
+  if (!value) return null;
+
+  const at = value.lastIndexOf(".");
+  if (at < 1) return null;
+
+  const phone = value.slice(0, at);
+  if (!sameString(value.slice(at + 1), sign(`acting:${phone}`))) return null;
+  return (await currentCustomer()) === phone ? phone : null;
+}
