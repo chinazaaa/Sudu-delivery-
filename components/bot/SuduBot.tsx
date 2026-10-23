@@ -30,6 +30,7 @@ import {
   cardCalled,
   them,
 } from "@/lib/occasions";
+import { isCorrection } from "@/lib/bot-brain";
 
 /**
  * Sudu Bot.
@@ -1385,22 +1386,22 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         list.current.length === 0 &&
         !readingOff.current &&
         /*
-         * The first message is read before the comma rule, not after it.
+         * Read first, every time, and let the reading say what it was.
          *
-         * "Naza, qUEEN" is a name and a block with a comma between them,
-         * which is exactly what the chat asked for and exactly what the
-         * comma rule reads as two things to buy. It searched both halves
-         * of somebody's details against the shop and offered them cod
-         * liver oil, because NAZA'S COD LIVER OIL is a real product and a
-         * menu is all that search has.
+         * This was gated on the comma rule having already failed, which
+         * is the right order for a message that is a list of food and
+         * exactly the wrong one for everything else. "Naza, qUEEN" became
+         * a search for cod liver oil. "sorry, naza, trezadel", somebody
+         * correcting their block, became three things to buy.
          *
-         * So on the opening message the reading goes first and the comma
-         * rule never sees it. Afterwards the comma rule wins, because by
-         * then a comma really does separate two dishes and the rule is
-         * quicker and needs no key.
+         * The gate was trying to decide what a message was in order to
+         * choose who should read it, which is the job of the thing it was
+         * gating. So the reading goes first and says: this is an order of
+         * two, or one thing, or a name and a block, or a correction. The
+         * comma rule still does the work whenever the reading comes back
+         * with a list, and still does all of it when there is no key.
          */
-        (firstSay.current ||
-          (splitOrder(said).length < 2 && said.trim().split(/\s+/).length >= 4))
+        true
       ) {
         firstSay.current = false;
         const got = await fetch("/api/bot/understand", {
@@ -1431,10 +1432,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
              a sentence must not quietly move an order somebody has
              already given a block for. */
           const mine = held.current;
-          if (mine.name === "" && reading.name !== "") {
+          /* Somebody putting right what the chat got wrong is allowed to
+             overwrite it. Any other sentence may only fill a blank, or a
+             stray word relocates a dinner somebody already placed. */
+          const fixing = isCorrection(said);
+          if ((mine.name === "" || fixing) && reading.name !== "") {
             mine.name = String(reading.name).split(" ")[0];
           }
-          if (mine.phone === "" && reading.phone !== "") {
+          if ((mine.phone === "" || fixing) && reading.phone !== "") {
             mine.phone = reading.phone;
             /*
              * A number given in the opening message is still a number the
@@ -1458,7 +1463,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             }
             if (seen?.hasBlock && mine.hostel === "") mine.sameBlock = true;
           }
-          if (mine.hostel === "" && reading.hostel !== "") {
+          if ((mine.hostel === "" || fixing) && reading.hostel !== "") {
             const blocks = startRef.current?.hostels ?? [];
             /* Named exactly, or near enough that only one block could be
                meant. "queen mary" and "Queen Mary Hall" are the same
@@ -1503,7 +1508,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
            * kept and the one missing thing is asked for, which is the
            * conversation anybody would have had.
            */
-          if (wanted.length === 0 && (mine.name !== "" || mine.hostel !== "" || mine.phone !== "")) {
+          if (
+            wanted.length === 0 &&
+            (mine.name !== "" || mine.hostel !== "" || mine.phone !== "")
+          ) {
             const got: string[] = [];
             if (mine.name !== "") got.push(`<b>${mine.name}</b>`);
             if (mine.hostel !== "") got.push(mine.hostel);

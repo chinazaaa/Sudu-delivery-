@@ -42,6 +42,7 @@ import {
   MOST,
   NOTHING_READ,
   botModel,
+  isCorrection,
   howMany,
   readIntent,
   shopBrief,
@@ -5471,4 +5472,22 @@ test("a gift is noticed rather than asked about", () => {
   // student whose birthday it is.
   assert.equal(looksLikeAGift("just for me, it's my birthday"), false);
   assert.equal(looksLikeAGift("for myself"), false);
+});
+
+test("a correction is allowed to overwrite, an aside is not", () => {
+  // The real one: the block was read as Queen Mary and is being put
+  // right. Nobody says sorry to a menu.
+  assert.equal(isCorrection("sorry, naza, trezadel"), true);
+  assert.equal(isCorrection("actually Trezadel"), true);
+  assert.equal(isCorrection("no, Emerald"), true);
+  assert.equal(isCorrection("I meant Trezadel"), true);
+  assert.equal(isCorrection("oops wrong block"), true);
+
+  // An ordinary order must never be allowed to move a block somebody
+  // already gave, or a stray word relocates their dinner.
+  assert.equal(isCorrection("2 chicken pie and a coke"), false);
+  assert.equal(isCorrection("Trezadel"), false);
+  assert.equal(isCorrection(""), false);
+  // "Nothing else" starts with no but is not a correction of anything.
+  assert.equal(isCorrection("nothing else thanks"), false);
 });

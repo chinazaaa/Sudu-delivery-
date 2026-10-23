@@ -249,3 +249,25 @@ export function botModel(asked: string | undefined | null): string {
   if (said.startsWith("claude-")) return said;
   return (BOT_MODELS as Record<string, string>)[said] ?? BOT_MODELS.haiku;
 }
+
+/**
+ * Whether somebody is correcting what they just said.
+ *
+ * "sorry, naza, trezadel" is not an order for three things. It is the
+ * same two details again with the block changed, and the word at the
+ * front is the whole signal: nobody says sorry to a menu.
+ *
+ * It matters because details are otherwise only ever allowed to fill a
+ * blank. That is the right rule for a stray sentence halfway down an
+ * order, and exactly the wrong one here, where the person is trying to
+ * tell the shop it has the wrong block. Blanks get filled; corrections
+ * get to overwrite.
+ */
+/* The word boundary applies only to the word alternatives: "no," ends in
+   a comma, and a boundary after a comma followed by a space never matches,
+   so a trailing \b silently turned off half this rule. */
+const SORRY = /^\s*(?:(?:sorry|oops|actually|i meant|i mean|my bad|correction|wait)\b|no[,!.\s])/i;
+
+export function isCorrection(said: string): boolean {
+  return SORRY.test(String(said ?? ""));
+}
