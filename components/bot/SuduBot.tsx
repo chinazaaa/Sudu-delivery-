@@ -290,6 +290,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
      two words and is a name and a block, and the rules can only read it as
      a search for cake. */
   const firstSay = useRef(true);
+  /* Blocks a half-named one could have meant. "Queen" is Queen Mary and
+     Cooperative Queens, so it is not guessed; it is offered. */
+  const blockGuess = useRef<string[]>([]);
   /*
    * The search already run for this sentence, kept so it is only run once.
    *
@@ -1452,6 +1455,11 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
                 one.toLowerCase().includes(want) || want.includes(one.toLowerCase())
             );
             const match = exact ?? (near.length === 1 ? near[0] : undefined);
+            /* Said something block shaped that fits more than one. Not
+               guessed, because guessing here delivers to the wrong
+               building, and not thrown away either: the two it could be
+               are worth a tap rather than a retype. */
+            if (!match && near.length > 1) blockGuess.current = near;
             /* Only a block the shop actually has. A reading is a reading,
                and a hostel nobody has heard of is not a delivery address. */
             if (match) mine.hostel = match;
@@ -2827,20 +2835,51 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
        * handed to the checkout when the order is placed, where it is
        * checked again and counted as used.
        */
+      /*
+       * Asked once, then straight to the box.
+       *
+       * A code that did not work already offered "Try another code" and
+       * "Carry on without it". Tapping the first one asked the same
+       * question again, with the same two buttons, before showing
+       * anywhere to type: somebody who has just pressed Try another code
+       * has answered that question as clearly as it can be answered.
+       *
+       * So the question is only ever asked the first time. Every try
+       * after that goes straight to the box, and the way out is still on
+       * the failure itself, where somebody deciding to give up is
+       * actually looking.
+       */
       const askCode = (first = true) => {
-        bot(
-          first
-            ? "Do you have a discount code?"
-            : "Another code to try, or shall we carry on?",
-          440
-        );
+        if (!first) {
+          typeCode();
+          return;
+        }
+        bot("Do you have a discount code?", 440);
         setAsk({
           of: "buttons",
           buttons: [
             {
-              said: first ? "Yes, I have one" : "Try another code",
+              said: "Yes, I have one",
               go: () => {
-                me(first ? "Yes, I have one" : "Try another code");
+                me("Yes, I have one");
+                typeCode();
+              },
+            },
+            {
+              said: "No, carry on",
+              look: "alt",
+              go: () => {
+                me("No, carry on");
+                noCode.current = true;
+                confirm();
+              },
+            },
+          ],
+          hint: "If you do not have one, nothing changes.",
+        });
+      };
+
+      function typeCode() {
                 bot("Go on, type it in.", 400);
                 setAsk({
                   of: "text",
@@ -2944,21 +2983,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
                     }
                   },
                 });
-              },
-            },
-            {
-              said: first ? "No, carry on" : "Carry on",
-              look: "alt",
-              go: () => {
-                me(first ? "No, carry on" : "Carry on");
-                noCode.current = true;
-                confirm();
-              },
-            },
-          ],
-          hint: first ? "If you do not have one, nothing changes." : undefined,
-        });
-      };
+      }
 
       /*
        * The card, offered against a total rather than before one.
@@ -3106,15 +3131,30 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
              * and come straight back here afterwards, with the bill worked
              * out again, because changing the day changes the fee.
              */
-            {
-              said: "Change the day or run",
-              go: () => {
-                me("Change the day or run");
-                const back = () => soon();
-                if (isGift(held.current.occasion)) askDayRef.current?.(back);
-                else askSlotRef.current?.(back);
-              },
-            },
+            /*
+             * Offered only where there is something to change it to.
+             *
+             * On a shop with one run open, this led to a screen showing
+             * that one run, a That works button and a line saying it is
+             * already the soonest we can reach you. A choice of one is
+             * not a choice, and a question that can only be answered the
+             * way it was already answered is a step.
+             */
+            ...((startRef.current?.runs ?? []).length +
+              (startRef.current?.cars ?? []).length >
+            1
+              ? [
+                  {
+                    said: "Change the day or run",
+                    go: () => {
+                      me("Change the day or run");
+                      const back = () => soon();
+                      if (isGift(held.current.occasion)) askDayRef.current?.(back);
+                      else askSlotRef.current?.(back);
+                    },
+                  },
+                ]
+              : []),
             {
               said: "Change the block",
               go: () => {
@@ -4061,10 +4101,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     const first = onTheDay[0] ?? runs[0];
     held.current.run = first;
     held.current.car = null;
+    /* The block is named only where the chat knows it. Somebody using the
+       block saved against their number has not told it one, and "Our next
+       run to  is Friday" is a sentence with a hole in it. */
+    const to = held.current.hostel !== "" ? ` to <b>${held.current.hostel}</b>` : "";
     bot(
       wanted !== "" && first.runDate === wanted
-        ? `There is a run to <b>${held.current.hostel}</b> that very day, <b>${first.said}</b>.`
-        : `Our next run to <b>${held.current.hostel}</b> is <b>${first.said}</b>.`,
+        ? `There is a run${to} that very day, <b>${first.said}</b>.`
+        : `Our next run${to} is <b>${first.said}</b>.`,
       480
     );
     say(
@@ -4228,6 +4272,43 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
      * typing has no reason to be there at all.
      */
     const mine = held.current;
+
+    /*
+     * The blocks a half-named one could have meant, offered first.
+     *
+     * Somebody who typed "Naza Queen" has said their block; it is just
+     * that the shop has two with Queen in them. Asking "which block are
+     * you in?" after they have told you is the chat not having listened,
+     * so the two it could be are the question instead.
+     */
+    if (blockGuess.current.length > 1) {
+      const could = blockGuess.current;
+      blockGuess.current = [];
+      bot(`Which one did you mean?`, 420);
+      setAsk({
+        of: "chips",
+        chips: [
+          ...could.map((one, which) => ({
+            said: one,
+            hot: which === 0,
+            go: () => {
+              me(one);
+              takeBlock(one, then);
+            },
+          })),
+          {
+            said: "Neither",
+            go: () => {
+              me("Neither");
+              showBlocks(startRef.current?.hostels ?? [], undefined, then);
+            },
+          },
+        ],
+        hint: "",
+      });
+      return;
+    }
+
     bot(
       isGift(mine.occasion)
         ? `Which block is <b>${them(mine.occasion, mine.forName)}</b> in? That is where it goes.`
