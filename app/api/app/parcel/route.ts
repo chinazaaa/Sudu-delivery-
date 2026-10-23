@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { hostelNames } from "@/lib/hostels";
 import { lagosToday } from "@/lib/time";
-import { parcels, pricedRoutes } from "@/lib/parcels";
+import { isCustom, liveRoutes, parcels } from "@/lib/parcels";
 import { namedPromoters } from "@/lib/promoters";
 import { placeParcel } from "@/lib/parcel-order";
 
@@ -18,16 +18,7 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<NextResponse> {
   try {
     const setup = await parcels();
-    /*
-     * The priced ones only.
-     *
-     * The website has a route that carries no price, for the trip nobody
-     * has priced: picking it asks for a quote rather than placing an
-     * order. The app has no way to ask, so sending it the route would be
-     * offering a button that cannot work. It comes back here the day the
-     * app learns to ask.
-     */
-    const routes = pricedRoutes(setup.routes);
+    const routes = liveRoutes(setup.routes);
 
     return NextResponse.json({
       on: setup.on && routes.length > 0,
@@ -42,6 +33,10 @@ export async function GET(): Promise<NextResponse> {
         label: one.label,
         toPau: one.toPau,
         bands: one.bands,
+        // The route that asks rather than charges. It carries no bands and
+        // never will, so a phone must be told which one it is rather than
+        // left to guess from an empty ladder.
+        custom: isCustom(one),
       })),
     });
   } catch (error) {
@@ -77,6 +72,15 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
 
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+    /*
+     * The trip nobody has priced does not become an order.
+     *
+     * It goes into the custom order list and somebody comes back with a
+     * figure, so there is no order id to hand back and nothing for the
+     * phone to open. It says so instead, and the app shows the same
+     * "we will message you" card the website does.
+     */
+    if (result.asked) return NextResponse.json({ asked: true });
     return NextResponse.json({ orderId: result.orderId });
   } catch (error) {
     return NextResponse.json(

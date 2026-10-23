@@ -61,7 +61,7 @@ import {
 import OrderEditor from "@/components/admin/OrderEditor";
 import { linesToEdit } from "@/lib/order-edit";
 import { repeatSaid } from "@/lib/box-day";
-import { foodCatalogue } from "@/lib/box-admin";
+import { catalogueFor } from "@/lib/box-admin";
 import { openBatches } from "@/lib/batches";
 import { hoursByDay } from "@/lib/settings";
 import { deliverySlots } from "@/lib/same-day";
@@ -115,37 +115,33 @@ export default async function AdminOrderPage({
 
 async function orderPage(id: string, said: string) {
 
-  const [order, settings, url, runs, editable, shops] = await Promise.all([
+  const [order, settings, url, runs, editable] = await Promise.all([
     getOrder(id),
     getSettings(),
     siteUrl(),
     openBatches(),
     // What is actually in it, so it can be changed to whatever was agreed.
     linesToEdit(id),
-    // Everything sellable, ours and the restaurants', for adding a line.
-    foodCatalogue().catch(() => []),
   ]);
+
+  /*
+   * The dishes already in this order, and nothing else.
+   *
+   * This asked for everything sellable: two thousand dishes, ten paged
+   * round trips for their choices, and the lot of it serialised into a
+   * page somebody opened to read a phone number, all so a picker nobody
+   * had typed into yet could be searched in the browser. That is the whole
+   * of why opening an order felt like nothing had happened. The pickers
+   * ask the server when somebody types; this is the handful of lines in
+   * front of them, for the real choices each one offers.
+   */
+  const asking = catalogueFor(
+    editable.map((line) => line.menu_item_id ?? "")
+  ).catch(() => []);
 
   const boxDay = String((order as { wanted_on?: string | null }).wanted_on ?? "");
   const repeatEvery = String((order as { repeat_every?: string }).repeat_every ?? "");
   const repeatNote = String((order as { repeat_note?: string }).repeat_note ?? "");
-
-  const catalogue = shops.flatMap((shop) =>
-    shop.items.map((item) => ({
-      id: item.id,
-      name: item.name,
-      shop: shop.name,
-      price: item.price,
-      // The choices this item really has, so changing hand tossed to thin
-      // crust is picking the one that exists rather than typing it again.
-      options: item.groups.flatMap((group) =>
-        group.options.map((one) => ({
-          name: `${group.name}: ${one.name}`,
-          delta: one.delta,
-        }))
-      ),
-    }))
-  );
 
   // Where this one could go instead, soonest first: a run still taking
   // orders, or a window of its own, which makes its car when it is picked.
@@ -153,19 +149,52 @@ async function orderPage(id: string, said: string) {
     settings.same_day_on === "on"
       ? deliverySlots(new Date(), await hoursByDay())
       : [];
-  // The account every payment message quotes: the first on the list.
-  const bank = (await payableAccounts(settings))[0] ?? null;
   if (!order) notFound();
 
-  // Which run it is on, said rather than left behind a button. "Open its
-  // run" told you there was one and nothing about which: knowing an order is
-  // on Friday night is most of what anybody opens this page to find out.
-  const run = await getBatch(order.batch_id);
-  /* Whether this is this month's of somebody's monthly box. An order a
-     plan raised is an ordinary order and stays one, which is the whole
-     point of raising one, but somebody opening it should be able to see
-     where it came from and get back there. */
-  const standing = await planForOrder(order.id).catch(() => null);
+  /*
+   * Everything else this page draws, asked for at once.
+   *
+   * Seven round trips stood in a queue down this function and two more
+   * inside the markup, each waiting on the one above it for no reason: the
+   * bank account has nothing to do with which run it is on, which has
+   * nothing to do with how many orders this person has placed. On the page
+   * somebody opens from every order in the list, that was nine lots of
+   * latency for one order.
+   */
+  const [catalogue, bank, run, standing, feed, reach, them, photos, parcelDay] =
+    await Promise.all([
+      asking,
+      // The account every payment message quotes: the first on the list.
+      payableAccounts(settings).then((all) => all[0] ?? null),
+      // Which run it is on, said rather than left behind a button. "Open its
+      // run" told you there was one and nothing about which: knowing an
+      // order is on Friday night is most of what anybody opens this page to
+      // find out.
+      getBatch(order.batch_id),
+      /* Whether this is this month's of somebody's monthly box. An order a
+         plan raised is an ordinary order and stays one, which is the whole
+         point of raising one, but somebody opening it should be able to see
+         where it came from and get back there. */
+      planForOrder(order.id).catch(() => null),
+      // The card wants the feed's shape, so this one order is read the same
+      // way.
+      orderFeed({ status: "all", search: order.customer_phone }),
+      // Where to message them, which is not always the number on the order:
+      // somebody can order with one number and have WhatsApp on another.
+      reachFor([order.customer_phone]),
+      // Who they are, for the two rows the board's person panel has that
+      // ours never had: how many orders they have placed and what they have
+      // spent.
+      oneCustomer(order.customer_phone).catch(() => null),
+      // A parcel's photographs, and the day its trip was agreed. Asked for
+      // on every order and used on the parcels, which costs one trip rather
+      // than the two this page used to make from inside its own markup.
+      photosFor(order.id).catch(() => []),
+      order.parcel_route
+        ? tripGoingOn(order.parcel_route, order.batch.id).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+
   const runLabel = run
     ? run.kind === "same_day"
       ? `A car of its own · ${runDateLabel(run.run_date)}`
@@ -176,16 +205,10 @@ async function orderPage(id: string, said: string) {
   // the story below are written from.
   const counters = [...new Set(order.lines.map((line) => line.restaurant))];
 
-  // The card wants the feed's shape, so this one order is read the same way.
-  const card = (await orderFeed({ status: "all", search: order.customer_phone })).find(
-    (row) => row.id === order.id
-  );
+  const card = feed.find((row) => row.id === order.id);
   // Worked out once, because the header borrows two of the card's message
   // templates: the board opens an order with their PIN and the review ask,
   // and the card below then does not offer the same two links again.
-  // Where to message them, which is not always the number on the order:
-  // somebody can order with one number and have WhatsApp on another.
-  const reach = await reachFor([order.customer_phone]);
   const shown = card
     ? toCard(card, settings, url, bank, whoFor(order, reach[order.customer_phone]))
     : null;
@@ -218,10 +241,6 @@ async function orderPage(id: string, said: string) {
   const earned = card
     ? await shareOfProfit([card], card.subtotal_food ?? 0, card.total).catch(() => null)
     : null;
-
-  // Who they are, for the two rows the board's person panel has that ours
-  // never had: how many orders they have placed and what they have spent.
-  const them = await oneCustomer(order.customer_phone).catch(() => null);
 
   return (
     /* Room under the last card for the bar standing over it on a phone. */
@@ -896,11 +915,10 @@ async function orderPage(id: string, said: string) {
               runDate={order.batch.run_date}
               cutOffTime={lagosClock(order.batch.cut_off_at)}
               agreed={Boolean(order.batch.deliver_at)}
-              joining={await (async () => {
-                // Said as a day somebody reads, not as 2026-09-26.
-                const day = await tripGoingOn(order.parcel_route!, order.batch.id);
-                return day === "" ? "" : runDateLabel(day);
-              })()}
+              // Said as a day somebody reads, not as 2026-09-26. Fetched
+              // with everything else at the top rather than from inside the
+              // markup, where an await waits on every await above it.
+              joining={!parcelDay ? "" : runDateLabel(parcelDay)}
               action={agreeParcelDay}
             />
           )}
@@ -908,7 +926,7 @@ async function orderPage(id: string, said: string) {
           {order.parcel_route && (
             <ParcelPhotos
               orderId={order.id}
-              photos={await photosFor(order.id)}
+              photos={photos}
               add={addParcelPhoto}
               remove={removeParcelPhoto}
             />

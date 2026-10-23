@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ActionButton from "@/components/ActionButton";
 
 import { naira } from "@/lib/money";
@@ -41,6 +41,16 @@ export default function OrderEditor({
 }: {
   orderId: string;
   lines: EditedLine[];
+  /**
+   * The dishes already on this order, and nothing else.
+   *
+   * This used to be the whole shop, handed over so the pickers could be
+   * searched in the browser: two thousand dishes, ten paged round trips
+   * for their choices, and all of it serialised into a page somebody
+   * opened to read a phone number. The pickers now ask the server when
+   * somebody types, so all that is needed here is the handful of lines in
+   * front of them, for the real choices each one offers.
+   */
   catalogue: {
     id: string;
     name: string;
@@ -72,8 +82,7 @@ export default function OrderEditor({
   const [adding, setAdding] = useState(false);
   const [showing, setShowing] = useState("");
 
-  const needle = query.trim().toLowerCase();
-  const found = needle.length < 2 ? [] : search(catalogue, needle, 8);
+  const found = useCatalogue(query);
 
   // An order that has been delivered, cancelled or given back is history.
   // Editing it edits something that already happened, and the buttons being
@@ -257,7 +266,7 @@ export default function OrderEditor({
                   {/* "Two rice, but the ten kilo one" is not a quantity
                       and not a new line: it is this line, a different
                       product. */}
-                  <SwapForm lineId={line.id} catalogue={catalogue} swap={swapLine} />
+                  <SwapForm lineId={line.id} swap={swapLine} />
 
                   <ChoiceForm
                     lineId={line.id}
@@ -295,7 +304,7 @@ export default function OrderEditor({
             placeholder="Spaghetti, a cake, a card, anything on the menu"
             className="field mt-1 py-2 text-sm"
           />
-          {needle.length >= 2 && found.length === 0 && (
+          {query.trim().length >= 2 && found.length === 0 && (
             <p className="mt-2 text-sm text-muted">
               Nothing matches. Add it as a product first, on Restaurants under
               Sudu, and it will be here.
@@ -434,39 +443,54 @@ function ChoiceForm({
 }
 
 /**
- * Search the catalogue by words rather than by one run of characters.
+ * What the shop sells, as somebody types.
  *
- * It used to ask whether the name contained the whole box of text, or the
- * shop did. So "hot wings" found them and "kfc hot wings" found nothing: no
- * dish is called that and no shop is, and the one thing anybody actually
- * types, the counter and the thing, was the one that failed. Every word has
- * to be somewhere in the line instead, and the line is the name and the
- * shop together.
- *
- * Name matches come first, so typing a counter's name does not bury the
- * dish under whatever happens to sit at the top of that counter's list.
+ * Asked of the server rather than searched in the browser, because the
+ * browser can only search what it was given and giving it the whole shop
+ * cost every order page two thousand dishes it did not need. Waits for two
+ * letters, as it always has, and waits a beat after the last keystroke so
+ * typing a dish is one question and not nine.
  */
-function search<T extends { name: string; shop: string }>(
-  catalogue: T[],
-  query: string,
-  limit: number
-): T[] {
-  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return [];
+function useCatalogue(query: string): Hit[] {
+  const [found, setFound] = useState<Hit[]>([]);
 
-  const hits: { one: T; named: number }[] = [];
-  for (const one of catalogue) {
-    const name = one.name.toLowerCase();
-    const line = `${name} ${one.shop.toLowerCase()}`;
-    if (!words.every((word) => line.includes(word))) continue;
-    hits.push({ one, named: words.filter((word) => name.includes(word)).length });
-  }
+  useEffect(() => {
+    const needle = query.trim();
+    if (needle.length < 2) {
+      setFound([]);
+      return;
+    }
 
-  return hits
-    .sort((a, b) => b.named - a.named)
-    .slice(0, limit)
-    .map((hit) => hit.one);
+    let alive = true;
+    const soon = setTimeout(() => {
+      void fetch(`/api/admin/catalogue?q=${encodeURIComponent(needle)}`)
+        .then((reply) => reply.json() as Promise<{ found?: Hit[] }>)
+        .then((said) => {
+          if (alive) setFound(said.found ?? []);
+        })
+        .catch(() => {
+          // An empty picker is a picker that found nothing, which is
+          // already what the box says.
+          if (alive) setFound([]);
+        });
+    }, 250);
+
+    return () => {
+      alive = false;
+      clearTimeout(soon);
+    };
+  }, [query]);
+
+  return found;
 }
+
+type Hit = {
+  id: string;
+  name: string;
+  shop: string;
+  price: number;
+  options: { name: string; delta: number }[];
+};
 
 /**
  * Making one line a different product.
@@ -477,17 +501,14 @@ function search<T extends { name: string; shop: string }>(
  */
 function SwapForm({
   lineId,
-  catalogue,
   swap,
 }: {
   lineId: string;
-  catalogue: { id: string; name: string; shop: string; price: number }[];
   swap: (form: FormData) => void;
 }) {
   const [query, setQuery] = useState("");
 
-  const needle = query.trim().toLowerCase();
-  const found = needle.length < 2 ? [] : search(catalogue, needle, 8);
+  const found = useCatalogue(query);
 
   return (
     <div className="border-t border-black/5 pt-3">

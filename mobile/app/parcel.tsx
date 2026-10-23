@@ -31,6 +31,9 @@ export default function Parcel() {
   const [setup, setSetup] = useState<ParcelSetup | null>(null);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
+  // A quote asked for and taken. There is no order to open, so the screen
+  // says what happens next instead of pushing one.
+  const [asked1, setAsked] = useState(false);
 
   const [routeId, setRouteId] = useState("");
   const [kg, setKg] = useState(0);
@@ -71,6 +74,16 @@ export default function Parcel() {
   const route = setup?.routes.find((one) => one.id === routeId) ?? null;
   const toPau = route?.toPau ?? true;
   const bands = route?.bands ?? [];
+  /*
+   * The route that asks rather than charges.
+   *
+   * Four towns each way covers most of what gets asked for and none of what
+   * does not: a pickup in Epe, a box plainly heavier than the heaviest
+   * band. Picking this one places nothing. The details go into the list
+   * somebody already reads and a figure comes back on WhatsApp, so there is
+   * no weight to pick, no price to show and nothing to pay.
+   */
+  const asking = route?.custom === true;
   // The bands change with the route, so the weight picked may not exist on
   // the new one.
   const picked = bands.some((one) => one.upTo === kg) ? kg : bands[0]?.upTo ?? 0;
@@ -91,13 +104,14 @@ export default function Parcel() {
     (toName.trim() === "" || !goodNumber);
 
   const send = async () => {
-    if (!route || fee === null) return;
+    if (!route) return;
+    if (!asking && fee === null) return;
     setSending(true);
     setError("");
     try {
-      const { orderId } = await api.sendParcel({
+      const answer = await api.sendParcel({
         route: route.id,
-        kg: picked,
+        kg: asking ? 0 : picked,
         wantedOn,
         item,
         shop,
@@ -114,7 +128,14 @@ export default function Parcel() {
         paymentMethod: "transfer",
       });
       await me.save({ name, phone, hostel });
-      router.replace(`/order/${orderId}` as never);
+      // A quote is not an order. Nothing was charged and there is nothing to
+      // open, so the screen says what happens next rather than pushing a
+      // page that does not exist.
+      if (answer.asked) {
+        setAsked(true);
+        return;
+      }
+      router.replace(`/order/${answer.orderId}` as never);
     } catch (problem) {
       setError((problem as Error).message);
     } finally {
@@ -135,6 +156,26 @@ export default function Parcel() {
       <View style={{ flex: 1, backgroundColor: T.shell, justifyContent: "center" }}>
         <ActivityIndicator color={T.brand} />
       </View>
+    );
+  }
+
+  if (asked1) {
+    return (
+      <ScrollView style={{ flex: 1, backgroundColor: T.shell }} contentContainerStyle={{ padding: 16, gap: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Pressable onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="chevron-back" size={24} color={T.ink} />
+          </Pressable>
+          <Display size={26}>Send a parcel</Display>
+        </View>
+        <View style={card()}>
+          <Display size={24}>We have it.</Display>
+          <Text style={{ color: T.muted, marginTop: 6 }}>
+            We will message you on WhatsApp with the price for that trip.
+            Nothing is charged and nothing moves until you say yes.
+          </Text>
+        </View>
+      </ScrollView>
     );
   }
 
@@ -204,18 +245,28 @@ export default function Parcel() {
           we will agree another one with you before anything moves.
         </Text>
 
-        <Label text="About how heavy is it?" />
-        <Choices
-          options={bands.map((one, index) => ({
-            value: String(one.upTo),
-            label:
-              index === 0
-                ? `Up to ${one.upTo}kg`
-                : `${bands[index - 1].upTo}kg to ${one.upTo}kg`,
-          }))}
-          value={String(picked)}
-          onPick={(next) => setKg(Number(next))}
-        />
+        {asking ? (
+          <Text style={{ color: T.muted }}>
+            We have not priced this one, so tell us what it is and where it is
+            and we will come back to you on WhatsApp with a figure. Nothing is
+            charged and nothing moves until you have said yes to it.
+          </Text>
+        ) : (
+          <>
+            <Label text="About how heavy is it?" />
+            <Choices
+              options={bands.map((one, index) => ({
+                value: String(one.upTo),
+                label:
+                  index === 0
+                    ? `Up to ${one.upTo}kg`
+                    : `${bands[index - 1].upTo}kg to ${one.upTo}kg`,
+              }))}
+              value={String(picked)}
+              onPick={(next) => setKg(Number(next))}
+            />
+          </>
+        )}
 
         <Label text="What are we carrying?" />
         <Field value={item} onChangeText={setItem} placeholder="A dress in a paper bag" />
@@ -266,13 +317,13 @@ export default function Parcel() {
         />
         <Text
           style={{
-            color: tooDear ? T.brandDark : T.muted,
+            color: tooDear && !asking ? T.brandDark : T.muted,
             fontSize: 12,
             marginTop: 6,
-            fontWeight: tooDear ? "700" : "400",
+            fontWeight: tooDear && !asking ? "700" : "400",
           }}
         >
-          {tooDear
+          {tooDear && !asking
             ? `${naira(value)} is over the ${naira(setup.maxValue)} limit, so we cannot carry it. Message us and we will talk it through.`
             : `Nothing over ${naira(setup.maxValue)}, and no phones, laptops, jewellery or cash. If it is lost or damaged in the car it is on us, which is why there is a limit.`}
         </Text>
@@ -331,7 +382,7 @@ export default function Parcel() {
 
       {/* The price at the end, once they have said what it is and how far it
           is going. Those two are the price. */}
-      {route && fee !== null && (
+      {route && fee !== null && !asking && (
         <View style={card()}>
           <Row label={route.label} value={`up to ${picked}kg`} />
           <View style={{ height: 1, backgroundColor: T.line, marginVertical: 8 }} />
@@ -351,9 +402,10 @@ export default function Parcel() {
 
       <Pressable
         onPress={() => void send()}
-        disabled={sending || tooDear || halfRecipient}
+        disabled={sending || (tooDear && !asking) || halfRecipient}
         style={{
-          backgroundColor: sending || tooDear || halfRecipient ? T.muted : T.brand,
+          backgroundColor:
+            sending || (tooDear && !asking) || halfRecipient ? T.muted : T.brand,
           borderRadius: 999,
           paddingVertical: 16,
           alignItems: "center",
@@ -362,17 +414,21 @@ export default function Parcel() {
         <Text style={{ color: "#fff", fontFamily: F.bodyBold, fontSize: 16 }}>
           {sending
             ? "Sending…"
-            : tooDear
+            : tooDear && !asking
               ? `Over the ${naira(setup.maxValue)} limit`
               : halfRecipient
                 ? "Their name and number, or neither"
-                : fee !== null
-                  ? `Send it · ${naira(fee)}`
-                  : "Send it"}
+                : asking
+                  ? "Ask us for a price"
+                  : fee !== null
+                    ? `Send it · ${naira(fee)}`
+                    : "Send it"}
         </Text>
       </Pressable>
       <Text style={{ color: T.muted, fontSize: 12, textAlign: "center" }}>
-        We agree the day with you on WhatsApp once it is paid.
+        {asking
+          ? "Nothing is charged now. We come back with a price on WhatsApp."
+          : "We agree the day with you on WhatsApp once it is paid."}
       </Text>
     </ScrollView>
   );

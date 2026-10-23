@@ -102,16 +102,51 @@ export async function GET(): Promise<NextResponse> {
     // The strip, checked against what it points at, so a banner for a match
     // that has been played takes itself down on the phone the same moment it
     // does on the website.
-    const ribbon = await liveRibbon(settings).catch(() => ({
-      text: settings.ribbon_text,
-      href: settings.ribbon_href,
-    }));
+    /*
+     * Everything else the home screen needs, asked for at once.
+     *
+     * These stood in a queue down the length of this function, and six of
+     * them stood in a queue inside the object literal at the bottom, where
+     * an await on one line waits for the await on the line above it. None
+     * of them needs any of the others: where the kitchens are has nothing
+     * to do with who is promoting, and neither has anything to do with the
+     * strip at the top. On the one request the app makes before it can draw
+     * anything, that was a dozen round trips end to end instead of one.
+     */
+    const [
+      ribbon,
+      pricing,
+      dayHours,
+      offers,
+      areas,
+      areaOf,
+      areaPairs,
+      valueBandsOf,
+      promoters,
+      nudge,
+    ] = await Promise.all([
+      // The strip, checked against what it points at, so a banner for a
+      // match that has been played takes itself down on the phone the same
+      // moment it does on the website.
+      liveRibbon(settings).catch(() => ({
+        text: settings.ribbon_text,
+        href: settings.ribbon_href,
+      })),
+      sameDayPricing(),
+      hoursByDay(),
+      offersByRestaurant(),
+      allAreas(),
+      areaOfEach(),
+      allAreaPairs(),
+      valueBandsOfEach(),
+      namedPromoters(),
+      appNudge(),
+    ]);
 
-    const pricing = await sameDayPricing();
     const slots =
       settings.same_day_on === "on"
         ? slotsWorthOffering(
-            deliverySlots(new Date(), await hoursByDay()),
+            deliverySlots(new Date(), dayHours),
             batches.map((one) => ({
               run_date: one.run_date,
               window: one.delivery_window_text,
@@ -123,7 +158,6 @@ export async function GET(): Promise<NextResponse> {
     // for the card, a sentence for the top of the menu, and the whole list
     // for the drawer. The app was quoting a band fee on food a promotion was
     // about to price, which is a number nobody was going to be charged.
-    const offers = await offersByRestaurant();
     const deals = await Promise.all(
       menu.map(async (place) => ({
         restaurantId: place.restaurant.id,
@@ -164,17 +198,17 @@ export async function GET(): Promise<NextResponse> {
       // furthest thing in the cart exactly as the website does, because a
       // fee quoted on a phone and charged on the server has to be one
       // number. Empty means one area, and every price as it was.
-      areas: await allAreas(),
-      areaOf: await areaOfEach(),
-      areaPairs: await allAreaPairs(),
+      areas,
+      areaOf,
+      areaPairs,
       // The kitchens that charge by what the shopping comes to rather than
       // by how many things it is. Without this the app prices a market
       // basket off the container ladder and quotes a number nobody is
       // charged, which is the one thing a checkout must never do.
-      valueBandsOf: await valueBandsOfEach(),
+      valueBandsOf,
       // Who somebody could say they heard about the shop from. Empty means
       // nobody is promoting, and then the question is not worth asking.
-      promoters: await namedPromoters(),
+      promoters,
       // The order of the front page, as admin set it. The app used to hold
       // its own opinion about this and drifted from the website the first
       // time anybody moved a card.
@@ -218,9 +252,18 @@ export async function GET(): Promise<NextResponse> {
       // under its slug and the app screen finds one by its id, so the slug
       // went through as an id, matched nothing, and the screen sat spinning
       // on a restaurant that could never arrive.
-      nudge: await appNudge(),
+      nudge,
       shop: {
         tagline: settings.tagline,
+        /*
+         * Which season the shop is dressed for, empty for the ordinary one.
+         *
+         * The website has worn this since it went in and the app never did,
+         * so somebody who switched Halloween on saw pumpkins on the site
+         * and the plain red shop on their phone. One setting, read in both
+         * places, so turning it off is still clearing a text box.
+         */
+        season: settings.season ?? "",
         ribbon: ribbon?.text ?? "",
         // Where the strip goes, translated into a screen this app has. The
         // website files a collection under /collections and an occasion

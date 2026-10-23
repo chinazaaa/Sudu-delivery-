@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, keptShop, type Shop } from "@/lib/api";
+import { api, heldShop, keptShop, type Shop } from "@/lib/api";
 
 /**
  * The shop, from what the phone already has, then from the shop itself.
@@ -14,7 +14,16 @@ import { api, keptShop, type Shop } from "@/lib/api";
  * the second when it is not.
  */
 export function useShop(): Shop | null {
-  const [shop, setShop] = useState<Shop | null>(null);
+  /*
+   * What this run of the app already has, straight away.
+   *
+   * Every screen calls this when it mounts, and the kept copy is over a
+   * megabyte of JSON to read off the disk and parse. Moving between two
+   * tabs was doing that twice for a menu already sitting in a variable,
+   * and the screen drew empty for a frame or two each time while it
+   * waited. In hand, there is nothing to wait for.
+   */
+  const [shop, setShop] = useState<Shop | null>(() => heldShop());
 
   useEffect(() => {
     let alive = true;

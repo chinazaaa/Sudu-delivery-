@@ -209,3 +209,136 @@ export async function boxPrices(
 
   return found;
 }
+
+/** One line of a picker: the dish, whose counter it is, and what it costs. */
+export type PickerHit = {
+  id: string;
+  name: string;
+  shop: string;
+  price: number;
+  options: { name: string; delta: number }[];
+};
+
+/**
+ * The few dishes somebody is typing at, rather than the whole shop.
+ *
+ * The box builder is handed everything, and that is right for it: one
+ * admin, one page, a picker used dozens of times in a sitting. An order
+ * page is not that. It was calling foodCatalogue to fill a box nobody had
+ * typed into yet, which is two thousand dishes, ten paged round trips for
+ * their choices, and the lot of it serialised into a page somebody opened
+ * to read a phone number. That is the whole of why opening an order felt
+ * like nothing had happened.
+ *
+ * Searched here rather than in the browser, so the thing that costs is paid
+ * for by the person who actually typed something.
+ */
+export async function catalogueSearch(
+  query: string,
+  limit = 8
+): Promise<PickerHit[]> {
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
+
+  const { data: places } = await db()
+    .from("restaurants")
+    .select("id, name, kind, active")
+    .order("sort_order", { ascending: true });
+
+  const food = (places ?? []).filter(
+    (one: any) => one.kind !== "skincare" && one.active !== false
+  );
+  if (food.length === 0) return [];
+  const nameOf = new Map<string, string>(
+    food.map((one: any) => [one.id as string, one.name as string])
+  );
+
+  /*
+   * Narrowed in the database on the longest word, then sieved here.
+   *
+   * "kfc hot wings" is a counter and a dish, and no single column holds
+   * both, so the exact rule lives here as it always has. What the database
+   * can do is throw away the ninety-odd per cent that cannot match any of
+   * the words, which is the difference between reading two thousand rows
+   * and reading forty.
+   */
+  const longest = words.reduce((a, b) => (b.length > a.length ? b : a));
+  const { data: items } = await db()
+    .from("menu_items")
+    .select("id, restaurant_id, name, price_food")
+    .in("restaurant_id", [...nameOf.keys()])
+    .eq("available", true)
+    .or(`name.ilike.%${longest.replace(/[%,]/g, " ")}%`)
+    .order("name", { ascending: true })
+    .limit(400);
+
+  const named = (items ?? []).map((one: any) => ({
+    id: one.id as string,
+    name: String(one.name ?? ""),
+    shop: nameOf.get(one.restaurant_id as string) ?? "",
+    price: Number(one.price_food ?? 0),
+  }));
+
+  // Every word somewhere in the name and the counter together, name
+  // matches first, exactly as the picker has always sorted them.
+  const hits = named
+    .map((one) => ({
+      one,
+      line: `${one.name.toLowerCase()} ${one.shop.toLowerCase()}`,
+      named: words.filter((word) => one.name.toLowerCase().includes(word)).length,
+    }))
+    .filter((hit) => words.every((word) => hit.line.includes(word)))
+    .sort((a, b) => b.named - a.named)
+    .slice(0, limit);
+
+  const groups = await groupsFor(hits.map((hit) => hit.one.id));
+  return hits.map((hit) => ({
+    ...hit.one,
+    options: (groups.get(hit.one.id) ?? []).flatMap((group) =>
+      group.options.map((option) => ({
+        name: `${group.name}: ${option.name}`,
+        delta: option.delta,
+      }))
+    ),
+  }));
+}
+
+/**
+ * The dishes already on an order, as picker lines.
+ *
+ * All a line needs to offer its real choices. Two queries for the handful
+ * of things in front of somebody, rather than ten for everything the shop
+ * sells.
+ */
+export async function catalogueFor(itemIds: string[]): Promise<PickerHit[]> {
+  const wanted = [...new Set(itemIds.filter((one) => one && one.trim() !== ""))];
+  if (wanted.length === 0) return [];
+
+  const { data: items } = await db()
+    .from("menu_items")
+    .select("id, restaurant_id, name, price_food")
+    .in("id", wanted);
+  if (!items || items.length === 0) return [];
+
+  const { data: places } = await db()
+    .from("restaurants")
+    .select("id, name")
+    .in("id", [...new Set((items as any[]).map((one) => one.restaurant_id as string))]);
+  const nameOf = new Map<string, string>(
+    ((places ?? []) as any[]).map((one) => [one.id as string, one.name as string])
+  );
+
+  const groups = await groupsFor((items as any[]).map((one) => one.id as string));
+  return (items as any[]).map((one) => ({
+    id: one.id as string,
+    name: String(one.name ?? ""),
+    shop: nameOf.get(one.restaurant_id as string) ?? "",
+    price: Number(one.price_food ?? 0),
+    options: (groups.get(one.id as string) ?? []).flatMap((group) =>
+      group.options.map((option) => ({
+        name: `${group.name}: ${option.name}`,
+        delta: option.delta,
+      }))
+    ),
+  }));
+}

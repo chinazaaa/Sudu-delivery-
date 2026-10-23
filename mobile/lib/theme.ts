@@ -70,3 +70,55 @@ export const ticket = {
   letterSpacing: 1,
   textTransform: "uppercase" as const,
 };
+
+/*
+ * The season the shop is dressed for.
+ *
+ * The website recolours itself off one setting in admin, and the app wore
+ * the ordinary red whatever that setting said: somebody who switched
+ * Halloween on got pumpkins on the site and the plain shop on their phone.
+ *
+ * Done by writing over the palette rather than threading a theme through
+ * every screen. Nothing here is captured at module load — every screen
+ * reads T at the moment it draws — so changing these fields and letting the
+ * shop's arrival re-render is the whole of it.
+ *
+ * What it deliberately does not do is repaint the app dark. The palette is
+ * solid colours, and a shop that turns its paper black has to re-prove
+ * every piece of text on it against the new ground. That is a redesign, not
+ * a season, and it is the kind that ships a screen nobody can read on a
+ * phone in sunlight. So the ground stays and the loud parts change.
+ */
+const ORDINARY = {
+  brand: T.brand,
+  brandDark: T.brandDark,
+  ink: T.ink,
+  ink2: T.ink2,
+  inkLine: T.inkLine,
+  tint: T.tint,
+  volt: T.volt,
+};
+
+const SEASONS: Record<string, Partial<typeof ORDINARY>> = {
+  halloween: {
+    // The same five the website wears, so the two read as one shop.
+    brand: "#f26419",
+    brandDark: "#c2410c",
+    ink: "#241633",
+    ink2: "#342448",
+    inkLine: "#4a3a5e",
+    tint: "#fdeddd",
+    volt: "#b6e82a",
+  },
+};
+
+/** What is drawn over the page on top of the colours, where anything is. */
+export const SEASON_ART: Record<string, string[]> = {
+  halloween: ["🎃", "🦇", "👻", "🕸️"],
+};
+
+/** Dress the palette for a season, or put it back to the ordinary shop. */
+export function dressFor(season: string | undefined): void {
+  const worn = SEASONS[String(season ?? "").trim().toLowerCase()] ?? {};
+  Object.assign(T, ORDINARY, worn);
+}

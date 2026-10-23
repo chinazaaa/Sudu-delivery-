@@ -29,6 +29,7 @@ import AskUs from "@/components/AskUs";
 import { Ionicons } from "@expo/vector-icons";
 import { F, T } from "@/lib/theme";
 import { tileAt } from "@/lib/tiles";
+import SeasonDecor from "@/components/SeasonDecor";
 import { Display, Stripes, Ticket } from "@/components/ui";
 
 /**
@@ -711,6 +712,12 @@ export default function Home() {
           />
         </View>
       </ScrollView>
+
+      {/* The pumpkins, when the shop is dressed for them.
+          Over the page and deaf to the thumb: a decoration that can swallow
+          a tap on the order button is worse than no decoration. Under the
+          nudge below it, which is a thing somebody has to be able to press. */}
+      <SeasonDecor season={shop?.shop.season} />
 
       {/* Over the page rather than in it: the page carries on underneath and
           one tap on the cross ends it. Outside the ScrollView so it stays

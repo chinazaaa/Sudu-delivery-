@@ -1,6 +1,8 @@
 import Constants from "expo-constants";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { InteractionManager } from "react-native";
+import { dressFor } from "@/lib/theme";
 
 import { me } from "./store";
 
@@ -349,6 +351,9 @@ export type Shop = {
   };
   shop: {
     tagline: string;
+    /** Which season the shop is dressed for. Empty is the ordinary shop,
+     *  and so is an older server that does not send it at all. */
+    season?: string;
     /** The strip along the top, written in admin. Empty means nothing to
      *  announce and no strip at all. */
     ribbon: string;
@@ -467,6 +472,8 @@ export type OrderView = {
  * minute. Pulling down asks for it fresh.
  */
 let held: { at: number; shop: Shop } | null = null;
+/** The fetch already in the air, so several screens share one. */
+let coming: Promise<Shop> | null = null;
 const HELD_FOR = 60_000;
 
 /**
@@ -483,6 +490,28 @@ const HELD_FOR = 60_000;
  * that is not worth showing even for the second before the real one lands.
  */
 const KEPT_KEY = "sudu.shop.kept";
+
+/**
+ * File the shop for next time, off the frame that is drawing it.
+ *
+ * It is well over a megabyte, and turning that into a string is work done
+ * on the same thread as the screen. Done the moment the menu arrives, it
+ * was a stutter at exactly the moment somebody was looking at the new
+ * food. The screen wants the menu, not the receipt for having filed it, so
+ * the filing waits until the screen has finished with the thread.
+ */
+function keep(shop: Shop): void {
+  InteractionManager.runAfterInteractions(() => {
+    try {
+      void AsyncStorage.setItem(
+        KEPT_KEY,
+        JSON.stringify({ at: Date.now(), shop })
+      ).catch(() => {});
+    } catch {
+      // A phone with no room left still has the menu in memory.
+    }
+  });
+}
 const KEPT_FOR = 24 * 60 * 60 * 1000;
 
 /**
@@ -495,6 +524,17 @@ const KEPT_FOR = 24 * 60 * 60 * 1000;
  * a time rather than an opinion, so it still means what it says.
  */
 function stillGoing(shop: Shop): Shop {
+  /*
+   * Dressed for the season on the way past.
+   *
+   * Every shop object the app ever holds comes through here, so this is
+   * the one place that cannot be forgotten. The website has recoloured
+   * itself off this setting since it went in and the app wore the ordinary
+   * red whatever it said, so switching Halloween on gave pumpkins on the
+   * site and the plain shop on the phone.
+   */
+  dressFor(shop.shop?.season);
+
   const now = Date.now();
   return {
     ...shop,
@@ -505,8 +545,27 @@ function stillGoing(shop: Shop): Shop {
   };
 }
 
+/**
+ * What this run of the app already has in memory, without touching the disk.
+ *
+ * The whole shop is well over a megabyte of JSON, and reading the kept copy
+ * means parsing all of it. Every screen asks for the shop when it mounts, so
+ * moving between two tabs was parsing a megabyte off the disk twice for a
+ * menu already sitting in a variable. Nothing is read, nothing is parsed,
+ * and the screen draws on the frame it mounted in.
+ */
+export function heldShop(): Shop | null {
+  return held === null || Date.now() - held.at >= KEPT_FOR
+    ? null
+    : stillGoing(held.shop);
+}
+
 /** What the phone saw last time, if it is recent enough to be worth drawing. */
 export async function keptShop(): Promise<Shop | null> {
+  // Already in hand, so there is nothing to read and nothing to parse.
+  const inHand = heldShop();
+  if (inHand) return inHand;
+
   try {
     const raw = await AsyncStorage.getItem(KEPT_KEY);
     if (!raw) return null;
@@ -525,14 +584,26 @@ export const api = {
     if (!fresh && held !== null && Date.now() - held.at < HELD_FOR) {
       return stillGoing(held.shop);
     }
-    const shop = await get<Shop>("/menu");
-    held = { at: Date.now(), shop };
-    // Written without waiting: the screen wants the menu, not the receipt
-    // for having filed it.
-    void AsyncStorage.setItem(KEPT_KEY, JSON.stringify({ at: Date.now(), shop })).catch(
-      () => {}
-    );
-    return shop;
+    /*
+     * One request, however many screens ask.
+     *
+     * Every screen asks for the shop when it mounts, and opening the app
+     * mounts several at once. Past the hold that was two or three fetches
+     * of the same megabyte, racing each other to write the same file. They
+     * share the one that is already in the air instead.
+     */
+    if (!fresh && coming !== null) return stillGoing(await coming);
+
+    const asking = get<Shop>("/menu");
+    if (!fresh) coming = asking;
+    try {
+      const shop = await asking;
+      held = { at: Date.now(), shop };
+      keep(shop);
+      return stillGoing(shop);
+    } finally {
+      if (coming === asking) coming = null;
+    }
   },
   signIn: (phone: string, pin: string) =>
     post<{
@@ -912,7 +983,8 @@ export const api = {
     heardFrom: string;
     note: string;
     paymentMethod: "transfer" | "card";
-  }) => post<{ orderId: string }>("/parcel", parcel),
+    /** The quote routes carry no weight. Sent as nought and ignored. */
+  }) => post<{ orderId?: string; asked?: boolean }>("/parcel", parcel),
 };
 
 /** A route a parcel can travel, and what it costs by weight. */
@@ -922,6 +994,19 @@ export type ParcelRoute = {
   /** Which end is campus: one end is a block and the other is an address. */
   toPau: boolean;
   bands: { upTo: number; fee: number }[];
+  /**
+   * The route that asks rather than charges.
+   *
+   * Four towns each way covers most of what gets asked for and none of what
+   * does not: a pickup in Epe, a box plainly heavier than the heaviest
+   * band. That route carries no bands and no price. Picking it places
+   * nothing: the details go into the list somebody already reads, and a
+   * figure comes back on WhatsApp.
+   *
+   * Absent on an older server, which is a shop with no such route, which is
+   * how it worked before.
+   */
+  custom?: boolean;
 };
 
 /** What the shop carries, and the rules it carries it under. */

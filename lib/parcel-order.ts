@@ -8,7 +8,8 @@ import { isReturningCustomer } from "./orders";
 import { realPromoter } from "./promoters";
 import { lagosInstant, lagosToday } from "./time";
 import { normalisePhone } from "./phone";
-import { parcels, liveRoutes, routeById, feeFor, heaviest } from "./parcels";
+import { parcels, isCustom, liveRoutes, routeById, feeFor, heaviest } from "./parcels";
+import { askFor } from "./requests";
 import { newPin } from "./customer-auth";
 import { tellAdmin } from "./admin-alerts";
 
@@ -49,7 +50,11 @@ export type ParcelInput = {
 };
 
 export type ParcelResult =
-  | { ok: true; orderId: string }
+  /** Placed, priced and waiting to be paid for. */
+  | { ok: true; orderId: string; asked?: false }
+  /** Asked about rather than placed: the trip nobody has priced. Nothing is
+   *  charged, and somebody comes back with a figure. */
+  | { ok: true; asked: true; orderId?: undefined }
   | { ok: false; error: string };
 
 /**
@@ -78,6 +83,22 @@ export async function placeParcel(input: ParcelInput): Promise<ParcelResult> {
 
   const route = routeById(liveRoutes(setup.routes), input.routeId);
   if (!route) return { ok: false, error: "Pick where it is going from and to." };
+
+  /*
+   * The trip nobody has priced.
+   *
+   * Four towns each way covers most of what gets asked for and none of what
+   * does not: a pickup in Epe, a box plainly heavier than the heaviest band,
+   * a shop that will only release the thing to a named person. Those were a
+   * dead end on a page whose whole job is to say yes.
+   *
+   * So one route places nothing. It asks, the way the custom order page
+   * asks, and somebody comes back with a figure. Here rather than in the
+   * form that posts to it, because two forms post to it: the website's and
+   * the app's, and a rule written twice is a rule that will disagree with
+   * itself.
+   */
+  if (isCustom(route)) return quoteParcel(input, route.label);
 
   // Priced by how heavy it is as well as how far it goes. A dress and a chest
   // of drawers do not take the same room or the same effort.
@@ -359,4 +380,61 @@ async function announceParcel(args: {
   } catch {
     /* Never let a notification break a parcel that is already saved. */
   }
+}
+
+/**
+ * A parcel nobody has priced, asked about rather than ordered.
+ *
+ * Everything the form collected goes into the one list somebody already
+ * reads and answers: the custom order list. Nothing is charged, no trip is
+ * made, and no order exists to chase for money that was never agreed.
+ *
+ * The weight is not asked for and not kept. It is the one thing on that
+ * form that only means something against a ladder, and this route has none.
+ */
+async function quoteParcel(
+  input: ParcelInput,
+  routeSaid: string
+): Promise<ParcelResult> {
+  const where = input.address.trim();
+  const block = input.hostel.trim();
+  const room = input.room.trim();
+
+  const asked = await askFor({
+    wanted: `Parcel: ${input.item.trim() || "something"}`,
+    budget: "",
+    name: input.name,
+    phone: input.phone,
+    hostel: block,
+    note: [
+      `Route: ${routeSaid}`,
+      `Collecting from: ${input.shop.trim() || "not said"}`,
+      where !== "" ? `Address: ${where}` : "",
+      block !== "" ? `Block: ${block}${room !== "" ? `, ${room}` : ""}` : "",
+      input.wantedOn.trim() !== "" ? `Wanted on: ${input.wantedOn.trim()}` : "",
+      input.toName.trim() !== ""
+        ? `Going to: ${input.toName.trim()} ${input.toPhone.trim()}`.trim()
+        : "",
+      Number(input.value) > 0 ? `Worth about: ${naira(Number(input.value))}` : "",
+      input.note.trim(),
+    ]
+      .filter((one) => one !== "")
+      .join("\n"),
+  });
+  if (!asked.ok) return { ok: false, error: asked.error };
+
+  // After the row exists and never in a way that can fail it.
+  try {
+    await tellAdmin({
+      title: "Parcel · needs a price",
+      body: `${input.name.trim() || "Someone"} wants a parcel carried: ${
+        input.item.trim() || "something"
+      }.`,
+      url: "/admin/requests",
+    });
+  } catch {
+    /* The ask is saved either way. */
+  }
+
+  return { ok: true, asked: true };
 }
