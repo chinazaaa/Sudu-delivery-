@@ -312,6 +312,11 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   /** The question step, held in a box because the answers above it offer
    *  it as the way out when none of them fit. */
   const askAQuestionRef = useRef<((first?: string) => void) | null>(null);
+  /** Sending a question that has already been typed, held in a box because
+   *  the number and the name are collected between typing it and sending
+   *  it, and each of those has to come back to the sending rather than to
+   *  the asking: asking again would want the question typed twice. */
+  const sendQuestionRef = useRef<((asked: string) => void) | null>(null);
   /** The block question, held in a box so an answer given at it can hand
    *  the conversation back to it. */
   const askHostelRef = useRef<((then?: () => void) => void) | null>(null);
@@ -764,65 +769,138 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           me(asked);
           setAsk({ of: "nothing" });
           const mine = held.current;
-          try {
-            const answer = await working(
-              "Sending that over…",
-              fetch("/api/bot/ask", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  wanted: asked,
-                  name: mine.name,
-                  phone: mine.phone,
-                  hostel: mine.hostel,
-                  kind: "question",
-                }),
-              })
-            );
-            const got = (await answer.json()) as { ok?: boolean; error?: string };
-            if (!got.ok) {
-              bot(got.error || "Could not send that just now.", 450);
-              setAsk({
-                of: "buttons",
-                buttons: [
-                  { said: "Try again", look: "alt", go: () => { me("Try again"); askAQuestion(asked); } },
-                  { said: "Ask on WhatsApp", look: "green", href: handOver("I have a question.") },
-                ],
-              });
-              return;
-            }
-            say(
-              {
-                kind: "status",
-                tone: "ok",
-                html: "<span><b>Sent.</b> Somebody will come back to you on your number.</span>",
-              },
-              420
-            );
-            bot("Anything else while you are here?", 450);
-            setAsk({
-              of: "buttons",
-              buttons: [
-                { said: "Order something", go: () => { me("Order something"); askOrderRef.current?.(true); } },
-                { said: "Ask on WhatsApp too", look: "alt", href: handOver("I have a question.") },
-                { said: "That's all for now", look: "alt", go: () => { me("That's all for now"); byeRef.current?.(); } },
-              ],
-            });
-          } catch {
-            bot("Could not send that just now.", 420);
-            setAsk({
-              of: "buttons",
-              buttons: [
-                { said: "Try again", go: () => { me("Try again"); askAQuestion(asked); } },
-                { said: "Ask on WhatsApp", look: "green", href: handOver("I have a question.") },
-              ],
-            });
+
+          /*
+           * A number to come back on, asked for here if it is not known.
+           *
+           * The chat used to take a name and a number before anybody said
+           * a word, so by the time somebody asked for a person it always
+           * had both. Details are collected at the till now, and a
+           * question asked before any food is chosen reaches this with
+           * neither, so it promised to send the question over with their
+           * number, sent nothing, and answered "Please enter your name."
+           *
+           * Number first and then the name, the same order as the bill:
+           * the number is what the shop files people under, so somebody
+           * who has ordered before is greeted rather than interviewed.
+           */
+          if (mine.phone === "") {
+            bot("What number should we come back to you on?", 430);
+            askPhoneRef.current?.(() => sendQuestionRef.current?.(asked));
+            return;
           }
+          if (mine.name === "") {
+            bot("And what should I call you?", 420);
+            setAsk({
+              of: "text",
+              placeholder: "Your name",
+              onSay: (who) => {
+                me(who);
+                mine.name = (nameIn(who) || who).split(" ")[0];
+                sendQuestionRef.current?.(asked);
+              },
+            });
+            return;
+          }
+
+          sendQuestionRef.current?.(asked);
         },
       });
     },
+    [bot, me]
+  );
+
+  /*
+   * Sending a question that is already typed.
+   *
+   * Split from asking for it, because the number and the name are now
+   * collected in between and each of those has to come back to the
+   * sending. Coming back to the asking is what a first attempt at this
+   * did, and it put somebody in a loop being asked to type their question
+   * again after every answer.
+   */
+  const sendQuestion = useCallback(
+    async (asked: string) => {
+      setAsk({ of: "nothing" });
+      const mine = held.current;
+
+      /* The same guard again, because the number step comes straight back
+         here: a number the shop has never seen leaves the name empty, and
+         sending without one is the error this was built to stop. */
+      if (mine.name === "") {
+        bot("And what should I call you?", 420);
+        setAsk({
+          of: "text",
+          placeholder: "Your name",
+          onSay: (who) => {
+            me(who);
+            mine.name = (nameIn(who) || who).split(" ")[0];
+            sendQuestionRef.current?.(asked);
+          },
+        });
+        return;
+      }
+        try {
+          const answer = await working(
+            "Sending that over…",
+            fetch("/api/bot/ask", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                wanted: asked,
+                name: mine.name,
+                phone: mine.phone,
+                hostel: mine.hostel,
+                kind: "question",
+              }),
+            })
+          );
+          const got = (await answer.json()) as { ok?: boolean; error?: string };
+          if (!got.ok) {
+            bot(got.error || "Could not send that just now.", 450);
+            setAsk({
+              of: "buttons",
+              buttons: [
+                { said: "Try again", look: "alt", go: () => { me("Try again"); sendQuestionRef.current?.(asked); } },
+                { said: "Ask on WhatsApp", look: "green", href: handOver("I have a question.") },
+              ],
+            });
+            return;
+          }
+          say(
+            {
+              kind: "status",
+              tone: "ok",
+              html: "<span><b>Sent.</b> Somebody will come back to you on your number.</span>",
+            },
+            420
+          );
+          bot("Anything else while you are here?", 450);
+          setAsk({
+            of: "buttons",
+            buttons: [
+              { said: "Order something", go: () => { me("Order something"); askOrderRef.current?.(true); } },
+              { said: "Ask on WhatsApp too", look: "alt", href: handOver("I have a question.") },
+              { said: "That's all for now", look: "alt", go: () => { me("That's all for now"); byeRef.current?.(); } },
+            ],
+          });
+        } catch {
+          bot("Could not send that just now.", 420);
+          setAsk({
+            of: "buttons",
+            buttons: [
+              { said: "Try again", go: () => { me("Try again"); sendQuestionRef.current?.(asked); } },
+              { said: "Ask on WhatsApp", look: "green", href: handOver("I have a question.") },
+            ],
+          });
+        }
+    },
     [bot, handOver, me, say, working]
   );
+
+  useEffect(() => {
+    sendQuestionRef.current = sendQuestion;
+  }, [sendQuestion]);
 
   useEffect(() => {
     askAQuestionRef.current = askAQuestion;
@@ -983,13 +1061,18 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
          * for one sentence is a pause on the one path where somebody is
          * already waiting.
          */
-        const peek = await fetch("/api/bot/find", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ said, kitchen: queue.current[0]?.id ?? "" }),
-        })
-          .then((one) => one.json())
-          .catch(() => null);
+        /* The same courtesy on the question path, which also goes quiet
+           for a round trip before anybody hears a word back. */
+        const peek = await working(
+          "Having a look\u2026",
+          fetch("/api/bot/find", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ said, kitchen: queue.current[0]?.id ?? "" }),
+          })
+            .then((one) => one.json())
+            .catch(() => null)
+        );
 
         const named =
           peek &&
@@ -1404,7 +1487,18 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         true
       ) {
         firstSay.current = false;
-        const got = await fetch("/api/bot/understand", {
+        /*
+           Something on the screen while it reads.
+
+           The reading takes most of a second and is allowed six before it
+           gives up, and for all of that the chat sat there saying nothing
+           at all. A box that answers instantly for a year and then goes
+           quiet reads as broken, and somebody types the message again,
+           which is a second order's worth of nothing happening.
+        */
+        const got = await working(
+          "Reading that\u2026",
+          fetch("/api/bot/understand", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1419,8 +1513,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             },
           }),
         })
-          .then((one) => one.json())
-          .catch(() => null);
+            .then((one) => one.json())
+            .catch(() => null)
+        );
 
         /* No key, no credit, no answer: remembered, so this is the last
            time it is asked this session, and the rules carry on. */
