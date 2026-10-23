@@ -7,9 +7,9 @@ import {
   openGroupFor,
   startSharedGroup,
 } from "./groups";
-import { feeFor, sameDayFee, splitFee, type Band } from "./fees";
-import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "./settings";
+import { feeFor, sameDayFee, splitFee, tripFee, type Band } from "./fees";
 import { feeOnTrip } from "./trip-fee";
+import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "./settings";
 import {
   activePromotion,
   checkCoupon,
@@ -485,11 +485,24 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // delivery" is worth what delivery actually costs here and no more. The
   // check happens against the fee the order is about to be charged.
   //
-  // Through the one question, because this asked the run's ladder even on
-  // a car: a free-delivery code on a car of its own was taking off the
-  // run's fee and leaving the difference on the bill, or taking off more
-  // than the trip was worth, depending on which way the two ladders sat.
-  const couponFee = await feeOnTrip(batch, countItems(priced.lines));
+  /*
+   * Through the one question, and off the ladders this cart is actually
+   * charged.
+   *
+   * It asked the run's ladder even on a car, so a free-delivery code on a
+   * car of its own was worth the wrong amount. Fixing that by fetching
+   * the shop's plain ladders would have been a worse bug in the same
+   * place: the real ones have the distance and the second stop already
+   * added to every rung, which is why a six item car across Ajah and
+   * Sangotedo is ten thousand and not the eight and a half the bare
+   * ladder says. `where` is those ladders, so `where` is what is asked.
+   */
+  const couponFee = tripFee(batch, countItems(priced.lines), {
+    run: bands,
+    car: where.sameDayBands,
+    urgentExtra: where.urgentExtra,
+    urgent: sameDay !== null && !("error" in sameDay) && sameDay.slot.urgent,
+  });
   const coupon = input.coupon?.trim()
     ? await checkCoupon({
         code: input.coupon,
@@ -1777,11 +1790,17 @@ export async function perkFor(args: {
     return { kind: "offer", note: holding.coupon.note.trim() || "An offer" };
   }
 
+  /* The same ladders the order will be charged off, distance and second
+     stop included, rather than the shop's bare ones. */
+  const charged = await areaOfCart(placesIn(priced.lines));
+
   const result = await checkCoupon({
     code,
-    /* The trip's own fee, so a free-delivery code quoted on a car is
-       worth what the car costs rather than what a run would have. */
-    fee: await feeOnTrip(batch, countItems(priced.lines)),
+    fee: tripFee(batch, countItems(priced.lines), {
+      run: isSkincareBatch(batch) ? await bandsFor(batch) : charged.bands,
+      car: charged.sameDayBands,
+      urgentExtra: charged.urgentExtra,
+    }),
     food: countFood(priced.lines),
     returning,
     batchId: batch.id,
@@ -1883,7 +1902,6 @@ export async function moveOrder(
    * be the shop billing itself for its own rearrangement.
    */
   const car = batch.kind === "same_day";
-  const sameDay = car ? await sameDayPricing() : null;
 
   for (const id of moving) {
     const one = await getOrder(id);
@@ -1915,9 +1933,24 @@ export async function moveOrder(
     // A car keeps whatever the order was already charged where that is
     // dearer: an order that bought an urgent slot has paid for one, and a
     // move it did not ask for must not hand that money back.
-    const onLadder = sameDay
-      ? sameDayFee(items, false, sameDay.bands, sameDay.urgentExtra)
-      : feeFor(items, batch.flash_fee, bands);
+    /*
+     * Off the ladders this cart is charged, not the shop's bare ones.
+     *
+     * The first go at this noticed that a car has its own ladder and
+     * stopped there, which fixed four thousand of a mistake and left
+     * fifteen hundred of it: every rung of both ladders moves with how
+     * far the food is coming from and whether a second area makes a
+     * second stop. A six item car is 8,500 bare and 10,000 across Ajah
+     * and Sangotedo.
+     *
+     * Not urgent, ever. The extra is for ordering at an hour's notice,
+     * and a move is the shop rearranging its own car.
+     */
+    const onLadder = await feeOnTrip(
+      batch,
+      items,
+      repriced.lines.map((line) => line.restaurantId)
+    );
     const fee = car ? Math.max(onLadder, Number(one.fee ?? 0)) : onLadder;
 
     // The lines carry the new prices too, so the order reads as it is charged.
