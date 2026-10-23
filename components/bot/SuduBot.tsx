@@ -1410,7 +1410,30 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           if (mine.name === "" && reading.name !== "") {
             mine.name = String(reading.name).split(" ")[0];
           }
-          if (mine.phone === "" && reading.phone !== "") mine.phone = reading.phone;
+          if (mine.phone === "" && reading.phone !== "") {
+            mine.phone = reading.phone;
+            /*
+             * A number given in the opening message is still a number the
+             * shop may already know, and somebody who typed everything at
+             * once should not be the one person who gets asked for a name
+             * they have given before.
+             *
+             * The block comes back as a yes or no and never as a place,
+             * exactly as it does when the number is typed on its own.
+             */
+            const seen = await fetch("/api/bot/known", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ phone: reading.phone }),
+            })
+              .then((one) => one.json())
+              .catch(() => null);
+
+            if (seen?.name && mine.name === "") {
+              mine.name = String(seen.name).split(" ")[0];
+            }
+            if (seen?.hasBlock && mine.hostel === "") mine.sameBlock = true;
+          }
           if (mine.hostel === "" && reading.hostel !== "") {
             const blocks = startRef.current?.hostels ?? [];
             /* Named exactly, or near enough that only one block could be
@@ -2587,6 +2610,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
      * filed under. Each step comes back here, so the bill is worked out
      * once and only when it can actually be delivered.
      */
+    if (mine.phone === "") {
+      askPhoneRef.current?.(() => soonRef.current?.());
+      return;
+    }
+    /* After the number, never before it. The number is what the shop
+       files people under, so asking for it first means a returning
+       customer is greeted by name instead of being asked for one they
+       have given before. */
     if (mine.name === "") {
       bot("Nearly there. What should I call you?", 430);
       setAsk({
@@ -2598,10 +2629,6 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           soonRef.current?.();
         },
       });
-      return;
-    }
-    if (mine.phone === "") {
-      askPhoneRef.current?.(() => soonRef.current?.());
       return;
     }
     if (mine.hostel === "" && mine.sameBlock !== true) {
@@ -4252,6 +4279,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             })
               .then((one) => one.json())
               .catch(() => null);
+
+            /* Known, so they are greeted rather than interviewed. The
+               name is filled in here, which is why the number is asked
+               for before the name and not after it. */
+            if (seen?.name && held.current.name === "") {
+              held.current.name = String(seen.name).split(" ")[0];
+              bot(`Welcome back, <b>${held.current.name}</b>.`, 400);
+            }
 
             if (!seen?.hasBlock) {
               askHostel(then);

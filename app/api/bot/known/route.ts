@@ -26,16 +26,31 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     const body = (await request.json()) as { phone?: unknown };
     const phone = normalisePhone(String(body.phone ?? ""));
-    if (!phone) return NextResponse.json({ known: false, hasBlock: false });
+    if (!phone) return NextResponse.json({ known: false, name: "", hasBlock: false });
 
     const details = await customerDetails(phone);
+    /*
+     * A first name, and never the block.
+     *
+     * The name is given back because the shop knowing who you are is the
+     * point: somebody who ordered last week should not be asked what to
+     * call them. One word, not the whole name on the account.
+     *
+     * The block is not, and that is the line. A first name tells whoever
+     * typed the number almost nothing they did not already know to type
+     * it; a hostel tells them where that person sleeps, and the order box
+     * is open to anybody with no sign-in at all. So it is used when the
+     * order is placed and never sent to a browser.
+     */
+    const first = String(details?.name ?? "").trim().split(/\s+/)[0] ?? "";
     return NextResponse.json({
       known: details !== null,
+      name: first,
       hasBlock: String(details?.hostel ?? "").trim() !== "",
     });
   } catch {
     // Not knowing is the safe answer: it costs one question, and the
     // question is one the chat has always asked.
-    return NextResponse.json({ known: false, hasBlock: false });
+    return NextResponse.json({ known: false, name: "", hasBlock: false });
   }
 }
