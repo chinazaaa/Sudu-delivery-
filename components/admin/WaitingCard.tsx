@@ -4,6 +4,7 @@ import SaveButton from "@/components/SaveButton";
 import type { OrderCardData } from "./OrderCard";
 import { naira } from "@/lib/money";
 import { placedLabel } from "@/lib/time";
+import { doorSkin, doorTag } from "@/lib/doors";
 
 /**
  * One order that is waiting on something, with the one thing it is waiting
@@ -90,6 +91,19 @@ export default function WaitingCard({
               ? "card link sent, not paid"
               : "waiting on transfer"}
         </span>
+        {/*
+          Which door it came through.
+          
+          New in today is the one list anybody actually reads, and it was
+          the one card that did not say. Opening an order to find out
+          whether the chat took it is the cost of leaving it off, paid on
+          every order of the day.
+        */}
+        {doorTag(order.source) !== "" && (
+          <span className={`tag ${doorSkin(order.source)}`}>
+            {doorTag(order.source)}
+          </span>
+        )}
         {order.narration !== "" && !wantsCard && (
           <span className="hint">
             narration <span className="font-mono font-semibold">{order.narration}</span>

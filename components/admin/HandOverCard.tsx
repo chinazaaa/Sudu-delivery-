@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { doorSkin, doorTag } from "@/lib/doors";
 import ActionButton from "@/components/ActionButton";
 import ConfirmButton from "./ConfirmButton";
 import type { OrderCardData } from "./OrderCard";
@@ -80,6 +81,13 @@ export default function HandOverCard({
         <span className={`tag ${done ? "bg-mint-tint text-mint" : "bg-wash text-ink"}`}>
           {done ? "delivered" : "paid, not handed over"}
         </span>
+        {/* The same on the paid half of the list, so the day reads the
+            same way all the way down it. */}
+        {doorTag(order.source) !== "" && (
+          <span className={`tag ${doorSkin(order.source)}`}>
+            {doorTag(order.source)}
+          </span>
+        )}
         {order.pin && (
           <span className="hint">
             PIN <span className="font-mono font-semibold">{order.pin}</span>
