@@ -209,8 +209,29 @@ export default async function BatchPage({
    * stood at a till reading 6,900 while it asked for 6,000, on every line
    * of every run, and the difference was never a difference.
    */
-  const costFor = (group: { restaurant: string }, unitPrice: number, qty: number) =>
-    lineCost(unitPrice, qty, reach[group.restaurant]?.markup ?? DEFAULT_MARKUP);
+  /*
+   * The cost somebody typed in beats the sum every time.
+   *
+   * Working it backwards off the selling price was right when the shop had
+   * no idea what a counter asks for. It is arithmetic rather than
+   * knowledge, and the shop now has hundreds of real costs read off boards
+   * and receipts. Fantasy ice cream was put in at 1,200 off the counter's
+   * own shelf and this went on printing 1,130, because 1,300 less fifteen
+   * per cent is 1,130 and nothing in the sum had changed. Somebody stands
+   * at a till reading one number while it asks for another.
+   *
+   * The sum stays for everything nobody has priced, which is how it worked
+   * before and is still better than printing the selling price.
+   */
+  const costFor = (
+    group: { restaurant: string },
+    unitPrice: number,
+    qty: number,
+    costPrice = 0
+  ) =>
+    costPrice > 0
+      ? costPrice * qty
+      : lineCost(unitPrice, qty, reach[group.restaurant]?.markup ?? DEFAULT_MARKUP);
 
   /*
    * What this counter should actually be charged.
@@ -222,12 +243,14 @@ export default async function BatchPage({
    */
   const costAt = (group: {
     restaurant: string;
-    lines: { key: string; unitPrice: number; qty: number }[];
+    lines: { key: string; unitPrice: number; qty: number; costPrice: number }[];
   }) =>
     group.lines.reduce(
       (total, line) =>
         total +
-        (couldNotGet.has(line.key) ? 0 : costFor(group, line.unitPrice, line.qty)),
+        (couldNotGet.has(line.key)
+          ? 0
+          : costFor(group, line.unitPrice, line.qty, line.costPrice)),
       0
     );
   // What a counter said that still needs doing. Everything else on this
@@ -1309,7 +1332,7 @@ export default async function BatchPage({
                              the choices because the boards set it in mono,
                              and the second rule is that money always is. */
                           money: `${naira(
-                            costFor(group, line.unitPrice, 1)
+                            costFor(group, line.unitPrice, 1, line.costPrice)
                           )} ea at the counter`,
                         }))}
                       />

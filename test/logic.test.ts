@@ -4762,8 +4762,8 @@ test("the expected total is the driver's, not the counter's", () => {
   const group = {
     restaurant: "Dominos Pizza",
     lines: [
-      { name: "Pepperoni", choices: ['Medium 12"', "Hand Tossed"], qty: 2, unitPrice: 11000, key: "a", paid: null, itemId: "x", recovered: 0, menuPrice: 11000 },
-      { name: "Cheesy Bread", choices: [], qty: 1, unitPrice: 4500, key: "b", paid: null, itemId: "y", recovered: 0, menuPrice: 4500 },
+      { name: "Pepperoni", choices: ['Medium 12"', "Hand Tossed"], qty: 2, unitPrice: 11000, key: "a", paid: null, itemId: "x", recovered: 0, menuPrice: 11000, costPrice: 0 },
+      { name: "Cheesy Bread", choices: [], qty: 1, unitPrice: 4500, key: "b", paid: null, itemId: "y", recovered: 0, menuPrice: 4500, costPrice: 0 },
     ],
     expectedFoodTotal: 26500,
   };
@@ -4906,8 +4906,8 @@ test("the message asks for the total, with sizes, and no prices", () => {
   const group = {
     restaurant: "Panarottis",
     lines: [
-      { name: "Panarottis Special", choices: ["Large"], qty: 1, unitPrice: 28450, key: "a", paid: null, itemId: "x", recovered: 0, menuPrice: 28450 },
-      { name: "Duo Pizza", choices: ["Monsterito"], qty: 1, unitPrice: 46300, key: "b", paid: null, itemId: "y", recovered: 0, menuPrice: 46300 },
+      { name: "Panarottis Special", choices: ["Large"], qty: 1, unitPrice: 28450, key: "a", paid: null, itemId: "x", recovered: 0, menuPrice: 28450, costPrice: 0 },
+      { name: "Duo Pizza", choices: ["Monsterito"], qty: 1, unitPrice: 46300, key: "b", paid: null, itemId: "y", recovered: 0, menuPrice: 46300, costPrice: 0 },
     ],
     expectedFoodTotal: 74750,
   };
@@ -5869,4 +5869,51 @@ test("ice cream rides along rather than making its own trip", () => {
   // thousand; a step of nothing would divide by zero working out the lots.
   assert.equal(parseStepFee('{"first":0,"firstFee":4000,"step":15,"stepFee":500}'), null);
   assert.equal(parseStepFee('{"first":15,"firstFee":4000,"step":0,"stepFee":500}'), null);
+});
+
+test("a cost somebody wrote down beats the sum", () => {
+  /*
+   * The run sheet worked the counter price out backwards, by taking the
+   * shop's markup off the selling price. Fantasy ice cream was put in at
+   * 1,200 off the counter's own shelf and the sheet went on printing
+   * 1,130, because 1,300 less fifteen per cent is 1,130 and nothing in the
+   * sum had changed. Somebody stands at a till reading one number while it
+   * asks for another.
+   */
+  const lines = [
+    {
+      id: "l1",
+      order_id: "o1",
+      menu_item_id: "ice",
+      qty: 11,
+      unit_price_at_order: 1300,
+      name: "Fantasy Icecream",
+      restaurant: "Sudu Shop",
+      source: "",
+      choices: [] as string[],
+    },
+  ] as never;
+
+  // The sum, which is what it did before: 1,300 less fifteen per cent.
+  const guessed = chargedByRestaurant(lines, [], { "Sudu Shop": 15 });
+  assert.equal(guessed[0].charged, 11 * 1130);
+
+  // The cost somebody typed in, which is what the counter will ask for.
+  const known = chargedByRestaurant(
+    lines,
+    [],
+    { "Sudu Shop": 15 },
+    new Map([["ice", 1200]])
+  );
+  assert.equal(known[0].charged, 11 * 1200);
+
+  // A receipt somebody actually typed beats both: it is the only figure
+  // that is neither a sum nor a note about the world.
+  const counted = chargedByRestaurant(
+    lines,
+    [{ line_key: counterKey(lines[0]), paid: 12_000 }],
+    { "Sudu Shop": 15 },
+    new Map([["ice", 1200]])
+  );
+  assert.equal(counted[0].charged, 12_000);
 });

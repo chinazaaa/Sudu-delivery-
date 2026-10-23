@@ -56,6 +56,12 @@ export type CounterLine = {
    *  The offer to put the menu up has to measure itself against the menu,
    *  or it can never be satisfied. */
   menuPrice: number;
+  /** What the counter actually charges for one, as somebody typed it in
+   *  off a board or a receipt. Zero where nobody has said, and then the
+   *  sheet works it out by taking the shop's markup off the selling price,
+   *  which is arithmetic rather than knowledge. Read live, so correcting a
+   *  cost this afternoon corrects tonight's sheet. */
+  costPrice: number;
 };
 export type CounterGroup = {
   restaurant: string;
@@ -207,8 +213,20 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
    * and the tile above it read 8,400, on one screen.
    */
   const markups = await counterMarkups();
-  const shouldCost = (restaurant: string, line: { qty: number; unitPrice: number }) =>
-    lineCost(line.unitPrice, line.qty, markups[restaurant] ?? DEFAULT_MARKUP);
+  // And a cost somebody actually wrote down beats the sum, here as on the
+  // sheet: the sum is the guess that stands in until there is one, and
+  // the two must agree or the tile and the stop under it print different
+  // money for the same food.
+  const atCounter = await counterCosts(everyLine.map((line) => line.itemId));
+  const shouldCost = (
+    restaurant: string,
+    line: { qty: number; unitPrice: number; itemId: string }
+  ) => {
+    const said = atCounter.get(line.itemId) ?? 0;
+    return said > 0
+      ? said * line.qty
+      : lineCost(line.unitPrice, line.qty, markups[restaurant] ?? DEFAULT_MARKUP);
+  };
 
   const reckoned = counterLines.reduce(
     (total, place) =>
@@ -247,6 +265,10 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
           paid: spentOn.has(line.key) ? (spentOn.get(line.key) as number) : null,
           recovered: gotBack.get(line.key) ?? 0,
           menuPrice: onMenu.get(line.itemId) ?? line.unitPrice,
+          // What the till will ask for, where somebody has written it
+          // down. Zero where nobody has, and then the sheet falls back to
+          // taking the markup off the selling price.
+          costPrice: atCounter.get(line.itemId) ?? 0,
         })),
       })
     ),
@@ -379,6 +401,48 @@ async function menuPrices(ids: string[]): Promise<Map<string, number>> {
 }
 
 /**
+ * What a counter really charges for a thing, where somebody has said.
+ *
+ * The run sheet worked the counter price out backwards, by taking the
+ * shop's markup off the selling price. That was right when the shop had no
+ * idea what a counter asks for, and it is arithmetic rather than
+ * knowledge: a cost typed in from a board or a receipt is the answer, and
+ * the sum is only the guess that stands in until there is one.
+ *
+ * It showed. Fantasy ice cream was put in at 1,200 off the counter's own
+ * shelf and the sheet went on printing 1,130, because 1,300 less fifteen
+ * per cent is 1,130 and nothing in the sum had changed. Somebody stands at
+ * a till reading one number while it asks for another.
+ *
+ * Read live rather than off the order, so correcting a cost this afternoon
+ * corrects tonight's sheet: the order carries what it sold for, which must
+ * never move, and what it costs us is the shop's own note about the world
+ * and moves whenever the world does.
+ */
+export async function counterCosts(ids: string[]): Promise<Map<string, number>> {
+  const wanted = [...new Set(ids.filter(Boolean))];
+  if (wanted.length === 0) return new Map();
+  try {
+    const { data, error } = await db()
+      .from("menu_items")
+      .select("id, price_cost")
+      .in("id", wanted);
+    // Before the column exists there is nothing to read, and every line
+    // falls back to the markup sum, which is how it worked before.
+    if (error) return new Map();
+    const found = new Map<string, number>();
+    for (const row of (data ?? []) as { id: string; price_cost?: number | null }[]) {
+      const cost = Number(row.price_cost ?? 0);
+      // Nought is nobody having said, not a thing that is free.
+      if (cost > 0) found.set(row.id, Math.round(cost));
+    }
+    return found;
+  } catch {
+    return new Map();
+  }
+}
+
+/**
  * Orders collapsed by restaurant into totals. This is what she reads aloud at
  * the counter, so it is one line per distinct item, not one per order.
  */
@@ -411,6 +475,9 @@ export function groupForCounter(
         paid: null,
         itemId: line.menu_item_id,
         recovered: 0,
+        // Filled in from the menu below. Grouping does not read it, so
+        // nought is the honest answer until somebody does.
+        costPrice: 0,
         // Grouping does not read the menu, so the price on the line is the
         // honest answer until somebody fills it in.
         menuPrice: line.unit_price_at_order,
@@ -962,13 +1029,18 @@ export async function overMenu(
   );
   const lines = await linesFor(wanted.map((o) => o.id));
   const batchOfOrder = new Map(wanted.map((o) => [o.id, o.batch_id]));
+  // What these things really cost, where somebody has written it down, so
+  // this agrees with the run's own sheet rather than reckoning the same
+  // food two ways on two screens.
+  const atCounter = await counterCosts(lines.map((line) => line.menu_item_id));
 
   for (const id of reconciledIds) {
     const mine = lines.filter((line) => batchOfOrder.get(line.order_id) === id);
     const real = chargedByRestaurant(
       mine,
       spend.filter((row) => row.batch_id === id),
-      markups
+      markups,
+      atCounter
     ).reduce(
       (total, place) => total + place.charged,
       0
@@ -1017,7 +1089,18 @@ export function chargedByRestaurant(
    * the cost with the markup already on it, so an unreconciled line
    * claimed the shop handed the counter every naira it took.
    */
-  markups: Record<string, number> = {}
+  markups: Record<string, number> = {},
+  /*
+   * What each thing really costs at the counter, by item, where somebody
+   * has written it down off a board or a receipt.
+   *
+   * It beats the markup sum, which is arithmetic rather than knowledge and
+   * only ever the guess that stands in until there is one. Passed in
+   * rather than read here, because this is a pure function the tests turn
+   * over and the costs are one query its callers already have reason to
+   * make. Empty is the markup sum, which is how it worked before.
+   */
+  costs: Map<string, number> = new Map()
 ): CounterCharge[] {
   const spentOn = new Map(spend.map((row) => [row.line_key, Number(row.paid ?? 0)]));
   const gotBack = new Map(spend.map((row) => [row.line_key, Number(row.recovered ?? 0)]));
@@ -1027,16 +1110,25 @@ export function chargedByRestaurant(
     return {
       restaurant: place.restaurant,
       menu: place.expectedFoodTotal,
-      charged: place.lines.reduce(
-        (total, line) =>
+      charged: place.lines.reduce((total, line) => {
+        // A receipt somebody typed is the truth. Then a cost somebody
+        // wrote down off the board. Then the sum, and only then the menu
+        // price, which claims the shop handed the counter every naira it
+        // took.
+        if (spentOn.has(line.key)) {
+          return (
+            total + (spentOn.get(line.key) as number) - (gotBack.get(line.key) ?? 0)
+          );
+        }
+        const said = costs.get(line.itemId) ?? 0;
+        if (said > 0) return total + said * line.qty;
+        return (
           total +
-          (spentOn.has(line.key)
-            ? (spentOn.get(line.key) as number) - (gotBack.get(line.key) ?? 0)
-            : markup === undefined
-              ? line.qty * line.unitPrice
-              : lineCost(line.unitPrice, line.qty, markup)),
-        0
-      ),
+          (markup === undefined
+            ? line.qty * line.unitPrice
+            : lineCost(line.unitPrice, line.qty, markup))
+        );
+      }, 0),
     };
   });
 }
