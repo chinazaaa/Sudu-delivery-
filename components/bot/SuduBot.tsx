@@ -285,6 +285,11 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   /* Whether the reading layer answered at all. Set once, when it says it
      has no key, so the chat stops asking something that will not answer. */
   const readingOff = useRef(false);
+  /* The very first thing somebody types, which is the one the chat invited
+     them to put everything into. Read however short it is: "Naza Queen" is
+     two words and is a name and a block, and the rules can only read it as
+     a search for cake. */
+  const firstSay = useRef(true);
   /*
    * The search already run for this sentence, kept so it is only run once.
    *
@@ -1377,8 +1382,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         list.current.length === 0 &&
         !readingOff.current &&
         splitOrder(said).length < 2 &&
-        said.trim().split(/\s+/).length >= 4
+        (firstSay.current || said.trim().split(/\s+/).length >= 4)
       ) {
+        firstSay.current = false;
         const got = await fetch("/api/bot/understand", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1464,6 +1470,34 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             huntRef.current?.(parts[0], false);
             return;
           }
+          /*
+           * Details and no food, which is most of what the first message
+           * turns out to be.
+           *
+           * "Naza Queen" is a name and a block. Handed to the menu search
+           * it became a hunt for cake, because a menu is all the search
+           * has and so a menu is what it finds. Now the two facts are
+           * kept and the one missing thing is asked for, which is the
+           * conversation anybody would have had.
+           */
+          if (wanted.length === 0 && (mine.name !== "" || mine.hostel !== "" || mine.phone !== "")) {
+            const got: string[] = [];
+            if (mine.name !== "") got.push(`<b>${mine.name}</b>`);
+            if (mine.hostel !== "") got.push(mine.hostel);
+            bot(
+              got.length > 0
+                ? `Got it${got.length > 0 ? `, ${got.join(", ")}` : ""}. What would you like?`
+                : "What would you like?",
+              430
+            );
+            setAsk({
+              of: "text",
+              placeholder: "e.g. 2 chicken pie and a shawarma",
+              onSay: (next) => huntRef.current?.(next),
+            });
+            return;
+          }
+
           if (wanted.length === 1) {
             /* One thing, said in a sentence. Searched for as the thing
                rather than as the sentence, which is the whole difference
@@ -4401,6 +4435,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     list.current = [];
     listing.current = 0;
     noCode.current = false;
+    firstSay.current = true;
     cardAsked.current = false;
     cardMsg.current = "";
     setLines([]);
