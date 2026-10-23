@@ -316,7 +316,10 @@ export default async function ProductsPage({
           {facets.places.length > 4 && (
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-shell to-transparent sm:hidden"
+              /* On every width. The row scrolls on a desk too: this was
+                 hidden from sm up, which is the size the screenshot that
+                 reported the problem was taken at. */
+              className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-shell to-transparent"
             />
           )}
           <div

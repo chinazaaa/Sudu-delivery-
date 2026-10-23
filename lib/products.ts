@@ -273,15 +273,27 @@ export { pctOf };
  * screen is a dead end on the page where somebody is trying to spend
  * money.
  *
- * Names alone, and capped. Scoring a few hundred of them against one typo
- * is instant; fetching the whole shop to do it would not be.
+ * Names alone, and the whole shelf.
+ *
+ * The cap started at six hundred, on the reasoning that scoring a few
+ * hundred strings is instant and fetching everything would not be. The
+ * shop has four thousand names and exactly one of them says Birthday, so
+ * a cap of six hundred was a coin toss on whether the suggestion this was
+ * written for could appear at all. Four thousand short strings is a small
+ * query and scoring them is still instant; the cap is only there so a
+ * shop ten times this size degrades rather than stalls.
  */
-export async function shelfNames(place?: string, cap = 600): Promise<string[]> {
+export async function shelfNames(place?: string, cap = 5000): Promise<string[]> {
   try {
+    /* `active`, not `is_open`. Naming a column the table has not got
+       errors the whole statement, and the catch below turned that into an
+       empty list, so the suggestion silently never appeared and the search
+       behaved exactly as it had before. */
     let ask = db()
       .from("menu_items")
-      .select("name, restaurants!inner(name, is_open)")
+      .select("name, restaurants!inner(name, active)")
       .eq("available", true)
+      .eq("restaurants.active", true)
       .gt("price_food", 0)
       .limit(cap);
 
