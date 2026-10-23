@@ -40,6 +40,7 @@ import { buyingDone } from "../lib/runner";
 import {
   MOST,
   NOTHING_READ,
+  botModel,
   howMany,
   readIntent,
   shopBrief,
@@ -5426,4 +5427,27 @@ test("the shop brief says only what is true tonight", () => {
   });
   assert.match(shut, /Nothing is open/);
   assert.doesNotMatch(shut, /next run is/);
+});
+
+test("the reading model is the small one, and moving up is a setting", () => {
+  // Unset is the ordinary case and must land somewhere sensible rather
+  // than on whatever was most recently fashionable.
+  assert.equal(botModel(undefined), "claude-haiku-5-5");
+  assert.equal(botModel(""), "claude-haiku-5-5");
+  assert.equal(botModel("   "), "claude-haiku-5-5");
+
+  // Short names, because the person typing this into a dashboard at
+  // midnight should not have to remember a version number.
+  assert.equal(botModel("sonnet"), "claude-sonnet-5-5");
+  assert.equal(botModel("Sonnet"), "claude-sonnet-5-5");
+  assert.equal(botModel("opus"), "claude-opus-5-5");
+
+  // A full id passes through, so a model released after this was written
+  // can be used without changing the code.
+  assert.equal(botModel("claude-opus-5-5"), "claude-opus-5-5");
+
+  // Anything else falls back rather than failing: a typo in a dashboard
+  // must not stop the bot reading anything at all.
+  assert.equal(botModel("gpt-4"), "claude-haiku-5-5");
+  assert.equal(botModel("nonsense"), "claude-haiku-5-5");
 });

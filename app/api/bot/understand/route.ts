@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import {
   NOTHING_READ,
   READING_SCHEMA,
+  botModel,
   readIntent,
   shopBrief,
   type ShopNow,
@@ -64,7 +65,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const client = new Anthropic({ apiKey: key, maxRetries: 0, timeout: WAIT_MS });
 
     const response = await client.messages.create({
-      model: "claude-opus-5-5",
+      model: botModel(process.env.BOT_MODEL),
       max_tokens: 2000,
       // Low effort on purpose. This is one short sentence being read by
       // somebody standing in a corridor deciding what to have for dinner,

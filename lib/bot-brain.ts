@@ -218,3 +218,34 @@ export function worthActingOn(reading: Reading): boolean {
     reading.hostel !== ""
   );
 }
+
+/**
+ * Which model reads the sentences.
+ *
+ * Haiku by default, because the job is small and sharply bounded: one
+ * short message, a fixed set of fields, and a schema the API enforces on
+ * the way out. That is the shape of task the smallest model is for, and it
+ * is roughly forty times cheaper than the largest, which on a shop doing a
+ * few runs a week is the difference between pennies a year and pennies a
+ * month.
+ *
+ * Switchable from the environment rather than from the code, because the
+ * honest position is that nobody has watched it read a hundred real
+ * messages yet. If it turns out to fumble Nigerian phrasing, or to miss
+ * that "can I change my order" is a question rather than a dish, moving up
+ * is a setting rather than a deploy.
+ */
+export const BOT_MODELS = {
+  haiku: "claude-haiku-5-5",
+  sonnet: "claude-sonnet-5-5",
+  opus: "claude-opus-5-5",
+} as const;
+
+export function botModel(asked: string | undefined | null): string {
+  const said = String(asked ?? "").trim().toLowerCase();
+  if (said === "") return BOT_MODELS.haiku;
+  // A full model id passes through, so a model released after this was
+  // written can be used without changing it.
+  if (said.startsWith("claude-")) return said;
+  return (BOT_MODELS as Record<string, string>)[said] ?? BOT_MODELS.haiku;
+}
