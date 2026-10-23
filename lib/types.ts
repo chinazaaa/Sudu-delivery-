@@ -153,6 +153,13 @@ export type Batch = {
   driver_cost: number;
   /** Keke, bike, a car for the bags. Not the fuel and not the driver. */
   transport_cost: number;
+  /** What has already been moved onto the card for this run.
+   *
+   *  The money goes across before the car leaves, once everybody has
+   *  ordered. An order that lands after that is not a second transfer of
+   *  the whole thing, it is a balance, and working the balance out by hand
+   *  at nine at night is how somebody arrives at a till short. */
+  card_sent?: number;
   other_cost: number;
   cost_note: string;
   /** When the books were closed on it. Null while there is still work. */

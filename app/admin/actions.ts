@@ -6152,3 +6152,35 @@ export async function stopOrderingAs(form: FormData): Promise<void> {
   await signOutCustomer();
   redirect(phone === "" ? "/admin/customers" : `/admin/customers/${phone}`);
 }
+
+/**
+ * What has been moved onto the card for this run.
+ *
+ * The money goes across before the car leaves, once everybody has ordered.
+ * An order that lands after that is not a second transfer of the whole
+ * thing, it is a balance, and working the balance out by hand at nine at
+ * night is how somebody arrives at a till short.
+ *
+ * A figure rather than a tick, because the run keeps growing: what was the
+ * whole of it at six is a part of it at seven, and a tick cannot say which.
+ */
+export async function setCardSent(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const id = String(form.get("batch_id"));
+  // The button says the whole figure and wins over the box, which is what
+  // was in it before the button was pressed.
+  const whole = form.get("card_sent_all");
+  const said = Math.round(
+    Number((whole !== null ? whole : form.get("card_sent")) ?? 0)
+  );
+  const sent = Number.isFinite(said) && said > 0 ? said : 0;
+
+  // Naming a column the database has not been given yet fails the whole
+  // update, so a shop that has not run the migration simply carries on
+  // without this and works it out by hand as it always did.
+  await db().from("batches").update({ card_sent: sent }).eq("id", id);
+
+  revalidatePath(`/admin/batch/${id}`);
+  revalidatePath("/admin", "layout");
+}

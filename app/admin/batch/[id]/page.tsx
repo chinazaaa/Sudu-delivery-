@@ -73,6 +73,7 @@ import {
   setBagDelivered,
   setBatchStatus,
   setFlashFee,
+  setCardSent,
   setRunCosts,
   updateRun,
   deleteRun,
@@ -401,6 +402,16 @@ export default async function BatchPage({
   // has got to.
   const allCounters = counter.reduce((total, group) => total + costAt(group), 0);
   const toCard = putOnCard({ counters: allCounters, fare: fare.amount });
+  /*
+   * And what is still to go across.
+   *
+   * The transfer happens before the car leaves, once everybody has
+   * ordered. An order that lands after that is not the whole thing again,
+   * it is a balance, and the balance is the number somebody actually needs
+   * at nine at night.
+   */
+  const sentToCard = Number((batch as { card_sent?: number }).card_sent ?? 0);
+  const leftToSend = Math.max(0, toCard - sentToCard);
 
   // Which counter is being read. One counter at a time is the phone's shape,
   // and the counter is in the address so the sheet for one stop can be sent
@@ -825,21 +836,84 @@ export default async function BatchPage({
       {batch.stage !== "handed_out" && allCounters > 0 && (
         <section className="card mb-4 space-y-2">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <h2 className="section-title">Put on the card</h2>
-            <span className="font-display text-[34px] font-black leading-none">
-              {naira(toCard)}
+            <h2 className="section-title">
+              {sentToCard === 0
+                ? "Put on the card"
+                : leftToSend > 0
+                  ? "Send the balance"
+                  : "On the card"}
+            </h2>
+            <span
+              className={`font-display text-[34px] font-black leading-none ${
+                sentToCard > 0 && leftToSend === 0 ? "text-mint" : ""
+              }`}
+            >
+              {naira(sentToCard === 0 ? toCard : leftToSend)}
             </span>
           </div>
           <p className="text-sm text-muted">
             {naira(allCounters)} for the counters
             {fare.amount > 0 ? ` and ${naira(fare.amount)} for the trip` : ""}
-            {whereTo.length > 0 ? ` to ${whereTo.join(" and ")}` : ""}.{" "}
+            {whereTo.length > 0 ? ` to ${whereTo.join(" and ")}` : ""}
+            {sentToCard > 0 ? `, ${naira(toCard)} in all` : ""}.{" "}
+            {sentToCard > 0 && (
+              <>
+                {naira(sentToCard)} sent already
+                {leftToSend === 0 ? ", which covers it" : ""}.{" "}
+              </>
+            )}
             {summary.gross > 0 && (
               <>
                 {naira(Math.max(0, summary.gross - toCard))} stays in the account.
               </>
             )}
           </p>
+
+          {/*
+            Writing down what went across.
+            
+            One figure rather than a tick, because the run keeps growing:
+            what was the whole of it at six is a part of it at seven, and a
+            tick cannot say which. The button fills the box with whatever
+            is outstanding right now, because that is the figure in nine
+            transfers out of ten, and the box is there for the tenth.
+          */}
+          <form
+            action={setCardSent}
+            className="flex flex-wrap items-center gap-2 border-t border-black/5 pt-2"
+          >
+            <input type="hidden" name="batch_id" value={batch.id} />
+            <label className="text-xs font-semibold text-muted" htmlFor="card_sent">
+              Sent so far
+            </label>
+            <span className="text-muted">₦</span>
+            <input
+              id="card_sent"
+              name="card_sent"
+              inputMode="numeric"
+              defaultValue={sentToCard || ""}
+              placeholder="0"
+              className="field field-admin w-32 py-1.5 text-sm"
+            />
+            <ActionButton className="btn-admin shrink-0" done="Saved ✓">
+              Save
+            </ActionButton>
+            {leftToSend > 0 && (
+              <ActionButton
+                /* Its own name, not the box's. Two fields called the same
+                   thing in one form and the form reads the first, so the
+                   button would have quietly saved whatever was typed. */
+                name="card_sent_all"
+                value={String(toCard)}
+                className="btn-quiet shrink-0 px-3 py-1.5 text-sm"
+                done="Saved ✓"
+              >
+                {sentToCard === 0
+                  ? `I have sent ${naira(toCard)}`
+                  : `Sent the ${naira(leftToSend)} balance`}
+              </ActionButton>
+            )}
+          </form>
           {/* Said as a guess when it is one. A figure somebody can see is
               wrong beats a blank on the screen where the money is decided,
               and a guess printed as a fact is worse than either. */}
