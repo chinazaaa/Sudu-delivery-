@@ -360,6 +360,34 @@ export default function Home({
                     </span>
                   </Link>
                 </li>
+
+                {/*
+                  Beside All the food, because it is the same question.
+                  
+                  The grid answers "where from" fifteen times and then
+                  stops, and somebody who wants a thing no counter on it
+                  sells has nowhere to go but away. The shop buys things
+                  nobody stocks every week; the only reason it is not more
+                  is that the offer lives on a page nobody passes.
+                */}
+                <li>
+                  <Link
+                    href="/custom-order"
+                    className="flex h-full items-center justify-between gap-3 rounded-xl border-2 border-dashed border-ink bg-paper p-5 text-ink transition active:translate-x-0.5 active:translate-y-0.5"
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-display text-[28px] font-extrabold uppercase leading-none">
+                        Something else
+                      </span>
+                      <span className="mt-1 block text-[13px] font-semibold text-muted">
+                        Not on here? We go and buy it.
+                      </span>
+                    </span>
+                    <span aria-hidden className="shrink-0 font-bold">
+                      →
+                    </span>
+                  </Link>
+                </li>
               </ul>
             </section>
           )}

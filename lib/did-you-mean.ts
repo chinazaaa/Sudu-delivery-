@@ -19,8 +19,13 @@ import { alike, words } from "./bot-match";
  */
 
 /** Below this two words are not the same word badly typed, they are two
- *  different words, and offering one for the other is noise. */
-export const CLOSE_ENOUGH = 0.55;
+ *  different words, and offering one for the other is noise.
+ *
+ *  Raised from 0.55, which let "curta" through as "Curl": five letters
+ *  sharing two bigrams scores 0.57, and on a long name there is always
+ *  some word that scores that against something. A suggestion has to be
+ *  the word they were typing, not the nearest thing in the shop. */
+export const CLOSE_ENOUGH = 0.7;
 
 export function didYouMean(
   said: string,

@@ -285,23 +285,30 @@ export { pctOf };
  */
 export async function shelfNames(place?: string, cap = 5000): Promise<string[]> {
   try {
-    /* `active`, not `is_open`. Naming a column the table has not got
-       errors the whole statement, and the catch below turned that into an
-       empty list, so the suggestion silently never appeared and the search
-       behaved exactly as it had before. */
-    let ask = db()
+    /*
+     * The same shelves the page can actually show.
+     *
+     * This asked the whole database and the page asks foodPlaces, so it
+     * offered somebody searching "curta" an ECO Professional Styling Gel
+     * from the skincare shelf: a real product, on a shelf this page does
+     * not carry, so tapping it searched for its exact name and found
+     * nothing. A suggestion that leads nowhere is worse than none, and it
+     * taught somebody the search was broken when it was working.
+     */
+    const places = await foodPlaces();
+    const wanted = place && place.trim() !== ""
+      ? places.filter((one) => one.id === place.trim())
+      : places;
+    if (wanted.length === 0) return [];
+
+    const { data, error } = await db()
       .from("menu_items")
-      .select("name, restaurants!inner(name, active)")
+      .select("name")
+      .in("restaurant_id", wanted.map((one) => one.id))
       .eq("available", true)
-      .eq("restaurants.active", true)
       .gt("price_food", 0)
       .limit(cap);
 
-    if (place && place.trim() !== "") {
-      ask = ask.eq("restaurants.name", place.trim());
-    }
-
-    const { data, error } = await ask;
     if (error) return [];
     return ((data ?? []) as { name?: string }[])
       .map((one) => String(one.name ?? "").trim())

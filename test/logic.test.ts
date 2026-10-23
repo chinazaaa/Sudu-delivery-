@@ -5584,3 +5584,20 @@ test("a near miss on the search is offered rather than left as nothing", () => {
     "Chicken Pie",
   ]);
 });
+
+test("a suggestion is the word they typed, not the nearest thing in the shop", () => {
+  // The real failure: "curta" offered an ECO Professional Styling Gel
+  // Curl & Wave, because five letters sharing two bigrams with "Curl"
+  // scored 0.57 and the floor was 0.55. On a long enough name there is
+  // always some word that scores that against something.
+  const shelf = [
+    "ECO Professional Styling Gel Curl & Wave 236ml",
+    "Chicken Pie",
+    "Birthday Cake Remix",
+  ];
+  assert.deepEqual(didYouMean("curta", shelf), []);
+
+  // And the ones that are genuinely a typo still come through.
+  assert.deepEqual(didYouMean("birthdat", shelf, 1), ["Birthday Cake Remix"]);
+  assert.deepEqual(didYouMean("chiken", shelf, 1), ["Chicken Pie"]);
+});

@@ -180,7 +180,7 @@ export default function ProductSearch({
           aria-live="polite"
           className="pointer-events-none absolute -bottom-6 left-1 text-[13px] font-semibold text-muted"
         >
-          Searching\u2026
+          Searching…
         </span>
       )}
       <span
