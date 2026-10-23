@@ -4481,7 +4481,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
      * questions, the same answers, in the order a person expects them.
      */
     const askFood = () => {
-      bot("What are you after?", 430);
+      bot("How can I help you today?", 430);
       setAsk({
         of: "text",
         placeholder: "e.g. 2 chicken pie and a shawarma",
@@ -4593,9 +4593,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
      * then, at the till, where every shop asks for it and where somebody
      * has already decided they want the food.
      */
+    /* Open rather than narrow, because not everybody who opens this is
+       buying: some are asking what time the run is, or whether the shop
+       has something. "What are you after" is a question only an order
+       answers, and the ones with a question then have to work out that
+       they are allowed to ask it. */
     bot(
-      "What are you after? You can say it all at once if you like, " +
-        "food, your name, your number and your block.",
+      "How can I help you today? If it is an order you can say the whole " +
+        "thing at once: the food, your name, your number and your block.",
       450
     );
     setAsk({
