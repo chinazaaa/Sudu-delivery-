@@ -33,7 +33,7 @@ export default function PrintAsk({
   label: string;
   chips: string[];
   preset: string;
-  attach?: { label: string; accept: string; hint: string };
+  attach?: { label: string; accept?: string; hint: string };
   /** This page's own address, so a quote links back to the exact item. */
   here: string;
 }) {

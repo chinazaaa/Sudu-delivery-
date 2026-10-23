@@ -64,7 +64,7 @@ export type PlaceOrderInput = {
   /** Which front door this came through: the website, the app, or the
    *  chat. Left out by anything older, which reads as unknown rather than
    *  as a guess. */
-  source?: "app" | "web" | "bot";
+  source?: "app" | "web" | "bot" | "desk";
   /** Somebody abroad is paying by card, in their money. Left out for the
    *  naira that nearly every order is paid in. */
   payCurrency?: "GBP" | "USD";
@@ -1107,7 +1107,7 @@ async function placeSingleOrder(args: {
   bands: Band[];
   customerNote: string;
   /** Which front door it came through. */
-  source?: "app" | "web" | "bot";
+  source?: "app" | "web" | "bot" | "desk";
   /** The channel that brought them. A place, never a person. */
   cameFrom?: string;
   /** The money a card link will be made out in. */
@@ -1451,7 +1451,7 @@ async function insertOrder(args: {
   payment_method: "transfer" | "card";
   customer_note: string;
   /** Which front door it came through. */
-  source?: "app" | "web" | "bot";
+  source?: "app" | "web" | "bot" | "desk";
   /** The channel that brought them. A place, never a person. */
   cameFrom?: string;
   /** The money a card link will be made out in. */

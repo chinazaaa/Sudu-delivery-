@@ -314,6 +314,15 @@ export default async function OrdersPage({
                 ? `Today's orders, and anything still owed. Nothing is running today; the next run is ${closesWhen}.`
                 : "Today's orders, and anything still owed from a run that has gone."
           }
+          actions={
+            /* For the orders that never touch the site. Somebody says what
+               they want on WhatsApp and this is where it gets typed in,
+               rather than opening the shop in another tab and ordering as
+               them, which needs their PIN. */
+            <Link href="/admin/orders/new" className="btn-admin">
+              Take an order
+            </Link>
+          }
         />
         {cuts}
 

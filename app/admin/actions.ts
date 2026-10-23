@@ -6110,3 +6110,87 @@ export async function noteSorted(form: FormData): Promise<void> {
 
   revalidatePath("/admin", "layout");
 }
+
+/**
+ * An order somebody placed on WhatsApp, typed in by the shop.
+ *
+ * Everything under here is the ordinary machinery: the same pricing, the
+ * same ladder, the same fee, the same PIN rules, the same chasing. Nothing
+ * about an order being keyed in makes it a different kind of order, and a
+ * second way of making one would be a second set of bugs.
+ *
+ * What it does not do is pretend. The door says a person took it rather
+ * than the website, because the door counts are there to say how well each
+ * way of ordering is working, and this one is somebody at a keyboard.
+ */
+export async function deskOrder(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const back = (said: string, phone: string) =>
+    redirect(
+      `/admin/orders/new?phone=${encodeURIComponent(phone)}&said=${encodeURIComponent(said)}`
+    );
+
+  const phone = normalisePhone(String(form.get("phone") ?? "")) ?? "";
+  if (phone === "") back("Find them by their number first.", "");
+
+  const name = String(form.get("name") ?? "").trim();
+  if (name.length < 2) back("Their name, so the bag has something on it.", phone);
+
+  const hostel = String(form.get("hostel") ?? "").trim();
+  if (hostel === "") back("Which block is it going to?", phone);
+
+  let picked: { id: string; qty: number }[] = [];
+  try {
+    picked = JSON.parse(String(form.get("lines") ?? "[]")) as typeof picked;
+  } catch {
+    picked = [];
+  }
+  const lines = picked
+    .map((one) => ({
+      menu_item_id: String(one?.id ?? ""),
+      qty: Math.max(1, Math.round(Number(one?.qty) || 0)),
+      option_ids: [] as string[],
+      for_name: null,
+    }))
+    .filter((one) => one.menu_item_id !== "");
+  if (lines.length === 0) back("Nothing is in it yet.", phone);
+
+  // Where it goes: a run still taking orders, or a car of its own, which is
+  // made here the way the carts page makes one.
+  const going = String(form.get("going") ?? "");
+  if (going === "") back("Pick a run, or a car of its own.", phone);
+
+  let batchId = going.startsWith("run:") ? going.slice(4) : "";
+  if (batchId === "") {
+    const car = await createSameDayBatch({
+      deliverAt: going,
+      label: windowPhrase(going).replace(/^./, (one) => one.toUpperCase()),
+    });
+    if (!car) back("Could not make that car.", phone);
+    batchId = car!.id;
+  }
+
+  const made = await placeOrder({
+    batchId,
+    name,
+    phone,
+    hostel,
+    // Not "web". The door counts say how each way of ordering is working,
+    // and an order a person typed in says nothing about any of them.
+    source: "desk",
+    paymentMethod: "transfer",
+    customerNote: String(form.get("note") ?? "").trim(),
+    lines,
+  });
+
+  if (!made.ok) {
+    back(made.error, phone);
+    return;
+  }
+
+  revalidatePath("/admin", "layout");
+  // Straight to the order, which is where the sizes and the flavours get
+  // added and where the payment message is sent from.
+  redirect(`/admin/orders/${made.orderId}`);
+}

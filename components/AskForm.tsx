@@ -28,7 +28,16 @@ export default function AskForm({
   send = "Ask Sudu to get it",
   fileLabel = "A picture, if you have one",
   fileAccept = "image/*",
-  fileHint = "Optional, and often quicker than describing it. A photo of the thing, the damage, or the style you want.",
+  /*
+   * What a picture is for here.
+   *
+   * This said "the thing, the damage, or the style you want", which was
+   * one sentence trying to cover printing, tailoring, hair and repair at
+   * once. On the custom order page, where somebody is asking us to go and
+   * buy something, it offered to look at damage nobody had mentioned. Each
+   * errand says what its own picture is for; this is the shopping one.
+   */
+  fileHint = "Optional, and often quicker than describing it. A photo of the thing, a screenshot, or the label off the pack you want.",
 }: {
   hostels: string[];
   whatsapp: string | null;
@@ -161,11 +170,14 @@ export default function AskForm({
           </div>
         </div>
 
-        {/* Half of what people want is easier shown than said: a cracked
-            screen, a hairstyle, the damage in a garment, the model sticker
+        {/* Half of what people want is easier shown than said: the pack
+            off a shelf, a cracked screen, a hairstyle, the model sticker
             under a laptop. WhatsApp has always carried pictures and the
             form has not, which made the form the poorer of the two ways to
-            ask for exactly the things people most want to show. */}
+            ask for exactly the things people most want to show. What the
+            picture is for changes with the page, so each errand says it in
+            its own words rather than one sentence trying to cover all of
+            them. */}
         <div>
           <label className="label" htmlFor="photo">
             {fileLabel}

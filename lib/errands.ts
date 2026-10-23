@@ -45,7 +45,12 @@ export type Errand = {
   priceList?: boolean;
   /** What the attachment on this page is for. A printing page wants the
    *  document; most of the others want a photograph. */
-  attach?: { label: string; accept: string; hint: string };
+  /** What a picture is for on this page, in its own words. The printing
+   *  page wants the document itself; a repair page wants the cracked
+   *  screen. Left out, the form says what a shopping picture is for, which
+   *  is what the custom order page is. `accept` only where it is not an
+   *  ordinary photograph. */
+  attach?: { label: string; accept?: string; hint: string };
   /** Whether the page carries the printing catalogue: two hundred things
    *  that can be made, every one of them quoted rather than priced. */
   catalogue?: boolean;
@@ -162,6 +167,10 @@ export const ERRANDS: Errand[] = [
   },
   {
     slug: "pau-tailoring",
+    attach: {
+      label: "A picture, if you have one",
+      hint: "Optional. A style you want copied, or the garment that needs altering with the bit that is wrong in shot.",
+    },
     title: "Tailoring: made to measure, and altered",
     ticket: "Hostel · Pan-Atlantic University",
     lead: "Something made for you from scratch, or something you own made to fit. We find the tailor, agree the price, and handle the back and forth.",
@@ -272,6 +281,10 @@ export const ERRANDS: Errand[] = [
   },
   {
     slug: "pau-hair-and-barbing",
+    attach: {
+      label: "A picture, if you have one",
+      hint: "Optional, and much quicker than describing it. The style you want, from any angle.",
+    },
     title: "Hair, braids and barbing",
     ticket: "Hostel · Pan-Atlantic University",
     lead: "Tell us what you want done and when. We find somebody good and arrange it.",
@@ -336,6 +349,10 @@ export const ERRANDS: Errand[] = [
   },
   {
     slug: "pau-phone-and-laptop-repair",
+    attach: {
+      label: "A picture, if you have one",
+      hint: "Optional. The screen, the port, or the sticker underneath with the model on it. It is how they quote before they open anything.",
+    },
     title: "Phone and laptop repair",
     ticket: "Hostel · Pan-Atlantic University",
     lead: "A cracked screen, a port that will not charge, a battery that lasts an hour. We take it, they fix it, we bring it back.",
@@ -400,6 +417,10 @@ export const ERRANDS: Errand[] = [
   },
   {
     slug: "pau-buy-a-laptop",
+    attach: {
+      label: "A picture, if you have one",
+      hint: "Optional. A listing you have seen, or the model you have in mind.",
+    },
     title: "Buying a laptop or a phone",
     ticket: "Hostel · Pan-Atlantic University",
     lead: "Tell us what you need it for and what you can spend. We find it, check it, and bring it to your block.",
@@ -481,6 +502,10 @@ export const ERRANDS: Errand[] = [
   },
   {
     slug: "pau-laundry",
+    attach: {
+      label: "A picture, if you have one",
+      hint: "Optional. The load, or a stain that needs saying something about before it is washed.",
+    },
     priceList: true,
     title: "Laundry, collected from your block",
     ticket: "Hostel · Pan-Atlantic University",

@@ -96,7 +96,11 @@ export default function ActionButton({
     <button
       type="submit"
       value={value}
-      disabled={status.pending}
+      /* Both reasons, not whichever came last in the spread. A caller that
+         passes its own disabled used to switch the pending one off with
+         it, which left a form submittable twice while the server was
+         still answering the first press. */
+      disabled={status.pending || rest.disabled === true}
       className={`${className} ${
         keepLabel ? (pending ? "opacity-50" : "") : finished ? doneClassName : ""
       }`}
