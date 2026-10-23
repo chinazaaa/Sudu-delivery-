@@ -616,6 +616,11 @@ export type SignedInNow = {
    *  again. Checked against the live promoters where it is used, so one who
    *  has stopped is never put in front of anybody. */
   heardFrom: string;
+  /** The channel they came through, as the shop files it: "chatgpt",
+   *  "instagram". A channel is not a person and pays nobody, but it is
+   *  still the answer to where they heard about us, and asking somebody it
+   *  was already written down for is asking them to remember it. */
+  cameFrom: string;
 };
 
 export async function whoIsSignedIn(): Promise<SignedInNow | null> {
@@ -629,14 +634,18 @@ export async function whoIsSignedIn(): Promise<SignedInNow | null> {
         try {
           const { data } = await db()
             .from("customers")
-            .select("promoter_code")
+            .select("promoter_code, came_from")
             .eq("phone", phone)
             .maybeSingle();
-          return String(
-            (data as { promoter_code?: string } | null)?.promoter_code ?? ""
-          );
+          const row = data as
+            | { promoter_code?: string; came_from?: string }
+            | null;
+          return {
+            code: String(row?.promoter_code ?? ""),
+            channel: String(row?.came_from ?? "").trim().toLowerCase(),
+          };
         } catch {
-          return "";
+          return { code: "", channel: "" };
         }
       })(),
     ]);
@@ -646,7 +655,8 @@ export async function whoIsSignedIn(): Promise<SignedInNow | null> {
       phone,
       hostel: me?.hostel ?? "",
       paymentMethod: me?.paymentMethod ?? "transfer",
-      heardFrom: brought,
+      heardFrom: brought.code,
+      cameFrom: brought.channel,
     };
   } catch {
     return null;

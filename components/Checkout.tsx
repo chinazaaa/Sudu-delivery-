@@ -101,6 +101,10 @@ export type SignedIn = {
    *  the live promoters where it is used, so one who has stopped is never
    *  put in front of anybody. */
   heardFrom: string;
+  /** The channel they came through, as the shop files it: "chatgpt". A
+   *  channel is not a person and pays nobody, but it is still the answer
+   *  to where they heard about us. */
+  cameFrom: string;
 };
 
 export default function Checkout({
@@ -469,7 +473,25 @@ export default function Checkout({
    * from a person they had just said did not send them. The offer belongs
    * to coming in through somebody, so it follows the answer.
    */
-  const [heardFrom, setHeardFrom] = useState(sentBy);
+  /*
+   * Where they heard about us, already answered where the shop knows.
+   *
+   * The link first, then whoever brought them, then the channel they came
+   * through. All three were written down on their first order and never
+   * touched again, and the box still opened on "Somewhere else": the shop
+   * asking a regular to remember something it had written down for her,
+   * and taking the one answer that was never true.
+   *
+   * A channel carries a prefix no promoter's code can have, because it
+   * credits nobody. Only the ones the list actually offers: a channel the
+   * select has no option for cannot be shown as picked, and "Somewhere
+   * else" is the honest answer then.
+   */
+  const [heardFrom, setHeardFrom] = useState(() => {
+    if (sentBy !== "") return sentBy;
+    const channel = (you?.cameFrom ?? "").trim().toLowerCase();
+    return channel === "chatgpt" ? "c:chatgpt" : "";
+  });
 
   // Whose name goes on the line. The link's, until they name somebody else.
   const creditName =
