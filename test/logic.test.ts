@@ -37,6 +37,7 @@ import {
   soldOutSaid,
 } from "../lib/refunds";
 import { buyingDone } from "../lib/runner";
+import { looksLikeAGift } from "../lib/occasions";
 import {
   MOST,
   NOTHING_READ,
@@ -5450,4 +5451,24 @@ test("the reading model is the small one, and moving up is a setting", () => {
   // must not stop the bot reading anything at all.
   assert.equal(botModel("gpt-4"), "claude-haiku-5-5");
   assert.equal(botModel("nonsense"), "claude-haiku-5-5");
+});
+
+test("a gift is noticed rather than asked about", () => {
+  // The orders the opening question existed to catch.
+  assert.equal(looksLikeAGift("it's my friend's birthday"), true);
+  assert.equal(looksLikeAGift("a gift for someone"), true);
+  assert.equal(looksLikeAGift("send it to Ada in Emerald"), true);
+  assert.equal(looksLikeAGift("for my sister"), true);
+  assert.equal(looksLikeAGift("surprise for my roommate"), true);
+
+  // Nine orders in ten, which must not be asked two extra questions.
+  assert.equal(looksLikeAGift("2 chicken pie and a shawarma"), false);
+  assert.equal(looksLikeAGift("what time is the run"), false);
+  assert.equal(looksLikeAGift(""), false);
+
+  // Said plainly, "for me" outranks a word that merely looks gifty: a
+  // false gift costs two questions nobody wanted and asks a hungry
+  // student whose birthday it is.
+  assert.equal(looksLikeAGift("just for me, it's my birthday"), false);
+  assert.equal(looksLikeAGift("for myself"), false);
 });

@@ -24,7 +24,7 @@ import {
 import { Asking, Rail, Said, Typing, useSaying, type Ask, type Line } from "./Chat";
 import Rider from "./Rider";
 import {
-  OCCASIONS,
+  looksLikeAGift,
   occasionBy,
   isGift,
   cardCalled,
@@ -1304,6 +1304,45 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
        * it was agreed somewhere else first. Taken one at a time, because
        * each thing on it may have a question of its own.
        */
+      /*
+       * A gift, noticed rather than asked about.
+       *
+       * The opening question that used to buy this fact is gone, because
+       * everybody paid a message for it and nine in ten answered the same
+       * way. So every typed sentence is checked instead, and only the
+       * ones that sound like a gift cost anybody a question.
+       *
+       * A plain rule, not the reading layer, because this one is not
+       * allowed to be absent: a birthday surprise sent to the buyer's own
+       * block is not a thing to get wrong on the evening somebody forgot
+       * to top up an API key.
+       *
+       * Asked once. Having answered who it is for, the order carries it,
+       * and the sentence goes on to be searched exactly as it would have
+       * been.
+       */
+      if (
+        echo &&
+        held.current.occasion === "me" &&
+        held.current.forName === "" &&
+        looksLikeAGift(said)
+      ) {
+        held.current.occasion = "gift";
+        bot("That sounds like it is for somebody else. Who is it going to?", 440);
+        setAsk({
+          of: "text",
+          placeholder: "Their first name",
+          onSay: (who) => {
+            me(who);
+            held.current.forName = (nameIn(who) || who).split(" ")[0];
+            /* Back to what they actually said, now that the order knows
+               there are two people in it. */
+            huntRef.current?.(said, false);
+          },
+        });
+        return;
+      }
+
       /*
        * The sentence read rather than pattern matched.
        *
@@ -4194,52 +4233,26 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     bot("Hey, I’m <b>Sudu Bot</b>. I can take your order right here, no app needed.", 450);
 
     /*
-     * One tap that changes everything after it.
+     * Straight to it.
      *
-     * The chat had no way to hear "this is not for me", so it asked a
-     * gift-buyer which block *they* were in, and would have sent a rider
-     * to ring the person being surprised. Four chips settle it before
-     * anything else is asked, and somebody ordering their own lunch taps
-     * the first one and notices nothing else has changed.
+     * This used to open by asking what the order was for: four chips, one
+     * tap, and it bought the one fact everything afterwards depends on,
+     * which is whether there is a second person in it. A gift goes to the
+     * block where the person receiving it sleeps, and the buyer has no
+     * reason to be there at all.
+     *
+     * It also cost a message at the top of every single conversation,
+     * including the nine in ten that are somebody buying their own
+     * dinner, and the whole point of this chat is that it is quicker than
+     * WhatsApp. A question everybody answers the same way is not a
+     * question, it is a toll.
+     *
+     * So it is noticed instead. Every sentence from here is checked for
+     * sounding like a gift, by a plain rule that needs no key, and only
+     * those orders are asked who they are going to. Ordinary orders are
+     * never asked at all.
      */
-    bot("What is this one for?");
-    setAsk({
-      of: "chips",
-      chips: OCCASIONS.map((one, which) => ({
-        said: one.said,
-        hot: which === 0,
-        go: () => {
-          me(one.said);
-          held.current.occasion = one.key;
-          bot(one.greet, 450);
-          /*
-           * Somebody the shop already knows is not asked who they are.
-           *
-           * The chat used to ask everybody their name, including the
-           * person who ordered last Tuesday and is signed in on the very
-           * phone she ordered from. Asking what to call somebody you
-           * already call that is the shop admitting it was not paying
-           * attention, and it costs a message at the moment somebody is
-           * hungry and deciding whether this beats WhatsApp.
-           *
-           * It is said rather than done silently, because a chat that
-           * knows your name and your block without mentioning it is
-           * unsettling, and because it has to be wrong out loud: Not me
-           * is the way back for a shared phone or a borrowed laptop.
-           */
-          const known = startRef.current?.you ?? null;
-          if (known && known.name !== "" && !one.gift) {
-            held.current.name = known.name.split(" ")[0];
-            held.current.phone = known.phone;
-            held.current.hostel = known.hostel;
-            greetKnown(known);
-            return;
-          }
-          askTheName();
-        },
-      })),
-      hint: "Pick the closest one. It only changes what I ask next.",
-    });
+    held.current.occasion = "me";
 
     let tries = 0;
 
@@ -4410,9 +4423,19 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
      * later: "What is this one for?" with nowhere to answer it but a text
      * field, which somebody then answered with their name.
      *
-     * Whichever chip is tapped asks for the name itself, because the chip
-     * decides how that question is worded.
+     * The chips are gone now, so the first question is the name, and it
+     * is asked here, after the things that answer it have been defined.
      */
+    const you = startRef.current?.you ?? null;
+    if (you && you.name !== "") {
+      held.current.name = you.name.split(" ")[0];
+      held.current.phone = you.phone;
+      held.current.hostel = you.hostel;
+      greetKnown(you);
+      return;
+    }
+    bot("What should I call you?", 450);
+    askTheName();
   }, [askPhone, bot, me, sayFaq, stopWatching]);
 
   /*
