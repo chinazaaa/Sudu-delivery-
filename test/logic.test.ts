@@ -86,9 +86,11 @@ import {
   bandFor,
   evenShare,
   feeFor,
+  isCar,
   isUrgent,
   nextBand,
   sameDayFee,
+  tripFee,
   parseBands,
   splitFee,
   HEADLINE_FEE,
@@ -5517,4 +5519,40 @@ test("a car of its own keeps its own ladder when an order is moved", () => {
   // itself, not the customer asking for anything.
   assert.equal(sameDayFee(2, true, carBands, 4000), 10000);
   assert.equal(sameDayFee(2, false, carBands, 4000), 6000);
+});
+
+test("one question answers what a trip costs, whichever trip it is", () => {
+  const run = [
+    { maxItems: 3, fee: 4000 },
+    { maxItems: 99, fee: 6000 },
+  ];
+  const car = [
+    { maxItems: 3, fee: 6000 },
+    { maxItems: 99, fee: 8000 },
+  ];
+  const ladders = { run, car, urgentExtra: 4000 };
+
+  // A run uses the run's ladder.
+  assert.equal(tripFee({ kind: "food" }, 2, ladders), 4000);
+  assert.equal(tripFee({ kind: "food" }, 10, ladders), 6000);
+  assert.equal(tripFee(null, 2, ladders), 4000);
+
+  // A car uses the car's, which is the whole bug: asked the old way this
+  // returned 4,000 for a trip that costs 6,000.
+  assert.equal(tripFee({ kind: "same_day" }, 2, ladders), 6000);
+  assert.equal(tripFee({ kind: "same_day" }, 10, ladders), 8000);
+
+  // The urgent extra only where somebody asked for an urgent slot.
+  assert.equal(tripFee({ kind: "same_day" }, 2, { ...ladders, urgent: true }), 10000);
+  assert.equal(tripFee({ kind: "food" }, 2, { ...ladders, urgent: true }), 4000);
+
+  // A run's flash price still beats its ladder, and a car has no flash.
+  // A flash price moves the whole ladder down rather than replacing it,
+  // so ten items on a 2,500 flash is 2,500 plus the gap to its band.
+  assert.equal(tripFee({ kind: "food", flash_fee: 2500 }, 10, ladders), 4500);
+  assert.equal(tripFee({ kind: "same_day", flash_fee: 2500 }, 10, ladders), 8000);
+
+  assert.equal(isCar({ kind: "same_day" }), true);
+  assert.equal(isCar({ kind: "food" }), false);
+  assert.equal(isCar(null), false);
 });

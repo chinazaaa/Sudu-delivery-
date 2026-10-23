@@ -299,3 +299,52 @@ export function sameDayFee(
 ): number {
   return bandFor(itemCount, bands).fee + (urgent ? urgentExtra : 0);
 }
+
+/**
+ * What one trip's delivery costs, whichever kind of trip it is.
+ *
+ * The shop runs two sorts and they are priced differently on purpose: a
+ * run goes out on a timetable with everybody's food in one boot, and a car
+ * of its own goes when somebody asks, with an extra on top for asking at
+ * an hour's notice. Different trips, different ladders.
+ *
+ * Every place that needed a fee used to pick a ladder for itself, and the
+ * places that forgot to ask which trip it was simply used the run's. That
+ * is how moving an order onto a car turned a ten thousand naira delivery
+ * into six, and how a free-delivery code on a car took off the wrong
+ * amount. Nothing announced either: a fee that is too low looks exactly
+ * like a fee.
+ *
+ * So there is one question and one answer. Callers say what the trip is
+ * and how much is going on it; this says what it costs. The two ladders
+ * stay where they are and keep their own rules; what goes is the chance
+ * to consult the wrong one.
+ */
+export type Trip = {
+  /** "same_day" is a car of its own. Anything else rides a run. */
+  kind?: string | null;
+  /** A run's one-off flash price, where it has one. */
+  flash_fee?: number | null;
+};
+
+export const isCar = (trip: Trip | null | undefined): boolean =>
+  String(trip?.kind ?? "") === "same_day";
+
+export function tripFee(
+  trip: Trip | null | undefined,
+  items: number,
+  ladders: {
+    run: Band[];
+    car: Band[];
+    urgentExtra: number;
+    /** Only ever true where the customer chose an urgent slot. Never on a
+     *  move: that is the shop rearranging itself, and billing somebody for
+     *  that is billing them for your convenience. */
+    urgent?: boolean;
+  }
+): number {
+  if (isCar(trip)) {
+    return sameDayFee(items, ladders.urgent === true, ladders.car, ladders.urgentExtra);
+  }
+  return feeFor(items, trip?.flash_fee ?? null, ladders.run);
+}

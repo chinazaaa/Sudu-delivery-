@@ -9,6 +9,7 @@ import {
 } from "./groups";
 import { feeFor, sameDayFee, splitFee, type Band } from "./fees";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "./settings";
+import { feeOnTrip } from "./trip-fee";
 import {
   activePromotion,
   checkCoupon,
@@ -483,10 +484,16 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // A discount code is checked against this order's own delivery, so "free
   // delivery" is worth what delivery actually costs here and no more. The
   // check happens against the fee the order is about to be charged.
+  //
+  // Through the one question, because this asked the run's ladder even on
+  // a car: a free-delivery code on a car of its own was taking off the
+  // run's fee and leaving the difference on the bill, or taking off more
+  // than the trip was worth, depending on which way the two ladders sat.
+  const couponFee = await feeOnTrip(batch, countItems(priced.lines));
   const coupon = input.coupon?.trim()
     ? await checkCoupon({
         code: input.coupon,
-        fee: feeFor(countItems(priced.lines), batch.flash_fee, bands),
+        fee: couponFee,
         food: countFood(priced.lines),
         returning,
         batchId: batch.id,
@@ -504,7 +511,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     !coupon && linkCode !== ""
       ? await checkCoupon({
           code: linkCode,
-          fee: feeFor(countItems(priced.lines), batch.flash_fee, bands),
+          fee: couponFee,
           food: countFood(priced.lines),
           returning,
           batchId: batch.id,
@@ -1772,7 +1779,9 @@ export async function perkFor(args: {
 
   const result = await checkCoupon({
     code,
-    fee: feeFor(countItems(priced.lines), batch.flash_fee, await bandsFor(batch)),
+    /* The trip's own fee, so a free-delivery code quoted on a car is
+       worth what the car costs rather than what a run would have. */
+    fee: await feeOnTrip(batch, countItems(priced.lines)),
     food: countFood(priced.lines),
     returning,
     batchId: batch.id,
