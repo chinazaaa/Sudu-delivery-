@@ -2684,7 +2684,23 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         got.lines.map((line) => `${line.qty > 1 ? `${line.qty} × ` : ""}${line.name}`).join(", "),
         got.total ?? 0
       );
-      bot("Here is your total.", 420);
+      /*
+       * When it lands, said before the money.
+       *
+       * It was already on the bill, in small type under Delivery, which
+       * is where somebody looks last and sometimes not at all. The run is
+       * the thing most likely to be wrong for them: a total they are
+       * happy with for a night they cannot be in is a cancelled order and
+       * a wasted conversation. So it is a sentence of its own, in front
+       * of the figure, where a question about it is still cheap to ask.
+       */
+      const when = mine.car?.label ?? mine.run?.said ?? "";
+      bot(
+        when !== ""
+          ? `That goes out <b>${when}</b>. Here is your total.`
+          : "Here is your total.",
+        420
+      );
       say(
         {
           kind: "card",
@@ -2702,7 +2718,21 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               })),
               {
                 said: "Delivery",
-                under: `${mine.hostel} · run ${mine.run?.said ?? ""}`,
+                /* The block they are on, or the one already saved
+                   against their number, which the chat deliberately does
+                   not know. Said as "your usual block" rather than left
+                   blank, because a bill with a gap where the address goes
+                   is a bill nobody trusts. */
+                under: [
+                  mine.hostel !== ""
+                    ? mine.hostel
+                    : mine.sameBlock
+                      ? "your usual block"
+                      : "",
+                  when !== "" ? `run ${when}` : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
                 amount: got.fee ?? 0,
               },
             ],
@@ -2737,7 +2767,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         }
       }
 
-      const confirm = (hint = "Nothing is charged until you transfer.") => {
+      const confirm = (
+        hint = "Nothing is charged until you transfer. Change something covers the food, the block and the run."
+      ) => {
         setAsk({
           of: "buttons",
           buttons: [
@@ -4055,6 +4087,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   const takeBlock = useCallback(
     (hostel: string, then?: () => void) => {
       held.current.hostel = hostel;
+      /* Naming a block outranks the one saved against the number, so the
+         order's route stops filling that in and the bill stops calling it
+         "your usual block". */
+      held.current.sameBlock = false;
       /*
        * Where to go next.
        *
@@ -4293,35 +4329,24 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               return;
             }
 
-            bot("I have a block saved for this number. Same one?", 420);
-            setAsk({
-              of: "chips",
-              chips: [
-                {
-                  said: "Yes, same as last time",
-                  hot: true,
-                  go: () => {
-                    me("Yes, same as last time");
-                    /* Taken from the record on the server when the order
-                       is placed, which is where it has always come from
-                       for a signed-in customer. Nothing here has to know
-                       what it is. */
-                    held.current.hostel = "";
-                    held.current.sameBlock = true;
-                    if (then) then();
-                    else askSlotRef.current?.();
-                  },
-                },
-                {
-                  said: "No, different block",
-                  go: () => {
-                    me("No, different block");
-                    askHostel(then);
-                  },
-                },
-              ],
-              hint: "",
-            });
+            /*
+             * The block they used last time, taken rather than asked
+             * about.
+             *
+             * This used to ask "same one?", which is a whole message
+             * spent on a question almost nobody answers no to, and the
+             * answer is on the total a moment later anyway where it can
+             * be changed along with everything else. A confirmation step
+             * that duplicates a confirmation step is just a step.
+             *
+             * Never printed here. The chat does not know what the block
+             * is, and does not need to: the order's own route reads it
+             * from the record, so a number typed into a public box never
+             * comes back with somewhere to find that person.
+             */
+            held.current.sameBlock = true;
+            if (then) then();
+            else askSlotRef.current?.();
           })();
           return;
         }
