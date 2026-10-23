@@ -1384,8 +1384,23 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         echo &&
         list.current.length === 0 &&
         !readingOff.current &&
-        splitOrder(said).length < 2 &&
-        (firstSay.current || said.trim().split(/\s+/).length >= 4)
+        /*
+         * The first message is read before the comma rule, not after it.
+         *
+         * "Naza, qUEEN" is a name and a block with a comma between them,
+         * which is exactly what the chat asked for and exactly what the
+         * comma rule reads as two things to buy. It searched both halves
+         * of somebody's details against the shop and offered them cod
+         * liver oil, because NAZA'S COD LIVER OIL is a real product and a
+         * menu is all that search has.
+         *
+         * So on the opening message the reading goes first and the comma
+         * rule never sees it. Afterwards the comma rule wins, because by
+         * then a comma really does separate two dishes and the rule is
+         * quicker and needs no key.
+         */
+        (firstSay.current ||
+          (splitOrder(said).length < 2 && said.trim().split(/\s+/).length >= 4))
       ) {
         firstSay.current = false;
         const got = await fetch("/api/bot/understand", {
