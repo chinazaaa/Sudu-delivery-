@@ -134,9 +134,13 @@ export default async function ProductsPage({
    * thing and being shown another unasked is how people stop trusting a
    * search.
    */
+  /* Three letters before it bothers. One or two is somebody still typing,
+     and the four thousand names fetched to score them is the work that
+     made the answer slow enough for the box to overwrite itself. */
+  const asking = String(asked.q ?? "").trim();
   const meant =
-    total === 0 && String(asked.q ?? "").trim() !== ""
-      ? didYouMean(String(asked.q), await shelfNames(asked.place))
+    total === 0 && asking.length >= 3
+      ? didYouMean(asking, await shelfNames(asked.place))
       : [];
 
   // What each thing on this page asks before it can go in a cart. Looked up
@@ -391,7 +395,7 @@ export default async function ProductsPage({
             Did you mean
           </p>
           <p className="mt-1 text-sm text-ink/75">
-            Nothing is spelled <b>{String(asked.q ?? "").trim()}</b>, but this is
+            Nothing is spelled <b>{asking}</b>, but this is
             on a shelf.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">

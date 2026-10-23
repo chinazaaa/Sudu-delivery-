@@ -39,20 +39,42 @@ export default function ProductSearch({
   const [typed, setTyped] = useState(start);
   const [working, startWorking] = useTransition();
 
+  /** What this box last put in the address, so its own echo can be told
+   *  from somebody else changing the page. */
+  const sent = useRef(start);
+
   const go = (next: string) => {
     const now = new URLSearchParams(params.toString());
     if (next.trim() === "") now.delete("q");
     else now.set("q", next.trim());
     // A new search is page one of it.
     now.delete("page");
+    // Remembered, so the answer coming back does not overwrite whatever
+    // has been typed since it was asked for.
+    sent.current = next.trim();
     // Replaced rather than pushed: typing six letters must not put six pages
     // in the back button between here and wherever they came from.
     startWorking(() => router.replace(`${to}?${now.toString()}`, { scroll: false }));
   };
 
-  // The address is the truth, so arriving with a search in it, or pressing
-  // back, fills the box in to match.
+  /*
+   * The address is the truth, except when the address is our own echo.
+   *
+   * Typing "curtain" sends "cu" to the address after the first pause.
+   * The server answers, this page re-renders with start as "cu", and this
+   * effect put "cu" back in the box, deleting the "rtain" typed while the
+   * answer was in the air. The box emptied itself mid-word and read as
+   * the page refreshing under you.
+   *
+   * It has always been able to do this and only became easy to hit when
+   * the no-results answer got slower, which widened the window to most of
+   * a second. So the box remembers what it last sent and ignores that
+   * coming back. Anything else, arriving with a search in the link or
+   * pressing back, is somebody else's change and still fills the box.
+   */
   useEffect(() => {
+    if (start === sent.current) return;
+    sent.current = start;
     setTyped(start);
   }, [start]);
 
