@@ -127,8 +127,36 @@ export default async function AdminHome() {
   // Jobs with no run behind them: somebody paid for an errand nobody drove a
   // car for. Counted in the same window as the runs, because a profit that
   // leaves out a fortnight's errands is not the profit.
-  const aside = await otherMoneySince(windowStart()).catch(() => []);
+  /*
+   * The four tiles at the foot of this page, asked for at once.
+   *
+   * These stood in a queue: the errands, then the custom-order requests,
+   * then the standing orders, then what the promoters are owed, each
+   * waiting on the one before it for no reason at all. Four trips of
+   * latency on the page somebody opens twenty times a day, for four
+   * questions that have nothing to do with each other.
+   */
+  const [aside, asked, standing, promoters] = await Promise.all([
+    // Jobs with no run behind them: somebody paid for an errand nobody drove
+    // a car for. Counted in the same window as the runs, because a profit
+    // that leaves out a fortnight's errands is not the profit.
+    otherMoneySince(windowStart()).catch(() => []),
+    // Somebody asking for something we do not stock, waiting on an answer.
+    // It arrives by email too, and an inbox is where things go to be missed.
+    newRequests().catch(() => 0),
+    // Standing orders to raise, and parents who asked for one and have not
+    // heard back. The only things on this list worth money every month
+    // rather than once, and the easiest to miss: a box that should have
+    // landed on the 3rd and did not is a parent who assumes we forgot.
+    plansWaiting().catch(() => ({ due: 0, asked: 0 })),
+    // Commission earned and not handed over. Not the shop's money, and
+    // somebody did the work weeks ago and is still waiting for it.
+    promoterRows().catch(() => []),
+  ]);
   const asideTotals = otherMoneyTotals(aside);
+  const owing = promoters
+    .filter((one) => one.owed > 0)
+    .map((one) => ({ name: one.name || one.code, owed: one.owed, since: "" }));
   /*
    * Settled, and waiting.
    *
@@ -183,19 +211,6 @@ export default async function AdminHome() {
           waiting.length === 1 ? "" : "s"
         } waiting on costs`;
   const unpaidValue = unpaid.reduce((total, order) => total + order.total, 0);
-  // Somebody asking for something we do not stock, waiting on an answer.
-  // It arrives by email too, and an inbox is where things go to be missed.
-  const asked = await newRequests().catch(() => 0);
-  // Standing orders to raise, and parents who asked for one and have not
-  // heard back. The only things on this list worth money every month
-  // rather than once, and the easiest to miss: a box that should have
-  // landed on the 3rd and did not is a parent who assumes we forgot.
-  const standing = await plansWaiting().catch(() => ({ due: 0, asked: 0 }));
-  // Commission earned and not handed over. Not the shop's money, and
-  // somebody did the work weeks ago and is still waiting for it.
-  const owing = (await promoterRows().catch(() => []))
-    .filter((one) => one.owed > 0)
-    .map((one) => ({ name: one.name || one.code, owed: one.owed, since: "" }));
 
   // How long the run being worked has left, for the one job on the list that
   // is about a clock rather than about money.

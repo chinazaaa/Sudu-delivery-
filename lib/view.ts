@@ -44,6 +44,21 @@ export type ItemView = {
   containerPct: number;
   /** Size, flavour, extras. An item with none of these adds in one tap. */
   groups: OptionGroupView[];
+  /**
+   * How many of those there are, where the groups themselves have been left
+   * behind.
+   *
+   * The front page used to carry the whole menu into the browser so its
+   * search box could read it: a thousand dishes and nearly four thousand
+   * choices, about a megabyte of it, downloaded by everybody who opened the
+   * shop whether or not they searched for anything. The choices are the
+   * bulk of that and nobody needs them until they tap a dish, so the page
+   * sends this number instead and fetches the choices then.
+   *
+   * Absent means the groups are the whole truth, which is what every other
+   * page sends.
+   */
+  choices?: number;
 };
 
 export type OptionGroupView = {

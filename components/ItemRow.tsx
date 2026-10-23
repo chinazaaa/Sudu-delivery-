@@ -18,6 +18,7 @@ export default function ItemRow({
   item,
   inCart,
   onOpen,
+  opening = false,
   restaurant,
   category = "",
 }: {
@@ -25,6 +26,9 @@ export default function ItemRow({
   inCart: number;
   /** The sheet, for the choices a card cannot ask for. */
   onOpen: () => void;
+  /** Its choices are being fetched. Only the front page, which sends the
+   *  menu without them, ever says yes. */
+  opening?: boolean;
   /** Whose kitchen it is. Without it there is nothing to put in a cart
    *  line, so every press opens the sheet instead, which is what the
    *  search results on the front page want anyway. */
@@ -45,7 +49,16 @@ export default function ItemRow({
   // and the card just says how many there are.
   const lines = cart.filter((l) => l.itemId === item.id);
   const one = lines.length === 1 ? lines[0] : null;
-  const simple = item.groups.length === 0 && restaurant !== undefined;
+  /*
+   * Nothing to ask, so the card can add it itself.
+   *
+   * Counted rather than measured, because the front page sends the menu
+   * with the choices left behind to save the browser a megabyte, and a
+   * dish whose sizes have not arrived yet is not a dish with no sizes. Read
+   * off the groups it would be one tap to put a large pizza in the cart at
+   * the price of a small.
+   */
+  const simple = (item.choices ?? item.groups.length) === 0 && restaurant !== undefined;
 
   const add = () => {
     if (one) {
@@ -142,7 +155,7 @@ export default function ItemRow({
             <button
               type="button"
               onClick={add}
-              disabled={!item.available}
+              disabled={!item.available || opening}
               aria-label={`Add ${item.name}`}
               className="relative flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border-2 border-ink bg-brand px-0 font-bold text-white shadow-press disabled:opacity-40 disabled:shadow-none sm:px-[18px]"
             >
@@ -150,7 +163,7 @@ export default function ItemRow({
                 <Plus />
               </span>
               <span className="hidden sm:inline">
-                {inCart > 0 ? `${inCart} in cart` : "Add"}
+                {opening ? "Opening…" : inCart > 0 ? `${inCart} in cart` : "Add"}
               </span>
               {/* Two ways of ordering the same dish. The card cannot step
                   either of them, but it must still say they are in there:

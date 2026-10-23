@@ -11,7 +11,7 @@ import { orderFeed, statusCounts } from "@/lib/admin-data";
 import { reachFor, whoFor } from "@/lib/customer";
 import { isGone } from "@/lib/orders";
 import { batchOverview } from "@/lib/admin";
-import { getSettings, googleLinks } from "@/lib/settings";
+import { getSettings, googleLinks, safeSettings } from "@/lib/settings";
 import { payableAccounts } from "@/lib/banks";
 import { siteUrl, toCard } from "@/lib/admin-templates";
 import { SLOT_LABEL } from "@/lib/config";
@@ -97,7 +97,7 @@ export default async function OrdersPage({
   // Card payers are unpaid orders, narrowed by how they said they would pay.
   const status = (tab === "card" ? "pending" : tab) as OrderStatus | "all";
 
-  const [orders, batches, settings, url, unpaid, everything] = await Promise.all([
+  const [orders, batches, settings, url, unpaid, everything, accounts] = await Promise.all([
     orderFeed({
       status,
       batchId: query.batch ?? null,
@@ -117,9 +117,13 @@ export default async function OrdersPage({
     // the one order on a Tuesday ended up invisible on the screen that is
     // supposed to be about today.
     orderFeed({ status: "all", limit: 200 }),
+    // The accounts, alongside the orders rather than after them. This waited
+    // on the whole block above for a list it has no use for: the settings it
+    // reads are read once per request and handed back without a second trip.
+    safeSettings().then(payableAccounts),
   ]);
   // The account every payment message quotes: the first on the list.
-  const bank = (await payableAccounts(settings))[0] ?? null;
+  const bank = accounts[0] ?? null;
   // Where to message each of them, which is not always the number on the
   // order: somebody can order with one number and have WhatsApp on another.
   // One query for every list on the page rather than one per row.

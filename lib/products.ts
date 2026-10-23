@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { db } from "./supabase";
 import { aislesFrom } from "./aisles";
 import { safeSettings } from "./settings";
@@ -73,7 +75,9 @@ export type Facets = {
  * browsing it is hungry, but somebody picking a Christmas present is not,
  * and skincare is the most giftable thing in the shop.
  */
-async function foodPlaces(all = false): Promise<{ id: string; name: string; slug: string }[]> {
+const foodPlaces = cache(async function foodPlaces(
+  all = false
+): Promise<{ id: string; name: string; slug: string }[]> {
   const { data } = await db()
     .from("restaurants")
     .select("id, name, slug, kind, active")
@@ -86,7 +90,7 @@ async function foodPlaces(all = false): Promise<{ id: string; name: string; slug
       name: one.name as string,
       slug: (one.slug as string) ?? "",
     }));
-}
+});
 
 /**
  * What there is to narrow by.

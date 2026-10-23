@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { db } from "./supabase";
 import { waLink } from "./whatsapp";
 import {
@@ -370,7 +372,23 @@ export const EMPTY: Settings = {
   parcel_terms: "",
 };
 
-export async function getSettings(): Promise<Settings> {
+/**
+ * The shop's settings, read once per request however often they are asked
+ * for.
+ *
+ * A hundred and two places in the code ask for these, and a single page
+ * render asks a dozen times: the fee bands want them, so do the areas, the
+ * opening hours, the bank details, the WhatsApp number and the chat. Every
+ * one of those was its own round trip to the database, and on a page that
+ * asks ten times that is ten waits for one unchanging row.
+ *
+ * React's cache gives one answer per request. Not a time cache and not a
+ * stale one: the first caller fetches, everybody else in that same render
+ * gets the same promise, and the next request starts again. So editing a
+ * setting still takes effect on the very next page load, which is the
+ * whole reason these are read live rather than baked in.
+ */
+export const getSettings = cache(async function getSettings(): Promise<Settings> {
   // Every column, rather than a list of them. Naming each one means that
   // adding a setting to the code and forgetting to add the column makes the
   // whole row come back empty, and every setting on the site quietly reverts
@@ -384,7 +402,7 @@ export async function getSettings(): Promise<Settings> {
   if (error) throw new Error(error.message);
 
   return { ...EMPTY, ...((data ?? {}) as Partial<Settings>) };
-}
+});
 
 export async function safeSettings(): Promise<Settings> {
   try {

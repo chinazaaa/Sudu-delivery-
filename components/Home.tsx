@@ -113,10 +113,44 @@ export default function Home({
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<{ item: ItemView; place: MenuView } | null>(null);
+  // A dish whose choices are still on their way. The sheet waits for them
+  // rather than opening on a half of itself: a sheet with no sizes on it is
+  // a sheet that adds the wrong thing to the cart.
+  const [fetching, setFetching] = useState("");
   const cart = useCart();
 
   const countFor = (itemId: string) =>
     cart.filter((l) => l.itemId === itemId).reduce((n, l) => n + l.qty, 0);
+
+  /*
+   * Open a dish, fetching its choices first where the page did not carry
+   * them.
+   *
+   * The front page sends the menu without its sizes, flavours and extras,
+   * because that is the larger half of a megabyte and nobody wants it until
+   * they tap something. `choices` says how many there are: nought, or
+   * absent on every other page, means the dish is already whole and the
+   * sheet opens on the spot.
+   */
+  async function openItem(item: ItemView, place: MenuView) {
+    if ((item.choices ?? 0) === 0 || item.groups.length > 0) {
+      setOpen({ item, place });
+      return;
+    }
+
+    setFetching(item.id);
+    try {
+      const reply = await fetch(`/api/item/${item.id}/choices`);
+      const said = (await reply.json()) as { groups?: ItemView["groups"] };
+      setOpen({ item: { ...item, groups: said.groups ?? [] }, place });
+    } catch {
+      // A dish that will not say what its sizes are is a dish nobody should
+      // be able to add blind, so the sheet stays shut and the tap does
+      // nothing rather than something wrong.
+    } finally {
+      setFetching("");
+    }
+  }
 
   const found = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -211,7 +245,8 @@ export default function Home({
                     place.categories.find((one) => one.id === item.categoryId)
                       ?.name ?? ""
                   }
-                  onOpen={() => setOpen({ item, place })}
+                  onOpen={() => void openItem(item, place)}
+                  opening={fetching === item.id}
                 />
               ))}
             </div>

@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { db } from "./supabase";
 import { safeSettings } from "./settings";
 import { activeBands, sameDayPricing } from "./settings";
@@ -22,8 +24,13 @@ import { parseValueBands, type ValueBand } from "./value-bands";
  * A map rather than a column on the cart: the cart is written in a browser
  * and a browser can say anything, so where a kitchen is has to be looked up
  * at the moment the money is decided.
+ *
+ * Once per request, not once per asking. Pricing a cart asks for this, and
+ * so does saying which run can carry it, and so does the checkout drawing
+ * the fee again: one table that changes when somebody moves a kitchen,
+ * fetched one time and handed to all of them.
  */
-export async function areaOfEach(): Promise<Record<string, string>> {
+export const areaOfEach = cache(async function areaOfEach(): Promise<Record<string, string>> {
   const { data, error } = await db().from("restaurants").select("id, area");
   // Before the migration there is no column, and asking for one errors the
   // whole statement. Everything is home then, which is what it was.
@@ -31,7 +38,7 @@ export async function areaOfEach(): Promise<Record<string, string>> {
   return Object.fromEntries(
     ((data ?? []) as { id: string; area?: string }[]).map((one) => [one.id, one.area ?? ""])
   );
-}
+});
 
 export async function allAreas(): Promise<Area[]> {
   return parseAreas((await safeSettings()).delivery_areas);
@@ -124,16 +131,13 @@ export { HOME };
 export async function valueLadder(restaurantIds: string[]): Promise<ValueBand[]> {
   if (restaurantIds.length === 0) return [];
 
-  const { data, error } = await db()
-    .from("restaurants")
-    .select("id, value_bands")
-    .in("id", restaurantIds);
-  // Before the migration there is no column, and every restaurant is on the
-  // ordinary ladder, which is what they were all on anyway.
-  if (error) return [];
+  // The one map of who prices how, rather than a query of its own. This and
+  // the next function asked the database the same question twice, and
+  // pricing one cart calls both.
+  const byId = await valueBandsOfEach();
 
-  const ladders = ((data ?? []) as { value_bands?: string }[])
-    .map((one) => parseValueBands(one.value_bands))
+  const ladders = restaurantIds
+    .map((id) => byId[id] ?? [])
     .filter((one) => one.length > 0);
 
   return ladders.reduce<ValueBand[]>(
@@ -154,16 +158,8 @@ const top = (bands: ValueBand[]) => bands[bands.length - 1]?.fee ?? 0;
 export async function kitchensByValue(restaurantIds: string[]): Promise<string[]> {
   if (restaurantIds.length === 0) return [];
 
-  const { data, error } = await db()
-    .from("restaurants")
-    .select("id, value_bands")
-    .in("id", restaurantIds);
-  // Before the migration there is no column, and nobody prices by value.
-  if (error) return [];
-
-  return ((data ?? []) as { id: string; value_bands?: string }[])
-    .filter((one) => parseValueBands(one.value_bands).length > 0)
-    .map((one) => one.id);
+  const byId = await valueBandsOfEach();
+  return restaurantIds.filter((id) => (byId[id] ?? []).length > 0);
 }
 
 /**
@@ -175,7 +171,9 @@ export async function kitchensByValue(restaurantIds: string[]): Promise<string[]
  * applies to what is in front of it, and the server decides it again when
  * the order is placed.
  */
-export async function valueBandsOfEach(): Promise<Record<string, ValueBand[]>> {
+export const valueBandsOfEach = cache(async function valueBandsOfEach(): Promise<
+  Record<string, ValueBand[]>
+> {
   const { data, error } = await db().from("restaurants").select("id, value_bands");
   if (error) return {};
 
@@ -185,7 +183,7 @@ export async function valueBandsOfEach(): Promise<Record<string, ValueBand[]>> {
     if (bands.length > 0) found[one.id] = bands;
   }
   return found;
-}
+});
 
 
 /**
@@ -194,7 +192,9 @@ export async function valueBandsOfEach(): Promise<Record<string, ValueBand[]>> {
  * Only the exceptions are returned, so a shop where nothing ever closes
  * sends an empty object and the checkout behaves exactly as it always has.
  */
-export async function openDaysOfEach(): Promise<Record<string, string>> {
+export const openDaysOfEach = cache(async function openDaysOfEach(): Promise<
+  Record<string, string>
+> {
   const { data, error } = await db().from("restaurants").select("id, name, open_days");
   if (error) return {};
 
@@ -204,4 +204,4 @@ export async function openDaysOfEach(): Promise<Record<string, string>> {
     if (said !== "") found[one.id] = said;
   }
   return found;
-}
+});

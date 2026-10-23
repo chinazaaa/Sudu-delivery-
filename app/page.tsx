@@ -64,6 +64,29 @@ export default async function HomePage() {
         )
       : [];
 
+  /*
+   * The menu without its choices.
+   *
+   * The front page hands the whole menu to the browser so its search box can
+   * read it, and until now that meant every size, flavour and extra under
+   * every dish went with it: about four thousand rows, the larger half of a
+   * megabyte, downloaded by everybody who opened the shop and read by almost
+   * nobody. The search reads names and descriptions; the choices are only
+   * wanted the moment somebody taps a dish, and one dish's worth is fetched
+   * then, in the time the sheet takes to slide up.
+   *
+   * The count stays, because a dish with nothing to pick still has to add in
+   * one tap.
+   */
+  const lightMenu = menu.map((place) => ({
+    ...place,
+    items: place.items.map((item) => ({
+      ...item,
+      groups: [],
+      choices: item.groups.length,
+    })),
+  }));
+
   // Read once: the tile names the routes, so it needs the whole set up.
   const parcelSetup = parcelsFrom(settings);
 
@@ -88,7 +111,22 @@ export default async function HomePage() {
   // With a price, because a name is a category and a name with a price is an
   // offer. Two more queries to say "from ₦20,000, delivery in it", which is
   // sentence that gets the tap.
-  const packed = await liveOccasions();
+  /*
+   * The shelves, the two counters, and what Google says, asked for at once.
+   *
+   * These stood in a queue down the length of the function: the shelves
+   * here, the counters a hundred lines below, the quotes inside the markup
+   * at the very bottom. None of them needs any of the others, so a visitor
+   * was waiting four lots of latency for four things that could have been
+   * fetched together. Where they are used has nothing to do with when they
+   * have to be asked for.
+   */
+  const [packed, skincareShelf, pharmacyShelf, quotes] = await Promise.all([
+    liveOccasions(),
+    skincareOn(settings) ? skincareShop() : Promise.resolve(null),
+    pharmacyOn(settings) ? pharmacyShop() : Promise.resolve(null),
+    shownSays(settings.google_quotes),
+  ]);
   const packedBoxes = await boxesAcross(packed.map((one) => one.id));
   // Together, because neither needs the other and this page is the one
   // thing every visitor waits for. A photograph of the best thing on each
@@ -162,21 +200,8 @@ export default async function HomePage() {
     ? `${placesSaid(parcelSetup.routes)}, to PAU and back. Its own trip, on a day we agree.`
     : "";
 
-  /*
-   * The two counters and the hours, asked for at once.
-   *
-   * These were three round trips to the database standing in a queue, each
-   * waiting on the one before it for no reason: whether skincare has a
-   * shelf has nothing to do with whether pharmacy has one, and neither has
-   * anything to do with what time the car stops. On a page every visitor
-   * waits for, three trips in a row is three trips of latency instead of
-   * one.
-   */
-  const [skincareShelf, pharmacyShelf, dayHours] = await Promise.all([
-    skincareOn(settings) ? skincareShop() : Promise.resolve(null),
-    pharmacyOn(settings) ? pharmacyShop() : Promise.resolve(null),
-    settings.same_day_on === "on" ? hoursByDay() : Promise.resolve(null),
-  ]);
+  // The hours, off the settings already read rather than a trip of its own.
+  const dayHours = settings.same_day_on === "on" ? await hoursByDay() : null;
 
   // One car a week, on a Saturday. Empty when that shelf is off, and then the
   // page does not mention it at all.
@@ -303,11 +328,11 @@ export default async function HomePage() {
         ...googleLinks(settings),
         rating: Number(settings.google_rating) || 0,
         count: Number(settings.google_reviews) || 0,
-        quotes: await shownSays(settings.google_quotes),
+        quotes,
       }}
       iosAppId={settings.ios_app_id}
       androidPackage={settings.android_package}
-      menu={menu}
+      menu={lightMenu}
       slides={slides}
       // When something ordered right now would land, by the one rule every
       // other way of ordering uses: a run going today while it is taking

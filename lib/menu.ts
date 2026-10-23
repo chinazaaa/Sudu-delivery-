@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { unstable_cache } from "next/cache";
 import { onTheMenu } from "./shelf";
 import { closedWord } from "./open-days";
@@ -380,8 +382,13 @@ async function readMenuFor(ref: string): Promise<MenuView | null> {
   };
 }
 
-/** Just the names, for the navigation bar. Never throws during a build. */
-export async function openRestaurants(): Promise<
+/**
+ * Just the names, for the navigation bar. Never throws during a build.
+ *
+ * Read once per request. The bar is on every page and so is the footer, and
+ * nine rows fetched nine times is nine waits for one unchanging list.
+ */
+export const openRestaurants = cache(async function openRestaurants(): Promise<
   { id: string; name: string; href: string }[]
 > {
   // The column list is decided at run time, so the query builder cannot know
@@ -415,7 +422,7 @@ export async function openRestaurants(): Promise<
   } catch {
     return [];
   }
-}
+});
 
 
 /**
