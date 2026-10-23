@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 
+import { isSignedIn } from "@/lib/admin-auth";
+
 import {
   NOTHING_READ,
   READING_SCHEMA,
@@ -114,12 +116,115 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     return NextResponse.json({ ok: true, reading: readIntent(parsed) });
-  } catch {
+  } catch (wrong) {
     /*
      * Out of credit, rate limited, timed out, offline, or a bad minute at
-     * the other end. All one answer: the bot never heard of this, carry on
-     * with the rules.
+     * the other end. All one answer to the chat: the bot never heard of
+     * this, carry on with the rules.
+     *
+     * Said out loud in the log, though, because the whole point of
+     * failing quietly is that nobody notices, and a reading layer that
+     * has been broken since the day it shipped would look exactly like
+     * one that is working and simply never needed. The browser still
+     * learns nothing: a public order box is no place for the shop's
+     * error messages.
      */
+    console.error("[bot/understand]", wrong);
     return NextResponse.json({ ok: false, reading: NOTHING_READ });
   }
+}
+
+/**
+ * Is it actually working?
+ *
+ * The chat cannot tell you. It is built to carry on without the reading
+ * layer, and it does that whether the layer is missing, out of credit, or
+ * broken in a way nobody has noticed since the day it shipped. Those look
+ * identical from the outside, which is exactly the problem with anything
+ * that fails politely.
+ *
+ * So this runs the layer against a handful of sentences the shop actually
+ * gets and shows what came back: the model, how long it took, what it
+ * read, and the error in full where there was one. Open it while signed
+ * into admin and the answer is on the screen rather than in an argument.
+ */
+const TRY_THESE = [
+  "naza, queen",
+  "sorry, naza, trezadel",
+  "2 chicken pie and a shawarma for John Doe, 0800 000 0000, Trezadel",
+  "what time is the run tonight",
+  "it is my friend's birthday, send it to Emerald",
+];
+
+export async function GET(): Promise<NextResponse> {
+  if (!(await isSignedIn())) {
+    return NextResponse.json({ error: "Admin only." }, { status: 404 });
+  }
+
+  const key = String(process.env.ANTHROPIC_API_KEY ?? "").trim();
+  if (key === "") {
+    return NextResponse.json({
+      working: false,
+      why: "ANTHROPIC_API_KEY is not set, so the chat is running on its rules alone.",
+      model: botModel(process.env.BOT_MODEL),
+    });
+  }
+
+  const client = new Anthropic({ apiKey: key, maxRetries: 0, timeout: WAIT_MS });
+  const model = botModel(process.env.BOT_MODEL);
+  const shop: ShopNow = {
+    shopName: "Sudu",
+    counters: ["Chicken Republic", "KFC"],
+    hostels: ["Trezadel", "Queen Mary", "Cooperative Queens", "Emerald"],
+    nextRun: "tonight between 6pm and 7.30pm",
+    cutOff: "4.30 pm",
+    open: true,
+  };
+
+  const went: unknown[] = [];
+  for (const said of TRY_THESE) {
+    const began = Date.now();
+    try {
+      const response = await client.messages.create({
+        model,
+        max_tokens: 2000,
+        output_config: {
+          effort: "low",
+          format: { type: "json_schema", schema: READING_SCHEMA },
+        },
+        system: [{ type: "text", text: shopBrief(shop) }],
+        messages: [{ role: "user", content: said }],
+      });
+
+      const text = response.content
+        .filter((block): block is Anthropic.TextBlock => block.type === "text")
+        .map((block) => block.text)
+        .join("");
+
+      went.push({
+        said,
+        ms: Date.now() - began,
+        stop: response.stop_reason,
+        read: readIntent(JSON.parse(text)),
+        tokens: response.usage.input_tokens + response.usage.output_tokens,
+      });
+    } catch (wrong) {
+      went.push({
+        said,
+        ms: Date.now() - began,
+        failed: wrong instanceof Error ? `${wrong.name}: ${wrong.message}` : String(wrong),
+      });
+    }
+  }
+
+  const ok = went.filter((one) => (one as { read?: unknown }).read !== undefined).length;
+  return NextResponse.json(
+    {
+      working: ok > 0,
+      model,
+      read: `${ok} of ${TRY_THESE.length}`,
+      went,
+    },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }
