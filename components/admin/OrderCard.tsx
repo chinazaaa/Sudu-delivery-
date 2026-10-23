@@ -8,7 +8,7 @@ import { naira } from "@/lib/money";
 import { STAGE_LABEL, type BatchStage } from "@/lib/stages";
 import { formatPhone } from "@/lib/phone";
 import { placedLabel } from "@/lib/time";
-import { doorTag } from "@/lib/doors";
+import { doorSkin, doorTag } from "@/lib/doors";
 
 export type OrderCardLine = {
   id: string;
@@ -225,6 +225,22 @@ export default function OrderCard({
                 the rest is detail that should take up the space detail
                 deserves. */}
             <div className="mt-[7px] flex flex-wrap items-center gap-1.5">
+              {/*
+                Which door it came through, first and in its own colour.
+
+                It was already here and already right, as a grey pill in a
+                row of grey pills beside the status, the run stage and the
+                promoter. Recording the door is only worth anything if
+                somebody can tell at a glance which it was, and the eye
+                skipped it every time. Nothing for an order older than the
+                column: a guess printed as a fact is worse than a gap.
+              */}
+              {doorTag(order.source) !== "" && (
+                <span className={`tag ${doorSkin(order.source)}`}>
+                  {doorTag(order.source)}
+                </span>
+              )}
+
               {order.parcel && <Tag tone="volt">Parcel · {order.parcel.route}</Tag>}
               {/* Before the link is made, not after: a Stripe link in the
                   wrong currency is a payment that has to be sent back. */}
@@ -263,10 +279,7 @@ export default function OrderCard({
                           : STAGE_LABEL[order.runStage]}
                 </Tag>
               )}
-              {/* Which door it came through. It knew two and said "Website"
-                  for everything that was not the app, so every order the
-                  chat has ever taken was filed as the website's. */}
-              {doorTag(order.source) !== "" && <Tag>{doorTag(order.source)}</Tag>}
+
               {order.promoter && (
                 <Link
                   href={`/admin/orders?status=all&promoter=${encodeURIComponent(

@@ -16,7 +16,7 @@ import { getOrder } from "@/lib/orders";
 import { getBatch } from "@/lib/batches";
 import { SLOT_LABEL, TZ } from "@/lib/config";
 import { STAGE_LABEL } from "@/lib/stages";
-import { doorTag } from "@/lib/doors";
+import { doorSkin, doorTag } from "@/lib/doors";
 import { planForOrder } from "@/lib/plans";
 import { getSettings } from "@/lib/settings";
 import { payableAccounts } from "@/lib/banks";
@@ -246,6 +246,24 @@ async function orderPage(id: string, said: string) {
             <span className="hidden lg:inline">
               Order {shareRef(order, order.shares.length > 0 ? order.shares : [order])}
             </span>
+            {/*
+              Which door it came through, beside the order's own number.
+              
+              It was here already, fifteen rows down a list of details,
+              which is nowhere at all on a phone: opening an order to find
+              out whether the chat took it meant scrolling past the PIN,
+              the payment method and the note. The one word that answers
+              it belongs where the eye already is.
+            */}
+            {doorTag((order as { source?: string }).source ?? "") !== "" && (
+              <span
+                className={`tag ml-2 align-middle ${doorSkin(
+                  (order as { source?: string }).source ?? ""
+                )}`}
+              >
+                {doorTag((order as { source?: string }).source ?? "")}
+              </span>
+            )}
           </>
         }
         /* Two people on a gift, and the driver needs the second one.
@@ -498,14 +516,6 @@ async function orderPage(id: string, said: string) {
                 itself. The header sends the PIN in a message; somebody at
                 the gate reads it off the screen. */}
             <dl className="mt-1 text-[14.5px]">
-              {/* Which door it came through, on the order itself.
-                  It was on the card in the list and nowhere here, so
-                  opening one on a phone, which is how anybody reads "new
-                  in", lost the one thing that says whether the chat is
-                  earning its keep. */}
-              {doorTag((order as { source?: string }).source ?? "") !== "" && (
-                <Detail label="Came in through" value={doorTag((order as { source?: string }).source ?? "")} />
-              )}
               {/* Changeable, because what they picked at checkout and what
                   actually happened are two different facts. Somebody taps
                   card link by mistake, pays into the account like everybody

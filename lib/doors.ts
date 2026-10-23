@@ -29,3 +29,22 @@ export function doorTag(source: string): string {
   if (source === "web") return "Website";
   return "";
 }
+
+/**
+ * The door, said so it can be seen.
+ *
+ * The pill was there all along and read as grey text in a row of grey
+ * text: beside a status, a run stage and a promoter it was one more tag
+ * and the eye skipped it. The whole point of recording which door an
+ * order came through is being able to tell at a glance, so each one gets
+ * a colour of its own and sits first in the row.
+ *
+ * Three doors, three tints, and nothing for an order older than the
+ * column that records it: a guess printed as a fact is worse than a gap.
+ */
+export function doorSkin(source: string): string {
+  if (source === "app") return "bg-ink text-paper";
+  if (source === "bot") return "bg-brand text-white";
+  if (source === "web") return "bg-mint/20 text-ink";
+  return "";
+}
